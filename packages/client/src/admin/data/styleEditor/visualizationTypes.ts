@@ -9,6 +9,7 @@ import {
   isRasterInfo,
 } from "@seasketch/geostats-types";
 import {
+  CircleLayer,
   Expression,
   FillLayer,
   Layer,
@@ -24,7 +25,10 @@ import {
 } from "../../../dataLayers/legends/utils";
 import { isSymbolLayer } from "./LabelLayerEditor";
 import { isFillLayer, isLineLayer } from "./SimplePolygonEditor";
-import { autoStrokeColorForFill } from "./FillStyleEditor";
+import {
+  autoStrokeColorForFill,
+  autoStrokeForFillColor,
+} from "./FillStyleEditor";
 
 export const colorScales = {
   categorical: [
@@ -94,6 +98,12 @@ export enum VisualizationType {
   SIMPLE_POLYGON = "Simple Polygon",
   CATEGORICAL_POLYGON = "Categories",
   CONTINUOUS_POLYGON = "Color Range",
+  // Point or MultiPoint
+  SIMPLE_POINT = "Simple Points",
+  MARKER_IMAGE = "Marker Image",
+  CATEGORICAL_POINT = "Categorized Points",
+  PROPORTIONAL_SYMBOL = "Proportional Symbol",
+  HEATMAP = "Heatmap",
 }
 
 export const VisualizationTypeDescriptions: { [key: string]: string } = {
@@ -107,6 +117,11 @@ export const VisualizationTypeDescriptions: { [key: string]: string } = {
     "Choropleth maps based on continuous values",
   [VisualizationType.CATEGORICAL_POLYGON]:
     "Group polygons by discrete string values",
+  [VisualizationType.SIMPLE_POINT]: "Circle markers indicating point locations",
+  [VisualizationType.MARKER_IMAGE]: "Locations indicated by symbols",
+  [VisualizationType.CATEGORICAL_POINT]: "Circles with unique colors",
+  [VisualizationType.PROPORTIONAL_SYMBOL]: "Circle size determined by values",
+  [VisualizationType.HEATMAP]: "Visualize densely packed locations",
 };
 
 export function validVisualizationTypesForGeostats(
@@ -138,6 +153,18 @@ export function validVisualizationTypesForGeostats(
         VisualizationType.CATEGORICAL_POLYGON,
         VisualizationType.CONTINUOUS_POLYGON
       );
+    } else if (
+      geostats.geometry === "Point" ||
+      geostats.geometry === "MultiPoint"
+    ) {
+      types.push(
+        VisualizationType.SIMPLE_POINT
+        // TODO: implement these
+        // VisualizationType.MARKER_IMAGE,
+        // VisualizationType.HEATMAP
+      );
+      // TODO: check for continuous data values and add VisualizationType.PROPORTIONAL_SYMBOL if so
+      // TODO: check for categorical attributes and add VisualizationType.CATEGORICAL_POINT if so
     }
   }
   return types;
@@ -207,9 +234,46 @@ export function determineVisualizationType(
           return VisualizationType.CATEGORICAL_POLYGON;
         }
       }
+    } else if (
+      geostats.geometry === "Point" ||
+      geostats.geometry === "MultiPoint"
+    ) {
+      const circleLayer = layers.find((l) => isCircleLayer(l));
+      if (circleLayer) {
+        if (
+          !circleLayer.paint?.["circle-color"] ||
+          (!hasGetExpression(circleLayer.paint?.["circle-color"]) &&
+            (!circleLayer.paint?.["circle-radius"] ||
+              !hasGetExpression(circleLayer.paint["circle-radius"])))
+        ) {
+          return VisualizationType.SIMPLE_POINT;
+        } else {
+          // TODO: check for proportional symbol & categorical point
+          if (
+            circleLayer.paint?.["circle-radius"] &&
+            hasGetExpression(circleLayer.paint?.["circle-radius"])
+          ) {
+            // return VisualizationType.PROPORTIONAL_SYMBOL;
+          } else {
+            // return VisualizationType.CATEGORICAL_POINT;
+          }
+        }
+      } else if (layers.find((l) => l.type === "heatmap")) {
+        // TODO: implement renderer and detect
+        // return VisualizationType.HEATMAP;
+      } else if (
+        layers.find((l) => isSymbolLayer(l) && l.layout?.["icon-image"])
+      ) {
+        // TODO: implement renderer and detect
+        // return VisualizationType.MARKER_IMAGE;
+      }
     }
   }
   return null;
+}
+
+export function isCircleLayer(l: any): l is CircleLayer {
+  return "type" in l && l.type === "circle";
 }
 
 function hasFillColorGetExpression(layers: Layer[]) {
@@ -539,6 +603,36 @@ export function convertToVisualizationType(
         },
       });
       // TODO: add stroke with matching colors
+      break;
+    }
+    case VisualizationType.SIMPLE_POINT: {
+      let circleColor =
+        colorScale.schemeTableau10[Math.floor(Math.random() * 10)];
+      const oldCircleLayer = oldLayers.find(isCircleLayer);
+      if (
+        oldCircleLayer &&
+        oldCircleLayer.paint?.["circle-color"] &&
+        isExpression(oldCircleLayer.paint?.["circle-color"])
+      ) {
+        const oldColor = extractFirstColorFromExpression(
+          oldCircleLayer.paint["circle-color"]
+        );
+        if (oldColor) {
+          circleColor = oldColor;
+        }
+      }
+      layers.push({
+        type: "circle",
+        paint: {
+          "circle-color": circleColor,
+          "circle-radius": 5,
+          "circle-stroke-width": 1,
+          "circle-stroke-color": autoStrokeForFillColor(circleColor),
+        },
+        layout: {
+          visibility: "visible",
+        },
+      });
       break;
     }
     default:

@@ -653,11 +653,12 @@ async function getStyle(
             },
             layout: {
               "text-size": 12,
-              "text-field": ["get", "FEATURE_NA"],
+              "text-field": ["get", labelAttribute],
               "text-anchor": "left",
               "symbol-placement": "point",
               "text-offset": [0.5, 0.5],
             },
+            minzoom: 9,
           },
         ];
       } else {

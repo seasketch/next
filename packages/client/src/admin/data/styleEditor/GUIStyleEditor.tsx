@@ -344,7 +344,9 @@ export default function GUIStyleEditor({
   if (
     !isRasterInfo(geostats) &&
     geostats.geometry !== "Polygon" &&
-    geostats.geometry !== "MultiPolygon"
+    geostats.geometry !== "MultiPolygon" &&
+    geostats.geometry !== "Point" &&
+    geostats.geometry !== "MultiPoint"
   ) {
     return (
       <Editors.Card>

@@ -1,10 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from "react";
+import { useCallback, useContext, useState } from "react";
 import RasterLayerEditor, { isRasterLayer } from "./RasterLayerEditor";
 import { VisualizationType } from "./visualizationTypes";
 import { Card, GUIEditorContext } from "./Editors";
@@ -18,6 +12,7 @@ import CategoricalPolygonEditor from "./CategoricalPolygonEditor";
 import * as Editor from "./Editors";
 import VisualizationTypeControl from "./VisualizationTypeControl";
 import { ErrorBoundary } from "@sentry/react";
+import SimplePointEditor from "./SimplePointEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -98,6 +93,14 @@ export default function EditorForVisualizationType({
             <>
               <ContinuousPolygonEditor />
               {ContinuousPolygonEditor.hasUnrelatedLayers(context.glLayers) && (
+                <ExtraLayersWarning />
+              )}
+            </>
+          )}
+          {type === VisualizationType.SIMPLE_POINT && (
+            <>
+              <SimplePointEditor />
+              {SimplePointEditor.hasUnrelatedLayers(context.glLayers) && (
                 <ExtraLayersWarning />
               )}
             </>

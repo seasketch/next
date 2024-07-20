@@ -2,7 +2,7 @@ import {
   RasterBucket,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
-import { rasterInfoForBands } from "../rasterInfoForBands";
+import { rasterInfoForBands } from "../src/rasterInfoForBands";
 
 describe("rasterInfoForBands", () => {
   jest.setTimeout(100000);

@@ -188,6 +188,15 @@ export function autoStrokeColorForFill(fill?: FillLayer, line?: LineLayer) {
   }
 }
 
+export function autoStrokeForFillColor(fillColor: string) {
+  const c = colord(fillColor);
+  if (c.isDark()) {
+    return c.lighten(0.3).alpha(1).toRgbString();
+  } else {
+    return c.darken(0.15).alpha(1).toRgbString();
+  }
+}
+
 export function valueOrDefault(value: any, defaultValue: any) {
   if (value === undefined) {
     return defaultValue;
