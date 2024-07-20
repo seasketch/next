@@ -148,11 +148,13 @@ export function validVisualizationTypesForGeostats(
       geostats.geometry === "Polygon" ||
       geostats.geometry === "MultiPolygon"
     ) {
-      types.push(
-        VisualizationType.SIMPLE_POLYGON,
-        VisualizationType.CATEGORICAL_POLYGON,
-        VisualizationType.CONTINUOUS_POLYGON
-      );
+      types.push(VisualizationType.SIMPLE_POLYGON);
+      if (findBestCategoricalAttribute(geostats) !== null) {
+        types.push(VisualizationType.CATEGORICAL_POLYGON);
+      }
+      if (findBestContinuousAttribute(geostats) !== null) {
+        types.push(VisualizationType.CONTINUOUS_POLYGON);
+      }
     } else if (
       geostats.geometry === "Point" ||
       geostats.geometry === "MultiPoint"
@@ -474,6 +476,9 @@ export function convertToVisualizationType(
       }
       // find the most appropriate attribute to color the fill layer
       const attr = findBestContinuousAttribute(geostats);
+      if (!attr) {
+        throw new Error("No numeric attributes found");
+      }
       const attribute = geostats.attributes.find((a) => a.attribute === attr)!;
       let fillLayer = oldLayers.find((l) => isFillLayer(l)) as
         | FillLayer
@@ -572,6 +577,9 @@ export function convertToVisualizationType(
       }
       // first, find the most appropriate attribute to color the fill layer
       const attr = findBestCategoricalAttribute(geostats);
+      if (attr === null) {
+        throw new Error("No categorical attributes found");
+      }
       let oldFillLayer = oldLayers.find((l) => isFillLayer(l)) as
         | FillLayer
         | undefined;
@@ -1001,7 +1009,7 @@ export function findBestContinuousAttribute(geostats: GeostatsLayer) {
   if (sorted.length) {
     return sorted[0].attribute;
   }
-  throw new Error("No numeric attributes found");
+  return null;
 }
 
 export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
@@ -1046,7 +1054,7 @@ export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
   if (sorted.length) {
     return sorted[0];
   } else {
-    throw new Error("No categorical attributes found");
+    return null;
   }
 }
 
