@@ -635,11 +635,13 @@ async function getStyle(
       const circleLayer = {
         type: "circle",
         paint: {
-          "circle-radius": 5,
+          "circle-radius": 4,
           "circle-color": color,
-          "circle-stroke-color": "#000000",
-          "circle-stroke-width": 1,
-          "circle-stroke-opacity": 0.5,
+          "circle-stroke-color": autoStrokeColorForFillColor(color),
+          "circle-stroke-width": 2,
+        },
+        metadata: {
+          "s:color-auto": true,
         },
       };
       if (labelAttribute) {

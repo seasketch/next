@@ -11,6 +11,8 @@ import {
 } from "../../../dataLayers/legends/utils";
 import { CircleLayer, Expression } from "mapbox-gl";
 import { SeaSketchGlLayer } from "../../../dataLayers/legends/compileLegend";
+import CircleStrokeEditor from "./CircleStrokeEditor";
+import { autoStrokeForFillColor } from "./FillStyleEditor";
 
 export default function SimplePointEditor() {
   const context = useContext(Editor.GUIEditorContext);
@@ -78,7 +80,7 @@ export default function SimplePointEditor() {
         }}
       />
       <Editor.Root>
-        <Editor.Label title={t("Circle Color")} />
+        <Editor.Label title={t("Color")} />
         <Editor.Control>
           {isExpression(circleLayer.paint?.["circle-color"]) ? (
             <Editor.CustomExpressionIndicator
@@ -102,12 +104,24 @@ export default function SimplePointEditor() {
                   "circle-color",
                   color
                 );
+                if (
+                  (circleLayer.metadata as Editor.SeaSketchLayerMetadata)?.[
+                    "s:color-auto"
+                  ]
+                ) {
+                  const strokeColor = autoStrokeForFillColor(color);
+                  context.updateLayer(
+                    indexes.circle,
+                    "paint",
+                    "circle-stroke-color",
+                    strokeColor
+                  );
+                }
               }}
             />
           )}
         </Editor.Control>
       </Editor.Root>
-      {/* TODO: Circle Stroke (color and width) */}
       <Editor.Root>
         <Editor.Label title={t("Circle Radius")} />
         <Editor.Control>
@@ -140,6 +154,7 @@ export default function SimplePointEditor() {
           )}
         </Editor.Control>
       </Editor.Root>
+      <CircleStrokeEditor />
       <LabelLayerEditor />
     </>
   );

@@ -183,9 +183,6 @@ export default function StrokeEditor({
                   </span>
                 )}
                 <span>{type}</span>
-                {/* {!isExpression(color) && (
-                    <span>{formatColor(color, "#000000")}</span>
-                  )} */}
                 {!isExpression(color) && type !== "None" && (
                   <Editor.Swatch
                     auto={
@@ -225,10 +222,6 @@ export default function StrokeEditor({
                     ...prev,
                     autoStrokeColor: autoColor,
                   }));
-                  // if (newType === StrokeType.None && layerIndex !== -1) {
-                  //   removeLayer(layerIndex);
-                  //   return;
-                  // }
 
                   if (layerIndex !== -1) {
                     updateLayer(
