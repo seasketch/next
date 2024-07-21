@@ -1065,12 +1065,11 @@ export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
 
 export function categoricalAttributes(attributes: GeostatsAttribute[]) {
   return attributes.filter(
-    (a) =>
-      a.countDistinct &&
-      a.countDistinct > 1 &&
-      (a.type === "string" ||
-        a.type === "boolean" ||
-        (a.type === "number" && a.countDistinct && a.countDistinct < 12))
+    (a) => a.countDistinct && a.countDistinct > 1 && a.type === "string"
+    // || a.type === "boolean")
+    // CB 7/22/24 disallow strings and booleans for categorical expressions
+    //  ||
+    // (a.type === "number" && a.countDistinct && a.countDistinct < 12))
   );
 }
 
