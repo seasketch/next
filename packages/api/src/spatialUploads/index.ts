@@ -639,6 +639,7 @@ async function getStyle(
           "circle-color": color,
           "circle-stroke-color": autoStrokeColorForFillColor(color),
           "circle-stroke-width": 2,
+          "circle-stroke-opacity": 0.8,
         },
         metadata: {
           "s:color-auto": true,
