@@ -986,10 +986,10 @@ export function findBestContinuousAttribute(geostats: GeostatsLayer) {
   // first, sort attributes by number of stddev values
   const sorted = filtered
     .sort((a, b) => {
-      let aValue = a.stats.standardDeviations
+      let aValue = a.stats?.standardDeviations
         ? Object.keys(a.stats.standardDeviations).length
         : 0;
-      let bValue = b.stats.standardDeviations
+      let bValue = b.stats?.standardDeviations
         ? Object.keys(b.stats.standardDeviations).length
         : 0;
       return bValue - aValue;
