@@ -29,6 +29,7 @@ import {
   autoStrokeColorForFill,
   autoStrokeForFillColor,
 } from "./FillStyleEditor";
+import { SeaSketchLayerMetadata } from "./Editors";
 
 export const colorScales = {
   categorical: [
@@ -634,12 +635,16 @@ export function convertToVisualizationType(
         paint: {
           "circle-color": circleColor,
           "circle-radius": 5,
-          "circle-stroke-width": 1,
+          "circle-stroke-width": 2,
           "circle-stroke-color": autoStrokeForFillColor(circleColor),
+          "circle-stroke-opacity": 0.8,
         },
         layout: {
           visibility: "visible",
         },
+        metadata: {
+          "s:color-auto": true,
+        } as SeaSketchLayerMetadata,
       });
       break;
     }
