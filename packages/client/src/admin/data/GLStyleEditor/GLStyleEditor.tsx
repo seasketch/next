@@ -72,6 +72,7 @@ interface GLStyleEditorProps {
   onRequestShowBounds?: (bounds: [number, number, number, number]) => void;
   layerId?: number;
   sourceLayer?: string;
+  hideNewCartographyTools?: boolean;
 }
 
 /**
@@ -96,9 +97,12 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const editorRef = useRef<ReactCodeMirrorRef>(null);
 
   const [editor, setEditor] = useState<"style" | "code">(
-    (props.geostats || props.dataSource?.geostats) &&
-      (isRasterInfo(props.dataSource?.geostats) ||
-        !isLegacyGeostatsLayer(props.geostats || props.dataSource?.geostats))
+    props.hideNewCartographyTools === true
+      ? "code"
+      : (props.geostats || props.dataSource?.geostats) &&
+        ((props.dataSource?.geostats &&
+          isRasterInfo(props.dataSource?.geostats)) ||
+          !isLegacyGeostatsLayer(props.geostats || props.dataSource?.geostats))
       ? "style"
       : "code"
   );
@@ -505,9 +509,11 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
               </Menubar.Menu>
             </Menubar.Root>
 
-            <div className="h-full flex items-center">
-              <CodeVsGuiSwitch value={editor} onChange={setEditor} />
-            </div>
+            {props.hideNewCartographyTools === true ? null : (
+              <div className="h-full flex items-center">
+                <CodeVsGuiSwitch value={editor} onChange={setEditor} />
+              </div>
+            )}
             {props.tocItemId && (
               <div className="flex-1 flex items-center justify-end pr-2">
                 <span

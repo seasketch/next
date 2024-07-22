@@ -307,6 +307,7 @@ export default function SketchClassStyleAdmin({
         })}
       </div>
       <GLStyleEditor
+        hideNewCartographyTools={true}
         className="flex-1 overflow-hidden"
         initialStyle={JSON.stringify(sketchClass.mapboxGlStyle || [])}
         onChange={(newStyle) => {
