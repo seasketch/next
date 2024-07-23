@@ -18,6 +18,7 @@ export interface EditFolderModalProps {
   onRequestClose?: (created: boolean) => void;
   className?: string;
   createNew?: boolean;
+  parentStableId?: string;
 }
 
 export enum FolderType {
@@ -32,6 +33,7 @@ export default function EditFolderModal({
   onRequestClose,
   className,
   createNew,
+  parentStableId,
 }: EditFolderModalProps) {
   const { data, loading } = useGetFolderQuery({
     variables: {
@@ -73,6 +75,7 @@ export default function EditFolderModal({
             stableId: generateStableId(),
             title: state.title,
             ...typeToFolderProps(state.folderType),
+            ...(parentStableId ? { parentStableId } : {}),
           },
         });
         if (!createFolderState.error && onRequestClose) {
@@ -133,7 +136,7 @@ export default function EditFolderModal({
           },
         },
       ]}
-      onRequestClose={() => { }}
+      onRequestClose={() => {}}
       title={createNew ? t("New Folder") : t("Edit Folder")}
       initialFocus={nameRef}
     >

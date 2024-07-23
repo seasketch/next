@@ -15,15 +15,17 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useContext, useState } from "react";
 import { LayerEditingContext } from "./LayerEditingContext";
 import getSlug from "../../getSlug";
-import ConvertFeatureLayerToHostedModal from "./arcgis/ConvertFeatureLayerToHostedModal";
 import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobContext";
+import { TreeItem } from "../../components/TreeView";
 
 export default function TableOfContentsItemAdminMenuItems({
   type,
   items,
+  onExpand,
 }: {
   type: typeof DropdownMenu | typeof ContextMenu | typeof MenuBar;
   items: TocMenuItemType[];
+  onExpand?: (node: TreeItem, isExpanded: boolean) => void;
 }) {
   const MenuType = type;
   const { t } = useTranslation("admin:data");
@@ -60,6 +62,31 @@ export default function TableOfContentsItemAdminMenuItems({
       >
         {t("Edit")}
       </MenuType.Item>
+      {item.isFolder && (
+        <MenuType.Item
+          style={{ minWidth: 120 }}
+          className={MenuBarItemClasses}
+          onSelect={() => {
+            if (onExpand) {
+              onExpand(
+                {
+                  ...item,
+                  isLeaf: false,
+                  id: item.stableId,
+                  type: "",
+                },
+                true
+              );
+            }
+            layerEditingContext.setCreateFolderModal({
+              open: true,
+              parentStableId: item.stableId,
+            });
+          }}
+        >
+          {t("Add Folder")}
+        </MenuType.Item>
+      )}
       {/* <MenuType.Item
         style={{
           minWidth: 120,

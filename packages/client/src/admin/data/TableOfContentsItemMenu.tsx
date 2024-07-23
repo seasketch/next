@@ -17,6 +17,7 @@ import { createPortal } from "react-dom";
 import DataDownloadModal, {
   DataDownloadModalContext,
 } from "../../dataLayers/DataDownloadModal";
+import { TreeItem } from "../../components/TreeView";
 const LazyAdminItems = React.lazy(
   () =>
     import(
@@ -33,10 +34,20 @@ export const TableOfContentsItemMenu = React.forwardRef<
     transform?: { x: number; y: number };
     top?: boolean;
     bottom?: boolean;
+    onExpand?: (node: TreeItem, isExpanded: boolean) => void;
   }
 >(
   (
-    { top, bottom, transform, type = DropdownMenu, items, editable, ...props },
+    {
+      top,
+      bottom,
+      transform,
+      type = DropdownMenu,
+      items,
+      editable,
+      onExpand,
+      ...props
+    },
     forwardedRef
   ) => {
     const MenuType = type;
@@ -227,7 +238,11 @@ export const TableOfContentsItemMenu = React.forwardRef<
                   {!firstItem.isFolder && (
                     <MenuType.Separator {...MenuBarSeparatorProps} />
                   )}
-                  <LazyAdminItems type={type} items={items} />
+                  <LazyAdminItems
+                    type={type}
+                    items={items}
+                    onExpand={onExpand}
+                  />
                 </>
               )}
             </>

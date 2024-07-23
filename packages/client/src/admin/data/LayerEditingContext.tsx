@@ -21,6 +21,11 @@ export const LayerEditingContext = createContext<{
    */
   recentlyDeletedStableIds: string[];
   setRecentlyDeletedStableIds: Dispatch<SetStateAction<string[]>>;
+  createFolderModal: { open: boolean; parentStableId?: string };
+  setCreateFolderModal: (opts: {
+    open: boolean;
+    parentStableId?: string;
+  }) => void;
 }>({
   setOpenEditor: (
     item: { id: number; isFolder: boolean; title: string } | undefined
@@ -29,6 +34,8 @@ export const LayerEditingContext = createContext<{
   recentlyDeletedStableIds: [],
   // set state action
   setRecentlyDeletedStableIds: () => {},
+  createFolderModal: { open: false },
+  setCreateFolderModal: (opts) => {},
 });
 
 export const LayerEditingContextProvider = ({
@@ -45,6 +52,8 @@ export const LayerEditingContextProvider = ({
   const [recentlyDeletedItems, setRecentlyDeletedItems] = useState<string[]>(
     []
   );
+  const [createFolderModal, setCreateFolderModal] = useState({ open: false });
+
   return (
     <LayerEditingContext.Provider
       value={{
@@ -54,6 +63,8 @@ export const LayerEditingContextProvider = ({
         recentlyDeletedStableIds: recentlyDeletedItems,
         setRecentlyDeletedStableIds: setRecentlyDeletedItems,
         setOpenMetadataEditor: setOpenMetadataEditor,
+        createFolderModal,
+        setCreateFolderModal,
       }}
     >
       {children}

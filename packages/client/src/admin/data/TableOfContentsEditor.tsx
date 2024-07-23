@@ -94,8 +94,6 @@ export default function TableOfContentsEditor() {
     variables: { slug },
   });
 
-  const [createNewFolderModalOpen, setCreateNewFolderModalOpen] =
-    useState<boolean>(false);
   const [updateChildrenMutation] =
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
@@ -320,18 +318,19 @@ export default function TableOfContentsEditor() {
 
   return (
     <>
-      {createNewFolderModalOpen && (
+      {layerEditingContext.createFolderModal.open && (
         <EditFolderModal
           className="z-30"
           folderId={folderId}
+          parentStableId={layerEditingContext.createFolderModal.parentStableId}
           onRequestClose={async (created) => {
             if (created) {
               await tocQuery.refetch();
             }
             setFolderId(undefined);
-            setCreateNewFolderModalOpen(false);
+            layerEditingContext.setCreateFolderModal({ open: false });
           }}
-          createNew={createNewFolderModalOpen}
+          createNew={layerEditingContext.createFolderModal.open}
         />
       )}
       {folderId && (
@@ -371,7 +370,7 @@ export default function TableOfContentsEditor() {
             setArcgisCartOpen(true);
           }}
           onRequestOpenFolder={() => {
-            setCreateNewFolderModalOpen(true);
+            layerEditingContext.setCreateFolderModal({ open: true });
           }}
           map={mapContext.manager?.map}
           region={tocQuery.data?.projectBySlug?.region.geojson}
@@ -457,6 +456,7 @@ export default function TableOfContentsEditor() {
                       <TableOfContentsItemMenu
                         items={[item]}
                         type={ContextMenu}
+                        onExpand={onExpand}
                         editable
                         transform={{
                           x: clickEvent.clientX,
