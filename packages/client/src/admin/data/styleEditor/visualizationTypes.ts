@@ -987,10 +987,10 @@ export function findBestContinuousAttribute(geostats: GeostatsLayer) {
   const sorted = filtered
     .sort((a, b) => {
       let aValue = a.stats?.standardDeviations
-        ? Object.keys(a.stats.standardDeviations).length
+        ? Object.keys(a.stats?.standardDeviations || {}).length
         : 0;
       let bValue = b.stats?.standardDeviations
-        ? Object.keys(b.stats.standardDeviations).length
+        ? Object.keys(b.stats?.standardDeviations || {}).length
         : 0;
       return bValue - aValue;
     })
@@ -1000,13 +1000,13 @@ export function findBestContinuousAttribute(geostats: GeostatsLayer) {
       !/area/i.test(attr.attribute) &&
       !/length/i.test(attr.attribute) &&
       !/code/i.test(attr.attribute) &&
-      Object.keys(attr.stats.standardDeviations || {}).length > 3
+      Object.keys(attr.stats?.standardDeviations || {}).length > 3
     ) {
       return attr.attribute;
     }
   }
   const best = sorted.find(
-    (a) => Object.keys(a.stats.standardDeviations || {}).length > 3
+    (a) => Object.keys(a.stats?.standardDeviations || {}).length > 3
   );
   if (best) {
     return best.attribute;
