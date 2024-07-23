@@ -1,0 +1,11 @@
+{
+  "Create a Project": "Unda Mradi",
+  "Create your own<1></1><2> SeaSketch Project</2>": "Unda yako mwenyewe<1></1><2> Mradi wa SeaSketch</2>",
+  "Create your project": "Unda mradi wako",
+  "Developer API": "API ya Wasanidi Programu",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "Tafadhali wasiliana nasi kwa <2>support@seasketch.org</2> ili kupanga majadiliano kuhusu jinsi SeaSketch inaweza kutumika kusaidia juhudi zako za kupanga.",
+  "Project name": "Jina la mradi",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "Miradi ya SeaSketch inaweza kuboreshwa kwa kutumia chanzo chetu wazi <2>Geoprocessing Framework</2>. Miradi inaweza kufafanua ripoti zinazoonyesha athari za maeneo yanayotarajiwa kwa kutumia Typescript, React, na AWS Lambda.",
+  "Trusted by": "Kuaminiwa na",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "Tumia geodesign yetu ya ushirikiano na zana za utafiti kwa mipango ya anga ya baharini katika mkoa wako. Mradi wako utajumuisha zana za kuibua ramani, kuunda vikao vya majadiliano, mipango ya kuchora, na kukusanya data kwa kutumia tafiti - <i>bure!</i> Ripoti za uchambuzi zinaweza kutengenezwa na kuboreshwa kwa kutumia mfumo wetu wa <5>geoprocessing</5>."
+}

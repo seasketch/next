@@ -1,0 +1,17 @@
+{
+  "Accept as": "Kubali kama {{email}}",
+  "An account with this email address already exists.": "Akaunti iliyo na anwani hii ya barua pepe tayari ipo.",
+  "Confirming invite": "Kuthibitisha mwaliko",
+  "Contact {{supportEmail}} to request a new invitation.": "Wasiliana {{supportEmail}} kuomba mwaliko mpya.",
+  "Create an Account": "Unda akaunti",
+  "Logout and sign in as ": "Ingia na uingie kama ",
+  "Sign In": "Ingia ndani",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Mwaliko huu tayari umekubaliwa. <1> Endelea kwenye mradi </1> au <5>contact support</5> kama unaamini hii ni kosa.",
+  "This invitation was originally sent to <2></2>.": "Mwaliko huu ulitumwa awali kwa <2></2>.",
+  "Use another account": "Tumia akaunti nyingine",
+  "Verifying invitation code": "Kuthibitisha msimbo wa mwaliko",
+  "Welcome, !": "Karibu!",
+  "Welcome!": "Karibu!",
+  "You have been invited to participate in a SeaSketch project.": "Umealikwa kushiriki katika mradi wa SeaSketch.",
+  "Your invitation to this project has expired.": "Mwaliko wako kwa mradi huu umeisha."
+}

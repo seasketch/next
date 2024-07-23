@@ -1,4 +1,22 @@
 {
-  "Activity Dashboard": "Activity Dashboard",
-  "Coming soon...": "Coming soon..."
+  "Browsers": "Browsers",
+  "Countries": "Countries",
+  "Data Uploads": "Data Uploads",
+  "Device Types": "Device Types",
+  "Forum Posts": "Forum Posts",
+  "Hosted Layer Requests": "Hosted Layer Requests",
+  "Last 24 hours": "Last 24 hours",
+  "Last 30 days": "Last 30 days",
+  "Last 7 days": "Last 7 days",
+  "Layers Stored": "Layers Stored",
+  "Most Popular Hosted Layers": "Most Popular Hosted Layers",
+  "Operating Systems": "Operating Systems",
+  "Participants": "Participants",
+  "Referrers": "Referrers",
+  "Sketches": "Sketches",
+  "Survey Responses": "Survey Responses",
+  "Total Visitors": "Total Visitors",
+  "Updated every 5 minutes.": "Updated every 5 minutes.",
+  "Usage Dashboard": "Usage Dashboard",
+  "Visitor Metrics": "Visitor Metrics"
 }

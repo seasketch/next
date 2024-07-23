@@ -66,6 +66,11 @@ const languages: LangDetails[] = [
       code: "de",
     },
     {
+      name: "Gilbertese",
+      localName: "Gilbertese",
+      code: "gil",
+    },
+    {
       name: "Croatian",
       localName: "Hrvatski",
       code: "hr",
