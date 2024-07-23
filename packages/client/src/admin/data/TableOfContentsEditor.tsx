@@ -55,6 +55,10 @@ import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import useProjectId from "../../useProjectId";
+import withScrolling, {
+  createVerticalStrength,
+  createHorizontalStrength,
+} from "@nosferatu500/react-dnd-scrollzone";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -316,6 +320,8 @@ export default function TableOfContentsEditor() {
     setExpandedIds,
   });
 
+  const ScrollingComponent = withScrolling("div");
+
   return (
     <>
       {layerEditingContext.createFolderModal.open && (
@@ -395,11 +401,11 @@ export default function TableOfContentsEditor() {
           {tocQuery.error.message || "An error occurred"}
         </Warning>
       )}
-      <div
+      <ScrollingComponent
         className={`flex-1 overflow-y-auto p-2 ${
           selectedView === "quota" ? "px-4" : "px-8"
         }`}
-        onContextMenu={(e) => e.preventDefault()}
+        onContextMenu={(e: any) => e.preventDefault()}
       >
         {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
 
@@ -502,7 +508,7 @@ export default function TableOfContentsEditor() {
             slug={slug}
           />
         </Route>
-      </div>
+      </ScrollingComponent>
       {layerEditingContext.openEditor &&
         !layerEditingContext.openEditor.isFolder && (
           <LayerTableOfContentsItemEditor
