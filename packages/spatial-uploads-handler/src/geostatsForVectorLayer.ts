@@ -294,16 +294,22 @@ export async function geostatsForVectorLayers(
 function parseGeomType(geomType: number): GeostatsLayer["geometry"] {
   switch (geomType) {
     case gdal.wkbPoint:
+    case gdal.wkbPoint25D:
       return "Point";
     case gdal.wkbMultiPoint:
+    case gdal.wkbMultiPoint25D:
       return "MultiPoint";
     case gdal.wkbLineString:
+    case gdal.wkbLineString25D:
       return "LineString";
     case gdal.wkbMultiLineString:
+    case gdal.wkbMultiLineString25D:
       return "MultiLineString";
     case gdal.wkbPolygon:
+    case gdal.wkbPolygon25D:
       return "Polygon";
     case gdal.wkbMultiPolygon:
+    case gdal.wkbMultiPolygon25D:
       return "MultiPolygon";
     case gdal.wkbGeometryCollection:
       return "GeometryCollection";

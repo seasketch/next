@@ -429,6 +429,12 @@ describe("geostatsForVectorLayers", () => {
     const layer = layers[0];
     expect(layer.geometry).toBe("MultiPolygon");
   });
+
+  test("MultiPolygon with Z values recognized as multipolygon", async () => {
+    const layers = await geostatsForVectorLayers(`${__dirname}/birds.geojson`);
+    const layer = layers[0];
+    expect(layer.geometry).toBe("MultiPolygon");
+  });
 });
 
 const rankMaxBreaks = {
