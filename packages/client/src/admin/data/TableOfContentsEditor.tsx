@@ -62,6 +62,8 @@ import withScrolling, {
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
 
+const ScrollingComponent = withScrolling("div");
+
 const LazyArcGISCartModal = React.lazy(
   () =>
     import(
@@ -322,7 +324,6 @@ export default function TableOfContentsEditor() {
     setExpandedIds,
   });
 
-  const ScrollingComponent = withScrolling("div");
   const client = useApolloClient();
 
   return (
