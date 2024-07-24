@@ -135,7 +135,11 @@ export type LegacyGeostatsLayer = Omit<
 export function isLegacyGeostatsLayer(
   layer: LegacyGeostatsLayer | GeostatsLayer
 ): layer is LegacyGeostatsLayer {
-  return (layer as GeostatsLayer).attributes[0].countDistinct === undefined;
+  if ("attributesCount" in layer && layer.attributesCount) {
+    return (layer as GeostatsLayer).attributes[0].countDistinct === undefined;
+  } else {
+    return !("bounds" in layer);
+  }
 }
 
 export function isLegacyGeostatsAttribute(
