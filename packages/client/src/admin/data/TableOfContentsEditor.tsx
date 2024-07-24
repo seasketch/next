@@ -4,6 +4,7 @@ import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import {
+  GetLayerItemDocument,
   useDisableDownloadForSharedLayersMutation,
   useDraftStatusSubscription,
   useDraftTableOfContentsQuery,
@@ -59,6 +60,7 @@ import withScrolling, {
   createVerticalStrength,
   createHorizontalStrength,
 } from "@nosferatu500/react-dnd-scrollzone";
+import { useApolloClient } from "@apollo/client";
 
 const LazyArcGISCartModal = React.lazy(
   () =>
@@ -321,6 +323,7 @@ export default function TableOfContentsEditor() {
   });
 
   const ScrollingComponent = withScrolling("div");
+  const client = useApolloClient();
 
   return (
     <>
@@ -458,6 +461,13 @@ export default function TableOfContentsEditor() {
                   const sorted =
                     mapContext.manager?.getVisibleLayersByZIndex() || [];
                   if (item) {
+                    const variables = {
+                      id: item.id,
+                    };
+                    client.query({
+                      query: GetLayerItemDocument,
+                      variables,
+                    });
                     return (
                       <TableOfContentsItemMenu
                         items={[item]}
