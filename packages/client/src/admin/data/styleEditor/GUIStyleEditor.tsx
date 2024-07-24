@@ -186,14 +186,6 @@ export default function GUIStyleEditor({
 
       setStyleJSON([...styleJSON]);
       updateEditor(JSON.stringify(styleJSON));
-      // editorRef.current?.view?.dispatch({
-      //   changes: {
-      //     from: 0,
-      //     to: editorRef.current.view!.state.doc.length,
-      //     insert: JSON.stringify(styleJSON),
-      //   },
-      // });
-      // formatJSONCommand(editorRef.current?.view!);
     },
     [editorRef, styleJSON, mapContext.manager?.map, layerId]
   );
