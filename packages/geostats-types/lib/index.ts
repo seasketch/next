@@ -114,6 +114,7 @@ export interface GeostatsLayer {
    * Geometry type for the layer
    */
   geometry: GeoJsonGeometryTypes | "Unknown";
+  hasZ: boolean;
   /**
    * Number of attributes in the layer
    */
