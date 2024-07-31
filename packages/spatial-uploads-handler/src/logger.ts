@@ -1,6 +1,7 @@
 import debounce from "lodash.debounce";
 import { spawn } from "node:child_process";
 
+const DEBUG = process.env.DEBUG === "true";
 /**
  * Logger class that captures stdout/stderr while executing command line tasks
  * and updates progress.
@@ -42,6 +43,9 @@ export class Logger {
   ): Promise<string> {
     let stdout = "";
     const self = this;
+    if (DEBUG) {
+      console.log(`Running command: ${command[0]} ${command[1].join(" ")}`);
+    }
     return new Promise((resolve, reject) => {
       let progress = 0;
       self.output += `${command[0]} ${command[1].join(" ")}\n`;
@@ -61,6 +65,9 @@ export class Logger {
         }
         stdout += data.toString();
         self.output += data.toString() + "\n";
+        if (DEBUG) {
+          console.log(data.toString());
+        }
       });
 
       child.stderr.setEncoding("utf8");
@@ -82,6 +89,9 @@ export class Logger {
           self.updateProgress((increment / 100) * progressFraction);
         }
         self.output += data.toString() + "\n";
+        if (DEBUG) {
+          console.error(data.toString());
+        }
       });
 
       child.on("close", async function (code) {

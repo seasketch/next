@@ -161,7 +161,7 @@ export async function processVectorUpload(options: {
   });
 
   // Compute metadata useful for cartography and data handling
-  const stats = await geostatsForVectorLayers(workingFilePath);
+  const stats = await geostatsForVectorLayers(normalizedVectorPath);
 
   // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
   // from the normalized fgb dynamically if someone wants to download it as
