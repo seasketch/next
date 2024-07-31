@@ -336,6 +336,9 @@ const SpatialAccessPriority: FormElementComponent<
         props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) &&
       mapContext.manager?.map
     ) {
+      mapContext.manager?.map?.fitBounds(bounds as LngLatBoundsLike, {
+        animate: false,
+      });
       create(true);
     }
     if (mapContext.manager?.map) {
