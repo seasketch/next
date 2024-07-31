@@ -19,7 +19,8 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "test": "node ./__tests__/geostats-types.test.js"
+    "test": "node ./__tests__/geostats-types.test.js",
+    "build": "tsc"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

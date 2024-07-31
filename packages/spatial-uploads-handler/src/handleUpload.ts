@@ -20,6 +20,8 @@ import { Logger } from "./logger";
 
 export { SpatialUploadsHandlerRequest };
 
+const DEBUG = process.env.DEBUG === "true";
+
 export type SupportedTypes =
   | "GeoJSON"
   | "FlatGeobuf"
@@ -89,6 +91,9 @@ export default async function handleUpload(
   requestingUser: string,
   skipLoggingProgress?: boolean
 ): Promise<ProcessedUploadResponse> {
+  if (DEBUG) {
+    console.log("DEBUG MODE ENABLED");
+  }
   const pgClient = await getClient();
   const outputs: (ResponseOutput & { local: string })[] = [];
   const baseKey = `projects/${slug}/public`;
@@ -313,7 +318,11 @@ export default async function handleUpload(
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
     await putObject(logPath, s3LogPath, logger);
-    tmpobj.removeCallback();
+    if (DEBUG) {
+      console.log("Debugging enabled, not cleaning up tmp directory");
+    } else {
+      tmpobj.removeCallback();
+    }
   }
 }
 

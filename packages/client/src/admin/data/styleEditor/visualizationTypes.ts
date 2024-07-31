@@ -138,6 +138,9 @@ export function validVisualizationTypesForGeostats(
       geostats.bands[0].stats.categories.length > 0
     ) {
       types.push(VisualizationType.CATEGORICAL_RASTER);
+      if (geostats.bands[0].stats.categories.length > 4) {
+        types.push(VisualizationType.CONTINUOUS_RASTER);
+      }
       // types.push(VisualizationType.RGB_RASTER);
     } else if (
       geostats.presentation === SuggestedRasterPresentation.continuous
@@ -367,7 +370,9 @@ export function convertToVisualizationType(
             metadata: {
               ...(oldLayer?.metadata || {}),
               "s:type": VisualizationType.CATEGORICAL_RASTER,
-              "s:palette": colorScaleKey,
+              "s:palette": geostats.bands[0].colorTable
+                ? geostats.bands[0].colorTable.map((b) => b[1])
+                : colorScaleKey,
             },
           });
         }
@@ -375,6 +380,23 @@ export function convertToVisualizationType(
       break;
     case VisualizationType.CONTINUOUS_RASTER:
       if (isRasterInfo(geostats)) {
+        const band = geostats.bands[0]!;
+        let rasterColorMix = [
+          ["*", 255, 65536],
+          ["*", 255, 256],
+          255,
+          ["+", -32768, band.base],
+        ] as any;
+        if (band.interval && band.interval !== 1) {
+          rasterColorMix = rasterColorMix.map((channel: any) => [
+            "*",
+            band.interval,
+            channel,
+          ]);
+        }
+        if (geostats.presentation === SuggestedRasterPresentation.categorical) {
+          rasterColorMix = [0, 0, 258, band.base];
+        }
         layers.push({
           type: "raster",
           paint: {
@@ -382,12 +404,7 @@ export function convertToVisualizationType(
               "raster-opacity",
             ]),
             "raster-resampling": "nearest",
-            "raster-color-mix": [
-              ["*", 255, 65536],
-              ["*", 255, 256],
-              255,
-              ["+", -32768, geostats.bands[0].base],
-            ],
+            "raster-color-mix": rasterColorMix,
             "raster-color-range": [
               geostats.bands[0].minimum,
               geostats.bands[0].maximum,
@@ -885,6 +902,7 @@ export function applyExcludedValuesToCategoryExpression(
       ? palette
       : getScale(palette)
     : [];
+
   const expressionColors = extractColorsFromExpression(expression);
   if (!colors || !colorsMatch(expressionColors, colors)) {
     colors = expressionColors;
@@ -916,7 +934,7 @@ export function applyExcludedValuesToCategoryExpression(
 function getScale(palette: string) {
   if (!Array.isArray(palette) && palette in colorScale) {
     const scale = colorScale[palette as keyof typeof colorScale];
-    if (scale.length) {
+    if (Array.isArray(scale) && scale.length) {
       return scale as string[];
     }
   }

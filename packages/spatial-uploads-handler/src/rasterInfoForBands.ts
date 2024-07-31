@@ -132,7 +132,12 @@ export async function rasterInfoForBands(
     const range = stats.max - base;
     let interval = 1;
     let scale = 1;
-    if ((isFloat && categoryBuckets.length > 12) || range > 16777216) {
+    if (
+      band.colorInterpretation === "Gray" ||
+      (isFloat && categoryBuckets.length > 12) ||
+      range > 16777216
+    ) {
+      console.log("setting custom interval");
       // find a scaling factor that will represent the range of data values with
       // the full range of the encoding scheme.
       if (range < 16777216) {
@@ -266,7 +271,8 @@ export async function rasterInfoForBands(
     info.presentation = SuggestedRasterPresentation.categorical;
   } else if (
     info.bands[0].stats.categories.length < 12 &&
-    info.bands.length === 1
+    info.bands.length === 1 &&
+    info.bands[0].colorInterpretation !== "Gray"
   ) {
     info.presentation = SuggestedRasterPresentation.categorical;
   } else if (info.bands[0].colorInterpretation === "Gray") {

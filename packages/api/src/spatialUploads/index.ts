@@ -521,7 +521,9 @@ async function getStyle(
               visibility: "visible",
             },
             metadata: {
-              "s:palette": "schemeTableau10",
+              "s:palette": geostats.bands[0].colorTable
+                ? geostats.bands[0].colorTable.map((b) => b[1])
+                : "schemeTableau10",
             },
           },
         ];

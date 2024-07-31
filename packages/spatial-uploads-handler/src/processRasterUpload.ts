@@ -7,6 +7,7 @@ import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
 import { rasterInfoForBands } from "./rasterInfoForBands";
 import { Logger } from "./logger";
+import gdal from "gdal-async";
 
 export async function processRasterUpload(options: {
   logger: Logger;
@@ -43,6 +44,7 @@ export async function processRasterUpload(options: {
   const stats = await rasterInfoForBands(path);
 
   if (!isCorrectProjection) {
+    await updateProgress("running", "reprojecting");
     // use rio warp to reproject tif
     const warpedPath = pathJoin(workingDirectory, jobId + ".warped.tif");
     await logger.exec(
@@ -108,6 +110,7 @@ export async function processRasterUpload(options: {
     stats.presentation === SuggestedRasterPresentation.categorical ||
     stats.presentation === SuggestedRasterPresentation.continuous
   ) {
+    await updateProgress("running", "encoding");
     path = await encodeValuesToRGB(
       path,
       logger,
@@ -151,21 +154,21 @@ async function validateInput(path: string, logger: Logger) {
     throw new Error("Only GeoTIFF files are supported");
   }
 
-  const rioInfo = await logger.exec(
-    ["rio", ["info", path]],
-    "Problem reading file. Rasters should be uploaded as GeoTIFF.",
-    2 / 30
-  );
-  const rioData = JSON.parse(rioInfo);
-  if (rioData.driver !== "GTiff") {
-    throw new Error(`Unrecognized raster driver "${rioData.driver}"`);
+  const ds = await gdal.openAsync(path);
+  if (ds.driver.description !== "GTiff") {
+    throw new Error(`Unrecognized raster driver "${ds.driver.description}"`);
   }
 
-  const isCorrectProjection = rioData.crs === "EPSG:3857";
+  const isCorrectProjection =
+    ds.srs &&
+    ds.srs.getAuthorityName() === "EPSG" &&
+    ds.srs.getAuthorityCode() === "3857";
 
   return {
     isCorrectProjection,
-    crs: rioData.crs,
+    crs: ds.srs
+      ? `${ds.srs.getAuthorityName()}:${ds.srs.getAuthorityCode()}`
+      : null,
     ext,
   };
 }
@@ -213,15 +216,26 @@ async function createPMTiles(
   //     https://github.com/mapbox/mbutil/blob/d495c0a737f4bce5fde8e707fe267674be39369a/patch
   //
   // I'm not sure it's worth it to do all that at this point.
+
+  const ds = await gdal.openAsync(mbtilesPath);
+  const maxzoom = parseInt((await ds.getMetadataAsync()).maxzoom);
+  let overviews = [];
+  if (maxzoom) {
+    let zoom = maxzoom - 1;
+    while (zoom > 1) {
+      overviews.push(2 ** (maxzoom - zoom));
+      zoom--;
+    }
+  }
+
   await logger.exec(
     [
       "gdaladdo",
       [
-        "-minsize",
-        "2",
         "-r",
         presentation === SuggestedRasterPresentation.rgb ? "cubic" : "nearest",
         mbtilesPath,
+        ...overviews.map((o) => o.toString()),
       ],
     ],
     "Problem adding overviews to mbtiles",
@@ -299,6 +313,8 @@ async function encodeValuesToRGB(
           "0",
           "--type",
           "Byte",
+          "--creation-option",
+          "COMPRESS=DEFLATE",
         ],
       ],
       `Problem creating ${output}`
@@ -319,7 +335,7 @@ async function encodeValuesToRGB(
     noDataValue === null ? "output_encoded_rgb.tif" : "output_encoded_rgba.tif"
   );
   await logger.exec(
-    ["gdal_translate", [vrtFname, encodedFname]],
+    ["gdal_translate", ["-co", "COMPRESS=DEFLATE", vrtFname, encodedFname]],
     "Problem converting VRT to RGB TIFF"
   );
 

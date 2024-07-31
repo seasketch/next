@@ -437,6 +437,25 @@ describe("geostatsForVectorLayers", () => {
   });
 });
 
+describe("BBoxes", () => {
+  test("coastline", async () => {
+    const layers = await geostatsForVectorLayers(`${__dirname}/coastline.fgb`);
+    const layer = layers[0];
+    expect(layer.bounds).toEqual([
+      169.5207977294923012, -17.8521137237548828, 216.9337005615234943,
+      4.6994919776916504,
+    ]);
+  });
+  test("bioregions", async () => {
+    const layers = await geostatsForVectorLayers(`${__dirname}/bioregions.fgb`);
+    const layer = layers[0];
+    expect(layer.bounds).toEqual([
+      -175.0017260343726377, -11.4603951662395041, 176.8568064025060949,
+      4.7492252777669046,
+    ]);
+  });
+});
+
 const rankMaxBreaks = {
   "3": [
     [0, 858],
