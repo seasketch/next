@@ -332,6 +332,7 @@ function sketchClassToGeostats(
   const geostats: GeostatsLayer = {
     layer: sketchClass.name,
     geometry: coerceGeometrytype(sketchClass.geometryType),
+    hasZ: false,
     count: 1,
     attributeCount: inputs.length,
     attributes: inputs.map((fe) => {

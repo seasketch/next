@@ -27,6 +27,7 @@ import Warning from "../components/Warning";
 import { GeoJSONSource } from "mapbox-gl";
 import bbox from "@turf/bbox";
 import { MapContext } from "../dataLayers/MapContextManager";
+import { GeostatsLayer } from "@seasketch/geostats-types";
 
 export default function AddMVTUrlModal({
   onRequestClose,
@@ -1024,9 +1025,10 @@ function addTileToGeostats(geostats: Geostats, data: ArrayBuffer) {
         count: 0,
         // @ts-ignore
         geometry: "Unknown",
+        hasZ: false,
         attributeCount: 0,
         attributes: [],
-      };
+      } as GeostatsLayer;
       geostats.layers.push(geostatsLayer!);
       geostats.layerCount++;
     }
