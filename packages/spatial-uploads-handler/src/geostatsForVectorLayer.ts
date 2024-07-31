@@ -65,6 +65,7 @@ export async function geostatsForVectorLayers(
     attributeCount: 0,
     attributes: [],
     bounds: [],
+    hasZ: false,
   } as GeostatsLayer;
   const dataset = await gdal.openAsync(filepath);
   dataset.layers.forEach((lyr, lidx) => {
@@ -78,7 +79,9 @@ export async function geostatsForVectorLayers(
     // features are the same type. In this case, we can manually assign the
     // geometry type based on the sampled features.
     let assignGeometryTypeManually = false;
-    layer.geometry = parseGeomType(lyr.geomType);
+    const { geometryType, hasZ } = parseGeomType(lyr.geomType);
+    layer.geometry = geometryType;
+    layer.hasZ = hasZ;
     if (layer.geometry === "Unknown") {
       assignGeometryTypeManually = true;
     }
@@ -139,7 +142,11 @@ export async function geostatsForVectorLayers(
 
     lyr.features.forEach((feature) => {
       if (assignGeometryTypeManually && layer.geometry === "Unknown") {
-        layer.geometry = parseGeomType(feature.getGeometry().wkbType);
+        const { geometryType, hasZ } = parseGeomType(
+          feature.getGeometry().wkbType
+        );
+        layer.geometry = geometryType;
+        layer.hasZ = hasZ;
       }
       for (const attribute of layer.attributes) {
         const value = feature.fields.get(attribute.attribute);
@@ -291,30 +298,45 @@ export async function geostatsForVectorLayers(
  * @param geomType
  * @returns
  */
-function parseGeomType(geomType: number): GeostatsLayer["geometry"] {
+function parseGeomType(geomType: number): {
+  geometryType: GeostatsLayer["geometry"];
+  hasZ: boolean;
+} {
   switch (geomType) {
     case gdal.wkbPoint:
     case gdal.wkbPoint25D:
-      return "Point";
+      return { geometryType: "Point", hasZ: geomType === gdal.wkbPoint25D };
     case gdal.wkbMultiPoint:
     case gdal.wkbMultiPoint25D:
-      return "MultiPoint";
+      return {
+        geometryType: "MultiPoint",
+        hasZ: geomType === gdal.wkbMultiPoint25D,
+      };
     case gdal.wkbLineString:
     case gdal.wkbLineString25D:
-      return "LineString";
+      return {
+        geometryType: "LineString",
+        hasZ: geomType === gdal.wkbLineString25D,
+      };
     case gdal.wkbMultiLineString:
     case gdal.wkbMultiLineString25D:
-      return "MultiLineString";
+      return {
+        geometryType: "MultiLineString",
+        hasZ: geomType === gdal.wkbMultiLineString25D,
+      };
     case gdal.wkbPolygon:
     case gdal.wkbPolygon25D:
-      return "Polygon";
+      return { geometryType: "Polygon", hasZ: geomType === gdal.wkbPolygon25D };
     case gdal.wkbMultiPolygon:
     case gdal.wkbMultiPolygon25D:
-      return "MultiPolygon";
+      return {
+        geometryType: "MultiPolygon",
+        hasZ: geomType === gdal.wkbMultiPolygon25D,
+      };
     case gdal.wkbGeometryCollection:
-      return "GeometryCollection";
+      return { geometryType: "GeometryCollection", hasZ: false };
     default:
-      return "Unknown";
+      return { geometryType: "Unknown", hasZ: false };
   }
 }
 
