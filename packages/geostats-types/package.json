@@ -20,7 +20,8 @@
   },
   "scripts": {
     "test": "node ./__tests__/geostats-types.test.js",
-    "build": "tsc"
+    "build": "tsc",
+    "watch": "tsc -w"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

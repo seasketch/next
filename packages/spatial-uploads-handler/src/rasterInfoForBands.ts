@@ -27,6 +27,7 @@ export async function rasterInfoForBands(
 ): Promise<RasterInfo> {
   const dataset = await gdal.openAsync(filepath);
   const info = {
+    byteEncoding: false,
     bands: [] as RasterBandInfo[],
     metadata: dataset.getMetadata(),
     presentation: SuggestedRasterPresentation.rgb,
@@ -34,8 +35,12 @@ export async function rasterInfoForBands(
   const samples: { [rgbIndex: number]: number[] } = {};
   const categories: { [key: number]: number } = {};
   let categoryCount = 0;
+  let isByteEncoding = false;
   dataset.bands.forEach((band) => {
     const dataType = band.dataType;
+    if (dataType === "Byte") {
+      isByteEncoding = true;
+    }
     const isFloat = /float/i.test(dataType || "");
     const stats = band.getStatistics(false, true) as {
       min: number | null;
@@ -88,6 +93,22 @@ export async function rasterInfoForBands(
         }
       }
     }
+
+    // Check if this dataset can be represented using simple byte encoding
+    if (
+      Object.keys(categories).length <= 255 &&
+      stats.max !== null &&
+      stats.min !== null &&
+      stats.max - stats.min <= 255
+    ) {
+      for (const key in categories) {
+        if (key.indexOf(".") !== -1) {
+          break;
+        }
+      }
+      isByteEncoding = true;
+    }
+
     if (sampledPixelValues.indexOf(stats.min!) === -1) {
       sampledPixelValues.push(stats.min!);
     }
@@ -133,11 +154,11 @@ export async function rasterInfoForBands(
     let interval = 1;
     let scale = 1;
     if (
-      band.colorInterpretation === "Gray" ||
-      (isFloat && categoryBuckets.length > 12) ||
-      range > 16777216
+      !isByteEncoding &&
+      (band.colorInterpretation === "Gray" ||
+        (isFloat && categoryBuckets.length > 12) ||
+        range > 16777216)
     ) {
-      console.log("setting custom interval");
       // find a scaling factor that will represent the range of data values with
       // the full range of the encoding scheme.
       if (range < 16777216) {
@@ -269,12 +290,14 @@ export async function rasterInfoForBands(
     info.bands[0].maximum <= 255
   ) {
     info.presentation = SuggestedRasterPresentation.categorical;
+    isByteEncoding = true;
   } else if (
     info.bands[0].stats.categories.length < 12 &&
     info.bands.length === 1 &&
     info.bands[0].colorInterpretation !== "Gray"
   ) {
     info.presentation = SuggestedRasterPresentation.categorical;
+    isByteEncoding = true;
   } else if (info.bands[0].colorInterpretation === "Gray") {
     info.presentation = SuggestedRasterPresentation.continuous;
   }
@@ -299,6 +322,11 @@ export async function rasterInfoForBands(
         10000
       );
     }
+  }
+  info.byteEncoding = isByteEncoding;
+
+  if (info.byteEncoding && info.bands[0].stats.categories.length > 0) {
+    info.presentation = SuggestedRasterPresentation.categorical;
   }
   return info;
 }

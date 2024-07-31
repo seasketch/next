@@ -544,6 +544,9 @@ async function getStyle(
             channel,
           ]);
         }
+        if (geostats.byteEncoding) {
+          rasterColorMix = [0, 0, 258, band.base];
+        }
         return [
           {
             type: "raster",
@@ -558,7 +561,9 @@ async function getStyle(
               ],
               "raster-color-mix": rasterColorMix,
               "raster-resampling": "nearest",
-              "raster-color-range": [band.minimum, band.maximum],
+              "raster-color-range": geostats.byteEncoding
+                ? [band.minimum, band.minimum + 255]
+                : [band.minimum, band.maximum],
               "raster-fade-duration": 0,
             },
             layout: {
