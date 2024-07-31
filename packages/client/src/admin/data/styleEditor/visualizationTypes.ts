@@ -141,11 +141,13 @@ export function validVisualizationTypesForGeostats(
       if (geostats.bands[0].stats.categories.length > 4) {
         types.push(VisualizationType.CONTINUOUS_RASTER);
       }
-      // types.push(VisualizationType.RGB_RASTER);
     } else if (
       geostats.presentation === SuggestedRasterPresentation.continuous
     ) {
       types.push(VisualizationType.CONTINUOUS_RASTER);
+      if (geostats.byteEncoding) {
+        types.push(VisualizationType.CATEGORICAL_RASTER);
+      }
     }
   } else {
     if (
@@ -331,7 +333,7 @@ export function convertToVisualizationType(
           oldLayer?.metadata?.["s:palette"] || "schemeTableau10";
         // @ts-ignore
         let scale = colorScale[colorScaleKey];
-        if (!scale) {
+        if (!scale || !Array.isArray(scale)) {
           colorScaleKey = "schemeTableau10";
           // @ts-ignore
           scale = colorScale["schemeTableau10"];
@@ -360,7 +362,7 @@ export function convertToVisualizationType(
                 "transparent",
                 ...colors.flat(),
               ],
-              "raster-color-range": [minimum, maximum],
+              "raster-color-range": [minimum, minimum + 255],
               "raster-fade-duration": 0,
             },
             metadata: {
@@ -390,7 +392,10 @@ export function convertToVisualizationType(
             channel,
           ]);
         }
-        if (geostats.presentation === SuggestedRasterPresentation.categorical) {
+        if (
+          geostats.presentation === SuggestedRasterPresentation.categorical ||
+          geostats.byteEncoding
+        ) {
           rasterColorMix = [0, 0, 258, band.base];
         }
         layers.push({
@@ -401,10 +406,9 @@ export function convertToVisualizationType(
             ]),
             "raster-resampling": "nearest",
             "raster-color-mix": rasterColorMix,
-            "raster-color-range": [
-              geostats.bands[0].minimum,
-              geostats.bands[0].maximum,
-            ],
+            "raster-color-range": geostats.byteEncoding
+              ? [band.minimum, band.minimum + 255]
+              : [geostats.bands[0].minimum, geostats.bands[0].maximum],
             "raster-fade-duration": 0,
             "raster-color": buildContinuousRasterColorExpression(
               undefined,

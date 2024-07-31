@@ -54,7 +54,8 @@ export async function processRasterUpload(options: {
           "-r",
           stats.presentation === SuggestedRasterPresentation.rgb
             ? "cubic"
-            : stats.presentation === SuggestedRasterPresentation.categorical
+            : stats.presentation === SuggestedRasterPresentation.categorical ||
+              stats.byteEncoding
             ? "mode"
             : "nearest",
           "-t_srs",

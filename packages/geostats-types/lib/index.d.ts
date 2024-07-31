@@ -178,6 +178,11 @@ export interface RasterInfo {
     metadata?: {
         [key: string]: string;
     };
+    /**
+     * Indicates that the value should be derived using a simpler mapbox
+     * expression. [0, 0,255, base] vs [65536, 256, 1, base]
+     */
+    byteEncoding?: boolean;
 }
 export declare function isRasterInfo(info: RasterInfo | GeostatsLayer | any): info is RasterInfo;
 export declare function isGeostatsLayer(data: RasterInfo | GeostatsLayer | any): data is GeostatsLayer;

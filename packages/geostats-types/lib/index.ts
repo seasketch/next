@@ -225,6 +225,11 @@ export interface RasterInfo {
   presentation: SuggestedRasterPresentation;
   representativeColorsForRGB?: [number, number, number][];
   metadata?: { [key: string]: string };
+  /**
+   * Indicates that the value should be derived using a simpler mapbox
+   * expression. [0, 0,255, base] vs [65536, 256, 1, base]
+   */
+  byteEncoding?: boolean;
 }
 
 export function isRasterInfo(
