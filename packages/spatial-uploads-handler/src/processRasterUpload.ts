@@ -43,7 +43,10 @@ export async function processRasterUpload(options: {
   // Get raster stats
   const stats = await rasterInfoForBands(path);
 
-  if (!isCorrectProjection) {
+  const size = statSync(path).size;
+
+  // Reproject files > 2MB in case blocksize is too small
+  if (!isCorrectProjection || size > 2_000_000) {
     await updateProgress("running", "reprojecting");
     // use rio warp to reproject tif
     const warpedPath = pathJoin(workingDirectory, jobId + ".warped.tif");
