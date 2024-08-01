@@ -22,6 +22,7 @@
   "documentCount": "{{count}} na dokumento",
   "documentCount_plural": "{{count}} na mga dokumento",
   "Download": "I-download",
+  "Download responses": "Mag-download ng mga tugon",
   "downloadedAt": "na-downloadSa",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Nabigong i-render ang mga offline na setting. Naka-enable ba ang ServiceWorker?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Kung online ka at mali ang SeaSketch tungkol sa iyong koneksyon sa network, maaari kang <2>magpatuloy sa online na site</2>.",

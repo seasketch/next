@@ -22,6 +22,7 @@
   "documentCount": "{{count}} dokumentas",
   "documentCount_plural": "{{count}} dokumentų",
   "Download": "parsisiųsti",
+  "Download responses": "Atsisiųskite atsakymus",
   "downloadedAt": "atsisiųsta",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Nepavyko pateikti neprisijungus nustatymų. Ar ServiceWorker įjungtas?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Jei esate prisijungę ir „SeaSketch“ neteisingai nurodo jūsų tinklo ryšį, galite <2>eiti į internetinę svetainę</2>.",

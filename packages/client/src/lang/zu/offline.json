@@ -22,6 +22,7 @@
   "documentCount": "{{count}} amadokhumenti",
   "documentCount_plural": "documentCount_plural",
   "Download": "Landa",
+  "Download responses": "Landa izimpendulo",
   "downloadedAt": "ilandiweAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Yehlulekile ukwenza izilungiselelo zokungaxhunyiwe ku-inthanethi. Ingabe i-ServiceWorker ivuliwe?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Uma uku-inthanethi futhi i-SeaSketch ingalungile mayelana noxhumo lwakho lwenethiwekhi, ungakwazi <2>ukudlulela kusayithi eku-inthanethi</2>.",

@@ -22,6 +22,7 @@
   "documentCount": "{{count}} dokument",
   "documentCount_plural": "{{count}} dokument",
   "Download": "Ladda ner",
+  "Download responses": "Ladda ner svar",
   "downloadedAt": "laddas ner vid",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Det gick inte att återge offlineinställningar. Är ServiceWorker aktiverat?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Om du är online och SeaSketch har fel angående din nätverksanslutning kan du <2>gå vidare till onlinesidan</2>.",

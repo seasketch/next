@@ -22,6 +22,7 @@
   "documentCount": "{{count}} pepa",
   "documentCount_plural": "{{count}} pepa",
   "Download": "aumai",
+  "Download responses": "La'u mai tali",
   "downloadedAt": "Aumaia ia",
   "Failed to render offline settings. Is ServiceWorker enabled?": "E le mafai ona fa'asologa lau agluega pe a leai se fa'atulaga a e faia e aunoa m ase intianeti. Ua fa'agaoioi le ServiceWorker?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Afai ua fa'agasolo lau galuega ae le sa'o le SeaSketch ona ua leai se fesootaiga, e mafai ona e <2>fa'agasolo ile upegatafa'ilagi</2>.",

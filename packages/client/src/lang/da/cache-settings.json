@@ -7,9 +7,11 @@
   "Improved Performance": "Forbedret ydeevne",
   "Maximum": "Maksimum",
   "Minimum": "Minimum",
+  "No service worker found!": "Ingen servicemedarbejder fundet!",
   "Only what's necessary to run SeaSketch": "Kun hvad der er nødvendigt for at køre SeaSketch",
   "Query Cache": "Forespørgselscache",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Gemmer nogle nyligt brugte appdata for forbedret opstartsydelse og brug over dårlige internetforbindelser",
+  "Service Worker": "Servicemedarbejder",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Brug denne indstilling, hvis du er en facilitator eller planlægger, der bruger SeaSketch regelmæssigt. Understøtter offline brug.",
   "Using  of your browser's storage quota": "Brug af din browsers lagerkvote"
 }

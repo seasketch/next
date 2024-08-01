@@ -7,9 +7,11 @@
   "Improved Performance": "Parem jõudlus",
   "Maximum": "Maksimaalne",
   "Minimum": "Minimaalne",
+  "No service worker found!": "Teenindajat ei leitud!",
   "Only what's necessary to run SeaSketch": "Ainult see, mis on SeaSketchi käitamiseks vajalik",
   "Query Cache": "Päringu vahemälu",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Salvestab mõned hiljuti kasutatud rakenduse andmed, et parandada käivitusjõudlust ja kasutada kehva Interneti-ühenduse korral",
+  "Service Worker": "Teenindustöötaja",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Kasutage seda seadet, kui olete abistaja või planeerija, kes kasutab SeaSketchi regulaarselt. Toetab võrguühenduseta kasutamist.",
   "Using  of your browser's storage quota": "Teie brauseri salvestuskvoodi kasutamine"
 }

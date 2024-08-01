@@ -7,9 +7,11 @@
   "Improved Performance": "Uzlabota veiktspēja",
   "Maximum": "Maksimums",
   "Minimum": "Minimums",
+  "No service worker found!": "Servisa darbinieks nav atrasts!",
   "Only what's necessary to run SeaSketch": "Tikai tas, kas nepieciešams, lai palaistu SeaSketch",
   "Query Cache": "Vaicājumu kešatmiņa",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Saglabā dažus nesen izmantotos lietotņu datus, lai uzlabotu startēšanas veiktspēju un lietošanu vājā interneta savienojumā",
+  "Service Worker": "Servisa darbinieks",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Izmantojiet šo iestatījumu, ja esat koordinators vai plānotājs, kurš regulāri lieto SeaSketch. Atbalsta bezsaistes lietošanu.",
   "Using  of your browser's storage quota": "Jūsu pārlūkprogrammas krātuves kvotas izmantošana"
 }

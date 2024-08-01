@@ -22,6 +22,7 @@
   "documentCount": "{{count}} 个文件",
   "documentCount_plural": "documentCount_plural",
   "Download": "下载",
+  "Download responses": "下载回复",
   "downloadedAt": "下载地址",
   "Failed to render offline settings. Is ServiceWorker enabled?": "无法呈现离线设置。是否启用了 ServiceWorker？",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "如果您在线并且 SeaSketch 关于您的网络连接的信息不正确，您可以<2>继续访问在线站点</2>。",

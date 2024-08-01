@@ -22,6 +22,7 @@
   "documentCount": "{{count}} tuhinga",
   "documentCount_plural": "{{count}} tuhinga",
   "Download": "Tikiake",
+  "Download responses": "Tikiake whakautu",
   "downloadedAt": "kua tikiakeAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "I rahua te tuku i nga tautuhinga tuimotu. Kua whakahohea te ServiceWorker?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Mena kei te ipurangi koe, kei te he a SeaSketch mo to hononga whatunga, ka taea e koe <2>haere ki te pae ipurangi</2>.",

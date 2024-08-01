@@ -7,9 +7,11 @@
   "Improved Performance": "Ukusebenza Okuthuthukisiwe",
   "Maximum": "Ubuningi",
   "Minimum": "Ubuncane",
+  "No service worker found!": "Asikho isisebenzi sesevisi esitholiwe!",
   "Only what's necessary to run SeaSketch": "Yilokho kuphela okudingekayo ukuze usebenzise i-SeaSketch",
   "Query Cache": "Inqolobane yombuzo",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Ilondoloza idatha ethile yohlelo lokusebenza esanda kusetshenziswa ukuze kuthuthukiswe ukusebenza kokuqalisa futhi isebenzise ukuxhumeka okubuthakathaka kwe-inthanethi",
+  "Service Worker": "Isisebenzi Sesevisi",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Sebenzisa lesi silungiselelo uma ungumgqugquzeli noma umhleli osebenzisa i-SeaSketch njalo. Isekela ukusetshenziswa okungaxhunyiwe ku-inthanethi.",
   "Using  of your browser's storage quota": "Ukusebenzisa isabelo sokulondoloza sesiphequluli sakho"
 }

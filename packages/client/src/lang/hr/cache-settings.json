@@ -7,9 +7,11 @@
   "Improved Performance": "Poboljšane performanse",
   "Maximum": "Maksimum",
   "Minimum": "Minimum",
+  "No service worker found!": "Nije pronađen serviser!",
   "Only what's necessary to run SeaSketch": "Samo ono što je potrebno za pokretanje SeaSketch-a",
   "Query Cache": "Predmemorija upita",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Sprema neke nedavno korištene podatke aplikacije za poboljšanu izvedbu pokretanja i korištenje preko loših internetskih veza",
+  "Service Worker": "Uslužni radnik",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Koristite ovu postavku ako ste voditelj ili planer koji redovito koristi SeaSketch. Podržava izvanmrežnu upotrebu.",
   "Using  of your browser's storage quota": "Korištenje kvote pohrane vašeg preglednika"
 }

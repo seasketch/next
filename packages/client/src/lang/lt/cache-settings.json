@@ -7,9 +7,11 @@
   "Improved Performance": "Patobulintas našumas",
   "Maximum": "Maksimalus",
   "Minimum": "Minimumas",
+  "No service worker found!": "Nerastas aptarnavimo darbuotojas!",
   "Only what's necessary to run SeaSketch": "Tik tai, ko reikia norint paleisti SeaSketch",
   "Query Cache": "Užklausos talpykla",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Išsaugo kai kuriuos neseniai naudotus programos duomenis, kad būtų pagerintas paleidimo našumas ir naudojimas prastu interneto ryšiu",
+  "Service Worker": "Aptarnavimo darbuotojas",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Naudokite šį nustatymą, jei esate tarpininkas arba planuotojas, kuris reguliariai naudojasi SeaSketch. Palaikomas naudojimas neprisijungus.",
   "Using  of your browser's storage quota": "Naršyklės saugyklos kvotos naudojimas"
 }

@@ -7,9 +7,11 @@
   "Improved Performance": "改进的性能",
   "Maximum": "最大限度",
   "Minimum": "最低限度",
+  "No service worker found!": "沒有找到服務員！",
   "Only what's necessary to run SeaSketch": "只有运行 SeaSketch 所必需的",
   "Query Cache": "查询缓存",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "保存一些最近使用的应用程序数据，以提高启动性能和在互联网连接不畅的情况下使用",
+  "Service Worker": "服务工作者",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "如果您是定期使用 SeaSketch 的协调员或计划员，请使用此设置。支持离线使用。",
   "Using  of your browser's storage quota": "使用浏览器的存储配额"
 }
