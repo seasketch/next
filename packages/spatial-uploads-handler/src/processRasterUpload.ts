@@ -60,6 +60,8 @@ export async function processRasterUpload(options: {
             : "nearest",
           "-t_srs",
           "EPSG:3857",
+          "-co",
+          "COMPRESS=DEFLATE",
           path,
           warpedPath,
         ],
