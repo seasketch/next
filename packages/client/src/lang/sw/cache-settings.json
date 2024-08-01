@@ -7,9 +7,11 @@
   "Improved Performance": "Utendaji Ulioboreshwa",
   "Maximum": "Upeo",
   "Minimum": "Chini",
+  "No service worker found!": "Hakuna mfanyakazi wa huduma aliyepatikana!",
   "Only what's necessary to run SeaSketch": "Ni nini tu kinachohitajika kuendesha SeaSketch",
   "Query Cache": "Akiba ya Ulizo",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Huhifadhi baadhi ya data ya programu inayotumika hivi karibuni kwa utendaji bora wa kuanza na matumizi juu ya miunganisho duni ya mtandao",
+  "Service Worker": "Mfanyakazi wa Huduma",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Tumia mpangilio huu ikiwa wewe ni mwezeshaji au mpangaji ambaye hutumia SeaSketch mara kwa mara. Inasaidia matumizi ya nje ya mtandao.",
   "Using  of your browser's storage quota": "Kutumia kiwango cha uhifadhi wa kivinjari chako"
 }

@@ -22,6 +22,7 @@
   "documentCount": "{{count}} skjal",
   "documentCount_plural": "{{count}} skjöl",
   "Download": "Sækja",
+  "Download responses": "Sækja svör",
   "downloadedAt": "niðurhalað Kl",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Mistókst að birta stillingar án nettengingar. Er ServiceWorker virkt?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Ef þú ert á netinu og SeaSketch er rangt varðandi nettenginguna þína, geturðu <2>farið áfram á netsíðuna</2>.",

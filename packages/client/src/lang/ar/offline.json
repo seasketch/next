@@ -22,6 +22,7 @@
   "documentCount": "{{عدد}} من المستندات",
   "documentCount_plural": "documentCount_plural",
   "Download": "تحميل",
+  "Download responses": "تحميل الردود",
   "downloadedAt": "تم التنزيل",
   "Failed to render offline settings. Is ServiceWorker enabled?": "فشل عرض الإعدادات في وضع عدم الاتصال. هل ServiceWorker ممكّن؟",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "إذا كنت متصلاً بالإنترنت وكان SeaSketch غير صحيح بشأن اتصالك بالشبكة ، فيمكنك <2> المتابعة إلى الموقع عبر الإنترنت </ 2>.",

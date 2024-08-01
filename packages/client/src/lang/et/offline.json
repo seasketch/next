@@ -22,6 +22,7 @@
   "documentCount": "{{count}} dokument",
   "documentCount_plural": "{{count}} dokumenti",
   "Download": "Lae alla",
+  "Download responses": "Laadige vastused alla",
   "downloadedAt": "allalaaditudAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Võrguühenduseta seadete renderdamine ebaõnnestus. Kas ServiceWorker on lubatud?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Kui olete võrgus ja SeaSketchi andmed teie võrguühenduse kohta on valed, saate <2>liikuda võrgusaidile</2>.",

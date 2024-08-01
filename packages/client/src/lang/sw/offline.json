@@ -22,6 +22,7 @@
   "documentCount": "{{count}} waraka",
   "documentCount_plural": "{{count}} nyaraka",
   "Download": "Kupakua",
+  "Download responses": "Pakua majibu",
   "downloadedAt": "kupakuliwa",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Imeshindwa kutoa mipangilio ya nje ya mtandao. Je, Mfanyakazi wa Huduma amewezeshwa?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Ikiwa uko mtandaoni na SeaSketch sio sahihi kuhusu muunganisho wako wa mtandao, unaweza <2>kuahirisha kwenye tovuti ya mtandaoni</2>.",

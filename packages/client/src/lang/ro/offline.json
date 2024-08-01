@@ -22,6 +22,7 @@
   "documentCount": "{{count}} document",
   "documentCount_plural": "{{count}} documente",
   "Download": "Descarca",
+  "Download responses": "Descărcați răspunsurile",
   "downloadedAt": "downloadedAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Nu s-au redat setările offline. Este ServiceWorker activat?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Dacă sunteți online și SeaSketch este incorect în ceea ce privește conexiunea la rețea, puteți <2>treceți la site-ul online</2>.",

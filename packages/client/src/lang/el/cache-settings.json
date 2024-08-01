@@ -7,9 +7,11 @@
   "Improved Performance": "Βελτιωμένη απόδοση",
   "Maximum": "Ανώτατο όριο",
   "Minimum": "Ελάχιστο",
+  "No service worker found!": "Δεν βρέθηκε υπάλληλος σέρβις!",
   "Only what's necessary to run SeaSketch": "Μόνο ό,τι είναι απαραίτητο για την εκτέλεση του SeaSketch",
   "Query Cache": "Query Cache",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Αποθηκεύει ορισμένα δεδομένα εφαρμογών που χρησιμοποιήθηκαν πρόσφατα για βελτιωμένη απόδοση εκκίνησης και χρήση μέσω κακών συνδέσεων στο διαδίκτυο",
+  "Service Worker": "Υπάλληλος σέρβις",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Χρησιμοποιήστε αυτήν τη ρύθμιση εάν είστε συντονιστής ή προγραμματιστής που χρησιμοποιεί τακτικά το SeaSketch. Υποστηρίζει χρήση εκτός σύνδεσης.",
   "Using  of your browser's storage quota": "Χρήση του ορίου αποθήκευσης του προγράμματος περιήγησής σας"
 }

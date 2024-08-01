@@ -22,6 +22,7 @@
   "documentCount": "เอกสาร {{count}}",
   "documentCount_plural": "เอกสาร {{count}} รายการ",
   "Download": "ดาวน์โหลด",
+  "Download responses": "ดาวน์โหลดคำตอบ",
   "downloadedAt": "ดาวน์โหลดแล้วที่",
   "Failed to render offline settings. Is ServiceWorker enabled?": "ไม่สามารถแสดงการตั้งค่าออฟไลน์ ServiceWorker เปิดใช้งานอยู่หรือไม่",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "หากคุณออนไลน์อยู่และ SeaSketch ไม่ถูกต้องเกี่ยวกับการเชื่อมต่อเครือข่ายของคุณ คุณสามารถ<2>ไปยังเว็บไซต์ออนไลน์</2>ได้",

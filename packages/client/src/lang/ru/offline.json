@@ -22,6 +22,7 @@
   "documentCount": "{{count}} документ",
   "documentCount_plural": "{{count}} документов",
   "Download": "Скачать",
+  "Download responses": "Скачать ответы",
   "downloadedAt": "скачал в",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Не удалось отобразить автономные настройки. Сервисворкер включен?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Если вы находитесь в сети, а SeaSketch неверно указывает ваше сетевое подключение, вы можете <2>перейти на онлайн-сайт</2>.",

@@ -7,9 +7,11 @@
   "Improved Performance": "Desempeño mejorado",
   "Maximum": "Máximo",
   "Minimum": "Mínimo",
+  "No service worker found!": "¡No se encontró ningún trabajador de servicio!",
   "Only what's necessary to run SeaSketch": "Solo lo necesario para ejecutar SeaSketch",
   "Query Cache": "Caché de consultas",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Guarda algunos datos de aplicaciones utilizados recientemente para mejorar el rendimiento de inicio y el uso en conexiones de Internet deficientes",
+  "Service Worker": "Trabajador del servicio",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Use esta configuración si es un facilitador o planificador que usa SeaSketch regularmente. Admite el uso sin conexión.",
   "Using  of your browser's storage quota": "Uso de la cuota de almacenamiento de su navegador"
 }

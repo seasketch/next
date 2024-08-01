@@ -7,9 +7,11 @@
   "Improved Performance": "Performanta imbunatatita",
   "Maximum": "Maxim",
   "Minimum": "Minim",
+  "No service worker found!": "Nu a fost găsit niciun lucrător de service!",
   "Only what's necessary to run SeaSketch": "Doar ceea ce este necesar pentru a rula SeaSketch",
   "Query Cache": "Cache de interogări",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Salvează unele date ale aplicației utilizate recent pentru a îmbunătăți performanța de pornire și pentru a le utiliza pe conexiuni slabe la internet",
+  "Service Worker": "Lucrător de serviciu",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Utilizați această setare dacă sunteți un facilitator sau un planificator care utilizează SeaSketch în mod regulat. Acceptă utilizarea offline.",
   "Using  of your browser's storage quota": "Utilizarea cotei de stocare a browserului dvs"
 }

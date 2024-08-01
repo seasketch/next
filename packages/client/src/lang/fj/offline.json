@@ -22,6 +22,7 @@
   "documentCount": "{{count}} ivolatukutuku",
   "documentCount_plural": "documentCount_plural",
   "Download": "Lavetaka",
+  "Download responses": "Lavetaka na isaunitaro",
   "downloadedAt": "lavetakiAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Sega ni rawa ni vakayacori na ituvatuva ena vanua ni sega ni vakacurumi. E rawa beka na ServiceWorker?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Kevaka o sa tiko ena initaneti ka cala na SeaSketch me baleta na nomu isema ni ilawalawa vakacakacaka, sa rawa mo <2>proceed ki na mata ena initaneti</2>.",

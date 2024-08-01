@@ -7,9 +7,11 @@
   "Improved Performance": "Fakaleleiʻi e Ngāué",
   "Maximum": "Lahi Taha",
   "Minimum": "Siʻisiʻi Taha",
+  "No service worker found!": "Naʻe ʻikai maʻu ha taha ngāue tokoni!",
   "Only what's necessary to run SeaSketch": "Ko e meʻa pe ʻoku fie maʻu ke lele SeaSketch",
   "Query Cache": "Fehuʻi Cache",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Seivi ha niʻihi ʻo e ngaahi fakamatala ne toki fakaʻaongaʻi ki hono kamataʻi ʻo e ngaue mo hono fakaʻaongaʻi ʻo e ngaahi fehokotakiʻanga ʻInitaneti ʻoku kovi",
+  "Service Worker": "Tokotaha Ngāue Tokoni",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Fakaʻaongaʻi ʻa e ʻatakai ko ʻeni kapau ko ha tokotaha tokoni pe tohi palani koe ʻoku ke fakaʻaongaʻi maʻu pe ʻa e SeaSketch. Poupouʻi hono fakaʻaongaʻi taʻe ʻinitaneti.",
   "Using  of your browser's storage quota": "Fakaʻaongaʻi ʻa e fika tukupau ki hono tauhi ʻo hoʻo browser"
 }

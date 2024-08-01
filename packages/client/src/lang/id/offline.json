@@ -22,6 +22,7 @@
   "documentCount": "{{count}} dokumen",
   "documentCount_plural": "documentCount_plural",
   "Download": "Unduh",
+  "Download responses": "Unduh tanggapan",
   "downloadedAt": "downloadAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Gagal merender setelan luring. Apakah ServiceWorker diaktifkan?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Jika Anda online dan SeaSketch salah tentang koneksi jaringan Anda, Anda dapat <2>melanjutkan ke situs online</2>.",

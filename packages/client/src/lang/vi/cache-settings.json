@@ -7,9 +7,11 @@
   "Improved Performance": "Cải thiện hiệu suất",
   "Maximum": "Tối đa",
   "Minimum": "tối thiểu",
+  "No service worker found!": "Không tìm thấy nhân viên dịch vụ nào!",
   "Only what's necessary to run SeaSketch": "Chỉ những gì cần thiết để chạy SeaSketch",
   "Query Cache": "Bộ đệm truy vấn",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Lưu một số dữ liệu ứng dụng được sử dụng gần đây để cải thiện hiệu suất khởi động và sử dụng qua kết nối Internet kém",
+  "Service Worker": "Nhân viên phục vụ",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Sử dụng cài đặt này nếu bạn là người hỗ trợ hoặc người lập kế hoạch sử dụng SeaSketch thường xuyên. Hỗ trợ sử dụng ngoại tuyến.",
   "Using  of your browser's storage quota": "Sử dụng hạn ngạch lưu trữ của trình duyệt của bạn"
 }

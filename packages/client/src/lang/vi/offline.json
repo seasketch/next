@@ -22,6 +22,7 @@
   "documentCount": "{{đếm}} tài liệu",
   "documentCount_plural": "{{đếm}} tài liệu",
   "Download": "Tải xuống",
+  "Download responses": "Tải xuống câu trả lời",
   "downloadedAt": "đã tải xuốngTại",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Không thể hiển thị cài đặt ngoại tuyến. ServiceWorker có được bật không?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Nếu bạn đang trực tuyến và SeaSketch không chính xác về kết nối mạng của bạn, bạn có thể <2>tiếp tục truy cập trang web trực tuyến</2>.",

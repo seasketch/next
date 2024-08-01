@@ -22,6 +22,7 @@
   "documentCount": "{{count}} ލިޔުން",
   "documentCount_plural": "{{count}} ލިޔުންތައް",
   "Download": "ޑައުންލޯޑް ކުރޭ",
+  "Download responses": "ޖަވާބުތައް ޑައުންލޯޑް ކުރޭ",
   "downloadedAt": "ޑައުންލޯޑް ކުރެވިފައިވާ",
   "Failed to render offline settings. Is ServiceWorker enabled?": "އޮފްލައިން ސެޓިންތައް ރެންޑާ ނުކުރެވުނެވެ. ސަރވިސްވޯކަރ އެނަބަލް ކުރެވިއްޖެތަ؟.",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "އޮންލައިން ކޮށް އަދި ސީސްކެޗް އަކީ ނެޓްވޯކް ކަނެކްޝަނާ ބެހޭ ގޮތުން ގޯސް އެއްޗެއް ނަމަ އޮންލައިން ސައިޓަށް <2>ޕްރޮސެސް ކޮށްގެން އޮންލައިން ސައިޓަށް</2>.",

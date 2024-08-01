@@ -22,6 +22,7 @@
   "documentCount": "{{count}} dokumenata",
   "documentCount_plural": "dokumentBroj_množina",
   "Download": "preuzimanje datoteka",
+  "Download responses": "Preuzmite odgovore",
   "downloadedAt": "preuzetoAt",
   "Failed to render offline settings. Is ServiceWorker enabled?": "Renderiranje izvanmrežnih postavki nije uspjelo. Je li ServiceWorker omogućen?",
   "If you are online and SeaSketch is incorrect about your network connection, you can <2>proceed to the online site</2>.": "Ako ste na mreži i SeaSketch nije točan u vezi s vašom mrežnom vezom, možete <2>nastaviti na internetsku stranicu</2>.",

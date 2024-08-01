@@ -7,9 +7,11 @@
   "Improved Performance": "Bætt árangur",
   "Maximum": "Hámark",
   "Minimum": "Lágmark",
+  "No service worker found!": "Enginn þjónustuaðili fannst!",
   "Only what's necessary to run SeaSketch": "Aðeins það sem er nauðsynlegt til að keyra SeaSketch",
   "Query Cache": "Skyndiminni fyrirspurnar",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Vistar nokkur nýlega notuð forritsgögn til að bæta ræsingarafköst og notkun yfir lélegar nettengingar",
+  "Service Worker": "Þjónustustarfsmaður",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Notaðu þessa stillingu ef þú ert leiðbeinandi eða skipuleggjandi sem notar SeaSketch reglulega. Styður offline notkun.",
   "Using  of your browser's storage quota": "Notkun á geymslukvóta vafrans þíns"
 }

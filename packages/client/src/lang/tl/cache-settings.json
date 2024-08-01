@@ -7,9 +7,11 @@
   "Improved Performance": "Pinahusay na Pagganap",
   "Maximum": "Pinakamataas",
   "Minimum": "pinakamababa",
+  "No service worker found!": "Walang nakitang service worker!",
   "Only what's necessary to run SeaSketch": "Tanging kung ano ang kinakailangan upang patakbuhin ang SeaSketch",
   "Query Cache": "Query Cache",
   "Saves some recently used app data for improved startup performance and use over poor internet connections": "Nagse-save ng ilang kamakailang ginamit na data ng app para sa pinahusay na pagganap ng startup at paggamit sa mahihirap na koneksyon sa internet",
+  "Service Worker": "Serbisyong Manggagawa",
   "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "Gamitin ang setting na ito kung isa kang facilitator o planner na regular na gumagamit ng SeaSketch. Sinusuportahan ang offline na paggamit.",
   "Using  of your browser's storage quota": "Paggamit ng quota ng storage ng iyong browser"
 }
