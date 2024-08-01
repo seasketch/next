@@ -194,7 +194,14 @@ export function determineVisualizationType(
       } else if (paint && "raster-color-mix" in paint) {
         if ("raster-color" in paint && Array.isArray(paint["raster-color"])) {
           const expression = paint["raster-color"][0];
-          if (expression === "step" || expression === "match") {
+          if (
+            rasterLayer.metadata?.["s:type"] ===
+            VisualizationType.CONTINUOUS_RASTER
+          ) {
+            if (validTypes.includes(VisualizationType.CONTINUOUS_RASTER)) {
+              return VisualizationType.CONTINUOUS_RASTER;
+            }
+          } else if (expression === "step" || expression === "match") {
             if (validTypes.includes(VisualizationType.CATEGORICAL_RASTER)) {
               return VisualizationType.CATEGORICAL_RASTER;
             } else if (expression === "step") {
@@ -420,6 +427,7 @@ export function convertToVisualizationType(
           metadata: {
             "s:palette": "interpolatePlasma",
             "s:respect-scale-and-offset": true,
+            "s:type": VisualizationType.CONTINUOUS_RASTER,
           },
         });
       }
