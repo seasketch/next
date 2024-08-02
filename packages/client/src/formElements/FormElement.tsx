@@ -651,6 +651,7 @@ export const SurveyContext = createContext<{
   togglePracticeMode: (enable: boolean) => void;
   toggleFacilitation: (enable: boolean) => void;
   setResponseIsSubmitted: (saved: boolean) => void;
+  responseIsSubmitted: boolean;
 } | null>(null);
 
 export function getLayout(
