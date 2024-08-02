@@ -292,7 +292,7 @@ export async function rasterInfoForBands(
     info.presentation = SuggestedRasterPresentation.categorical;
     isByteEncoding = true;
   } else if (
-    info.bands[0].stats.categories.length < 12 &&
+    info.bands[0].stats.categories.length < 4 &&
     info.bands.length === 1 &&
     info.bands[0].colorInterpretation !== "Gray"
   ) {
