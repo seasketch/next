@@ -481,6 +481,7 @@ function SurveyApp() {
                     submitted,
                   }));
                 },
+                responseIsSubmitted: responseState.submitted,
                 saveResponse: async () => {
                   const responseData: { [elementId: number]: any } = {};
                   for (const element of elements.filter(

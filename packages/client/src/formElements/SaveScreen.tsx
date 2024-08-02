@@ -64,7 +64,14 @@ const SaveScreen: FormElementComponent<{}> = (props) => {
     }
   }
 
-  useEffect(save, []);
+  useEffect(() => {
+    if (surveyContext?.responseIsSubmitted) {
+      alert("Your response has already been submitted.");
+      props.onSubmit();
+    } else {
+      save();
+    }
+  }, []);
 
   return (
     <>
