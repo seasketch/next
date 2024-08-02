@@ -537,6 +537,7 @@ export default function SurveyFormEditor({
                   offlineResponseCount: 0,
                   saveResponseToOfflineStore: () => Promise.resolve(),
                   setResponseIsSubmitted: () => {},
+                  responseIsSubmitted: false,
                 }}
               >
                 <SurveyAppLayout
