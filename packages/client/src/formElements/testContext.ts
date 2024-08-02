@@ -21,4 +21,5 @@ export const TestSurveyContextValue = {
   clientIsPreppedForOfflineUse: false,
   offlineResponseCount: 0,
   saveResponseToOfflineStore: () => Promise.resolve(),
+  setResponseIsSubmitted: (submitted: boolean) => {},
 };

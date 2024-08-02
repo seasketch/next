@@ -22,7 +22,7 @@ import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
 import { LinkIcon, StatusOfflineIcon } from "@heroicons/react/outline";
 import Button from "../components/Button";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import useClipboard from "react-use-clipboard";
@@ -59,6 +59,11 @@ const ThankYou: FormElementComponent<ThankYouProps> = (props) => {
     "respondAgainMessage",
     props
   );
+
+  useEffect(() => {
+    context?.setResponseIsSubmitted(true);
+  }, []);
+
   return (
     <>
       <div className="mb-5">

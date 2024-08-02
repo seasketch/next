@@ -47,6 +47,13 @@ import { ExclamationIcon } from "@heroicons/react/outline";
 import Spinner from "../components/Spinner";
 import Modal from "../components/Modal";
 import useResetLanguage from "./useResetLanguage";
+import useDialog from "../components/useDialog";
+import {
+  ActivityLogIcon,
+  ReloadIcon,
+  ResumeIcon,
+  TrashIcon,
+} from "@radix-ui/react-icons";
 
 require("./surveys.css");
 
@@ -70,6 +77,7 @@ function SurveyApp() {
     slug: string;
   }>();
   const { t, i18n } = useTranslation("surveys");
+  const dialog = useDialog();
 
   let language = languages.find((lang) => lang.code === "EN")!;
   language = languages.find((lang) => lang.code === i18n.language) || language;
@@ -152,6 +160,8 @@ function SurveyApp() {
     submitted: boolean;
     groupResponse: boolean;
     groupParticipantCount: number;
+    // ISO date
+    startedAt?: string;
   }>(
     // eslint-disable-next-line i18next/no-literal-string
     `survey-${surveyId}`,
@@ -193,7 +203,9 @@ function SurveyApp() {
             id !== "groupParticipantCount"
           ) {
             const n = parseInt(id);
-            answers[n] = responseState[n].value;
+            if (!isNaN(n) && n in responseState && responseState[n].value) {
+              answers[n] = responseState[n].value;
+            }
           }
           return answers;
         }, {} as { [formElementId: number]: any })
@@ -388,7 +400,9 @@ function SurveyApp() {
           id !== "groupParticipantCount"
         ) {
           const n = parseInt(id);
-          answers[n] = responseState[n].value;
+          if (!isNaN(n) && n in responseState && responseState[n].value) {
+            answers[n] = responseState[n].value;
+          }
         }
         return answers;
       }, {} as { [formElementId: number]: any })
@@ -461,6 +475,12 @@ function SurveyApp() {
                   );
                   return;
                 },
+                setResponseIsSubmitted: (submitted: boolean) => {
+                  setResponseState((prev) => ({
+                    ...prev,
+                    submitted,
+                  }));
+                },
                 saveResponse: async () => {
                   const responseData: { [elementId: number]: any } = {};
                   for (const element of elements.filter(
@@ -495,6 +515,8 @@ function SurveyApp() {
                     //   )}/${practice ? "practice" : ""}`
                     // );
                     // // setResponseState({ facilitated: false, submitted: false });
+                  } else {
+                    console.error(response.errors);
                   }
 
                   return response;
@@ -601,15 +623,122 @@ function SurveyApp() {
                         {...formElement.current}
                         typeName={formElement.current.typeId}
                         submissionAttempted={!!state?.submissionAttempted}
-                        onChange={(value, errors, advanceAutomatically) => {
+                        onChange={async (
+                          value,
+                          errors,
+                          advanceAutomatically
+                        ) => {
                           if (
                             formElement.current?.typeId === "WelcomeMessage"
                           ) {
+                            const hasAnswers =
+                              pagingState.sortedFormElements.filter(
+                                (el) =>
+                                  el.id.toString() in responseState &&
+                                  el.isInput
+                              ).length > 1;
+                            const nameField =
+                              pagingState.sortedFormElements.find(
+                                (el) => el.type?.componentName === "Name"
+                              );
+                            const name = nameField?.id
+                              ? responseState[nameField.id]?.value
+                              : null;
+                            if (hasAnswers && !responseState.submitted) {
+                              const details = name ? [name.name] : [];
+                              if (responseState.startedAt) {
+                                details.push(
+                                  new Date(
+                                    responseState.startedAt
+                                  ).toLocaleDateString()
+                                );
+                              }
+                              const answer = await dialog.makeChoice({
+                                title:
+                                  t(`Unfinished response detected `) +
+                                  (details.length > 0
+                                    ? `(${details.join(", ")})`
+                                    : ""),
+                                choices: [
+                                  <div className="flex w-full items-center md:min-w-lg border rounded-lg p-4 group-hover:border-blue-500 group-hover:bg-blue-50 bg-opacity-30">
+                                    <div className="flex items-center justify-center w-16 h-16 rounded bg-gray-100 mr-3 border border-gray-300">
+                                      <ResumeIcon className="w-8 h-8 text-gray-700" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="font-semibold">
+                                        {t("Resume this response")}
+                                      </h3>
+                                      <p className="text-sm">
+                                        {t(
+                                          "You will be advanced to the next question, and given an opportunity to complete and save the survey response."
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>,
+                                  <div className="flex w-full items-center md:min-w-lg border rounded-lg p-4 group-hover:border-blue-500 group-hover:bg-blue-50 bg-opacity-30">
+                                    <div className="flex items-center justify-center w-16 h-16 rounded bg-gray-100 mr-3 border border-gray-300">
+                                      <ReloadIcon className="w-8 h-8 text-gray-700" />
+                                    </div>
+                                    <div className="flex-1">
+                                      <h3 className="font-semibold">
+                                        {t("Start Over")}
+                                      </h3>
+                                      <p className="text-sm">
+                                        {t(
+                                          "The incomplete response will be permanently deleted, and you will start a new survey response."
+                                        )}
+                                      </p>
+                                    </div>
+                                  </div>,
+                                ],
+                              });
+                              if (answer === false) {
+                                return;
+                              } else if (answer === 0) {
+                                // advance to next question
+                                let nextQuestionIndex =
+                                  pagingState.sortedFormElements.length - 1;
+                                while (nextQuestionIndex > 1) {
+                                  const el =
+                                    pagingState.sortedFormElements[
+                                      nextQuestionIndex
+                                    ];
+                                  if (
+                                    el.type?.componentName !== "ThankYou" &&
+                                    el.type?.componentName !== "SaveScreen" &&
+                                    el.isInput &&
+                                    el.id.toString() in responseState
+                                  ) {
+                                    break;
+                                  }
+                                  nextQuestionIndex--;
+                                }
+                                if (nextQuestionIndex > -1) {
+                                  setFormElement((prev) => ({
+                                    ...prev,
+                                    exiting: prev.current,
+                                  }));
+                                  window.scrollTo(0, 0);
+                                  history.push(
+                                    // eslint-disable-next-line i18next/no-literal-string
+                                    `/${slug}/surveys/${surveyId}/${
+                                      nextQuestionIndex || 1
+                                    }/${practice ? "practice" : ""}`
+                                  );
+                                } else {
+                                  handleAdvance();
+                                }
+                                return;
+                              } else if (answer === 1) {
+                                // fall through to default behavior
+                              }
+                            }
                             setResponseState((prev) => ({
                               submitted: false,
                               facilitated: !!responseState.facilitated,
                               groupResponse: false,
                               groupParticipantCount: 1,
+                              startedAt: new Date().toISOString(),
                             }));
                             if (practice) {
                               history.push(
