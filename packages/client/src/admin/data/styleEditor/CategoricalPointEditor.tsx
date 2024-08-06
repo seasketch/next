@@ -12,6 +12,7 @@ import {
   expressionMatchesPalette,
   extractFirstColorFromExpression,
   isCircleLayer,
+  strokeExpressionFromFillExpression,
 } from "./visualizationTypes";
 import LabelLayerEditor, { isSymbolLayer } from "./LabelLayerEditor";
 import { StepsSetting } from "./ContinuousStepsEditor";
@@ -50,19 +51,21 @@ export default function CategoricalPointEditor() {
       if (!selectedAttribute) {
         throw new Error("No attribute selected");
       }
+      const fillExpression = buildMatchExpressionForAttribute(
+        selectedAttribute,
+        palette,
+        Boolean(reverse)
+      );
+      updateLayer(indexes.circles, "paint", "circle-color", fillExpression, {
+        "s:palette": palette,
+        "s:reverse-palette": Boolean(reverse),
+      });
+      // TODO: create stroke color expression based on fill expression
       updateLayer(
         indexes.circles,
         "paint",
-        "circle-color",
-        buildMatchExpressionForAttribute(
-          selectedAttribute,
-          palette,
-          Boolean(reverse)
-        ),
-        {
-          "s:palette": palette,
-          "s:reverse-palette": Boolean(reverse),
-        }
+        "circle-stroke-color",
+        strokeExpressionFromFillExpression(fillExpression)
       );
     },
     [indexes.circles, selectedAttribute, updateLayer]
@@ -77,6 +80,12 @@ export default function CategoricalPointEditor() {
           "circle-color",
           expression,
           metadata
+        );
+        updateLayer(
+          indexes.circles,
+          "paint",
+          "circle-stroke-color",
+          strokeExpressionFromFillExpression(expression)
         );
       }
     },

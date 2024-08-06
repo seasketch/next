@@ -703,19 +703,21 @@ export function convertToVisualizationType(
       ) {
         colorPalette = "schemeTableau10";
       }
-      const expr = buildMatchExpressionForAttribute(
+      const fillExpression = buildMatchExpressionForAttribute(
         attr,
         colorPalette,
         oldCircleLayer?.metadata?.["s:reverse-palette"] || false
       );
+      const strokeExpression =
+        strokeExpressionFromFillExpression(fillExpression);
       // add a fill layer
       layers.push({
         type: "circle",
         paint: {
-          "circle-color": expr,
+          "circle-color": fillExpression,
           "circle-opacity": 0.9,
-          "circle-stroke-color": "black",
-          "circle-stroke-opacity": 0.5,
+          "circle-stroke-color": strokeExpression,
+          "circle-stroke-opacity": 1,
           "circle-stroke-width": 1,
           "circle-radius": 5,
         },
@@ -1180,5 +1182,24 @@ export function buildMatchExpressionForAttribute(
     expression.push(value, colors[i % colors.length]);
   }
   expression.push("transparent");
+  return expression;
+}
+
+/**
+ * Given a match expression used for determining fill style, this function
+ * returns a modified expression with a complimentary stroke color for each
+ * fill color.
+ * @param expression Match expression
+ */
+export function strokeExpressionFromFillExpression(expression: Expression) {
+  if (expression[0] !== "match") {
+    throw new Error("Unsupported expression type. " + expression[0]);
+  }
+  expression = [...expression];
+  for (var i = 3; i < expression.length; i += 2) {
+    if (typeof expression[i] === "string" && isColor(expression[i])) {
+      expression[i] = autoStrokeForFillColor(expression[i]);
+    }
+  }
   return expression;
 }
