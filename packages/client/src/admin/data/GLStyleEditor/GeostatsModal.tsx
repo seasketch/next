@@ -2,7 +2,6 @@
 import Modal from "../../../components/Modal";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 import { getAttributeValues } from "./extensions/glStyleAutocomplete";
-import { LayerIcon } from "../../../projects/MiniSidebarButtons";
 import { CrossCircledIcon, LayersIcon } from "@radix-ui/react-icons";
 
 export interface Geostats {

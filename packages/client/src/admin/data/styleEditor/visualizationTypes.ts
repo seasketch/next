@@ -173,6 +173,10 @@ export function validVisualizationTypesForGeostats(
       );
       // TODO: check for continuous data values and add VisualizationType.PROPORTIONAL_SYMBOL if so
       // TODO: check for categorical attributes and add VisualizationType.CATEGORICAL_POINT if so
+      const categorical = findBestCategoricalAttribute(geostats);
+      if (categorical) {
+        types.push(VisualizationType.CATEGORICAL_POINT);
+      }
     }
   }
   return types;
@@ -270,7 +274,7 @@ export function determineVisualizationType(
           ) {
             // return VisualizationType.PROPORTIONAL_SYMBOL;
           } else {
-            // return VisualizationType.CATEGORICAL_POINT;
+            return VisualizationType.CATEGORICAL_POINT;
           }
         }
       } else if (layers.find((l) => l.type === "heatmap")) {
@@ -674,6 +678,53 @@ export function convertToVisualizationType(
         metadata: {
           "s:color-auto": true,
         } as SeaSketchLayerMetadata,
+      });
+      break;
+    }
+    case VisualizationType.CATEGORICAL_POINT: {
+      if (isRasterInfo(geostats)) {
+        throw new Error("Is RasterInfo");
+      }
+      // first, find the most appropriate attribute to color by
+      const attr = findBestCategoricalAttribute(geostats);
+      if (attr === null) {
+        throw new Error("No categorical attributes found");
+      }
+      let oldCircleLayer = oldLayers.find((l) => isCircleLayer(l)) as
+        | CircleLayer
+        | undefined;
+      let colorPalette =
+        oldCircleLayer?.metadata?.["s:palette"] || "schemeTableau10";
+      if (
+        !(
+          typeof colorPalette === "string" &&
+          colorPalette in colorScales.categorical
+        )
+      ) {
+        colorPalette = "schemeTableau10";
+      }
+      const fillExpression = buildMatchExpressionForAttribute(
+        attr,
+        colorPalette,
+        oldCircleLayer?.metadata?.["s:reverse-palette"] || false
+      );
+      const strokeExpression =
+        strokeExpressionFromFillExpression(fillExpression);
+      // add a fill layer
+      layers.push({
+        type: "circle",
+        paint: {
+          "circle-color": fillExpression,
+          "circle-opacity": 0.9,
+          "circle-stroke-color": strokeExpression,
+          "circle-stroke-opacity": 1,
+          "circle-stroke-width": 1,
+          "circle-radius": 5,
+        },
+        metadata: {
+          ...oldCircleLayer?.metadata,
+          "s:palette": colorPalette,
+        },
       });
       break;
     }
@@ -1131,5 +1182,24 @@ export function buildMatchExpressionForAttribute(
     expression.push(value, colors[i % colors.length]);
   }
   expression.push("transparent");
+  return expression;
+}
+
+/**
+ * Given a match expression used for determining fill style, this function
+ * returns a modified expression with a complimentary stroke color for each
+ * fill color.
+ * @param expression Match expression
+ */
+export function strokeExpressionFromFillExpression(expression: Expression) {
+  if (expression[0] !== "match") {
+    throw new Error("Unsupported expression type. " + expression[0]);
+  }
+  expression = [...expression];
+  for (var i = 3; i < expression.length; i += 2) {
+    if (typeof expression[i] === "string" && isColor(expression[i])) {
+      expression[i] = autoStrokeForFillColor(expression[i]);
+    }
+  }
   return expression;
 }

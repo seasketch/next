@@ -13,6 +13,7 @@ import * as Editor from "./Editors";
 import VisualizationTypeControl from "./VisualizationTypeControl";
 import { ErrorBoundary } from "@sentry/react";
 import SimplePointEditor from "./SimplePointEditor";
+import CategoricalPointEditor from "./CategoricalPointEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -103,6 +104,11 @@ export default function EditorForVisualizationType({
               {SimplePointEditor.hasUnrelatedLayers(context.glLayers) && (
                 <ExtraLayersWarning />
               )}
+            </>
+          )}
+          {type === VisualizationType.CATEGORICAL_POINT && (
+            <>
+              <CategoricalPointEditor />
             </>
           )}
         </Editor.CardButtonsPortalRef.Provider>
