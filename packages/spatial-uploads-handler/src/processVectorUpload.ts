@@ -247,7 +247,6 @@ export async function processVectorUpload(options: {
     const geometryType = Array.isArray(stats)
       ? stats[0].geometry
       : (stats as any).geometry;
-    console.log("geometry Type", geometryType, /point/.test(geometryType));
     await logger.exec(
       [
         "tippecanoe",
