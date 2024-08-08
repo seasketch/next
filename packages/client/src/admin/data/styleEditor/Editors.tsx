@@ -179,7 +179,6 @@ export function Thumb({
   "aria-label"?: string;
   style?: CSSProperties;
 }) {
-  console.log("rest", rest);
   return (
     <Slider.Thumb
       {...rest}
