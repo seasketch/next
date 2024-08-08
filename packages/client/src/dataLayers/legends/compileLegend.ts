@@ -550,6 +550,7 @@ export function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
                 stops[1],
               ];
             }
+            const metadata = (layer.metadata || {}) as SeaSketchLayerMetadata;
             // construct a bubble panel
             panels.push({
               panel: {
@@ -558,7 +559,11 @@ export function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
                   layer
                 )}-${exprData.facets.indexOf(facet)}`,
                 type: "GLLegendBubblePanel",
-                label: interpolate[2][1],
+                label:
+                  metadata["s:legend-labels"] &&
+                  interpolate[2][1] in metadata["s:legend-labels"]
+                    ? metadata["s:legend-labels"][interpolate[2][1]]
+                    : interpolate[2][1],
                 stops: stops
                   .filter((s) => "input" in s)
                   .map((s) => {

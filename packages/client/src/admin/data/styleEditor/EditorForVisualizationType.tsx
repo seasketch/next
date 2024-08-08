@@ -15,6 +15,7 @@ import { ErrorBoundary } from "@sentry/react";
 import SimplePointEditor from "./SimplePointEditor";
 import CategoricalPointEditor from "./CategoricalPointEditor";
 import HeatmapEditor from "./HeatmapEditor";
+import ProportionalSymbolEditor from "./ProportionalSymbolEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -115,6 +116,17 @@ export default function EditorForVisualizationType({
           {type === VisualizationType.HEATMAP && (
             <>
               <HeatmapEditor />
+              {HeatmapEditor.hasUnrelatedLayers(context.glLayers) && (
+                <ExtraLayersWarning />
+              )}
+            </>
+          )}
+          {type === VisualizationType.PROPORTIONAL_SYMBOL && (
+            <>
+              <ProportionalSymbolEditor />
+              {ProportionalSymbolEditor.hasUnrelatedLayers(
+                context.glLayers
+              ) && <ExtraLayersWarning />}
             </>
           )}
         </Editor.CardButtonsPortalRef.Provider>

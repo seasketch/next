@@ -165,3 +165,7 @@ export default function HeatmapEditor() {
     </>
   );
 }
+
+HeatmapEditor.hasUnrelatedLayers = (glLayers: any[]) => {
+  return glLayers.length > 1;
+};

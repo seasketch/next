@@ -7,6 +7,7 @@ import {
 import * as Slider from "@radix-ui/react-slider";
 import { Expression } from "mapbox-gl";
 import {
+  CSSProperties,
   Dispatch,
   InputHTMLAttributes,
   ReactNode,
@@ -171,14 +172,19 @@ export function Header({
 export function Thumb({
   className,
   "aria-label": ariaLabel,
+  style,
+  ...rest
 }: {
   className?: string;
   "aria-label"?: string;
+  style?: CSSProperties;
 }) {
+  console.log("rest", rest);
   return (
     <Slider.Thumb
+      {...rest}
       className={`block w-3 h-5 rounded bg-gray-300  shadow hover:bg-gray-100 focus:outline-none focus:shadow ${className}`}
-      style={{ boxShadow: "1px 1px 3px rgba(0,0,0,0.5)" }}
+      style={{ boxShadow: "1px 1px 3px rgba(0,0,0,0.5)", ...style }}
       aria-label={ariaLabel}
     />
   );

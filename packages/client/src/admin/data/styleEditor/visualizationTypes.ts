@@ -168,14 +168,16 @@ export function validVisualizationTypesForGeostats(
     ) {
       types.push(
         VisualizationType.SIMPLE_POINT
-        // TODO: implement these
-        // VisualizationType.MARKER_IMAGE,
+        // TODO: implement VisualizationType.MARKER_IMAGE
       );
-      // TODO: check for continuous data values and add VisualizationType.PROPORTIONAL_SYMBOL if so
-      // TODO: check for categorical attributes and add VisualizationType.CATEGORICAL_POINT if so
+      // check for categorical attributes and add CATEGORICAL_POINT if so
       const categorical = findBestCategoricalAttribute(geostats);
       if (categorical) {
         types.push(VisualizationType.CATEGORICAL_POINT);
+      }
+      // check for continuous data values
+      if (findBestContinuousAttribute(geostats) !== null) {
+        types.push(VisualizationType.PROPORTIONAL_SYMBOL);
       }
       types.push(VisualizationType.HEATMAP);
     }
@@ -273,7 +275,7 @@ export function determineVisualizationType(
             circleLayer.paint?.["circle-radius"] &&
             hasGetExpression(circleLayer.paint?.["circle-radius"])
           ) {
-            // return VisualizationType.PROPORTIONAL_SYMBOL;
+            return VisualizationType.PROPORTIONAL_SYMBOL;
           } else {
             return VisualizationType.CATEGORICAL_POINT;
           }
@@ -746,6 +748,59 @@ export function convertToVisualizationType(
           "heatmap-opacity": 0.9,
           "heatmap-color": heatmapColor,
         },
+        metadata: {
+          "s:palette": "interpolateTurbo",
+        },
+      });
+      break;
+    }
+    case VisualizationType.PROPORTIONAL_SYMBOL: {
+      if (isRasterInfo(geostats)) {
+        throw new Error("Is RasterInfo");
+      }
+      let circleColor =
+        colorScale.schemeTableau10[Math.floor(Math.random() * 10)];
+      const oldCircleLayer = oldLayers.find(isCircleLayer);
+      if (
+        oldCircleLayer &&
+        oldCircleLayer.paint?.["circle-color"] &&
+        isExpression(oldCircleLayer.paint?.["circle-color"])
+      ) {
+        const oldColor = extractFirstColorFromExpression(
+          oldCircleLayer.paint["circle-color"]
+        );
+        if (oldColor) {
+          circleColor = oldColor;
+        }
+      }
+      const bestAttr = findBestContinuousAttribute(geostats);
+      if (!bestAttr) {
+        throw new Error("No numeric attributes found");
+      }
+      layers.push({
+        type: "circle",
+        paint: {
+          "circle-color": circleColor,
+          "circle-radius": [
+            "interpolate",
+            ["linear"],
+            ["get", bestAttr],
+            geostats.attributes.find((a) => a.attribute === bestAttr)!.min,
+            5,
+            geostats.attributes.find((a) => a.attribute === bestAttr)!.max,
+            50,
+          ],
+          "circle-stroke-width": 1,
+          "circle-stroke-color": autoStrokeForFillColor(circleColor),
+          "circle-stroke-opacity": 1,
+          "circle-opacity": 0.8,
+        },
+        layout: {
+          visibility: "visible",
+        },
+        metadata: {
+          "s:color-auto": true,
+        } as SeaSketchLayerMetadata,
       });
       break;
     }
