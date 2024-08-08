@@ -14,6 +14,7 @@ import VisualizationTypeControl from "./VisualizationTypeControl";
 import { ErrorBoundary } from "@sentry/react";
 import SimplePointEditor from "./SimplePointEditor";
 import CategoricalPointEditor from "./CategoricalPointEditor";
+import HeatmapEditor from "./HeatmapEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -109,6 +110,11 @@ export default function EditorForVisualizationType({
           {type === VisualizationType.CATEGORICAL_POINT && (
             <>
               <CategoricalPointEditor />
+            </>
+          )}
+          {type === VisualizationType.HEATMAP && (
+            <>
+              <HeatmapEditor />
             </>
           )}
         </Editor.CardButtonsPortalRef.Provider>

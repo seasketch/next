@@ -30,6 +30,7 @@ import {
   autoStrokeForFillColor,
 } from "./FillStyleEditor";
 import { SeaSketchLayerMetadata } from "./Editors";
+import { colord } from "colord";
 
 export const colorScales = {
   categorical: [
@@ -169,7 +170,6 @@ export function validVisualizationTypesForGeostats(
         VisualizationType.SIMPLE_POINT
         // TODO: implement these
         // VisualizationType.MARKER_IMAGE,
-        // VisualizationType.HEATMAP
       );
       // TODO: check for continuous data values and add VisualizationType.PROPORTIONAL_SYMBOL if so
       // TODO: check for categorical attributes and add VisualizationType.CATEGORICAL_POINT if so
@@ -177,6 +177,7 @@ export function validVisualizationTypesForGeostats(
       if (categorical) {
         types.push(VisualizationType.CATEGORICAL_POINT);
       }
+      types.push(VisualizationType.HEATMAP);
     }
   }
   return types;
@@ -278,8 +279,7 @@ export function determineVisualizationType(
           }
         }
       } else if (layers.find((l) => l.type === "heatmap")) {
-        // TODO: implement renderer and detect
-        // return VisualizationType.HEATMAP;
+        return VisualizationType.HEATMAP;
       } else if (
         layers.find((l) => isSymbolLayer(l) && l.layout?.["icon-image"])
       ) {
@@ -728,6 +728,27 @@ export function convertToVisualizationType(
       });
       break;
     }
+    case VisualizationType.HEATMAP: {
+      const heatmapColor = buildContinuousColorExpression(
+        undefined,
+        "interpolateTurbo",
+        false,
+        [0, 1],
+        ["heatmap-density"]
+      ) as Expression;
+      heatmapColor[4] = colord(heatmapColor[4]).alpha(0).toRgbString();
+      layers.push({
+        type: "heatmap",
+        paint: {
+          "heatmap-radius": 10,
+          "heatmap-weight": 1,
+          "heatmap-intensity": 0.5,
+          "heatmap-opacity": 0.9,
+          "heatmap-color": heatmapColor,
+        },
+      });
+      break;
+    }
     default:
       layers.push(...oldLayers);
   }
@@ -858,7 +879,9 @@ export function expressionMatchesPalette(
   expression: Expression,
   palette: keyof typeof colorScale,
   reversed: boolean,
-  steps: StepsSetting
+  steps: StepsSetting,
+  // useful for heatmaps since the first color is altered to be transparent
+  skipFirstColor?: boolean
 ) {
   let paletteColors = (
     Array.isArray(palette) ? [] : (colorScale[palette] as string[])
@@ -870,7 +893,10 @@ export function expressionMatchesPalette(
   }
   const expressionColors = extractColorsFromExpression(expression);
   for (const color of expressionColors) {
-    if (!(paletteColors as string[]).includes(color)) {
+    if (
+      !(paletteColors as string[]).includes(color) &&
+      (!skipFirstColor || expressionColors.indexOf(color) !== 0)
+    ) {
       return false;
     }
   }
