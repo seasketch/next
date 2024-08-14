@@ -260,7 +260,7 @@ export async function processVectorUpload(options: {
                 // prevent tippecanoe from dropping too many points
                 // https://github.com/felt/tippecanoe?tab=readme-ov-file#dropping-a-fixed-fraction-of-features-by-zoom-level
                 "-r",
-                "1.5",
+                "1.2",
               ]
             : []),
           "--generate-ids",
