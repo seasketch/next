@@ -78,12 +78,21 @@ export default function ContinuousPolygonEditor() {
         )
       : undefined;
 
-  const range = useMemo(() => {
-    return extractValueRange(
-      (fillLayer!.paint! as FillPaint)["fill-color"] as Expression
-    );
+  const range = useMemo(
+    () => {
+      return extractValueRange(
+        (fillLayer!.paint! as FillPaint)["fill-color"] as Expression,
+        Boolean(fillLayer?.metadata?.["s:exclude-outside-range"])
+      );
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fillLayer?.paint?.["fill-color"]]);
+    [
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      fillLayer?.paint?.["fill-color"],
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+      fillLayer?.metadata?.["s:exclude-outside-range"],
+    ]
+  );
 
   return (
     <>
@@ -166,6 +175,10 @@ export default function ContinuousPolygonEditor() {
               const metadata: Editor.SeaSketchLayerMetadata =
                 fillLayer?.metadata || {};
               if (fillLayer) {
+                // Clear s:exclude-outside-range and filters
+                updateLayer(indexes.fill, "filter", undefined, undefined, {
+                  "s:exclude-outside-range": false,
+                });
                 if (steps?.steps === "continuous") {
                   updateLayer(
                     indexes.fill,
@@ -230,6 +243,10 @@ export default function ContinuousPolygonEditor() {
           metadata={fillLayer?.metadata}
           updateLayerProperty={(type, property, value, metadata) => {
             updateLayer(indexes.fill, type, "fill-color", value, metadata);
+            // clear filters and s:exclude-outside-range
+            updateLayer(indexes.fill, "filter", undefined, undefined, {
+              "s:exclude-outside-range": false,
+            });
           }}
           valueExpression={["get", selectedAttribute.attribute]}
         />
@@ -279,7 +296,11 @@ export default function ContinuousPolygonEditor() {
         }
         expression={fillLayer?.paint?.["fill-color"] as Expression}
         range={range}
-        onRangeChange={(range) => {
+        excludeOutsideRange={
+          fillLayer?.metadata?.["s:exclude-outside-range"] ||
+          Array.isArray(fillLayer?.filter)
+        }
+        onRangeChange={(range, excludeOutsideRange) => {
           if (fillLayer) {
             const fillExpression = fillLayer.paint!["fill-color"] as Expression;
             let palette = fillLayer.metadata?.["s:palette"] as any;
@@ -293,6 +314,10 @@ export default function ContinuousPolygonEditor() {
             ) {
               palette = extractColorsFromExpression(fillExpression);
             }
+            const applyFilter =
+              excludeOutsideRange &&
+              (range[0] > selectedAttribute!.min! ||
+                range[1] < selectedAttribute!.max!);
             const expr = buildContinuousColorExpression(
               fillExpression,
               palette,
@@ -301,6 +326,22 @@ export default function ContinuousPolygonEditor() {
               ["get", selectedAttribute!.attribute]
             );
             updateLayer(indexes.fill, "paint", "fill-color", expr);
+            // update filter
+            updateLayer(
+              indexes.fill,
+              "filter",
+              undefined,
+              applyFilter
+                ? [
+                    "all",
+                    [">=", ["get", selectedAttribute!.attribute], range[0]],
+                    ["<=", ["get", selectedAttribute!.attribute], range[1]],
+                  ]
+                : undefined,
+              {
+                "s:exclude-outside-range": excludeOutsideRange,
+              }
+            );
           } else {
             throw new Error("No fill layer found");
           }

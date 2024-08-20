@@ -162,11 +162,19 @@ export async function rasterInfoForBands(
       // find a scaling factor that will represent the range of data values with
       // the full range of the encoding scheme.
       if (range < 16777216) {
+        scale = 1;
         // stretch values to fit full encoding scheme
         // Use factors of 10, e.g. 10, 100, 1000, etc.
-        while (range * (scale * 10) < 16777216) {
-          scale *= 10;
-        }
+        // TODO: fix this in the future when you have a 0-1 float dataset to
+        // test
+        // while (range * (scale * 10) < 16777216) {
+        //   console.log({
+        //     range,
+        //     scaled: range * (scale * 10),
+        //   });
+        //   scale *= 10;
+        //   // break;
+        // }
       } else if (range > 16777216) {
         // compress values to fit full encoding scheme
         // Use factors of 10, e.g. 0.1, 0.01, 0.001, etc.
@@ -282,7 +290,13 @@ export async function rasterInfoForBands(
     info.bands.push(b);
   });
 
+  const isRGB =
+    (info.bands.length === 3 || info.bands.length === 4) &&
+    info.bands.find((b) => b.colorInterpretation === "Red") &&
+    info.bands.find((b) => b.colorInterpretation === "Green") &&
+    info.bands.find((b) => b.colorInterpretation === "Blue");
   if (
+    !isRGB &&
     info.bands[0].colorInterpretation === "Palette" &&
     info.bands[0].colorTable &&
     info.bands[0].colorTable.length <= 255 &&
@@ -292,13 +306,14 @@ export async function rasterInfoForBands(
     info.presentation = SuggestedRasterPresentation.categorical;
     isByteEncoding = true;
   } else if (
+    !isRGB &&
     info.bands[0].stats.categories.length < 4 &&
     info.bands.length === 1 &&
     info.bands[0].colorInterpretation !== "Gray"
   ) {
     info.presentation = SuggestedRasterPresentation.categorical;
     isByteEncoding = true;
-  } else if (info.bands[0].colorInterpretation === "Gray") {
+  } else if (!isRGB && info.bands[0].colorInterpretation === "Gray") {
     info.presentation = SuggestedRasterPresentation.continuous;
   }
 
@@ -325,7 +340,11 @@ export async function rasterInfoForBands(
   }
   info.byteEncoding = isByteEncoding;
 
-  if (info.byteEncoding && info.bands[0].stats.categories.length > 0) {
+  if (
+    info.byteEncoding &&
+    info.bands[0].stats.categories.length > 0 &&
+    !isRGB
+  ) {
     info.presentation = SuggestedRasterPresentation.categorical;
   }
   return info;

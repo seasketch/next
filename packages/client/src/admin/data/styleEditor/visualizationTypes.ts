@@ -105,6 +105,7 @@ export enum VisualizationType {
   MARKER_IMAGE = "Marker Image",
   CATEGORICAL_POINT = "Categorized Points",
   PROPORTIONAL_SYMBOL = "Proportional Symbol",
+  CONTINUOUS_POINT = "Point Color Range",
   HEATMAP = "Heatmap",
 }
 
@@ -124,6 +125,7 @@ export const VisualizationTypeDescriptions: { [key: string]: string } = {
   [VisualizationType.CATEGORICAL_POINT]: "Circles with unique colors",
   [VisualizationType.PROPORTIONAL_SYMBOL]: "Circle size determined by values",
   [VisualizationType.HEATMAP]: "Visualize densely packed locations",
+  [VisualizationType.CONTINUOUS_POINT]: "Color range based on numeric values",
 };
 
 export function validVisualizationTypesForGeostats(
@@ -177,7 +179,10 @@ export function validVisualizationTypesForGeostats(
       }
       // check for continuous data values
       if (findBestContinuousAttribute(geostats) !== null) {
-        types.push(VisualizationType.PROPORTIONAL_SYMBOL);
+        types.push(
+          VisualizationType.PROPORTIONAL_SYMBOL,
+          VisualizationType.CONTINUOUS_POINT
+        );
       }
       types.push(VisualizationType.HEATMAP);
     }
@@ -277,7 +282,16 @@ export function determineVisualizationType(
           ) {
             return VisualizationType.PROPORTIONAL_SYMBOL;
           } else {
-            return VisualizationType.CATEGORICAL_POINT;
+            if (
+              hasGetExpression(circleLayer.paint["circle-color"]) &&
+              /interpolate|step/.test(
+                (circleLayer.paint["circle-color"] as Expression)[0]
+              )
+            ) {
+              return VisualizationType.CONTINUOUS_POINT;
+            } else {
+              return VisualizationType.CATEGORICAL_POINT;
+            }
           }
         }
       } else if (layers.find((l) => l.type === "heatmap")) {
@@ -804,6 +818,117 @@ export function convertToVisualizationType(
       });
       break;
     }
+    case VisualizationType.CONTINUOUS_POINT: {
+      if (isRasterInfo(geostats)) {
+        throw new Error("Is RasterInfo");
+      }
+      // find the most appropriate attribute
+      const attr = findBestContinuousAttribute(geostats);
+      if (!attr) {
+        throw new Error("No numeric attributes found");
+      }
+      const attribute = geostats.attributes.find((a) => a.attribute === attr)!;
+      let layer = oldLayers.find((l) => isCircleLayer(l)) as
+        | Omit<CircleLayer, "id">
+        | undefined;
+      let colorPalette = layer?.metadata?.["s:palette"] || "interpolatePlasma";
+      if (
+        !(
+          colorPalette in colorScales.continuous.cyclical ||
+          colorPalette in colorScales.continuous.diverging ||
+          colorPalette in colorScales.continuous.sequential
+        )
+      ) {
+        colorPalette = "interpolatePlasma";
+      }
+      const labelLayer = oldLayers.find(
+        (l) => isSymbolLayer(l) && l.layout?.["text-field"]
+      ) as SymbolLayer | undefined;
+
+      let fillExpression = buildContinuousColorExpression(
+        undefined,
+        colorPalette,
+        false,
+        [attribute.min || 0, attribute.max!],
+        ["get", attr]
+      ) as Expression;
+      // eslint-disable-next-line i18next/no-literal-string
+      let steps = `continuous:10`;
+      if (
+        isNumericGeostatsAttribute(attribute) &&
+        Object.keys(attribute.stats.naturalBreaks).length > 3
+      ) {
+        let n = "7";
+        if (!(n in attribute.stats.naturalBreaks)) {
+          n = "5";
+        }
+        if (!(n in attribute.stats.naturalBreaks)) {
+          n = Object.keys(attribute.stats.naturalBreaks).slice(-1)[0];
+        }
+        fillExpression = buildStepExpression(
+          attribute.stats.naturalBreaks[n as any],
+          colorPalette,
+          false,
+          ["get", attr]
+        );
+
+        // eslint-disable-next-line i18next/no-literal-string
+        steps = `naturalBreaks:${n}`;
+      }
+      let strokeExpression = strokeExpressionFromFillExpression(fillExpression);
+      if (layer) {
+        if (!layer.paint) {
+          layer.paint = {};
+        }
+        layer.paint["circle-color"] = fillExpression;
+        if (typeof colorPalette === "string") {
+          layer.metadata = {
+            ...(layer.metadata || {}),
+            "s:palette": colorPalette,
+          };
+        }
+        layer.paint["circle-opacity"] = 0.7;
+        layer.paint["circle-radius"] = 5;
+        layer.paint["circle-stroke-color"] = strokeExpression;
+        if (!layer.layout) {
+          layer.layout = {};
+        }
+        layer.layout["circle-sort-key"] = ["get", attr];
+        layer.metadata = {
+          ...layer.metadata,
+          "s:steps": steps,
+        };
+        delete layer.metadata["s:excluded"];
+      } else {
+        layer = {
+          type: "circle",
+          paint: {
+            "circle-color": fillExpression,
+            "circle-opacity": 0.5,
+            "circle-radius": 5,
+            "circle-stroke-color": strokeExpression,
+          },
+          layout: {
+            visibility: "visible",
+            "circle-sort-key": ["get", attr],
+          },
+          metadata: {
+            "s:palette": colorPalette,
+            "s:steps": steps,
+          },
+        };
+      }
+      // First, add the fill layer
+      layers.push({
+        ...layer,
+      });
+      if (labelLayer) {
+        layers.push({
+          ...labelLayer,
+        });
+      }
+      break;
+    }
     default:
       layers.push(...oldLayers);
   }
@@ -825,7 +950,8 @@ export function replaceColors(
   palette: string,
   reverse: boolean,
   excludedValues: (string | number)[],
-  steps?: StepsSetting
+  steps?: StepsSetting,
+  excludeOutsideRange?: boolean
 ) {
   // @ts-ignore
   let colors = Array.isArray(palette) ? palette : colorScale[palette];
@@ -867,13 +993,22 @@ export function replaceColors(
     const fnName = expression[0];
     const iType = expression[1];
     const arg = expression[2];
-    const stops = expression.slice(3);
+    const stops = excludeOutsideRange
+      ? expression.slice(5, expression.length - 2)
+      : expression.slice(3);
     const nStops = stops.length / 2;
     for (var i = 0; i < nStops; i++) {
       const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
       stops[i * 2 + 1] = colors(fraction);
     }
-    return [fnName, iType, arg, ...stops];
+    return [
+      fnName,
+      iType,
+      arg,
+      ...(excludeOutsideRange ? expression.slice(3, 5) : []),
+      ...stops,
+      ...(excludeOutsideRange ? expression.slice(-2) : []),
+    ];
   } else {
     throw new Error("Unsupported expression type. " + expression[0]);
   }
@@ -1063,13 +1198,18 @@ export function replaceColorForValueInExpression(
   }
 }
 
-export function extractValueRange(expression: Expression) {
+export function extractValueRange(
+  expression: Expression,
+  excludeOutsideRange: boolean
+) {
   const values = [] as number[];
   const fName = expression[0];
   if (/interpolate/.test(fName)) {
     const stops = expression.slice(3);
     for (let i = 0; i < stops.length; i += 2) {
-      values.push(stops[i]);
+      if (!excludeOutsideRange || stops[i + 1] !== "transparent") {
+        values.push(stops[i]);
+      }
     }
     return [Math.min(...values), Math.max(...values)] as [number, number];
   } else {
@@ -1273,14 +1413,23 @@ export function buildMatchExpressionForAttribute(
  * @param expression Match expression
  */
 export function strokeExpressionFromFillExpression(expression: Expression) {
-  if (expression[0] !== "match") {
+  if (expression[0] === "match") {
+    expression = [...expression];
+    for (var i = 3; i < expression.length; i += 2) {
+      if (typeof expression[i] === "string" && isColor(expression[i])) {
+        expression[i] = autoStrokeForFillColor(expression[i]);
+      }
+    }
+    return expression;
+  } else if (/interpolate/.test(expression[0]) || expression[0] === "step") {
+    expression = [...expression];
+    for (var i = 4; i < expression.length; i += 2) {
+      if (typeof expression[i] === "string" && isColor(expression[i])) {
+        expression[i] = autoStrokeForFillColor(expression[i]);
+      }
+    }
+    return expression;
+  } else {
     throw new Error("Unsupported expression type. " + expression[0]);
   }
-  expression = [...expression];
-  for (var i = 3; i < expression.length; i += 2) {
-    if (typeof expression[i] === "string" && isColor(expression[i])) {
-      expression[i] = autoStrokeForFillColor(expression[i]);
-    }
-  }
-  return expression;
 }

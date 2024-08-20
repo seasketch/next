@@ -38,6 +38,7 @@ import {
   NULLIFIED_EXPRESSION_OUTPUT_STRING,
 } from "./utils";
 import { SeaSketchLayerMetadata } from "../../admin/data/styleEditor/Editors";
+import { expression } from "mapbox-gl/dist/style-spec/index.es.js";
 
 // ordered by rank of importance
 const SIGNIFICANT_PAINT_PROPS = [
@@ -156,7 +157,7 @@ export function compileLegendFromGLStyleLayers(
             // eslint-disable-next-line i18next/no-literal-string
             id: `layer-0-raster-color-legend`,
             type: "GLLegendGradientPanel",
-            stops: interpolationExpressionToStops(rasterColor),
+            stops: interpolationExpressionToStops(rasterColor, layer.metadata),
           },
           filters: [],
         });
@@ -277,6 +278,7 @@ export function compileLegendFromGLStyleLayers(
     try {
       legendItems.push(...pluckStepPanels(context));
     } catch (e) {
+      console.warn("problem plucking step panels");
       console.warn(e);
     }
     try {
@@ -297,28 +299,35 @@ export function compileLegendFromGLStyleLayers(
       console.warn(e);
     }
 
-    // render any remaining layers as simple symbols
-    if (legendItems.length > 0) {
-      for (const layer of context.layers) {
-        if (
-          layer.type !== "symbol" ||
-          (layer.paint || ({} as any))["icon-image"]
-        ) {
-          legendItems.push({
-            filters: [],
-            panel: {
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `remaining-layer-${context.layers.indexOf(layer)}`,
-              type: "GLLegendSimpleSymbolPanel",
-              items: [
-                {
-                  id: "remaining-layer-single-child",
-                  symbol: getSingleSymbolForVectorLayers([layer]),
-                },
-              ],
-            },
-          });
+    try {
+      // render any remaining layers as simple symbols
+      if (legendItems.length > 0) {
+        for (const layer of context.layers) {
+          if (
+            layer.type !== "symbol" ||
+            (layer.paint || ({} as any))["icon-image"]
+          ) {
+            legendItems.push({
+              filters: [],
+              panel: {
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `remaining-layer-${context.layers.indexOf(layer)}`,
+                type: "GLLegendSimpleSymbolPanel",
+                items: [
+                  {
+                    id: "remaining-layer-single-child",
+                    symbol: getSingleSymbolForVectorLayers([layer]),
+                  },
+                ],
+              },
+            });
+          }
         }
+      }
+    } catch (e) {
+      if (legendItems.length === 0) {
+        throw e;
+        // else skip and just render what you have
       }
     }
 
@@ -868,7 +877,9 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
                   ),
                 },
                 filters:
-                  layer.filter && isExpression(layer.filter)
+                  layer.filter &&
+                  isExpression(layer.filter) &&
+                  layer.metadata?.["s:exclude-outside-range"] !== true
                     ? [layer.filter, ...facet.filters]
                     : facet.filters,
               });
@@ -888,7 +899,14 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
                 hasGetExpression(styleValue) &&
                 styleProp.prop !== paintProp
               ) {
-                hasRemainingGetExpressions = true;
+                if (
+                  styleProp.prop === "circle-stroke-color" &&
+                  /interpolate|step/.test(styleValue[0])
+                ) {
+                  hasRemainingGetExpressions = false;
+                } else {
+                  hasRemainingGetExpressions = true;
+                }
               }
             }
             if (!hasRemainingGetExpressions) {
@@ -1987,6 +2005,7 @@ function interpolationExpressionToStops(
           1,
           "red",
         ];
+  const excludeOutsideRange = Boolean(metadata?.["s:exclude-outside-range"]);
   const stops: { value: number; color: string; label: string }[] = [];
   if (/interpolate/.test(expression[0])) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -1995,6 +2014,9 @@ function interpolationExpressionToStops(
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const [input, ...stopPairs] = args;
       for (let i = 0; i < stopPairs.length; i += 2) {
+        if (excludeOutsideRange && (i === 0 || i === stopPairs.length - 2)) {
+          continue;
+        }
         let label = stopPairs[i].toLocaleString();
         if (metadata && metadata["s:round-numbers"]) {
           label = Math.round(stopPairs[i]).toLocaleString();
@@ -2018,7 +2040,8 @@ function getPaintProp(
   propName: string,
   featureData: { [propName: string]: any },
   representedProperties?: RepresentedProperties,
-  defaultIfAlreadyRepresented?: number | string | boolean
+  defaultIfAlreadyRepresented?: number | string | boolean,
+  expectedType?: expression.StylePropertyType
 ) {
   if (representedProperties && representedProperties.has(propName)) {
     return defaultIfAlreadyRepresented;
@@ -2047,7 +2070,8 @@ function getPaintProp(
         }
       }
       // evaluate expression using featureData
-      return ExpressionEvaluator.parse(value).evaluate({
+      const parsed = ExpressionEvaluator.parse(value, expectedType);
+      return parsed.evaluate({
         type: "Feature",
         properties: featureData,
         geometry: {
@@ -2190,7 +2214,7 @@ type SignificantExpression =
   | SignificantRampScaleOrCurveExpression
   | SignificantFilterExpression;
 
-export type SeaSketchGlLayer = Omit<Layer, "id" | "source">;
+export type SeaSketchGlLayer<T = Layer> = Omit<T, "id" | "source">;
 
 interface LegendContext {
   globalContext: {
@@ -2888,7 +2912,8 @@ function createCircleSymbol(
     "circle-stroke-color",
     featureData,
     representedProperties,
-    "#000"
+    "#000",
+    "color"
   );
   const strokeOpacity = getPaintProp(
     paint,
@@ -2902,7 +2927,11 @@ function createCircleSymbol(
     "circle-color",
     featureData,
     representedProperties,
-    "transparent"
+    "transparent",
+    Array.isArray(paint["circle-color"]) &&
+      /interpolate/.test(paint["circle-color"][0])
+      ? "color"
+      : undefined
   );
 
   const radius = getPaintProp(

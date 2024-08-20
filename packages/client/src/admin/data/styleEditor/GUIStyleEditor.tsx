@@ -193,7 +193,7 @@ export default function GUIStyleEditor({
   const updateLayerProperty = useCallback(
     (
       layerIndex: number,
-      type: "paint" | "layout" | undefined,
+      type: "paint" | "layout" | "filter" | undefined,
       property: string | undefined,
       value: any | undefined,
       metadata?: { [key: string]: any }
@@ -206,7 +206,9 @@ export default function GUIStyleEditor({
       }
       const layer = styleJSON[layerIndex];
       if (type && !layer[type]) {
-        layer[type] = {};
+        if (type !== "filter") {
+          layer[type] = {};
+        }
       }
       if (!layer) {
         console.error(styleJSON, layerIndex, layer);
@@ -266,6 +268,25 @@ export default function GUIStyleEditor({
             }
           } catch (e) {
             // do nothing. map might not be loaded
+          }
+        }
+      } else if (type === "filter") {
+        if (value === undefined) {
+          delete layer.filter;
+        } else {
+          layer.filter = value;
+        }
+        if (mapContext.manager?.map && layerId) {
+          const map = mapContext.manager.map;
+          const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
+          const layer = map.getLayer(id);
+          if (layer) {
+            // using the layer id, update the style in the map
+            try {
+              map.setFilter(id, value);
+            } catch (e) {
+              // do nothing
+            }
           }
         }
       }
@@ -421,7 +442,7 @@ export type LayerPropertyUpdater = (
 
 export type LayerUpdater = (
   idx: number,
-  type: "paint" | "layout" | undefined,
+  type: "paint" | "layout" | "filter" | undefined,
   property: string | undefined,
   value: any | undefined,
   metadata?: Editors.SeaSketchLayerMetadata
