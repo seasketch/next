@@ -43,8 +43,9 @@ function RasterLayerEditor({
   const context = useContext(Editor.GUIEditorContext);
   const glLayer = context.glLayers.find((l) =>
     isRasterLayer(l)
-  ) as SeaSketchGlLayer;
+  ) as SeaSketchGlLayer<RasterLayer>;
 
+  const p = glLayer.paint || {};
   const hasAppearanceProp = useMemo(() => {
     return (
       glLayer.paint &&
@@ -56,16 +57,16 @@ function RasterLayerEditor({
     );
   }, [
     glLayer.paint,
-    // @ts-ignore
-    glLayer.paint?.["raster-contrast"],
-    // @ts-ignore
-    glLayer.paint?.["raster-saturation"],
-    // @ts-ignore
-    glLayer.paint?.["raster-hue-rotate"],
-    // @ts-ignore
-    glLayer.paint?.["raster-brightness-min"],
-    // @ts-ignore
-    glLayer.paint?.["raster-brightness-max"],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    p["raster-contrast"],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    p["raster-saturation"],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    p["raster-hue-rotate"],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    p["raster-brightness-min"],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    p["raster-brightness-max"],
   ]);
 
   const onCategoriesChange = useCallback(
@@ -144,7 +145,8 @@ function RasterLayerEditor({
                 paint["raster-color"]! as Expression,
                 glLayer.metadata["s:palette"],
                 Boolean(glLayer.metadata["s:reverse-palette"]),
-                steps!
+                steps!,
+                true
               )
                 ? (glLayer.metadata || {})["s:palette"]
                 : null
@@ -158,7 +160,8 @@ function RasterLayerEditor({
                   palette,
                   Boolean(reverse),
                   glLayer.metadata?.["s:excluded"] || [],
-                  steps
+                  steps,
+                  Boolean(glLayer.metadata?.["s:exclude-outside-range"])
                 ),
                 { "s:palette": palette, "s:reverse-palette": reverse }
               );
@@ -253,16 +256,23 @@ function RasterLayerEditor({
               maximum={rasterInfo.bands[0].maximum}
               expression={(glLayer.paint as any)["raster-color"]}
               metadata={glLayer.metadata}
-              updateLayerProperty={updateLayerProperty}
+              updateLayerProperty={(type, property, value, metadata) => {
+                // clear filters and s:exclude-outside-range
+                context.updateLayer(0, undefined, undefined, undefined, {
+                  "s:exclude-outside-range": false,
+                });
+                updateLayerProperty(type, property, value, metadata);
+              }}
               valueExpression={["raster-value"]}
             />
             <HistogramControl
               expression={paint["raster-color"]! as Expression}
               histogram={rasterInfo.bands[0].stats.histogram}
               range={extractValueRange(
-                (glLayer!.paint! as RasterPaint)["raster-color"] as Expression
+                (glLayer!.paint! as RasterPaint)["raster-color"] as Expression,
+                Boolean(glLayer?.metadata?.["s:exclude-outside-range"])
               )}
-              onRangeChange={(range) => {
+              onRangeChange={(range, excludeOutsideRange) => {
                 let palette = glLayer.metadata?.["s:palette"] as any;
                 if (
                   !expressionMatchesPalette(
@@ -278,15 +288,39 @@ function RasterLayerEditor({
                     glLayer.paint["raster-color"]!
                   );
                 }
-                const expr = buildContinuousRasterColorExpression(
+                let expr = buildContinuousRasterColorExpression(
                   // @ts-ignore
                   glLayer.paint["raster-color"],
                   palette,
                   glLayer.metadata?.["s:reverse-palette"],
                   range
                 );
-                updateLayerProperty("paint", "raster-color", expr);
+                const applyFilter =
+                  excludeOutsideRange &&
+                  (range[0] > rasterInfo.bands[0].minimum ||
+                    range[1] < rasterInfo.bands[0].maximum);
+                if (applyFilter) {
+                  // Modify the expression to exclude values outside the range
+                  const head = expr.slice(0, 3);
+                  const values = expr.slice(3);
+                  const interval = (values[2] - values[0]) / 1000;
+                  const newValues = [
+                    values[0] - interval,
+                    "transparent",
+                    ...values,
+                    values[values.length - 2] + interval,
+                    "transparent",
+                  ];
+                  expr = [...head, ...newValues];
+                }
+                context.updateLayer(0, "paint", "raster-color", expr, {
+                  "s:exclude-outside-range": excludeOutsideRange,
+                });
+                // updateLayerProperty("paint", "raster-color", expr);
               }}
+              excludeOutsideRange={
+                glLayer.metadata?.["s:exclude-outside-range"]
+              }
             />
           </>
         )}
@@ -315,38 +349,38 @@ function RasterLayerEditor({
                   />
                 </Editor.Control>
               </Editor.Root>
-              <Editor.Root>
-                <Editor.Label title={t("Display rounded numbers")} />
-                <Editor.Control>
-                  <Switch
-                    isToggled={glLayer.metadata?.["s:round-numbers"] || false}
-                    onClick={(value) => {
-                      updateLayerProperty(undefined, undefined, undefined, {
-                        "s:round-numbers": value,
-                      });
-                    }}
-                  />
-                </Editor.Control>
-              </Editor.Root>
-              <Editor.Root>
-                <Editor.Label
-                  title={t("Value suffix")}
-                  tooltip={t("Used to append text to values in the legend.")}
-                />
-                <Editor.Control>
-                  <Editor.TextInput
-                    className="w-24 text-center"
-                    value={glLayer.metadata?.["s:value-suffix"] || ""}
-                    onValueChange={(v) => {
-                      updateLayerProperty(undefined, undefined, undefined, {
-                        "s:value-suffix": v,
-                      });
-                    }}
-                  />
-                </Editor.Control>
-              </Editor.Root>
             </>
           )}
+          <Editor.Root>
+            <Editor.Label title={t("Display rounded numbers")} />
+            <Editor.Control>
+              <Switch
+                isToggled={glLayer.metadata?.["s:round-numbers"] || false}
+                onClick={(value) => {
+                  updateLayerProperty(undefined, undefined, undefined, {
+                    "s:round-numbers": value,
+                  });
+                }}
+              />
+            </Editor.Control>
+          </Editor.Root>
+          <Editor.Root>
+            <Editor.Label
+              title={t("Value suffix")}
+              tooltip={t("Used to append text to values in the legend.")}
+            />
+            <Editor.Control>
+              <Editor.TextInput
+                className="w-24 text-center"
+                value={glLayer.metadata?.["s:value-suffix"] || ""}
+                onValueChange={(v) => {
+                  updateLayerProperty(undefined, undefined, undefined, {
+                    "s:value-suffix": v,
+                  });
+                }}
+              />
+            </Editor.Control>
+          </Editor.Root>
         </>
       )}
     </>

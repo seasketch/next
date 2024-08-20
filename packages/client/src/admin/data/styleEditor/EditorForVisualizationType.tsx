@@ -16,6 +16,7 @@ import SimplePointEditor from "./SimplePointEditor";
 import CategoricalPointEditor from "./CategoricalPointEditor";
 import HeatmapEditor from "./HeatmapEditor";
 import ProportionalSymbolEditor from "./ProportionalSymbolEditor";
+import ContinuousPointEditor from "./ContinuousPointEditor";
 
 export default function EditorForVisualizationType({
   type,
@@ -127,6 +128,11 @@ export default function EditorForVisualizationType({
               {ProportionalSymbolEditor.hasUnrelatedLayers(
                 context.glLayers
               ) && <ExtraLayersWarning />}
+            </>
+          )}
+          {type === VisualizationType.CONTINUOUS_POINT && (
+            <>
+              <ContinuousPointEditor />
             </>
           )}
         </Editor.CardButtonsPortalRef.Provider>

@@ -57,10 +57,7 @@ export async function processRasterUpload(options: {
           "-r",
           stats.presentation === SuggestedRasterPresentation.rgb
             ? "cubic"
-            : stats.presentation === SuggestedRasterPresentation.categorical ||
-              stats.byteEncoding
-            ? "mode"
-            : "nearest",
+            : "mode",
           "-t_srs",
           "EPSG:3857",
           "-co",
@@ -228,7 +225,7 @@ async function createPMTiles(
   let overviews = [];
   if (maxzoom) {
     let zoom = maxzoom - 1;
-    while (zoom > 1) {
+    while (zoom > 0) {
       overviews.push(2 ** (maxzoom - zoom));
       zoom--;
     }

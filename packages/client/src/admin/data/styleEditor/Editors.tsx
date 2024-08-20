@@ -211,6 +211,7 @@ export type SeaSketchLayerMetadata = { [key: string]: any } & {
   "s:value-suffix"?: string;
   "s:steps"?: string;
   "s:color-auto"?: boolean;
+  "s:exclude-outside-range"?: boolean;
 };
 
 export function extractCategoriesFromExpression(expression: Expression) {

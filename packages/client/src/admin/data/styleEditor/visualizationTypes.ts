@@ -284,7 +284,7 @@ export function determineVisualizationType(
           } else {
             if (
               hasGetExpression(circleLayer.paint["circle-color"]) &&
-              /interpolate/.test(
+              /interpolate|step/.test(
                 (circleLayer.paint["circle-color"] as Expression)[0]
               )
             ) {
@@ -828,7 +828,9 @@ export function convertToVisualizationType(
         throw new Error("No numeric attributes found");
       }
       const attribute = geostats.attributes.find((a) => a.attribute === attr)!;
-      let layer = oldLayers.find((l) => isCircleLayer(l));
+      let layer = oldLayers.find((l) => isCircleLayer(l)) as
+        | Omit<CircleLayer, "id">
+        | undefined;
       let colorPalette = layer?.metadata?.["s:palette"] || "interpolatePlasma";
       if (
         !(
@@ -888,10 +890,15 @@ export function convertToVisualizationType(
         layer.paint["circle-opacity"] = 0.7;
         layer.paint["circle-radius"] = 5;
         layer.paint["circle-stroke-color"] = strokeExpression;
+        if (!layer.layout) {
+          layer.layout = {};
+        }
+        layer.layout["circle-sort-key"] = ["get", attr];
         layer.metadata = {
           ...layer.metadata,
           "s:steps": steps,
         };
+        delete layer.metadata["s:excluded"];
       } else {
         layer = {
           type: "circle",
@@ -903,12 +910,13 @@ export function convertToVisualizationType(
           },
           layout: {
             visibility: "visible",
+            "circle-sort-key": ["get", attr],
           },
           metadata: {
             "s:palette": colorPalette,
             "s:steps": steps,
           },
-        } as CircleLayer;
+        };
       }
       // First, add the fill layer
       layers.push({
@@ -942,7 +950,8 @@ export function replaceColors(
   palette: string,
   reverse: boolean,
   excludedValues: (string | number)[],
-  steps?: StepsSetting
+  steps?: StepsSetting,
+  excludeOutsideRange?: boolean
 ) {
   // @ts-ignore
   let colors = Array.isArray(palette) ? palette : colorScale[palette];
@@ -984,13 +993,22 @@ export function replaceColors(
     const fnName = expression[0];
     const iType = expression[1];
     const arg = expression[2];
-    const stops = expression.slice(3);
+    const stops = excludeOutsideRange
+      ? expression.slice(5, expression.length - 2)
+      : expression.slice(3);
     const nStops = stops.length / 2;
     for (var i = 0; i < nStops; i++) {
       const fraction = reverse ? 1 - i / (nStops - 1) : i / (nStops - 1);
       stops[i * 2 + 1] = colors(fraction);
     }
-    return [fnName, iType, arg, ...stops];
+    return [
+      fnName,
+      iType,
+      arg,
+      ...(excludeOutsideRange ? expression.slice(3, 5) : []),
+      ...stops,
+      ...(excludeOutsideRange ? expression.slice(-2) : []),
+    ];
   } else {
     throw new Error("Unsupported expression type. " + expression[0]);
   }
@@ -1180,13 +1198,18 @@ export function replaceColorForValueInExpression(
   }
 }
 
-export function extractValueRange(expression: Expression) {
+export function extractValueRange(
+  expression: Expression,
+  excludeOutsideRange: boolean
+) {
   const values = [] as number[];
   const fName = expression[0];
   if (/interpolate/.test(fName)) {
     const stops = expression.slice(3);
     for (let i = 0; i < stops.length; i += 2) {
-      values.push(stops[i]);
+      if (!excludeOutsideRange || stops[i + 1] !== "transparent") {
+        values.push(stops[i]);
+      }
     }
     return [Math.min(...values), Math.max(...values)] as [number, number];
   } else {
