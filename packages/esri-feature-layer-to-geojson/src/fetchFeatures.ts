@@ -27,6 +27,11 @@ export async function* fetchFeatures(
      * Can be used to abort the operation
      */
     abortController?: AbortController;
+    /**
+     * If supported by the service, adds attachments to feature properties
+     * as 'esriAttachments'. Default is false.
+     */
+    includeAttachments?: boolean;
   }
 ) {
   const params = new URLSearchParams({
@@ -77,6 +82,35 @@ export async function* fetchFeatures(
     }
     if (fc.error) {
       throw new Error(fc.error.message);
+    }
+    if (options?.includeAttachments) {
+      const objectIds = fc.features.map((f) => f.id);
+      try {
+        const attachmentResponse = await fetch(
+          `${baseUrl}/queryAttachments?objectIds=${objectIds.join(
+            ","
+          )}&returnUrl=true&f=json`,
+          opts
+        );
+        const data: any = await attachmentResponse.json();
+        if (data.error || !Array.isArray(data?.attachmentGroups)) {
+          options.includeAttachments = false;
+        } else {
+          const attachmentGroups = data.attachmentGroups;
+          for (const group of attachmentGroups) {
+            const objectId = group.parentObjectId;
+            const feature = fc.features.find((f) => f.id === objectId);
+            if (feature && Array.isArray(group.attachmentInfos)) {
+              feature.properties = {
+                ...feature.properties,
+                esriAttachments: group.attachmentInfos,
+              };
+            }
+          }
+        }
+      } catch (e) {
+        options.includeAttachments = false;
+      }
     }
     pagesFetched++;
     yield { features: fc.features, pagesFetched } as PagedFeatures;

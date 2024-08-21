@@ -365,11 +365,24 @@ export default class LayerInteractivityManager extends EventEmitter {
           interactivitySetting.type === InteractivityType.SidebarOverlay)
       ) {
         vectorPopupOpened = true;
+        const props = top.properties;
+        // Special handling for esriAttachments
+        if (
+          props &&
+          "esriAttachments" in props &&
+          typeof props.esriAttachments === "string"
+        ) {
+          try {
+            props.esriAttachments = JSON.parse(props.esriAttachments);
+          } catch (e) {
+            // do nothing
+          }
+        }
         const content = Mustache.render(
           interactivitySetting.longTemplate || "",
           {
             ...mustacheHelpers,
-            ...top.properties,
+            ...props,
           }
         );
         if (interactivitySetting.type === InteractivityType.Popup) {
