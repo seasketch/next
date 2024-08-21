@@ -42,6 +42,7 @@ export default {
         status: 400,
       });
     }
+    const includeAttachments = params.get("attachments") === "true";
     const store = params.get("store") === "true";
     // Exclude requests from unauthorized origins
     const referer = request.headers.get("referer");
@@ -130,7 +131,9 @@ export default {
     ctx.waitUntil(
       (async () => {
         try {
-          for await (const page of fetchFeatures(location)) {
+          for await (const page of fetchFeatures(location, {
+            includeAttachments,
+          })) {
             // If thresholds are met, immediately return a streaming response
             if (
               !deferred.isResolved &&
