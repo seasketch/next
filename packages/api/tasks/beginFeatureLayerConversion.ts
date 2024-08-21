@@ -205,7 +205,7 @@ export default async function beginFeatureLayerConversion(
 
     try {
       const request = await fetch(
-        `https://arcgis-export.seasketch.org/?store=true&location=${location}`
+        `https://arcgis-export.seasketch.org/?store=true&location=${location}&includeAttachments=true`
       );
 
       const response = await request.json();
