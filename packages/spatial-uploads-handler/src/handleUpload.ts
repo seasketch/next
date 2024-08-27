@@ -222,7 +222,11 @@ export default async function handleUpload(
     for (const output of outputs) {
       if (output.type === "PMTiles") {
         sourceUrl = output.url!.replace(/\.pmtiles$/, "");
-      } else if (output.type === "GeoJSON" && !sourceUrl) {
+      } else if (
+        output.type === "GeoJSON" &&
+        !output.isOriginal &&
+        !sourceUrl
+      ) {
         sourceUrl = output.url;
       }
     }

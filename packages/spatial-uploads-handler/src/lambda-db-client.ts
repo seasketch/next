@@ -50,11 +50,13 @@ export async function getClient() {
         });
         try {
           await client.connect();
-          client.on("error", () => {
+          client.on("error", (e) => {
+            console.error(e);
             dbClient = null;
           });
           resolve(client);
         } catch (e) {
+          console.error(e);
           reject(e);
         }
       });
