@@ -79,7 +79,7 @@ export async function getClient() {
                 password: token,
                 user: db.user,
                 ssl: {
-                  ca: pem,
+                  rejectUnauthorized: false,
                 },
               });
               try {
