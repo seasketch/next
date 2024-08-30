@@ -40,6 +40,7 @@ export async function processRasterUpload(options: {
 
   const { ext, isCorrectProjection } = await validateInput(path, logger);
 
+  await updateProgress("running", "analyzing");
   // Get raster stats
   const stats = await rasterInfoForBands(path);
 
@@ -273,7 +274,7 @@ async function encodeValuesToRGB(
         (
           (
             ( A - ${base} ) * ${1 / interval}
-          ) + 32768
+          ) + 32768.0
         ) / 65536
       )
     `,
@@ -283,7 +284,7 @@ async function encodeValuesToRGB(
           (
             (
               (A - ${base}) * ${1 / interval}
-            ) + 32768
+            ) + 32768.0
           ) % 65536
         ) / 256
       )
@@ -292,7 +293,7 @@ async function encodeValuesToRGB(
       (
         floor(
           (A - ${base}) * ${1 / interval}
-        ) + 32768
+        ) + 32768.0
       ) % 256
     `,
   };
