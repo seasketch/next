@@ -36,6 +36,13 @@ export async function rasterInfoForBands(
   const categories: { [key: number]: number } = {};
   let categoryCount = 0;
   let isByteEncoding = false;
+  const colorInterpretations = dataset.bands.map(
+    (band) => band.colorInterpretation
+  );
+  const isRGB =
+    colorInterpretations.includes("Red") &&
+    colorInterpretations.includes("Green") &&
+    colorInterpretations.includes("Blue");
   dataset.bands.forEach((band) => {
     const dataType = band.dataType;
     if (dataType === "Byte") {
@@ -66,12 +73,12 @@ export async function rasterInfoForBands(
     const samplingInterval = Math.max(1, Math.floor(count / 500_000));
     let num = 0;
     let sum = 0;
-    // TODO: Can this be sped up by reading a block at a time?
     for (var y = 0; y < size.y; y++) {
       const values = band.pixels.read(0, y, size.x, 1);
       for (var i = 0; i < size.x; i++) {
         const value = values[i];
-        if (value !== noDataValue) {
+        num++;
+        if (isRGB || value !== noDataValue) {
           if (stats.min === null || value < stats.min) {
             stats.min = value;
           }
@@ -79,7 +86,6 @@ export async function rasterInfoForBands(
             stats.max = value;
           }
           sum += value;
-          num++;
           if (num % samplingInterval === 0) {
             sampledPixelValues.push(value);
             sampledCount++;
@@ -109,11 +115,13 @@ export async function rasterInfoForBands(
       isByteEncoding = true;
     }
 
-    if (sampledPixelValues.indexOf(stats.min!) === -1) {
-      sampledPixelValues.push(stats.min!);
-    }
-    if (sampledPixelValues.indexOf(stats.max!) === -1) {
-      sampledPixelValues.push(stats.max!);
+    if (!isRGB) {
+      if (sampledPixelValues.indexOf(stats.min!) === -1) {
+        sampledPixelValues.push(stats.min!);
+      }
+      if (sampledPixelValues.indexOf(stats.max!) === -1) {
+        sampledPixelValues.push(stats.max!);
+      }
     }
     stats.mean = sum / num;
     if (band.colorInterpretation?.toLowerCase() === "red") {
@@ -157,28 +165,24 @@ export async function rasterInfoForBands(
       !isByteEncoding &&
       (band.colorInterpretation === "Gray" ||
         (isFloat && categoryBuckets.length > 12) ||
-        range > 16777216)
+        range > 16_777_216)
     ) {
       // find a scaling factor that will represent the range of data values with
       // the full range of the encoding scheme.
-      if (range < 16777216) {
+      if (range < 16_777_216) {
         scale = 1;
         // stretch values to fit full encoding scheme
         // Use factors of 10, e.g. 10, 100, 1000, etc.
         // TODO: fix this in the future when you have a 0-1 float dataset to
         // test
         // while (range * (scale * 10) < 16777216) {
-        //   console.log({
-        //     range,
-        //     scaled: range * (scale * 10),
-        //   });
         //   scale *= 10;
         //   // break;
         // }
-      } else if (range > 16777216) {
+      } else if (range > 16_777_216) {
         // compress values to fit full encoding scheme
         // Use factors of 10, e.g. 0.1, 0.01, 0.001, etc.
-        while (range * (scale / 10) > 16777216) {
+        while (range * (scale / 10) > 16_777_216) {
           scale = scale / 10;
         }
       }
@@ -254,19 +258,22 @@ export async function rasterInfoForBands(
           true
         )
       );
-      addBuckets(
-        b.stats.standardDeviations,
-        n,
-        stdDevBuckets(
-          sampledPixelValues,
+      // Seems to be a quirk in the library where it returns -9999 for stdev when it can't be calculated
+      if (b.stats.stdev !== -9999) {
+        addBuckets(
+          b.stats.standardDeviations,
           n,
-          b.stats.mean,
-          b.stats.stdev,
-          b.minimum,
-          b.maximum,
-          true
-        )
-      );
+          stdDevBuckets(
+            sampledPixelValues,
+            n,
+            b.stats.mean,
+            b.stats.stdev,
+            b.minimum,
+            b.maximum,
+            true
+          )
+        );
+      }
       samples[n] = sampledPixelValues;
     }
     if (b.colorInterpretation === "Palette") {
@@ -290,11 +297,6 @@ export async function rasterInfoForBands(
     info.bands.push(b);
   });
 
-  const isRGB =
-    (info.bands.length === 3 || info.bands.length === 4) &&
-    info.bands.find((b) => b.colorInterpretation === "Red") &&
-    info.bands.find((b) => b.colorInterpretation === "Green") &&
-    info.bands.find((b) => b.colorInterpretation === "Blue");
   if (
     !isRGB &&
     info.bands[0].colorInterpretation === "Palette" &&
