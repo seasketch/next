@@ -149,7 +149,6 @@ export async function processVectorUpload(options: {
 
   // Save normalized vector to the list of outputs
   const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
-  console.log("size", normalizedVectorFileSize);
   outputs.push({
     type: "FlatGeobuf",
     filename: `${jobId}.fgb`,
