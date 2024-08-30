@@ -10,3 +10,4 @@ github_key*
 .env
 ./cdk.context.json
 ./cdk.json
+**/*.js.map
