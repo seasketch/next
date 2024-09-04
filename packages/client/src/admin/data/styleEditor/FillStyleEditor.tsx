@@ -188,12 +188,19 @@ export function autoStrokeColorForFill(fill?: FillLayer, line?: LineLayer) {
   }
 }
 
-export function autoStrokeForFillColor(fillColor: string) {
+export function autoStrokeForFillColor(fillColor: string, darken = false) {
   const c = colord(fillColor);
-  if (c.isDark()) {
-    return c.lighten(0.3).alpha(1).toRgbString();
+  const brightness = c.brightness();
+  if (c.isDark() && !darken) {
+    return c
+      .lighten(brightness * 0.2)
+      .alpha(1)
+      .toRgbString();
   } else {
-    return c.darken(0.15).alpha(1).toRgbString();
+    return c
+      .darken(brightness * 0.15)
+      .alpha(1)
+      .toRgbString();
   }
 }
 

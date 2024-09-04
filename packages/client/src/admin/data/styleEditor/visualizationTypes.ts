@@ -1417,7 +1417,7 @@ export function strokeExpressionFromFillExpression(expression: Expression) {
     expression = [...expression];
     for (var i = 3; i < expression.length; i += 2) {
       if (typeof expression[i] === "string" && isColor(expression[i])) {
-        expression[i] = autoStrokeForFillColor(expression[i]);
+        expression[i] = autoStrokeForFillColor(expression[i], true);
       }
     }
     return expression;
@@ -1425,7 +1425,7 @@ export function strokeExpressionFromFillExpression(expression: Expression) {
     expression = [...expression];
     for (var i = 4; i < expression.length; i += 2) {
       if (typeof expression[i] === "string" && isColor(expression[i])) {
-        expression[i] = autoStrokeForFillColor(expression[i]);
+        expression[i] = autoStrokeForFillColor(expression[i], true);
       }
     }
     return expression;
