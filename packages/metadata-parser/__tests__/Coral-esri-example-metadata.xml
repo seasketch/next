@@ -1,0 +1,194 @@
+<metadata>
+<idinfo>
+<citation>
+<citeinfo>
+<origin>The Nature Conservancy</origin>
+<pubdate>20130101</pubdate>
+<title>Resilience Metrics from FRRP Coral Data</title>
+<geoform>vector digital data</geoform>
+</citeinfo>
+</citation>
+<descript>
+<abstract>The dataset includes Taxonomic richness (# of genera and species combined), intensity of bleaching, and disease prevalence, and an index of reef resilience (see VanWoesik and Burman 2012) of benthic stony corals collected from multiple habitat types across the south Florida shelf from St. Lucie Inlet to Biscayne Bay for years 2005 through 2014. The data were collected during synoptic broad-scale surveys of coral reef and hard-bottom habitats that were stratified into sub-regions or along-shelf positions (e.g., Biscayne, SEFCRI and various habitat types (e.g., patch reefs, low relief hard-bottom, high-relief spur and groove, etc.). A 200m x 200m polygon grid was used to overlay onto existing bathymetry and benthic habitat maps of the study area, and a two-stage stratified random design was used to select sites for sampling from various strata combinations of cross-shelf habitat type, along-shelf position (i.e. region), and management zone (http://frrp.org/).Attribute Fields:MetricDescriptionBatchBatch codeSiteSite codeLatitudeLatitude (decimal degrees)LongitudeLongitude (decimal degrees)SubregionGeographic subregion categoryZoneReef zone categoryHabitatHabitat categoryDepthAverage depth of survey (meters)RegionGeographic RegionN_TaxaTotal number of Taxa (genus or speciesNC_SumNumber of coral colonies summed from two transect surveysBI_MeanAverage number of bleached (partially or totally bleached) coloniesDisTot_SumDisease prevalence (Number of total diseased colonies)ColDensTotal number of coral colonies per squrare meterN_TransNumber of transectsSBIIBleaching Index (0=no bleaching - 3=all corals bleached)SDIIDisease prevalence Index (Total number of disease colonies per square meter)Area_m2Area (square meters) surveyedDensClassCoral Colony Density Index (# per square meter)SBII_ClassSite Bleaching Intensity IndexSDII_ClassSite Disease IndexRRIReef Resilience Index</abstract>
+<purpose>This dataset was compiled to 1) describe the spatial distribution patterns of stony coral density, bleaching intensity, and disease prevalence along the Florida Coral Reef Tract (FCRT) of the SEFCRI Region for the Nature Conservancy's Florida Reef Resilience Program. This dataset is intended to inform the Southeast Florida Coral Reef Initiative "Our Florida Reefs" management process. </purpose>
+</descript>
+<timeperd>
+<timeinfo>
+<rngdates>
+<begdate>20050101</begdate>
+<enddate>20111231</enddate>
+</rngdates>
+</timeinfo>
+<current>2005 - 2011</current>
+</timeperd>
+<status>
+<progress>Planned</progress>
+<update>Annually</update>
+</status>
+<spdom>
+<bounding>
+<westbc>-80.234460</westbc>
+<eastbc>-80.013620</eastbc>
+<northbc>27.134600</northbc>
+<southbc>25.297890</southbc>
+</bounding>
+</spdom>
+<keywords>
+<theme>
+<themekt>None</themekt>
+<themekey>Florida Reef Resiliency Program</themekey>
+<themekey>The Nature Conservancy</themekey>
+<themekey>Florida Keys</themekey>
+<themekey>Southeast Florida</themekey>
+<themekey>SEFCRI</themekey>
+<themekey>Resilience</themekey>
+<themekey>Coral Richness</themekey>
+<themekey>Disease</themekey>
+<themekey>Bleaching</themekey>
+<themekey>Coral Density</themekey>
+</theme>
+</keywords>
+<accconst>None</accconst>
+<useconst>Data is open access. Contact James Byrne (TNC) for more informationDownloaded data filename: "CoralDiseaseByTransect.xls"Computed Metrics1. ColDens = sum of coral colony counts (2 transects) / (10 m2 per transect * number of transects)2. Site Bleaching Intensity Index = mean BI/Col Dens3. Disease Intensity Index per transect = Total prevalence / ColDens4. Resilience Index = ColDens-SBII-SDII5. Bleaching Intensity (SBII) = Mean Bleaching Intensity Index/colony density6. Disease Intensity Index (SDII) = Total Disease / disease Intensity Index</useconst>
+<datacred>Map creation: Christopher Jeffrey, Ph.D (CSS-Dynamac at NOAA National Centers for Coastal Ocean Science). Data were provided by The Nature Conservancy http://frrp.org/data/).</datacred>
+<native>Esri ArcGIS 13.1.0.41833</native>
+</idinfo>
+<spdoinfo>
+<direct>Vector</direct>
+<ptvctinf>
+<sdtsterm>
+<sdtstype>Entity point</sdtstype>
+<ptvctcnt>0</ptvctcnt>
+</sdtsterm>
+</ptvctinf>
+</spdoinfo>
+<eainfo>
+<detailed>
+<enttyp>
+<enttypl>CoralColonyRes_gdbEx</enttypl>
+<enttypd>coral monitoring survey</enttypd>
+<enttypds>TNC FRRP</enttypds>
+</enttyp>
+<attr>
+<attrlabl>OBJECTID</attrlabl>
+<attrdef>Internal feature number.</attrdef>
+<attrdefs>Esri</attrdefs>
+<attrdomv>
+<udom>Sequential unique whole numbers that are automatically generated.</udom>
+</attrdomv>
+</attr>
+<attr>
+<attrlabl>Shape</attrlabl>
+<attrdef>Feature geometry.</attrdef>
+<attrdefs>Esri</attrdefs>
+<attrdomv>
+<udom>Coordinates defining the features.</udom>
+</attrdomv>
+</attr>
+<attr>
+<attrlabl>Batch</attrlabl>
+</attr>
+<attr>
+<attrlabl>Latitude</attrlabl>
+<attrdef>latitude</attrdef>
+<attrdefs>TNC FRRP</attrdefs>
+<attrdomv>
+<rdom>
+<rdommin>-90</rdommin>
+<rdommax>90</rdommax>
+</rdom>
+</attrdomv>
+</attr>
+<attr>
+<attrlabl>Longitude</attrlabl>
+<attrdef>longitude</attrdef>
+<attrdefs>TNC FRRP</attrdefs>
+<attrdomv>
+<rdom>
+<rdommin>-180</rdommin>
+<rdommax>180</rdommax>
+</rdom>
+</attrdomv>
+</attr>
+<attr>
+<attrlabl>Subregion</attrlabl>
+<attrdef>subregion of study area</attrdef>
+<attrdefs>TNC FRRP</attrdefs>
+</attr>
+<attr>
+<attrlabl>Zone</attrlabl>
+<attrdef>zone</attrdef>
+<attrdefs>TNC FRRP</attrdefs>
+</attr>
+<attr>
+<attrlabl>Depth</attrlabl>
+<attrdef>Depth, in meters</attrdef>
+</attr>
+<attr>
+<attrlabl>Habitat</attrlabl>
+<attrdef>habitat (RVC classifications)</attrdef>
+<attrdefs>TNC FRRP</attrdefs>
+</attr>
+<attr>
+<attrlabl>Site</attrlabl>
+<attrdef>FRRP site of survey</attrdef>
+<attrdefs>TNC FRRP</attrdefs>
+</attr>
+<attr>
+<attrlabl>Region</attrlabl>
+</attr>
+<attr>
+<attrlabl>N_Taxa</attrlabl>
+</attr>
+<attr>
+<attrlabl>NC_Sum</attrlabl>
+</attr>
+<attr>
+<attrlabl>BI_Mean</attrlabl>
+</attr>
+<attr>
+<attrlabl>DisTot_Sum</attrlabl>
+</attr>
+<attr>
+<attrlabl>ColDens</attrlabl>
+</attr>
+<attr>
+<attrlabl>N_Trans</attrlabl>
+</attr>
+<attr>
+<attrlabl>SBII</attrlabl>
+</attr>
+<attr>
+<attrlabl>SDII</attrlabl>
+</attr>
+<attr>
+<attrlabl>Area_m2</attrlabl>
+</attr>
+<attr>
+<attrlabl>DnClSEFCRI</attrlabl>
+</attr>
+<attr>
+<attrlabl>SBl_SEFCRI</attrlabl>
+</attr>
+<attr>
+<attrlabl>SDI_SEFCRI</attrlabl>
+</attr>
+<attr>
+<attrlabl>RRI_SEFCRI</attrlabl>
+</attr>
+</detailed>
+</eainfo>
+<metainfo>
+<metd>20240325</metd>
+<metc>
+<cntinfo>
+<cntorgp>
+<cntorg>The Nature Conservancy</cntorg>
+</cntorgp>
+</cntinfo>
+</metc>
+<metstdn>FGDC Content Standard for Digital Geospatial Metadata</metstdn>
+<metstdv>FGDC-STD-001-1998</metstdv>
+<mettc>local time</mettc>
+</metainfo>
+</metadata>

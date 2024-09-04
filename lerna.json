@@ -11,7 +11,8 @@
     "packages/spatial-uploads-handler",
     "packages/uploads-server",
     "packages/vector-data-source",
-    "packages/geostats-types"
+    "packages/geostats-types",
+    "packages/metadata-parser"
   ],
   "version": "independent"
 }
