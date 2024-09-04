@@ -889,6 +889,7 @@ export function convertToVisualizationType(
         }
         layer.paint["circle-opacity"] = 0.7;
         layer.paint["circle-radius"] = 5;
+        layer.paint["circle-stroke-width"] = 1.5;
         layer.paint["circle-stroke-color"] = strokeExpression;
         if (!layer.layout) {
           layer.layout = {};
@@ -907,6 +908,7 @@ export function convertToVisualizationType(
             "circle-opacity": 0.5,
             "circle-radius": 5,
             "circle-stroke-color": strokeExpression,
+            "circle-stroke-width": 1.5,
           },
           layout: {
             visibility: "visible",
