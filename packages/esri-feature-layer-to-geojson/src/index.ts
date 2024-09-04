@@ -42,7 +42,7 @@ export default {
         status: 400,
       });
     }
-    const includeAttachments = params.get("attachments") === "true";
+    const includeAttachments = params.get("includeAttachments") === "true";
     const store = params.get("store") === "true";
     // Exclude requests from unauthorized origins
     const referer = request.headers.get("referer");
