@@ -371,6 +371,7 @@ export default function ContinuousPointEditor() {
           Array.isArray(layer.filter)
         }
       />
+      <LabelLayerEditor />
     </>
   );
 }
