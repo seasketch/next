@@ -320,7 +320,7 @@ export async function createDBRecordsForProcessedLayer(
         `
           update table_of_contents_items set metadata = $1 where id = $2
         `,
-        [conversionTask.metadata, tocItem.id]
+        [conversionTask.metadata || layer.geostats?.metadata, tocItem.id]
       );
     }
 
@@ -387,32 +387,33 @@ export async function createDBRecordsForProcessedLayer(
         // 0,
         true,
         JSON.stringify(
-          conversionTask?.metadata || {
-            type: "doc",
-            content: [
-              {
-                type: "heading",
-                attrs: {
-                  level: 1,
+          conversionTask?.metadata ||
+            layer.geostats?.metadata || {
+              type: "doc",
+              content: [
+                {
+                  type: "heading",
+                  attrs: {
+                    level: 1,
+                  },
+                  content: [
+                    {
+                      type: "text",
+                      text: layer.name,
+                    },
+                  ],
                 },
-                content: [
-                  {
-                    type: "text",
-                    text: layer.name,
-                  },
-                ],
-              },
-              {
-                type: "paragraph",
-                content: [
-                  {
-                    type: "text",
-                    text: `Uploaded ${new Date().toLocaleDateString()}`,
-                  },
-                ],
-              },
-            ],
-          }
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      text: `Uploaded ${new Date().toLocaleDateString()}`,
+                    },
+                  ],
+                },
+              ],
+            }
         ),
       ]
     );

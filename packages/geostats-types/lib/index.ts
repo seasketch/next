@@ -124,6 +124,10 @@ export interface GeostatsLayer {
    */
   attributes: GeostatsAttribute[];
   bounds?: number[];
+  /**
+   * Markdown-formatted metadata for the layer
+   */
+  metadata?: JSON;
 }
 
 export type LegacyGeostatsLayer = Omit<

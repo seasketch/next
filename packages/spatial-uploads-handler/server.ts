@@ -1,11 +1,11 @@
 #!/usr/bin/env tsx
-import http from "http";
+import { createServer } from "http";
 import * as dotenv from "dotenv";
 dotenv.config();
 
 const PORT = process.env.PORT || 3005;
 
-const server = http.createServer(function (req, res) {
+const server = createServer(function (req, res) {
   if (req.method === "POST") {
     let body = "";
     req.on("data", (chunk) => {

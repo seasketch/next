@@ -9,6 +9,12 @@ import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
 import { geostatsForVectorLayers } from "./geostatsForVectorLayer";
 import { Logger } from "./logger";
+import { iso19139ToMarkdown } from "./iso19139ToMarkdown";
+import { defaultMarkdownParser } from "prosemirror-markdown";
+
+export default function fromMarkdown(md: string) {
+  return defaultMarkdownParser.parse(md)?.toJSON();
+}
 
 /**
  * Process a vector upload, converting it to a normalized FlatGeobuf file and
@@ -50,6 +56,7 @@ export async function processVectorUpload(options: {
   let type: SupportedTypes;
   let { ext } = parsePath(path);
   const isZip = ext === ".zip";
+  let metadata: string | undefined;
 
   // Step 1) Unzip if necessary, and assume it is a shapefile
   if (isZip) {
@@ -86,6 +93,43 @@ export async function processVectorUpload(options: {
     // Consider that there may be multiple shapefiles in the zip archive
     // and choose the first one
     workingFilePath = shapefile.split("\n")[0].trim();
+    const { ext } = parsePath(workingFilePath);
+    // Look for a matching file with a .xml extension
+    const xmlPath = await logger.exec(
+      [
+        "find",
+        [
+          workingDirectory,
+          "-type",
+          "f",
+          "-not",
+          "-path",
+          "*/.*",
+          "-not",
+          "-path",
+          "*/__",
+          "-name",
+          "*.xml",
+        ],
+      ],
+      "Problem finding metadata file in zip archive",
+      1 / 30
+    );
+    try {
+      if (xmlPath) {
+        try {
+          metadata = await iso19139ToMarkdown(xmlPath.trim());
+          if (metadata && metadata.length) {
+            console.log(metadata);
+          }
+        } catch (e) {
+          console.error("Problem parsing ISO19139 metadata");
+          console.error(e);
+        }
+      }
+    } catch (e) {
+      // no metadata file
+    }
   }
 
   await updateProgress("running", "validating");
@@ -162,6 +206,10 @@ export async function processVectorUpload(options: {
   // Compute metadata useful for cartography and data handling
   const stats = await geostatsForVectorLayers(normalizedVectorPath);
 
+  if (metadata) {
+    stats[0].metadata = fromMarkdown(metadata);
+    console.log(stats[0].metadata);
+  }
   // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
   // from the normalized fgb dynamically if someone wants to download it as
   // GeoJSON or shapefile.
