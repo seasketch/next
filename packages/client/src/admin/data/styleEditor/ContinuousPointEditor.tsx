@@ -371,6 +371,38 @@ export default function ContinuousPointEditor() {
           Array.isArray(layer.filter)
         }
       />
+      <Editor.Header title={t("Legend")} className="pt-6" />
+      <Editor.Root>
+        <Editor.Label
+          title={t("Value Label")}
+          tooltip={t("Labels the color scale. Use a space to hide.")}
+        />
+        <Editor.Control>
+          <Editor.TextInput
+            className="text-right w-32"
+            value={
+              selectedAttribute?.attribute
+                ? (layer.metadata as Editor.SeaSketchLayerMetadata)?.[
+                    "s:legend-labels"
+                  ]?.[selectedAttribute?.attribute]
+                : undefined
+            }
+            placeholder={selectedAttribute?.attribute}
+            onValueChange={(value) => {
+              if (selectedAttribute?.attribute) {
+                updateLayer(indexes.circle, undefined, undefined, undefined, {
+                  "s:legend-labels": {
+                    ...((layer.metadata as Editor.SeaSketchLayerMetadata)?.[
+                      "s:legend-labels"
+                    ] || {}),
+                    [selectedAttribute.attribute]: value,
+                  },
+                });
+              }
+            }}
+          />
+        </Editor.Control>
+      </Editor.Root>
       <LabelLayerEditor />
     </>
   );
