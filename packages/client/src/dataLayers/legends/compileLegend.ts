@@ -2005,7 +2005,9 @@ function interpolationExpressionToStops(
           1,
           "red",
         ];
-  const excludeOutsideRange = Boolean(metadata?.["s:exclude-outside-range"]);
+  const excludeOutsideRange =
+    Boolean(metadata?.["s:exclude-outside-range"]) &&
+    expression[2][0] === "raster-value";
   const stops: { value: number; color: string; label: string }[] = [];
   if (/interpolate/.test(expression[0])) {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
