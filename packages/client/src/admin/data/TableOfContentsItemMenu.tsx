@@ -156,7 +156,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                   <MenuType.Item
                     className={MenuBarItemClasses}
                     onSelect={() => {
-                      metadataContext.open(firstItem.id);
+                      metadataContext.open(firstItem.id, firstItem.title);
                     }}
                   >
                     <Trans ns="homepage">View metadata</Trans>

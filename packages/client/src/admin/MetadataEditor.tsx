@@ -124,6 +124,7 @@ export default function MetadataEditor({
         }`}
       >
         <EditorMenuBar
+          showUploadOption={true}
           view={viewRef.current?.view}
           className="border-t border-b mb-4 pl-0"
           state={state}

@@ -1,5 +1,5 @@
 {
-  "name": "metadata-parser",
+  "name": "@seasketch/metadata-parser",
   "version": "1.0.0",
   "description": "Parses metadata in esri, iso19139, and possibly other formats and converts them to markdown summaries for use in SeaSketch",
   "author": "Chad Burt <chad@underbluewaters.net>",
@@ -7,7 +7,7 @@
   "license": "BSD-3-Clause",
   "main": "dist/metadata-parser.js",
   "directories": {
-    "lib": "src",
+    "src": "src",
     "test": "__tests__"
   },
   "files": [
@@ -19,14 +19,17 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "test": "vitest"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
   },
   "dependencies": {
     "@types/xml2js": "^0.4.14",
-    "vitest": "^2.0.5",
     "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.5"
   }
 }

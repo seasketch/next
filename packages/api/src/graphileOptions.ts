@@ -42,6 +42,7 @@ import DraftTocStatusPlugin from "./plugins/projectDraftTableOfContentsStatusSub
 import ComputedMetadataPlugin from "./plugins/computedMetadataPlugin";
 import SearchOverlaysRateLimiterPlugin from "./plugins/searchOverlaysRateLimiterPlugin";
 import ProjectBackgroundJobSubscriptionPlugin from "./plugins/projectBackgroundJobSubscriptionPlugin";
+import MetadataParserPlugin from "./plugins/metadataParserPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -94,6 +95,7 @@ export default function graphileOptions(): PostGraphileOptions {
       ComputedMetadataPlugin,
       SearchOverlaysRateLimiterPlugin,
       ProjectBackgroundJobSubscriptionPlugin,
+      MetadataParserPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

@@ -133,18 +133,26 @@ div[attachments="forumAttachments"] {
   display: none;
 }
 
-.metadata.small-variant .ProseMirror h1 {
+.metadata .ProseMirror h1 {
   @apply text-2xl;
 }
 
-.metadata.small-variant .ProseMirror h2 {
-  @apply text-xl;
+.metadata .ProseMirror h2 {
+  @apply text-xl pt-3 pb-0.5;
 }
 
-.metadata.small-variant .ProseMirror h3 {
-  @apply text-lg;
+.metadata .ProseMirror h3 {
+  @apply text-lg pt-2 pb-0.5;
 }
 
-.metadata.small-variant .ProseMirror p {
+.metadata .ProseMirror p {
   @apply text-sm;
+}
+
+.metadata .ProseMirror table {
+  @apply text-sm mt-1 mb-2;
+}
+
+.metadata .ProseMirror td {
+  @apply border p-1;
 }

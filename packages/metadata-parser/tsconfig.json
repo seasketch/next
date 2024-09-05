@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2023",
+    "target": "ES5",
     "declaration": true,
     "outDir": "./dist",
     "strict": true,

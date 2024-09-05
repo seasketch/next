@@ -1,14 +1,17 @@
 import { describe, it, expect, beforeAll } from "vitest";
+// @ts-ignore
 import fs from "fs";
+// @ts-ignore
 import path from "path";
 import {
-  esriToMarkdown,
-  getAttribution as getEsriAttribution,
-} from "../src/esriToMarkdown";
+  fgdcToMarkdown,
+  getAttribution as getFGDCAttribution,
+} from "../src/fgdcToMarkdown";
 import {
   iso19139ToMarkdown,
   getAttribution as getIsoAttribution,
 } from "../src/iso19139";
+// @ts-ignore
 import xml2js from "xml2js";
 
 // Helper to load XML files
@@ -24,24 +27,23 @@ function writeMarkdownFile(fileName: string, markdown: string) {
 }
 
 describe("Metadata Parsers", () => {
-  describe("Esri Metadata", () => {
-    let esriMetadata: any;
+  describe("FGDC Metadata", () => {
+    let fgdcMetadata: any;
 
     beforeAll(async () => {
       const filePath = path.resolve(
         __dirname,
-        "./Coral-esri-example-metadata.xml"
+        "./Coral-fgdc-example-metadata.xml"
       );
-      esriMetadata = await loadXml(filePath);
+      fgdcMetadata = await loadXml(filePath);
     });
 
-    it("parses Esri metadata to Markdown", () => {
-      expect(esriMetadata).toBeTruthy();
-      const markdown = esriToMarkdown(esriMetadata);
+    it("parses fgdc metadata to Markdown", () => {
+      expect(fgdcMetadata).toBeTruthy();
+      const markdown = fgdcToMarkdown(fgdcMetadata);
       // Write the markdown file
-      writeMarkdownFile("Coral-esri-metadata.md", markdown);
+      writeMarkdownFile("Coral-fgcd-metadata.md", markdown);
 
-      console.log("markdown", markdown);
       expect(markdown).toContain("# Resilience Metrics from FRRP Coral Data");
       expect(markdown).toContain(
         "**Abstract:** The dataset includes Taxonomic richness"
@@ -54,8 +56,8 @@ describe("Metadata Parsers", () => {
       expect(markdown).toContain("- **Organization:** The Nature Conservancy");
     });
 
-    it("returns the correct Esri attribution", () => {
-      const attribution = getEsriAttribution(esriMetadata);
+    it("returns the correct FGDC attribution", () => {
+      const attribution = getFGDCAttribution(fgdcMetadata);
       expect(attribution).toBe("The Nature Conservancy");
     });
   });
@@ -82,7 +84,7 @@ describe("Metadata Parsers", () => {
       expect(markdown).toContain("**Keywords:** FAUNA, FISHERIES");
       expect(markdown).toContain("## Contact Information");
       expect(markdown).toContain("- **Organization:** Geoscience_MFMRD");
-      expect(markdown).toContain("- **Contact Person:** Catherine Paul");
+      expect(markdown).toContain("**Name:** Catherine Paul");
     });
 
     it("returns the correct ISO attribution", () => {

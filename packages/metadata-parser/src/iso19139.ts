@@ -109,6 +109,9 @@ const parseDataQuality = (dataQualityInfo: any): string => {
 };
 
 export function iso19139ToMarkdown(metadata: any) {
+  if ("gmd:MD_Metadata" in metadata) {
+    metadata = metadata["gmd:MD_Metadata"];
+  }
   const md: string[] = [];
 
   // Title
@@ -225,18 +228,21 @@ export function iso19139ToMarkdown(metadata: any) {
 
 // Get attribution from ISO 19139 metadata
 export function getAttribution(metadata: any): string | null {
+  if ("gmd:MD_Metadata" in metadata) {
+    metadata = metadata["gmd:MD_Metadata"];
+  }
+  const contact = metadata?.["gmd:contact"]?.[0];
+
+  const responsibleParty = contact?.["gmd:CI_ResponsibleParty"]?.[0];
   // Try to retrieve the responsible organization
   const organization =
-    metadata?.gmd?.contact?.[0]?.CI_ResponsibleParty?.organisationName
-      ?.CharacterString?.[0];
+    responsibleParty["gmd:organisationName"]?.[0]["gco:CharacterString"]?.[0];
   if (organization) {
     return organization;
   }
 
-  // Fallback to other contact organization info if available
-  const contactOrg =
-    metadata?.gmd?.identificationInfo?.[0]?.MD_DataIdentification?.citation
-      ?.CI_Citation?.citedResponsibleParty?.[0]?.CI_ResponsibleParty
-      ?.organisationName?.CharacterString?.[0];
-  return contactOrg || null;
+  // Fallback to other contact individual info if available
+  const individual =
+    responsibleParty?.["gmd:individualName"]?.[0]["gco:CharacterString"]?.[0];
+  return individual || null;
 }
