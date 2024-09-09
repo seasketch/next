@@ -218,7 +218,7 @@ export function ImageDisplayModal({
         <img
           onLoad={onImageLoaded}
           onClick={(e) => e.stopPropagation()}
-          src={fileUpload.downloadUrl + "/public"}
+          src={fileUpload.downloadUrl.replace(/\/$/, "") + "/public"}
           alt={fileUpload.filename}
           className="w-auto h-auto max-w-full max-h-full"
         />
@@ -231,7 +231,8 @@ export function ImageDisplayModal({
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              const imageSrc = fileUpload.downloadUrl + "/public";
+              const imageSrc =
+                fileUpload.downloadUrl.replace(/\/$/, "") + "/public";
               const image = await fetch(imageSrc);
               const imageBlog = await image.blob();
               const imageURL = URL.createObjectURL(imageBlog);
