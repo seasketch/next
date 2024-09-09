@@ -7148,6 +7148,7 @@ export type Mutation = {
   /** Updates a single `TableOfContentsItem` using its globally unique id and a patch. */
   updateTableOfContentsItemByNodeId?: Maybe<UpdateTableOfContentsItemPayload>;
   updateTableOfContentsItemChildren?: Maybe<UpdateTableOfContentsItemChildrenPayload>;
+  updateTocMetadataFromXML: TableOfContentsItem;
   /** Updates a single `Topic` using a unique key and a patch. */
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
@@ -8602,6 +8603,13 @@ export type MutationUpdateTableOfContentsItemByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTableOfContentsItemChildrenArgs = {
   input: UpdateTableOfContentsItemChildrenInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateTocMetadataFromXmlArgs = {
+  id: Scalars['Int'];
+  xmlMetadata: Scalars['String'];
 };
 
 
@@ -17411,6 +17419,28 @@ export type UpdateMetadataMutation = (
   )> }
 );
 
+export type UpdateMetadataFromXmlMutationVariables = Exact<{
+  itemId: Scalars['Int'];
+  xml: Scalars['String'];
+}>;
+
+
+export type UpdateMetadataFromXmlMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTocMetadataFromXML: (
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'metadata' | 'computedMetadata'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'attribution'>
+      )> }
+    )> }
+  ) }
+);
+
 export type ProjectHostingQuotaQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -23873,6 +23903,22 @@ export const UpdateMetadataDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateMetadataFromXmlDocument = /*#__PURE__*/ gql`
+    mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!) {
+  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml) {
+    id
+    metadata
+    computedMetadata
+    dataLayer {
+      id
+      dataSource {
+        id
+        attribution
+      }
+    }
+  }
+}
+    `;
 export const ProjectHostingQuotaDocument = /*#__PURE__*/ gql`
     query ProjectHostingQuota($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -26377,6 +26423,7 @@ export const namedOperations = {
     UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
+    UpdateMetadataFromXML: 'UpdateMetadataFromXML',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',
     SetMaxZoom: 'SetMaxZoom',

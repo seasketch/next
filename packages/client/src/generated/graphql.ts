@@ -7150,6 +7150,7 @@ export type Mutation = {
   /** Updates a single `TableOfContentsItem` using its globally unique id and a patch. */
   updateTableOfContentsItemByNodeId?: Maybe<UpdateTableOfContentsItemPayload>;
   updateTableOfContentsItemChildren?: Maybe<UpdateTableOfContentsItemChildrenPayload>;
+  updateTocMetadataFromXML: TableOfContentsItem;
   /** Updates a single `Topic` using a unique key and a patch. */
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
@@ -8604,6 +8605,13 @@ export type MutationUpdateTableOfContentsItemByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTableOfContentsItemChildrenArgs = {
   input: UpdateTableOfContentsItemChildrenInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateTocMetadataFromXmlArgs = {
+  id: Scalars['Int'];
+  xmlMetadata: Scalars['String'];
 };
 
 
@@ -17411,6 +17419,28 @@ export type UpdateMetadataMutation = (
       & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
     )> }
   )> }
+);
+
+export type UpdateMetadataFromXmlMutationVariables = Exact<{
+  itemId: Scalars['Int'];
+  xml: Scalars['String'];
+}>;
+
+
+export type UpdateMetadataFromXmlMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTocMetadataFromXML: (
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'metadata' | 'computedMetadata'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'attribution'>
+      )> }
+    )> }
+  ) }
 );
 
 export type ProjectHostingQuotaQueryVariables = Exact<{
@@ -26249,6 +26279,49 @@ export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptio
 export type UpdateMetadataMutationHookResult = ReturnType<typeof useUpdateMetadataMutation>;
 export type UpdateMetadataMutationResult = Apollo.MutationResult<UpdateMetadataMutation>;
 export type UpdateMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
+export const UpdateMetadataFromXmlDocument = gql`
+    mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!) {
+  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml) {
+    id
+    metadata
+    computedMetadata
+    dataLayer {
+      id
+      dataSource {
+        id
+        attribution
+      }
+    }
+  }
+}
+    `;
+export type UpdateMetadataFromXmlMutationFn = Apollo.MutationFunction<UpdateMetadataFromXmlMutation, UpdateMetadataFromXmlMutationVariables>;
+
+/**
+ * __useUpdateMetadataFromXmlMutation__
+ *
+ * To run a mutation, you first call `useUpdateMetadataFromXmlMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateMetadataFromXmlMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateMetadataFromXmlMutation, { data, loading, error }] = useUpdateMetadataFromXmlMutation({
+ *   variables: {
+ *      itemId: // value for 'itemId'
+ *      xml: // value for 'xml'
+ *   },
+ * });
+ */
+export function useUpdateMetadataFromXmlMutation(baseOptions?: Apollo.MutationHookOptions<UpdateMetadataFromXmlMutation, UpdateMetadataFromXmlMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateMetadataFromXmlMutation, UpdateMetadataFromXmlMutationVariables>(UpdateMetadataFromXmlDocument, options);
+      }
+export type UpdateMetadataFromXmlMutationHookResult = ReturnType<typeof useUpdateMetadataFromXmlMutation>;
+export type UpdateMetadataFromXmlMutationResult = Apollo.MutationResult<UpdateMetadataFromXmlMutation>;
+export type UpdateMetadataFromXmlMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataFromXmlMutation, UpdateMetadataFromXmlMutationVariables>;
 export const ProjectHostingQuotaDocument = gql`
     query ProjectHostingQuota($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -33291,6 +33364,7 @@ export const namedOperations = {
     UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
+    UpdateMetadataFromXML: 'UpdateMetadataFromXML',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',
     SetMaxZoom: 'SetMaxZoom',

@@ -1,5 +1,5 @@
 import { DOMSerializer, Node } from "prosemirror-model";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
 import { metadata as editorConfig } from "../editor/config";
@@ -21,6 +21,15 @@ export default function MetadataModal({
 }) {
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
+
+  const showTitle = useMemo(() => {
+    return (
+      !loading &&
+      !document?.content?.find(
+        (node: any) => node.type === "heading" && node.attrs?.level === 1
+      )
+    );
+  }, [document, loading]);
 
   useEffect(() => {
     if (target.current && document) {
@@ -63,6 +72,9 @@ export default function MetadataModal({
             <div className="w-full h-6 flex items-center justify-center">
               <Spinner />
             </div>
+          )}
+          {showTitle && title && (
+            <h1 className="text-2xl font-medium">{title}</h1>
           )}
           <div className="ProseMirror" ref={target}></div>
         </div>

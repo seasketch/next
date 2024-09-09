@@ -5,7 +5,8 @@ import MetadataModal from "./MetadataModal";
 export const TableOfContentsMetadataModalContext = createContext<{
   id?: number;
   onRequestClose: () => void;
-  open: (id: number) => void;
+  open: (id: number, title?: string) => void;
+  title?: string;
 }>({
   onRequestClose: () => {},
   open: () => {},
@@ -14,9 +15,11 @@ export const TableOfContentsMetadataModalContext = createContext<{
 export default function TableOfContentsMetadataModal({
   id,
   onRequestClose,
+  title,
 }: {
   id: number;
   onRequestClose: () => void;
+  title?: string;
 }) {
   const { data, loading, error } = useGetMetadataQuery({
     variables: {
@@ -31,6 +34,7 @@ export default function TableOfContentsMetadataModal({
       loading={loading}
       error={error}
       onRequestClose={onRequestClose}
+      title={title}
     />
   );
 }
@@ -41,6 +45,7 @@ export function TableOfContentsMetadataModalProvider({
   children: React.ReactNode;
 }) {
   const [id, setId] = useState<number>();
+  const [title, setTitle] = useState<string | undefined>();
 
   return (
     <TableOfContentsMetadataModalContext.Provider
@@ -48,9 +53,11 @@ export function TableOfContentsMetadataModalProvider({
         id,
         onRequestClose: () => {
           setId(undefined);
+          setTitle(undefined);
         },
-        open: (id: number) => {
+        open: (id: number, title?: string) => {
           setId(id);
+          setTitle(title);
         },
       }}
     >
@@ -58,7 +65,11 @@ export function TableOfContentsMetadataModalProvider({
       {id && (
         <TableOfContentsMetadataModal
           id={id}
-          onRequestClose={() => setId(undefined)}
+          onRequestClose={() => {
+            setId(undefined);
+            setTitle(undefined);
+          }}
+          title={title}
         />
       )}
     </TableOfContentsMetadataModalContext.Provider>

@@ -30,6 +30,7 @@ import {
   SketchTocDetailsFragment,
   FileUploadDetailsFragment,
   UploaderResponse,
+  useUpdateMetadataFromXmlMutation,
 } from "../generated/graphql";
 import { sketchType } from "./config";
 import { ChevronDownIcon } from "@heroicons/react/outline";
@@ -45,6 +46,7 @@ import {
   MenuBarContentClasses,
   MenuBarItemClasses,
 } from "../components/Menubar";
+import { UploadIcon } from "@radix-ui/react-icons";
 require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
 interface EditorMenuBarProps {
@@ -61,7 +63,9 @@ interface EditorMenuBarProps {
   ) => Promise<UploaderResponse | null>;
   onUseServiceMetadata?: () => void;
   dynamicMetadataAvailable?: boolean;
+  showUploadOption?: boolean;
   children?: ReactNode;
+  tocId?: number;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -149,6 +153,60 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     },
     [props.view, sketchingContext]
   );
+
+  const [uploadXMLMutation, uploadXMLMutationState] =
+    useUpdateMetadataFromXmlMutation();
+
+  const onUploadButtonClick = useCallback(() => {
+    // create an input element to trigger the file upload dialog
+    var input = document.createElement("input");
+    input.type = "file";
+    // only accept xml files
+    input.accept = ".xml";
+    input.onchange = (e: any) => {
+      if (e.target.files.length > 0 && props.tocId) {
+        const file = e.target.files[0];
+        // verify that the file is an xml file
+        if (file.type !== "text/xml") {
+          alert("Please upload an XML file");
+          return;
+        }
+        const loader = dialog.loadingMessage(t("Reading XML metadata"));
+        // read the xml file as a string
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          let xml = e.target?.result;
+          if (xml) {
+            xml = xml.toString();
+            try {
+              loader.updateLoadingMessage(t("Uploading XML metadata"));
+              const response = await uploadXMLMutation({
+                variables: {
+                  itemId: props.tocId!,
+                  xml,
+                },
+              });
+              loader.hideLoadingMessage();
+              if (!response.errors?.length && props.view) {
+                props.view!.focus();
+                const tr = props.view!.state.tr;
+                const node = schema.nodeFromJSON(
+                  response.data?.updateTocMetadataFromXML.computedMetadata
+                );
+                tr.replaceWith(0, props.view!.state.doc.content.size, node);
+                props.view!.dispatch(tr);
+              }
+            } catch (e) {
+              console.error(e);
+              onError(e);
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }, [props.tocId, uploadXMLMutation, props.view]);
 
   const [contextMenuTarget, setContextMenuTarget] =
     useState<HTMLButtonElement | null>(null);
@@ -403,6 +461,16 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
+      {props.showUploadOption && (
+        <button
+          onClick={onUploadButtonClick}
+          className={buttonClass(false, "")}
+          title="Upload XML metadata in FGDC or ISO19139 format"
+        >
+          <UploadIcon />
+        </button>
+      )}
+
       {(schema.nodes.sketches || schema.marks.attachmentLink) && (
         <DropdownMenu.Root>
           <DropdownMenu.Trigger asChild>

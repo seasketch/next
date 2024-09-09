@@ -1,0 +1,36 @@
+{
+  "name": "@seasketch/metadata-parser",
+  "version": "1.0.0",
+  "description": "Parses metadata in esri, iso19139, and possibly other formats and converts them to markdown summaries for use in SeaSketch",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "dist/metadata-parser.js",
+  "directories": {
+    "src": "src",
+    "test": "__tests__"
+  },
+  "files": [
+    "lib"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "test": "vitest"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "@seasketch/geostats-types": "^1.0.0",
+    "@types/xml2js": "^0.4.14",
+    "xml2js": "^0.6.2"
+  },
+  "devDependencies": {
+    "vitest": "^2.0.5"
+  }
+}

@@ -117,6 +117,8 @@ export default function OverlayMetataEditor({
             }`}
           >
             <EditorMenuBar
+              tocId={id}
+              showUploadOption={true}
               view={viewRef.current?.view}
               className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10 flex-none"
               state={state}

@@ -638,6 +638,21 @@ mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   }
 }
 
+mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!) {
+  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml) {
+    id
+    metadata
+    computedMetadata
+    dataLayer {
+      id
+      dataSource {
+        id
+        attribution
+      }
+    }
+  }
+}
+
 query ProjectHostingQuota($slug: String!) {
   projectBySlug(slug: $slug) {
     id

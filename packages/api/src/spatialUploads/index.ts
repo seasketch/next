@@ -4,6 +4,7 @@ import { customAlphabet } from "nanoid";
 import { GeoJsonGeometryTypes } from "geojson";
 import {
   GeostatsLayer,
+  GeostatsMetadata,
   RasterInfo,
   SuggestedRasterPresentation,
   isRasterInfo,
@@ -195,7 +196,9 @@ export async function createDBRecordsForProcessedLayer(
             layerCount: 1,
           },
       pmtiles && !isVector ? 512 : null,
-      conversionTask?.attribution || null,
+      conversionTask?.attribution ||
+        layer.geostats?.metadata?.attribution ||
+        null,
       conversionTask?.location || null,
       Boolean(conversionTask),
       uploadedBy,
@@ -320,7 +323,7 @@ export async function createDBRecordsForProcessedLayer(
         `
           update table_of_contents_items set metadata = $1 where id = $2
         `,
-        [conversionTask.metadata || layer.geostats?.metadata, tocItem.id]
+        [conversionTask.metadata || layer.geostats?.metadata?.doc, tocItem.id]
       );
     }
 
@@ -380,7 +383,7 @@ export async function createDBRecordsForProcessedLayer(
       [
         projectId,
         nanoId(),
-        layer.name.replace("_", " "),
+        layer.geostats?.metadata?.title || layer.name.replace("_", " "),
         false,
         layer.bounds,
         dataLayerId,
@@ -388,7 +391,7 @@ export async function createDBRecordsForProcessedLayer(
         true,
         JSON.stringify(
           conversionTask?.metadata ||
-            layer.geostats?.metadata || {
+            layer.geostats?.metadata?.doc || {
               type: "doc",
               content: [
                 {

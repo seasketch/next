@@ -101,6 +101,27 @@ export function isNumericGeostatsAttribute(
   return attr.type === "number";
 }
 
+export declare enum MetadataType {
+  ISO19139 = "ISO19139",
+  FGDC = "FGDC",
+}
+
+export type GeostatsMetadata = {
+  /**
+   * metadata for the layer summarized as a prosemirror document
+   */
+  doc: any;
+  /**
+   * Attribution for the layer
+   */
+  attribution?: string;
+  type: MetadataType;
+  /**
+   * Suggested title based on the metadata
+   */
+  title?: string;
+};
+
 export interface GeostatsLayer {
   /**
    * Name for the layer
@@ -124,10 +145,7 @@ export interface GeostatsLayer {
    */
   attributes: GeostatsAttribute[];
   bounds?: number[];
-  /**
-   * Markdown-formatted metadata for the layer
-   */
-  metadata?: JSON;
+  metadata?: GeostatsMetadata;
 }
 
 export type LegacyGeostatsLayer = Omit<

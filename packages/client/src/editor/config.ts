@@ -8,6 +8,7 @@ import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
+import { tableNodes } from "prosemirror-tables";
 
 let spec = baseSchema.spec;
 
@@ -63,7 +64,29 @@ const questionSchema: Schema = new Schema({
 
 const metadataSchema = new Schema({
   // @ts-ignore
-  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  nodes: addListNodes(
+    baseSchema.spec.nodes,
+    "paragraph block*",
+    "block"
+  ).append(
+    tableNodes({
+      tableGroup: "block",
+      cellContent: "block+",
+      cellAttributes: {
+        background: {
+          default: null,
+          getFromDOM(dom) {
+            return (dom.style && dom.style.backgroundColor) || null;
+          },
+          setDOMAttr(value, attrs) {
+            if (value)
+              // eslint-disable-next-line i18next/no-literal-string
+              attrs.style = (attrs.style || "") + `background-color: ${value};`;
+          },
+        },
+      },
+    })
+  ),
   // @ts-ignore
   marks: baseMarks,
 });
