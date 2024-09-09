@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.fgdcToProseMirror = fgdcToProseMirror;
 exports.getAttribution = getAttribution;
+var createParagraphNode_1 = require("./createParagraphNode");
 // Helper function to safely access arrays
 var getFirst = function (value) {
     return Array.isArray(value) && value.length > 0 ? value[0] : "";
@@ -16,13 +17,6 @@ function createTextNode(content) {
         text: content,
     };
 }
-// Function to create a paragraph node
-function createParagraphNode(content) {
-    return {
-        type: "paragraph",
-        content: content,
-    };
-}
 // Function to create a heading node
 function createHeadingNode(content, level) {
     return {
@@ -35,7 +29,7 @@ function createHeadingNode(content, level) {
 function createTableCellNode(content) {
     return {
         type: "table_cell",
-        content: [createParagraphNode(content)],
+        content: [(0, createParagraphNode_1.createParagraphNode)(content)],
     };
 }
 // Function to create a table row node
@@ -63,7 +57,7 @@ function createBulletListNode(items) {
 function createListItemNode(content) {
     return {
         type: "list_item",
-        content: [createParagraphNode(content)],
+        content: [(0, createParagraphNode_1.createParagraphNode)(content)],
     };
 }
 // Main function to generate ProseMirror nodes from Esri metadata
@@ -83,7 +77,7 @@ function fgdcToProseMirror(metadata) {
     var abstract = getFirst(descript === null || descript === void 0 ? void 0 : descript.abstract);
     if (abstract) {
         doc.content.push(createHeadingNode([createTextNode("Abstract")], 2));
-        doc.content.push(createParagraphNode([
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([
             createTextNode(abstract.split("Attribute Fields:")[0]),
         ]));
     }
@@ -91,7 +85,7 @@ function fgdcToProseMirror(metadata) {
     var purpose = getFirst(descript === null || descript === void 0 ? void 0 : descript.purpose);
     if (purpose) {
         doc.content.push(createHeadingNode([createTextNode("Purpose")], 2));
-        doc.content.push(createParagraphNode([createTextNode(purpose)]));
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(purpose)]));
     }
     // Keywords
     var keywords = getFirst(idinfo === null || idinfo === void 0 ? void 0 : idinfo.keywords);
@@ -99,13 +93,13 @@ function fgdcToProseMirror(metadata) {
     var themeKeywords = theme === null || theme === void 0 ? void 0 : theme.themekey.filter(Boolean).join(", ");
     if (themeKeywords) {
         doc.content.push(createHeadingNode([createTextNode("Keywords")], 2));
-        doc.content.push(createParagraphNode([createTextNode(themeKeywords)]));
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(themeKeywords)]));
     }
     // Use Constraints
     var useConstraints = getFirst(idinfo === null || idinfo === void 0 ? void 0 : idinfo.useconst);
     if (useConstraints) {
         doc.content.push(createHeadingNode([createTextNode("Use Constraints")], 2));
-        doc.content.push(createParagraphNode([
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([
             createTextNode(useConstraints.split("Downloaded data filename:")[0]),
         ]));
     }

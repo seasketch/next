@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.iso19139ToProseMirror = iso19139ToProseMirror;
 exports.getAttribution = getAttribution;
+var createParagraphNode_1 = require("./createParagraphNode");
 // Helper function to safely access arrays
 var getFirst = function (value) {
     return Array.isArray(value) && value.length > 0 ? value[0] : "";
@@ -11,13 +12,6 @@ function createTextNode(content) {
     return {
         type: "text",
         text: content,
-    };
-}
-// Function to create a paragraph node
-function createParagraphNode(content) {
-    return {
-        type: "paragraph",
-        content: content,
     };
 }
 // Function to create a heading node
@@ -32,7 +26,7 @@ function createHeadingNode(content, level) {
 function createTableCellNode(content) {
     return {
         type: "table_cell",
-        content: [createParagraphNode(content)],
+        content: [(0, createParagraphNode_1.createParagraphNode)(content)],
     };
 }
 // Function to create a table row node
@@ -60,7 +54,7 @@ function createBulletListNode(items) {
 function createListItemNode(content) {
     return {
         type: "list_item",
-        content: [createParagraphNode(content)],
+        content: [(0, createParagraphNode_1.createParagraphNode)(content)],
     };
 }
 var parseTopicCategories = function (categories) {
@@ -99,18 +93,18 @@ function iso19139ToProseMirror(metadata) {
     var abstract = getFirst(metadata["gmd:identificationInfo"][0]["gmd:MD_DataIdentification"][0]["gmd:abstract"][0]["gco:CharacterString"]);
     if (abstract) {
         doc.content.push(createHeadingNode([createTextNode("Abstract")], 2));
-        doc.content.push(createParagraphNode([createTextNode(abstract)]));
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(abstract)]));
     }
     // Keywords
     var keywords = (_b = (_a = metadata["gmd:identificationInfo"][0]["gmd:MD_DataIdentification"][0]["gmd:descriptiveKeywords"]) === null || _a === void 0 ? void 0 : _a[0]["gmd:MD_Keywords"][0]["gmd:keyword"]) === null || _b === void 0 ? void 0 : _b.map(function (kw) { return kw["gco:CharacterString"][0]; }).join(", ");
     if (keywords) {
         doc.content.push(createHeadingNode([createTextNode("Keywords")], 2));
-        doc.content.push(createParagraphNode([createTextNode(keywords)]));
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(keywords)]));
     }
     var topicCategories = metadata["gmd:identificationInfo"][0]["gmd:MD_DataIdentification"][0]["gmd:topicCategory"];
     if (topicCategories) {
         doc.content.push(createHeadingNode([createTextNode("Topic Categories")], 2));
-        doc.content.push(createParagraphNode([
+        doc.content.push((0, createParagraphNode_1.createParagraphNode)([
             createTextNode(parseTopicCategories(topicCategories)),
         ]));
     }
@@ -128,7 +122,7 @@ function iso19139ToProseMirror(metadata) {
         if (useConstraints) {
             console.log("use constraints", useConstraints);
             doc.content.push(createHeadingNode([createTextNode("Use Constraints")], 2));
-            doc.content.push(createParagraphNode([createTextNode(useConstraints)]));
+            doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(useConstraints)]));
         }
     }
     var dataQualityInfo = (_d = (_c = metadata["gmd:dataQualityInfo"]) === null || _c === void 0 ? void 0 : _c[0]["gmd:DQ_DataQuality"]) === null || _d === void 0 ? void 0 : _d[0];
@@ -138,12 +132,12 @@ function iso19139ToProseMirror(metadata) {
         if (lineage || report) {
             doc.content.push(createHeadingNode([createTextNode("Data Quality")], 2));
             if (lineage) {
-                doc.content.push(createParagraphNode([createTextNode(lineage)]));
+                doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(lineage)]));
             }
             if (report) {
                 var explanation = ((_m = (_l = (_k = report["gmd:DQ_Element"]) === null || _k === void 0 ? void 0 : _k[0]["gmd:measureDescription"]) === null || _l === void 0 ? void 0 : _l[0]["gco:CharacterString"]) === null || _m === void 0 ? void 0 : _m[0]) || "";
                 if (explanation) {
-                    doc.content.push(createParagraphNode([createTextNode(explanation)]));
+                    doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(explanation)]));
                 }
             }
         }

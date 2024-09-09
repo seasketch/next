@@ -1,3 +1,5 @@
+import { createParagraphNode } from "./createParagraphNode";
+
 // Helper function to safely access arrays
 const getFirst = (value: any) =>
   Array.isArray(value) && value.length > 0 ? value[0] : "";
@@ -7,14 +9,6 @@ function createTextNode(content: string) {
   return {
     type: "text",
     text: content,
-  };
-}
-
-// Function to create a paragraph node
-function createParagraphNode(content: any[]) {
-  return {
-    type: "paragraph",
-    content: content,
   };
 }
 
