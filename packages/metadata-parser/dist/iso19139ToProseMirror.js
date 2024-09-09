@@ -218,6 +218,7 @@ function iso19139ToProseMirror(metadata) {
         title: title,
         doc: doc,
         attribution: getAttribution(metadata),
+        type: "ISO19139",
     };
 }
 // Get attribution from ISO 19139 metadata
@@ -235,7 +236,7 @@ function getAttribution(metadata) {
     }
     // Fallback to other contact individual info if available
     var individual = (_f = (_e = responsibleParty === null || responsibleParty === void 0 ? void 0 : responsibleParty["gmd:individualName"]) === null || _e === void 0 ? void 0 : _e[0]["gco:CharacterString"]) === null || _f === void 0 ? void 0 : _f[0];
-    return individual || null;
+    return individual || undefined;
 }
 // Helper functions for parsing contact and constraints
 function parseContact(contact) {

@@ -1,6 +1,3 @@
-export declare function iso19139ToProseMirror(metadata: any): {
-    title: any;
-    doc: any;
-    attribution: string | null;
-};
-export declare function getAttribution(metadata: any): string | null;
+import { GeostatsMetadata } from "@seasketch/geostats-types";
+export declare function iso19139ToProseMirror(metadata: any): GeostatsMetadata;
+export declare function getAttribution(metadata: any): string | undefined;

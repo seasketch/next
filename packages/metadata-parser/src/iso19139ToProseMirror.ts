@@ -1,3 +1,4 @@
+import { GeostatsMetadata } from "@seasketch/geostats-types";
 import { createParagraphNode } from "./createParagraphNode";
 
 // Helper function to safely access arrays
@@ -302,11 +303,12 @@ export function iso19139ToProseMirror(metadata: any) {
     title,
     doc,
     attribution: getAttribution(metadata),
-  };
+    type: "ISO19139",
+  } as GeostatsMetadata;
 }
 
 // Get attribution from ISO 19139 metadata
-export function getAttribution(metadata: any): string | null {
+export function getAttribution(metadata: any): string | undefined {
   if ("gmd:MD_Metadata" in metadata) {
     metadata = metadata["gmd:MD_Metadata"];
   }
@@ -323,7 +325,7 @@ export function getAttribution(metadata: any): string | null {
   // Fallback to other contact individual info if available
   const individual =
     responsibleParty?.["gmd:individualName"]?.[0]["gco:CharacterString"]?.[0];
-  return individual || null;
+  return individual || undefined;
 }
 
 // Helper functions for parsing contact and constraints

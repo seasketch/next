@@ -36,17 +36,11 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
     }
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MetadataType = void 0;
 exports.metadataToProseMirror = metadataToProseMirror;
 // @ts-ignore
 var xml2js_1 = require("xml2js");
 var fgdcToProsemirror_1 = require("./fgdcToProsemirror");
 var iso19139ToProseMirror_1 = require("./iso19139ToProseMirror");
-var MetadataType;
-(function (MetadataType) {
-    MetadataType[MetadataType["ISO19139"] = 0] = "ISO19139";
-    MetadataType[MetadataType["FGDC"] = 1] = "FGDC";
-})(MetadataType || (exports.MetadataType = MetadataType = {}));
 function metadataToProseMirror(xmlString) {
     return __awaiter(this, void 0, void 0, function () {
         var data, error_1;

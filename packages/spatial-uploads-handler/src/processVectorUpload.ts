@@ -1,4 +1,8 @@
-import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  GeostatsMetadata,
+  RasterInfo,
+} from "@seasketch/geostats-types";
 import {
   MVT_THRESHOLD,
   ProgressUpdater,
@@ -6,11 +10,11 @@ import {
   SupportedTypes,
 } from "./handleUpload";
 import { parse as parsePath, join as pathJoin } from "path";
-import { statSync } from "fs";
+import { readFileSync, statSync } from "fs";
 import { geostatsForVectorLayers } from "./geostatsForVectorLayer";
 import { Logger } from "./logger";
-import { iso19139ToMarkdown } from "./iso19139ToMarkdown";
 import { defaultMarkdownParser } from "prosemirror-markdown";
+import { metadataToProseMirror } from "@seasketch/metadata-parser";
 
 export default function fromMarkdown(md: string) {
   return defaultMarkdownParser.parse(md)?.toJSON();
@@ -56,7 +60,7 @@ export async function processVectorUpload(options: {
   let type: SupportedTypes;
   let { ext } = parsePath(path);
   const isZip = ext === ".zip";
-  let metadata: string | undefined;
+  let metadata: GeostatsMetadata | null = null;
 
   // Step 1) Unzip if necessary, and assume it is a shapefile
   if (isZip) {
@@ -118,12 +122,11 @@ export async function processVectorUpload(options: {
     try {
       if (xmlPath) {
         try {
-          metadata = await iso19139ToMarkdown(xmlPath.trim());
-          if (metadata && metadata.length) {
-            console.log(metadata);
-          }
+          console.log("xml path", xmlPath.trim());
+          const data = readFileSync(xmlPath.trim(), "utf8");
+          metadata = await metadataToProseMirror(data);
         } catch (e) {
-          console.error("Problem parsing ISO19139 metadata");
+          console.error("Problem parsing xml metadata");
           console.error(e);
         }
       }
@@ -207,8 +210,7 @@ export async function processVectorUpload(options: {
   const stats = await geostatsForVectorLayers(normalizedVectorPath);
 
   if (metadata) {
-    stats[0].metadata = fromMarkdown(metadata);
-    console.log(stats[0].metadata);
+    stats[0].metadata = metadata;
   }
   // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
   // from the normalized fgb dynamically if someone wants to download it as

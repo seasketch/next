@@ -1,3 +1,4 @@
+import { GeostatsMetadata } from "@seasketch/geostats-types";
 import { createParagraphNode } from "./createParagraphNode";
 
 // Helper function to safely access arrays
@@ -218,10 +219,11 @@ export function fgdcToProseMirror(metadata: any) {
     title,
     doc,
     attribution,
-  };
+    type: "FGDC",
+  } as GeostatsMetadata;
 }
 
-export function getAttribution(metadata: any): string {
+export function getAttribution(metadata: any): string | undefined {
   const getFirst = (value: any) =>
     Array.isArray(value) && value.length > 0 ? value[0] : "";
 
@@ -240,5 +242,5 @@ export function getAttribution(metadata: any): string {
   const cntinfo = getFirst(metc?.cntinfo);
   const cntorgp = getFirst(cntinfo?.cntorgp);
   const contactOrg = getFirst(cntorgp?.cntorg);
-  return contactOrg || "Unknown attribution";
+  return contactOrg || undefined;
 }

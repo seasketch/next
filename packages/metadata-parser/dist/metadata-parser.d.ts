@@ -1,7 +1,3 @@
-export declare enum MetadataType {
-    ISO19139 = 0,
-    FGDC = 1
-}
 export interface Contact {
     name: string;
     organization: string;
@@ -13,8 +9,4 @@ export interface Contact {
     country: string;
     email: string;
 }
-export declare function metadataToProseMirror(xmlString: string): Promise<{
-    title: any;
-    doc: any;
-    attribution: string | null;
-} | null>;
+export declare function metadataToProseMirror(xmlString: string): Promise<import("@seasketch/geostats-types").GeostatsMetadata | null>;

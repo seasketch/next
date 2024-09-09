@@ -3,11 +3,6 @@ import { parseStringPromise } from "xml2js";
 import { fgdcToProseMirror } from "./fgdcToProsemirror";
 import { iso19139ToProseMirror } from "./iso19139ToProseMirror";
 
-export enum MetadataType {
-  ISO19139,
-  FGDC,
-}
-
 export interface Contact {
   name: string;
   organization: string;

@@ -182,6 +182,7 @@ function fgdcToProseMirror(metadata) {
         title: title,
         doc: doc,
         attribution: attribution,
+        type: "FGDC",
     };
 }
 function getAttribution(metadata) {
@@ -203,5 +204,5 @@ function getAttribution(metadata) {
     var cntinfo = getFirst(metc === null || metc === void 0 ? void 0 : metc.cntinfo);
     var cntorgp = getFirst(cntinfo === null || cntinfo === void 0 ? void 0 : cntinfo.cntorgp);
     var contactOrg = getFirst(cntorgp === null || cntorgp === void 0 ? void 0 : cntorgp.cntorg);
-    return contactOrg || "Unknown attribution";
+    return contactOrg || undefined;
 }
