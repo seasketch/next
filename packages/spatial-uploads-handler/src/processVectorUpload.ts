@@ -99,7 +99,7 @@ export async function processVectorUpload(options: {
     workingFilePath = shapefile.split("\n")[0].trim();
     const { ext } = parsePath(workingFilePath);
     // Look for a matching file with a .xml extension
-    const xmlPath = await logger.exec(
+    const xmlPaths = await logger.exec(
       [
         "find",
         [
@@ -116,22 +116,29 @@ export async function processVectorUpload(options: {
           "*.xml",
         ],
       ],
-      "Problem finding metadata file in zip archive",
+      "Problem finding metadata files in zip archive",
       1 / 30
     );
     try {
-      if (xmlPath) {
-        try {
-          console.log("xml path", xmlPath.trim());
-          const data = readFileSync(xmlPath.trim(), "utf8");
-          metadata = await metadataToProseMirror(data);
-        } catch (e) {
-          console.error("Problem parsing xml metadata");
-          console.error(e);
+      if (xmlPaths) {
+        const paths = xmlPaths.trim().split("\n");
+        for (const xmlPath of paths) {
+          try {
+            console.log("xml path", xmlPath.trim());
+            const data = readFileSync(xmlPath.trim(), "utf8");
+            const parsedMetadata = await metadataToProseMirror(data);
+            if (parsedMetadata && Object.keys(parsedMetadata).length > 0) {
+              metadata = parsedMetadata;
+              break;
+            }
+          } catch (e) {
+            console.error("Problem parsing xml metadata");
+            console.error(e);
+          }
         }
       }
     } catch (e) {
-      // no metadata file
+      // no metadata files
     }
   }
 
