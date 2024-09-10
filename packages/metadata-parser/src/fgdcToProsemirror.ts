@@ -100,7 +100,7 @@ export function fgdcToProseMirror(metadata: any) {
   // Keywords
   const keywords = getFirst(idinfo?.keywords);
   const theme = getFirst(keywords?.theme);
-  const themeKeywords = theme?.themekey.filter(Boolean).join(", ");
+  const themeKeywords = theme?.themekey?.filter(Boolean).join(", ");
   if (themeKeywords) {
     doc.content.push(createHeadingNode([createTextNode("Keywords")], 2));
     doc.content.push(createParagraphNode([createTextNode(themeKeywords)]));

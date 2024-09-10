@@ -62,7 +62,7 @@ function createListItemNode(content) {
 }
 // Main function to generate ProseMirror nodes from Esri metadata
 function fgdcToProseMirror(metadata) {
-    var _a, _b, _c, _d;
+    var _a, _b, _c, _d, _e;
     var doc = { type: "doc", content: [] };
     // Title
     var idinfo = getFirst((_a = metadata === null || metadata === void 0 ? void 0 : metadata.metadata) === null || _a === void 0 ? void 0 : _a.idinfo);
@@ -90,7 +90,7 @@ function fgdcToProseMirror(metadata) {
     // Keywords
     var keywords = getFirst(idinfo === null || idinfo === void 0 ? void 0 : idinfo.keywords);
     var theme = getFirst(keywords === null || keywords === void 0 ? void 0 : keywords.theme);
-    var themeKeywords = theme === null || theme === void 0 ? void 0 : theme.themekey.filter(Boolean).join(", ");
+    var themeKeywords = (_b = theme === null || theme === void 0 ? void 0 : theme.themekey) === null || _b === void 0 ? void 0 : _b.filter(Boolean).join(", ");
     if (themeKeywords) {
         doc.content.push(createHeadingNode([createTextNode("Keywords")], 2));
         doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(themeKeywords)]));
@@ -104,8 +104,8 @@ function fgdcToProseMirror(metadata) {
         ]));
     }
     // Attribute Information (Table using ProseMirror Table Schema)
-    var eainfo = getFirst((_b = metadata === null || metadata === void 0 ? void 0 : metadata.metadata) === null || _b === void 0 ? void 0 : _b.eainfo);
-    var detailed = ((_c = eainfo === null || eainfo === void 0 ? void 0 : eainfo.detailed) === null || _c === void 0 ? void 0 : _c[0]) || {};
+    var eainfo = getFirst((_c = metadata === null || metadata === void 0 ? void 0 : metadata.metadata) === null || _c === void 0 ? void 0 : _c.eainfo);
+    var detailed = ((_d = eainfo === null || eainfo === void 0 ? void 0 : eainfo.detailed) === null || _d === void 0 ? void 0 : _d[0]) || {};
     var attributes = (detailed === null || detailed === void 0 ? void 0 : detailed.attr) || [];
     if (attributes.length > 0) {
         doc.content.push(createHeadingNode([createTextNode("Attribute Information")], 2));
@@ -148,7 +148,7 @@ function fgdcToProseMirror(metadata) {
         doc.content.push(tableNode);
     }
     // Contact Information
-    var metainfo = getFirst((_d = metadata === null || metadata === void 0 ? void 0 : metadata.metadata) === null || _d === void 0 ? void 0 : _d.metainfo);
+    var metainfo = getFirst((_e = metadata === null || metadata === void 0 ? void 0 : metadata.metadata) === null || _e === void 0 ? void 0 : _e.metainfo);
     var metc = getFirst(metainfo === null || metainfo === void 0 ? void 0 : metainfo.metc);
     var cntinfo = getFirst(metc === null || metc === void 0 ? void 0 : metc.cntinfo);
     var cntorgp = getFirst(cntinfo === null || cntinfo === void 0 ? void 0 : cntinfo.cntorgp);
