@@ -20,9 +20,11 @@ RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@s
 # Not using lerna, so need to copy this manually
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
+COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
 RUN npm install
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
+COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
 COPY handler.ts ./
 COPY src ./src
 RUN npm run build
