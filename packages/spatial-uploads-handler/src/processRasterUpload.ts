@@ -8,6 +8,7 @@ import { statSync } from "fs";
 import { rasterInfoForBands } from "./rasterInfoForBands";
 import { Logger } from "./logger";
 import gdal from "gdal-async";
+import bbox from "@turf/bbox";
 
 export async function processRasterUpload(options: {
   logger: Logger;
@@ -100,12 +101,12 @@ export async function processRasterUpload(options: {
   }
 
   // Assign bounds from rio bounds command output
-  const fc = await logger.exec(
-    ["rio", ["bounds", path]],
-    "Problem determining bounds of raster",
+  const info = await logger.exec(
+    ["gdalinfo", ["-json", path]],
+    "Problem running gdalinfo on raster",
     2 / 30
   );
-  const bounds = JSON.parse(fc).bbox;
+  const bounds = bbox(JSON.parse(info)["wgs84Extent"]);
   for (const band of stats.bands) {
     band.bounds = bounds;
   }
