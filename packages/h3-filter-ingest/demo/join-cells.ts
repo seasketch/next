@@ -12,12 +12,16 @@ if (!filePath) {
 }
 
 // Initialize progress bar
-const progressBar = new cliProgress.SingleBar({
-  format: 'Progress | {bar} | {percentage}% || {value}/{total} cells processed',
-  barCompleteChar: '\u2588',
-  barIncompleteChar: '\u2591',
-  hideCursor: true
-}, cliProgress.Presets.shades_classic);
+const progressBar = new cliProgress.SingleBar(
+  {
+    format:
+      "Progress | {bar} | {percentage}% || {value}/{total} cells processed",
+    barCompleteChar: "\u2588",
+    barIncompleteChar: "\u2591",
+    hideCursor: true,
+  },
+  cliProgress.Presets.shades_classic
+);
 
 const dataToJoin = readFileSync("./output/200m-cells.csv", "utf-8");
 const data = Papa.parse<{ id: string } | any>(dataToJoin, { header: true });
@@ -65,17 +69,22 @@ Papa.parse(stream, {
           output.write("\n");
           output.write(id);
           for (const key in joined) {
-            output.write(",");
-            output.write(joined[key]);
+            if (key !== "id") {
+              output.write(",");
+              output.write(joined[key]);
+            }
           }
         } else {
           // Get a random cell to join with
-          const random = data.data[Math.floor(Math.random() * data.data.length)];
+          const random =
+            data.data[Math.floor(Math.random() * data.data.length)];
           output.write("\n");
           output.write(id);
           for (const key in random) {
-            output.write(",");
-            output.write(random[key]);
+            if (key !== "id") {
+              output.write(",");
+              output.write(random[key]);
+            }
           }
         }
       },
@@ -84,8 +93,14 @@ Papa.parse(stream, {
         output.end();
         progressBar.update(totalCells);
         progressBar.stop();
-        console.log(`Wrote ${i.toLocaleString()} joined cells to output/joined-cells.csv`);
-      }
+        console.log(
+          `Wrote ${i.toLocaleString()} joined cells to output/joined-cells.csv`
+        );
+      },
+      error: (err) => {
+        console.error(err);
+        process.exit(1);
+      },
     });
-  }
+  },
 });
