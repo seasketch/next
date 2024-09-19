@@ -42,7 +42,7 @@ function isAllowedAttribute(attr: GeostatsAttribute) {
 
 // create the table based on attributes.json
 const createTable = `CREATE TABLE cells (
-  id TEXT PRIMARY KEY,
+  id TEXT NOT NULL PRIMARY KEY,
   ${attributes
     .filter(
       (attr: GeostatsAttribute) =>
@@ -61,7 +61,6 @@ const createTable = `CREATE TABLE cells (
 );`;
 
 countLines(cellsPath).then(async (rowCount) => {
-  console.log("create table", createTable);
   await run(createTable, []);
   // Create a progress bar
   const progressBar = new cliProgress.SingleBar(
@@ -108,9 +107,9 @@ countLines(cellsPath).then(async (rowCount) => {
         }
       });
       await run(
-        `INSERT INTO cells (${columns.join(", ")}) VALUES (${columns
-          .map(() => "?")
-          .join(", ")})`,
+        `INSERT INTO cells (id, ${columns.join(
+          ", "
+        )}) VALUES ('${id}', ${columns.map(() => "?").join(", ")})`,
         values
       );
       i++;

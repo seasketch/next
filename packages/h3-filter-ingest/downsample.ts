@@ -7,19 +7,31 @@
  */
 import * as h3 from "h3-js";
 import * as Papa from "papaparse";
-import { createReadStream, createWriteStream } from "node:fs";
+import { createReadStream, createWriteStream, readFileSync } from "node:fs";
 import cliProgress from "cli-progress";
+import * as sqlite from "sqlite3";
+import { GeostatsAttribute } from "@seasketch/geostats-types";
 
 const MIN_RESOLUTION = 5;
 
+const usage =
+  "Usage: npx ts-node downsample.ts <path-to-cells.csv> <path-to-attributes.json> <path-to-db.sqlite>";
 // get file path, which should be the first argument
 const filePath = process.argv[2];
 if (!filePath) {
-  console.error("Usage: npx ts-node downsample.ts <path-to-cells.csv>");
+  console.error(usage);
   process.exit(1);
 }
-
-const processed = new Set<string>();
+const attrPath = process.argv[3];
+if (!attrPath) {
+  console.error(usage);
+  process.exit(1);
+}
+const dbPath = process.argv[4];
+if (!dbPath) {
+  console.error(usage);
+  process.exit(1);
+}
 
 // Function to count the total number of rows by counting newlines
 function countRows(filePath: string): Promise<number> {
@@ -42,8 +54,19 @@ function countRows(filePath: string): Promise<number> {
 }
 
 async function downsample(input: string, resolution: number) {
-  const readStream = createReadStream(input);
-  const output = createReadStream(input);
+  const db = new sqlite.Database(dbPath);
+  function all(statement: string, values: any[]) {
+    return new Promise<any[]>((resolve, reject) => {
+      db.all(statement, values, (err, rows) => {
+        if (err) {
+          reject(err);
+        } else {
+          resolve(rows);
+        }
+      });
+    });
+  }
+  const cellIds = await getCellIds(input, resolution);
   const outputCsv = createWriteStream(`output/cells-${resolution}.csv`);
   const totalRows = await countRows(input);
   const progressBar = new cliProgress.SingleBar(
@@ -52,54 +75,82 @@ async function downsample(input: string, resolution: number) {
   );
   progressBar.start(totalRows, 0);
   let i = 0;
-  return new Promise<string>((resolve, reject) => {
-    Papa.parse<{ id: string } & { [key: string]: any }>(readStream, {
-      header: true,
-      step: (row, parser) => {
-        if (i === 0) {
-          // write header
-          outputCsv.write("id");
-          for (const key in row.data) {
-            if (key !== "id" && key !== "__parsed_extra") {
-              outputCsv.write(",");
-              outputCsv.write(key);
-            }
-          }
-          outputCsv.write("\n");
-        }
-        i++;
-        if (i % 1000 === 0) {
-          progressBar.update(i);
-        }
-        const id = row.data.id.toString();
-        const parentId = h3.cellToParent(id, resolution);
-        if (processed.has(parentId)) {
-          return;
-        }
-        processed.add(parentId);
-        outputCsv.write(parentId);
-        for (const key in row.data) {
-          if (key !== "id" && key !== "__parsed_extra") {
-            outputCsv.write(",");
-            outputCsv.write(row.data[key].toString());
-          }
-        }
-        outputCsv.write("\n");
-      },
-      complete: () => {
-        progressBar.update(totalRows); // Set it to 100% completion
-        progressBar.stop();
-        outputCsv.end();
-        console.log(
-          `Wrote ${i.toLocaleString()} cells to output/cells-${resolution}.csv`
+  // write the header, based on attributes.json
+  const attributes = JSON.parse(readFileSync(attrPath, "utf-8"));
+  outputCsv.write("id");
+  const columns = attributes.filter(
+    (attr: any) => attr.attribute !== "id"
+  ) as GeostatsAttribute[];
+  for (const column of columns) {
+    if (column.type === "boolean" || column.type === "string") {
+      outputCsv.write("," + column.attribute);
+    } else {
+      outputCsv.write(
+        "," + column.attribute + "_min," + column.attribute + "_max"
+      );
+    }
+  }
+  outputCsv.write("\n");
+
+  for (const cellId of cellIds) {
+    if (i % 1000 === 0) {
+      progressBar.update(i);
+    }
+    outputCsv.write(cellId);
+    const childIds = h3.cellToChildren(cellId, resolution + 1);
+    for (const column of columns) {
+      if (column.type === "boolean" || column.type === "string") {
+        const data = await all(
+          `SELECT distinct(${
+            column.attribute
+          }) FROM cells WHERE id IN (${childIds.map((id) => "?").join(",")})`,
+          childIds
         );
-        resolve(`output/cells-${resolution}.csv`);
-      },
-      error: (err) => {
-        reject(err);
-      },
-    });
-  });
+        if (column.type === "boolean") {
+          // if single value of 1, set to 1
+          if (data.length === 1 && data[0][column.attribute] === 1) {
+            outputCsv.write(",1");
+          } else if (data.length === 1 && data[0][column.attribute] === 0) {
+            outputCsv.write(",0");
+          } else if (data.length === 2) {
+            outputCsv.write(",2");
+          } else {
+            outputCsv.write(",");
+          }
+        } else {
+          const sortedKeys = Object.keys(column.values).sort();
+          // string type
+          const indexes = data.map((d: any) =>
+            sortedKeys.indexOf(d[column.attribute])
+          );
+          outputCsv.write(`,"${indexes.join(",")}"`);
+        }
+      } else {
+        const data = await all(
+          `select min(${column.attribute}) as min, max(${
+            column.attribute
+          }) as max from cells where id in (${childIds
+            .map(() => "?")
+            .join(",")})`,
+          childIds
+        );
+        if (data.length < 1) {
+          throw new Error("No data found");
+        } else {
+          outputCsv.write(`,${data[0].min},${data[0].max}`);
+        }
+      }
+    }
+    if (i % 1000 === 0) {
+      progressBar.update(i);
+    }
+    outputCsv.write("\n");
+    i++;
+  }
+  progressBar.update(totalRows);
+  progressBar.stop();
+  db.close();
+  return `output/cells-${resolution}.csv`;
 }
 
 let INPUT_RESOLUTION = 0;
@@ -117,11 +168,12 @@ const data = Papa.parse<{ id: string } & { [key: string]: any }>(stream, {
     i++;
   },
   complete: async () => {
-    console.log("input resolution", INPUT_RESOLUTION);
     let resolution = INPUT_RESOLUTION - 1;
     let input = filePath;
     while (resolution >= MIN_RESOLUTION) {
-      console.log(`Downsampling to resolution ${resolution}`);
+      console.log(
+        `Downsampling from resolution ${resolution + 1} > ${resolution}`
+      );
       input = await downsample(input, resolution);
       resolution--;
     }
@@ -131,3 +183,37 @@ const data = Papa.parse<{ id: string } & { [key: string]: any }>(stream, {
     process.exit(1);
   },
 });
+
+async function getCellIds(inputPath: string, resolution: number) {
+  console.log("Getting cell ids");
+  const totalRows = await countRows(inputPath);
+  const progressBar = new cliProgress.SingleBar(
+    {},
+    cliProgress.Presets.shades_classic
+  );
+  progressBar.start(totalRows, 0);
+  const readStream = createReadStream(inputPath);
+  const cellIds = new Set<string>();
+  let i = 0;
+  return new Promise<Set<string>>((resolve, reject) => {
+    Papa.parse<{ id: string }>(readStream, {
+      header: true,
+      step: (row, parser) => {
+        const id = row.data.id.toString();
+        cellIds.add(h3.cellToParent(id, resolution));
+        if (i % 1000 === 0) {
+          progressBar.update(i);
+        }
+        i++;
+      },
+      complete: () => {
+        progressBar.update(totalRows);
+        progressBar.stop();
+        resolve(cellIds);
+      },
+      error: (err) => {
+        reject(err);
+      },
+    });
+  });
+}
