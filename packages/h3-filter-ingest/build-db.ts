@@ -31,7 +31,7 @@ if (!dbPath) {
   process.exit(1);
 }
 
-const db = new sqlite.Database(dbPath, sqlite.OPEN_CREATE);
+const db = new sqlite.Database(dbPath);
 
 function isAllowedAttribute(attr: GeostatsAttribute) {
   return (
@@ -61,6 +61,7 @@ const createTable = `CREATE TABLE cells (
 );`;
 
 countLines(cellsPath).then(async (rowCount) => {
+  console.log("create table", createTable);
   await run(createTable, []);
   // Create a progress bar
   const progressBar = new cliProgress.SingleBar(
