@@ -9,20 +9,26 @@
   - [x] histograms in particular are needed
 - [x] test upload to d1
 - [] build cloudflare worker for performing filtering
-- [] BUG!! - You are accidentally adding the id twice, overwriting region (and others?)
-- [] develop scheme for summarizing cell properties at lower resolutions
-  - [] booleans
+- [x] BUG!! - You are accidentally adding the id twice, overwriting region (and others?)
+- [x] develop scheme for summarizing cell properties at lower resolutions
+  - [x] booleans
     - 1=All Yes, 0=All No, 2=Mixed, null=All Null
-  - [] strings
+  - [x] strings
     - Array[number], numbers reference the index of an item in the unique values field of the attribute's geostats
-  - [] numbers
+  - [x] numbers
     - col_min, col_max
-- [] properly encode lower-resolution property values
+- [x] properly encode lower-resolution property values
 
 ## Visualization
 
 - [] create function to generate appropriate styles for filtering at low and original resolution
 - [] database schema for representing a "h3 filter" sketch class
+- [] make a demo of realtime filtering
+  - do it in vite?
+  - dynamic list of fields to filter with
+  - sliders with histogram
+  - string multi-select
+  - boolean include or exclude
 
 # Questions for the Group Call
 

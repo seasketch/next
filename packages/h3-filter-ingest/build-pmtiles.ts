@@ -1,6 +1,6 @@
 import { execSync } from "child_process";
 /**
- * Creates a tile set from cells-{resolution}.fgb files, which it expects to 
+ * Creates a tile set from cells-{resolution}.fgb files, which it expects to
  * already be in the outputs folder.
  */
 const MIN_ZOOM = 1;
@@ -8,7 +8,7 @@ const MIN_ZOOM = 1;
 type Stop = {
   h3Resolution: number;
   zoomLevel: number;
-}
+};
 
 /**
  * These stops represent the zoom levels at which each h3 resolution should be
@@ -18,11 +18,13 @@ type Stop = {
 const stops: Stop[] = [
   { h3Resolution: 11, zoomLevel: 14 },
   { h3Resolution: 10, zoomLevel: 13 },
+  { h3Resolution: 9, zoomLevel: 12 },
   { h3Resolution: 9, zoomLevel: 11 },
   { h3Resolution: 8, zoomLevel: 10 },
-  { h3Resolution: 7, zoomLevel: 7 },
+  // { h3Resolution: 7, zoomLevel: 8 },
+  { h3Resolution: 7, zoomLevel: 8 },
   { h3Resolution: 6, zoomLevel: 6 },
-  { h3Resolution: 5, zoomLevel: 5 },
+  // { h3Resolution: 5, zoomLevel: 5 },
 ].sort((a, b) => b.zoomLevel - a.zoomLevel);
 
 for (const stop of stops) {
@@ -38,5 +40,7 @@ for (const stop of stops) {
     minZoom = MIN_ZOOM;
   }
   console.log(`Create tiles for r${resolution}, z${minZoom} - z${maxZoom}`);
-  execSync(`tippecanoe --force -l cells -z ${maxZoom} -Z ${minZoom} -o output/cells-${resolution}-z${minZoom}-z${maxZoom}.pmtiles output/cells-${resolution}.fgb`);
+  execSync(
+    `tippecanoe --force -M 750000 -l cells -z ${maxZoom} -Z ${minZoom} -o output/cells-${resolution}-z${minZoom}-z${maxZoom}.pmtiles output/cells-${resolution}.fgb`
+  );
 }

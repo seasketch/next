@@ -8,11 +8,11 @@
 import * as h3 from "h3-js";
 import * as Papa from "papaparse";
 import { createReadStream, createWriteStream, readFileSync } from "node:fs";
-import cliProgress from "cli-progress";
+import * as cliProgress from "cli-progress";
 import * as sqlite from "sqlite3";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
 
-const MIN_RESOLUTION = 5;
+const MIN_RESOLUTION = 6;
 
 const usage =
   "Usage: npx ts-node downsample.ts <path-to-cells.csv> <path-to-attributes.json> <path-to-db.sqlite>";
@@ -66,6 +66,8 @@ async function downsample(input: string, resolution: number) {
       });
     });
   }
+  const data = await all("SELECT id FROM cells limit 1", []);
+  const cellDbResolution = h3.getResolution(data[0].id);
   const cellIds = await getCellIds(input, resolution);
   const outputCsv = createWriteStream(`output/cells-${resolution}.csv`);
   const totalRows = await countRows(input);
@@ -92,12 +94,12 @@ async function downsample(input: string, resolution: number) {
   }
   outputCsv.write("\n");
 
-  for (const cellId of cellIds) {
+  for (const cellId of Array.from(cellIds)) {
     if (i % 1000 === 0) {
       progressBar.update(i);
     }
     outputCsv.write(cellId);
-    const childIds = h3.cellToChildren(cellId, resolution + 1);
+    const childIds = h3.cellToChildren(cellId, cellDbResolution);
     for (const column of columns) {
       if (column.type === "boolean" || column.type === "string") {
         const data = await all(
@@ -107,10 +109,13 @@ async function downsample(input: string, resolution: number) {
           childIds
         );
         if (column.type === "boolean") {
+          const values = data
+            .map((d: any) => d[column.attribute])
+            .filter((v) => typeof v === "number");
           // if single value of 1, set to 1
-          if (data.length === 1 && data[0][column.attribute] === 1) {
+          if (values.length === 1 && values[0] === 1) {
             outputCsv.write(",1");
-          } else if (data.length === 1 && data[0][column.attribute] === 0) {
+          } else if (values.length === 1 && values[0] === 0) {
             outputCsv.write(",0");
           } else if (data.length === 2) {
             outputCsv.write(",2");
@@ -118,11 +123,12 @@ async function downsample(input: string, resolution: number) {
             outputCsv.write(",");
           }
         } else {
-          const sortedKeys = Object.keys(column.values).sort();
           // string type
-          const indexes = data.map((d: any) =>
-            sortedKeys.indexOf(d[column.attribute])
-          );
+          const sortedKeys = Object.keys(column.values).sort();
+          const values = data
+            .map((d: any) => d[column.attribute])
+            .filter((s: any) => typeof s === "string" && s.length > 0);
+          const indexes = values.map((value: any) => sortedKeys.indexOf(value));
           outputCsv.write(`,"${indexes.join(",")}"`);
         }
       } else {
@@ -156,7 +162,7 @@ async function downsample(input: string, resolution: number) {
 let INPUT_RESOLUTION = 0;
 let i = 0;
 const stream = createReadStream(filePath);
-const data = Papa.parse<{ id: string } & { [key: string]: any }>(stream, {
+Papa.parse<{ id: string } & { [key: string]: any }>(stream, {
   header: true,
   dynamicTyping: true,
   step: (row, parser) => {
