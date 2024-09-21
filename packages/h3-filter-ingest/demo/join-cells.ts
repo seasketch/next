@@ -57,6 +57,7 @@ Papa.parse(stream, {
 
     Papa.parse(cellStream, {
       header: false,
+      dynamicTyping: true,
       step: (row: any) => {
         i++;
         if (i % 1000 === 0) {
@@ -69,7 +70,7 @@ Papa.parse(stream, {
           output.write("\n");
           output.write(id);
           for (const key in joined) {
-            if (key !== "id") {
+            if (key !== "id" && key !== "__parsed_extra") {
               output.write(",");
               output.write(joined[key]);
             }
@@ -81,7 +82,7 @@ Papa.parse(stream, {
           output.write("\n");
           output.write(id);
           for (const key in random) {
-            if (key !== "id") {
+            if (key !== "id" && key !== "__parsed_extra") {
               output.write(",");
               output.write(random[key]);
             }

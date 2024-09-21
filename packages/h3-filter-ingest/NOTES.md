@@ -21,6 +21,9 @@
 
 ## Visualization
 
+- [] make sure correct types are assigned to FGB output
+  - [] still a problem with arrays of values for string types
+  - [] booleans are incorrect at the highest resolution (are string)
 - [] create function to generate appropriate styles for filtering at low and original resolution
 - [] database schema for representing a "h3 filter" sketch class
 - [] make a demo of realtime filtering
