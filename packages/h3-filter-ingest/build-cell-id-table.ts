@@ -138,7 +138,7 @@ run(createTable, []).then(async () => {
     );
 
     let i = 0;
-    layer.fields.add(new gdal.FieldDefn("id", gdal.OFTInteger));
+    layer.fields.add(new gdal.FieldDefn("id", gdal.OFTReal));
     layer.fields.add(new gdal.FieldDefn("index", gdal.OFTString));
 
     for (const field of attributes) {
@@ -153,7 +153,7 @@ run(createTable, []).then(async () => {
           new gdal.FieldDefn(field.attribute + "_max", gdal.OFTReal)
         );
       } else if (field.type === "boolean") {
-        layer.fields.add(new gdal.FieldDefn(field.attribute, gdal.OFTInteger));
+        layer.fields.add(new gdal.FieldDefn(field.attribute, gdal.OFTReal));
       } else if (field.type === "string") {
         if (!field.values) {
           console.warn(`Skipping ${field.attribute} due to missing values`);
@@ -162,9 +162,7 @@ run(createTable, []).then(async () => {
           console.warn(`Skipping ${field.attribute} due to too many values`);
           continue;
         } else {
-          layer.fields.add(
-            new gdal.FieldDefn(field.attribute, gdal.OFTInteger)
-          );
+          layer.fields.add(new gdal.FieldDefn(field.attribute, gdal.OFTReal));
         }
       }
     }
@@ -206,7 +204,14 @@ run(createTable, []).then(async () => {
             feature.fields.set(field.attribute + "_min", data[field.attribute]);
             feature.fields.set(field.attribute + "_max", data[field.attribute]);
           } else if (field.type === "boolean") {
-            feature.fields.set(field.attribute, data[field.attribute]);
+            const value = data[field.attribute];
+            if (value === null) {
+              feature.fields.set(field.attribute, null);
+            } else if (value) {
+              feature.fields.set(field.attribute, 1);
+            } else {
+              feature.fields.set(field.attribute, 0);
+            }
           } else if (field.type === "string") {
             if (!field.values) {
               // console.warn(`Skipping ${field.attribute} due to missing values`);
@@ -223,6 +228,73 @@ run(createTable, []).then(async () => {
                 )
               );
             }
+          }
+        }
+        layer.features.add(feature);
+      } else {
+        const childIds = h3.cellToChildren(id, MAX_RESOLUTION);
+        const data = await get(
+          `
+          select ${attributes
+            .filter((attr: any) => attr.attribute !== "id")
+            .map((attr: any) => {
+              if (attr.type === "number") {
+                return `min(${attr.attribute}) as ${attr.attribute}_min, max(${attr.attribute}) as ${attr.attribute}_max`;
+              } else if (attr.type === "boolean") {
+                return `json_group_array(distinct(${attr.attribute})) as ${attr.attribute}`;
+              } else if (attr.type === "string") {
+                return `json_group_array(distinct(${attr.attribute})) as ${attr.attribute}`;
+              }
+            })
+            .join(", ")} from cells where id in (${childIds
+            .map(() => "?")
+            .join(",")})
+          `,
+          childIds
+        );
+        const feature = new gdal.Feature(layer);
+        const polygon = h3.cellsToMultiPolygon([id], true)[0];
+        feature.setGeometry(
+          gdal.Geometry.fromGeoJson({
+            type: "Polygon",
+            coordinates: polygon,
+          })
+        );
+        feature.fields.set("id", i);
+        feature.fields.set("index", id);
+        for (const field of attributes) {
+          if (field.attribute === "id") {
+            continue;
+          }
+          if (field.type === "number") {
+            feature.fields.set(
+              field.attribute + "_min",
+              data[field.attribute + "_min"]
+            );
+            feature.fields.set(
+              field.attribute + "_max",
+              data[field.attribute + "_max"]
+            );
+          } else if (field.type === "boolean") {
+            const values = JSON.parse(data[field.attribute]).filter(
+              (v: any) => typeof v === "number"
+            );
+            // should be a set of 0, 1, and/or null
+            if (values.length === 1 && values[0] === 1) {
+              feature.fields.set(field.attribute, 1);
+            } else if (values.length === 1 && values[0] === 0) {
+              feature.fields.set(field.attribute, 0);
+            } else if (values.length === 2) {
+              feature.fields.set(field.attribute, 2);
+            } else {
+              feature.fields.set(field.attribute, null);
+            }
+          } else if (field.type === "string") {
+            const strings = JSON.parse(data[field.attribute]);
+            feature.fields.set(
+              field.attribute,
+              encodeArray(strings, sortedValues[field.attribute])
+            );
           }
         }
         layer.features.add(feature);

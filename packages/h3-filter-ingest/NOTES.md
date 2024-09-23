@@ -36,3 +36,19 @@
 # Questions for the Group Call
 
 - Will the filtering tool be targeted at just coral reef restoration sites, or will it be used as-is for other use cases? How general purpose should it be?
+
+# Stuff you want done by the monday meeting
+
+- [x] finished demo
+  - [x] no outstanding encoding issues
+    - [x] need to do a final publish from scratch to make sure everything is working correctly
+  - [x] Can filter all types
+    - [x] strings
+    - [x] booleans
+    - [x] numbers
+  - [no] show count using worker and d1
+  - [x] popups that illustrate why a cell was/was-not included
+- [] write a note of where you see the combinatorial problem
+- [] plan for walkthru
+- [] rough roadmap
+- [] list of questions
