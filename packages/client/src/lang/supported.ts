@@ -21,6 +21,11 @@ const languages: LangDetails[] = [
       code: "pt",
     },
     {
+      name: "Brazilian Portuguese",
+      localName: "Português do Brasil",
+      code: "pt-br",
+    },
+    {
       name: "Norwegian",
       localName: "Norsk",
       code: "no",

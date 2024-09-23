@@ -1,0 +1,17 @@
+{
+  "Accept as": "Aceitar como {{email}}",
+  "An account with this email address already exists.": "Já existe uma conta com este endereço de e-mail.",
+  "Confirming invite": "Confirmando convite",
+  "Contact {{supportEmail}} to request a new invitation.": "Entre em contato com {{supportEmail}} para solicitar um novo convite.",
+  "Create an Account": "Criar uma conta",
+  "Logout and sign in as ": "Saia e entre como ",
+  "Sign In": "Entrar",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "Este convite já foi aceito. <1> Prossiga para o projeto </1> ou <5>entre em contato com o suporte</5>se você acredita que isso é um erro.",
+  "This invitation was originally sent to <2></2>.": "Este convite foi originalmente enviado para <2></2>.",
+  "Use another account": "Usar outra conta",
+  "Verifying invitation code": "Verificando o código de convite",
+  "Welcome, !": "Bem-vindo!",
+  "Welcome!": "Bem-vindo!",
+  "You have been invited to participate in a SeaSketch project.": "Você foi convidado a participar de um projeto SeaSketch.",
+  "Your invitation to this project has expired.": "Seu convite para este projeto expirou."
+}
