@@ -299,7 +299,7 @@ async function encodeValuesToRGB(
     `,
   };
 
-  if (noDataValue !== null) {
+  if (noDataValue !== null && !isNaN(noDataValue)) {
     operations["temp_a.tif"] = `255*(A!=${noDataValue})`;
   }
 

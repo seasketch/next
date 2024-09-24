@@ -59,7 +59,7 @@ export async function rasterInfoForBands(
     const metadata = band.getMetadata();
     const size = band.size;
     const noDataValue = band.noDataValue;
-    if (noDataValue !== null) {
+    if (noDataValue !== null && !isNaN(noDataValue)) {
       if (noDataValue === stats.min) {
         stats.min = null;
       }
@@ -78,7 +78,7 @@ export async function rasterInfoForBands(
       for (var i = 0; i < size.x; i++) {
         const value = values[i];
         num++;
-        if (isRGB || value !== noDataValue) {
+        if (isRGB || (!isNaN(value) && value !== noDataValue)) {
           if (stats.min === null || value < stats.min) {
             stats.min = value;
           }
@@ -215,7 +215,10 @@ export async function rasterInfoForBands(
         categories: categoryBuckets,
       },
       maximum: stats.max,
-      noDataValue: band.noDataValue as number | null,
+      noDataValue:
+        band.noDataValue && isNaN(band.noDataValue)
+          ? null
+          : (band.noDataValue as number | null),
       offset: band.offset,
       scale: band.scale,
       count,
