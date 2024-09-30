@@ -150,6 +150,15 @@ class MeasureControl extends EventEmitter {
   private isDestroyed = false;
   private length = 0;
   private mapContextManager: MapContextManager;
+  /**
+   * During the React component lifecycle, sometimes the MeasureControl
+   * is created and destroyed out of sync with the map. This counter
+   * is used to enable repeated calls to destroy when even listeners are
+   * fired on destroyed MeasureControls, so that event listeners can be
+   * removed. Using the counter, the number of times this will be
+   * attempted before throwing an exception can be limited (3 tries).
+   */
+  private destroyCount = 0;
 
   constructor(mapContextManager: MapContextManager) {
     super();
@@ -301,6 +310,10 @@ class MeasureControl extends EventEmitter {
    * map. Call before discarding this instance of MeasureControl.
    */
   destroy = () => {
+    if (this.destroyCount > 3) {
+      throw new Error("MeasureControl is already destroyed");
+    }
+    this.destroyCount++;
     if (this.map && this.map.loaded()) {
       for (const layer of measureLayers) {
         this.map.removeLayer(layer.id);
@@ -324,6 +337,7 @@ class MeasureControl extends EventEmitter {
 
   onKeyDown = (e: KeyboardEvent) => {
     if (this.isDestroyed) {
+      this.destroy();
       return;
     }
     if (e.key === "Escape" && this.state === "drawing") {
@@ -351,7 +365,8 @@ class MeasureControl extends EventEmitter {
 
   onMouseOverPoint = async (e: any) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      this.destroy();
+      return;
     }
     if (this.state === "disabled" || this.state === "dragging") {
       return;
@@ -431,7 +446,8 @@ class MeasureControl extends EventEmitter {
 
   onClick = (e: mapboxgl.MapMouseEvent) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      this.destroy();
+      return;
     }
     if (this.state === "drawing") {
       // Check if on last point
@@ -480,7 +496,8 @@ class MeasureControl extends EventEmitter {
   private cursorOverRuler = false;
   onMouseOutPoint = (e: any) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      this.destroy();
+      return;
     }
 
     if (this.state === "drawing") {
@@ -529,7 +546,8 @@ class MeasureControl extends EventEmitter {
 
   onMouseDownPoint = (e: any) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      this.destroy();
+      return;
     }
     this.onMouseDownOnPoint = true;
     if (this.state === "editing" && this.draggedPointIndex > -1) {
@@ -540,7 +558,8 @@ class MeasureControl extends EventEmitter {
 
   onMouseUp = (e: any) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      this.destroy();
+      return;
     }
     this.onMouseDownOnPoint = false;
     if (this.state === "dragging") {
@@ -605,7 +624,8 @@ class MeasureControl extends EventEmitter {
 
   onMouseMove = (e: any) => {
     if (this.isDestroyed) {
-      throw new Error("MeasureControl is destroyed");
+      this.destroy();
+      return;
     }
     if (this.state === "drawing") {
       // update cursor
