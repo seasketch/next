@@ -1,19 +1,20 @@
 import { TableIcon } from "@heroicons/react/outline";
 import React, { useContext } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { SurveyStyleContext } from "../surveys/appearance";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
   FormLanguageContext,
-  SurveyContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
 import FormElementOptionsInput, {
   FormElementOption,
 } from "./FormElementOptionsInput";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import useDialog from "../components/useDialog";
 
 export type MatrixProps = {
   options?: FormElementOption[];
@@ -35,6 +36,8 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
     "rows",
     props
   ) as FormElementOption[];
+
+  const { alert } = useDialog();
 
   function updateValue(row: FormElementOption, option: string) {
     const newValue = { ...props.value, [row.value || row.label]: option };
@@ -89,6 +92,18 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
             <React.Fragment key={row.label}>
               <div className="px-2 items-center flex bg-black bg-opacity-10 ltr:rounded-l rtl:rounded-r">
                 {row.label}
+                {row.description && row.description.length > 0 && (
+                  <button
+                    className="ml-1.5"
+                    onClick={() => {
+                      alert(row.label, {
+                        description: row.description,
+                      });
+                    }}
+                  >
+                    <InfoCircledIcon />
+                  </button>
+                )}
               </div>
               <div
                 className={`flex w-32 sm:w-auto items-center bg-black bg-opacity-10 p-2 ltr:rounded-r rtl:rounded-l`}
@@ -149,8 +164,9 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
           return (
             <>
               <FormElementOptionsInput
+                promptForDescription
                 heading="Rows"
-                key={props.id}
+                key={props.id + "rows"}
                 prop="rows"
                 componentSettings={props.componentSettings}
                 alternateLanguageSettings={props.alternateLanguageSettings}
@@ -162,7 +178,7 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
                 )}
               />
               <FormElementOptionsInput
-                key={props.id}
+                key={props.id + "options"}
                 prop="options"
                 componentSettings={props.componentSettings}
                 alternateLanguageSettings={props.alternateLanguageSettings}
