@@ -29,7 +29,8 @@ export async function networkFirst(
   cacheKey: string,
   request: Request,
   appendToCache?: boolean,
-  timeout?: number
+  timeout?: number,
+  expectedContentType?: RegExp
 ) {
   const cached = await cache.match(cacheKey);
   const abortController = new AbortController();
@@ -49,7 +50,14 @@ export async function networkFirst(
     }
     if (networkResponse.ok) {
       if (appendToCache && networkResponse.status !== 204) {
-        cache.put(cacheKey, networkResponse.clone());
+        if (
+          !expectedContentType ||
+          expectedContentType.test(
+            networkResponse.headers.get("content-type") || ""
+          )
+        ) {
+          cache.put(cacheKey, networkResponse.clone());
+        }
       } else if (networkResponse.status === 204) {
         console.warn(
           "204 response from networkFirst strategy, skipping caching"

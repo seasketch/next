@@ -408,13 +408,16 @@ export default class ArcGISFeatureLayerSource
       this.rawFeaturesHaveBeenFetched = true;
     } catch (e) {
       let shouldFireError = true;
+      let shouldSetLoading = true;
       if (
+        (typeof e === "string" && /timeout/.test(e)) ||
         ("message" in (e as any) && /limit/i.test((e as any).message)) ||
         this.abortController?.signal?.reason === "timeout"
       ) {
         this.exceededBytesLimit = true;
         if (this.options.fetchStrategy === "auto") {
           shouldFireError = false;
+          shouldSetLoading = false;
           this.options.fetchStrategy = "tiled";
           this.QuantizedVectorRequestManager!.on(
             "update",
@@ -428,7 +431,9 @@ export default class ArcGISFeatureLayerSource
         this.fireError(e as Error);
         console.error(e);
       }
-      this._loading = false;
+      if (shouldSetLoading) {
+        this._loading = false;
+      }
     }
   }
 

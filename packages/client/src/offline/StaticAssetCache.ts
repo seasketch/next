@@ -307,7 +307,8 @@ class StaticAssetCache {
       "/",
       event.request,
       true,
-      navigator.onLine ? 8000 : 1000
+      navigator.onLine ? 8000 : 1000,
+      /text\/html/
     );
     if (response.status === 204) {
       console.warn("networkThenIndexHtmlCache 204 response");
@@ -324,7 +325,14 @@ class StaticAssetCache {
       // index.html used to be cached in older service workers, so this is a
       // remotely-possible fallback for those cases.
       // Should probably remove this code path after the fiji surveys (6/10/24)
-      return networkFirst(await this.cache, "/index.html", event.request, true);
+      return networkFirst(
+        await this.cache,
+        "/index.html",
+        event.request,
+        true,
+        undefined,
+        /text\/html/
+      );
     }
   }
 }

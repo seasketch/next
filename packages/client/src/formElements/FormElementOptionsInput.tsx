@@ -8,6 +8,7 @@ import { FormLanguageContext, SurveyContext } from "./FormElement";
 export type FormElementOption = {
   value?: string;
   label: string;
+  description?: string;
 };
 
 export default function FormElementOptionsInput({
@@ -17,6 +18,7 @@ export default function FormElementOptionsInput({
   onChange,
   heading,
   description,
+  promptForDescription,
 }: {
   prop: string;
   componentSettings?: { [key: string]: any };
@@ -24,6 +26,7 @@ export default function FormElementOptionsInput({
   onChange: (options: FormElementOption[]) => void;
   heading?: string;
   description?: ReactNode | string;
+  promptForDescription?: boolean;
 }) {
   const context = useContext(FormLanguageContext);
   const { t } = useTranslation("admin:surveys");
@@ -91,7 +94,7 @@ export default function FormElementOptionsInput({
         <Trans ns="admin:surveys">
           List options as{" "}
           <code className="font-mono bg-gray-100 p-1 rounded">
-            label,value{" "}
+            label,value{promptForDescription ? ",description" : ""}{" "}
           </code>
           each on a new line. Use quotes to escape commas. Values are not
           required but will keep data consistent if text changes are needed.
@@ -154,16 +157,32 @@ export default function FormElementOptionsInput({
 function toText(options: FormElementOption[]): string {
   return Papa.unparse(
     options.map((option) =>
-      option.value ? [option.label, option.value] : [option.label]
-    )
-  );
+      option.value
+        ? option.description
+          ? [
+              option.label,
+              option.value,
+              `${option.description.replace(/^"/, "").replace(/"$/, "")}`,
+            ]
+          : [option.label, option.value]
+        : [option.label]
+    ),
+    {
+      // using the Mongolian vowel separator as a quote character, as it
+      // is unlikely to be used in user-generated content
+      quoteChar: "\u180E",
+    }
+  ).replace(/\u180E/g, "");
 }
 
 function fromText(text: string) {
   let options: FormElementOption[] = [];
   let errors: string[] = [];
   let delimiter: string | undefined = undefined;
-  const result = Papa.parse(text, { skipEmptyLines: true });
+  // eslint-disable-next-line i18next/no-literal-string
+  const result = Papa.parse(text, {
+    skipEmptyLines: true,
+  });
   if (
     result.errors?.length &&
     result.errors.filter((e) => e.type !== "Delimiter").length
@@ -173,7 +192,16 @@ function fromText(text: string) {
     options = result.data.map((r: any) =>
       r.length === 1
         ? { label: r[0].trim() }
-        : { label: r[0].trim(), value: r[1].trim() }
+        : {
+            label: r[0].trim(),
+            value: r[1].trim(),
+            description: r
+              .slice(2)
+              ?.join(",")
+              .trim()
+              .replace(/^"/, "")
+              .replace(/"$/, ""),
+          }
     );
     if (options.length === 0) {
       errors = ["No options specified"];
