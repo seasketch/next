@@ -31,6 +31,7 @@ export default function TableOfContentsMetadataModal({
   return (
     <MetadataModal
       document={data?.tableOfContentsItem?.computedMetadata}
+      xml={data?.tableOfContentsItem?.metadataXml}
       loading={loading}
       error={error}
       onRequestClose={onRequestClose}

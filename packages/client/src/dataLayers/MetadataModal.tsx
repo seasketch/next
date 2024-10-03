@@ -3,6 +3,8 @@ import { useEffect, useMemo, useRef } from "react";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
 import { metadata as editorConfig } from "../editor/config";
+import { MetadataXmlFileFragment } from "../generated/graphql";
+import { Trans } from "react-i18next";
 
 const { schema } = editorConfig;
 
@@ -12,12 +14,14 @@ export default function MetadataModal({
   loading,
   error,
   title,
+  xml,
 }: {
   document?: any;
   onRequestClose: () => void;
   loading: boolean;
   error?: Error;
   title?: string;
+  xml?: MetadataXmlFileFragment | null;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
@@ -77,6 +81,22 @@ export default function MetadataModal({
             <h1 className="text-2xl font-medium">{title}</h1>
           )}
           <div className="ProseMirror" ref={target}></div>
+          {xml && (
+            <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
+              <Trans ns="homepage">
+                This layer includes metadata in XML format, available for{" "}
+              </Trans>
+              <a
+                href={xml.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
+                download={xml.filename}
+              >
+                <Trans ns="homepage">Download</Trans>
+              </a>
+            </div>
+          )}
         </div>
       </>
     </Modal>

@@ -129,6 +129,19 @@ export async function processVectorUpload(options: {
             const parsedMetadata = await metadataToProseMirror(data);
             if (parsedMetadata && Object.keys(parsedMetadata).length > 0) {
               metadata = parsedMetadata;
+              outputs.push({
+                type: "XMLMetadata",
+                filename: xmlPath.split("/").pop()!,
+                remote: `${
+                  process.env.RESOURCES_REMOTE
+                }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
+                local: xmlPath,
+                size: statSync(xmlPath).size,
+                url: `${
+                  process.env.UPLOADS_BASE_URL
+                }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
+              });
+              console.log("outputs", outputs);
               break;
             }
           } catch (e) {

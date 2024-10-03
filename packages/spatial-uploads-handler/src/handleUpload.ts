@@ -39,7 +39,8 @@ export interface ResponseOutput {
     | SupportedTypes
     | "PMTiles"
     // geotif may be converted to normalized png when processing gray -> rgb
-    | "PNG";
+    | "PNG"
+    | "XMLMetadata";
   /** URL of the tile service (or geojson if really small) */
   url?: string;
   /** in bytes */
@@ -241,6 +242,14 @@ export default async function handleUpload(
     await putObject(logPath, s3LogPath, logger);
     const geostats = Array.isArray(stats) ? stats[0] : stats;
 
+    console.log(
+      "buliding response",
+      outputs.map((o) => ({
+        ...o,
+        local: undefined,
+        filename: o.filename,
+      }))
+    );
     const response: { layers: ProcessedUploadLayer[]; logfile: string } = {
       layers: [
         {
