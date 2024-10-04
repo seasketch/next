@@ -1,4 +1,7 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
+import { DOMParser } from "prosemirror-model";
+import { JSDOM } from "jsdom";
+import { schema } from "../prosemirror/basicSchema";
 
 const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
   return {
@@ -14,29 +17,6 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
     `,
     resolvers: {
       TableOfContentsItem: {
-        // metadataXMLUrl: async (item, args, context, info) => {
-        //   if (item.dataLayerId) {
-        //     // first, get the data_source_id
-        //     const q = await context.pgClient.query(
-        //       `select data_source_id from data_layers where id = $1`,
-        //       [item.dataLayerId]
-        //     );
-        //     if (q.rows.length === 0) {
-        //       return null;
-        //     }
-        //     // then look for a data_upload_output with type = XMLMetadata
-        //     const { data_source_id } = q.rows[0];
-        //     const { rows } = await context.pgClient.query(
-        //       `select url from data_upload_outputs where data_source_id = $1 and type = 'XMLMetadata'`,
-        //       [data_source_id]
-        //     );
-        //     if (rows.length === 0) {
-        //       return null;
-        //     }
-        //     return rows[0].url;
-        //   }
-        //   return null;
-        // },
         computedMetadata: async (item, args, context, info) => {
           if (item.metadata) {
             return item.metadata;
@@ -118,7 +98,34 @@ export function generateMetadataForLayer(
     contentOrFalse(layer.copyrightText) ||
     contentOrFalse(mapServerInfo.copyrightText) ||
     contentOrFalse(mapServerInfo.documentInfo?.Author);
-  const description = pickDescription(mapServerInfo, layer);
+  const descriptionText = pickDescription(mapServerInfo, layer);
+
+  // if description contains html, convert to prosemirror
+  const hasHtml = descriptionText
+    ? /<[a-z][\s\S]*>/i.test(descriptionText)
+    : false;
+  let description: any | null = null;
+  if (hasHtml) {
+    const dom = new JSDOM(descriptionText as string);
+    const document = dom.window.document;
+    const body = document.querySelector("body");
+    // @ts-ignore
+    const parsedDocument = DOMParser.fromSchema(schema).parse(body);
+    description = parsedDocument.toJSON().content;
+  } else if (descriptionText && descriptionText.length > 0) {
+    description = [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: descriptionText || "",
+          },
+        ],
+      },
+    ];
+  }
+
   let keywords =
     mapServerInfo.documentInfo?.Keywords &&
     mapServerInfo.documentInfo?.Keywords.length
@@ -137,19 +144,7 @@ export function generateMetadataForLayer(
           },
         ],
       },
-      ...(description
-        ? [
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "text",
-                  text: description || "",
-                },
-              ],
-            },
-          ]
-        : []),
+      ...(description ? description : []),
       ...(attribution
         ? [
             { type: "paragraph" },
@@ -222,3 +217,16 @@ export function generateMetadataForLayer(
 }
 
 export default ComputedMetadataPlugin;
+
+function decodeUnicode(encodedString: string) {
+  // Replace Unicode escape sequences with corresponding characters
+  const unicodeDecoded = encodedString.replace(
+    /\\u[\dA-F]{4}/gi,
+    function (match) {
+      return String.fromCharCode(parseInt(match.replace(/\\u/g, ""), 16));
+    }
+  );
+
+  // Remove any remaining HTML tags if needed (since you want plain text)
+  return unicodeDecoded.replace(/<\/?[^>]+(>|$)/g, "");
+}
