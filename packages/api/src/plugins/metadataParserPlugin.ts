@@ -19,11 +19,6 @@ const REQUIRED_ENV_VARS = [
 
 const MetadataParserPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
-  for (const envvar of REQUIRED_ENV_VARS) {
-    if (!process.env[envvar]) {
-      throw new Error(`Missing env var ${envvar}`);
-    }
-  }
   return {
     typeDefs: gql`
       extend type Mutation {
@@ -42,6 +37,12 @@ const MetadataParserPlugin = makeExtendSchemaPlugin((build) => {
           context,
           resolveInfo
         ) => {
+          for (const envvar of REQUIRED_ENV_VARS) {
+            if (!process.env[envvar]) {
+              throw new Error(`Missing env var ${envvar}`);
+            }
+          }
+
           const { pgClient } = context;
 
           const data = await metadataToProseMirror(args.xmlMetadata);
