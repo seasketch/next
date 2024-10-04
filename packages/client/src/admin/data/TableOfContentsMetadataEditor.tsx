@@ -26,7 +26,7 @@ export default function TableOfContentsMetadataEditor({
       onRequestClose={onRequestClose}
       usingDynamicMetadata={Boolean(
         data?.tableOfContentsItem?.usesDynamicMetadata
-      )}
+    )}
       dynamicMetadataAvailable={
         data?.tableOfContentsItem?.isCustomGlSource || false
       }
