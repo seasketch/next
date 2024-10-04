@@ -20,6 +20,8 @@ export default function TableOfContentsMetadataEditor({
     },
   });
   const [mutation, mutationState] = useUpdateMetadataMutation();
+
+  console.log("toc metadata editor", data?.tableOfContentsItem);
   return (
     <MetadataEditor
       onRequestClose={onRequestClose}
@@ -41,6 +43,14 @@ export default function TableOfContentsMetadataEditor({
       loading={loading}
       error={error}
       startingDocument={data?.tableOfContentsItem?.computedMetadata}
+      xml={
+        data?.tableOfContentsItem?.metadataXml
+          ? {
+              ...data.tableOfContentsItem.metadataXml,
+              format: data.tableOfContentsItem.metadataFormat!,
+            }
+          : undefined
+      }
     />
   );
 }

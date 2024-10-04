@@ -1,5 +1,6 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { metadataToProseMirror } from "@seasketch/metadata-parser";
+import { v4 as uuid } from "uuid";
 import S3 from "aws-sdk/clients/s3";
 
 const r2 = new S3({
@@ -29,6 +30,7 @@ const MetadataParserPlugin = makeExtendSchemaPlugin((build) => {
         updateTocMetadataFromXML(
           id: Int!
           xmlMetadata: String!
+          filename: String
         ): TableOfContentsItem!
       }
     `,
@@ -41,8 +43,57 @@ const MetadataParserPlugin = makeExtendSchemaPlugin((build) => {
           resolveInfo
         ) => {
           const { pgClient } = context;
+
           const data = await metadataToProseMirror(args.xmlMetadata);
           if (data?.doc) {
+            // get project id related to table of contents item from db
+            const { rows: projectRows } = await pgClient.query(
+              `select project_id from public.table_of_contents_items where id = $1`,
+              [args.id]
+            );
+            if (!projectRows?.[0]?.project_id) {
+              throw new Error("Table of contents item not found");
+            }
+            const projectId = projectRows[0].project_id;
+
+            // get the project slug
+            const { rows: slugRows } = await pgClient.query(
+              `select slug from public.projects where id = $1`,
+              [projectId]
+            );
+            if (!slugRows?.[0]?.slug) {
+              throw new Error("Project not found");
+            }
+            const slug = slugRows[0].slug;
+
+            const objectPath = `projects/${slug}/metadata-updates/${uuid()}.xml`;
+            const remote = `r2://${process.env.R2_TILES_BUCKET}/${objectPath}`;
+            const url = `https://uploads.seasketch.org/${objectPath}`;
+            // get byte length of xmlMetadata
+            const byteLength = Buffer.byteLength(args.xmlMetadata, "utf8");
+            // create a record in the db
+            await pgClient.query(
+              `select create_metadata_xml_output((
+                select data_source_id from data_layers where id = (select data_layer_id from public.table_of_contents_items where id = $1)
+              ), $2, $3, $4, $5, $6)`,
+              [
+                args.id,
+                url,
+                remote,
+                byteLength,
+                args.filename || "metadata.xml",
+                `"${data.type}"`,
+              ]
+            );
+            // Save to r2
+            const uploadParams = {
+              Bucket: process.env.R2_TILES_BUCKET,
+              Key: objectPath,
+              Body: args.xmlMetadata, // The XML content
+              ContentType: "application/xml", // MIME type for XML files
+            };
+
+            await r2.upload(uploadParams).promise();
             const { rows } = await pgClient.query(
               `update public.table_of_contents_items set metadata = $1 where id = $2 returning data_layer_id`,
               [data.doc, args.id]

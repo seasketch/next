@@ -2893,6 +2893,7 @@ export enum DataUploadOutputType {
   GeoTiff = 'GEO_TIFF',
   Pmtiles = 'PMTILES',
   Png = 'PNG',
+  Xmlmetadata = 'XMLMETADATA',
   ZippedShapefile = 'ZIPPED_SHAPEFILE'
 }
 
@@ -8608,6 +8609,7 @@ export type MutationUpdateTableOfContentsItemChildrenArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateTocMetadataFromXmlArgs = {
+  filename?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   xmlMetadata: Scalars['String'];
 };
@@ -13093,6 +13095,8 @@ export type TableOfContentsItem = Node & {
   isFolder: Scalars['Boolean'];
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
   metadata?: Maybe<Scalars['JSON']>;
+  metadataFormat?: Maybe<Scalars['String']>;
+  metadataXml?: Maybe<DataUploadOutput>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /**
@@ -17094,7 +17098,7 @@ export type FullAdminSourceFragment = (
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )>, outputs?: Maybe<Array<(
     { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename'>
+    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt'>
   )>> }
 );
 
@@ -17389,6 +17393,11 @@ export type UpdateEnableHighDpiRequestsMutation = (
   )> }
 );
 
+export type MetadataXmlFileFragment = (
+  { __typename?: 'DataUploadOutput' }
+  & Pick<DataUploadOutput, 'url' | 'createdAt' | 'filename' | 'size'>
+);
+
 export type GetMetadataQueryVariables = Exact<{
   itemId: Scalars['Int'];
 }>;
@@ -17398,7 +17407,11 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'metadataFormat'>
+    & { metadataXml?: Maybe<(
+      { __typename?: 'DataUploadOutput' }
+      & MetadataXmlFileFragment
+    )> }
   )> }
 );
 
@@ -17422,6 +17435,7 @@ export type UpdateMetadataMutation = (
 export type UpdateMetadataFromXmlMutationVariables = Exact<{
   itemId: Scalars['Int'];
   xml: Scalars['String'];
+  filename?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -17429,13 +17443,17 @@ export type UpdateMetadataFromXmlMutation = (
   { __typename?: 'Mutation' }
   & { updateTocMetadataFromXML: (
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'metadata' | 'computedMetadata'>
-    & { dataLayer?: Maybe<(
+    & Pick<TableOfContentsItem, 'id' | 'metadata' | 'computedMetadata' | 'metadataFormat'>
+    & { metadataXml?: Maybe<(
+      { __typename?: 'DataUploadOutput' }
+      & MetadataXmlFileFragment
+    )>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id'>
       & { dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'attribution'>
+        & Pick<DataSource, 'id'>
+        & FullAdminSourceFragment
       )> }
     )> }
   ) }
@@ -21692,6 +21710,8 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     type
     size
     originalFilename
+    filename
+    createdAt
   }
   changelog
 }
@@ -21799,6 +21819,14 @@ export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${FullAdminDataLayerFragmentDoc}`;
+export const MetadataXmlFileFragmentDoc = /*#__PURE__*/ gql`
+    fragment MetadataXmlFile on DataUploadOutput {
+  url
+  createdAt
+  filename
+  size
+}
+    `;
 export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ForumListDetails on Forum {
   id
@@ -23888,9 +23916,13 @@ export const GetMetadataDocument = /*#__PURE__*/ gql`
     computedMetadata
     usesDynamicMetadata
     isCustomGlSource
+    metadataXml {
+      ...MetadataXmlFile
+    }
+    metadataFormat
   }
 }
-    `;
+    ${MetadataXmlFileFragmentDoc}`;
 export const UpdateMetadataDocument = /*#__PURE__*/ gql`
     mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
@@ -23904,21 +23936,26 @@ export const UpdateMetadataDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateMetadataFromXmlDocument = /*#__PURE__*/ gql`
-    mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!) {
-  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml) {
+    mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!, $filename: String) {
+  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml, filename: $filename) {
     id
     metadata
     computedMetadata
+    metadataXml {
+      ...MetadataXmlFile
+    }
+    metadataFormat
     dataLayer {
       id
       dataSource {
         id
-        attribution
+        ...FullAdminSource
       }
     }
   }
 }
-    `;
+    ${MetadataXmlFileFragmentDoc}
+${FullAdminSourceFragmentDoc}`;
 export const ProjectHostingQuotaDocument = /*#__PURE__*/ gql`
     query ProjectHostingQuota($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -26566,6 +26603,7 @@ export const namedOperations = {
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',
     FullAdminOverlay: 'FullAdminOverlay',
+    MetadataXmlFile: 'MetadataXmlFile',
     ForumListDetails: 'ForumListDetails',
     AuthorProfile: 'AuthorProfile',
     ForumPost: 'ForumPost',

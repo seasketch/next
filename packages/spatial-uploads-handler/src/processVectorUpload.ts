@@ -124,7 +124,6 @@ export async function processVectorUpload(options: {
         const paths = xmlPaths.trim().split("\n");
         for (const xmlPath of paths) {
           try {
-            console.log("xml path", xmlPath.trim());
             const data = readFileSync(xmlPath.trim(), "utf8");
             const parsedMetadata = await metadataToProseMirror(data);
             if (parsedMetadata && Object.keys(parsedMetadata).length > 0) {
@@ -141,7 +140,6 @@ export async function processVectorUpload(options: {
                   process.env.UPLOADS_BASE_URL
                 }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
               });
-              console.log("outputs", outputs);
               break;
             }
           } catch (e) {

@@ -21,7 +21,7 @@ export default function MetadataModal({
   loading: boolean;
   error?: Error;
   title?: string;
-  xml?: MetadataXmlFileFragment | null;
+  xml?: (MetadataXmlFileFragment & { format?: string }) | null;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
@@ -84,7 +84,8 @@ export default function MetadataModal({
           {xml && (
             <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
               <Trans ns="homepage">
-                This layer includes metadata in XML format, available for{" "}
+                This layer includes metadata in {xml.format} XML format,
+                available for{" "}
               </Trans>
               <a
                 href={xml.url}

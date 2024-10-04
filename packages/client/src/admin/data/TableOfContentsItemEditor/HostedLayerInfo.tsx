@@ -49,6 +49,14 @@ export default function HostedLayerInfo({
     source.geostats.layers.length
       ? source.geostats.layers[0].metadata?.type
       : undefined;
+  const metadataWasUpdated =
+    metadata &&
+    Math.abs(
+      new Date(metadata.createdAt).getTime() -
+        new Date(original?.createdAt || 0).getTime()
+    ) > 1000;
+
+  console.log(source.geostats);
   return (
     <>
       {original && (
@@ -72,21 +80,30 @@ export default function HostedLayerInfo({
         <SettingsDLListItem
           term={"Metadata"}
           description={
-            <div className="truncate">
-              <a
-                className="text-primary-500 underline"
-                href={metadata.url}
-                target="_blank"
-                download={metadata.filename}
-              >
-                {metadata.filename || metadata.url}
-              </a>{" "}
-              <span className="text-gray-500">
+            <div
+              className={`truncate ${
+                metadataWasUpdated ? "flex flex-col" : ""
+              }`}
+            >
+              <span>
+                <a
+                  className="text-primary-500 underline"
+                  href={metadata.url}
+                  target="_blank"
+                  download={metadata.filename}
+                >
+                  {metadata.filename || metadata.url}
+                </a>{" "}
+              </span>
+              <span className="text-gray-500 w-full">
                 {metadata.createdAt && metadataFormat
                   ? // eslint-disable-next-line i18next/no-literal-string
-                    `${metadataFormat}, created ${new Date(
-                      metadata.createdAt
-                    ).toLocaleDateString()}`
+                    `${metadataFormat}${
+                      metadataWasUpdated
+                        ? ". Updated " +
+                          new Date(metadata.createdAt).toLocaleString()
+                        : ""
+                    }`
                   : ""}
               </span>
             </div>

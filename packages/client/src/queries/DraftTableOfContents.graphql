@@ -634,6 +634,7 @@ query GetMetadata($itemId: Int!) {
     metadataXml {
       ...MetadataXmlFile
     }
+    metadataFormat
   }
 }
 
@@ -650,16 +651,28 @@ mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   }
 }
 
-mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!) {
-  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml) {
+mutation UpdateMetadataFromXML(
+  $itemId: Int!
+  $xml: String!
+  $filename: String
+) {
+  updateTocMetadataFromXML(
+    id: $itemId
+    xmlMetadata: $xml
+    filename: $filename
+  ) {
     id
     metadata
     computedMetadata
+    metadataXml {
+      ...MetadataXmlFile
+    }
+    metadataFormat
     dataLayer {
       id
       dataSource {
         id
-        attribution
+        ...FullAdminSource
       }
     }
   }
