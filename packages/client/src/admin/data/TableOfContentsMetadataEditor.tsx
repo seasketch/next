@@ -21,7 +21,6 @@ export default function TableOfContentsMetadataEditor({
   });
   const [mutation, mutationState] = useUpdateMetadataMutation();
 
-  console.log("toc metadata editor", data?.tableOfContentsItem);
   return (
     <MetadataEditor
       onRequestClose={onRequestClose}

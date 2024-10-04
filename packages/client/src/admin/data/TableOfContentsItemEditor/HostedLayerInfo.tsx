@@ -56,7 +56,6 @@ export default function HostedLayerInfo({
         new Date(original?.createdAt || 0).getTime()
     ) > 1000;
 
-  console.log(source.geostats);
   return (
     <>
       {original && (
