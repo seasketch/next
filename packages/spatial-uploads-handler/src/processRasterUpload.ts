@@ -233,19 +233,24 @@ async function createPMTiles(
     }
   }
 
-  await logger.exec(
-    [
-      "gdaladdo",
+  // Skip building overviews if already at level 0
+  if (overviews.length > 1) {
+    await logger.exec(
       [
-        "-r",
-        presentation === SuggestedRasterPresentation.rgb ? "cubic" : "nearest",
-        mbtilesPath,
-        ...overviews.map((o) => o.toString()),
+        "gdaladdo",
+        [
+          "-r",
+          presentation === SuggestedRasterPresentation.rgb
+            ? "cubic"
+            : "nearest",
+          mbtilesPath,
+          ...overviews.map((o) => o.toString()),
+        ],
       ],
-    ],
-    "Problem adding overviews to mbtiles",
-    4 / 30
-  );
+      "Problem adding overviews to mbtiles",
+      4 / 30
+    );
+  }
 
   // Convert to pmtiles
   const pmtilesPath = pathJoin(workingDirectory, jobId + ".pmtiles");
