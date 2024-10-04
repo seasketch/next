@@ -49,5 +49,6 @@ declare namespace NodeJS {
     CLOUDFLARE_ACCOUNT_TAG: string;
     CLOUDFLARE_SITE_TAG: string;
     PMTILES_SERVER_ZONE: string;
+    R2_TILES_BUCKET: string;
   }
 }

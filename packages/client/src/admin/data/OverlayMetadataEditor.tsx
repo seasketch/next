@@ -1,6 +1,7 @@
 import { Trans, useTranslation } from "react-i18next";
 import {
   useGetMetadataQuery,
+  useUpdateMetadataFromXmlMutation,
   useUpdateMetadataMutation,
 } from "../../generated/graphql";
 import Skeleton from "../../components/Skeleton";
@@ -11,8 +12,9 @@ import useMetadataEditor from "./useMetadataEditor";
 import Warning from "../../components/Warning";
 import EditorMenuBar from "../../editor/EditorMenuBar";
 import useDialog from "../../components/useDialog";
-import { Dispatch, SetStateAction, useEffect } from "react";
+import { Dispatch, SetStateAction, useCallback, useEffect } from "react";
 import Button from "../../components/Button";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function OverlayMetataEditor({
   id,
@@ -41,7 +43,14 @@ export default function OverlayMetataEditor({
       loading,
     });
 
-  const { confirm } = useDialog();
+  const { confirm, loadingMessage } = useDialog();
+
+  const xml = data?.tableOfContentsItem?.metadataXml
+    ? {
+        ...data.tableOfContentsItem.metadataXml,
+        format: data.tableOfContentsItem.metadataFormat!,
+      }
+    : undefined;
 
   useEffect(() => {
     if (registerPreventUnload) {
@@ -60,6 +69,68 @@ export default function OverlayMetataEditor({
       }
     }
   }, [hasChanges, registerPreventUnload, t]);
+
+  const onError = useGlobalErrorHandler();
+
+  const [uploadXMLMutation, uploadXMLMutationState] =
+    useUpdateMetadataFromXmlMutation();
+
+  const onUploadMetadataClick = useCallback(() => {
+    // create an input element to trigger the file upload dialog
+    var input = document.createElement("input");
+    input.type = "file";
+    // only accept xml files
+    input.accept = ".xml";
+    input.onchange = (e: any) => {
+      if (e.target.files.length > 0 && id) {
+        const file = e.target.files[0];
+        // verify that the file is an xml file
+        if (file.type !== "text/xml") {
+          alert("Please upload an XML file");
+          return;
+        }
+        const loader = loadingMessage(t("Reading XML metadata"));
+        // read the xml file as a string
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          let xml = e.target?.result;
+          if (xml) {
+            xml = xml.toString();
+            try {
+              loader.updateLoadingMessage(t("Uploading XML metadata"));
+              const response = await uploadXMLMutation({
+                variables: {
+                  itemId: id!,
+                  xml,
+                  filename: file.name,
+                },
+              });
+              loader.hideLoadingMessage();
+              if (!response.errors?.length && viewRef.current?.view) {
+                viewRef.current.view.focus();
+                const tr = viewRef.current?.view.state.tr;
+                const node = schema.nodeFromJSON(
+                  response.data?.updateTocMetadataFromXML.computedMetadata
+                );
+                tr.replaceWith(
+                  0,
+                  viewRef.current?.view.state.doc.content.size,
+                  node
+                );
+                viewRef.current?.view!.dispatch(tr);
+              }
+            } catch (e) {
+              console.error(e);
+              onError(e);
+              loader.hideLoadingMessage();
+            }
+          }
+        };
+        reader.readAsText(file);
+      }
+    };
+    input.click();
+  }, [id, uploadXMLMutation, viewRef.current?.view]);
 
   return (
     <>
@@ -123,6 +194,7 @@ export default function OverlayMetataEditor({
               className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10 flex-none"
               state={state}
               schema={schema}
+              onUploadMetadataClick={onUploadMetadataClick}
               dynamicMetadataAvailable={dynamicMetadataAvailable}
             >
               <div className="flex-1 justify-end flex">
@@ -151,6 +223,30 @@ export default function OverlayMetataEditor({
                 // @ts-ignore
                 ref={viewRef}
               />
+              {!usingDynamicMetadata && xml && (
+                <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
+                  <Trans ns="homepage">
+                    This layer includes metadata in {xml.format} XML format.
+                  </Trans>
+                  <div className="mt-1">
+                    <a
+                      href={xml.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-white bg-primary-500 rounded px-1 py-0.5"
+                      download={xml.filename}
+                    >
+                      <Trans ns="homepage">Download</Trans>
+                    </a>
+                    <button
+                      onClick={onUploadMetadataClick}
+                      className="bg-primary-500 text-white rounded px-1 ml-2"
+                    >
+                      <Trans ns="admin:data">Update</Trans>
+                    </button>
+                  </div>
+                </div>
+              )}
               {dynamicMetadataAvailable && !usingDynamicMetadata && (
                 <Warning className="mt-6" level="info">
                   <p className="pb-4">

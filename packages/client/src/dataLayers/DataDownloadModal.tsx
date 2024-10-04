@@ -63,7 +63,10 @@ export default function DataDownloadModal({
         // a must be equal to b
         return 0;
       })
-      .filter((option) => !option.isOriginal);
+      .filter(
+        (option) =>
+          !option.isOriginal && option.type !== DataUploadOutputType.Xmlmetadata
+      );
   }, [data?.tableOfContentsItem?.downloadOptions]);
 
   const getTranslatedProp = useTranslatedProps(data?.tableOfContentsItem);

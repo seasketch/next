@@ -398,6 +398,8 @@ export function humanizeOutputType(type: DataUploadOutputType | "Archives") {
       return "PNG Image";
     case "Archives":
       return "Archived Versions";
+    case DataUploadOutputType.Xmlmetadata:
+      return "XML Metadata";
     default:
       return type;
   }

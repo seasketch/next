@@ -3238,15 +3238,20 @@ class MapContextManager extends EventEmitter {
     }
     if (bounds && [180.0, 90.0, -180.0, -90.0].join(",") !== bounds.join(",")) {
       const sidebar = currentSidebarState();
-      this.map?.fitBounds(bounds, {
-        animate: true,
-        padding: {
-          bottom: 100,
-          top: 100,
-          left: sidebar.open ? sidebar.width + 100 : 100,
-          right: 100,
-        },
-      });
+      try {
+        this.map?.fitBounds(bounds, {
+          animate: true,
+          padding: {
+            bottom: 100,
+            top: 100,
+            left: sidebar.open ? sidebar.width + 100 : 100,
+            right: 100,
+          },
+        });
+      } catch (e) {
+        // may be invalid bounds
+        console.error(e);
+      }
     }
   }
 

@@ -11,6 +11,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { useTranslation } from "react-i18next";
 import "./TooltipContent.css";
 import { humanizeOutputType } from "../QuotaUsageTreemap";
+import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 
 export default function HostedLayerInfo({
   source,
@@ -26,6 +27,7 @@ export default function HostedLayerInfo({
     | "uploadedSourceFilename"
     | "hostingQuotaUsed"
     | "outputs"
+    | "geostats"
   >;
   readonly?: boolean;
   layerId: number;
@@ -38,6 +40,22 @@ export default function HostedLayerInfo({
   });
   const { t } = useTranslation("admin:data");
   const original = (source.outputs || []).find((output) => output.isOriginal);
+  const metadata = (source.outputs || []).find(
+    (output) => output.type === DataUploadOutputType.Xmlmetadata
+  );
+  const metadataFormat =
+    source.geostats &&
+    !isRasterInfo(source.geostats) &&
+    source.geostats.layers.length
+      ? source.geostats.layers[0].metadata?.type
+      : undefined;
+  const metadataWasUpdated =
+    metadata &&
+    Math.abs(
+      new Date(metadata.createdAt).getTime() -
+        new Date(original?.createdAt || 0).getTime()
+    ) > 1000;
+
   return (
     <>
       {original && (
@@ -53,6 +71,40 @@ export default function HostedLayerInfo({
               >
                 {original.originalFilename || original.url}
               </a>
+            </div>
+          }
+        />
+      )}
+      {metadata && (
+        <SettingsDLListItem
+          term={"Metadata"}
+          description={
+            <div
+              className={`truncate ${
+                metadataWasUpdated ? "flex flex-col" : ""
+              }`}
+            >
+              <span>
+                <a
+                  className="text-primary-500 underline"
+                  href={metadata.url}
+                  target="_blank"
+                  download={metadata.filename}
+                >
+                  {metadata.filename || metadata.url}
+                </a>{" "}
+              </span>
+              <span className="text-gray-500 w-full">
+                {metadata.createdAt && metadataFormat
+                  ? // eslint-disable-next-line i18next/no-literal-string
+                    `${metadataFormat}${
+                      metadataWasUpdated
+                        ? ". Updated " +
+                          new Date(metadata.createdAt).toLocaleString()
+                        : ""
+                    }`
+                  : ""}
+              </span>
             </div>
           }
         />

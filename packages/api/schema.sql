@@ -264,7 +264,8 @@ CREATE TYPE public.data_upload_output_type AS ENUM (
     'ZippedShapefile',
     'PMTiles',
     'GeoTIFF',
-    'PNG'
+    'PNG',
+    'XMLMetadata'
 );
 
 
@@ -5941,6 +5942,101 @@ CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style 
 
 
 --
+-- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_upload_outputs (
+    id integer NOT NULL,
+    data_source_id integer,
+    project_id integer,
+    type public.data_upload_output_type NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    url text NOT NULL,
+    remote text NOT NULL,
+    is_original boolean DEFAULT false NOT NULL,
+    size bigint NOT NULL,
+    filename text NOT NULL,
+    original_filename text
+);
+
+
+--
+-- Name: create_metadata_xml_output(integer, text, text, bigint, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) RETURNS public.data_upload_outputs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      source_exists boolean;
+      output_id int;
+      output data_upload_outputs;
+      original_fname text;
+      pid int;
+    begin
+      -- first, check if data_source even exists
+      select exists(select 1 from data_sources where id = data_source_id) into source_exists;
+      if source_exists = false then
+        raise exception 'Data source does not exist';
+      end if;
+
+      select 
+        original_filename, 
+        project_id 
+      into original_fname, pid 
+      from data_upload_outputs 
+      where 
+        data_upload_outputs.data_source_id = create_metadata_xml_output.data_source_id;
+      if session_is_admin(pid) = false then
+        raise exception 'Only admins can create metadata xml outputs';
+      end if;
+      -- delete existing metadata xml output
+      delete from 
+        data_upload_outputs 
+      where 
+        data_upload_outputs.data_source_id = create_metadata_xml_output.data_source_id and 
+        type = 'XMLMetadata';
+      insert into data_upload_outputs (
+        data_source_id, 
+        project_id,
+        type, 
+        url, 
+        remote, 
+        size, 
+        filename, 
+        original_filename
+      ) values (
+        create_metadata_xml_output.data_source_id, 
+        pid,
+        'XMLMetadata', 
+        url, 
+        remote, 
+        size, 
+        filename, 
+        original_fname
+      ) returning * into output;
+      UPDATE data_sources
+      SET geostats = jsonb_set(
+          geostats,
+          '{layers,0,metadata,type}',
+          metadata_type::jsonb,
+          true
+      )
+      WHERE data_sources.id = id and 
+      jsonb_typeof(geostats->'layers'->0->'metadata'->'type') IS NOT NULL;
+      return output;
+    end;
+$$;
+
+
+--
+-- Name: FUNCTION create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) IS '@omit';
+
+
+--
 -- Name: extract_post_bookmark_attachments(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8006,25 +8102,6 @@ CREATE FUNCTION public.data_sources_is_archived(data_source public.data_sources)
     AS $$
     select exists(select 1 from archived_data_sources where data_source_id = data_source.id);
     $$;
-
-
---
--- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_upload_outputs (
-    id integer NOT NULL,
-    data_source_id integer,
-    project_id integer,
-    type public.data_upload_output_type NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    url text NOT NULL,
-    remote text NOT NULL,
-    is_original boolean DEFAULT false NOT NULL,
-    size bigint NOT NULL,
-    filename text NOT NULL,
-    original_filename text
-);
 
 
 --
@@ -13951,6 +14028,40 @@ COMMENT ON FUNCTION public.search_overlays(lang text, query text, "projectId" in
 
 
 --
+-- Name: search_overlays2(text, text, integer, boolean, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.search_overlays2(lang text, query text, "projectId" integer, draft boolean, "limit" integer) RETURNS public.search_result[]
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      q tsquery := websearch_to_tsquery('english'::regconfig, query);
+      results search_result[];
+    begin
+      IF position(' ' in query) <= 0 THEN
+        q := to_tsquery('english'::regconfig, query || ':*');
+      end if;
+      select
+        id, 
+        stable_id, 
+        ts_headline('english', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+        ts_headline('english', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+        is_folder
+        into results
+      from 
+        table_of_contents_items 
+      where 
+        project_id = "projectId" and
+        is_draft = draft and
+        fts_en @@ q
+      limit
+        coalesce("limit", 10);
+        return results;
+    end;
+  $$;
+
+
+--
 -- Name: invite_emails; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -15704,6 +15815,47 @@ CREATE FUNCTION public.table_of_contents_items_is_downloadable_source_type(item 
         item.original_source_upload_available = true
       );
   $$;
+
+
+--
+-- Name: table_of_contents_items_metadata_format(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_metadata_format(item public.table_of_contents_items) RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      ds_id int;
+      metadata_type text;
+    begin
+      select data_source_id into ds_id from data_layers where id = item.data_layer_id;
+      SELECT geostats->'layers'->0->'metadata'->>'type' into metadata_type
+      FROM data_sources
+      WHERE jsonb_typeof(geostats->'layers'->0->'metadata'->'type') IS NOT NULL;
+      return metadata_type;
+    end;
+$$;
+
+
+--
+-- Name: table_of_contents_items_metadata_xml(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) RETURNS public.data_upload_outputs
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      ds_id int;
+      data_upload_output data_upload_outputs;
+    begin
+      select data_source_id into ds_id from data_layers where id = item.data_layer_id;
+      if ds_id is null then
+        return null;
+      end if;
+      select * into data_upload_output from data_upload_outputs where data_source_id = ds_id and type = 'XMLMetadata';
+      return data_upload_output;
+    end;
+$$;
 
 
 --
@@ -25030,6 +25182,14 @@ GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, 
 
 
 --
+-- Name: FUNCTION create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION extract_post_bookmark_attachments(doc jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -29207,6 +29367,13 @@ GRANT ALL ON FUNCTION public.search_overlays(lang text, query text, "projectId" 
 
 
 --
+-- Name: FUNCTION search_overlays2(lang text, query text, "projectId" integer, draft boolean, "limit" integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.search_overlays2(lang text, query text, "projectId" integer, draft boolean, "limit" integer) FROM PUBLIC;
+
+
+--
 -- Name: COLUMN invite_emails.id; Type: ACL; Schema: public; Owner: -
 --
 
@@ -32624,6 +32791,22 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t publi
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_metadata_format(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_metadata_format(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_format(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_metadata_xml(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) TO anon;
 
 
 --

@@ -14,6 +14,29 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
     `,
     resolvers: {
       TableOfContentsItem: {
+        // metadataXMLUrl: async (item, args, context, info) => {
+        //   if (item.dataLayerId) {
+        //     // first, get the data_source_id
+        //     const q = await context.pgClient.query(
+        //       `select data_source_id from data_layers where id = $1`,
+        //       [item.dataLayerId]
+        //     );
+        //     if (q.rows.length === 0) {
+        //       return null;
+        //     }
+        //     // then look for a data_upload_output with type = XMLMetadata
+        //     const { data_source_id } = q.rows[0];
+        //     const { rows } = await context.pgClient.query(
+        //       `select url from data_upload_outputs where data_source_id = $1 and type = 'XMLMetadata'`,
+        //       [data_source_id]
+        //     );
+        //     if (rows.length === 0) {
+        //       return null;
+        //     }
+        //     return rows[0].url;
+        //   }
+        //   return null;
+        // },
         computedMetadata: async (item, args, context, info) => {
           if (item.metadata) {
             return item.metadata;

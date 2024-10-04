@@ -124,11 +124,22 @@ export async function processVectorUpload(options: {
         const paths = xmlPaths.trim().split("\n");
         for (const xmlPath of paths) {
           try {
-            console.log("xml path", xmlPath.trim());
             const data = readFileSync(xmlPath.trim(), "utf8");
             const parsedMetadata = await metadataToProseMirror(data);
             if (parsedMetadata && Object.keys(parsedMetadata).length > 0) {
               metadata = parsedMetadata;
+              outputs.push({
+                type: "XMLMetadata",
+                filename: xmlPath.split("/").pop()!,
+                remote: `${
+                  process.env.RESOURCES_REMOTE
+                }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
+                local: xmlPath,
+                size: statSync(xmlPath).size,
+                url: `${
+                  process.env.UPLOADS_BASE_URL
+                }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
+              });
               break;
             }
           } catch (e) {
