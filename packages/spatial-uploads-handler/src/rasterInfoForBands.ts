@@ -350,7 +350,11 @@ export async function rasterInfoForBands(
     info.bands[0].stats.categories.length > 0 &&
     !isRGB
   ) {
-    info.presentation = SuggestedRasterPresentation.categorical;
+    if (info.bands[0].stats.categories.length <= 128) {
+      info.presentation = SuggestedRasterPresentation.categorical;
+    } else {
+      info.presentation = SuggestedRasterPresentation.continuous;
+    }
   }
   return info;
 }
