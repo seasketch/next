@@ -175,10 +175,10 @@ export async function rasterInfoForBands(
         // Use factors of 10, e.g. 10, 100, 1000, etc.
         // TODO: fix this in the future when you have a 0-1 float dataset to
         // test
-        // while (range * (scale * 10) < 16777216) {
-        //   scale *= 10;
-        //   // break;
-        // }
+        while (range * (scale * 10) < 16777216) {
+          scale *= 10;
+          // break;
+        }
       } else if (range > 16_777_216) {
         // compress values to fit full encoding scheme
         // Use factors of 10, e.g. 0.1, 0.01, 0.001, etc.
