@@ -407,9 +407,9 @@ export function convertToVisualizationType(
       if (isRasterInfo(geostats)) {
         const band = geostats.bands[0]!;
         let rasterColorMix = [
-          ["*", 255, 65536],
-          ["*", 255, 256],
-          255,
+          ["*", 258, 65536],
+          ["*", 258, 256],
+          258,
           ["+", -32768, band.base],
         ] as any;
         if (band.interval && band.interval !== 1) {
