@@ -3,9 +3,9 @@ WORKDIR /usr/app
 RUN dnf install -y tar unzip
 RUN curl https://rclone.org/install.sh | bash
 RUN dnf install -y git clang sqlite-devel zlib-devel make
-RUN curl -O -L https://github.com/felt/tippecanoe/archive/refs/tags/2.53.0.tar.gz
+RUN curl -O -L https://github.com/felt/tippecanoe/archive/refs/tags/2.64.0.tar.gz
 RUN mkdir ./tippecanoe
-RUN tar -zxvf 2.53.0.tar.gz -C ./tippecanoe --strip-components=1
+RUN tar -zxvf 2.64.0.tar.gz -C ./tippecanoe --strip-components=1
 WORKDIR /usr/app/tippecanoe
 RUN make -j
 RUN make install
@@ -182,58 +182,31 @@ RUN mkdir /tmp/szip \
 
 RUN dnf install -y libtirpc libtirpc-devel
 
-# # libhdf4
-# ENV HDF4_VERSION=4.2.15
-# RUN mkdir /tmp/hdf4 \
-#   && curl -sfL https://support.hdfgroup.org/ftp/HDF/releases/HDF${HDF4_VERSION}/src/hdf-${HDF4_VERSION}.tar | tar xvf - -C /tmp/hdf4 --strip-components=1 \
-#   && cd /tmp/hdf4 \
-#   && CFLAGS="-O2 -Wl,-S,-I/usr/include/tirpc/" CXXFLAGS="-O2 -Wl,-S" ./configure \
-#   --prefix=$PREFIX \
-#   --with-szlib=$PREFIX \
-#   --with-jpeg=$PREFIX \
-#   --enable-shared \
-#   --disable-static \
-#   --disable-netcdf \
-#   --disable-fortran \
-#   && make -j $(nproc) --silent && make install && make clean \
-#   && rm -rf /tmp/hdf4
 
-# # libhdf5
-# ENV HDF5_VERSION=1.12.0
-# RUN mkdir /tmp/hdf5 \
-#   && curl -sfL https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-${HDF5_VERSION%.*}/hdf5-${HDF5_VERSION}/src/hdf5-$HDF5_VERSION.tar.gz | tar zxf - -C /tmp/hdf5 --strip-components=1 \
-#   && cd /tmp/hdf5 \
-#   && CFLAGS="-O2 -Wl,-S,-I/usr/include/tirpc/" CXXFLAGS="-O2 -Wl,-S" ./configure \
-#   --prefix=$PREFIX \
-#   --with-szlib=$PREFIX \
-#   --enable-cxx \
-#   --enable-thread-safe \
-#   --disable-static \
-#   && make -j $(nproc) --silent && make install && make clean \
-#   && rm -rf /tmp/hdf5
+# Install HDF5 from source
+ENV HDF5_VERSION=1.10.5
+RUN mkdir /tmp/hdf5 \
+    && curl -sfL https://support.hdfgroup.org/ftp/HDF5/current/src/hdf5-${HDF5_VERSION}.tar.gz | tar zxf - -C /tmp/hdf5 --strip-components=1 \
+    && cd /tmp/hdf5 \
+    && ./configure --prefix=$PREFIX --enable-shared \
+    && make -j $(nproc) && make install \
+    && rm -rf /tmp/hdf5
 
-# # NetCDF
-# ENV NETCDF_VERSION=4.7.4
-# RUN mkdir /tmp/netcdf \
-#   && curl -sfL https://github.com/Unidata/netcdf-c/archive/v${NETCDF_VERSION}.tar.gz | tar zxf - -C /tmp/netcdf --strip-components=1 \
-#   && cd /tmp/netcdf \
-#   && CFLAGS="-O2 -Wl,-S" CXXFLAGS="-O2 -Wl,-S" CPPFLAGS="-I${PREFIX}/include" LDFLAGS="-L${PREFIX}/lib" ./configure \
-#   --with-default-chunk-size=67108864 \
-#   --with-chunk-cache-size=67108864 \
-#   --prefix=$PREFIX \
-#   --disable-static \
-#   --enable-netcdf4 \
-#   --enable-dap \
-#   --with-pic \
-#   && make -j $(nproc) --silent && make install && make clean \
-#   && rm -rf /tmp/netcdf
+# Install NetCDF from source
+ENV NETCDF_VERSION=4.8.1
+RUN mkdir /tmp/netcdf \
+    && curl -sfL https://github.com/Unidata/netcdf-c/archive/refs/tags/v${NETCDF_VERSION}.tar.gz | tar zxf - -C /tmp/netcdf --strip-components=1 \
+    && cd /tmp/netcdf \
+    && ./configure --prefix=$PREFIX --enable-shared --disable-dap \
+    && make -j $(nproc) && make install \
+    && rm -rf /tmp/netcdf
 
 # Install for python bindings (gdal_calc)
 RUN dnf install -y openssl python-pip python3 swig python-devel
 RUN LD_LIBRARY_PATH="" pip install cython numpy==1.25 wheel --no-binary numpy
 
 # GDAL
-ENV GDAL_VERSION 3.8.0
+ENV GDAL_VERSION 3.9.2
 RUN mkdir /tmp/gdal \
   && curl -sfL https://github.com/OSGeo/gdal/archive/refs/tags/v${GDAL_VERSION}.tar.gz | tar zxf - -C /tmp/gdal --strip-components=1 \
   && cd /tmp/gdal \
@@ -249,6 +222,7 @@ RUN mkdir /tmp/gdal \
     -DGDAL_USE_TIFF_INTERNAL=OFF \
     -DGDAL_USE_GEOTIFF_INTERNAL=OFF \
     -DGDAL_USE_LERC_INTERNAL=OFF \
+    -DGDAL_USE_NETCDF=ON \
     -DLERC_INCLUDE_DIR=$PREFIX/include \
     -DLERC_LIBRARY=$PREFIX/lib/libLercLib.so \
     -DPNG_PNG_INCLUDE_DIR=$PREFIX/include \
