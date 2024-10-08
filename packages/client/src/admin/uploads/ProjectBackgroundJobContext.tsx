@@ -204,7 +204,7 @@ export default function DataUploadDropzone({
           message = t(`"${file.name}" is a projection file.`);
           isPartOfShapefile = true;
         } else if (file.name.endsWith(".shp")) {
-          message = t(`"${file.name}" is a bare shapefile.`);
+          message = t(`"${file.name}" should be a zipfile.`);
           isPartOfShapefile = true;
         } else if (file.name.endsWith(".xml")) {
           message = t(`"${file.name}" is an XML file.`);
@@ -218,7 +218,7 @@ export default function DataUploadDropzone({
         if (message) {
           const description = isPartOfShapefile
             ? t(
-                `Parts of shapefiles cannot be uploaded directly. To upload a shapefile, create a .zip file with all related files (.shp, .prj, .shx, etc) and upload that zipfile.`
+                `Parts of shapefiles cannot be uploaded directly. To upload a shapefile, create a zipfile (.zip) with all related sidecar files (.shp, .prj, .shx, etc). At a minimum, your upload will need to contain the geometry file (.shp) and the projection file (.prj).`
               )
             : isUnsupportedRaster
             ? t(
@@ -230,6 +230,7 @@ export default function DataUploadDropzone({
           return {
             message,
             description,
+            isPartOfShapefile,
           };
         } else {
           return true;
@@ -249,16 +250,22 @@ export default function DataUploadDropzone({
       for (const file of acceptedFiles) {
         const supported = isUploadForSupported(file);
         if (supported !== true) {
-          const { message, description } = supported;
-          const response = await confirm(message, {
-            description,
-            secondaryButtonText: "Upload anyway",
-            primaryButtonText: "Cancel",
-          });
-          if (!response) {
-            filteredFiles.push(file);
-            // Something weird happens when opening these confirm dialogs over and over again
-            await sleep(100);
+          const { message, description, isPartOfShapefile } = supported;
+          if (isPartOfShapefile) {
+            alert(message, {
+              description,
+            });
+          } else {
+            const response = await confirm(message, {
+              description,
+              secondaryButtonText: "Upload anyway",
+              primaryButtonText: "Cancel",
+            });
+            if (!response) {
+              filteredFiles.push(file);
+              // Something weird happens when opening these confirm dialogs over and over again
+              await sleep(100);
+            }
           }
         } else {
           filteredFiles.push(file);
