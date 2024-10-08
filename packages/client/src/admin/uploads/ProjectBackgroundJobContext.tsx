@@ -432,7 +432,7 @@ export default function DataUploadDropzone({
                   </h4>
                   <p className="text-sm">
                     {t(
-                      "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, and FlatGeobuf formats."
+                      "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, NetCDF and FlatGeobuf formats."
                     )}
                   </p>
                   {Boolean(state.droppedFiles) && !state.error && (

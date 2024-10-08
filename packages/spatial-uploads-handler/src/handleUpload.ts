@@ -17,6 +17,7 @@ import { processRasterUpload } from "./processRasterUpload";
 import { notifySlackChannel } from "./notifySlackChannel";
 import { getObject, putObject } from "./remotes";
 import { Logger } from "./logger";
+import { getLayerIdentifiers } from "./formats/netcdf";
 
 export { SpatialUploadsHandlerRequest };
 
@@ -150,6 +151,7 @@ export default async function handleUpload(
 
   const s3LogPath = `s3://${process.env.BUCKET}/${jobId}.log.txt`;
   let { name, ext, base } = path.parse(objectKey);
+
   name = sanitize(name);
   const originalName = name;
   name = `${jobId}`;
@@ -170,7 +172,7 @@ export default async function handleUpload(
   // After the environment is set up, we can start processing the file depending
   // on its type
   try {
-    if (isTif) {
+    if (isTif || ext === ".nc") {
       stats = await processRasterUpload({
         logger,
         path: workingFilePath,

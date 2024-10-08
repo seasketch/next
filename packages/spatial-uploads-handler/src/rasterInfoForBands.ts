@@ -169,7 +169,8 @@ export async function rasterInfoForBands(
     ) {
       // find a scaling factor that will represent the range of data values with
       // the full range of the encoding scheme.
-      if (range < 16_777_216) {
+      // This is useful for float values which may just be 0-1
+      if (range < 500) {
         scale = 1;
         // stretch values to fit full encoding scheme
         // Use factors of 10, e.g. 10, 100, 1000, etc.

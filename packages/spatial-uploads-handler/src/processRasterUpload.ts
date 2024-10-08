@@ -9,6 +9,7 @@ import { rasterInfoForBands } from "./rasterInfoForBands";
 import { Logger } from "./logger";
 import gdal from "gdal-async";
 import bbox from "@turf/bbox";
+import { convertToGeoTiff, getLayerIdentifiers } from "./formats/netcdf";
 
 export async function processRasterUpload(options: {
   logger: Logger;
@@ -40,6 +41,19 @@ export async function processRasterUpload(options: {
   const originalPath = options.path;
 
   const { ext, isCorrectProjection } = await validateInput(path, logger);
+
+  if (ext === ".nc") {
+    const layerIdentifiers = await getLayerIdentifiers(path, logger);
+    if (layerIdentifiers.length > 0) {
+      path = await convertToGeoTiff(
+        layerIdentifiers[0],
+        pathJoin(workingDirectory, jobId + ".tif"),
+        logger
+      );
+    } else {
+      throw new Error("No layers found in NetCDF file");
+    }
+  }
 
   await updateProgress("running", "analyzing");
   // Get raster stats
@@ -155,12 +169,12 @@ async function validateInput(path: string, logger: Logger) {
 
   // Use rasterio to see if it is a supported file format
   const isTif = ext === ".tif" || ext === ".tiff";
-  if (!isTif) {
-    throw new Error("Only GeoTIFF files are supported");
+  if (!isTif && ext !== ".nc") {
+    throw new Error("Only GeoTIFF and NetCDF files are supported");
   }
 
   const ds = await gdal.openAsync(path);
-  if (ds.driver.description !== "GTiff") {
+  if (ds.driver.description !== "GTiff" && ds.driver.description !== "netCDF") {
     throw new Error(`Unrecognized raster driver "${ds.driver.description}"`);
   }
 
