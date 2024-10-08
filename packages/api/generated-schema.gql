@@ -3388,6 +3388,7 @@ enum DataUploadOutputType {
   FLAT_GEOBUF
   GEO_JSON
   GEO_TIFF
+  NET_CDF
   PMTILES
   PNG
   XMLMETADATA

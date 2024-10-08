@@ -90,7 +90,12 @@ export async function processRasterUpload(options: {
 
   // Add original file to outputs
   outputs.push({
-    type: ext === ".tif" || ext === ".tiff" ? "GeoTIFF" : "PNG",
+    type:
+      ext === ".tif" || ext === ".tiff"
+        ? "GeoTIFF"
+        : ext === ".nc"
+        ? "NetCDF"
+        : "PNG",
     remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
     local: path,
     size: statSync(path).size,

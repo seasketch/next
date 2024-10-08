@@ -27,7 +27,8 @@ export type SupportedTypes =
   | "GeoJSON"
   | "FlatGeobuf"
   | "ZippedShapefile"
-  | "GeoTIFF";
+  | "GeoTIFF"
+  | "NetCDF";
 
 export interface ResponseOutput {
   /** Remote location string as used in rclone */
