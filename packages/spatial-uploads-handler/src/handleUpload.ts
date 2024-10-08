@@ -232,7 +232,6 @@ export default async function handleUpload(
       }
     }
     if (!sourceUrl) {
-      console.log(outputs);
       throw new Error("No sourceUrl found");
     }
 
@@ -242,14 +241,6 @@ export default async function handleUpload(
     await putObject(logPath, s3LogPath, logger);
     const geostats = Array.isArray(stats) ? stats[0] : stats;
 
-    console.log(
-      "buliding response",
-      outputs.map((o) => ({
-        ...o,
-        local: undefined,
-        filename: o.filename,
-      }))
-    );
     const response: { layers: ProcessedUploadLayer[]; logfile: string } = {
       layers: [
         {

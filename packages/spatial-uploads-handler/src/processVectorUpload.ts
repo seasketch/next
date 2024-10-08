@@ -94,6 +94,36 @@ export async function processVectorUpload(options: {
       "Problem finding shapefile in zip archive",
       1 / 30
     );
+
+    // Make sure there is also a .prj projection file
+    const projFile = await logger.exec(
+      [
+        "find",
+        [
+          workingDirectory,
+          "-type",
+          "f",
+          "-not",
+          "-path",
+          "*/.*",
+          "-not",
+          "-path",
+          "*/__",
+          "-name",
+          "*.prj",
+        ],
+      ],
+      "Problem finding projection file (.prj) in zip archive",
+      1 / 30
+    );
+
+    if (!projFile) {
+      throw new Error("No projection file found (.prj) in zip archive");
+    }
+    if (!shapefile) {
+      throw new Error("No shape-file (.shp) found in zip archive");
+    }
+
     // Consider that there may be multiple shapefiles in the zip archive
     // and choose the first one
     workingFilePath = shapefile.split("\n")[0].trim();
