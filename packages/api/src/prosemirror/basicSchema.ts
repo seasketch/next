@@ -1,4 +1,10 @@
 import { Node, Schema } from "prosemirror-model";
+import {
+  addListNodes,
+  bulletList,
+  listItem,
+  orderedList,
+} from "prosemirror-schema-list";
 
 const pDOM = ["p", 0],
   blockquoteDOM = ["blockquote", 0],
@@ -125,6 +131,21 @@ export const nodes = {
     toDOM() {
       return brDOM;
     },
+  },
+
+  ordered_list: {
+    content: "list_item+",
+    group: "block",
+    ...orderedList,
+  },
+  bullet_list: {
+    content: "list_item+",
+    group: "block",
+    ...bulletList,
+  },
+  list_item: {
+    content: "paragraph block*",
+    ...listItem,
   },
 };
 

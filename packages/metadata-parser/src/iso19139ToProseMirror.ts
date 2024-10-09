@@ -95,6 +95,27 @@ const parseDataQuality = (dataQualityInfo: any): string => {
   return dataQuality ? `## Data Quality\n${dataQuality}` : "";
 };
 
+function parseSpatialBounds(extent: any) {
+  const bbox =
+    extent?.["gmd:geographicElement"]?.[0]["gmd:EX_GeographicBoundingBox"]?.[0];
+  if (!bbox) return "";
+
+  const westBound = bbox["gmd:westBoundLongitude"]?.[0]["gco:Decimal"]?.[0];
+  const eastBound = bbox["gmd:eastBoundLongitude"]?.[0]["gco:Decimal"]?.[0];
+  const southBound = bbox["gmd:southBoundLatitude"]?.[0]["gco:Decimal"]?.[0];
+  const northBound = bbox["gmd:northBoundLatitude"]?.[0]["gco:Decimal"]?.[0];
+
+  if (westBound && eastBound && southBound && northBound) {
+    return {
+      westBound,
+      eastBound,
+      southBound,
+      northBound,
+    };
+  }
+  return null;
+}
+
 // Main function to generate ProseMirror nodes from ISO 19139 metadata
 export function iso19139ToProseMirror(metadata: any) {
   if ("gmd:MD_Metadata" in metadata) {
@@ -167,7 +188,6 @@ export function iso19139ToProseMirror(metadata: any) {
       .join("\n");
 
     if (useConstraints) {
-      console.log("use constraints", useConstraints);
       doc.content.push(
         createHeadingNode([createTextNode("Use Constraints")], 2)
       );
@@ -298,6 +318,32 @@ export function iso19139ToProseMirror(metadata: any) {
       createListItemNode([createTextNode(`Email: ${contactInfo.email}`)])
     );
   doc.content.push(createBulletListNode(contactInfoContent));
+
+  const spatialBounds = parseSpatialBounds(
+    metadata["gmd:identificationInfo"]?.[0]?.[
+      "gmd:MD_DataIdentification"
+    ]?.[0]?.["gmd:extent"]?.[0]["gmd:EX_Extent"]?.[0]
+  );
+
+  if (spatialBounds) {
+    doc.content.push(createHeadingNode([createTextNode("Spatial Extent")], 2));
+    doc.content.push(
+      createBulletListNode([
+        createListItemNode([
+          createTextNode(`North: ${spatialBounds.northBound}`),
+        ]),
+        createListItemNode([
+          createTextNode(`East: ${spatialBounds.eastBound}`),
+        ]),
+        createListItemNode([
+          createTextNode(`South: ${spatialBounds.southBound}`),
+        ]),
+        createListItemNode([
+          createTextNode(`West: ${spatialBounds.westBound}`),
+        ]),
+      ])
+    );
+  }
 
   return {
     title,

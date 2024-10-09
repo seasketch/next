@@ -77,9 +77,28 @@ var parseDataQuality = function (dataQualityInfo) {
     }
     return dataQuality ? "## Data Quality\n".concat(dataQuality) : "";
 };
+function parseSpatialBounds(extent) {
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+    var bbox = (_b = (_a = extent === null || extent === void 0 ? void 0 : extent["gmd:geographicElement"]) === null || _a === void 0 ? void 0 : _a[0]["gmd:EX_GeographicBoundingBox"]) === null || _b === void 0 ? void 0 : _b[0];
+    if (!bbox)
+        return "";
+    var westBound = (_d = (_c = bbox["gmd:westBoundLongitude"]) === null || _c === void 0 ? void 0 : _c[0]["gco:Decimal"]) === null || _d === void 0 ? void 0 : _d[0];
+    var eastBound = (_f = (_e = bbox["gmd:eastBoundLongitude"]) === null || _e === void 0 ? void 0 : _e[0]["gco:Decimal"]) === null || _f === void 0 ? void 0 : _f[0];
+    var southBound = (_h = (_g = bbox["gmd:southBoundLatitude"]) === null || _g === void 0 ? void 0 : _g[0]["gco:Decimal"]) === null || _h === void 0 ? void 0 : _h[0];
+    var northBound = (_k = (_j = bbox["gmd:northBoundLatitude"]) === null || _j === void 0 ? void 0 : _j[0]["gco:Decimal"]) === null || _k === void 0 ? void 0 : _k[0];
+    if (westBound && eastBound && southBound && northBound) {
+        return {
+            westBound: westBound,
+            eastBound: eastBound,
+            southBound: southBound,
+            northBound: northBound,
+        };
+    }
+    return null;
+}
 // Main function to generate ProseMirror nodes from ISO 19139 metadata
 function iso19139ToProseMirror(metadata) {
-    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
     if ("gmd:MD_Metadata" in metadata) {
         metadata = metadata["gmd:MD_Metadata"];
     }
@@ -120,7 +139,6 @@ function iso19139ToProseMirror(metadata) {
         })
             .join("\n");
         if (useConstraints) {
-            console.log("use constraints", useConstraints);
             doc.content.push(createHeadingNode([createTextNode("Use Constraints")], 2));
             doc.content.push((0, createParagraphNode_1.createParagraphNode)([createTextNode(useConstraints)]));
         }
@@ -214,6 +232,24 @@ function iso19139ToProseMirror(metadata) {
     if (contactInfo.email)
         contactInfoContent.push(createListItemNode([createTextNode("Email: ".concat(contactInfo.email))]));
     doc.content.push(createBulletListNode(contactInfoContent));
+    var spatialBounds = parseSpatialBounds((_v = (_u = (_t = (_s = (_r = (_q = metadata["gmd:identificationInfo"]) === null || _q === void 0 ? void 0 : _q[0]) === null || _r === void 0 ? void 0 : _r["gmd:MD_DataIdentification"]) === null || _s === void 0 ? void 0 : _s[0]) === null || _t === void 0 ? void 0 : _t["gmd:extent"]) === null || _u === void 0 ? void 0 : _u[0]["gmd:EX_Extent"]) === null || _v === void 0 ? void 0 : _v[0]);
+    if (spatialBounds) {
+        doc.content.push(createHeadingNode([createTextNode("Spatial Extent")], 2));
+        doc.content.push(createBulletListNode([
+            createListItemNode([
+                createTextNode("North: ".concat(spatialBounds.northBound)),
+            ]),
+            createListItemNode([
+                createTextNode("East: ".concat(spatialBounds.eastBound)),
+            ]),
+            createListItemNode([
+                createTextNode("South: ".concat(spatialBounds.southBound)),
+            ]),
+            createListItemNode([
+                createTextNode("West: ".concat(spatialBounds.westBound)),
+            ]),
+        ]));
+    }
     return {
         title: title,
         doc: doc,

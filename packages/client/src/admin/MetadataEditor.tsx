@@ -11,6 +11,7 @@ import useDialog from "../components/useDialog";
 import Modal from "../components/Modal";
 import { Pencil1Icon } from "@radix-ui/react-icons";
 import useMetadataEditor from "./data/useMetadataEditor";
+import { MetadataXmlFileFragment } from "../generated/graphql";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -28,6 +29,7 @@ interface MetadataEditorProps {
   /* whether the metadata document is using dynamic metadata from a CustomGLSource */
   usingDynamicMetadata?: boolean;
   dynamicMetadataAvailable?: boolean;
+  xml?: (MetadataXmlFileFragment & { format: string }) | null;
 }
 
 export default function MetadataEditor({
@@ -39,6 +41,7 @@ export default function MetadataEditor({
   startingDocument,
   usingDynamicMetadata,
   dynamicMetadataAvailable,
+  xml,
 }: MetadataEditorProps) {
   const { t } = useTranslation("admin");
   const { confirm } = useDialog();
@@ -159,6 +162,23 @@ export default function MetadataEditor({
             state={state}
             onChange={onChange}
           />
+        )}
+        {xml && (
+          <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
+            <Trans ns="homepage">
+              This layer includes metadata in {xml.format} XML format, available
+              for{" "}
+            </Trans>
+            <a
+              href={xml.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 underline"
+              download={xml.filename}
+            >
+              <Trans ns="homepage">Download</Trans>
+            </a>
+          </div>
         )}
       </div>
     </Modal>

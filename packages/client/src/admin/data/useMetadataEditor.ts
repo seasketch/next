@@ -23,19 +23,52 @@ export default function useMetadataEditor({
 
   useEffect(() => {
     if (!loading) {
-      const doc = startingDocument
-        ? Node.fromJSON(schema, startingDocument)
-        : undefined;
-      if (doc) {
-        setOriginalDoc(doc);
+      try {
+        const doc = startingDocument
+          ? Node.fromJSON(schema, startingDocument)
+          : undefined;
+        if (doc) {
+          setOriginalDoc(doc);
+        }
+        // initial render
+        const state = EditorState.create({
+          schema: schema,
+          plugins,
+          doc,
+        });
+        setState(state);
+      } catch (e) {
+        const doc = startingDocument
+          ? Node.fromJSON(schema, {
+              type: "doc",
+              content: [
+                {
+                  type: "paragraph",
+                  content: [{ type: "text", text: "Problem parsing metadata" }],
+                },
+                {
+                  type: "paragraph",
+                  content: [
+                    {
+                      type: "text",
+                      text: e.toString(),
+                    },
+                  ],
+                },
+              ],
+            })
+          : undefined;
+        if (doc) {
+          setOriginalDoc(doc);
+        }
+        // initial render
+        const state = EditorState.create({
+          schema: schema,
+          plugins,
+          doc,
+        });
+        setState(state);
       }
-      // initial render
-      const state = EditorState.create({
-        schema: schema,
-        plugins,
-        doc,
-      });
-      setState(state);
     }
   }, [loading, setState, startingDocument]);
 

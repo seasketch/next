@@ -1,4 +1,7 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
+import { DOMParser } from "prosemirror-model";
+import { JSDOM } from "jsdom";
+import { schema } from "../prosemirror/basicSchema";
 
 const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
   return {
@@ -95,7 +98,34 @@ export function generateMetadataForLayer(
     contentOrFalse(layer.copyrightText) ||
     contentOrFalse(mapServerInfo.copyrightText) ||
     contentOrFalse(mapServerInfo.documentInfo?.Author);
-  const description = pickDescription(mapServerInfo, layer);
+  const descriptionText = pickDescription(mapServerInfo, layer);
+
+  // if description contains html, convert to prosemirror
+  const hasHtml = descriptionText
+    ? /<[a-z][\s\S]*>/i.test(descriptionText)
+    : false;
+  let description: any | null = null;
+  if (hasHtml) {
+    const dom = new JSDOM(descriptionText as string);
+    const document = dom.window.document;
+    const body = document.querySelector("body");
+    // @ts-ignore
+    const parsedDocument = DOMParser.fromSchema(schema).parse(body);
+    description = parsedDocument.toJSON().content;
+  } else if (descriptionText && descriptionText.length > 0) {
+    description = [
+      {
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            text: descriptionText || "",
+          },
+        ],
+      },
+    ];
+  }
+
   let keywords =
     mapServerInfo.documentInfo?.Keywords &&
     mapServerInfo.documentInfo?.Keywords.length
@@ -114,19 +144,7 @@ export function generateMetadataForLayer(
           },
         ],
       },
-      ...(description
-        ? [
-            {
-              type: "paragraph",
-              content: [
-                {
-                  type: "text",
-                  text: description || "",
-                },
-              ],
-            },
-          ]
-        : []),
+      ...(description ? description : []),
       ...(attribution
         ? [
             { type: "paragraph" },
@@ -199,3 +217,16 @@ export function generateMetadataForLayer(
 }
 
 export default ComputedMetadataPlugin;
+
+function decodeUnicode(encodedString: string) {
+  // Replace Unicode escape sequences with corresponding characters
+  const unicodeDecoded = encodedString.replace(
+    /\\u[\dA-F]{4}/gi,
+    function (match) {
+      return String.fromCharCode(parseInt(match.replace(/\\u/g, ""), 16));
+    }
+  );
+
+  // Remove any remaining HTML tags if needed (since you want plain text)
+  return unicodeDecoded.replace(/<\/?[^>]+(>|$)/g, "");
+}

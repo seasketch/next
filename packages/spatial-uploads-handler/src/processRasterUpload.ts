@@ -9,6 +9,7 @@ import { rasterInfoForBands } from "./rasterInfoForBands";
 import { Logger } from "./logger";
 import gdal from "gdal-async";
 import bbox from "@turf/bbox";
+import { convertToGeoTiff, getLayerIdentifiers } from "./formats/netcdf";
 
 export async function processRasterUpload(options: {
   logger: Logger;
@@ -40,6 +41,19 @@ export async function processRasterUpload(options: {
   const originalPath = options.path;
 
   const { ext, isCorrectProjection } = await validateInput(path, logger);
+
+  if (ext === ".nc") {
+    const layerIdentifiers = await getLayerIdentifiers(path, logger);
+    if (layerIdentifiers.length > 0) {
+      path = await convertToGeoTiff(
+        layerIdentifiers[0],
+        pathJoin(workingDirectory, jobId + ".tif"),
+        logger
+      );
+    } else {
+      throw new Error("No layers found in NetCDF file");
+    }
+  }
 
   await updateProgress("running", "analyzing");
   // Get raster stats
@@ -76,7 +90,12 @@ export async function processRasterUpload(options: {
 
   // Add original file to outputs
   outputs.push({
-    type: ext === ".tif" || ext === ".tiff" ? "GeoTIFF" : "PNG",
+    type:
+      ext === ".tif" || ext === ".tiff"
+        ? "GeoTIFF"
+        : ext === ".nc"
+        ? "NetCDF"
+        : "PNG",
     remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
     local: path,
     size: statSync(path).size,
@@ -155,12 +174,12 @@ async function validateInput(path: string, logger: Logger) {
 
   // Use rasterio to see if it is a supported file format
   const isTif = ext === ".tif" || ext === ".tiff";
-  if (!isTif) {
-    throw new Error("Only GeoTIFF files are supported");
+  if (!isTif && ext !== ".nc") {
+    throw new Error("Only GeoTIFF and NetCDF files are supported");
   }
 
   const ds = await gdal.openAsync(path);
-  if (ds.driver.description !== "GTiff") {
+  if (ds.driver.description !== "GTiff" && ds.driver.description !== "netCDF") {
     throw new Error(`Unrecognized raster driver "${ds.driver.description}"`);
   }
 
@@ -233,19 +252,24 @@ async function createPMTiles(
     }
   }
 
-  await logger.exec(
-    [
-      "gdaladdo",
+  // Skip building overviews if already at level 0
+  if (overviews.length > 1) {
+    await logger.exec(
       [
-        "-r",
-        presentation === SuggestedRasterPresentation.rgb ? "cubic" : "nearest",
-        mbtilesPath,
-        ...overviews.map((o) => o.toString()),
+        "gdaladdo",
+        [
+          "-r",
+          presentation === SuggestedRasterPresentation.rgb
+            ? "cubic"
+            : "nearest",
+          mbtilesPath,
+          ...overviews.map((o) => o.toString()),
+        ],
       ],
-    ],
-    "Problem adding overviews to mbtiles",
-    4 / 30
-  );
+      "Problem adding overviews to mbtiles",
+      4 / 30
+    );
+  }
 
   // Convert to pmtiles
   const pmtilesPath = pathJoin(workingDirectory, jobId + ".pmtiles");

@@ -94,6 +94,36 @@ export async function processVectorUpload(options: {
       "Problem finding shapefile in zip archive",
       1 / 30
     );
+
+    // Make sure there is also a .prj projection file
+    const projFile = await logger.exec(
+      [
+        "find",
+        [
+          workingDirectory,
+          "-type",
+          "f",
+          "-not",
+          "-path",
+          "*/.*",
+          "-not",
+          "-path",
+          "*/__",
+          "-name",
+          "*.prj",
+        ],
+      ],
+      "Problem finding projection file (.prj) in zip archive",
+      1 / 30
+    );
+
+    if (!projFile) {
+      throw new Error("No projection file found (.prj) in zip archive");
+    }
+    if (!shapefile) {
+      throw new Error("No shape-file (.shp) found in zip archive");
+    }
+
     // Consider that there may be multiple shapefiles in the zip archive
     // and choose the first one
     workingFilePath = shapefile.split("\n")[0].trim();
@@ -124,11 +154,22 @@ export async function processVectorUpload(options: {
         const paths = xmlPaths.trim().split("\n");
         for (const xmlPath of paths) {
           try {
-            console.log("xml path", xmlPath.trim());
             const data = readFileSync(xmlPath.trim(), "utf8");
             const parsedMetadata = await metadataToProseMirror(data);
             if (parsedMetadata && Object.keys(parsedMetadata).length > 0) {
               metadata = parsedMetadata;
+              outputs.push({
+                type: "XMLMetadata",
+                filename: xmlPath.split("/").pop()!,
+                remote: `${
+                  process.env.RESOURCES_REMOTE
+                }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
+                local: xmlPath,
+                size: statSync(xmlPath).size,
+                url: `${
+                  process.env.UPLOADS_BASE_URL
+                }/${baseKey}/${jobId}/${xmlPath.split("/").pop()!}`,
+              });
               break;
             }
           } catch (e) {

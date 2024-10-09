@@ -3388,8 +3388,10 @@ enum DataUploadOutputType {
   FLAT_GEOBUF
   GEO_JSON
   GEO_TIFF
+  NET_CDF
   PMTILES
   PNG
+  XMLMETADATA
   ZIPPED_SHAPEFILE
 }
 
@@ -9574,6 +9576,7 @@ type Mutation {
     """
     input: UpdateTableOfContentsItemChildrenInput!
   ): UpdateTableOfContentsItemChildrenPayload
+  updateTocMetadataFromXML(filename: String, id: Int!, xmlMetadata: String!): TableOfContentsItem!
 
   """Updates a single `Topic` using a unique key and a patch."""
   updateTopic(
@@ -14329,6 +14332,8 @@ type TableOfContentsItem implements Node {
   DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders
   """
   metadata: JSON
+  metadataFormat: String
+  metadataXml: DataUploadOutput
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.

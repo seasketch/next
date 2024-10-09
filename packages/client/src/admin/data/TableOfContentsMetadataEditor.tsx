@@ -20,12 +20,13 @@ export default function TableOfContentsMetadataEditor({
     },
   });
   const [mutation, mutationState] = useUpdateMetadataMutation();
+
   return (
     <MetadataEditor
       onRequestClose={onRequestClose}
       usingDynamicMetadata={Boolean(
         data?.tableOfContentsItem?.usesDynamicMetadata
-      )}
+    )}
       dynamicMetadataAvailable={
         data?.tableOfContentsItem?.isCustomGlSource || false
       }
@@ -41,6 +42,14 @@ export default function TableOfContentsMetadataEditor({
       loading={loading}
       error={error}
       startingDocument={data?.tableOfContentsItem?.computedMetadata}
+      xml={
+        data?.tableOfContentsItem?.metadataXml
+          ? {
+              ...data.tableOfContentsItem.metadataXml,
+              format: data.tableOfContentsItem.metadataFormat!,
+            }
+          : undefined
+      }
     />
   );
 }

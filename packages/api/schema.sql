@@ -264,7 +264,9 @@ CREATE TYPE public.data_upload_output_type AS ENUM (
     'ZippedShapefile',
     'PMTiles',
     'GeoTIFF',
-    'PNG'
+    'PNG',
+    'XMLMetadata',
+    'NetCDF'
 );
 
 
@@ -2918,12 +2920,12 @@ CREATE TABLE public.archived_data_sources (
     sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_style)::text)) STORED,
     changelog text,
     source_layer text,
+    project_id integer NOT NULL,
     bounds numeric[],
     created_at timestamp with time zone DEFAULT now(),
     sublayer text,
     sublayer_type public.sublayer_type,
-    dynamic_metadata boolean DEFAULT false NOT NULL,
-    project_id integer NOT NULL
+    dynamic_metadata boolean DEFAULT false NOT NULL
 );
 
 
@@ -5941,6 +5943,101 @@ CREATE FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style 
 
 
 --
+-- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.data_upload_outputs (
+    id integer NOT NULL,
+    data_source_id integer,
+    project_id integer,
+    type public.data_upload_output_type NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    url text NOT NULL,
+    remote text NOT NULL,
+    is_original boolean DEFAULT false NOT NULL,
+    size bigint NOT NULL,
+    filename text NOT NULL,
+    original_filename text
+);
+
+
+--
+-- Name: create_metadata_xml_output(integer, text, text, bigint, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) RETURNS public.data_upload_outputs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      source_exists boolean;
+      output_id int;
+      output data_upload_outputs;
+      original_fname text;
+      pid int;
+    begin
+      -- first, check if data_source even exists
+      select exists(select 1 from data_sources where id = data_source_id) into source_exists;
+      if source_exists = false then
+        raise exception 'Data source does not exist';
+      end if;
+
+      select 
+        original_filename, 
+        project_id 
+      into original_fname, pid 
+      from data_upload_outputs 
+      where 
+        data_upload_outputs.data_source_id = create_metadata_xml_output.data_source_id;
+      if session_is_admin(pid) = false then
+        raise exception 'Only admins can create metadata xml outputs';
+      end if;
+      -- delete existing metadata xml output
+      delete from 
+        data_upload_outputs 
+      where 
+        data_upload_outputs.data_source_id = create_metadata_xml_output.data_source_id and 
+        type = 'XMLMetadata';
+      insert into data_upload_outputs (
+        data_source_id, 
+        project_id,
+        type, 
+        url, 
+        remote, 
+        size, 
+        filename, 
+        original_filename
+      ) values (
+        create_metadata_xml_output.data_source_id, 
+        pid,
+        'XMLMetadata', 
+        url, 
+        remote, 
+        size, 
+        filename, 
+        original_fname
+      ) returning * into output;
+      UPDATE data_sources
+      SET geostats = jsonb_set(
+          geostats,
+          '{layers,0,metadata,type}',
+          metadata_type::jsonb,
+          true
+      )
+      WHERE data_sources.id = id and 
+      jsonb_typeof(geostats->'layers'->0->'metadata'->'type') IS NOT NULL;
+      return output;
+    end;
+$$;
+
+
+--
+-- Name: FUNCTION create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) IS '@omit';
+
+
+--
 -- Name: extract_post_bookmark_attachments(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6363,6 +6460,7 @@ CREATE TABLE public.table_of_contents_items (
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
     fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
+    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
     fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
     fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
     fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
@@ -6376,7 +6474,6 @@ CREATE TABLE public.table_of_contents_items (
     fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
     fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
     fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
-    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
     data_source_type text,
     original_source_upload_available boolean DEFAULT false NOT NULL,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
@@ -8009,25 +8106,6 @@ CREATE FUNCTION public.data_sources_is_archived(data_source public.data_sources)
 
 
 --
--- Name: data_upload_outputs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.data_upload_outputs (
-    id integer NOT NULL,
-    data_source_id integer,
-    project_id integer,
-    type public.data_upload_output_type NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    url text NOT NULL,
-    remote text NOT NULL,
-    is_original boolean DEFAULT false NOT NULL,
-    size bigint NOT NULL,
-    filename text NOT NULL,
-    original_filename text
-);
-
-
---
 -- Name: data_sources_outputs(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9579,7 +9657,7 @@ COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bo
 CREATE FUNCTION public.get_supported_languages() RETURNS jsonb
     LANGUAGE sql IMMUTABLE
     AS $$
-    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
+    select '{"simple": "simple", "english": "en", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "greek": "el", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
   $$;
 
 
@@ -9652,23 +9730,6 @@ CREATE FUNCTION public.has_session() RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.has_session() IS '@omit';
-
-
---
--- Name: id_lookup_get_key(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.id_lookup_get_key(key integer) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-    begin
-      if lookup is null then
-        raise exception 'lookup is null';
-      else
-        return (lookup->key)::int;
-      end if;
-    end;
-  $$;
 
 
 --
@@ -13920,25 +13981,309 @@ CREATE FUNCTION public.search_overlays(lang text, query text, "projectId" intege
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
-      q tsquery := websearch_to_tsquery('english'::regconfig, query);
+      supported_languages jsonb := get_supported_languages();
+      config regconfig;
+      q tsquery := websearch_to_tsquery(config, query);
     begin
+      select key::regconfig into config from jsonb_each_text(get_supported_languages()) where value = lower(lang);
       IF position(' ' in query) <= 0 THEN
-        q := to_tsquery('english'::regconfig, query || ':*');
+        q := to_tsquery(config, query || ':*');
       end if;
-      return query select
-        id, 
-        stable_id, 
-        ts_headline('english', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-        ts_headline('english', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-        is_folder
-      from 
-        table_of_contents_items 
-      where 
-        project_id = "projectId" and
-        is_draft = draft and
-        fts_en @@ q
-      limit
-        coalesce("limit", 10);
+      if config is null then
+        q = plainto_tsquery('simple', query);
+        IF position(' ' in query) <= 0 THEN
+          q := to_tsquery('simple', query || ':*');
+        end if;
+        -- use the simple index
+        return query select
+          id, 
+          stable_id, 
+          ts_headline('simple', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline('simple', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_simple @@ q
+        limit
+          coalesce("limit", 10);
+      elsif config = 'english'::regconfig then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_en @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'es' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_es @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'pt' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline('portuguese', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_pt @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'ar' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline('arabic', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_ar @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'da' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_da @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'nl' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_nl @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'fr' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_fr @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'de' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_de @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'el' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_el @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'id' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_id @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'it' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_it @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'lt' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_lt @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'no' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_no @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'ro' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_ro @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'ru' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_ru @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'sv' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_sv @@ q
+        limit
+          coalesce("limit", 10);
+      else
+        raise exception 'Unsupported language: %', lang;
+      end if;
     end;
   $$;
 
@@ -15704,6 +16049,47 @@ CREATE FUNCTION public.table_of_contents_items_is_downloadable_source_type(item 
         item.original_source_upload_available = true
       );
   $$;
+
+
+--
+-- Name: table_of_contents_items_metadata_format(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_metadata_format(item public.table_of_contents_items) RETURNS text
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      ds_id int;
+      metadata_type text;
+    begin
+      select data_source_id into ds_id from data_layers where id = item.data_layer_id;
+      SELECT geostats->'layers'->0->'metadata'->>'type' into metadata_type
+      FROM data_sources
+      WHERE jsonb_typeof(geostats->'layers'->0->'metadata'->'type') IS NOT NULL;
+      return metadata_type;
+    end;
+$$;
+
+
+--
+-- Name: table_of_contents_items_metadata_xml(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) RETURNS public.data_upload_outputs
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      ds_id int;
+      data_upload_output data_upload_outputs;
+    begin
+      select data_source_id into ds_id from data_layers where id = item.data_layer_id;
+      if ds_id is null then
+        return null;
+      end if;
+      select * into data_upload_output from data_upload_outputs where data_source_id = ds_id and type = 'XMLMetadata';
+      return data_upload_output;
+    end;
+$$;
 
 
 --
@@ -23595,8 +23981,8 @@ GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.enable_download_by_default; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(enable_download_by_default),UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_user;
 GRANT SELECT(enable_download_by_default) ON TABLE public.projects TO anon;
-GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -25027,6 +25413,14 @@ REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb, "clientGeneratedThumbnail" text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb, "clientGeneratedThumbnail" text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) TO seasketch_user;
 
 
 --
@@ -27228,13 +27622,6 @@ REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION id_lookup_get_key(key integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.id_lookup_get_key(key integer) FROM PUBLIC;
 
 
 --
@@ -32624,6 +33011,22 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t publi
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_metadata_format(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_metadata_format(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_format(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_metadata_xml(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) TO anon;
 
 
 --

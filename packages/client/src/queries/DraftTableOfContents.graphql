@@ -266,6 +266,8 @@ fragment FullAdminSource on DataSource {
     type
     size
     originalFilename
+    filename
+    createdAt
   }
   changelog
 }
@@ -616,12 +618,23 @@ mutation UpdateEnableHighDPIRequests(
   }
 }
 
+fragment MetadataXmlFile on DataUploadOutput {
+  url
+  createdAt
+  filename
+  size
+}
+
 query GetMetadata($itemId: Int!) {
   tableOfContentsItem(id: $itemId) {
     id
     computedMetadata
     usesDynamicMetadata
     isCustomGlSource
+    metadataXml {
+      ...MetadataXmlFile
+    }
+    metadataFormat
   }
 }
 
@@ -638,16 +651,28 @@ mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
   }
 }
 
-mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!) {
-  updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml) {
+mutation UpdateMetadataFromXML(
+  $itemId: Int!
+  $xml: String!
+  $filename: String
+) {
+  updateTocMetadataFromXML(
+    id: $itemId
+    xmlMetadata: $xml
+    filename: $filename
+  ) {
     id
     metadata
     computedMetadata
+    metadataXml {
+      ...MetadataXmlFile
+    }
+    metadataFormat
     dataLayer {
       id
       dataSource {
         id
-        attribution
+        ...FullAdminSource
       }
     }
   }

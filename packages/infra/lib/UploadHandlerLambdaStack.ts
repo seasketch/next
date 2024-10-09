@@ -81,6 +81,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         DEBUGGING_AWS_ACCESS_KEY_ID: DEBUGGING_AWS_ACCESS_KEY_ID || "",
         DEBUGGING_AWS_SECRET_ACCESS_KEY: DEBUGGING_AWS_SECRET_ACCESS_KEY || "",
         NODE_EXTRA_CA_CERTS: "/var/runtime/ca-cert.pem",
+        NODE_ENV: "production",
       },
       memorySize: 10240,
       reservedConcurrentExecutions: 100,

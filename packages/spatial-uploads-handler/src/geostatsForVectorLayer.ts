@@ -68,6 +68,9 @@ export async function geostatsForVectorLayers(
     hasZ: false,
   } as GeostatsLayer;
   const dataset = await gdal.openAsync(filepath);
+  // if (dataset.srs === null) {
+  //   throw new Error("No spatial reference system found in dataset.");
+  // }
   dataset.layers.forEach((lyr, lidx) => {
     const extent = lyr.getExtent();
     if (extent) {

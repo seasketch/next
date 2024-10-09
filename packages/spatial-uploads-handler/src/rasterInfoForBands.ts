@@ -169,16 +169,17 @@ export async function rasterInfoForBands(
     ) {
       // find a scaling factor that will represent the range of data values with
       // the full range of the encoding scheme.
-      if (range < 16_777_216) {
+      // This is useful for float values which may just be 0-1
+      if (range < 500) {
         scale = 1;
         // stretch values to fit full encoding scheme
         // Use factors of 10, e.g. 10, 100, 1000, etc.
         // TODO: fix this in the future when you have a 0-1 float dataset to
         // test
-        // while (range * (scale * 10) < 16777216) {
-        //   scale *= 10;
-        //   // break;
-        // }
+        while (range * (scale * 10) < 16777216) {
+          scale *= 10;
+          // break;
+        }
       } else if (range > 16_777_216) {
         // compress values to fit full encoding scheme
         // Use factors of 10, e.g. 0.1, 0.01, 0.001, etc.
@@ -350,7 +351,11 @@ export async function rasterInfoForBands(
     info.bands[0].stats.categories.length > 0 &&
     !isRGB
   ) {
-    info.presentation = SuggestedRasterPresentation.categorical;
+    if (info.bands[0].stats.categories.length <= 128) {
+      info.presentation = SuggestedRasterPresentation.categorical;
+    } else {
+      info.presentation = SuggestedRasterPresentation.continuous;
+    }
   }
   return info;
 }
