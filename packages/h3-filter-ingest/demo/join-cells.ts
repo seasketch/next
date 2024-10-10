@@ -4,10 +4,21 @@ import * as h3 from "h3-js";
 // @ts-ignore
 import cliProgress from "cli-progress";
 
+const usage = `
+Usage: npx ts-node join-cells.ts <output/path.csv> <input/cells.csv>
+`;
+
 // Get output file path (should be first argument)
 const filePath = process.argv[2];
 if (!filePath) {
-  console.error("Usage: npx ts-node downsample.ts <output/path.csv>");
+  console.error("Usage: npx ts-node join-cells.ts <output/path.csv>");
+  process.exit(1);
+}
+
+// Input cells.csv file should be second argument
+const cellsPath = process.argv[3];
+if (!cellsPath) {
+  console.error("Please provide a path to input cells csv file");
   process.exit(1);
 }
 
@@ -15,7 +26,7 @@ if (!filePath) {
 const progressBar = new cliProgress.SingleBar(
   {
     format:
-      "Progress | {bar} | {percentage}% || {value}/{total} cells processed",
+      "Progress | {bar} | {percentage}% || {value}/{total} cells processed || ETA: {eta_formatted}",
     barCompleteChar: "\u2588",
     barIncompleteChar: "\u2591",
     hideCursor: true,
@@ -37,7 +48,7 @@ const output = createWriteStream(filePath);
 output.write(header);
 
 // Read cells.csv as a stream and join each row
-const stream = createReadStream("./output/cells.csv");
+const stream = createReadStream(cellsPath);
 
 let i = 0;
 let totalCells = 0;
@@ -50,7 +61,7 @@ Papa.parse(stream, {
   },
   complete: () => {
     // Reset the stream for the actual parsing
-    const cellStream = createReadStream("./output/cells.csv");
+    const cellStream = createReadStream(cellsPath);
 
     // Start progress bar
     progressBar.start(totalCells, 0);
