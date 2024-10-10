@@ -79,6 +79,7 @@ export default function ProjectApp() {
   );
 
   const [expandSidebar, setExpandSidebar] = useState(!showSidebar);
+
   const { t, i18n } = useTranslation("sidebar");
   const sidebarTitles: { [key: string]: string } = {
     maps: t("Maps"),
@@ -173,7 +174,10 @@ export default function ProjectApp() {
                         }
                         onClose={() => history.replace(`/${slug}/app`)}
                         dark={dark}
-                        hidden={Boolean(!showSidebar)}
+                        hidden={
+                          Boolean(!showSidebar) ||
+                          showSidebar?.params["sidebar"] === "embed"
+                        }
                         noPadding={
                           /sketches/.test(history.location.pathname) ||
                           /forums/.test(history.location.pathname) ||
