@@ -249,19 +249,21 @@ export async function rasterInfoForBands(
         n,
         quantileBuckets(sampledPixelValues, n, b.minimum, b.maximum, true, true)
       );
-      addBuckets(
-        b.stats.naturalBreaks,
-        n,
-        naturalBreaksBuckets(
-          sampledPixelValues,
+      if (sampledPixelValues.length > n) {
+        addBuckets(
+          b.stats.naturalBreaks,
           n,
-          b.stats.histogram.length,
-          b.minimum,
-          b.maximum,
-          10000,
-          true
-        )
-      );
+          naturalBreaksBuckets(
+            sampledPixelValues,
+            n,
+            b.stats.histogram.length,
+            b.minimum,
+            b.maximum,
+            10000,
+            true
+          )
+        );
+      }
       // Seems to be a quirk in the library where it returns -9999 for stdev when it can't be calculated
       if (b.stats.stdev !== -9999) {
         addBuckets(
