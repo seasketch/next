@@ -44,7 +44,8 @@ const server = createServer(async (req, res) => {
     console.time(`${z}/${x}/${y}.${ext}`);
     if (ext === "txt") {
       try {
-        const data = await getText(z, x, y);
+        console.log("filters", filters);
+        const data = await getText(z, x, y, filters || {});
         console.timeEnd(`${z}/${x}/${y}.${ext}`);
         // add cors headers to allow all origins
         res.setHeader("Access-Control-Allow-Origin", "*");
@@ -89,7 +90,6 @@ async function getMVT(
 ) {
   const resolution = getResolutionForZoom(z);
   const f = buildWhereClauses(filters || {});
-  console.log(filters, f);
   const q = `
   with mvtgeom as 
   (select 
@@ -127,19 +127,31 @@ async function getMVT(
   }
 }
 
-async function getText(z: number, x: number, y: number) {
+async function getText(
+  z: number,
+  x: number,
+  y: number,
+  filters?: { [column: string]: Filter }
+) {
   const resolution = getResolutionForZoom(z);
+  const f = buildWhereClauses(filters || {});
+  console.log(f);
   const data = await pool.query({
-    name: "mvt-cell-ids-r" + resolution,
+    name:
+      "mvt-text-r" +
+      resolution +
+      createHash("md5").update(JSON.stringify(filters)).digest("hex"),
     text: `
       select 
-        distinct(r${resolution}_id) as id 
+        distinct(${resolution === 11 ? "id" : `r${resolution}_id`}) as id
       from 
         cells
       where 
-        ST_INTERSECTS(geom, ST_TileEnvelope($1,$2,$3))
+        ST_INTERSECTS(geom, ST_TileEnvelope($1,$2,$3)) ${
+          f.values.length > 0 ? "AND " + f.where : ""
+        }
   `,
-    values: [z, x, y],
+    values: [z, x, y, ...f.values],
   });
   if (data.rows.length === 0) {
     return "";
@@ -164,8 +176,6 @@ const stops: Stop[] = [
   { h3Resolution: 6, zoomLevel: 6 },
   // { h3Resolution: 5, zoomLevel: 5 },
 ].sort((a, b) => a.zoomLevel - b.zoomLevel);
-
-console.log(stops);
 
 function getResolutionForZoom(zoom: number) {
   const idx = stops.findIndex((stop) => stop.zoomLevel > zoom);
