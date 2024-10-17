@@ -90,6 +90,7 @@ const MIN_RESOLUTION = 6;
       layer.features.add(feature);
       progressBar.increment();
     });
+    ds.close();
     progressBar.stop();
     cells.clear();
     parents.forEach((parent) => cells.add(parent));

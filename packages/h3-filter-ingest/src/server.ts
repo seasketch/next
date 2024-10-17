@@ -1,6 +1,7 @@
 import { Pool } from "pg";
 import { createServer } from "http";
 import { createHash } from "crypto";
+import { stops, zoomToH3Resolution } from "./stops";
 
 const attributeData = require("../output/attributes.json");
 
@@ -50,6 +51,8 @@ const server = createServer(async (req, res) => {
         // add cors headers to allow all origins
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.setHeader("Content-Type", "text/plain");
+        // set cache headers
+        res.setHeader("Cache-Control", "public, max-age=60");
         res.end(data);
       } catch (error) {
         console.error("Error querying database", error);
@@ -73,6 +76,39 @@ const server = createServer(async (req, res) => {
         res.end("Error querying database");
       }
     }
+  } else if (req.method === "GET" && path === "/count") {
+    // get filters from query string
+    let filters: { [column: string]: Filter } | null = null;
+    if (parsedUrl.searchParams.has("filter")) {
+      const filter = JSON.parse(
+        decodeURIComponent(parsedUrl.searchParams.get("filter")!)
+      );
+      if (typeof filter === "object") {
+        filters = filter;
+      }
+    }
+    // get count of cells
+    const f = buildWhereClauses(filters || {}, 1);
+    const data = await pool.query({
+      name:
+        "count" +
+        createHash("md5").update(JSON.stringify(filters)).digest("hex"),
+      text: `
+      select 
+        count(distinct(id)) as count
+      from 
+        cells
+      where 
+        ${f.values.length > 0 ? f.where : "true"}
+    `,
+      values: f.values,
+    });
+    // add cors headers to allow all origins
+    res.setHeader("Access-Control-Allow-Origin", "*");
+    res.setHeader("Content-Type", "application/json");
+    // set cache headers
+    res.setHeader("Cache-Control", "public, max-age=3600");
+    res.end(JSON.stringify({ count: parseInt(data.rows[0].count || 0) }));
   } else {
     res.statusCode = 404;
     res.setHeader("Access-Control-Allow-Origin", "*");
@@ -165,27 +201,8 @@ type Stop = {
   zoomLevel: number;
 };
 
-const stops: Stop[] = [
-  { h3Resolution: 11, zoomLevel: 14 },
-  { h3Resolution: 10, zoomLevel: 13 },
-  { h3Resolution: 9, zoomLevel: 12 },
-  { h3Resolution: 9, zoomLevel: 11 },
-  { h3Resolution: 8, zoomLevel: 10 },
-  // { h3Resolution: 7, zoomLevel: 8 },
-  { h3Resolution: 7, zoomLevel: 8 },
-  { h3Resolution: 6, zoomLevel: 6 },
-  // { h3Resolution: 5, zoomLevel: 5 },
-].sort((a, b) => a.zoomLevel - b.zoomLevel);
-
 function getResolutionForZoom(zoom: number) {
-  const idx = stops.findIndex((stop) => stop.zoomLevel > zoom);
-  if (idx === -1) {
-    return stops[stops.length - 1].h3Resolution;
-  } else if (idx === 0) {
-    return stops[0].h3Resolution;
-  } else {
-    return stops[idx - 1].h3Resolution;
-  }
+  return zoomToH3Resolution(zoom, stops);
 }
 
 type NumberFilter = {
