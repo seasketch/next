@@ -4,7 +4,11 @@ import { GeostatsAttribute } from "@seasketch/geostats-types";
 import * as Papa from "papaparse";
 import { countLines } from "./src/countLines";
 import * as cliProgress from "cli-progress";
-import pg from "pg";
+import { stops } from "./src/stops";
+import { cellToParent } from "h3-js";
+
+const usage = `Please provide a path to the highest resolution cells.csv file.
+Usage: npx ts-node build-db.ts path/to/attributes.json path/to/cells.csv postgres|sqlite`;
 
 // argument 1 should be an attributes.json file
 const attrsPath = process.argv[2];
@@ -17,25 +21,17 @@ const attributes = JSON.parse(data);
 const cellsPath = process.argv[3];
 // ensure argument is passed
 if (!cellsPath) {
-  console.error(
-    "Please provide a path to the highest resolution cells.csv file.\nUsage: npx ts-node build-db.ts path/to/attributes.json path/to/cells.csv"
-  );
+  console.error(usage);
   process.exit(1);
 }
-// // third argument should be a path to the output database
-// const dbPath = process.argv[4];
-// // ensure argument is passed
-// if (!dbPath) {
-//   console.error(
-//     "Please provide a path to the output database.\nUsage: npx ts-node build-db.ts path/to/attributes.json path/to/cells.csv path/to/output.sqlite"
-//   );
-//   process.exit(1);
-// }
 
-// const db = new sqlite.Database(dbPath);
-const pgClient = new pg.Client({
-  database: "crdss",
-});
+const dbType = process.argv[4];
+if (!dbType || !["postgres", "sqlite"].includes(dbType)) {
+  console.error(usage);
+  process.exit(1);
+}
+
+const engine = dbType === "postgres" ? "pg" : "sqlite";
 
 function isAllowedAttribute(attr: GeostatsAttribute) {
   return (
@@ -44,9 +40,15 @@ function isAllowedAttribute(attr: GeostatsAttribute) {
   );
 }
 
+const resolutions = stops.map((stop) => stop.h3Resolution);
+
 // create the table based on attributes.json
-const createTable = `DROP TABLE IF EXISTS cells; CREATE TABLE cells (
-  id h3index NOT NULL PRIMARY KEY,
+const createTable = `DROP TABLE IF EXISTS cells;\nCREATE TABLE cells (
+  id ${engine === "pg" ? "h3index" : "text"} NOT NULL PRIMARY KEY,
+  ${resolutions
+    .filter((r) => r !== 11)
+    .map((r) => `r${r}_id TEXT`)
+    .join(",\n")},
   ${attributes
     .filter(
       (attr: GeostatsAttribute) =>
@@ -56,7 +58,7 @@ const createTable = `DROP TABLE IF EXISTS cells; CREATE TABLE cells (
       if (attr.type === "number") {
         return `${attr.attribute} REAL`;
       } else if (attr.type === "boolean") {
-        return `${attr.attribute} boolean`;
+        return `${attr.attribute} ${engine === "pg" ? "BOOLEAN" : "INTEGER"}`;
       } else {
         return `${attr.attribute} TEXT`;
       }
@@ -64,17 +66,47 @@ const createTable = `DROP TABLE IF EXISTS cells; CREATE TABLE cells (
     .join(",\n")}
 )`;
 
-const outputSqlFile = "output/cells.sql";
+const createIndexes = `
+CREATE INDEX IF NOT EXISTS idx_cells_id ON cells (id);
+${resolutions
+  .filter((r) => r !== 11)
+  .map(
+    (r) => `CREATE INDEX IF NOT EXISTS idx_cells_r${r}_id ON cells (r${r}_id);`
+  )
+  .join("\n")}
+${attributes
+  .filter(
+    (attr: GeostatsAttribute) =>
+      attr.attribute !== "id" && isAllowedAttribute(attr)
+  )
+  .map((attr: GeostatsAttribute) => {
+    if (engine === "sqlite" && attr.type === "boolean") {
+      // create two partial indexes where value is 1 or 0
+      return `
+CREATE INDEX IF NOT EXISTS idx_cells_${attr.attribute}_true ON cells (${attr.attribute}) WHERE ${attr.attribute} = 1;
+CREATE INDEX IF NOT EXISTS idx_cells_${attr.attribute}_false ON cells (${attr.attribute}) WHERE ${attr.attribute} = 0;`;
+    } else {
+      return `CREATE INDEX IF NOT EXISTS idx_cells_${attr.attribute} ON cells (${attr.attribute});`;
+    }
+  })
+  .join("\n")}`;
+
+const outputSqlFile = `output/cells.${engine}.sql`;
 const outputSqlStream = createWriteStream(outputSqlFile);
 
 countLines(cellsPath).then(async (rowCount) => {
-  await pgClient.connect();
-  try {
-    await pgClient.query(createTable, []);
-  } catch (e) {
-    console.error(e);
-    return;
-  }
+  const createDbOutput = `output/create-db.${engine}.sql`;
+  const createDbStream = createWriteStream(createDbOutput);
+  createDbStream.write(createTable);
+  createDbStream.end();
+  console.log(`CREATE DATABASE SQL file written to ${createDbOutput}`);
+
+  const createIndexesOutput = `output/create-indexes.${engine}.sql`;
+  const createIndexesStream = createWriteStream(createIndexesOutput);
+  createIndexesStream.write(createIndexes);
+  createIndexesStream.end();
+  console.log(`CREATE INDEXES SQL file written to ${createIndexesOutput}`);
+
   // await run(createTable, []);
   // Create a progress bar
   const progressBar = new cliProgress.SingleBar(
@@ -103,38 +135,54 @@ countLines(cellsPath).then(async (rowCount) => {
       const data = row.data;
       const id = data.id;
       // insert the row into the table, using the attributes.json to determine the columns
-      const values = attrs.map((attr: GeostatsAttribute) => {
-        if (attr.attribute === "id") {
-          return id;
-        } else if (attr.type === "boolean") {
-          if (data[attr.attribute] === null) {
-            return null;
-          } else {
-            return Boolean(data[attr.attribute]);
-          }
-        } else if (attr.type === "number") {
-          return Number(data[attr.attribute]);
-        } else if (
-          data[attr.attribute] === null ||
-          data[attr.attribute] === undefined
-        ) {
-          return null;
-        } else {
-          return data[attr.attribute].toString();
-        }
-      });
-      // console.log(
-      //   `INSERT INTO cells (id, ${columns.join(
-      //     ",\n"
-      //   )}) VALUES ('${id}', ${columns.map((c, i) => `\$${i + 1}`).join(", ")})`
-      // );
-      // console.log(id);
-      // parser.pause();
+
+      const values = [
+        id,
+        ...resolutions.filter((r) => r !== 11).map((r) => cellToParent(id, r)),
+        ...attrs
+          .filter((a: GeostatsAttribute) => a.attribute !== "id")
+          .map((attr: GeostatsAttribute) => {
+            if (attr.attribute === "id") {
+              return id;
+            } else if (attr.type === "boolean") {
+              if (data[attr.attribute] === null) {
+                return null;
+              } else {
+                if (engine === "pg") {
+                  return Boolean(data[attr.attribute]);
+                } else {
+                  return Boolean(data[attr.attribute]) ? 1 : 0;
+                }
+              }
+            } else if (attr.type === "number") {
+              if (isNaN(data[attr.attribute])) {
+                return null;
+              } else {
+                return Number(data[attr.attribute]);
+              }
+            } else if (
+              data[attr.attribute] === null ||
+              data[attr.attribute] === undefined
+            ) {
+              return null;
+            } else {
+              return data[attr.attribute].toString();
+            }
+          }),
+      ];
       await run(
-        `INSERT INTO cells (id, ${columns.join(
-          ", "
-        )}) VALUES ('${id}', ${columns
-          .map((c, i) => `\$${i + 1}`)
+        `INSERT INTO cells (id, ${resolutions
+          .filter((r) => r !== 11)
+          .map((r) => `r${r}_id`)
+          .join(", ")}, ${columns.join(", ")}) VALUES ('${id}', ${resolutions
+          .filter((r) => r !== 11)
+          .map((r, i) => {
+            return `\$${i + 1}`;
+          })
+          .join(", ")}, ${columns
+          .map(
+            (c, i) => `\$${i + 1 + resolutions.filter((r) => r !== 11).length}`
+          )
           .join(", ")})`,
         values
       );
@@ -142,26 +190,21 @@ countLines(cellsPath).then(async (rowCount) => {
       if (i % 100 === 0) {
         progressBar.update(i);
       }
-      // parser.resume();
       stream.resume();
     },
     complete: async () => {
       progressBar.update(rowCount);
       progressBar.stop();
-      // create indexes for all fields except for id
-      attributes
-        .filter(
-          (attr: GeostatsAttribute) =>
-            attr.attribute !== "id" && isAllowedAttribute(attr)
-        )
-        .forEach(async (attr: GeostatsAttribute) => {
-          // await pgClient.query(
-          //   `CREATE INDEX idx_${attr.attribute} ON cells (${attr.attribute});`
-          // );
-        });
       await outputSqlStream.end();
       console.log(`SQL file written to ${outputSqlFile}`);
-      // await pgClient.end();
+      // print usage info (depending on engine)
+      if (engine === "sqlite") {
+        console.log(
+          `Usage: sqlite3 path/to/database.sqlite < ${outputSqlFile}`
+        );
+      } else {
+        console.log(`Usage: psql -U postgres -d crdss -a -f ${outputSqlFile}`);
+      }
     },
   });
 });
@@ -172,17 +215,6 @@ function run(statement: string, values: any[]) {
     output = output.replace(`$${i + 1}`, escape(value));
   });
   return outputSqlStream.write(`${output};\n`);
-  // return pgClient.query(statement, values);
-  // return new Promise((resolve, reject) => {
-  //   pgClient.query(statement, values, (err) => {
-  //     if (err) {
-  //       reject(err);
-  //     } else {
-  //       console.log("resolved");
-  //       resolve(true);
-  //     }
-  //   });
-  // });
 }
 
 function escape(value: any) {

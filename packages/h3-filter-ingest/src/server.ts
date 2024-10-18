@@ -251,7 +251,7 @@ function buildWhereClauses(
       whereClauses.push(`${column} = $${valueStartIndex}`);
       values.push(filter.bool);
       valueStartIndex++;
-    } else if (isStringFilter(filter)) {
+    } else if (isStringFilter(filter) && filter.choices.length > 0) {
       whereClauses.push(
         `${column} IN (${filter.choices
           .map((_, i) => `$${valueStartIndex + i}`)
