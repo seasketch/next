@@ -8,7 +8,7 @@ import { stops } from "./src/stops";
 import { cellToParent } from "h3-js";
 
 const usage = `Please provide a path to the highest resolution cells.csv file.
-Usage: npx ts-node build-db.ts path/to/attributes.json path/to/cells.csv postgres|sqlite`;
+Usage: npx ts-node build-db.ts path/to/attributes.json path/to/cells.csv postgres|sqlite|duckdb`;
 
 // argument 1 should be an attributes.json file
 const attrsPath = process.argv[2];
@@ -26,12 +26,13 @@ if (!cellsPath) {
 }
 
 const dbType = process.argv[4];
-if (!dbType || !["postgres", "sqlite"].includes(dbType)) {
+if (!dbType || !["postgres", "sqlite", "duckdb"].includes(dbType)) {
   console.error(usage);
   process.exit(1);
 }
 
-const engine = dbType === "postgres" ? "pg" : "sqlite";
+const engine =
+  dbType === "postgres" ? "pg" : dbType === "duckdb" ? "duckdb" : "sqlite";
 
 function isAllowedAttribute(attr: GeostatsAttribute) {
   return (
@@ -41,6 +42,35 @@ function isAllowedAttribute(attr: GeostatsAttribute) {
 }
 
 const resolutions = stops.map((stop) => stop.h3Resolution);
+
+if (engine === "duckdb") {
+  console.log("DuckDB can be created directly from the CSV file");
+  console.log(`
+To do so, run the following from the duckdb cli:
+
+$ duckdb ./output/crdss.duckdb
+load h3;
+CREATE TABLE temp1 AS 
+  SELECT * FROM read_csv('${cellsPath}', 
+    header = true, 
+    null_padding = true
+  );
+CREATE TABLE cells as
+  select 
+    h3_string_to_h3(id) as r11_id, 
+    h3_cell_to_parent(h3_string_to_h3(id), 10) as r10_id,
+    h3_cell_to_parent(h3_string_to_h3(id), 9) as r9_id,
+    h3_cell_to_parent(h3_string_to_h3(id), 8) as r8_id,
+    h3_cell_to_parent(h3_string_to_h3(id), 7) as r7_id,
+    h3_cell_to_parent(h3_string_to_h3(id), 6) as r6_id,
+    h3_cell_to_parent(h3_string_to_h3(id), 5) as r5_id,
+    * 
+  from temp1;
+DROP TABLE temp1;
+`);
+
+  process.exit();
+}
 
 // create the table based on attributes.json
 const createTable = `DROP TABLE IF EXISTS cells;\nCREATE TABLE cells (
@@ -67,6 +97,8 @@ const createTable = `DROP TABLE IF EXISTS cells;\nCREATE TABLE cells (
 )`;
 
 const createIndexes = `
+alter table cells add column geom geometry(polygon, 3857) not null generated always as (st_transform(h3_cell_to_boundary_geometry(id), 3857)) stored;
+create index on cells using gist(geom);
 CREATE INDEX IF NOT EXISTS idx_cells_id ON cells (id);
 ${resolutions
   .filter((r) => r !== 11)
@@ -122,7 +154,13 @@ countLines(cellsPath).then(async (rowCount) => {
   const attrs = attributes.filter((attr: GeostatsAttribute) =>
     isAllowedAttribute(attr)
   );
-  const columns = [...attrs.map((attr: GeostatsAttribute) => attr.attribute)];
+  const columns = [
+    "id",
+    ...resolutions.filter((r) => r !== 11).map((r) => `r${r}_id`),
+    ...attrs
+      .filter((c: GeostatsAttribute) => c.attribute !== "id")
+      .map((attr: GeostatsAttribute) => attr.attribute),
+  ];
 
   const stream = createReadStream(cellsPath);
   // pull values from cells.csv and insert into the table
@@ -142,9 +180,7 @@ countLines(cellsPath).then(async (rowCount) => {
         ...attrs
           .filter((a: GeostatsAttribute) => a.attribute !== "id")
           .map((attr: GeostatsAttribute) => {
-            if (attr.attribute === "id") {
-              return id;
-            } else if (attr.type === "boolean") {
+            if (attr.type === "boolean") {
               if (data[attr.attribute] === null) {
                 return null;
               } else {
@@ -171,18 +207,8 @@ countLines(cellsPath).then(async (rowCount) => {
           }),
       ];
       await run(
-        `INSERT INTO cells (id, ${resolutions
-          .filter((r) => r !== 11)
-          .map((r) => `r${r}_id`)
-          .join(", ")}, ${columns.join(", ")}) VALUES ('${id}', ${resolutions
-          .filter((r) => r !== 11)
-          .map((r, i) => {
-            return `\$${i + 1}`;
-          })
-          .join(", ")}, ${columns
-          .map(
-            (c, i) => `\$${i + 1 + resolutions.filter((r) => r !== 11).length}`
-          )
+        `INSERT INTO cells (${columns.join(", ")}) VALUES (${columns
+          .map((c, i) => `\$${i + 1}`)
           .join(", ")})`,
         values
       );
@@ -190,6 +216,9 @@ countLines(cellsPath).then(async (rowCount) => {
       if (i % 100 === 0) {
         progressBar.update(i);
       }
+      // if (i > 100) {
+      //   parser.abort();
+      // }
       stream.resume();
     },
     complete: async () => {

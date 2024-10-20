@@ -34,7 +34,6 @@ const MIN_RESOLUTION = 6;
   for (const stop of stops) {
     const parents = new Set<string>();
     const isFirstStop = stops.indexOf(stop) === 0;
-    const isLastStop = stops.indexOf(stop) === stops.length - 1;
     if (isFirstStop) {
       console.log("First stop, reading cells from input file");
       // read the input file line-by-line. There are no columns so we
@@ -62,8 +61,17 @@ const MIN_RESOLUTION = 6;
       gdal.wkbPolygon
     );
     layer.fields.add(new gdal.FieldDefn("id", gdal.OFTString));
-    layer.fields.add(new gdal.FieldDefn("parent_id", gdal.OFTString));
-    layer.fields.add(new gdal.FieldDefn("grandparent_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r0_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r1_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r2_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r3_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r4_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r5_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r6_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r7_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r8_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r9_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r10_id", gdal.OFTString));
     const progressBar = new cliProgress.SingleBar(
       {
         format: `cells-${stop.h3Resolution}.fgb | {bar} | {percentage}% | {eta}s || {value}/{total} cells processed`,
@@ -73,22 +81,29 @@ const MIN_RESOLUTION = 6;
     progressBar.start(cells.size, 0);
     cells.forEach((cell) => {
       const id = cell;
-      const parent_id = h3.cellToParent(id, stop.h3Resolution - 1);
-      const grandparent_id = h3.cellToParent(parent_id, stop.h3Resolution - 2);
-      const multipolygon = h3.cellsToMultiPolygon([id], true);
-      const feature = new gdal.Feature(layer);
-      feature.setGeometry(
-        gdal.Geometry.fromGeoJson({
-          type: "Polygon",
-          coordinates: multipolygon[0],
-        })
-      );
-      feature.fields.set("id", id);
-      feature.fields.set("parent_id", parent_id);
-      parents.add(parent_id);
-      feature.fields.set("grandparent_id", grandparent_id);
-      layer.features.add(feature);
-      progressBar.increment();
+      try {
+        const parent_id = h3.cellToParent(id, stop.h3Resolution - 1);
+        const multipolygon = h3.cellsToMultiPolygon([id], true);
+        const feature = new gdal.Feature(layer);
+        feature.setGeometry(
+          gdal.Geometry.fromGeoJson({
+            type: "Polygon",
+            coordinates: multipolygon[0],
+          })
+        );
+        feature.fields.set("id", id);
+        for (const r of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+          if (r < stop.h3Resolution) {
+            feature.fields.set(`r${r}_id`, h3.cellToParent(id, r));
+          }
+        }
+        parents.add(parent_id);
+        layer.features.add(feature);
+        progressBar.increment();
+      } catch (e: any) {
+        console.log(id, stop.h3Resolution);
+        throw new Error(`Error processing cell ${id}: ${e.message}`);
+      }
     });
     ds.close();
     progressBar.stop();
