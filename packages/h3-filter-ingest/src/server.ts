@@ -2,6 +2,18 @@ import { Pool } from "pg";
 import { createServer } from "http";
 import { createHash } from "crypto";
 import { stops, zoomToH3Resolution } from "./stops";
+import * as h3 from "h3-js";
+const duckdb = require("duckdb");
+
+const db = new duckdb.Database("./output/crdss.duckdb");
+const connection = db.connect();
+connection.all("load h3", (err: any, data: any) => {
+  if (err) {
+    console.error(err);
+  } else {
+    console.log("h3 loaded", data);
+  }
+});
 
 const attributeData = require("../output/attributes.json");
 
@@ -33,10 +45,6 @@ const server = createServer(async (req, res) => {
       const ext = match[4];
       let filters: { [column: string]: Filter } | null = null;
       if (parsedUrl.searchParams.has("filter")) {
-        console.log(
-          "decoded",
-          decodeURIComponent(parsedUrl.searchParams.get("filter")!)
-        );
         const filter = JSON.parse(
           decodeURIComponent(parsedUrl.searchParams.get("filter")!)
         );
@@ -47,7 +55,6 @@ const server = createServer(async (req, res) => {
       console.time(`${z}/${x}/${y}.${ext}`);
       if (ext === "txt") {
         try {
-          console.log("filters", filters);
           const data = await getText(z, x, y, filters || {});
           console.timeEnd(`${z}/${x}/${y}.${ext}`);
           // add cors headers to allow all origins
@@ -121,10 +128,6 @@ const server = createServer(async (req, res) => {
         const resolution = Number(parsedUrl.searchParams.get("resolution"));
         let filters: { [column: string]: Filter } | null = null;
         if (parsedUrl.searchParams.has("filter")) {
-          console.log(
-            "decoded",
-            decodeURIComponent(parsedUrl.searchParams.get("filter")!)
-          );
           const filter = JSON.parse(
             decodeURIComponent(parsedUrl.searchParams.get("filter")!)
           );
@@ -172,6 +175,120 @@ const server = createServer(async (req, res) => {
         res.statusCode = 400;
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.end("Resolution is required");
+      }
+    } else if (req.method === "GET" && path === "/filter") {
+      const resolution = Number(parsedUrl.searchParams.get("resolution"));
+      let filters: { [column: string]: Filter } | null = null;
+      if (parsedUrl.searchParams.has("filter")) {
+        const filter = JSON.parse(
+          decodeURIComponent(parsedUrl.searchParams.get("filter")!)
+        );
+        if (typeof filter === "object") {
+          filters = filter;
+        }
+      }
+      if (!filters) {
+        res.statusCode = 400;
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.end("Filter is required");
+      }
+      if (resolution < 11) {
+        const f = buildWhereClauses(filters || {}, 1);
+        console.time("query");
+        const query = `
+          with filtered as (
+            select
+              distinct(r8_id) as id
+            from
+              cells
+            where
+              ${f.values.length > 0 ? f.where : "true"}
+          ) 
+          select
+            h3_compact_cells(
+              ARRAY_AGG(
+                distinct(
+                  h3_h3_to_string(id)
+                )
+              )
+            ) as r8,
+            h3_compact_cells(
+              ARRAY_AGG(
+                distinct(
+                  h3_cell_to_parent(h3_h3_to_string(id), 7)
+                )
+              )
+            ) as r7,
+            h3_compact_cells(
+              ARRAY_AGG(
+                distinct(
+                  h3_cell_to_parent(h3_h3_to_string(id), 6)
+                )
+              )
+            ) as r6
+            from filtered
+          `;
+
+        db.all(query, ...f.values, async (err: any, data: any) => {
+          console.timeEnd("query");
+
+          const count = (
+            await get<{ count: number }>(
+              `Select count(id)::int as count from cells where ${f.where}`,
+              f.values
+            )
+          ).count;
+          if (err) {
+            console.error(err);
+            res.statusCode = 500;
+            res.setHeader("Access-Control-Allow-Origin", "*");
+            res.end("Error querying database");
+            return;
+          }
+          type CellsByResolution = {
+            [resolution: number]: string[];
+          };
+          const layers: {
+            [displayResolution: number]: CellsByResolution;
+          } = {};
+          console.time("sort ids");
+          for (const key in data[0]) {
+            const cells = data[0][key];
+            const displayResolution = Number(key.replace("r", ""));
+            layers[displayResolution] = {} as CellsByResolution;
+            for (const cell of cells) {
+              const resolution = h3.getResolution(cell);
+              if (!layers[displayResolution][resolution]) {
+                layers[displayResolution][resolution] = [];
+              }
+              layers[displayResolution][resolution].push(cell);
+            }
+          }
+          console.timeEnd("sort ids");
+          for (const displayResolution in layers) {
+            console.log(`Resolution ${displayResolution}`);
+            // print cell counts for each resolution
+            const cells = layers[displayResolution];
+            let total = 0;
+            for (const r in cells) {
+              console.log(`  ${r}: ${cells[r].length.toLocaleString()} cells`);
+              total += cells[r].length;
+            }
+            console.log(`  Total: ${total.toLocaleString()} cells`);
+          }
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Content-Type", "application/json");
+          console.log(count);
+          // res.end(JSON.stringify(counts));
+          res.end(JSON.stringify({ count, layers }));
+          // res.statusCode = 400;
+          // res.setHeader("Access-Control-Allow-Origin", "*");
+          // res.end("Not implemented");
+        });
+      } else {
+        res.statusCode = 400;
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.end("Not implemented");
       }
     } else {
       res.statusCode = 404;
@@ -333,7 +450,25 @@ function buildWhereClauses(
       );
       values.push(...filter.choices);
       valueStartIndex += filter.choices.length;
+    } else {
+      console.error("Invalid filter", filter);
     }
   }
+  console.log("where", whereClauses);
   return { where: whereClauses.join(" AND "), values };
+}
+
+function get<T>(query: string, values: any[] = []): Promise<T> {
+  console.log(query, values);
+  return new Promise((resolve, reject) => {
+    connection.all(query, ...values, (err: any, data: any) => {
+      if (err) {
+        reject(err);
+      } else if (data && data.length > 0) {
+        resolve(data[0] as T);
+      } else {
+        reject(new Error("No data returned from query"));
+      }
+    });
+  });
 }
