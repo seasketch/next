@@ -192,6 +192,7 @@ const server = createServer(async (req, res) => {
         res.setHeader("Access-Control-Allow-Origin", "*");
         res.end("Filter is required");
       }
+      const rootTile = parsedUrl.searchParams.get("tile");
       if (resolution < 11) {
         const f = buildWhereClauses(filters || {}, 1);
         console.time("query");
@@ -203,6 +204,13 @@ const server = createServer(async (req, res) => {
               cells
             where
               ${f.values.length > 0 ? f.where : "true"}
+              ${
+                rootTile
+                  ? `AND r${h3.getResolution(
+                      rootTile
+                    )}_id = h3_string_to_h3('${rootTile}')`
+                  : ""
+              }
           ) 
           select
             h3_compact_cells(
