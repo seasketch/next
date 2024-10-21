@@ -206,9 +206,9 @@ const server = createServer(async (req, res) => {
               ${f.values.length > 0 ? f.where : "true"}
               ${
                 rootTile
-                  ? `AND r${h3.getResolution(
-                      rootTile
-                    )}_id = h3_string_to_h3('${rootTile}')`
+                  ? `AND r${h3.getResolution(rootTile)}_id = h3_string_to_h3($${
+                      f.values.length + 1
+                    }::varchar)::uint64`
                   : ""
               }
           ) 
@@ -236,16 +236,10 @@ const server = createServer(async (req, res) => {
             ) as r6
             from filtered
           `;
-
-        db.all(query, ...f.values, async (err: any, data: any) => {
+        const values = rootTile ? [...f.values, rootTile] : [...f.values];
+        console.log("query", query, values);
+        db.all(query, ...values, async (err: any, data: any) => {
           console.timeEnd("query");
-
-          const count = (
-            await get<{ count: number }>(
-              `Select count(id)::int as count from cells where ${f.where}`,
-              f.values
-            )
-          ).count;
           if (err) {
             console.error(err);
             res.statusCode = 500;
@@ -253,6 +247,12 @@ const server = createServer(async (req, res) => {
             res.end("Error querying database");
             return;
           }
+          const count = (
+            await get<{ count: number }>(
+              `Select count(id)::int as count from cells where ${f.where}`,
+              f.values
+            )
+          ).count;
           type CellsByResolution = {
             [resolution: number]: string[];
           };
