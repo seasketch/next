@@ -105,6 +105,7 @@ async function processBatch(
 
 // Function to incrementally process all rows
 async function processAllRows(stop: Stop): Promise<void> {
+  console.log(stop);
   try {
     // Get the total count of rows to process
     const countResult: { count: number }[] = await all(
