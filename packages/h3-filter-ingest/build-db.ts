@@ -88,12 +88,13 @@ CREATE TABLE cells as
     h3_cell_to_parent(h3_string_to_h3(id), 6) as r6_id,
     h3_cell_to_parent(h3_string_to_h3(id), 5) as r5_id,
     h3_cell_to_parent(h3_string_to_h3(id), 4) as r4_id,
-    h3_id_to_simple_polygon(id) as geom,
     * 
   from temp1;
-CREATE INDEX cells_geom ON cells USING RTREE (geom);
 
 DROP TABLE temp1;
+
+Don't forget to run:
+npx ts-node add-geohashes.ts -d output/crdss.duckdb
 `);
 
   process.exit();

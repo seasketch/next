@@ -9,8 +9,7 @@ import * as cliProgress from "cli-progress";
 import { stops, Stop } from "./src/stops";
 const tilebelt = require("@mapbox/tilebelt");
 
-const BATCH_SIZE = 50_000; // Define the batch size for processing
-const zoomLevel = 7;
+const BATCH_SIZE = 100_000; // Define the batch size for processing
 // const limits = { min_zoom: zoomLevel, max_zoom: zoomLevel };
 
 // Define the CLI options
@@ -144,6 +143,8 @@ async function processAllRows(stop: Stop): Promise<void> {
 }
 
 async function prepare() {
+  await run(`install h3`);
+  await run(`install spatial`);
   await run(`load h3`);
   await run(`load spatial`);
   await run(`drop table if exists geohashes`);
@@ -161,7 +162,7 @@ async function prepare() {
 
 (async () => {
   await prepare();
-  const steps = stops.reverse().slice(0, stops.length - 1);
+  const steps = stops.reverse(); //.slice(0, stops.length - 1);
   for (const stop of steps) {
     await processAllRows(stop);
   }
