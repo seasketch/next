@@ -53,7 +53,7 @@ app.get("/mvt/:z/:x/:y", async (c, next) => {
   const query = `
     with ids as (
     select
-      id,
+      distinct(id),
     from
       geohashes
     where

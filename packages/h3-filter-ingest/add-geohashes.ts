@@ -9,9 +9,9 @@ import * as cliProgress from "cli-progress";
 import { stops, Stop } from "./src/stops";
 const tilebelt = require("@mapbox/tilebelt");
 
-const BATCH_SIZE = 5000; // Define the batch size for processing
+const BATCH_SIZE = 50_000; // Define the batch size for processing
 const zoomLevel = 7;
-const limits = { min_zoom: zoomLevel, max_zoom: zoomLevel };
+// const limits = { min_zoom: zoomLevel, max_zoom: zoomLevel };
 
 // Define the CLI options
 const argv = yargs(process.argv.slice(2))
@@ -66,10 +66,10 @@ async function processBatch(
     const valuesStatements: string[] = [];
     // Process each geometry in the batch
     for (const row of result) {
-      const geohashes: string[] = tileCover.indexes(
-        JSON.parse(row.geojson),
-        limits
-      );
+      const geohashes: string[] = tileCover.indexes(JSON.parse(row.geojson), {
+        min_zoom: stop.zoomLevel,
+        max_zoom: stop.zoomLevel,
+      });
 
       // console.log("\n");
 
@@ -161,7 +161,8 @@ async function prepare() {
 
 (async () => {
   await prepare();
-  for (const stop of stops.reverse()) {
+  const steps = stops.reverse().slice(0, stops.length - 1);
+  for (const stop of steps) {
     await processAllRows(stop);
   }
   connection.close();
