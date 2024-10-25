@@ -9,19 +9,11 @@ import { execSync } from "node:child_process";
 const MIN_ZOOM = 0;
 
 const usage = `
-npx ts-node build-cell-pmtiles.ts <path-to-cells.csv> <path-to-output.pmtiles>
-`;
+npx ts-node build-cell-pmtiles.ts <path-to-cells.csv>`;
 
 const filePath = process.argv[2];
 if (!filePath) {
   console.error("Missing path to cells csv");
-  console.error(usage);
-  process.exit(1);
-}
-
-const outputPath = process.argv[3];
-if (!outputPath) {
-  console.error("Missing path to output pmtiles");
   console.error(usage);
   process.exit(1);
 }
@@ -61,6 +53,7 @@ const MIN_RESOLUTION = 6;
       gdal.wkbPolygon
     );
     layer.fields.add(new gdal.FieldDefn("id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("resolution", gdal.OFTReal));
     layer.fields.add(new gdal.FieldDefn("r0_id", gdal.OFTString));
     layer.fields.add(new gdal.FieldDefn("r1_id", gdal.OFTString));
     layer.fields.add(new gdal.FieldDefn("r2_id", gdal.OFTString));
@@ -72,6 +65,7 @@ const MIN_RESOLUTION = 6;
     layer.fields.add(new gdal.FieldDefn("r8_id", gdal.OFTString));
     layer.fields.add(new gdal.FieldDefn("r9_id", gdal.OFTString));
     layer.fields.add(new gdal.FieldDefn("r10_id", gdal.OFTString));
+    layer.fields.add(new gdal.FieldDefn("r11_id", gdal.OFTString));
     const progressBar = new cliProgress.SingleBar(
       {
         format: `cells-${stop.h3Resolution}.fgb | {bar} | {percentage}% | {eta}s || {value}/{total} cells processed`,
@@ -92,9 +86,12 @@ const MIN_RESOLUTION = 6;
           })
         );
         feature.fields.set("id", id);
-        for (const r of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]) {
+        feature.fields.set("resolution", stop.h3Resolution);
+        for (const r of [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]) {
           if (r < stop.h3Resolution) {
             feature.fields.set(`r${r}_id`, h3.cellToParent(id, r));
+          } else if (r === stop.h3Resolution) {
+            feature.fields.set(`r${r}_id`, id);
           }
         }
         parents.add(parent_id);

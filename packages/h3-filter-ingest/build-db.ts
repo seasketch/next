@@ -49,12 +49,35 @@ if (engine === "duckdb") {
 To do so, run the following from the duckdb cli:
 
 $ duckdb ./output/crdss.duckdb
+
 load h3;
+load spatial;
+
+CREATE or replace macro close_polygon_wkt(geom) AS (
+  -- Extract the coordinates part of the WKT
+  CASE
+    WHEN geom LIKE 'POLYGON%' THEN
+      'POLYGON((' ||
+      TRIM(BOTH '()' FROM SPLIT_PART(geom, '((', 2)) || ', ' ||
+      TRIM(SPLIT_PART(SPLIT_PART(geom, '((', 2), ',', 1)) || '))'
+    ELSE geom
+  END
+);
+
+CREATE or REPLACE MACRO polygon_from_multipolygon_wkt(wkt) as (
+   st_astext((unnest(st_dump(st_geomfromtext(wkt)))).geom)
+);
+
+CREATE or REPLACE MACRO h3_id_to_simple_polygon(id) as (
+  st_geomfromtext(close_polygon_wkt(polygon_from_multipolygon_wkt(h3_cells_to_multi_polygon_wkt(array_value(id)))))
+);
+
 CREATE TABLE temp1 AS 
   SELECT * FROM read_csv('${cellsPath}', 
     header = true, 
     null_padding = true
   );
+
 CREATE TABLE cells as
   select 
     h3_string_to_h3(id) as r11_id, 
@@ -64,8 +87,12 @@ CREATE TABLE cells as
     h3_cell_to_parent(h3_string_to_h3(id), 7) as r7_id,
     h3_cell_to_parent(h3_string_to_h3(id), 6) as r6_id,
     h3_cell_to_parent(h3_string_to_h3(id), 5) as r5_id,
+    h3_cell_to_parent(h3_string_to_h3(id), 4) as r4_id,
+    h3_id_to_simple_polygon(id) as geom,
     * 
   from temp1;
+CREATE INDEX cells_geom ON cells USING RTREE (geom);
+
 DROP TABLE temp1;
 `);
 
