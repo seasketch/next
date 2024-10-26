@@ -1,13 +1,10 @@
-import { createServer } from "http";
-import { createHash } from "crypto";
 import { stops, zoomToH3Resolution } from "./stops";
 import * as h3 from "h3-js";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { serve } from "@hono/node-server";
 import { logger } from "hono/logger";
-import { timing, setMetric, startTime, endTime } from "hono/timing";
-import type { TimingVariables } from "hono/timing";
+import { timing, startTime, endTime } from "hono/timing";
 
 const tilebelt = require("@mapbox/tilebelt");
 const duckdb = require("duckdb");
@@ -67,18 +64,20 @@ app.get("/:v/mvt/:z/:x/:y", async (c, next) => {
     )
     select
       distinct(h3_h3_to_string(r${resolution}_id)) as id,
+      count(h3_h3_to_string(r${resolution}_id))::int as count
     from
       cells
     where
       r${resolution}_id in (select id from tile_members) and
       ${where.values.length > 0 ? where.where : "true"}
+    group by r${resolution}_id
   `;
   const values = [resolution, `${tilebelt.tileToQuadkey([x, y, z])}%`];
   if (where.values.length > 0) {
     values.push(...where.values);
   }
   startTime(c, "db");
-  const result = await all<{ id: string }>(query, values);
+  const result = await all<{ id: string; count: number }>(query, values);
   endTime(c, "db");
   if (result.length === 0) {
     if (format === "geojson") {
@@ -100,6 +99,8 @@ app.get("/:v/mvt/:z/:x/:y", async (c, next) => {
       properties: {
         highlighted: true,
         h3: row.id,
+        count: row.count,
+        resolution,
       },
       geometry: {
         type: "Polygon",
@@ -305,7 +306,7 @@ function createEmptyTileBuffer() {
   return buffer;
 }
 
-export default {
-  port: 3003,
+serve({
   fetch: app.fetch,
-};
+  port: 3003,
+});
