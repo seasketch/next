@@ -477,7 +477,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           resolveInfo
         ) => {
           const { pgClient } = context;
-
+          if (!forForum) {
+            // check that the user owns this sketch
+            const { rows } = await pgClient.query(
+              `select user_id from sketches where id = $1`,
+              [id]
+            );
+            if (rows.length === 0) {
+              throw new Error("Sketch not found or permission denied");
+            }
+          }
           const {
             rows: [row],
           } = await pgClient.query(
