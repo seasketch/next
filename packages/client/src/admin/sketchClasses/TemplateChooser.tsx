@@ -8,7 +8,7 @@ import {
   useCreateSketchClassMutation,
   useTemplateSketchClassesQuery,
 } from "../../generated/graphql";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   LineIcon,
   PointIcon,
@@ -18,6 +18,8 @@ import useProjectId from "../../useProjectId";
 import { useState } from "react";
 import Spinner from "../../components/Spinner";
 import getSlug from "../../getSlug";
+import { FilterIcon } from "@heroicons/react/solid";
+import useIsSuperuser from "../../useIsSuperuser";
 
 export default function TemplateChooser({
   onCreate,
@@ -27,6 +29,7 @@ export default function TemplateChooser({
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const projectId = useProjectId();
+  const isSuperuser = useIsSuperuser();
   const { data } = useTemplateSketchClassesQuery({
     onError,
   });
@@ -85,42 +88,53 @@ export default function TemplateChooser({
         role="button"
         className="divide-y divide-gray-200 overflow-hidden rounded-lg  sm:grid sm:grid-cols-2 sm:gap-px sm:divide-y-0"
       >
-        {(data?.templateSketchClasses || []).map((template, actionIdx) => (
-          <TemplateItem
-            key={template.id}
-            disabled={clickedItem !== null}
-            loading={clickedItem === template.id}
-            onClick={async () => {
-              setClickedItem(template.id);
-              mutate({
-                variables: {
-                  projectId: projectId!,
-                  templateId: template.id,
-                },
-              }).finally(() => {
-                setClickedItem(null);
-              });
-            }}
-            sketchClass={template}
-            className={classNames(
-              "relative",
-              // actionIdx === 0
-              //   ? "rounded-tl-lg rounded-tr-lg sm:rounded-tr-none"
-              //   : "",
-              // actionIdx === 1 ? "sm:rounded-tr-lg" : "",
-              // actionIdx === (data?.templateSketchClasses || []).length - 2
-              //   ? "sm:rounded-bl-lg"
-              //   : "",
-              // actionIdx === (data?.templateSketchClasses || []).length - 1
-              //   ? "rounded-bl-lg rounded-br-lg sm:rounded-bl-none"
-              //   : "",
-              "relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500",
-              clickedItem === null
-                ? "hover:bg-opacity-80"
-                : "bg-opacity-50 cursor-auto"
-            )}
-          />
-        ))}
+        {(data?.templateSketchClasses || [])
+          .filter((sk) => {
+            return (
+              sk.geometryType !== SketchGeometryType.FilteredPlanningUnits ||
+              isSuperuser
+            );
+          })
+          .map((template, actionIdx) => (
+            <TemplateItem
+              key={template.id}
+              disabled={clickedItem !== null}
+              loading={clickedItem === template.id}
+              superusersOnly={
+                template.geometryType ===
+                SketchGeometryType.FilteredPlanningUnits
+              }
+              onClick={async () => {
+                setClickedItem(template.id);
+                mutate({
+                  variables: {
+                    projectId: projectId!,
+                    templateId: template.id,
+                  },
+                }).finally(() => {
+                  setClickedItem(null);
+                });
+              }}
+              sketchClass={template}
+              className={classNames(
+                "relative",
+                // actionIdx === 0
+                //   ? "rounded-tl-lg rounded-tr-lg sm:rounded-tr-none"
+                //   : "",
+                // actionIdx === 1 ? "sm:rounded-tr-lg" : "",
+                // actionIdx === (data?.templateSketchClasses || []).length - 2
+                //   ? "sm:rounded-bl-lg"
+                //   : "",
+                // actionIdx === (data?.templateSketchClasses || []).length - 1
+                //   ? "rounded-bl-lg rounded-br-lg sm:rounded-bl-none"
+                //   : "",
+                "relative group bg-white p-6 focus-within:ring-2 focus-within:ring-inset focus-within:ring-indigo-500",
+                clickedItem === null
+                  ? "hover:bg-opacity-80"
+                  : "bg-opacity-50 cursor-auto"
+              )}
+            />
+          ))}
       </div>
     </div>
   );
@@ -132,19 +146,26 @@ function TemplateItem({
   onClick,
   loading,
   disabled,
+  superusersOnly,
 }: {
   sketchClass: TemplateSketchClassFragment;
   className?: string;
   onClick?: () => void;
   loading?: boolean;
   disabled?: boolean;
+  superusersOnly?: boolean;
 }) {
   return (
     <div
       role={disabled ? "" : "button"}
-      className={className}
+      className={`${className} relative`}
       onClick={disabled ? undefined : onClick}
     >
+      {superusersOnly && (
+        <span className="absolute right-3 top-7 text-xs text-gray-400 transform rotate-45 w-16 text-center">
+          <Trans ns="admin:sketching">superusers only</Trans>
+        </span>
+      )}
       <SketchClassTemplateIcon
         geometryType={sketchClass.geometryType}
         name={sketchClass.name}
@@ -190,6 +211,8 @@ export function SketchClassTemplateIcon({
               return <LineIcon className="w-8 h-8" />;
             case SketchGeometryType.Collection:
               return <CollectionIcon className="w-8 h-8" />;
+            case SketchGeometryType.FilteredPlanningUnits:
+              return <FilterIcon className="w-8 h-8" />;
             default:
               return "";
           }

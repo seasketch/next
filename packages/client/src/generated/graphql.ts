@@ -12167,6 +12167,8 @@ export type SketchClass = Node & {
    * sketch classes can only be digitized by admins.
    */
   canDigitize?: Maybe<Scalars['Boolean']>;
+  filterApiServerLocation?: Maybe<Scalars['String']>;
+  filterApiVersion: Scalars['Int'];
   /** Reads a single `Form` that is related to this `SketchClass`. */
   form?: Maybe<Form>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
@@ -12251,6 +12253,8 @@ export type SketchClassPatch = {
    * multiple features.
    */
   allowMulti?: Maybe<Scalars['Boolean']>;
+  filterApiServerLocation?: Maybe<Scalars['String']>;
+  filterApiVersion?: Maybe<Scalars['Int']>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType?: Maybe<SketchGeometryType>;
   /** Name of the report to be displayed. */
@@ -12376,6 +12380,7 @@ export enum SketchFoldersOrderBy {
 export enum SketchGeometryType {
   ChooseFeature = 'CHOOSE_FEATURE',
   Collection = 'COLLECTION',
+  FilteredPlanningUnits = 'FILTERED_PLANNING_UNITS',
   Linestring = 'LINESTRING',
   Point = 'POINT',
   Polygon = 'POLYGON'
@@ -19035,7 +19040,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -19139,6 +19144,7 @@ export type UpdateSketchClassMutationVariables = Exact<{
   id: Scalars['Int'];
   name?: Maybe<Scalars['String']>;
   isArchived?: Maybe<Scalars['Boolean']>;
+  filterApiServerLocation?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -22316,6 +22322,8 @@ export const SketchingDetailsFragmentDoc = gql`
     }
   }
   geometryType
+  filterApiVersion
+  filterApiServerLocation
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
@@ -29330,9 +29338,9 @@ export type SketchClassesQueryHookResult = ReturnType<typeof useSketchClassesQue
 export type SketchClassesLazyQueryHookResult = ReturnType<typeof useSketchClassesLazyQuery>;
 export type SketchClassesQueryResult = Apollo.QueryResult<SketchClassesQuery, SketchClassesQueryVariables>;
 export const UpdateSketchClassDocument = gql`
-    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean, $filterApiServerLocation: String) {
   updateSketchClass(
-    input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived, filterApiServerLocation: $filterApiServerLocation}}
   ) {
     sketchClass {
       ...AdminSketchingDetails
@@ -29358,6 +29366,7 @@ export type UpdateSketchClassMutationFn = Apollo.MutationFunction<UpdateSketchCl
  *      id: // value for 'id'
  *      name: // value for 'name'
  *      isArchived: // value for 'isArchived'
+ *      filterApiServerLocation: // value for 'filterApiServerLocation'
  *   },
  * });
  */

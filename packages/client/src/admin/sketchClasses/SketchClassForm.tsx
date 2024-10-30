@@ -6,7 +6,7 @@ import {
   SketchGeometryType,
   AdminSketchingDetailsFragment,
 } from "../../generated/graphql";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import MutableAutosaveInput from "../MutableAutosaveInput";
 import InputBlock from "../../components/InputBlock";
@@ -23,6 +23,7 @@ import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
 import GeoprocessingClientInput from "./GeoprocessingClientInput";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
 import SketchClassStyleAdmin from "./SketchClassStyleAdmin";
+import EvaluateFilterServiceModal from "./EvaluateFilterServiceModal";
 
 export default function SketchClassForm({
   sketchClass,
@@ -40,6 +41,9 @@ export default function SketchClassForm({
     onError,
   });
   const [selectedTab, setSelectedTab] = useState("settings");
+  const [filterLocationModal, setFilterLocationModal] = useState<
+    string | undefined
+  >();
 
   const tabs: NonLinkTabItem[] = useMemo(() => {
     return [
@@ -59,7 +63,8 @@ export default function SketchClassForm({
         current: selectedTab === "geoprocessing",
       },
       ...(sketchClass.geometryType !== SketchGeometryType.Collection &&
-      sketchClass.geometryType !== SketchGeometryType.ChooseFeature
+      sketchClass.geometryType !== SketchGeometryType.ChooseFeature &&
+      sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
         ? [
             {
               name: "Style",
@@ -172,6 +177,45 @@ export default function SketchClassForm({
                 className="p-0.5 border rounded hover:shadow-sm -mb-5 ml-2"
               />
             </div>
+            {sketchClass.geometryType ===
+              SketchGeometryType.FilteredPlanningUnits && (
+              <div className="">
+                <MutableAutosaveInput
+                  value={sketchClass.filterApiServerLocation || ""}
+                  description={
+                    <span>
+                      <Trans ns="admin:sketching">
+                        Should match the signature of the{" "}
+                        <a
+                          className="text-primary-500"
+                          href="https://github.com/underbluewaters/crdss-api-server"
+                        >
+                          CRDSS service
+                        </a>
+                        . Provide the root URL of the API server.
+                      </Trans>
+                    </span>
+                  }
+                  label={t("Filter API Server Location")}
+                  mutation={mutate}
+                  mutationStatus={mutationState}
+                  propName="filterApiServerLocation"
+                />
+                {sketchClass.filterApiServerLocation && (
+                  <Button
+                    small
+                    className="mt-1"
+                    label={t("Test Service")}
+                    onClick={() => {
+                      setFilterLocationModal(
+                        sketchClass.filterApiServerLocation!
+                      );
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
             {sketchClass.acl?.nodeId && (
               <AccessControlListEditor nodeId={sketchClass.acl?.nodeId} />
             )}
@@ -233,10 +277,21 @@ export default function SketchClassForm({
           </>
         )}
         {selectedTab === "attributes" && sketchClass.form && (
-          <SketchClassAttributesAdmin formId={sketchClass.form.id} />
+          <SketchClassAttributesAdmin
+            formId={sketchClass.form.id}
+            filterServiceLocation={
+              sketchClass.filterApiServerLocation || undefined
+            }
+          />
         )}
         {selectedTab === "style" && (
           <SketchClassStyleAdmin sketchClass={sketchClass} />
+        )}
+        {filterLocationModal && (
+          <EvaluateFilterServiceModal
+            location={filterLocationModal}
+            onRequestClose={() => setFilterLocationModal(undefined)}
+          />
         )}
       </div>
     </div>

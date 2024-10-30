@@ -13162,6 +13162,8 @@ type SketchClass implements Node {
   sketch classes can only be digitized by admins.
   """
   canDigitize: Boolean
+  filterApiServerLocation: String
+  filterApiVersion: Int!
 
   """Reads a single `Form` that is related to this `SketchClass`."""
   form: Form
@@ -13304,6 +13306,8 @@ input SketchClassPatch {
   
   """
   allowMulti: Boolean
+  filterApiServerLocation: String
+  filterApiVersion: Int
 
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
@@ -13439,6 +13443,7 @@ enum SketchFoldersOrderBy {
 enum SketchGeometryType {
   CHOOSE_FEATURE
   COLLECTION
+  FILTERED_PLANNING_UNITS
   LINESTRING
   POINT
   POLYGON

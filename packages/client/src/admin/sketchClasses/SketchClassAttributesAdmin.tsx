@@ -1,11 +1,12 @@
 import {
   DeleteFormElementDocument,
+  FormElementDetailsFragment,
   useProjectMetadataQuery,
   useSketchClassFormQuery,
   useUpdateFormElementOrderMutation,
   useUpdateSketchFormElementMutation,
 } from "../../generated/graphql";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState } from "react";
 import SketchForm from "../../projects/Sketches/SketchForm";
 import AddFormElementButton from "../surveys/AddFormElementButton";
@@ -14,6 +15,7 @@ import {
   PencilIcon,
   TrashIcon,
   EyeOffIcon,
+  FilterIcon,
 } from "@heroicons/react/outline";
 import useDialog from "../../components/useDialog";
 import { useDelete } from "../../graphqlHookWrappers";
@@ -33,11 +35,17 @@ import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
 import SketchAttributesFormLogicRulesModal from "./SketchAttributesFormLogicRulesModal";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
+import { GeostatsAttribute } from "@seasketch/geostats-types";
+import Button from "../../components/Button";
+import FilterAttributesManagementModal from "./FilterAttributesManagementModal";
+import { FilterServiceMetadata } from "../../formElements/FilterInput";
 
 export default function SketchClassAttributesAdmin({
   formId,
+  filterServiceLocation,
 }: {
   formId: number;
+  filterServiceLocation?: string;
 }) {
   const { data } = useSketchClassFormQuery({
     variables: {
@@ -115,6 +123,29 @@ export default function SketchClassAttributesAdmin({
     onError,
   });
 
+  const [filterServiceMetadata, setFilterServiceMetadata] =
+    useState<FilterServiceMetadata | null>(null);
+
+  const [filterManagementModal, setFilterManagementModal] =
+    useState<FilterServiceMetadata | null>(null);
+
+  useEffect(() => {
+    if (!filterServiceLocation) {
+      setFilterServiceMetadata(null);
+    }
+    fetch(`${filterServiceLocation?.replace(/\/$/, "")}/metadata`).then(
+      (res) => {
+        if (res.ok) {
+          res.json().then((json) => {
+            setFilterServiceMetadata(json);
+          });
+        } else {
+          throw new Error("Invalid response from filter service.");
+        }
+      }
+    );
+  }, [filterServiceLocation]);
+
   const { confirmDelete } = useDialog();
 
   const { i18n } = useTranslation();
@@ -145,11 +176,11 @@ export default function SketchClassAttributesAdmin({
           },
         }}
       >
-        <p className="text-sm  bg-gray-50 p-4 border-b border-black border-opacity-5">
+        <div className="text-sm  bg-gray-50 p-4 pb-3 border-b border-black border-opacity-5">
           {t(
             "This form can be customized to collect important information about sketches from your users. The name field is the only form element required by SeaSketch which cannot be modified."
           )}
-          <div className="mt-2 -mb-1 flex gap-2 w-full items-center">
+          <div className="mt-2 flex gap-2 w-full items-center">
             {/* <div className="flex-1"> */}
             <AddFormElementButton
               label={t("Add a field")}
@@ -168,12 +199,37 @@ export default function SketchClassAttributesAdmin({
                 }, 16);
               }}
             />
-            {/* </div> */}
-            {/* <div> */}
+            {filterServiceLocation && (
+              <>
+                <Button
+                  small
+                  disabled={!filterServiceMetadata}
+                  onClick={() => {
+                    setFilterManagementModal(filterServiceMetadata);
+                  }}
+                  label={
+                    <span className="flex items-center space-x-2">
+                      <span>{t("Manage Filters")}</span>
+                      <FilterIcon className="w-4 h-4" />
+                    </span>
+                  }
+                />
+                {filterManagementModal && (
+                  <FilterAttributesManagementModal
+                    formId={data.form!.id}
+                    formElements={
+                      (data.form
+                        ?.formElements as FormElementDetailsFragment[]) || []
+                    }
+                    metadata={filterManagementModal}
+                    onRequestClose={() => setFilterManagementModal(null)}
+                  />
+                )}
+              </>
+            )}
             <EditorLanguageSelector large />
-            {/* </div> */}
           </div>
-        </p>
+        </div>
         <DragDropContext
           onDragEnd={(result) => {
             if (!result.destination) {
@@ -244,7 +300,11 @@ export default function SketchClassAttributesAdmin({
                           >
                             {(provided, snapshot) => (
                               <div
-                                className={`flex items-center group`}
+                                className={`flex ${
+                                  element.typeId === "FilterInput"
+                                    ? ""
+                                    : "items-center"
+                                } group`}
                                 ref={provided?.innerRef}
                                 {...provided?.draggableProps}
                                 key={element.id}
@@ -281,37 +341,40 @@ export default function SketchClassAttributesAdmin({
                                   >
                                     <TrashIcon className="w-5 h-5 text-gray-500 hover:text-black" />
                                   </button>
-                                  {element.isInput && (
+                                  {element.isInput &&
+                                    element.typeId !== "FilterInput" && (
+                                      <button
+                                        ref={setReferenceElement}
+                                        className={`py-1 flex-1 ${
+                                          element.id === editableElementId
+                                            ? "text-black"
+                                            : ""
+                                        }`}
+                                        onClick={(e) => {
+                                          setEditableElementId(element.id);
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                      >
+                                        <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                      </button>
+                                    )}
+                                  {element.typeId !== "FilterInput" && (
                                     <button
-                                      ref={setReferenceElement}
-                                      className={`py-1 flex-1 ${
-                                        element.id === editableElementId
-                                          ? "text-black"
-                                          : ""
-                                      }`}
-                                      onClick={(e) => {
-                                        setEditableElementId(element.id);
-                                        e.preventDefault();
-                                        e.stopPropagation();
+                                      className="py-1 flex-1 relative"
+                                      onClick={async () => {
+                                        setShowFormLogicRulesModal(element.id);
                                       }}
                                     >
-                                      <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                      <EyeOffIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                      {(data.form?.logicRules || []).find(
+                                        (rule) =>
+                                          rule.formElementId === element.id
+                                      ) && (
+                                        <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 -right-0.5 border-white border"></div>
+                                      )}
                                     </button>
                                   )}
-                                  <button
-                                    className="py-1 flex-1 relative"
-                                    onClick={async () => {
-                                      setShowFormLogicRulesModal(element.id);
-                                    }}
-                                  >
-                                    <EyeOffIcon className="w-5 h-5 text-gray-500 hover:text-black" />
-                                    {(data.form?.logicRules || []).find(
-                                      (rule) =>
-                                        rule.formElementId === element.id
-                                    ) && (
-                                      <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 -right-0.5 border-white border"></div>
-                                    )}
-                                  </button>
                                 </div>
                               </div>
                             )}
