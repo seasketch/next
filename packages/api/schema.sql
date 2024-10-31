@@ -818,7 +818,8 @@ CREATE TYPE public.sketch_geometry_type AS ENUM (
     'LINESTRING',
     'POINT',
     'COLLECTION',
-    'CHOOSE_FEATURE'
+    'CHOOSE_FEATURE',
+    'FILTERED_PLANNING_UNITS'
 );
 
 
@@ -1475,6 +1476,8 @@ CREATE TABLE public.sketch_classes (
     preprocessing_endpoint text,
     preprocessing_project_url text,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    filter_api_version integer DEFAULT 1 NOT NULL,
+    filter_api_server_location text,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
@@ -4503,6 +4506,24 @@ $$;
 
 
 --
+-- Name: check_sketch_rls_policy(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_sketch_rls_policy(id integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+  BEGIN
+    -- Try to select the resource under current user privileges
+    PERFORM 1 FROM sketches WHERE sketches.id = check_sketch_rls_policy.id;
+    RETURN TRUE; -- Resource is accessible
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            RETURN FALSE; -- Resource is not accessible due to RLS
+  END;
+$$;
+
+
+--
 -- Name: cleanup_tile_package(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5364,7 +5385,19 @@ CREATE FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, type pu
       child_copy_id int;
       is_collection boolean;
       child record;
+      policy_passed BOOLEAN;
     begin
+      policy_passed := check_sketch_rls_policy(parent_id);
+      if type = 'sketch' then
+        if policy_passed = false and it_me((select user_id from sketches where id = parent_id)) = false then
+          raise exception 'Permission denied';
+        end if;
+      else
+        if policy_passed = false and it_me((select user_id from sketch_folders where id = parent_id)) = false then
+          raise exception 'Permission denied';
+        end if;
+      end if;
+      SET session_replication_role = replica;
       if type = 'sketch' then
         if it_me((select user_id from sketches where id = parent_id)) = false then
           raise exception 'Permission denied';
@@ -7748,9 +7781,9 @@ CREATE TABLE public.data_sources (
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     created_by integer,
     changelog text,
+    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
     raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
-    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -22970,6 +23003,20 @@ GRANT UPDATE(translated_props) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
+-- Name: COLUMN sketch_classes.filter_api_version; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(filter_api_version) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.filter_api_server_location; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -24614,6 +24661,13 @@ REVOKE ALL ON FUNCTION public.check_element_type() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.check_optional_basemap_layers_columns() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION check_sketch_rls_policy(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_sketch_rls_policy(id integer) FROM PUBLIC;
 
 
 --
