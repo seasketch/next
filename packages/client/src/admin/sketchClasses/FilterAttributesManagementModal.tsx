@@ -9,10 +9,7 @@ import { useMemo, useState } from "react";
 import Button from "../../components/Button";
 import { FilterServiceMetadata } from "../../formElements/FilterInput";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import fromMarkdown, {
-  questionBodyFromMarkdown,
-} from "../../formElements/fromMarkdown";
-import { useApolloClient } from "@apollo/client";
+import { questionBodyFromMarkdown } from "../../formElements/fromMarkdown";
 
 export default function FilterAttributesManagementModal({
   metadata,
@@ -47,10 +44,9 @@ export default function FilterAttributesManagementModal({
     return attrs;
   }, [formElements, metadata]);
 
-  const client = useApolloClient();
-
   return (
     <Modal
+      disableBackdropClick
       zeroPadding
       // title={t("Filter Attributes Management")}
       onRequestClose={onRequestClose}
@@ -113,6 +109,7 @@ export default function FilterAttributesManagementModal({
         </p>
         <div className="px-4 pb-4">
           <Button
+            autofocus
             onClick={() => {
               if (Object.keys(selected).length > 0) {
                 setSelected({});
@@ -131,7 +128,7 @@ export default function FilterAttributesManagementModal({
           />
         </div>
         <div className="w-full h-64 overflow-y-auto px-4">
-          <form id="filters">
+          <form id="filters" autoFocus>
             <ul>
               {metadata.attributes
                 .filter((a) => a.attribute !== "id")

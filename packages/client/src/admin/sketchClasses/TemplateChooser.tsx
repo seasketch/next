@@ -162,7 +162,7 @@ function TemplateItem({
       onClick={disabled ? undefined : onClick}
     >
       {superusersOnly && (
-        <span className="absolute right-3 top-7 text-xs text-gray-400 transform rotate-45 w-16 text-center">
+        <span className="absolute right-3 top-7 text-xs  transform rotate-45 w-20 text-center px-1 border border-dotted text-indigo-400">
           <Trans ns="admin:sketching">superusers only</Trans>
         </span>
       )}

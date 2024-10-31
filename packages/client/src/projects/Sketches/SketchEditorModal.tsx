@@ -11,7 +11,14 @@ import {
 } from "../../generated/graphql";
 import { Trans, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
-import { useCallback, useContext, useEffect, useState, useMemo, useRef } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  useMemo,
+  useRef,
+} from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
 import getSlug from "../../getSlug";
@@ -37,6 +44,7 @@ import SketchForm from "./SketchForm";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
+import { FilterInputServiceContextProvider } from "../../formElements/FilterInput";
 // import { extractRelevantPropsFromStyle } from "../../admin/sketchClasses/SketchClassStyleAdmin";
 
 export default function SketchEditorModal({
@@ -118,6 +126,7 @@ export default function SketchEditorModal({
     if (!sketch) {
       return {};
     } else {
+      // @ts-ignore
       const properties = { ...sketch.properties } || {};
       const nameElement = formElements.find((f) => f.typeId === "FeatureName");
       if (nameElement) {
@@ -178,7 +187,8 @@ export default function SketchEditorModal({
       sketch?.bbox &&
       mapContext.manager?.map &&
       sketchClass.geometryType !== SketchGeometryType.Collection &&
-      sketchClass.geometryType !== SketchGeometryType.Point
+      sketchClass.geometryType !== SketchGeometryType.Point &&
+      sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
     ) {
       // If the sketch is not within the current viewport bounds, or is very
       // small or otherwise hard to see, zoom to it.
@@ -213,11 +223,11 @@ export default function SketchEditorModal({
         animate: true,
         padding: true // sidebarInfo.open
           ? {
-            top: 150,
-            bottom: 150,
-            right: 150,
-            left: sidebarInfo.width + 50,
-          }
+              top: 150,
+              bottom: 150,
+              right: 150,
+              left: sidebarInfo.width + 50,
+            }
           : 150,
       });
     }
@@ -287,7 +297,6 @@ export default function SketchEditorModal({
     }
   }, [sketch, setFeature, startingProperties]);
 
-
   const scrollToBottom = useCallback(() => {
     if (scrollableAreaRef.current) {
       const area = scrollableAreaRef.current;
@@ -295,7 +304,7 @@ export default function SketchEditorModal({
         area.scrollTop = area.scrollHeight;
       }, 100);
     }
-  }, [scrollableAreaRef])
+  }, [scrollableAreaRef]);
 
   useEffect(() => {
     if (sketch) {
@@ -333,7 +342,8 @@ export default function SketchEditorModal({
 
     if (
       !feature &&
-      sketchClass.geometryType !== SketchGeometryType.Collection
+      sketchClass.geometryType !== SketchGeometryType.Collection &&
+      sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
     ) {
       scrollToBottom();
       setGeometryErrors(t("You must finish your geometry first"));
@@ -354,7 +364,8 @@ export default function SketchEditorModal({
     } else {
       if (
         sketchClass.geometryType !== SketchGeometryType.Collection &&
-        draw.digitizingState !== DigitizingState.NO_SELECTION
+        draw.digitizingState !== DigitizingState.NO_SELECTION &&
+        sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
       ) {
         scrollToBottom();
         setGeometryErrors(t("Please complete your geometry first"));
@@ -390,16 +401,16 @@ export default function SketchEditorModal({
       const response = await updateSketch({
         variables: geometryChanged
           ? {
-            name,
-            userGeom: feature,
-            properties,
-            id: sketch.id,
-          }
+              name,
+              userGeom: feature,
+              properties,
+              id: sketch.id,
+            }
           : {
-            name,
-            properties,
-            id: sketch.id,
-          },
+              name,
+              properties,
+              id: sketch.id,
+            },
       });
       data = response.data?.updateSketch || undefined;
     } else {
@@ -462,7 +473,7 @@ export default function SketchEditorModal({
     hasValidationErrors,
     sketchClass.preprocessingEndpoint,
     collectionId,
-    scrollToBottom
+    scrollToBottom,
   ]);
 
   useEffect(() => {
@@ -577,22 +588,28 @@ export default function SketchEditorModal({
                     navigatingBackwards: false,
                   }}
                 >
-                  <SketchForm
-                    isSketchWorkflow={true}
-                    logicRules={sketchClass.form?.logicRules || []}
-                    onChange={(props, validationErrors) => {
-                      const nameValue = nameElementId
-                        ? props[nameElementId]
-                        : undefined;
-                      setName(nameValue);
-                      setProperties(props);
-                      setHasValidationErrors(validationErrors || !nameValue);
-                    }}
-                    formElements={formElements}
-                    submissionAttempted={submissionAttempted}
-                    startingProperties={startingProperties}
-                    onSubmissionRequested={() => onSubmit()}
-                  />
+                  <FilterInputServiceContextProvider
+                    serviceLocation={
+                      sketchClass.filterApiServerLocation || undefined
+                    }
+                  >
+                    <SketchForm
+                      isSketchWorkflow={true}
+                      logicRules={sketchClass.form?.logicRules || []}
+                      onChange={(props, validationErrors) => {
+                        const nameValue = nameElementId
+                          ? props[nameElementId]
+                          : undefined;
+                        setName(nameValue);
+                        setProperties(props);
+                        setHasValidationErrors(validationErrors || !nameValue);
+                      }}
+                      formElements={formElements}
+                      submissionAttempted={submissionAttempted}
+                      startingProperties={startingProperties}
+                      onSubmissionRequested={() => onSubmit()}
+                    />
+                  </FilterInputServiceContextProvider>
                 </FormElementLayoutContext.Provider>
                 {geometryErrors && <Warning>{geometryErrors}</Warning>}
                 {hasValidationErrors && submissionAttempted && (
@@ -652,7 +669,7 @@ export default function SketchEditorModal({
               onRequestFinishEditing={draw.actions.finishEditing}
               geometryType={sketchClass.geometryType}
               state={draw.digitizingState}
-              onRequestSubmit={() => { }}
+              onRequestSubmit={() => {}}
               onRequestDelete={() => {
                 confirmDelete({
                   message: t("Delete Geometry"),

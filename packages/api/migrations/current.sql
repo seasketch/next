@@ -17,7 +17,7 @@ insert into sketch_classes(
 ) values (
   (select id from projects where slug = 'superuser'),
   'Filtered Planning Units',
-  'FILTERED_PLANNING_UNITS',
+  'FILTERED_PLANNING_UNITS'::sketch_geometry_type,
   '{}'::jsonb,
   true,
   'Filter polygons by criteria. Requires an API server.'

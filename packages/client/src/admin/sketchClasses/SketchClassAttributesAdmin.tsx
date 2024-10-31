@@ -214,17 +214,6 @@ export default function SketchClassAttributesAdmin({
                     </span>
                   }
                 />
-                {filterManagementModal && (
-                  <FilterAttributesManagementModal
-                    formId={data.form!.id}
-                    formElements={
-                      (data.form
-                        ?.formElements as FormElementDetailsFragment[]) || []
-                    }
-                    metadata={filterManagementModal}
-                    onRequestClose={() => setFilterManagementModal(null)}
-                  />
-                )}
               </>
             )}
             <EditorLanguageSelector large />
@@ -411,6 +400,16 @@ export default function SketchClassAttributesAdmin({
             )}
           </Droppable>
         </DragDropContext>
+        {filterManagementModal && filterServiceLocation && (
+          <FilterAttributesManagementModal
+            formId={data.form!.id}
+            formElements={
+              (data.form?.formElements as FormElementDetailsFragment[]) || []
+            }
+            metadata={filterManagementModal}
+            onRequestClose={() => setFilterManagementModal(null)}
+          />
+        )}
 
         <div
           ref={setPopperElement}
