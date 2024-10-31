@@ -480,7 +480,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           if (!forForum) {
             // check that the user owns this sketch
             const { rows } = await pgClient.query(
-              `select user_id from sketches where id = $1`,
+              `select name from sketches where id = $1`,
               [id]
             );
             if (rows.length === 0) {
