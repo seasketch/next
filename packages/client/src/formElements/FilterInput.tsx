@@ -26,6 +26,7 @@ import {
   GeostatsAttribute,
   NumericGeostatsAttribute,
 } from "@seasketch/geostats-types";
+import * as Slider from "@radix-ui/react-slider";
 
 export type FilterGeostatsAttribute = Pick<
   GeostatsAttribute,
@@ -126,6 +127,23 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
                 onChange={(value) => {
                   handleChange({
                     booleanState: value === true,
+                  });
+                }}
+              />
+            )}
+            {metadata?.type === "number" && (
+              <NumberConfig
+                metadata={metadata}
+                value={[
+                  props.value?.numberState?.min || metadata.min || 0,
+                  props.value?.numberState?.max || metadata.max || 1,
+                ]}
+                onChange={(value) => {
+                  handleChange({
+                    numberState: {
+                      min: value[0],
+                      max: value[1],
+                    },
                   });
                 }}
               />
@@ -285,13 +303,19 @@ export function BooleanInput({
   );
 
   return (
-    <div>
+    <div className="text-sm my-2">
       <fieldset>
-        <legend>
+        <legend className="mb-1">
           <Trans ns="sketching">Select cells where this property is</Trans>
         </legend>
 
-        <div>
+        <div
+          className={`flex w-48 space-x-2 items-center py-1 px-2 rounded border border-opacity-0 ${
+            value === true
+              ? "bg-blue-50 border-blue-200 border-opacity-100"
+              : ""
+          }`}
+        >
           <input
             type="radio"
             id="true"
@@ -300,13 +324,19 @@ export function BooleanInput({
             checked={value === true}
             onChange={handleChange}
           />
-          <label htmlFor="true">
+          <label htmlFor="true" className="cursor-pointer">
             <Trans ns="sketching">True</Trans> (
             {metadata.values["true"].toLocaleString()})
           </label>
         </div>
 
-        <div>
+        <div
+          className={`flex w-48 space-x-2 items-center py-1 px-2 rounded border border-opacity-0 ${
+            value === false
+              ? "bg-blue-50 border-blue-200 border-opacity-100"
+              : ""
+          }`}
+        >
           <input
             type="radio"
             id="false"
@@ -315,12 +345,95 @@ export function BooleanInput({
             checked={value === false}
             onChange={handleChange}
           />
-          <label htmlFor="false">
+          <label htmlFor="false" className="cursor-pointer">
             <Trans ns="sketching">False</Trans> (
             {metadata.values["false"].toLocaleString()})
           </label>
         </div>
       </fieldset>
+    </div>
+  );
+}
+
+export function NumberConfig({
+  metadata,
+  value,
+  onChange,
+}: {
+  metadata: FilterGeostatsAttribute;
+  value: [number, number];
+  onChange: (value: [number, number]) => void;
+}) {
+  const min = metadata.min || 0;
+  const max = metadata.max || 1;
+  return (
+    <div>
+      {/* histogram */}
+      {metadata.stats?.histogram && (
+        <Histogram
+          data={metadata.stats?.histogram}
+          min={metadata.min || 0}
+          max={metadata.max || 1}
+        />
+      )}
+      <Slider.Root
+        className="relative flex items-center select-none touch-none w-full h-5 -top-1.5"
+        value={[value[0] || min, value[1] || max]}
+        max={max}
+        min={min}
+        step={(max - min) / 100}
+        onValueChange={onChange}
+      >
+        <Slider.Track className="bg-blackA7 relative grow rounded-full h-[3px]">
+          <Slider.Range className="absolute bg-white rounded-full h-full" />
+        </Slider.Track>
+        <Slider.Thumb
+          className="block w-3 h-3 bg-primary-500 shadow-[0_2px_10px] shadow-blackA4 rounded-[10px] hover:bg-violet3 focus:outline-none focus:shadow-[0_0_0_5px] focus:shadow-blackA5"
+          aria-label="Volume"
+        />
+        <Slider.Thumb
+          className="block w-3 h-3 bg-primary-500 shadow-[0_2px_10px] shadow-blackA4 rounded-[10px] hover:bg-violet3 focus:outline-none focus:shadow-[0_0_0_5px] focus:shadow-blackA5"
+          aria-label="Volume"
+        />
+      </Slider.Root>
+      <div className="flex bg-black -mt-2">
+        <input className="bg-black" type="number" value={value[0]} max={max} />
+        <input className="bg-black" type="number" value={value[1]} min={min} />
+      </div>
+    </div>
+  );
+}
+
+function Histogram({
+  data,
+  ...props
+}: {
+  data: (number | null)[][];
+  min: number;
+  max: number;
+}) {
+  const max = useMemo(() => {
+    return Math.max(...data.map((d) => d[1] || 0));
+  }, [data]);
+
+  return (
+    <div className="w-full h-12 flex items-baseline mt-2">
+      {data.map((d, i) => {
+        // const value = d[0];
+        const count = d[1];
+        const height = count ? `${(count / max) * 100}%` : "0%";
+        return (
+          <div
+            key={i}
+            className={
+              d[0] && d[0] >= props.min && d[0] <= props.max
+                ? "bg-primary-300"
+                : "bg-primary-900"
+            }
+            style={{ height, width: "2%" }}
+          ></div>
+        );
+      })}
     </div>
   );
 }
