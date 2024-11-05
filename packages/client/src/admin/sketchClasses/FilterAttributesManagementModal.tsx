@@ -7,9 +7,9 @@ import {
 } from "../../generated/graphql";
 import { useMemo, useState } from "react";
 import Button from "../../components/Button";
-import { FilterServiceMetadata } from "../../formElements/FilterInput";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { questionBodyFromMarkdown } from "../../formElements/fromMarkdown";
+import { FilterServiceMetadata } from "../../formElements/FilterInputContext";
 
 export default function FilterAttributesManagementModal({
   metadata,
@@ -68,28 +68,30 @@ export default function FilterAttributesManagementModal({
             Object.keys(selected).length < 1 || addFormElementState.loading,
           onClick: async () => {
             await Promise.all(
-              Object.keys(selected).map(async (attribute) => {
-                const attrMetadata = metadata.attributes.find(
-                  (a) => a.attribute === attribute
-                );
-                if (!attrMetadata) {
-                  throw new Error(
-                    `Attribute ${attribute} not found in metadata`
+              Object.keys(selected)
+                .sort()
+                .map(async (attribute) => {
+                  const attrMetadata = metadata.attributes.find(
+                    (a) => a.attribute === attribute
                   );
-                }
-                return await addFormElement({
-                  variables: {
-                    componentSettings: {
-                      attribute,
+                  if (!attrMetadata) {
+                    throw new Error(
+                      `Attribute ${attribute} not found in metadata`
+                    );
+                  }
+                  return await addFormElement({
+                    variables: {
+                      componentSettings: {
+                        attribute,
+                      },
+                      componentType: "FilterInput",
+                      isRequired: false,
+                      formId,
+                      exportId: attrMetadata.attribute,
+                      body: questionBodyFromMarkdown(`# ${attribute}`),
                     },
-                    componentType: "FilterInput",
-                    isRequired: false,
-                    formId,
-                    exportId: attrMetadata.attribute,
-                    body: questionBodyFromMarkdown(`# ${attribute}`),
-                  },
-                });
-              })
+                  });
+                })
             );
             onRequestClose();
           },

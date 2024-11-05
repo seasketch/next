@@ -88,8 +88,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           <Button
             label={t("Edit")}
             onClick={onRequestEdit}
-            className={`pointer-events-auto ${bottomToolbar && "content-center flex-1"
-              }`}
+            className={`pointer-events-auto ${
+              bottomToolbar && "content-center flex-1"
+            }`}
             buttonClassName={
               bottomToolbar
                 ? "py-3 text-base flex-1 text-center items-center justify-center"
@@ -98,17 +99,17 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           />
         )}
       {(state === DigitizingState.EDITING ||
-        (selfIntersects && (state !== DigitizingState.CAN_COMPLETE)) ||
+        (selfIntersects && state !== DigitizingState.CAN_COMPLETE) ||
         preprocessingError) && (
-          <Button
-            label={<TrashIcon className="w-5 h-5" />}
-            onClick={onRequestDelete}
-            className={`pointer-events-auto`}
-            buttonClassName={
-              bottomToolbar ? "py-3 flex-1 justify-center content-center" : ""
-            }
-          />
-        )}
+        <Button
+          label={<TrashIcon className="w-5 h-5" />}
+          onClick={onRequestDelete}
+          className={`pointer-events-auto`}
+          buttonClassName={
+            bottomToolbar ? "py-3 flex-1 justify-center content-center" : ""
+          }
+        />
+      )}
       {state === DigitizingState.EDITING && !selfIntersects && (
         <Button
           onClick={() => {
@@ -120,8 +121,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }}
           primary
           label={t("Done Editing")}
-          className={`pointer-events-auto whitespace-nowrap ${bottomToolbar && "flex-2 content-center max-w-1/2"
-            }`}
+          className={`pointer-events-auto whitespace-nowrap ${
+            bottomToolbar && "flex-2 content-center max-w-1/2"
+          }`}
           buttonClassName={
             bottomToolbar
               ? "py-3 text-base flex-1 text-center items-center justify-center"
@@ -135,8 +137,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             onRequestFinishEditing(false);
           }}
           label={t("Resubmit")}
-          className={`pointer-events-auto whitespace-nowrap ${bottomToolbar && "flex-2 content-center max-w-1/2"
-            }`}
+          className={`pointer-events-auto whitespace-nowrap ${
+            bottomToolbar && "flex-2 content-center max-w-1/2"
+          }`}
           primary
           buttonClassName={
             bottomToolbar
@@ -152,8 +155,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               setShowInvalidShapeModal(true);
             }}
             label={t("Invalid Shape")}
-            className={`pointer-events-auto whitespace-nowrap ${bottomToolbar && "flex-2 content-center max-w-1/2"
-              }`}
+            className={`pointer-events-auto whitespace-nowrap ${
+              bottomToolbar && "flex-2 content-center max-w-1/2"
+            }`}
             buttonClassName={
               bottomToolbar
                 ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
@@ -240,36 +244,40 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
 
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          style={{ maxWidth: "90%" }}
-          transition={{
-            duration: 0.1,
-          }}
-          // exit={{ scale: 0 }}
-          className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
-        >
-          <p className="text-sm select-none">
-            {isSketchingWorkflow &&
-              state === DigitizingState.NO_SELECTION &&
-              geometryType !== SketchGeometryType.Collection ? (
-              <Trans ns="digitizing">Click your sketch to edit geometry</Trans>
-            ) : (
-              <DigitizingInstructions
-                state={state}
-                geometryType={geometryType}
-                isMobile={isMobile}
-                multiFeature={multiFeature || false}
-                selfIntersects={selfIntersects || false}
-                preprocessingError={preprocessingError}
-              />
-            )}
-          </p>
-          <div className="flex-shrink-0 space-x-2 items-center flex">
-            {buttons}
-          </div>
-        </motion.div>
+        {geometryType !== SketchGeometryType.Collection &&
+          geometryType !== SketchGeometryType.FilteredPlanningUnits && (
+            <motion.div
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              style={{ maxWidth: "90%" }}
+              transition={{
+                duration: 0.1,
+              }}
+              // exit={{ scale: 0 }}
+              className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
+            >
+              <p className="text-sm select-none">
+                {isSketchingWorkflow &&
+                state === DigitizingState.NO_SELECTION ? (
+                  <Trans ns="digitizing">
+                    Click your sketch to edit geometry
+                  </Trans>
+                ) : (
+                  <DigitizingInstructions
+                    state={state}
+                    geometryType={geometryType}
+                    isMobile={isMobile}
+                    multiFeature={multiFeature || false}
+                    selfIntersects={selfIntersects || false}
+                    preprocessingError={preprocessingError}
+                  />
+                )}
+              </p>
+              <div className="flex-shrink-0 space-x-2 items-center flex">
+                {buttons}
+              </div>
+            </motion.div>
+          )}
         <MapSettingsPopup
           anchor={actionsButtonAnchor.current || undefined}
           open={toolsOpen}

@@ -124,27 +124,7 @@ export default function ProjectApp() {
                               mapContextManager={mapContext.manager}
                             />
                             <ShowScaleBar mapContext={mapContext} />
-                            <Measure
-                            // disabled={
-                            //   mapContext.digitizingLockState !==
-                            //     DigitizingLockState.Free ||
-                            //   mapContext.digitizingLockedBy === "MeasureControl"
-                            // }
-                            // onClick={() => {
-                            //   if (
-                            //     mapContext.digitizingLockState ===
-                            //     DigitizingLockState.Free
-                            //   ) {
-                            //     mapContext.manager?.measure();
-                            //   } else if (
-                            //     mapContext.digitizingLockedBy === "MeasureControl"
-                            //   ) {
-                            //     mapContext.manager?.cancelMeasurement();
-                            //   } else {
-                            //     // do nothing. Don't interfere with sketching
-                            //   }
-                            // }}
-                            />
+                            <Measure />
                           </>
                         }
                       />

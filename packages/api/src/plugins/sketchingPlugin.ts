@@ -318,7 +318,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             [sketchClassId]
           );
           const sketchClass = rows[0];
-          if (sketchClass.geometry_type === "COLLECTION") {
+          if (
+            sketchClass.geometry_type === "COLLECTION" ||
+            sketchClass.geometry_type === "FILTERED_PLANNING_UNITS"
+          ) {
             const {
               rows: [sketch],
             } = await pgClient.query(

@@ -12084,6 +12084,7 @@ export type Sketch = Node & {
    */
   copyOf?: Maybe<Scalars['Int']>;
   createdAt: Scalars['Datetime'];
+  filterMvtUrl?: Maybe<Scalars['String']>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
@@ -15778,6 +15779,11 @@ export type MyFolderFragment = (
   & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId' | 'sharedInForum'>
 );
 
+export type SketchFilterMvtDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'filterMvtUrl'>
+);
+
 export type PopupShareDetailsFragment = (
   { __typename?: 'Post' }
   & Pick<Post, 'id' | 'topicId'>
@@ -19371,7 +19377,7 @@ export type UpdateSketchClassStyleMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geometryType'>
@@ -19430,7 +19436,7 @@ export type CreateSketchFolderMutation = (
 
 export type SketchCrudResponseFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'name' | 'properties' | 'geojsonProperties'>
+  & Pick<Sketch, 'id' | 'name' | 'properties' | 'geojsonProperties' | 'filterMvtUrl'>
   & { userGeom?: Maybe<(
     { __typename?: 'GeometryGeometryCollection' }
     & Pick<GeometryGeometryCollection, 'geojson'>
@@ -19588,7 +19594,7 @@ export type UpdateTocItemsParentMutation = (
       & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
     )>>, sketches: Array<Maybe<(
       { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'updatedAt' | 'folderId' | 'collectionId'>
+      & Pick<Sketch, 'id' | 'updatedAt' | 'folderId' | 'collectionId' | 'filterMvtUrl'>
     )>>, updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
@@ -19733,7 +19739,7 @@ export type FormElementDetailsFragment = (
 
 export type SketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'allowMulti'>
+  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'filterApiServerLocation' | 'allowMulti'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -21429,6 +21435,12 @@ export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
   sharedInForum
 }
     `;
+export const SketchFilterMvtDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchFilterMVTDetails on Sketch {
+  id
+  filterMvtUrl
+}
+    `;
 export const PopupShareDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment PopupShareDetails on Post {
   id
@@ -22403,6 +22415,7 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   updatedAt
   createdAt
   isCollection
+  filterMvtUrl
   sketchClass {
     id
     geometryType
@@ -22433,6 +22446,7 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
   }
   properties
   geojsonProperties
+  filterMvtUrl
   ...SketchEditorModalDetails
   parentCollection {
     id
@@ -22524,6 +22538,7 @@ export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
+  filterApiServerLocation
   allowMulti
   form {
     formElements {
@@ -25222,6 +25237,7 @@ export const UpdateTocItemsParentDocument = /*#__PURE__*/ gql`
       updatedAt
       folderId
       collectionId
+      filterMvtUrl
     }
     updatedCollections {
       id
@@ -26598,6 +26614,7 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     MySketch: 'MySketch',
     MyFolder: 'MyFolder',
+    SketchFilterMVTDetails: 'SketchFilterMVTDetails',
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
     BackgroundJobDetails: 'BackgroundJobDetails',

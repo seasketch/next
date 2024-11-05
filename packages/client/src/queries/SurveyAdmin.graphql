@@ -95,6 +95,7 @@ fragment SketchClassDetails on SketchClass {
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
+  filterApiServerLocation
   allowMulti
   form {
     formElements {

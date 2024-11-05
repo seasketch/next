@@ -18,6 +18,7 @@ import {
   useState,
   useMemo,
   useRef,
+  memo,
 } from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
@@ -44,10 +45,9 @@ import SketchForm from "./SketchForm";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
-import { FilterInputServiceContextProvider } from "../../formElements/FilterInput";
-// import { extractRelevantPropsFromStyle } from "../../admin/sketchClasses/SketchClassStyleAdmin";
+import { FilterInputServiceContextProvider } from "../../formElements/FilterInputContext";
 
-export default function SketchEditorModal({
+function SketchEditorModal({
   sketch,
   sketchClass,
   onCancel,
@@ -592,6 +592,8 @@ export default function SketchEditorModal({
                     serviceLocation={
                       sketchClass.filterApiServerLocation || undefined
                     }
+                    startingProperties={properties || startingProperties}
+                    formElements={formElements}
                   >
                     <SketchForm
                       isSketchWorkflow={true}
@@ -697,3 +699,5 @@ export default function SketchEditorModal({
     </>
   );
 }
+
+export default memo(SketchEditorModal);

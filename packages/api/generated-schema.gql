@@ -13060,6 +13060,7 @@ type Sketch implements Node {
   """
   copyOf: Int
   createdAt: Datetime!
+  filterMvtUrl: String
 
   """
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.

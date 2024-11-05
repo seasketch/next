@@ -11,6 +11,7 @@ fragment SketchTocDetails on Sketch {
   updatedAt
   createdAt
   isCollection
+  filterMvtUrl
   sketchClass {
     id
     geometryType
@@ -76,6 +77,7 @@ fragment SketchCRUDResponse on Sketch {
   }
   properties
   geojsonProperties
+  filterMvtUrl
   ...SketchEditorModalDetails
   parentCollection {
     id
@@ -177,6 +179,7 @@ mutation UpdateTocItemsParent(
       updatedAt
       folderId
       collectionId
+      filterMvtUrl
     }
     updatedCollections {
       id

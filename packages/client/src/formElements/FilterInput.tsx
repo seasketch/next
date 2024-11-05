@@ -1,66 +1,29 @@
-import { CheckIcon, FilterIcon } from "@heroicons/react/outline";
-import {
-  ChangeEventHandler,
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { FilterIcon } from "@heroicons/react/outline";
+import { ChangeEventHandler, useCallback, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import EditableResponseCell from "../admin/surveys/EditableResponseCell";
-import Badge from "../components/Badge";
-import Button from "../components/Button";
-import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import useDialog from "../components/useDialog";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
-  FormLanguageContext,
 } from "./FormElement";
 import { questionBodyFromMarkdown } from "./fromMarkdown";
-import {
-  GeostatsAttribute,
-  NumericGeostatsAttribute,
-} from "@seasketch/geostats-types";
 import * as Slider from "@radix-ui/react-slider";
-
-export type FilterGeostatsAttribute = Pick<
-  GeostatsAttribute,
-  "attribute" | "type" | "max" | "min" | "values"
-> & {
-  stats?: Pick<
-    NumericGeostatsAttribute["stats"],
-    "avg" | "stdev" | "histogram"
-  >;
-};
-
-export type FilterServiceMetadata = {
-  version: number;
-  attributes: FilterGeostatsAttribute[];
-};
+import {
+  FilterGeostatsAttribute,
+  FilterInputValue,
+  useFilterContext,
+} from "./FilterInputContext";
 
 export type FilterInputProps = {
   attribute: string;
-};
-export type FilterInputValue = {
-  selected: boolean;
-  numberState?: {
-    min?: number;
-    max?: number;
-  };
-  stringState?: string[];
-  booleanState?: boolean;
 };
 
 const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
   props
 ) => {
   const { t } = useTranslation("surveys");
-  const { error, loading, metadata, setState } = useFilterContext(
+  const { error, loading, metadata } = useFilterContext(
     props.componentSettings.attribute
   );
 
@@ -73,16 +36,8 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
       if (props.onChange) {
         props.onChange(newState, false, false);
       }
-      if (setState) {
-        setState((prev) => {
-          return {
-            ...prev,
-            ...value,
-          };
-        });
-      }
     },
-    [props.onChange, props.value, setState]
+    [props.onChange, props.value]
   );
 
   return (
@@ -99,12 +54,24 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
           </div>
         )}
         <Switch
+          disabled={loading}
           className="transform scale-75"
           isToggled={Boolean(props.value?.selected)}
           onClick={(val) => {
-            handleChange({
-              selected: val,
-            });
+            if (
+              metadata?.type === "boolean" &&
+              val === true &&
+              !("booleanState" in (props.value || {}))
+            ) {
+              handleChange({
+                selected: val,
+                booleanState: true,
+              });
+            } else {
+              handleChange({
+                selected: val,
+              });
+            }
           }}
         />
       </div>
@@ -144,6 +111,17 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
                       min: value[0],
                       max: value[1],
                     },
+                  });
+                }}
+              />
+            )}
+            {metadata?.type === "string" && (
+              <StringConfig
+                metadata={metadata}
+                value={props.value?.stringState || []}
+                onChange={(value) => {
+                  handleChange({
+                    stringState: value,
                   });
                 }}
               />
@@ -191,101 +169,6 @@ FilterInput.templatesOnly = true;
 
 export default FilterInput;
 
-export const FilterInputServiceContext = createContext<{
-  metadata?: FilterServiceMetadata;
-  loading: boolean;
-  error?: Error;
-  getAttributeDetails: (attribute: string) => null | FilterGeostatsAttribute;
-  filterState: { [key: string]: FilterInputValue };
-  setFilterState: (
-    attribute: string,
-    setter: (prev: FilterInputValue) => FilterInputValue
-  ) => void;
-}>({
-  loading: false,
-  getAttributeDetails: () => null,
-  filterState: {},
-  setFilterState: () => {},
-});
-
-export function FilterInputServiceContextProvider({
-  children,
-  serviceLocation,
-}: {
-  children: React.ReactNode;
-  serviceLocation?: string;
-}) {
-  const [state, setState] = useState<{
-    metadata?: FilterServiceMetadata;
-    loading: boolean;
-    error?: Error;
-    filterState: { [key: string]: FilterInputValue };
-  }>({ loading: false, filterState: {} });
-
-  const getAttributeDetails = useCallback(
-    (attribute: string) => {
-      return (
-        state.metadata?.attributes.find((a) => a.attribute === attribute) ||
-        null
-      );
-    },
-    [state.metadata]
-  );
-
-  useEffect(() => {
-    if (!serviceLocation) {
-      return;
-    }
-    setState((prev) => ({ ...prev, loading: true }));
-    fetch(`${serviceLocation.replace(/\/$/, "")}/metadata`)
-      .then((res) => res.json())
-      .then((metadata: FilterServiceMetadata) => {
-        setState((prev) => ({ ...prev, metadata, loading: false }));
-      })
-      .catch((error) => {
-        setState((prev) => ({ ...prev, error, loading: false }));
-      });
-  }, [serviceLocation]);
-
-  const value = useMemo(() => {
-    return {
-      ...state,
-      getAttributeDetails,
-      setFilterState: (
-        attribute: string,
-        setter: (prev: FilterInputValue) => FilterInputValue
-      ) => {
-        setState((prev) => ({
-          ...prev,
-          filterState: {
-            ...prev.filterState,
-            [attribute]: setter(prev.filterState[attribute] || {}),
-          },
-        }));
-      },
-    };
-  }, [state, getAttributeDetails]);
-
-  return (
-    <FilterInputServiceContext.Provider value={value}>
-      {children}
-    </FilterInputServiceContext.Provider>
-  );
-}
-
-function useFilterContext(attribute: string) {
-  const context = useContext(FilterInputServiceContext);
-  const metadata = context.getAttributeDetails(attribute);
-  return {
-    metadata,
-    setState: (setter: (prev: FilterInputValue) => FilterInputValue) =>
-      context.setFilterState(attribute, setter),
-    state: context.filterState[attribute],
-    loading: context.loading,
-    error: context.error,
-  };
-}
-
 export function BooleanInput({
   metadata,
   value,
@@ -318,13 +201,13 @@ export function BooleanInput({
         >
           <input
             type="radio"
-            id="true"
-            name="true"
+            id={metadata.attribute}
+            name={metadata.attribute}
             value="true"
-            checked={value === true}
+            checked={Boolean(value)}
             onChange={handleChange}
           />
-          <label htmlFor="true" className="cursor-pointer">
+          <label htmlFor={metadata.attribute} className="cursor-pointer">
             <Trans ns="sketching">True</Trans> (
             {metadata.values["true"].toLocaleString()})
           </label>
@@ -339,13 +222,16 @@ export function BooleanInput({
         >
           <input
             type="radio"
-            id="false"
-            name="false"
+            id={metadata.attribute + "false"}
+            name={metadata.attribute}
             value="false"
-            checked={value === false}
+            checked={!Boolean(value)}
             onChange={handleChange}
           />
-          <label htmlFor="false" className="cursor-pointer">
+          <label
+            htmlFor={metadata.attribute + "false"}
+            className="cursor-pointer"
+          >
             <Trans ns="sketching">False</Trans> (
             {metadata.values["false"].toLocaleString()})
           </label>
@@ -372,33 +258,43 @@ export function NumberConfig({
       {metadata.stats?.histogram && (
         <Histogram
           data={metadata.stats?.histogram}
-          min={metadata.min || 0}
-          max={metadata.max || 1}
+          min={value[0]}
+          max={value[1]}
         />
       )}
       <Slider.Root
-        className="relative flex items-center select-none touch-none w-full h-5 -top-1.5"
+        className="relative flex items-center select-none touch-none w-full h-5 -top-1.5 -ml-1"
         value={[value[0] || min, value[1] || max]}
         max={max}
         min={min}
-        step={(max - min) / 100}
+        step={(max - min) / 50}
         onValueChange={onChange}
       >
-        <Slider.Track className="bg-blackA7 relative grow rounded-full h-[3px]">
+        <Slider.Track className="bg-black relative grow rounded-full h-1">
           <Slider.Range className="absolute bg-white rounded-full h-full" />
         </Slider.Track>
         <Slider.Thumb
-          className="block w-3 h-3 bg-primary-500 shadow-[0_2px_10px] shadow-blackA4 rounded-[10px] hover:bg-violet3 focus:outline-none focus:shadow-[0_0_0_5px] focus:shadow-blackA5"
-          aria-label="Volume"
+          className="block w-3 h-3 bg-primary-300 shadow rounded-full hover:bg-primary-400 focus:outline-none -mt-0.5"
+          aria-label="Min Value"
         />
         <Slider.Thumb
-          className="block w-3 h-3 bg-primary-500 shadow-[0_2px_10px] shadow-blackA4 rounded-[10px] hover:bg-violet3 focus:outline-none focus:shadow-[0_0_0_5px] focus:shadow-blackA5"
-          aria-label="Volume"
+          className="block w-3 h-3 bg-primary-300 shadow rounded-full hover:bg-primary-400 focus:outline-none -mt-0.5"
+          aria-label="Max Value"
         />
       </Slider.Root>
       <div className="flex bg-black -mt-2">
-        <input className="bg-black" type="number" value={value[0]} max={max} />
-        <input className="bg-black" type="number" value={value[1]} min={min} />
+        <input
+          className="bg-gray-100"
+          type="number"
+          value={value[0]}
+          max={max}
+        />
+        <input
+          className="bg-gray-100"
+          type="number"
+          value={value[1]}
+          min={min}
+        />
       </div>
     </div>
   );
@@ -426,14 +322,53 @@ function Histogram({
           <div
             key={i}
             className={
-              d[0] && d[0] >= props.min && d[0] <= props.max
-                ? "bg-primary-300"
-                : "bg-primary-900"
+              typeof d[0] === "number" && d[0] >= props.min && d[0] < props.max
+                ? "bg-primary-500"
+                : "bg-primary-500 bg-opacity-50"
             }
             style={{ height, width: "2%" }}
           ></div>
         );
       })}
+    </div>
+  );
+}
+
+export function StringConfig({
+  value,
+  metadata,
+  onChange,
+}: {
+  metadata: FilterGeostatsAttribute;
+  value: string[];
+  onChange: (value: string[]) => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs py-2 text-gray-500">
+        <Trans ns="sketching">
+          Select options to limit cells to those with matching values
+        </Trans>
+      </p>
+      <select
+        onChange={(e) => {
+          const values = Array.from(e.target.selectedOptions).map(
+            (option) => option.value
+          );
+          onChange(values);
+        }}
+        multiple
+        value={value || []}
+        className="w-full text-sm p-2"
+        style={{ height: Object.keys(metadata.values).length * 18 + 14 }}
+      >
+        {Object.keys(metadata.values).map((key) => (
+          <option key={key} className="flex" value={key}>
+            {key} - {/* eslint-disable-next-line i18next/no-literal-string */}
+            {metadata.values[key].toLocaleString()} cells
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

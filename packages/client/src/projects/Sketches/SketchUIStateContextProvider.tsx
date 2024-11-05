@@ -5,7 +5,7 @@ import {
   useApolloClient,
 } from "@apollo/client";
 import { Feature } from "geojson";
-import { MapMouseEvent, Popup } from "mapbox-gl";
+import { FillLayer, MapMouseEvent, Popup } from "mapbox-gl";
 import {
   createContext,
   Dispatch,
@@ -60,6 +60,7 @@ import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { createPortal } from "react-dom";
+import { LayerTemplate } from "../../formElements/FilterLayerManager";
 
 type ReportState = {
   sketchId: number;
@@ -149,7 +150,10 @@ interface SketchUIStateContextValue {
     update: DropdownOption[];
   };
   setSketchClasses: (
-    sketchClasses: Pick<SketchClassDetailsFragment, "id" | "mapboxGlStyle">[]
+    sketchClasses: Pick<
+      SketchClassDetailsFragment,
+      "id" | "mapboxGlStyle" | "geometryType" | "filterApiServerLocation"
+    >[]
   ) => void;
 }
 
@@ -214,7 +218,10 @@ export default function SketchUIStateContextProvider({
   );
 
   const [sketchClasses, setSketchClasses] = useState<
-    Pick<SketchClassDetailsFragment, "id" | "mapboxGlStyle">[]
+    Pick<
+      SketchClassDetailsFragment,
+      "id" | "mapboxGlStyle" | "filterApiServerLocation"
+    >[]
   >([]);
 
   useEffect(() => {
@@ -223,6 +230,16 @@ export default function SketchUIStateContextProvider({
       for (const sketchClass of sketchClasses) {
         if (sketchClass.mapboxGlStyle && sketchClass.mapboxGlStyle.length > 0) {
           styles[sketchClass.id] = sketchClass.mapboxGlStyle;
+        } else if (sketchClass.filterApiServerLocation?.length) {
+          const layer = {
+            ...LayerTemplate,
+          } as Partial<FillLayer>;
+          delete layer["source"];
+          layer.metadata = {
+            ...layer.metadata,
+            "s:filterApiServerLocation": sketchClass.filterApiServerLocation,
+          };
+          styles[sketchClass.id] = [layer];
         }
       }
       mapContext.manager.setSketchClassGlStyles(styles);
@@ -291,11 +308,22 @@ export default function SketchUIStateContextProvider({
         id: number;
         timestamp?: string;
         sketchClassId?: number;
+        filterMvtUrl?: string;
       }[] = [];
       // @ts-ignore
       window.client = client;
       for (const stringId of visibleSketches) {
         if (/Sketch:/.test(stringId)) {
+          const data = client.cache.readFragment<any>({
+            id: stringId,
+            // eslint-disable-next-line i18next/no-literal-string
+            fragment: gql`
+              fragment SketchFilterMVTDetails on Sketch {
+                id
+                filterMvtUrl
+              }
+            `,
+          });
           // @ts-ignore private api
           const isCached = client.cache.data.get(stringId, "id");
           // @ts-ignore private api
@@ -312,6 +340,7 @@ export default function SketchUIStateContextProvider({
               id: parseInt(stringId.split(":")[1]),
               timestamp: timestamp,
               sketchClassId: sketchClassId,
+              filterMvtUrl: data?.filterMvtUrl,
             });
           }
         }
@@ -456,13 +485,13 @@ export default function SketchUIStateContextProvider({
   const [editor, setEditor] = useState<
     | false
     | {
-      sketch?: SketchEditorModalDetailsFragment;
-      sketchClass: SketchingDetailsFragment;
-      folderId?: number;
-      collectionId?: number;
-      loading?: boolean;
-      loadingTitle?: string;
-    }
+        sketch?: SketchEditorModalDetailsFragment;
+        sketchClass: SketchingDetailsFragment;
+        folderId?: number;
+        collectionId?: number;
+        loading?: boolean;
+        loadingTitle?: string;
+      }
   >(false);
 
   const openSketchReport = useCallback(
@@ -602,7 +631,7 @@ export default function SketchUIStateContextProvider({
             const itMe =
               projectMetadata.data?.me?.id &&
               projectMetadata.data?.me.id ===
-              parseInt(feature.properties!.userId);
+                parseInt(feature.properties!.userId);
             const wasUpdated =
               props.updatedAt &&
               new Date(props.updatedAt) > new Date(props.createdAt);
@@ -647,36 +676,43 @@ export default function SketchUIStateContextProvider({
                     <h2 class="truncate text-sm font-semibold">${name}</h2>
                     <p class="">
                       <span>
-                      ${itMe
-                  ? t("You")
-                  : feature.properties!.userSlug ||
-                  feature.properties!.user_slug
-                }
+                      ${
+                        itMe
+                          ? t("You")
+                          : feature.properties!.userSlug ||
+                            feature.properties!.user_slug
+                      }
                       </span> 
-                      ${feature.properties!.sharedInForum
-                  ? t("shared this sketch on")
-                  : wasUpdated
-                    ? t("last updated this sketch on")
-                    : t("created this sketch on")
-                } ${dateString}
+                      ${
+                        feature.properties!.sharedInForum
+                          ? t("shared this sketch on")
+                          : wasUpdated
+                          ? t("last updated this sketch on")
+                          : t("created this sketch on")
+                      } ${dateString}
                     </p>
-                    ${post && post.topic
-                  ? `<p>
+                    ${
+                      post && post.topic
+                        ? `<p>
                           ${t(
-                    "in"
-                  )} <button data-url="/${getSlug()}/app/forums/${post.topic.forumId
-                  }/${post.topicId
-                  }" class="underline text-primary-500">${post.topic.title
-                  }</button>
+                            "in"
+                          )} <button data-url="/${getSlug()}/app/forums/${
+                            post.topic.forumId
+                          }/${
+                            post.topicId
+                          }" class="underline text-primary-500">${
+                            post.topic.title
+                          }</button>
                         </p>`
-                  : ""
-                }
+                        : ""
+                    }
                   </div>
                   <div class="-mx-3 py-2 space-x-1 bg-gray-50 p-2 border-t">
-                    ${feature.properties!.sharedInForum === true
-                  ? ""
-                  : `<button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">${editLabel}</button>`
-                }
+                    ${
+                      feature.properties!.sharedInForum === true
+                        ? ""
+                        : `<button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-edit-sketch" class="underline">${editLabel}</button>`
+                    }
                     <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-view-sketch" class="underline">${viewReportsLabel}</button>
                     <button class="bg-white border px-2 py-0 shadow-sm rounded" id="popup-hide-sketch" class="underline">${hideLabel}</button>
                   </div>
@@ -946,7 +982,7 @@ export default function SketchUIStateContextProvider({
 
       const create: DropdownOption[] = [
         ...(!selectionIsSharedContent &&
-          (!selectionType || !selectionType.sketch)
+        (!selectionType || !selectionType.sketch)
           ? sketchClasses || []
           : []
         )
@@ -974,7 +1010,7 @@ export default function SketchUIStateContextProvider({
                   sketchClass,
                   folderId:
                     selectedIds.length === 1 &&
-                      /SketchFolder:/.test(selectedIds[0])
+                    /SketchFolder:/.test(selectedIds[0])
                       ? selectedId
                       : undefined,
                   collectionId:
@@ -986,64 +1022,64 @@ export default function SketchUIStateContextProvider({
             },
           })),
         ...(!selectionIsSharedContent &&
-          (!selectionType || !selectionType.sketch)
+        (!selectionType || !selectionType.sketch)
           ? [
-            {
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `create-folder`,
-              label: t("Folder"),
-              onClick: async () => {
-                prompt({
-                  message: t(`What would you like to name your folder?`),
-                  onSubmit: async (name) => {
-                    if (!name.length) {
-                      return;
-                    }
-                    await createFolder({
-                      variables: {
-                        name,
-                        slug: getSlug(),
-                        ...(selectionType?.folder
-                          ? { folderId: selectedId }
-                          : {}),
-                      },
-                      update: async (cache, { data }) => {
-                        if (data?.createSketchFolder?.sketchFolder) {
-                          const folder = data.createSketchFolder.sketchFolder;
-                          const results = cache.readQuery<SketchingQuery>({
-                            query: SketchingDocument,
-                            variables: {
-                              slug: getSlug(),
-                            },
-                          });
-                          if (results?.projectBySlug?.myFolders) {
-                            await cache.writeQuery({
+              {
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `create-folder`,
+                label: t("Folder"),
+                onClick: async () => {
+                  prompt({
+                    message: t(`What would you like to name your folder?`),
+                    onSubmit: async (name) => {
+                      if (!name.length) {
+                        return;
+                      }
+                      await createFolder({
+                        variables: {
+                          name,
+                          slug: getSlug(),
+                          ...(selectionType?.folder
+                            ? { folderId: selectedId }
+                            : {}),
+                        },
+                        update: async (cache, { data }) => {
+                          if (data?.createSketchFolder?.sketchFolder) {
+                            const folder = data.createSketchFolder.sketchFolder;
+                            const results = cache.readQuery<SketchingQuery>({
                               query: SketchingDocument,
-                              variables: { slug: getSlug() },
-                              data: {
-                                ...results,
-                                projectBySlug: {
-                                  ...results.projectBySlug,
-                                  myFolders: [
-                                    ...results.projectBySlug.myFolders,
-                                    folder,
-                                  ],
-                                },
+                              variables: {
+                                slug: getSlug(),
                               },
                             });
-                            focusOnTableOfContentsItem(
-                              "SketchFolder",
-                              folder.id
-                            );
+                            if (results?.projectBySlug?.myFolders) {
+                              await cache.writeQuery({
+                                query: SketchingDocument,
+                                variables: { slug: getSlug() },
+                                data: {
+                                  ...results,
+                                  projectBySlug: {
+                                    ...results.projectBySlug,
+                                    myFolders: [
+                                      ...results.projectBySlug.myFolders,
+                                      folder,
+                                    ],
+                                  },
+                                },
+                              });
+                              focusOnTableOfContentsItem(
+                                "SketchFolder",
+                                folder.id
+                              );
+                            }
                           }
-                        }
-                      },
-                    });
-                  },
-                });
+                        },
+                      });
+                    },
+                  });
+                },
               },
-            },
-          ]
+            ]
           : []),
       ];
       const update: DropdownOption[] = [];
@@ -1051,13 +1087,13 @@ export default function SketchUIStateContextProvider({
       const viewReports: DropdownOption | undefined =
         selectionType?.collection || selectionType?.sketch
           ? {
-            id: "view-reports",
-            label: t("View Reports"),
-            keycode: "v",
-            onClick: () => {
-              openSketchReport(selectedId!);
-            },
-          }
+              id: "view-reports",
+              label: t("View Reports"),
+              keycode: "v",
+              onClick: () => {
+                openSketchReport(selectedId!);
+              },
+            }
           : undefined;
       if (viewReports) {
         contextMenu.push(viewReports);
@@ -1240,7 +1276,8 @@ export default function SketchUIStateContextProvider({
             // TODO: support multiple
             download(
               // eslint-disable-next-line i18next/no-literal-string
-              `${BASE_SERVER_ENDPOINT}/sketches/${selectedIds[0].split(":")[1]
+              `${BASE_SERVER_ENDPOINT}/sketches/${
+                selectedIds[0].split(":")[1]
               }.geojson.json?token=${token}`,
               // eslint-disable-next-line i18next/no-literal-string
               `${selectedIds[0].replace(":", "-")}.geojson.json`
@@ -1368,6 +1405,20 @@ export default function SketchUIStateContextProvider({
     [data?.project?.supportedLanguages, languages]
   );
 
+  const onComplete = useCallback(
+    (item: SketchTocDetailsFragment) => {
+      history.replace(`/${getSlug()}/app/sketches`);
+      setEditor(false);
+      focusOnTableOfContentsItem("Sketch", item.id, true);
+    },
+    [focusOnTableOfContentsItem, history]
+  );
+
+  const onCancel = useCallback(() => {
+    history.replace(`/${getSlug()}/app/sketches`);
+    setEditor(false);
+  }, [history]);
+
   const { i18n } = useTranslation();
   const lang = getSelectedLanguage(i18n, filteredLanguages);
 
@@ -1450,15 +1501,8 @@ export default function SketchUIStateContextProvider({
             loadingTitle={editor?.loading ? editor.loadingTitle : undefined}
             folderId={editor?.folderId}
             collectionId={editor?.collectionId}
-            onComplete={(item) => {
-              history.replace(`/${getSlug()}/app/sketches`);
-              setEditor(false);
-              focusOnTableOfContentsItem("Sketch", item.id, true);
-            }}
-            onCancel={() => {
-              history.replace(`/${getSlug()}/app/sketches`);
-              setEditor(false);
-            }}
+            onComplete={onComplete}
+            onCancel={onCancel}
           />
         )}
       </FormLanguageContext.Provider>

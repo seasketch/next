@@ -13,6 +13,7 @@ import mapboxgl, {
   Sources,
   GeoJSONSource,
   Expression,
+  VectorSource,
 } from "mapbox-gl";
 import {
   createContext,
@@ -161,6 +162,7 @@ export interface LayerState {
 
 export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
+  filterMvtUrl?: string;
 }
 class MapContextManager extends EventEmitter {
   map?: Map;
@@ -1089,7 +1091,12 @@ class MapContextManager extends EventEmitter {
    * @param sketches
    */
   setVisibleSketches(
-    sketches: { id: number; timestamp?: string; sketchClassId?: number }[]
+    sketches: {
+      id: number;
+      timestamp?: string;
+      sketchClassId?: number;
+      filterMvtUrl?: string;
+    }[]
   ) {
     const sketchIds = sketches.map(({ id }) => id);
     // remove missing ids from internal state
@@ -1105,6 +1112,7 @@ class MapContextManager extends EventEmitter {
           loading: true,
           visible: true,
           sketchClassId: sketch.sketchClassId,
+          filterMvtUrl: sketch.filterMvtUrl,
         };
       }
     }
@@ -1370,6 +1378,35 @@ class MapContextManager extends EventEmitter {
         if (relatedSourceIds.indexOf(key) > -1) {
           glDrawSources[key] = existingStyle.sources[key] as GeoJSONSource;
         }
+      }
+    }
+
+    // Do the same for filter-layer- layers related to FilterLayerManager
+    let filterLayers: AnyLayer[] = [];
+    let filterSources: { [id: string]: VectorSource } = {};
+    if (existingStyle) {
+      filterLayers =
+        existingStyle.layers?.filter(
+          (l) => l.id.indexOf("filter-layer-") === 0
+        ) || [];
+      // @ts-ignore
+      const relatedSourceIds = filterLayers.map((l) => l.source || "");
+      for (const key in existingStyle.sources) {
+        if (relatedSourceIds.indexOf(key) > -1) {
+          filterSources[key] = existingStyle.sources[key] as VectorSource;
+        }
+      }
+      // look for all-cells layer
+      const allCellsLayer = existingStyle.layers?.find(
+        (l) => l.id === "all-cells"
+      );
+      if (allCellsLayer) {
+        filterLayers.push(allCellsLayer);
+      }
+      // look for all-cells source
+      const allCellsSource = existingStyle.sources["all-cells"];
+      if (allCellsSource) {
+        filterSources["all-cells"] = allCellsSource as VectorSource;
       }
     }
 
@@ -1680,6 +1717,7 @@ class MapContextManager extends EventEmitter {
       ...baseStyle.sources,
       ...this.dynamicDataSources,
       ...glDrawSources,
+      ...filterSources,
     };
 
     baseStyle.layers = [
@@ -1687,6 +1725,7 @@ class MapContextManager extends EventEmitter {
       ...overLabels,
       ...this.dynamicLayers,
       ...glDrawLayers,
+      ...filterLayers,
     ];
 
     // Evaluate any basemap optional layers
@@ -1727,22 +1766,39 @@ class MapContextManager extends EventEmitter {
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
-        sources[`sketch-${id}`] = {
-          type: "geojson",
-          data:
-            cache && cache.timestamp === timestamp
-              ? cache.feature
-              : sketchGeoJSONUrl(id, timestamp),
-        };
         const layers = this.getLayersForSketch(
           id,
           id === this.editableSketchId,
           sketchClassId
         );
-        if (this.editableSketchId && id !== this.editableSketchId) {
-          reduceOpacity(layers);
+        if (
+          layers.length === 1 &&
+          "metadata" in layers[0] &&
+          this.internalState.sketchLayerStates[id].filterMvtUrl
+        ) {
+          console.log(
+            "is filter sketchclass",
+            layers[0].metadata?.["s:filterApiServerLocation"]
+          );
+          sources[`sketch-${id}`] = {
+            type: "vector",
+            tiles: [this.internalState.sketchLayerStates[id].filterMvtUrl],
+          };
+          allLayers.push(...layers);
+        } else {
+          sources[`sketch-${id}`] = {
+            type: "geojson",
+            data:
+              cache && cache.timestamp === timestamp
+                ? cache.feature
+                : sketchGeoJSONUrl(id, timestamp),
+          };
+          console.log("layers", layers);
+          if (this.editableSketchId && id !== this.editableSketchId) {
+            reduceOpacity(layers);
+          }
+          allLayers.push(...layers);
         }
-        allLayers.push(...layers);
       }
     }
     return { layers: allLayers, sources };
