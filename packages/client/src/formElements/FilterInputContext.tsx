@@ -30,6 +30,7 @@ export type FilterServiceMetadata = {
 };
 
 export type FilterInputValue = {
+  attribute: string;
   selected: boolean;
   numberState?: {
     min?: number;

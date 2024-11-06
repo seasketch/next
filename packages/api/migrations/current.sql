@@ -189,11 +189,16 @@ BEGIN
     LOOP
         -- Only process if "selected" is true
         IF filter->>'selected' = 'true' THEN
-            -- Look up the attribute name from form_elements for the current attr ID
-            SELECT component_settings->>'attribute'
-            INTO attribute_name
-            FROM form_elements
-            WHERE id = attr::int; -- Cast attr to integer to match form_elements ID
+            if filter->>'attribute' is not null then
+                attribute_name := filter->>'attribute';
+            else
+              -- Look up the attribute name from form_elements for the current attr ID
+              SELECT component_settings->>'attribute'
+              INTO attribute_name
+              FROM form_elements
+              WHERE id = attr::int; -- Cast attr to integer to match form_elements ID
+            end if;
+
 
             -- Default to the original key if no match is found
             IF attribute_name IS NULL THEN

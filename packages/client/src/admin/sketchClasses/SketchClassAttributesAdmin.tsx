@@ -322,6 +322,11 @@ export default function SketchClassAttributesAdmin({
                                         message: t(
                                           "Are you sure you want to delete this item?"
                                         ),
+                                        description: element.isInput
+                                          ? t(
+                                              "Existing data tied to this form input will be lost, and cannot be restored."
+                                            )
+                                          : undefined,
                                         onDelete: async () => {
                                           await del(element);
                                         },

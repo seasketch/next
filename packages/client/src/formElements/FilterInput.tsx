@@ -32,6 +32,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
       const newState = {
         ...(props.value as FilterInputValue),
         ...value,
+        attribute: props.componentSettings.attribute,
       } as FilterInputValue;
       if (props.onChange) {
         props.onChange(newState, false, false);

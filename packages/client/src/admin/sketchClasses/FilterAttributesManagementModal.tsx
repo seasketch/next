@@ -35,7 +35,7 @@ export default function FilterAttributesManagementModal({
     for (const element of formElements) {
       if (
         element.componentSettings?.attribute &&
-        element.type?.componentName === "FilterElement" &&
+        element.type?.componentName === "FilterInput" &&
         attributeNames.includes(element.componentSettings?.attribute)
       ) {
         attrs.add(element.componentSettings?.attribute);
@@ -139,7 +139,11 @@ export default function FilterAttributesManagementModal({
                   const isSelected = attribute.attribute in selected;
                   return (
                     <li key={attribute.attribute} className="p-1">
-                      <label className="flex items-center space-x-2 text-sm">
+                      <label
+                        className={`flex items-center space-x-2 text-sm ${
+                          included ? "opacity-30" : "opacity-100"
+                        }`}
+                      >
                         <input
                           disabled={included}
                           type="checkbox"
