@@ -14,6 +14,7 @@ import mapboxgl, {
   GeoJSONSource,
   Expression,
   VectorSource,
+  LineLayer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -1772,14 +1773,10 @@ class MapContextManager extends EventEmitter {
           sketchClassId
         );
         if (
-          layers.length === 1 &&
+          layers.length > 0 &&
           "metadata" in layers[0] &&
           this.internalState.sketchLayerStates[id].filterMvtUrl
         ) {
-          console.log(
-            "is filter sketchclass",
-            layers[0].metadata?.["s:filterApiServerLocation"]
-          );
           sources[`sketch-${id}`] = {
             type: "vector",
             tiles: [this.internalState.sketchLayerStates[id].filterMvtUrl],
@@ -1793,7 +1790,6 @@ class MapContextManager extends EventEmitter {
                 ? cache.feature
                 : sketchGeoJSONUrl(id, timestamp),
           };
-          console.log("layers", layers);
           if (this.editableSketchId && id !== this.editableSketchId) {
             reduceOpacity(layers);
           }
@@ -1886,38 +1882,63 @@ class MapContextManager extends EventEmitter {
       (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
       focusOfEditing
     ) {
-      layers.push(
-        ...([
-          {
-            // eslint-disable-next-line i18next/no-literal-string
-            id: `sketch-${id}-selection-second-outline`,
-            type: "line",
-            source,
-            paint: {
-              "line-color": "white",
-              "line-opacity": 0.25,
-              "line-width": 6,
-              "line-blur": 0,
-              "line-offset": -3,
-            },
-            // layout: { "line-join": "miter" },
+      if (
+        "metadata" in layers[0] &&
+        layers[0].metadata?.["s:filterApiServerLocation"]?.length
+      ) {
+        const outline = {
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `sketch-${id}-selection-outline`,
+          type: "line",
+          source,
+          "source-layer": "cells",
+          paint: {
+            "line-color": "rgb(46, 115, 182)",
+            "line-opacity": 0.7,
+            "line-width": 1,
+            "line-blur": 0,
+            // "line-offset": -1,
           },
-          {
-            // eslint-disable-next-line i18next/no-literal-string
-            id: `sketch-${id}-selection-outline`,
-            type: "line",
-            source,
-            paint: {
-              "line-color": "rgb(46, 115, 182)",
-              "line-opacity": 1,
-              "line-width": 2,
-              "line-blur": 0,
-              "line-offset": -1,
+          // @ts-ignore
+          slot: "top",
+          layout: {},
+          // layout: { "line-join": "miter" },
+        } as LineLayer;
+        layers.push(outline);
+      } else {
+        layers.push(
+          ...([
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `sketch-${id}-selection-second-outline`,
+              type: "line",
+              source,
+              paint: {
+                "line-color": "white",
+                "line-opacity": 0.25,
+                "line-width": 6,
+                "line-blur": 0,
+                "line-offset": -3,
+              },
+              // layout: { "line-join": "miter" },
             },
-            // layout: { "line-join": "miter" },
-          },
-        ] as AnyLayer[])
-      );
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `sketch-${id}-selection-outline`,
+              type: "line",
+              source,
+              paint: {
+                "line-color": "rgb(46, 115, 182)",
+                "line-opacity": 1,
+                "line-width": 2,
+                "line-blur": 0,
+                "line-offset": -1,
+              },
+              // layout: { "line-join": "miter" },
+            },
+          ] as AnyLayer[])
+        );
+      }
     }
     return layers;
   }

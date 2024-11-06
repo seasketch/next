@@ -319,6 +319,9 @@ export default function ForumPost({
           <ForumTreeView
             items={portal.items}
             timestamp={post.createdAt?.toString()}
+            postId={post.id}
+            authorProfile={post.authorProfile || undefined}
+            topicId={post.topicId}
           />,
           portal.ref,
           portal.key

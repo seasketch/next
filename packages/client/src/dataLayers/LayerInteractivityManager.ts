@@ -333,10 +333,12 @@ export default class LayerInteractivityManager extends EventEmitter {
     const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
       layers: this.sketchLayerIds || [],
     });
+    console.log("sketchFeatures", sketchFeatures);
     if (sketchFeatures.length) {
       const feature = sketchFeatures[0];
       if (this.focusedSketchId) {
         const id = feature.id?.toString();
+        console.log("id", id);
         if (id) {
           if (this.focusedSketchId === parseInt(id)) {
             this.emit("click:focused-sketch", feature, e);

@@ -15771,7 +15771,7 @@ export type UpdateBodyFragment = (
 
 export type MySketchFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'sketchClassId' | 'bbox'>
+  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'postId' | 'sketchClassId' | 'bbox' | 'filterMvtUrl' | 'createdAt' | 'updatedAt'>
 );
 
 export type MyFolderFragment = (
@@ -15784,12 +15784,20 @@ export type SketchFilterMvtDetailsFragment = (
   & Pick<Sketch, 'id' | 'filterMvtUrl'>
 );
 
+export type SketchPopupDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'sketchClassId' | 'postId' | 'userId' | 'updatedAt' | 'createdAt' | 'name' | 'sharedInForum'>
+);
+
 export type PopupShareDetailsFragment = (
   { __typename?: 'Post' }
   & Pick<Post, 'id' | 'topicId'>
   & { topic?: Maybe<(
     { __typename?: 'Topic' }
     & Pick<Topic, 'id' | 'title' | 'forumId'>
+  )>, authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture' | 'userId'>
   )> }
 );
 
@@ -21423,8 +21431,12 @@ export const MySketchFragmentDoc = /*#__PURE__*/ gql`
   folderId
   timestamp
   sharedInForum
+  postId
   sketchClassId
   bbox
+  filterMvtUrl
+  createdAt
+  updatedAt
 }
     `;
 export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
@@ -21441,6 +21453,18 @@ export const SketchFilterMvtDetailsFragmentDoc = /*#__PURE__*/ gql`
   filterMvtUrl
 }
     `;
+export const SketchPopupDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchPopupDetails on Sketch {
+  id
+  sketchClassId
+  postId
+  userId
+  updatedAt
+  createdAt
+  name
+  sharedInForum
+}
+    `;
 export const PopupShareDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment PopupShareDetails on Post {
   id
@@ -21449,6 +21473,15 @@ export const PopupShareDetailsFragmentDoc = /*#__PURE__*/ gql`
     id
     title
     forumId
+  }
+  authorProfile {
+    affiliations
+    affiliations
+    email
+    fullname
+    nickname
+    picture
+    userId
   }
 }
     `;
@@ -26615,6 +26648,7 @@ export const namedOperations = {
     MySketch: 'MySketch',
     MyFolder: 'MyFolder',
     SketchFilterMVTDetails: 'SketchFilterMVTDetails',
+    SketchPopupDetails: 'SketchPopupDetails',
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
     BackgroundJobDetails: 'BackgroundJobDetails',

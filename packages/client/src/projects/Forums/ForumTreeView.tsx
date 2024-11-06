@@ -3,6 +3,7 @@ import { gql, useApolloClient } from "@apollo/client";
 import { useCallback, useContext, useEffect, useMemo } from "react";
 import TreeView, { TreeItem } from "../../components/TreeView";
 import {
+  AuthorProfileFragment,
   SketchFolderDetailsFragment,
   SketchTocDetailsFragment,
 } from "../../generated/graphql";
@@ -12,6 +13,9 @@ import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 export default function ForumTreeView(props: {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
   timestamp?: string;
+  postId: number;
+  topicId: number;
+  authorProfile?: AuthorProfileFragment;
 }) {
   const client = useApolloClient();
 
@@ -44,6 +48,10 @@ export default function ForumTreeView(props: {
               ...item,
               timestamp: props.timestamp || new Date().getTime(),
               sharedInForum: true,
+              postId: props.postId,
+              userId: props.authorProfile?.userId,
+              createdAt: props.timestamp,
+              updatedAt: props.timestamp,
             },
             fragment: gql`
               fragment MySketch on Sketch {
@@ -53,8 +61,12 @@ export default function ForumTreeView(props: {
                 folderId
                 timestamp
                 sharedInForum
+                postId
                 sketchClassId
                 bbox
+                filterMvtUrl
+                createdAt
+                updatedAt
               }
             `,
           });
@@ -90,7 +102,15 @@ export default function ForumTreeView(props: {
       };
     }
     // They also need to be removed when the component is removed.
-  }, [treeItems, client.cache, updateFromCache, props.items, props.timestamp]);
+  }, [
+    treeItems,
+    client.cache,
+    updateFromCache,
+    props.items,
+    props.timestamp,
+    props.postId,
+    props.authorProfile?.userId,
+  ]);
 
   const getContextMenuItems = useCallback(
     (item: TreeItem) => {
