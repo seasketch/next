@@ -85,43 +85,65 @@ export default function SketchForm({
     [elementId: number]: boolean;
   }>({});
 
-  const hiddenByCollapsibleGroups = useMemo(() => {
-    const hiddenGroups = new Set<number>();
+  const collapsibleGroupsState = useMemo(() => {
+    const groupState: {
+      hiddenGroups: Set<number>;
+      activeGroups: Set<number>;
+      hiddenChildren: Set<number>;
+    } = {
+      hiddenGroups: new Set(),
+      activeGroups: new Set(),
+      hiddenChildren: new Set(),
+    };
     for (const elementId in collapsibleGroupOpenState) {
       if (!collapsibleGroupOpenState[elementId]) {
-        hiddenGroups.add(parseInt(elementId));
+        groupState.hiddenGroups.add(parseInt(elementId));
       }
     }
-    if (hiddenGroups.size === 0) {
-      return [];
+    if (groupState.hiddenGroups.size === 0) {
+      return groupState;
     } else {
-      const hidden: number[] = [];
       let isCollapsed = false;
+      let currentGroup: number | null = null;
       for (const element of formElements) {
         if (element.typeId === "CollapsibleGroup") {
-          if (hiddenGroups.has(element.id)) {
+          currentGroup = element.id;
+          if (groupState.hiddenGroups.has(element.id)) {
             isCollapsed = true;
           } else {
             isCollapsed = false;
           }
         } else if (element.typeId === "CollapsibleBreak") {
           isCollapsed = false;
+          currentGroup = null;
         } else {
           if (isCollapsed) {
-            hidden.push(element.id);
+            groupState.hiddenChildren.add(element.id);
+          }
+          if (
+            currentGroup &&
+            (state[element.id]?.error || state[element.id]?.value !== undefined)
+          ) {
+            if (element.typeId === "FilterInput") {
+              if (state[element.id]?.value?.selected) {
+                groupState.activeGroups.add(currentGroup);
+              }
+            } else {
+              groupState.activeGroups.add(currentGroup);
+            }
           }
         }
       }
-      return hidden;
+      return groupState;
     }
-  }, [collapsibleGroupOpenState, formElements]);
+  }, [collapsibleGroupOpenState, formElements, state]);
 
   const renderElement = useCallback(
     (element: SketchFormElementFragment) => {
       if (hiddenElements.includes(element.id)) {
         return null;
       }
-      if (hiddenByCollapsibleGroups.includes(element.id)) {
+      if (collapsibleGroupsState.hiddenChildren.has(element.id)) {
         return null;
       }
       return (
@@ -134,6 +156,14 @@ export default function SketchForm({
           isRequired={element.isRequired}
           alternateLanguageSettings={element.alternateLanguageSettings}
           body={element.body}
+          collapsibleGroupState={
+            element.typeId === "CollapsibleGroup"
+              ? {
+                  hidden: collapsibleGroupsState.hiddenGroups.has(element.id),
+                  active: collapsibleGroupsState.activeGroups.has(element.id),
+                }
+              : undefined
+          }
           onChange={(value, validationErrors) => {
             setState((prev) => {
               const newState = {
@@ -193,7 +223,7 @@ export default function SketchForm({
       onChange,
       state,
       submissionAttempted,
-      hiddenByCollapsibleGroups,
+      collapsibleGroupsState,
     ]
   );
 

@@ -14,6 +14,8 @@ import {
   FilterInputValue,
   useFilterContext,
 } from "./FilterInputContext";
+import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 export type FilterInputProps = {
   attribute: string;
@@ -45,7 +47,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
     <>
       <div
         className={`w-full flex items-center h-0 justify-end relative overflow-visible z-10 mt-2 ${
-          Boolean(props.value?.selected)
+          Boolean(props.value?.selected) || props.editable
             ? "pointer-events-none"
             : "pointer-events-auto"
         }`}
@@ -53,7 +55,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
           minHeight: 28,
         }}
       >
-        {!Boolean(props.value?.selected) && (
+        {!Boolean(props.value?.selected) && !props.editable && (
           <div
             className="flex-1 prosemirror-body cursor-pointer"
             onClick={() => {
@@ -76,7 +78,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
           </div>
         )}
         <Switch
-          disabled={loading}
+          disabled={loading || props.editable}
           className="transform scale-75 pointer-events-auto"
           isToggled={Boolean(props.value?.selected)}
           onClick={(val) => {
@@ -99,59 +101,104 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
       </div>
 
       <>
-        {Boolean(props.value?.selected) && (
+        {(Boolean(props.value?.selected) || props.editable) && (
           <div style={{ marginTop: -24, marginBottom: 10, zIndex: 5 }}>
             <FormElementBody
               formElementId={props.id}
               isInput={true}
               body={props.body}
               required={props.isRequired}
-              editable={props.editable && Boolean(props.value?.selected)}
+              editable={props.editable}
               alternateLanguageSettings={props.alternateLanguageSettings}
-              onHeadingClick={() => {
-                handleChange({
-                  selected: false,
-                });
-              }}
+              onHeadingClick={
+                !props.editable
+                  ? () => {
+                      handleChange({
+                        selected: false,
+                      });
+                    }
+                  : undefined
+              }
             />
-            {metadata?.type === "boolean" && (
-              <BooleanInput
-                metadata={metadata}
-                value={props.value?.booleanState || false}
-                onChange={(value) => {
-                  handleChange({
-                    booleanState: value === true,
-                  });
-                }}
-              />
+            {props.editable && (
+              <span className="text-xs border p-0.5 px-1 rounded bg-gray-50 w-auto inline-flex space-x-1">
+                <span>
+                  <Trans ns="admin:sketching">{metadata?.type} input</Trans>
+                </span>
+                <Tooltip.Provider>
+                  <Tooltip.Root>
+                    <Tooltip.Trigger asChild>
+                      <button>
+                        <QuestionMarkCircledIcon />
+                      </button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content
+                      side="right"
+                      align="center"
+                      style={{
+                        maxWidth: 180,
+                      }}
+                      className="bg-gray-800 text-white p-2 rounded text-xs"
+                    >
+                      <Trans ns="admin:sketching">
+                        The appropriate filter input will be shown to end-users
+                        when this property is selected.
+                      </Trans>
+                      <br />
+                      <br />
+                      <Trans ns="admin:sketching">
+                        Inputs are not rendered in when editing from the admin
+                        interface for performance reasons.
+                      </Trans>
+                      <Tooltip.Arrow className="fill-current text-gray-800" />
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </span>
             )}
-            {metadata?.type === "number" && (
-              <NumberConfig
-                metadata={metadata}
-                value={valuesFromNumberState(
-                  props.value?.numberState,
-                  metadata
+            {!props.editable && (
+              <>
+                {metadata?.type === "boolean" && (
+                  <BooleanInput
+                    metadata={metadata}
+                    value={props.value?.booleanState || false}
+                    onChange={(value) => {
+                      handleChange({
+                        booleanState: value === true,
+                      });
+                    }}
+                  />
                 )}
-                onChange={(value) => {
-                  handleChange({
-                    numberState: {
-                      min: value[0],
-                      max: value[1],
-                    },
-                  });
-                }}
-              />
-            )}
-            {metadata?.type === "string" && (
-              <StringConfig
-                metadata={metadata}
-                value={props.value?.stringState || []}
-                onChange={(value) => {
-                  handleChange({
-                    stringState: value,
-                  });
-                }}
-              />
+                {metadata?.type === "number" && (
+                  <NumberConfig
+                    metadata={metadata}
+                    value={valuesFromNumberState(
+                      props.value?.numberState,
+                      metadata
+                    )}
+                    onChange={(value) => {
+                      handleChange({
+                        numberState: {
+                          min: value[0],
+                          max: value[1],
+                        },
+                      });
+                    }}
+                  />
+                )}
+                {metadata?.type === "string" && (
+                  <StringConfig
+                    metadata={metadata}
+                    value={props.value?.stringState || []}
+                    onChange={(value) => {
+                      handleChange({
+                        stringState: value,
+                      });
+                    }}
+                  />
+                )}
+                )
+              </>
             )}
           </div>
         )}

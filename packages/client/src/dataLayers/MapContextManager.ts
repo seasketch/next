@@ -1115,6 +1115,11 @@ class MapContextManager extends EventEmitter {
           sketchClassId: sketch.sketchClassId,
           filterMvtUrl: sketch.filterMvtUrl,
         };
+      } else {
+        this.internalState.sketchLayerStates[sketch.id] = {
+          ...this.internalState.sketchLayerStates[sketch.id],
+          filterMvtUrl: sketch.filterMvtUrl,
+        };
       }
     }
     // update public state
@@ -1171,6 +1176,12 @@ class MapContextManager extends EventEmitter {
 
   hideEditableSketch(sketchId: number) {
     this.hideEditableSketchId = sketchId;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  unhideEditableSketch() {
+    delete this.hideEditableSketchId;
     // request a redraw
     this.debouncedUpdateStyle();
   }

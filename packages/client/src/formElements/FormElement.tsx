@@ -109,6 +109,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    */
   surveyParticipantCount?: number;
   onCollapse?: (open: boolean) => void;
+  collapsibleGroupState?: { hidden: boolean; active: boolean };
 }
 
 /**

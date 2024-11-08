@@ -46,6 +46,7 @@ import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import { defaultStyle } from "../../surveys/appearance";
 import { FilterInputServiceContextProvider } from "../../formElements/FilterInputContext";
+import FilteredPlanningUnitCountHeader from "./FilteredPlanningUnitCountHeader";
 
 function SketchEditorModal({
   sketch,
@@ -78,6 +79,19 @@ function SketchEditorModal({
   const [properties, setProperties] = useState<any>(sketch?.properties || {});
   const [hasValidationErrors, setHasValidationErrors] = useState(false);
 
+  useEffect(() => {
+    if (
+      sketchClass.geometryType === SketchGeometryType.FilteredPlanningUnits &&
+      mapContext.manager &&
+      sketch
+    ) {
+      const manager = mapContext.manager;
+      manager.hideEditableSketch(sketch.id);
+      return () => {
+        manager.unhideEditableSketch();
+      };
+    }
+  }, [sketchClass.geometryType, mapContext.manager, sketch]);
   //   const styleRelevantProps = useMemo(() => {
   //     return extractRelevantPropsFromStyle(sketchClass.mapboxGlStyle || []);
   //   }, [sketchClass]);
@@ -549,51 +563,55 @@ function SketchEditorModal({
             </div>
           ) : (
             <>
-              <h1 className="flex items-center p-4 border-b mb-3">
-                <span className="flex-1">
-                  <span className="font-bold">
-                    {!sketch && <Trans ns="sketching">New</Trans>}{" "}
-                    {getTranslatedProp("name")}
-                  </span>
-                </span>
-                {!left && (
-                  <button onClick={() => setLeft(true)}>
-                    <ArrowLeftIcon className="w-6 h-6" />
-                  </button>
-                )}
-                {left && (
-                  <button onClick={() => setLeft(false)}>
-                    <ArrowRightIcon className="w-6 h-6" />
-                  </button>
-                )}
-              </h1>
-              <div
-                className="p-4 pt-0 flex-1 overflow-y-auto SketchForm"
-                dir="ltr"
-                ref={scrollableAreaRef}
+              <FilterInputServiceContextProvider
+                serviceLocation={
+                  sketchClass.filterApiServerLocation || undefined
+                }
+                startingProperties={properties || startingProperties}
+                formElements={formElements}
               >
-                <FormElementLayoutContext.Provider
-                  value={{
-                    mapPortal: null,
-                    style: {
-                      ...defaultStyle,
-                      isDark: false,
-                      textClass: "text-black",
-                      backgroundColor: "#eee",
-                      secondaryColor: "#999",
-                      secondaryColor2: "#aaa",
-                      isSmall: false,
-                      compactAppearance: true,
-                    },
-                    navigatingBackwards: false,
-                  }}
+                <h1 className="flex items-center p-4 border-b">
+                  <span className="flex-1">
+                    <span className="font-bold">
+                      {!sketch && <Trans ns="sketching">New</Trans>}{" "}
+                      {getTranslatedProp("name")}
+                    </span>
+                  </span>
+                  {!left && (
+                    <button onClick={() => setLeft(true)}>
+                      <ArrowLeftIcon className="w-6 h-6" />
+                    </button>
+                  )}
+                  {left && (
+                    <button onClick={() => setLeft(false)}>
+                      <ArrowRightIcon className="w-6 h-6" />
+                    </button>
+                  )}
+                </h1>
+                {sketchClass.geometryType ===
+                  SketchGeometryType.FilteredPlanningUnits && (
+                  <FilteredPlanningUnitCountHeader />
+                )}
+                <div
+                  className="mt-3 p-4 pt-0 flex-1 overflow-y-auto SketchForm"
+                  dir="ltr"
+                  ref={scrollableAreaRef}
                 >
-                  <FilterInputServiceContextProvider
-                    serviceLocation={
-                      sketchClass.filterApiServerLocation || undefined
-                    }
-                    startingProperties={properties || startingProperties}
-                    formElements={formElements}
+                  <FormElementLayoutContext.Provider
+                    value={{
+                      mapPortal: null,
+                      style: {
+                        ...defaultStyle,
+                        isDark: false,
+                        textClass: "text-black",
+                        backgroundColor: "#eee",
+                        secondaryColor: "#999",
+                        secondaryColor2: "#aaa",
+                        isSmall: false,
+                        compactAppearance: true,
+                      },
+                      navigatingBackwards: false,
+                    }}
                   >
                     <SketchForm
                       isSketchWorkflow={true}
@@ -611,46 +629,46 @@ function SketchEditorModal({
                       startingProperties={startingProperties}
                       onSubmissionRequested={() => onSubmit()}
                     />
-                  </FilterInputServiceContextProvider>
-                </FormElementLayoutContext.Provider>
-                {geometryErrors && <Warning>{geometryErrors}</Warning>}
-                {hasValidationErrors && submissionAttempted && (
-                  <Warning>
-                    <Trans ns="sketching">
-                      Please complete your submission first.
-                    </Trans>
-                  </Warning>
-                )}
-                {createSketchState.error && (
-                  <Warning level="error">
-                    {createSketchState.error.message}
-                  </Warning>
-                )}
-                {updateSketchState.error && (
-                  <Warning level="error">
-                    {updateSketchState.error.message}
-                  </Warning>
-                )}
-              </div>
-              <div className="space-x-2 bg-gray-100 p-4 border-t">
-                <Button
-                  onClick={handleCancel}
-                  label={<Trans ns="sketching">Cancel</Trans>}
-                />
-                <Button
-                  loading={
-                    createSketchState.loading || updateSketchState.loading
-                  }
-                  disabled={
-                    createSketchState.loading ||
-                    updateSketchState.loading ||
-                    (hasValidationErrors && submissionAttempted)
-                  }
-                  onClick={onSubmit}
-                  label={<Trans ns="sketching">Submit</Trans>}
-                  primary
-                />
-              </div>
+                  </FormElementLayoutContext.Provider>
+                  {geometryErrors && <Warning>{geometryErrors}</Warning>}
+                  {hasValidationErrors && submissionAttempted && (
+                    <Warning>
+                      <Trans ns="sketching">
+                        Please complete your submission first.
+                      </Trans>
+                    </Warning>
+                  )}
+                  {createSketchState.error && (
+                    <Warning level="error">
+                      {createSketchState.error.message}
+                    </Warning>
+                  )}
+                  {updateSketchState.error && (
+                    <Warning level="error">
+                      {updateSketchState.error.message}
+                    </Warning>
+                  )}
+                </div>
+                <div className="space-x-2 bg-gray-100 p-4 border-t">
+                  <Button
+                    onClick={handleCancel}
+                    label={<Trans ns="sketching">Cancel</Trans>}
+                  />
+                  <Button
+                    loading={
+                      createSketchState.loading || updateSketchState.loading
+                    }
+                    disabled={
+                      createSketchState.loading ||
+                      updateSketchState.loading ||
+                      (hasValidationErrors && submissionAttempted)
+                    }
+                    onClick={onSubmit}
+                    label={<Trans ns="sketching">Submit</Trans>}
+                    primary
+                  />
+                </div>
+              </FilterInputServiceContextProvider>
             </>
           )}
         </motion.div>,

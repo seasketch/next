@@ -118,7 +118,10 @@ export default function FilterAttributesManagementModal({
               } else {
                 const newSelected: { [key: string]: true } = {};
                 metadata.attributes.forEach((a) => {
-                  if (a.attribute !== "id") {
+                  if (
+                    a.attribute !== "id" &&
+                    !includedAttributes.has(a.attribute)
+                  ) {
                     newSelected[a.attribute] = true;
                   }
                 });

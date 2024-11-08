@@ -45,9 +45,15 @@ export const FilterInputServiceContext = createContext<{
   loading: boolean;
   error?: Error;
   getAttributeDetails: (attribute: string) => null | FilterGeostatsAttribute;
+  updatingCount: boolean;
+  count: number;
+  fullCellCount: number;
 }>({
   loading: false,
   getAttributeDetails: () => null,
+  updatingCount: true,
+  count: 0,
+  fullCellCount: 0,
 });
 
 export function FilterInputServiceContextProvider({
@@ -55,6 +61,7 @@ export function FilterInputServiceContextProvider({
   serviceLocation,
   startingProperties,
   formElements,
+  skipMap,
 }: {
   children: React.ReactNode;
   serviceLocation?: string;
@@ -63,13 +70,20 @@ export function FilterInputServiceContextProvider({
     FormElementDetailsFragment,
     "id" | "componentSettings" | "typeId"
   >[];
+  skipMap?: boolean;
 }) {
   const [state, setState] = useState<{
     metadata?: FilterServiceMetadata;
     loading: boolean;
     error?: Error;
+    updatingCount: boolean;
+    count: number;
+    fullCellCount: number;
   }>({
     loading: false,
+    updatingCount: true,
+    count: 0,
+    fullCellCount: 0,
   });
 
   const mapContext = useContext(MapContext);
@@ -97,6 +111,9 @@ export function FilterInputServiceContextProvider({
             ...prev,
             metadata,
             loading: false,
+            fullCellCount:
+              // @ts-ignore
+              metadata.attributes.find((a) => a.attribute === "id")?.count || 0,
           };
         });
       })
@@ -110,7 +127,7 @@ export function FilterInputServiceContextProvider({
   >();
 
   useEffect(() => {
-    if (mapContext.manager && state.metadata && serviceLocation) {
+    if (mapContext.manager && state.metadata && serviceLocation && !skipMap) {
       const mngr = new FilterLayerManager(
         serviceLocation,
         state.metadata,
@@ -134,17 +151,53 @@ export function FilterInputServiceContextProvider({
   useEffect(() => {
     if (startingProperties && state.metadata) {
       if (filterLayerManager) {
-        filterLayerManager.updateFilter(
-          filterStateToSearchString(
-            filterDefaults(
-              initialFilterState(startingProperties, formElements),
-              state.metadata
-            )
+        const filterString = filterStateToSearchString(
+          filterDefaults(
+            initialFilterState(startingProperties, formElements),
+            state.metadata
           )
         );
+        filterLayerManager.updateFilter(filterString);
+        if (filterString.length === 0) {
+          setState((prev) => ({
+            ...prev,
+            updatingCount: false,
+            count: prev.fullCellCount,
+          }));
+        } else if (serviceLocation) {
+          // TODO: update count from service
+          setState((prev) => ({
+            ...prev,
+            updatingCount: true,
+          }));
+          fetch(
+            `${serviceLocation.replace(/\/$/, "")}/count?filter=${filterString}`
+          )
+            .then((res) => res.json())
+            .then((data) => {
+              setState((prev) => ({
+                ...prev,
+                updatingCount: false,
+                count: data.count,
+              }));
+            })
+            .catch((error) => {
+              setState((prev) => ({
+                ...prev,
+                updatingCount: false,
+                error,
+              }));
+            });
+        }
       }
     }
-  }, [startingProperties, state.metadata, filterLayerManager, formElements]);
+  }, [
+    startingProperties,
+    state.metadata,
+    filterLayerManager,
+    formElements,
+    serviceLocation,
+  ]);
 
   return (
     <FilterInputServiceContext.Provider value={value}>

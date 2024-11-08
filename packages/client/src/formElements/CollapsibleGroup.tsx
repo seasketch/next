@@ -9,6 +9,7 @@ import fromMarkdown from "./fromMarkdown";
 import { useEffect, useState } from "react";
 import Warning from "../components/Warning";
 import useDialog from "../components/useDialog";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 /**
  * Displays a rich text section
@@ -46,9 +47,32 @@ const CollapsibleGroup: FormElementComponent<{
             }}
             className="flex-1 prosemirror-body cursor-pointer flex items-center"
           >
-            <h2 className="flex-1 select-none">
-              {props.body.content[0].content[0].text}
-            </h2>
+            <Tooltip.Provider>
+              <Tooltip.Root delayDuration={100}>
+                <h2 className="flex-1 select-none flex items-center">
+                  {props.body.content[0].content[0].text}
+                  {props.collapsibleGroupState?.active ? (
+                    <Tooltip.Trigger asChild>
+                      <div className="ml-1 mb-0.5 inline-block w-2 h-2 rounded-full bg-primary-500 border"></div>
+                    </Tooltip.Trigger>
+                  ) : null}
+                </h2>
+                <Tooltip.Content
+                  sideOffset={5}
+                  // style={{ maxWidth: 180 }}
+                  className="z-50 select-none rounded bg-primary-600 text-white px-2 py-1 shadow text-center text-xs"
+                  side="right"
+                  align="center"
+                >
+                  <Tooltip.Arrow className="text-primary-600 fill-current" />
+                  <Trans ns="sketching">
+                    This group has input values.
+                    <br />
+                    Click to expand.
+                  </Trans>
+                </Tooltip.Content>
+              </Tooltip.Root>
+            </Tooltip.Provider>
             <button className="">
               {open ? (
                 <MinusCircledIcon className="w-6 h-6 mx-2 text-primary-500" />
