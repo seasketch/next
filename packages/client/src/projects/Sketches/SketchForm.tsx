@@ -6,7 +6,7 @@ import {
   LogicRuleDetailsFragment,
   SketchFormElementFragment,
 } from "../../generated/graphql";
-import { ReactNode, useCallback, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { sortFormElements } from "../../formElements/sortFormElements";
 require("./sketching.css");
@@ -81,9 +81,47 @@ export default function SketchForm({
     }
   }, [logicRules, state, editable]);
 
+  const [collapsibleGroupOpenState, setCollapsibleGroupOpenState] = useState<{
+    [elementId: number]: boolean;
+  }>({});
+
+  const hiddenByCollapsibleGroups = useMemo(() => {
+    const hiddenGroups = new Set<number>();
+    for (const elementId in collapsibleGroupOpenState) {
+      if (!collapsibleGroupOpenState[elementId]) {
+        hiddenGroups.add(parseInt(elementId));
+      }
+    }
+    if (hiddenGroups.size === 0) {
+      return [];
+    } else {
+      const hidden: number[] = [];
+      let isCollapsed = false;
+      for (const element of formElements) {
+        if (element.typeId === "CollapsibleGroup") {
+          if (hiddenGroups.has(element.id)) {
+            isCollapsed = true;
+          } else {
+            isCollapsed = false;
+          }
+        } else if (element.typeId === "CollapsibleBreak") {
+          isCollapsed = false;
+        } else {
+          if (isCollapsed) {
+            hidden.push(element.id);
+          }
+        }
+      }
+      return hidden;
+    }
+  }, [collapsibleGroupOpenState, formElements]);
+
   const renderElement = useCallback(
     (element: SketchFormElementFragment) => {
       if (hiddenElements.includes(element.id)) {
+        return null;
+      }
+      if (hiddenByCollapsibleGroups.includes(element.id)) {
         return null;
       }
       return (
@@ -123,6 +161,14 @@ export default function SketchForm({
               return newState;
             });
           }}
+          onCollapse={(open) => {
+            setCollapsibleGroupOpenState((prev) => {
+              return {
+                ...prev,
+                [element.id]: open,
+              };
+            });
+          }}
           submissionAttempted={submissionAttempted}
           onSubmit={
             element.typeId === "FeatureName"
@@ -141,7 +187,14 @@ export default function SketchForm({
         />
       );
     },
-    [editable, noop, onChange, state, submissionAttempted]
+    [
+      editable,
+      noop,
+      onChange,
+      state,
+      submissionAttempted,
+      hiddenByCollapsibleGroups,
+    ]
   );
 
   return (

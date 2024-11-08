@@ -44,19 +44,40 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
   return (
     <>
       <div
-        className="w-full flex items-center h-0 justify-end relative overflow-visible z-10 mt-2"
+        className={`w-full flex items-center h-0 justify-end relative overflow-visible z-10 mt-2 ${
+          Boolean(props.value?.selected)
+            ? "pointer-events-none"
+            : "pointer-events-auto"
+        }`}
         style={{
           minHeight: 28,
         }}
       >
         {!Boolean(props.value?.selected) && (
-          <div className="flex-1 prosemirror-body">
+          <div
+            className="flex-1 prosemirror-body cursor-pointer"
+            onClick={() => {
+              if (
+                metadata?.type === "boolean" &&
+                !("booleanState" in (props.value || {}))
+              ) {
+                handleChange({
+                  selected: true,
+                  booleanState: true,
+                });
+              } else {
+                handleChange({
+                  selected: true,
+                });
+              }
+            }}
+          >
             <h1 data-question="yes">{props.body.content[0].content[0].text}</h1>
           </div>
         )}
         <Switch
           disabled={loading}
-          className="transform scale-75"
+          className="transform scale-75 pointer-events-auto"
           isToggled={Boolean(props.value?.selected)}
           onClick={(val) => {
             if (
@@ -79,7 +100,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
 
       <>
         {Boolean(props.value?.selected) && (
-          <div style={{ marginTop: -10, marginBottom: 10 }}>
+          <div style={{ marginTop: -24, marginBottom: 10, zIndex: 5 }}>
             <FormElementBody
               formElementId={props.id}
               isInput={true}
@@ -87,6 +108,11 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
               required={props.isRequired}
               editable={props.editable && Boolean(props.value?.selected)}
               alternateLanguageSettings={props.alternateLanguageSettings}
+              onHeadingClick={() => {
+                handleChange({
+                  selected: false,
+                });
+              }}
             />
             {metadata?.type === "boolean" && (
               <BooleanInput
@@ -102,10 +128,10 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
             {metadata?.type === "number" && (
               <NumberConfig
                 metadata={metadata}
-                value={[
-                  props.value?.numberState?.min || metadata.min || 0,
-                  props.value?.numberState?.max || metadata.max || 1,
-                ]}
+                value={valuesFromNumberState(
+                  props.value?.numberState,
+                  metadata
+                )}
                 onChange={(value) => {
                   handleChange({
                     numberState: {
@@ -189,7 +215,7 @@ export function BooleanInput({
   return (
     <div className="text-sm my-2">
       <fieldset>
-        <legend className="mb-1">
+        <legend className="mb-1 text-xs text-gray-500">
           <Trans ns="sketching">Select cells where this property is</Trans>
         </legend>
 
@@ -251,8 +277,8 @@ export function NumberConfig({
   value: [number, number];
   onChange: (value: [number, number]) => void;
 }) {
-  const min = metadata.min || 0;
-  const max = metadata.max || 1;
+  const min = "min" in metadata ? metadata.min! : 0;
+  const max = "max" in metadata ? metadata.max! : 1;
   return (
     <div>
       {/* histogram */}
@@ -264,37 +290,52 @@ export function NumberConfig({
         />
       )}
       <Slider.Root
-        className="relative flex items-center select-none touch-none w-full h-5 -top-1.5 -ml-1"
-        value={[value[0] || min, value[1] || max]}
+        className="relative flex items-center select-none touch-none w-full h-4 -top-1.5 -mb-2"
+        value={[value[0], value[1]]}
         max={max}
         min={min}
         step={(max - min) / 50}
+        minStepsBetweenThumbs={1}
         onValueChange={onChange}
       >
         <Slider.Track className="bg-black relative grow rounded-full h-1">
           <Slider.Range className="absolute bg-white rounded-full h-full" />
         </Slider.Track>
         <Slider.Thumb
-          className="block w-3 h-3 bg-primary-300 shadow rounded-full hover:bg-primary-400 focus:outline-none -mt-0.5"
+          className="block w-2.5 h-4 bg-gray-300 border border-gray-600 shadow rounded hover:bg-grey-300 focus:outline-none -mt-1.5 -ml-1.5"
           aria-label="Min Value"
         />
         <Slider.Thumb
-          className="block w-3 h-3 bg-primary-300 shadow rounded-full hover:bg-primary-400 focus:outline-none -mt-0.5"
+          className="block w-2.5 h-4 bg-gray-300 border border-gray-600 shadow rounded hover:bg-grey-300 focus:outline-none -mt-1.5 -ml-1.5"
           aria-label="Max Value"
         />
       </Slider.Root>
-      <div className="flex bg-black -mt-2">
+      <p className="text-xs text-gray-500 py-1">
+        <Trans ns="sketching">
+          Use the sliders above to filter between a range of values in the
+          histogram, or set exact values in the inputs below.
+        </Trans>
+      </p>
+      <div className="flex w-full text-sm border-collapse">
         <input
-          className="bg-gray-100"
+          className="bg-gray-100 flex-1 text-sm px-2 py-1  FilterInputNumberInput rounded-l border-gray-300 border-collapse"
           type="number"
           value={value[0]}
-          max={max}
+          min={min}
+          max={Math.min(max, value[1])}
+          onChange={(e) => {
+            onChange([Number(e.target.value), value[1]]);
+          }}
         />
         <input
-          className="bg-gray-100"
+          className="bg-gray-100 flex-1 text-sm py-1 px-2 FilterInputNumberInput rounded-r border-gray-300 border-collapse"
           type="number"
           value={value[1]}
-          min={min}
+          min={Math.max(min, value[0])}
+          max={max}
+          onChange={(e) => {
+            onChange([value[0], Number(e.target.value)]);
+          }}
         />
       </div>
     </div>
@@ -314,7 +355,12 @@ function Histogram({
   }, [data]);
 
   return (
-    <div className="w-full h-12 flex items-baseline mt-2">
+    <div
+      className="h-12 flex items-baseline mt-2 border-b"
+      style={{
+        width: "calc(100% - 6px)",
+      }}
+    >
       {data.map((d, i) => {
         // const value = d[0];
         const count = d[1];
@@ -348,7 +394,8 @@ export function StringConfig({
     <div>
       <p className="text-xs py-2 text-gray-500">
         <Trans ns="sketching">
-          Select options to limit cells to those with matching values
+          Select one or more options to limit cells to those with matching
+          values. If no selection is made, this filter will not be applied.
         </Trans>
       </p>
       <select
@@ -360,8 +407,8 @@ export function StringConfig({
         }}
         multiple
         value={value || []}
-        className="w-full text-sm p-2"
-        style={{ height: Object.keys(metadata.values).length * 18 + 14 }}
+        className="w-full text-sm p-2 rounded bg-gray-100 border-gray-300"
+        style={{ height: Object.keys(metadata.values).length * 18 + 18 }}
       >
         {Object.keys(metadata.values).map((key) => (
           <option key={key} className="flex" value={key}>
@@ -372,4 +419,22 @@ export function StringConfig({
       </select>
     </div>
   );
+}
+
+function valuesFromNumberState(
+  value: { min?: number; max?: number } | undefined,
+  metadata: FilterGeostatsAttribute
+): [number, number] {
+  return [
+    value && "min" in value
+      ? value.min!
+      : "min" in metadata
+      ? metadata.min!
+      : 0,
+    value && "max" in value
+      ? value.max!
+      : "max" in metadata
+      ? metadata.max!
+      : 1,
+  ];
 }

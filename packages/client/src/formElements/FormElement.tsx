@@ -108,6 +108,7 @@ export interface FormElementProps<ComponentSettings, ValueType = {}> {
    * component.
    */
   surveyParticipantCount?: number;
+  onCollapse?: (open: boolean) => void;
 }
 
 /**
@@ -132,6 +133,7 @@ export function FormElementBody({
   componentSettings,
   componentSettingName,
   alternateLanguageSettings,
+  onHeadingClick,
 }: {
   formElementId: number;
   body: any;
@@ -141,6 +143,11 @@ export function FormElementBody({
   componentSettings?: any;
   componentSettingName?: string;
   alternateLanguageSettings: any;
+  /**
+   * Only available when not in editable mode
+   * @returns
+   */
+  onHeadingClick?: () => void;
 }) {
   const schema = isInput
     ? editorConfig.questions.schema
@@ -169,8 +176,14 @@ export function FormElementBody({
           Node.fromJSON(schema, body).content
         )
       );
+      if (onHeadingClick) {
+        target.current.querySelectorAll("h1").forEach((el) => {
+          el.addEventListener("click", onHeadingClick);
+          (el as HTMLHeadingElement).style.cursor = "pointer";
+        });
+      }
     }
-  }, [target, body, schema]);
+  }, [target, body, schema, onHeadingClick]);
 
   if (editable) {
     return (

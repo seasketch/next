@@ -38,7 +38,7 @@ import { defaultStyle } from "../../surveys/appearance";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
 import Button from "../../components/Button";
 import FilterAttributesManagementModal from "./FilterAttributesManagementModal";
-import { FilterServiceMetadata } from "../../formElements/FilterInput";
+import { FilterServiceMetadata } from "../../formElements/FilterInputContext";
 
 export default function SketchClassAttributesAdmin({
   formId,

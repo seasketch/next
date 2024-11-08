@@ -103,6 +103,12 @@ export default function AddFormElementButton({
                         return false;
                       }
                     }
+                    if (
+                      !formIsSketchClass &&
+                      type?.componentName === "CollapsibleGroup"
+                    ) {
+                      return false;
+                    }
                     return true;
                   })
                   .map(([id, C]) => (

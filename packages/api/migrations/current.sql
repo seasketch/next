@@ -262,3 +262,16 @@ grant execute on function sketches_filter_mvt_url to anon;
 -- alter table sketches add column if not exists filter_mvt_url text generated always as (filter_state_to_search_string(properties, sketch_class_id)) stored;
 
 -- grant select(filter_mvt_url) on sketches to anon;
+
+delete from form_element_types where component_name = 'CollapsibleGroup';
+insert into form_element_types (
+  component_name,
+  label,
+  is_input,
+  is_surveys_only
+) values (
+  'CollapsibleGroup',
+  'Collapsible Group',
+  false,
+  false
+);
