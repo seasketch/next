@@ -164,7 +164,7 @@ export function FilterInputServiceContextProvider({
             updatingCount: false,
             count: prev.fullCellCount,
           }));
-        } else if (serviceLocation) {
+        } else if (serviceLocation && state.fullCellCount === 0) {
           // TODO: update count from service
           setState((prev) => ({
             ...prev,

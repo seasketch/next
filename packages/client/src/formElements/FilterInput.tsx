@@ -197,7 +197,6 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
                     }}
                   />
                 )}
-                )
               </>
             )}
           </div>
