@@ -315,11 +315,12 @@ async function encodeValuesToRGB(
       )
     `,
     "temp_b.tif": `
-      (
-        floor(
+      floor(
+        (
           (A - ${base}) * ${1 / interval}
-        ) + 32768.0
-      ) % 256
+          + 32768.0
+        ) % 256
+      )
     `,
   };
 
