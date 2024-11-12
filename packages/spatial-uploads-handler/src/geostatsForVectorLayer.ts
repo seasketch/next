@@ -152,7 +152,9 @@ export async function geostatsForVectorLayers(
         layer.hasZ = hasZ;
       }
       for (const attribute of layer.attributes) {
-        const value = feature.fields.get(attribute.attribute);
+        // Use the index of the attribute, rather than the attribute name/key,
+        // as this can cause issues when there are unicode names
+        const value = feature.fields.get(layer.attributes.indexOf(attribute));
         if (value === null) {
           continue;
         }
