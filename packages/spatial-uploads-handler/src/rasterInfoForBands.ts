@@ -39,6 +39,9 @@ export async function rasterInfoForBands(
   const colorInterpretations = dataset.bands.map(
     (band) => band.colorInterpretation
   );
+  if (process.env.DEBUG) {
+    console.log(colorInterpretations);
+  }
   const isRGB =
     colorInterpretations.includes("Red") &&
     colorInterpretations.includes("Green") &&
@@ -113,6 +116,9 @@ export async function rasterInfoForBands(
         }
       }
       isByteEncoding = true;
+      if (process.env.DEBUG) {
+        console.log("Byte encoding detected");
+      }
     }
 
     if (!isRGB) {
@@ -180,11 +186,23 @@ export async function rasterInfoForBands(
           scale *= 10;
           // break;
         }
+        if (process.env.DEBUG) {
+          console.log(
+            "Stretching values to fit full encoding scheme. Scale:",
+            scale
+          );
+        }
       } else if (range > 16_777_216) {
         // compress values to fit full encoding scheme
         // Use factors of 10, e.g. 0.1, 0.01, 0.001, etc.
         while (range * (scale / 10) > 16_777_216) {
           scale = scale / 10;
+        }
+        if (process.env.DEBUG) {
+          console.log(
+            "Compressing values to fit full encoding scheme. Scale:",
+            scale
+          );
         }
       }
       interval = 1 / scale;
