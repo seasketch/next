@@ -1791,6 +1791,7 @@ class MapContextManager extends EventEmitter {
           sources[`sketch-${id}`] = {
             type: "vector",
             tiles: [this.internalState.sketchLayerStates[id].filterMvtUrl],
+            maxzoom: 14,
           };
           allLayers.push(...layers);
         } else {
