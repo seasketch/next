@@ -23,8 +23,10 @@ import useIsSuperuser from "../../useIsSuperuser";
 
 export default function TemplateChooser({
   onCreate,
+  showSuperuserOptions,
 }: {
   onCreate?: (sketchClass: SketchingDetailsFragment) => void;
+  showSuperuserOptions?: boolean;
 }) {
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
@@ -92,7 +94,7 @@ export default function TemplateChooser({
           .filter((sk) => {
             return (
               sk.geometryType !== SketchGeometryType.FilteredPlanningUnits ||
-              isSuperuser
+              (showSuperuserOptions && isSuperuser)
             );
           })
           .map((template, actionIdx) => (
