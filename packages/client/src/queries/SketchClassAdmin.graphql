@@ -45,6 +45,8 @@ fragment SketchingDetails on SketchClass {
     }
   }
   geometryType
+  filterApiVersion
+  filterApiServerLocation
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
@@ -114,9 +116,21 @@ query SketchClasses($slug: String!) {
   }
 }
 
-mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+mutation UpdateSketchClass(
+  $id: Int!
+  $name: String
+  $isArchived: Boolean
+  $filterApiServerLocation: String
+) {
   updateSketchClass(
-    input: { id: $id, patch: { name: $name, isArchived: $isArchived } }
+    input: {
+      id: $id
+      patch: {
+        name: $name
+        isArchived: $isArchived
+        filterApiServerLocation: $filterApiServerLocation
+      }
+    }
   ) {
     sketchClass {
       ...AdminSketchingDetails

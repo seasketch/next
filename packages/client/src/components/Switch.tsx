@@ -20,6 +20,12 @@ export default function Switch(props: SwitchProps) {
           if (props.onClick && !props.disabled) {
             props.onClick(!props.isToggled, e);
           }
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onDoubleClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
         }}
         onKeyDown={(e) => {
           if (

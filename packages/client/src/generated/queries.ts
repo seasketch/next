@@ -12084,6 +12084,7 @@ export type Sketch = Node & {
    */
   copyOf?: Maybe<Scalars['Int']>;
   createdAt: Scalars['Datetime'];
+  filterMvtUrl?: Maybe<Scalars['String']>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
@@ -12165,6 +12166,8 @@ export type SketchClass = Node & {
    * sketch classes can only be digitized by admins.
    */
   canDigitize?: Maybe<Scalars['Boolean']>;
+  filterApiServerLocation?: Maybe<Scalars['String']>;
+  filterApiVersion: Scalars['Int'];
   /** Reads a single `Form` that is related to this `SketchClass`. */
   form?: Maybe<Form>;
   /** Reads a single `FormElement` that is related to this `SketchClass`. */
@@ -12249,6 +12252,8 @@ export type SketchClassPatch = {
    * multiple features.
    */
   allowMulti?: Maybe<Scalars['Boolean']>;
+  filterApiServerLocation?: Maybe<Scalars['String']>;
+  filterApiVersion?: Maybe<Scalars['Int']>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType?: Maybe<SketchGeometryType>;
   /** Name of the report to be displayed. */
@@ -12374,6 +12379,7 @@ export enum SketchFoldersOrderBy {
 export enum SketchGeometryType {
   ChooseFeature = 'CHOOSE_FEATURE',
   Collection = 'COLLECTION',
+  FilteredPlanningUnits = 'FILTERED_PLANNING_UNITS',
   Linestring = 'LINESTRING',
   Point = 'POINT',
   Polygon = 'POLYGON'
@@ -15765,12 +15771,22 @@ export type UpdateBodyFragment = (
 
 export type MySketchFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'sketchClassId' | 'bbox'>
+  & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'postId' | 'sketchClassId' | 'bbox' | 'filterMvtUrl' | 'createdAt' | 'updatedAt'>
 );
 
 export type MyFolderFragment = (
   { __typename?: 'SketchFolder' }
   & Pick<SketchFolder, 'name' | 'collectionId' | 'folderId' | 'sharedInForum'>
+);
+
+export type SketchFilterMvtDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'filterMvtUrl'>
+);
+
+export type SketchPopupDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'sketchClassId' | 'postId' | 'userId' | 'updatedAt' | 'createdAt' | 'name' | 'sharedInForum'>
 );
 
 export type PopupShareDetailsFragment = (
@@ -15779,6 +15795,9 @@ export type PopupShareDetailsFragment = (
   & { topic?: Maybe<(
     { __typename?: 'Topic' }
     & Pick<Topic, 'id' | 'title' | 'forumId'>
+  )>, authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture' | 'userId'>
   )> }
 );
 
@@ -19033,7 +19052,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -19137,6 +19156,7 @@ export type UpdateSketchClassMutationVariables = Exact<{
   id: Scalars['Int'];
   name?: Maybe<Scalars['String']>;
   isArchived?: Maybe<Scalars['Boolean']>;
+  filterApiServerLocation?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -19365,7 +19385,7 @@ export type UpdateSketchClassStyleMutation = (
 
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection'>
+  & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geometryType'>
@@ -19424,7 +19444,7 @@ export type CreateSketchFolderMutation = (
 
 export type SketchCrudResponseFragment = (
   { __typename?: 'Sketch' }
-  & Pick<Sketch, 'id' | 'name' | 'properties' | 'geojsonProperties'>
+  & Pick<Sketch, 'id' | 'name' | 'properties' | 'geojsonProperties' | 'filterMvtUrl'>
   & { userGeom?: Maybe<(
     { __typename?: 'GeometryGeometryCollection' }
     & Pick<GeometryGeometryCollection, 'geojson'>
@@ -19582,7 +19602,7 @@ export type UpdateTocItemsParentMutation = (
       & Pick<SketchFolder, 'id' | 'folderId' | 'collectionId'>
     )>>, sketches: Array<Maybe<(
       { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'updatedAt' | 'folderId' | 'collectionId'>
+      & Pick<Sketch, 'id' | 'updatedAt' | 'folderId' | 'collectionId' | 'filterMvtUrl'>
     )>>, updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
@@ -19727,7 +19747,7 @@ export type FormElementDetailsFragment = (
 
 export type SketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'allowMulti'>
+  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'filterApiServerLocation' | 'allowMulti'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -21411,8 +21431,12 @@ export const MySketchFragmentDoc = /*#__PURE__*/ gql`
   folderId
   timestamp
   sharedInForum
+  postId
   sketchClassId
   bbox
+  filterMvtUrl
+  createdAt
+  updatedAt
 }
     `;
 export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
@@ -21420,6 +21444,24 @@ export const MyFolderFragmentDoc = /*#__PURE__*/ gql`
   name
   collectionId
   folderId
+  sharedInForum
+}
+    `;
+export const SketchFilterMvtDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchFilterMVTDetails on Sketch {
+  id
+  filterMvtUrl
+}
+    `;
+export const SketchPopupDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchPopupDetails on Sketch {
+  id
+  sketchClassId
+  postId
+  userId
+  updatedAt
+  createdAt
+  name
   sharedInForum
 }
     `;
@@ -21431,6 +21473,15 @@ export const PopupShareDetailsFragmentDoc = /*#__PURE__*/ gql`
     id
     title
     forumId
+  }
+  authorProfile {
+    affiliations
+    affiliations
+    email
+    fullname
+    nickname
+    picture
+    userId
   }
 }
     `;
@@ -22314,6 +22365,8 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     }
   }
   geometryType
+  filterApiVersion
+  filterApiServerLocation
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
@@ -22395,6 +22448,7 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   updatedAt
   createdAt
   isCollection
+  filterMvtUrl
   sketchClass {
     id
     geometryType
@@ -22425,6 +22479,7 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
   }
   properties
   geojsonProperties
+  filterMvtUrl
   ...SketchEditorModalDetails
   parentCollection {
     id
@@ -22516,6 +22571,7 @@ export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
   geoprocessingClientName
   geoprocessingClientUrl
   geoprocessingProjectUrl
+  filterApiServerLocation
   allowMulti
   form {
     formElements {
@@ -24976,9 +25032,9 @@ export const SketchClassesDocument = /*#__PURE__*/ gql`
 }
     ${AdminSketchingDetailsFragmentDoc}`;
 export const UpdateSketchClassDocument = /*#__PURE__*/ gql`
-    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean) {
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean, $filterApiServerLocation: String) {
   updateSketchClass(
-    input: {id: $id, patch: {name: $name, isArchived: $isArchived}}
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived, filterApiServerLocation: $filterApiServerLocation}}
   ) {
     sketchClass {
       ...AdminSketchingDetails
@@ -25214,6 +25270,7 @@ export const UpdateTocItemsParentDocument = /*#__PURE__*/ gql`
       updatedAt
       folderId
       collectionId
+      filterMvtUrl
     }
     updatedCollections {
       id
@@ -26590,6 +26647,8 @@ export const namedOperations = {
     UpdateBody: 'UpdateBody',
     MySketch: 'MySketch',
     MyFolder: 'MyFolder',
+    SketchFilterMVTDetails: 'SketchFilterMVTDetails',
+    SketchPopupDetails: 'SketchPopupDetails',
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
     BackgroundJobDetails: 'BackgroundJobDetails',

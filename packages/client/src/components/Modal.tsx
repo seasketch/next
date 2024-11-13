@@ -73,7 +73,7 @@ export default function Modal(props: ModalProps) {
       open={props.open === undefined ? true : props.open}
       as={motion.div}
       className={`relative ${props.tipyTop ? "z-50" : "z-30"}`}
-      onClose={() => {
+      onClose={(e) => {
         if (!props.disableBackdropClick) {
           props.onRequestClose();
         }

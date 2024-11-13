@@ -6,7 +6,7 @@ import {
   useTemplateSketchClassesQuery,
 } from "../../generated/graphql";
 import TemplateChooser from "./TemplateChooser";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import NavSidebar, { NavSidebarItem } from "../../components/NavSidebar";
 import Button from "../../components/Button";
 import { useHistory, useRouteMatch, Switch, Route } from "react-router-dom";
@@ -49,6 +49,8 @@ export default function SketchClassAdmin() {
     ];
   }, [sketchClasses, slug]);
 
+  const [showSuperuserOptions, setShowSuperuserOptions] = useState(false);
+
   const onCreate = useCallback(
     (sc: SketchingDetailsFragment) => {
       // eslint-disable-next-line i18next/no-literal-string
@@ -66,12 +68,32 @@ export default function SketchClassAdmin() {
               <h2 className="text-lg font-semibold mb-2">
                 {t("Create a new Sketch Class")}
               </h2>
-              <TemplateChooser onCreate={onCreate} />
-              <Button
-                label={t("Cancel")}
-                className="mt-4"
-                href={`/${getSlug()}/admin/sketching/`}
+              <TemplateChooser
+                showSuperuserOptions={showSuperuserOptions}
+                onCreate={onCreate}
               />
+              <div className="flex items-center mt-4">
+                <Button
+                  label={t("Cancel")}
+                  className=""
+                  href={`/${getSlug()}/admin/sketching/`}
+                />
+                <div className="flex-1 text-right absolute right-5 top-2">
+                  <div className="opacity-10 hover:opacity-100">
+                    <input
+                      type="checkbox"
+                      className="ml-4 rounded"
+                      checked={showSuperuserOptions}
+                      onChange={(e) => {
+                        setShowSuperuserOptions(e.target.checked);
+                      }}
+                    />
+                    <label className="ml-2 text-xs">
+                      {t("Show superuser options")}
+                    </label>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </Route>

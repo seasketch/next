@@ -23,6 +23,7 @@ export default function SketchGeometryTypeSelector({
     [SketchGeometryType.Polygon]: "Polygon",
     [SketchGeometryType.Collection]: "Collection",
     [SketchGeometryType.ChooseFeature]: "Choose feature",
+    [SketchGeometryType.FilteredPlanningUnits]: "Filtered planning units",
   };
   if (simpleFeatures) {
     options = options.slice(0, -1);

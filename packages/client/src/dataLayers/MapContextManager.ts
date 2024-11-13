@@ -13,6 +13,8 @@ import mapboxgl, {
   Sources,
   GeoJSONSource,
   Expression,
+  VectorSource,
+  LineLayer,
 } from "mapbox-gl";
 import {
   createContext,
@@ -161,6 +163,7 @@ export interface LayerState {
 
 export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
+  filterMvtUrl?: string;
 }
 class MapContextManager extends EventEmitter {
   map?: Map;
@@ -1089,7 +1092,12 @@ class MapContextManager extends EventEmitter {
    * @param sketches
    */
   setVisibleSketches(
-    sketches: { id: number; timestamp?: string; sketchClassId?: number }[]
+    sketches: {
+      id: number;
+      timestamp?: string;
+      sketchClassId?: number;
+      filterMvtUrl?: string;
+    }[]
   ) {
     const sketchIds = sketches.map(({ id }) => id);
     // remove missing ids from internal state
@@ -1105,6 +1113,12 @@ class MapContextManager extends EventEmitter {
           loading: true,
           visible: true,
           sketchClassId: sketch.sketchClassId,
+          filterMvtUrl: sketch.filterMvtUrl,
+        };
+      } else {
+        this.internalState.sketchLayerStates[sketch.id] = {
+          ...this.internalState.sketchLayerStates[sketch.id],
+          filterMvtUrl: sketch.filterMvtUrl,
         };
       }
     }
@@ -1162,6 +1176,12 @@ class MapContextManager extends EventEmitter {
 
   hideEditableSketch(sketchId: number) {
     this.hideEditableSketchId = sketchId;
+    // request a redraw
+    this.debouncedUpdateStyle();
+  }
+
+  unhideEditableSketch() {
+    delete this.hideEditableSketchId;
     // request a redraw
     this.debouncedUpdateStyle();
   }
@@ -1370,6 +1390,35 @@ class MapContextManager extends EventEmitter {
         if (relatedSourceIds.indexOf(key) > -1) {
           glDrawSources[key] = existingStyle.sources[key] as GeoJSONSource;
         }
+      }
+    }
+
+    // Do the same for filter-layer- layers related to FilterLayerManager
+    let filterLayers: AnyLayer[] = [];
+    let filterSources: { [id: string]: VectorSource } = {};
+    if (existingStyle) {
+      filterLayers =
+        existingStyle.layers?.filter(
+          (l) => l.id.indexOf("filter-layer-") === 0
+        ) || [];
+      // @ts-ignore
+      const relatedSourceIds = filterLayers.map((l) => l.source || "");
+      for (const key in existingStyle.sources) {
+        if (relatedSourceIds.indexOf(key) > -1) {
+          filterSources[key] = existingStyle.sources[key] as VectorSource;
+        }
+      }
+      // look for all-cells layer
+      const allCellsLayer = existingStyle.layers?.find(
+        (l) => l.id === "all-cells"
+      );
+      if (allCellsLayer) {
+        filterLayers.push(allCellsLayer);
+      }
+      // look for all-cells source
+      const allCellsSource = existingStyle.sources["all-cells"];
+      if (allCellsSource) {
+        filterSources["all-cells"] = allCellsSource as VectorSource;
       }
     }
 
@@ -1680,6 +1729,7 @@ class MapContextManager extends EventEmitter {
       ...baseStyle.sources,
       ...this.dynamicDataSources,
       ...glDrawSources,
+      ...filterSources,
     };
 
     baseStyle.layers = [
@@ -1687,6 +1737,7 @@ class MapContextManager extends EventEmitter {
       ...overLabels,
       ...this.dynamicLayers,
       ...glDrawLayers,
+      ...filterLayers,
     ];
 
     // Evaluate any basemap optional layers
@@ -1727,22 +1778,35 @@ class MapContextManager extends EventEmitter {
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
-        sources[`sketch-${id}`] = {
-          type: "geojson",
-          data:
-            cache && cache.timestamp === timestamp
-              ? cache.feature
-              : sketchGeoJSONUrl(id, timestamp),
-        };
         const layers = this.getLayersForSketch(
           id,
           id === this.editableSketchId,
           sketchClassId
         );
-        if (this.editableSketchId && id !== this.editableSketchId) {
-          reduceOpacity(layers);
+        if (
+          layers.length > 0 &&
+          "metadata" in layers[0] &&
+          this.internalState.sketchLayerStates[id].filterMvtUrl
+        ) {
+          sources[`sketch-${id}`] = {
+            type: "vector",
+            tiles: [this.internalState.sketchLayerStates[id].filterMvtUrl],
+            maxzoom: 14,
+          };
+          allLayers.push(...layers);
+        } else {
+          sources[`sketch-${id}`] = {
+            type: "geojson",
+            data:
+              cache && cache.timestamp === timestamp
+                ? cache.feature
+                : sketchGeoJSONUrl(id, timestamp),
+          };
+          if (this.editableSketchId && id !== this.editableSketchId) {
+            reduceOpacity(layers);
+          }
+          allLayers.push(...layers);
         }
-        allLayers.push(...layers);
       }
     }
     return { layers: allLayers, sources };
@@ -1830,38 +1894,63 @@ class MapContextManager extends EventEmitter {
       (this.selectedSketches && this.selectedSketches.indexOf(id) !== -1) ||
       focusOfEditing
     ) {
-      layers.push(
-        ...([
-          {
-            // eslint-disable-next-line i18next/no-literal-string
-            id: `sketch-${id}-selection-second-outline`,
-            type: "line",
-            source,
-            paint: {
-              "line-color": "white",
-              "line-opacity": 0.25,
-              "line-width": 6,
-              "line-blur": 0,
-              "line-offset": -3,
-            },
-            // layout: { "line-join": "miter" },
+      if (
+        "metadata" in layers[0] &&
+        layers[0].metadata?.["s:filterApiServerLocation"]?.length
+      ) {
+        const outline = {
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `sketch-${id}-selection-outline`,
+          type: "line",
+          source,
+          "source-layer": "cells",
+          paint: {
+            "line-color": "rgb(46, 115, 182)",
+            "line-opacity": 0.7,
+            "line-width": 1,
+            "line-blur": 0,
+            // "line-offset": -1,
           },
-          {
-            // eslint-disable-next-line i18next/no-literal-string
-            id: `sketch-${id}-selection-outline`,
-            type: "line",
-            source,
-            paint: {
-              "line-color": "rgb(46, 115, 182)",
-              "line-opacity": 1,
-              "line-width": 2,
-              "line-blur": 0,
-              "line-offset": -1,
+          // @ts-ignore
+          slot: "top",
+          layout: {},
+          // layout: { "line-join": "miter" },
+        } as LineLayer;
+        layers.push(outline);
+      } else {
+        layers.push(
+          ...([
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `sketch-${id}-selection-second-outline`,
+              type: "line",
+              source,
+              paint: {
+                "line-color": "white",
+                "line-opacity": 0.25,
+                "line-width": 6,
+                "line-blur": 0,
+                "line-offset": -3,
+              },
+              // layout: { "line-join": "miter" },
             },
-            // layout: { "line-join": "miter" },
-          },
-        ] as AnyLayer[])
-      );
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `sketch-${id}-selection-outline`,
+              type: "line",
+              source,
+              paint: {
+                "line-color": "rgb(46, 115, 182)",
+                "line-opacity": 1,
+                "line-width": 2,
+                "line-blur": 0,
+                "line-offset": -1,
+              },
+              // layout: { "line-join": "miter" },
+            },
+          ] as AnyLayer[])
+        );
+      }
     }
     return layers;
   }

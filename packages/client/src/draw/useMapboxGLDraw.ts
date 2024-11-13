@@ -717,6 +717,8 @@ function glDrawMode(
     return "draw_polygon";
   } else if (geometryType === SketchGeometryType.Collection) {
     return "simple_select";
+  } else if (geometryType === SketchGeometryType.FilteredPlanningUnits) {
+    return "simple_select";
   }
   throw new Error("Not implemented");
 }

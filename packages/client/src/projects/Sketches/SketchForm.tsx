@@ -6,7 +6,7 @@ import {
   LogicRuleDetailsFragment,
   SketchFormElementFragment,
 } from "../../generated/graphql";
-import { ReactNode, useCallback, useMemo, useState } from "react";
+import { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
 import FormElementFactory from "../../surveys/FormElementFactory";
 import { sortFormElements } from "../../formElements/sortFormElements";
 require("./sketching.css");
@@ -81,9 +81,69 @@ export default function SketchForm({
     }
   }, [logicRules, state, editable]);
 
+  const [collapsibleGroupOpenState, setCollapsibleGroupOpenState] = useState<{
+    [elementId: number]: boolean;
+  }>({});
+
+  const collapsibleGroupsState = useMemo(() => {
+    const groupState: {
+      hiddenGroups: Set<number>;
+      activeGroups: Set<number>;
+      hiddenChildren: Set<number>;
+    } = {
+      hiddenGroups: new Set(),
+      activeGroups: new Set(),
+      hiddenChildren: new Set(),
+    };
+    for (const elementId in collapsibleGroupOpenState) {
+      if (!collapsibleGroupOpenState[elementId]) {
+        groupState.hiddenGroups.add(parseInt(elementId));
+      }
+    }
+    if (groupState.hiddenGroups.size === 0) {
+      return groupState;
+    } else {
+      let isCollapsed = false;
+      let currentGroup: number | null = null;
+      for (const element of formElements) {
+        if (element.typeId === "CollapsibleGroup") {
+          currentGroup = element.id;
+          if (groupState.hiddenGroups.has(element.id)) {
+            isCollapsed = true;
+          } else {
+            isCollapsed = false;
+          }
+        } else if (element.typeId === "CollapsibleBreak") {
+          isCollapsed = false;
+          currentGroup = null;
+        } else {
+          if (isCollapsed) {
+            groupState.hiddenChildren.add(element.id);
+          }
+          if (
+            currentGroup &&
+            (state[element.id]?.error || state[element.id]?.value !== undefined)
+          ) {
+            if (element.typeId === "FilterInput") {
+              if (state[element.id]?.value?.selected) {
+                groupState.activeGroups.add(currentGroup);
+              }
+            } else {
+              groupState.activeGroups.add(currentGroup);
+            }
+          }
+        }
+      }
+      return groupState;
+    }
+  }, [collapsibleGroupOpenState, formElements, state]);
+
   const renderElement = useCallback(
     (element: SketchFormElementFragment) => {
       if (hiddenElements.includes(element.id)) {
+        return null;
+      }
+      if (collapsibleGroupsState.hiddenChildren.has(element.id)) {
         return null;
       }
       return (
@@ -96,6 +156,14 @@ export default function SketchForm({
           isRequired={element.isRequired}
           alternateLanguageSettings={element.alternateLanguageSettings}
           body={element.body}
+          collapsibleGroupState={
+            element.typeId === "CollapsibleGroup"
+              ? {
+                  hidden: collapsibleGroupsState.hiddenGroups.has(element.id),
+                  active: collapsibleGroupsState.activeGroups.has(element.id),
+                }
+              : undefined
+          }
           onChange={(value, validationErrors) => {
             setState((prev) => {
               const newState = {
@@ -123,6 +191,14 @@ export default function SketchForm({
               return newState;
             });
           }}
+          onCollapse={(open) => {
+            setCollapsibleGroupOpenState((prev) => {
+              return {
+                ...prev,
+                [element.id]: open,
+              };
+            });
+          }}
           submissionAttempted={submissionAttempted}
           onSubmit={
             element.typeId === "FeatureName"
@@ -141,7 +217,14 @@ export default function SketchForm({
         />
       );
     },
-    [editable, noop, onChange, state, submissionAttempted]
+    [
+      editable,
+      noop,
+      onChange,
+      state,
+      submissionAttempted,
+      collapsibleGroupsState,
+    ]
   );
 
   return (

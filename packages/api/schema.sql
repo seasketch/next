@@ -4100,6 +4100,26 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
             return NEW;
           end if;
         end if;
+      elsif class_geometry_type = 'FILTERED_PLANNING_UNITS' then
+        -- Also check for parent collection of parent folder (recursively)
+        if NEW.collection_id is not null then
+          raise exception 'Filtered planning units cannot be part of a collection';
+        elsif NEW.folder_id is not null then
+          if (select get_parent_collection_id('sketch_folder', NEW.folder_id)) is not null then
+            raise exception 'Filtered planning units cannot be part of a collection';
+          end if;
+        end if;
+        -- geom must be present unless a collection
+        if NEW.geom is not null or NEW.user_geom is not null then
+          raise exception 'Filtered planning units should not have geometry';
+        else
+          -- no nested collections
+          if NEW.collection_id is not null then
+            raise exception 'Filtered planning units cannot be part of a collection';
+          else
+            return NEW;
+          end if;
+        end if;
       else
         select geometrytype(NEW.user_geom) into new_geometry_type;
         -- geometry type must match sketch_class.geometry_type and sketch_class.allow_multi
@@ -4114,7 +4134,7 @@ CREATE FUNCTION public.before_sketch_insert_or_update() RETURNS trigger
           raise exception 'Geometry type does not match sketch class';
         end if;
       end if;
-    end
+    end;
   $$;
 
 
@@ -8798,6 +8818,103 @@ CREATE FUNCTION public.fail_data_upload(id uuid, msg text) RETURNS public.data_u
     AS $$
     update data_upload_tasks set state = 'failed', error_message = msg where id = fail_data_upload.id and session_is_admin(project_id) returning *;
   $$;
+
+
+--
+-- Name: filter_state_to_search_string(jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.filter_state_to_search_string(filters jsonb, sketch_class_id integer) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    state jsonb := '{}';
+    filter jsonb;
+    attr text;
+    result text;
+    attribute_name text;
+    filter_server_location text;
+    filter_version int;
+    final_url text;
+BEGIN
+    -- Retrieve the filter_api_server_location and filter_api_version from sketch_classes table
+    SELECT sketch_classes.filter_api_server_location, sketch_classes.filter_api_version
+    INTO filter_server_location, filter_version
+    FROM sketch_classes
+    WHERE id = sketch_class_id;
+
+    -- If filter_api_server_location is NULL, return NULL
+    IF filter_server_location IS NULL THEN
+        RETURN NULL;
+    END IF;
+
+    -- Loop through each attribute in the input JSONB object
+    FOR attr, filter IN
+        SELECT key, value FROM jsonb_each(filters)
+    LOOP
+        -- Only process if "selected" is true
+        IF filter->>'selected' = 'true' THEN
+            if filter->>'attribute' is not null then
+                attribute_name := filter->>'attribute';
+            else
+              -- Look up the attribute name from form_elements for the current attr ID
+              SELECT component_settings->>'attribute'
+              INTO attribute_name
+              FROM form_elements
+              WHERE id = attr::int; -- Cast attr to integer to match form_elements ID
+            end if;
+
+
+            -- Default to the original key if no match is found
+            IF attribute_name IS NULL THEN
+                attribute_name := attr;
+            END IF;
+
+            -- Check for numberState
+            IF filter ? 'numberState' THEN
+                state := state || jsonb_build_object(attribute_name, jsonb_build_object(
+                    'min', filter->'numberState'->'min',
+                    'max', filter->'numberState'->'max'
+                ));
+
+            -- Check for stringState
+            ELSIF filter ? 'stringState' THEN
+                state := state || jsonb_build_object(attribute_name, jsonb_build_object(
+                    'choices', filter->'stringState'
+                ));
+
+            -- Check for booleanState
+            ELSIF filter ? 'booleanState' THEN
+                state := state || jsonb_build_object(attribute_name, jsonb_build_object(
+                    'bool', COALESCE(filter->'booleanState', 'false')::boolean
+                ));
+            END IF;
+        END IF;
+    END LOOP;
+
+    -- If no keys were added, return an empty string; otherwise, encode the JSON
+    IF state = '{}'::jsonb THEN
+        RETURN filter_server_location || '/v' || filter_version || '/mvt/{z}/{x}/{y}.pbf';
+    ELSE
+        -- Convert the JSONB object to a text string without formatting
+        result := state::text;
+
+        -- URL encode the resulting JSON text using the updated url_encode function
+        result := url_encode(result);
+
+        -- Construct the final URL
+        final_url := filter_server_location || '/v' || filter_version || '/mvt/{z}/{x}/{y}.pbf?filter=' || result;
+        RETURN final_url;
+    END IF;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION filter_state_to_search_string(filters jsonb, sketch_class_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.filter_state_to_search_string(filters jsonb, sketch_class_id integer) IS '@omit';
 
 
 --
@@ -15320,6 +15437,17 @@ COMMENT ON FUNCTION public.sketches_child_properties(sketch public.sketches) IS 
 
 
 --
+-- Name: sketches_filter_mvt_url(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_filter_mvt_url(s public.sketches) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select filter_state_to_search_string(s.properties, s.sketch_class_id);
+  $$;
+
+
+--
 -- Name: sketches_geojson_feature(public.sketches); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -17215,6 +17343,47 @@ CREATE FUNCTION public.update_z_indexes("dataLayerIds" integer[]) RETURNS SETOF 
     return query (select * from data_layers where id = any("dataLayerIds"));
   end
 $$;
+
+
+--
+-- Name: url_encode(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.url_encode(input text) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+    cleaned_input text;
+    output text := '';
+    ch text;
+    ch_code int;
+BEGIN
+    -- Remove all extraneous whitespace from the input JSON text
+    cleaned_input := regexp_replace(input, '\s+', '', 'g');
+
+    -- Perform URL encoding on the cleaned input
+    FOR i IN 1..length(cleaned_input) LOOP
+        ch := substr(cleaned_input, i, 1);
+        ch_code := ascii(ch);
+        -- Allow only URL-safe characters (alphanumeric and unreserved characters)
+        IF ch ~ '[a-zA-Z0-9_.~-]' THEN
+            output := output || ch;
+        ELSE
+            -- Use lpad and upper to ensure two-character hexadecimal representation
+            output := output || '%' || lpad(upper(to_hex(ch_code)), 2, '0');
+        END IF;
+    END LOOP;
+
+    RETURN output;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION url_encode(input text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.url_encode(input text) IS '@omit';
 
 
 --
@@ -26528,6 +26697,14 @@ GRANT ALL ON FUNCTION public.fail_data_upload(id uuid, msg text) TO seasketch_us
 
 
 --
+-- Name: FUNCTION filter_state_to_search_string(filters jsonb, sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.filter_state_to_search_string(filters jsonb, sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.filter_state_to_search_string(filters jsonb, sketch_class_id integer) TO anon;
+
+
+--
 -- Name: FUNCTION find_srid(character varying, character varying, character varying); Type: ACL; Schema: public; Owner: -
 --
 
@@ -29962,6 +30139,14 @@ GRANT ALL ON FUNCTION public.sketch_or_collection_as_geojson(id integer) TO anon
 
 REVOKE ALL ON FUNCTION public.sketches_child_properties(sketch public.sketches) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketches_child_properties(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_filter_mvt_url(s public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_filter_mvt_url(s public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_filter_mvt_url(s public.sketches) TO anon;
 
 
 --
@@ -33510,6 +33695,14 @@ REVOKE ALL ON FUNCTION public.updategeometrysrid(character varying, character va
 --
 
 REVOKE ALL ON FUNCTION public.updategeometrysrid(catalogn_name character varying, schema_name character varying, table_name character varying, column_name character varying, new_srid_in integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION url_encode(input text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.url_encode(input text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.url_encode(input text) TO anon;
 
 
 --

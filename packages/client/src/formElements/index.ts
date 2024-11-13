@@ -168,5 +168,7 @@ registerComponent<SpatialAccessPriorityProps, SAPValueType>({
 registerComponent({ name: "FeatureName" });
 registerComponent({ name: "SAPRange" });
 registerComponent({ name: "SaveScreen" });
+registerComponent({ name: "FilterInput" });
+registerComponent({ name: "CollapsibleGroup" });
 
 export { components, componentExportHelpers };
