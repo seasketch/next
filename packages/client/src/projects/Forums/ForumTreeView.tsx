@@ -13,8 +13,8 @@ import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 export default function ForumTreeView(props: {
   items: (SketchTocDetailsFragment | SketchFolderDetailsFragment)[];
   timestamp?: string;
-  postId: number;
-  topicId: number;
+  postId?: number;
+  topicId?: number;
   authorProfile?: AuthorProfileFragment;
 }) {
   const client = useApolloClient();

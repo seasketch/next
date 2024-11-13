@@ -696,7 +696,7 @@ export default function SketchUIStateContextProvider({
               const dateString = new Date(
                 wasUpdated ? sketch.updatedAt : sketch.createdAt
               ).toLocaleDateString();
-              let userSlug = "Me";
+              let userSlug = "You";
               if (!itMe && post && post.authorProfile) {
                 userSlug =
                   post.authorProfile.nickname ||
