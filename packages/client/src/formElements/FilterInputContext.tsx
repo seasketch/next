@@ -79,11 +79,13 @@ export function FilterInputServiceContextProvider({
     updatingCount: boolean;
     count: number;
     fullCellCount: number;
+    filterString: string;
   }>({
     loading: false,
     updatingCount: true,
     count: 0,
     fullCellCount: 0,
+    filterString: "",
   });
 
   const mapContext = useContext(MapContext);
@@ -107,13 +109,16 @@ export function FilterInputServiceContextProvider({
       .then((res) => res.json())
       .then((metadata: FilterServiceMetadata) => {
         setState((prev) => {
+          const count =
+            // @ts-ignore
+            metadata.attributes.find((a) => a.attribute === "id")?.count || 0;
           return {
             ...prev,
             metadata,
             loading: false,
-            fullCellCount:
-              // @ts-ignore
-              metadata.attributes.find((a) => a.attribute === "id")?.count || 0,
+            fullCellCount: count,
+            count,
+            updatingCount: false,
           };
         });
       })
@@ -158,17 +163,21 @@ export function FilterInputServiceContextProvider({
           )
         );
         filterLayerManager.updateFilter(filterString);
-        if (filterString.length === 0) {
+        if (filterString === state.filterString) {
+          // do nothing
+        } else if (filterString.length === 0) {
           setState((prev) => ({
             ...prev,
             updatingCount: false,
             count: prev.fullCellCount,
+            filterString: "",
           }));
-        } else if (serviceLocation && state.fullCellCount === 0) {
+        } else if (serviceLocation) {
           // TODO: update count from service
           setState((prev) => ({
             ...prev,
             updatingCount: true,
+            filterString,
           }));
           fetch(
             `${serviceLocation.replace(/\/$/, "")}/count?filter=${filterString}`
@@ -299,7 +308,7 @@ export function filterStateToSearchString(filters: FilterState) {
   } = {};
   for (const attr in filters) {
     const filter = filters[attr];
-    if (filter.selected) {
+    if (filter && filter.selected) {
       if ("numberState" in filter) {
         state[attr] = filter.numberState!;
       } else if ("stringState" in filter) {

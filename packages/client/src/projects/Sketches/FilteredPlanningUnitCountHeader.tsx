@@ -5,7 +5,6 @@ import Spinner from "../../components/Spinner";
 
 export default function FilteredPlanningUnitCountHeader() {
   const context = useContext(FilterInputServiceContext);
-  console.log("context", context);
   return (
     <div
       className={`w-full flex items-center p-2 px-4 border-b bg-gray-50 text-sm ${
