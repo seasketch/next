@@ -356,7 +356,7 @@ export default function TreeView({
         }
         onChecked(ids, isChecked);
         if (isChecked && item.parentId) {
-          const parent = data.find((i) => i.node.id === item.parentId);
+          const parent = findTreeNodeRecursive(data, item.parentId);
           if (parent?.radioFolder) {
             // Find and hide any visible siblings and their children
             const siblings = parent.children.filter(
@@ -683,4 +683,17 @@ export function overlayLayerFragmentsToTreeItems(
     });
   }
   return items;
+}
+
+function findTreeNodeRecursive(data: TreeNode[], id: string): TreeNode | null {
+  for (const node of data) {
+    if (node.node.id === id) {
+      return node;
+    }
+    const found = findTreeNodeRecursive(node.children, id);
+    if (found) {
+      return found;
+    }
+  }
+  return null;
 }
