@@ -159,7 +159,11 @@ export default async function handleUpload(
   const isTif = ext === ".tif" || ext === ".tiff";
 
   // Step 1) Fetch the uploaded file from S3
-  let workingFilePath = `${path.join(tmpobj.name, objectKey.split("/")[1])}`;
+  const keyParts = objectKey.split("/");
+  let workingFilePath = `${path.join(
+    tmpobj.name,
+    keyParts[keyParts.length - 1]
+  )}`;
   await updateProgress("running", "fetching", 0.0);
   await getObject(
     workingFilePath,
