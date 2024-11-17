@@ -13,6 +13,7 @@ import {
 import { FilterLayerManager } from "./FilterLayerManager";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { FormElementDetailsFragment } from "../generated/graphql";
+import useDebounce from "../useDebounce";
 
 export type FilterGeostatsAttribute = Pick<
   GeostatsAttribute,
@@ -153,12 +154,14 @@ export function FilterInputServiceContextProvider({
     };
   }, [state, getAttributeDetails]);
 
+  const debouncedStartingProperties = useDebounce(startingProperties, 100);
+
   useEffect(() => {
-    if (startingProperties && state.metadata) {
+    if (debouncedStartingProperties && state.metadata) {
       if (filterLayerManager) {
         const filterString = filterStateToSearchString(
           filterDefaults(
-            initialFilterState(startingProperties, formElements),
+            initialFilterState(debouncedStartingProperties, formElements),
             state.metadata
           )
         );
@@ -173,7 +176,6 @@ export function FilterInputServiceContextProvider({
             filterString: "",
           }));
         } else if (serviceLocation) {
-          // TODO: update count from service
           setState((prev) => ({
             ...prev,
             updatingCount: true,
@@ -201,7 +203,7 @@ export function FilterInputServiceContextProvider({
       }
     }
   }, [
-    startingProperties,
+    debouncedStartingProperties,
     state.metadata,
     filterLayerManager,
     formElements,
