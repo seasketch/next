@@ -251,6 +251,7 @@ run({
   */3 * * * * identifyProjectsWithDataRequests
   */5 * * * * rollupDataSourceRequests
   * * * * * deleteExpiredArchivedDataSources
+  32 * * * * updateCRWTemplate
   `
       : `
   * * * * * cleanupProjectBackgroundJobs
