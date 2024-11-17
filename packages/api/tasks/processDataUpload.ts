@@ -99,7 +99,7 @@ const client = new AWS.Lambda({
   },
 });
 
-async function runLambda(event: SpatialUploadsHandlerRequest) {
+export async function runLambda(event: SpatialUploadsHandlerRequest) {
   if (process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER) {
     const response = await fetch(
       process.env.SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER,

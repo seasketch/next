@@ -116,12 +116,28 @@ export default async function cleanupDeletedOverlayRecords(
         `Deleting ${data.rowCount} uploaded data ouputs that are no longer being used.`
       );
       for (const record of data.rows) {
-        await deleteRemote(record.remote);
-        helpers.logger.info(`Deleted ${record.remote}.`);
-        await client.query(
-          `delete from deleted_data_upload_outputs where id = $1`,
-          [record.id]
+        // First, check if there are any outputs still used which refer to the
+        // same remote
+        const { rowCount } = await client.query(
+          `select id from data_upload_outputs where remote = $1`,
+          [record.remote]
         );
+        if (rowCount > 0) {
+          helpers.logger.info(
+            `Skipping deletion of ${record.remote} as it is still being used.`
+          );
+          await client.query(
+            `delete from deleted_data_upload_outputs where id = $1`,
+            [record.id]
+          );
+        } else {
+          await deleteRemote(record.remote);
+          helpers.logger.info(`Deleted ${record.remote}.`);
+          await client.query(
+            `delete from deleted_data_upload_outputs where id = $1`,
+            [record.id]
+          );
+        }
       }
     }
   });

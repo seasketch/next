@@ -7,8 +7,10 @@ import { Trans, useTranslation } from "react-i18next";
 import useDialog from "../../components/useDialog";
 import {
   DataSourceTypes,
+  DraftTableOfContentsDocument,
   ExtraTocEditingInfoDocument,
   useDeleteBranchMutation,
+  useDuplicateTableOfContentsItemMutation,
   useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -31,6 +33,11 @@ export default function TableOfContentsItemAdminMenuItems({
   const { t } = useTranslation("admin:data");
   const onError = useGlobalErrorHandler();
   const { confirmDelete } = useDialog();
+  const [duplicateItem] = useDuplicateTableOfContentsItemMutation({
+    onError,
+    refetchQueries: [DraftTableOfContentsDocument],
+  });
+
   const [deleteItem] = useDeleteBranchMutation({
     onError,
     refetchQueries: [ExtraTocEditingInfoDocument],
@@ -117,6 +124,20 @@ export default function TableOfContentsItemAdminMenuItems({
           </MenuType.Item>
         </>
       )}
+      <MenuType.Item
+        className={MenuBarItemClasses}
+        onSelect={async () => {
+          if (item) {
+            await duplicateItem({
+              variables: {
+                id: item.id as number,
+              },
+            });
+          }
+        }}
+      >
+        <Trans ns="admin:data">Duplicate</Trans>
+      </MenuType.Item>
       <MenuType.Item
         onSelect={async () => {
           if (item) {

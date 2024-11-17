@@ -174,6 +174,7 @@ query GetFolder($id: Int!) {
     isClickOffOnly
     showRadioChildren
     title
+    stableId
     hideChildren
     acl {
       nodeId
@@ -355,6 +356,7 @@ fragment FullAdminOverlay on TableOfContentsItem {
   title
   enableDownload
   geoprocessingReferenceId
+  copiedFromDataLibraryTemplateId
   primaryDownloadUrl
   projectBackgroundJobs {
     id
@@ -635,6 +637,16 @@ query GetMetadata($itemId: Int!) {
       ...MetadataXmlFile
     }
     metadataFormat
+    dataLayer {
+      id
+      dataSource {
+        id
+        outputs {
+          id
+          createdAt
+        }
+      }
+    }
   }
 }
 
@@ -969,6 +981,24 @@ query EstimatedDataHostingQuotaUsage(
     ) {
       bytes
       numSources
+    }
+  }
+}
+
+mutation CopyDataLibraryTemplate($slug: String!, $templateId: String!) {
+  copyDataLibraryTemplateItem(
+    input: { projectSlug: $slug, templateId: $templateId }
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+
+mutation DuplicateTableOfContentsItem($id: Int!) {
+  duplicateTableOfContentsItem(input: { itemId: $id }) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
     }
   }
 }

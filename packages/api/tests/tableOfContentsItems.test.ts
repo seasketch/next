@@ -821,6 +821,116 @@ describe("Special functions", () => {
       }
     );
   });
+
+  test("duplicateTableOfContentsItem", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, [userA]) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const folderA = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderA', true, ${id()}) returning stable_id`
+        );
+        const folderB = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderB', true, ${id()}) returning stable_id`
+        );
+        const folderC = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, parent_stable_id, stable_id) values (${projectId}, 'folderC', true, ${folderB}, ${id()}) returning stable_id`
+        );
+        const validSourceId = await conn.oneFirst(
+          sql`insert into data_sources (project_id, type, url) values (${projectId}, 'arcgis-dynamic-mapserver', 'https://example.com/arcgis/rest/services/bullshit/MapServer') returning id`
+        );
+        const geojsonSourceId = await conn.oneFirst(
+          sql`insert into data_sources (project_id, type, url) values (${projectId}, 'geojson', 'https://example.com/layer.json') returning id`
+        );
+        const layer0Id = await conn.oneFirst(
+          sql`insert into data_layers (project_id, data_source_id, sublayer) values (${projectId}, ${validSourceId}, '0') returning id`
+        );
+        const layer1Id = await conn.oneFirst(
+          sql`insert into data_layers (project_id, data_source_id, sublayer) values (${projectId}, ${validSourceId}, '1') returning id`
+        );
+        const geoJsonLayerId = await conn.oneFirst(
+          sql`insert into data_layers (project_id, data_source_id, mapbox_gl_styles) values (${projectId}, ${geojsonSourceId}, '{"foo": "bar"}'::jsonb) returning id`
+        );
+        const stableId = id();
+        const sub0 = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, data_layer_id, stable_id, parent_stable_id) values (${projectId}, 'sublayer 0', false, ${layer0Id}, ${stableId}, ${folderA}) returning id`
+        );
+        const sub1 = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, data_layer_id, stable_id, parent_stable_id) values (${projectId}, 'sublayer 1', false, ${layer1Id}, ${id()}, ${folderC}) returning id`
+        );
+        const geojsonItemId = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, data_layer_id, stable_id, parent_stable_id) values (${projectId}, 'geojson', false, ${geoJsonLayerId}, ${id()}, ${folderB}) returning id`
+        );
+        //    A     B
+        //   /     / \
+        // sub0  json C
+        //             \
+        //            sub1
+        // make sure to test with many multiple layers, folders, etc
+        // make sure nesting comes out intact
+        const itemCount = await conn.oneFirst(
+          sql`select count(*) from table_of_contents_items where project_id = ${projectId} and is_draft = true`
+        );
+        expect(itemCount).toBe(6);
+        await conn.any(
+          sql`select duplicate_table_of_contents_item((select id from table_of_contents_items where stable_id = ${folderA} and is_draft = true))`
+        );
+        const newItems = await conn.many(
+          sql`select id, title, stable_id, parent_stable_id, data_layer_id, path from table_of_contents_items where project_id = ${projectId} and is_draft = true`
+        );
+        expect(newItems.length).toBe(8);
+        const newFolderA = newItems.find((i) => i.title === "folderA (copy)")!;
+        expect(newFolderA).toBeTruthy();
+        const oldFolderA = newItems.find((i) => i.title === "folderA")!;
+        expect(oldFolderA).toBeTruthy();
+        expect(oldFolderA.stable_id).not.toEqual(newFolderA.stable_id);
+        //      A (copy)     A     B
+        //         /        /     / \
+        //      sub0      sub0  json C
+        //                            \
+        //                            sub1
+        const oldSub0 = newItems.find((i) => i.id === sub0)!;
+        const newSub0 = newItems.find(
+          (i) => i.parent_stable_id === newFolderA.stable_id
+        )!;
+        expect(oldSub0).toBeTruthy();
+        expect(newSub0).toBeTruthy();
+        expect(oldSub0.stable_id).not.toEqual(newSub0.stable_id);
+        expect(newSub0.path).toBe(
+          `${newFolderA.stable_id}.${newSub0.stable_id}`
+        );
+        // Next, create this:
+        //
+        //      A (copy)     A      B
+        //         /        /     / | \
+        //      sub0      sub0 json C  C (copy)
+        //                          |   \
+        //                        sub1  sub1
+        const oldFolderC = newItems.find((i) => i.title === "folderC")!;
+        expect(oldFolderC).toBeTruthy();
+        await conn.any(
+          sql`select duplicate_table_of_contents_item((select id from table_of_contents_items where stable_id = ${folderC} and is_draft = true))`
+        );
+        const newItems2 = await conn.many(
+          sql`select id, title, stable_id, parent_stable_id, data_layer_id, path from table_of_contents_items where project_id = ${projectId} and is_draft = true`
+        );
+        expect(newItems2.length).toBe(10);
+        const newFolderC = newItems2.find((i) => i.title === "folderC (copy)")!;
+        expect(newFolderC).toBeTruthy();
+        const newSub1 = newItems2.find(
+          (i) => i.parent_stable_id === newFolderC.stable_id
+        )!;
+        expect(newSub1).toBeTruthy();
+        const FolderB = newItems2.find((i) => i.title === "folderB")!;
+        expect(FolderB).toBeTruthy();
+        expect(newFolderC.parent_stable_id).toBe(FolderB.stable_id);
+        expect(newSub1.path).toBe(
+          `${FolderB.stable_id}.${newFolderC.stable_id}.${newSub1.stable_id}`
+        );
+      }
+    );
+  });
 });
 
 describe("Access control", () => {

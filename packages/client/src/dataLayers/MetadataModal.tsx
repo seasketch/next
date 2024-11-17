@@ -15,6 +15,7 @@ export default function MetadataModal({
   error,
   title,
   xml,
+  hostedSourceLastUpdated,
 }: {
   document?: any;
   onRequestClose: () => void;
@@ -22,6 +23,7 @@ export default function MetadataModal({
   error?: Error;
   title?: string;
   xml?: (MetadataXmlFileFragment & { format?: string }) | null;
+  hostedSourceLastUpdated?: string;
 }) {
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
@@ -97,6 +99,14 @@ export default function MetadataModal({
                 <Trans ns="homepage">Download</Trans>
               </a>
             </div>
+          )}
+          {hostedSourceLastUpdated && (
+            <p className="mt-5 text-sm bg-gray-50 p-2 border border-gray-300 rounded">
+              <Trans ns="homepage">
+                This hosted layer was last updated on{" "}
+                {new Date(hostedSourceLastUpdated).toLocaleString()}
+              </Trans>
+            </p>
           )}
         </div>
       </>

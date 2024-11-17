@@ -71,6 +71,10 @@ const LazyArcGISCartModal = React.lazy(
     )
 );
 
+const LazyDataLibraryModal = React.lazy(
+  () => import(/* webpackChunkName: "DataLibrary" */ "./DataLibraryModal")
+);
+
 export default function TableOfContentsEditor() {
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
@@ -615,6 +619,7 @@ function Header({
   const [mvtUrlModalOpen, setMVTUrlModalOpen] = useState(false);
   const [remoteGeoJSONModalOpen, setRemoteGeoJSONModalOpen] = useState(false);
   const projectId = useProjectId();
+  const [showDataLibrary, setShowDataLibrary] = useState(false);
 
   const { confirm } = useDialog();
   return (
@@ -688,6 +693,14 @@ function Header({
                 >
                   {t("Upload spatial data files")}
                 </MenuBarItem>
+                <MenuBarItem
+                  onClick={() => {
+                    setShowDataLibrary(true);
+                  }}
+                >
+                  {t("View the Data Library")}
+                </MenuBarItem>
+
                 <MenuBarSeparator />
                 <MenuBarLabel>{t("Connect to data services")}</MenuBarLabel>
                 <MenuBarItem
@@ -851,6 +864,13 @@ function Header({
         <AddRemoteGeoJSONModal
           onRequestClose={() => setRemoteGeoJSONModalOpen(false)}
         />
+      )}
+      {showDataLibrary && (
+        <Suspense fallback={<FullScreenLoadingSpinner />}>
+          <LazyDataLibraryModal
+            onRequestClose={() => setShowDataLibrary(false)}
+          />
+        </Suspense>
       )}
     </header>
   );

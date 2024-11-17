@@ -251,12 +251,14 @@ run({
   */3 * * * * identifyProjectsWithDataRequests
   */5 * * * * rollupDataSourceRequests
   * * * * * deleteExpiredArchivedDataSources
+  32 * * * * updateCRWTemplate
   `
       : `
   * * * * * cleanupProjectBackgroundJobs
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
   * * * * * deleteExpiredArchivedDataSources
+  1 * * * * updateCRWTemplate
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {
