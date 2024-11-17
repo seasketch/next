@@ -39,6 +39,7 @@ import { createPortal } from "react-dom";
 import useDialog from "../../../components/useDialog";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import ConvertFeatureLayerToHostedModal from "../arcgis/ConvertFeatureLayerToHostedModal";
+import useIsSuperuser from "../../../useIsSuperuser";
 
 export default function LayerVersioning({
   item,
@@ -84,7 +85,8 @@ export default function LayerVersioning({
   ]);
 
   const versions = useMemo(() => {
-    const versions = [
+    console.log(item);
+    let versions = [
       { version: item.dataLayer!.version, source: item.dataLayer!.dataSource! },
     ] as {
       version: number;
@@ -99,6 +101,7 @@ export default function LayerVersioning({
         });
       }
     }
+    versions = versions.filter((v) => v.source);
     return versions.sort((a, b) => b.version - a.version);
   }, [item]);
 
@@ -122,9 +125,10 @@ export default function LayerVersioning({
       );
   }, [data?.projectBySlug?.projectBackgroundJobs, versions, item.id]);
 
+  console.log(versions);
   // Jobs have string (UUID) ids, sources have number ids
   const [selectedItemId, setSelectedItemId] = useState<string | number>(
-    versions[0].source.id
+    versions[0]?.source?.id
   );
 
   const mapContext = useContext(MapContext);
@@ -464,6 +468,7 @@ function VersionDetails({
   });
   const [hostOnSeaSketch, setHostOnSeasketch] = useState<number | null>(null);
   const { confirmDelete, setState: setDialogState } = useDialog();
+  const isSuperuser = useIsSuperuser();
 
   const isArcGISVectorSource =
     source.type === DataSourceTypes.ArcgisVector ||
@@ -477,6 +482,15 @@ function VersionDetails({
           automatically deleted. This action cannot be undone.
         </Trans>
       </p>
+      {isSuperuser && getSlug() === "superuser" && (
+        // eslint-disable-next-line i18next/no-literal-string
+        <Warning level="warning">
+          Replated copies will not be rolled back for Data Library items. To
+          rollback Data Library layers, download the previous version and upload
+          it as a new version.
+        </Warning>
+      )}
+
       <div className="relative flex items-start px-1 py-2">
         <div className="flex h-6 items-center">
           <input

@@ -143,12 +143,17 @@ export async function updateSourceWithGeoJSON(
       ContentType: "application/json",
     })
     .promise();
-  await runLambda({
-    taskId: jobId,
-    objectKey: key,
-    suffix: "superuser",
-    requestingUser: "Data Library Template Updater <support@seasketch.org>",
-  });
+  try {
+    await runLambda({
+      taskId: jobId,
+      objectKey: key,
+      suffix: "superuser",
+      requestingUser: "Data Library Template Updater <support@seasketch.org>",
+    });
+  } catch (e) {
+    console.error(`Error updating Data Library Template ${templateId}`);
+    console.error(e);
+  }
 }
 
 export async function updateSourceWithUrl(
@@ -190,10 +195,15 @@ export async function updateSourceWithUrl(
     .promise();
   // fire off the lambda to process the data
   helpers.logger.info(`Starting lambda for ${key}`);
-  await runLambda({
-    taskId: jobId,
-    objectKey: key,
-    suffix: "superuser",
-    requestingUser: "Data Library Template Updater <support@seasketch.org>",
-  });
+  try {
+    await runLambda({
+      taskId: jobId,
+      objectKey: key,
+      suffix: "superuser",
+      requestingUser: "Data Library Template Updater <support@seasketch.org>",
+    });
+  } catch (e) {
+    console.error(`Error updating Data Library Template ${templateId}`);
+    console.error(e);
+  }
 }

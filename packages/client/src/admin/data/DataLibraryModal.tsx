@@ -27,10 +27,10 @@ export default function DataLibraryModal({
         <p className="text-sm">
           <Trans ns="admin:data">
             The SeaSketch team is in the process of creating a curated
-            collection of data from authoritative sources. These layers can be
-            added to your project with preset cartography, metadata, and
-            attribution. Data sources are updated regularly as provided by the
-            original sources.
+            collection of data from authoritative sources. These layers do not
+            count against your hosting quota, and come with preset cartography,
+            metadata, and attribution. Data sources are updated regularly as
+            provided by the original sources.
           </Trans>
         </p>
         <p className="text-sm">

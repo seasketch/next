@@ -1044,6 +1044,43 @@ type CopyAppearancePayload {
   query: Query
 }
 
+"""All input for the `copyDataLibraryTemplateItem` mutation."""
+input CopyDataLibraryTemplateItemInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectSlug: String
+  templateId: String
+}
+
+"""The output of our `copyDataLibraryTemplateItem` mutation."""
+type CopyDataLibraryTemplateItemPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
+  """
+  dataLayer: DataLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItem: TableOfContentsItem
+
+  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
+  tableOfContentsItemEdge(
+    """The method to use when ordering `TableOfContentsItem`."""
+    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): TableOfContentsItemsEdge
+}
+
 """All input for the `copySketchFolder` mutation."""
 input CopySketchFolderInput {
   """
@@ -2642,6 +2679,7 @@ type DataSource implements Node {
     """The method to use when ordering `DataLayer`."""
     orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataLayersConnection!
+  dataLibraryTemplateId: String
 
   """
   Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default
@@ -2912,6 +2950,7 @@ input DataSourceInput {
   coordinates: [BigFloat]
   createdAt: Datetime
   createdBy: Int
+  dataLibraryTemplateId: String
 
   """
   Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default
@@ -5030,6 +5069,42 @@ type DownloadOption {
   size: BigInt
   type: DataUploadOutputType
   url: String
+}
+
+"""All input for the `duplicateTableOfContentsItem` mutation."""
+input DuplicateTableOfContentsItemInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  itemId: Int
+}
+
+"""The output of our `duplicateTableOfContentsItem` mutation."""
+type DuplicateTableOfContentsItemPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
+  """
+  dataLayer: DataLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItem: TableOfContentsItem
+
+  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
+  tableOfContentsItemEdge(
+    """The method to use when ordering `TableOfContentsItem`."""
+    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): TableOfContentsItemsEdge
 }
 
 scalar Email
@@ -7752,6 +7827,12 @@ type Mutation {
     """
     input: CopyAppearanceInput!
   ): CopyAppearancePayload
+  copyDataLibraryTemplateItem(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CopyDataLibraryTemplateItemInput!
+  ): CopyDataLibraryTemplateItemPayload
   copySketch(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -8539,6 +8620,12 @@ type Mutation {
     """
     input: DismissFailedJobInput!
   ): DismissFailedJobPayload
+  duplicateTableOfContentsItem(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DuplicateTableOfContentsItemInput!
+  ): DuplicateTableOfContentsItemPayload
   enableDownloadForEligibleLayers(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -14270,6 +14357,7 @@ type TableOfContentsItem implements Node {
   """
   computedMetadata: JSON
   containedBy: [TableOfContentsItem]
+  copiedFromDataLibraryTemplateId: String
 
   """
   Reads a single `DataLayer` that is related to this `TableOfContentsItem`.

@@ -2923,12 +2923,12 @@ CREATE TABLE public.archived_data_sources (
     sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_style)::text)) STORED,
     changelog text,
     source_layer text,
-    project_id integer NOT NULL,
     bounds numeric[],
     created_at timestamp with time zone DEFAULT now(),
     sublayer text,
     sublayer_type public.sublayer_type,
-    dynamic_metadata boolean DEFAULT false NOT NULL
+    dynamic_metadata boolean DEFAULT false NOT NULL,
+    project_id integer NOT NULL
 );
 
 
@@ -2988,6 +2988,51 @@ $$;
 --
 
 COMMENT ON FUNCTION public.archived_data_sources_sprites(l public.archived_data_sources) IS '@simpleCollections only';
+
+
+--
+-- Name: assign_data_library_template_id(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.assign_data_library_template_id(stable_id text, template_id text) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+  declare
+    did_update boolean;
+  begin
+    did_update := false;
+    -- assign data_library_template_id to toc item
+    update table_of_contents_items set data_library_template_id = template_id where table_of_contents_items.stable_id = assign_data_library_template_id.stable_id and is_draft = true returning true into did_update;
+    -- assign data_library_template_id to data source (if exists)
+    update 
+      data_sources 
+    set data_library_template_id = template_id 
+    where id = (
+      select 
+        data_source_id 
+      from 
+        data_layers 
+      where 
+        id = (
+          select 
+            data_layer_id 
+          from 
+            table_of_contents_items 
+          where 
+            table_of_contents_items.stable_id = assign_data_library_template_id.stable_id and 
+          is_draft = true
+        )
+    ) returning true into did_update;
+    return did_update;
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION assign_data_library_template_id(stable_id text, template_id text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.assign_data_library_template_id(stable_id text, template_id text) IS '@omit';
 
 
 --
@@ -4544,6 +4589,24 @@ $$;
 
 
 --
+-- Name: check_toc_item_rls_policy(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_toc_item_rls_policy(id integer) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+  BEGIN
+    -- Try to select the resource under current user privileges
+    PERFORM 1 FROM table_of_contents_items WHERE table_of_contents_items.id = check_toc_item_rls_policy.id;
+    RETURN TRUE; -- Resource is accessible
+    EXCEPTION
+        WHEN insufficient_privilege THEN
+            RETURN FALSE; -- Resource is not accessible due to RLS
+  END;
+$$;
+
+
+--
 -- Name: cleanup_tile_package(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5135,6 +5198,276 @@ COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id
 
 
 --
+-- Name: toc_to_tsvector(text, text, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    DECLARE
+      title_translated_prop_is_filled_in boolean;
+      supported_languages jsonb := get_supported_languages();
+      langkey text := supported_languages->>lang;
+      conf regconfig := lang::regconfig;
+    BEGIN
+      title_translated_prop_is_filled_in = (translated_props->lang->>'title') is not null and (translated_props->lang->>'title') <> '';
+      if supported_languages->>lang is null then
+        raise exception 'Language % not supported', lang;
+      end if;
+      -- TODO: add support for translating metadata
+      if lang = 'simple' THEN
+        -- The simple index matches against absolutely everything in
+        -- all languages. It's a fallback that can be used when you
+        -- aren't getting any matches from the language-specific
+        -- indexes.
+        return (
+          setweight(to_tsvector(conf, title), 'A') || 
+          setweight(
+            to_tsvector(conf, extract_all_titles(translated_props)),  
+          'A') ||
+          setweight(
+            jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'
+          ), 'B')
+        );
+      elsif lang = 'english' THEN
+          return (
+            setweight(to_tsvector(conf, title), 'A') ||
+            setweight(
+              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
+            'A') ||
+            setweight(
+              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
+            'B')
+          );
+      else
+        return (
+          setweight(
+              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
+            'A') ||
+            setweight(
+              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
+            'B') ||
+            setweight(to_tsvector(conf, title), 'C')
+        );
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) IS '@omit';
+
+
+--
+-- Name: table_of_contents_items; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.table_of_contents_items (
+    id integer NOT NULL,
+    path public.ltree NOT NULL,
+    stable_id text NOT NULL,
+    parent_stable_id text,
+    is_draft boolean DEFAULT true NOT NULL,
+    project_id integer NOT NULL,
+    title text NOT NULL,
+    is_folder boolean DEFAULT true NOT NULL,
+    show_radio_children boolean DEFAULT false NOT NULL,
+    is_click_off_only boolean DEFAULT false NOT NULL,
+    metadata jsonb,
+    bounds numeric[],
+    data_layer_id integer,
+    sort_index integer NOT NULL,
+    hide_children boolean DEFAULT false NOT NULL,
+    enable_download boolean DEFAULT true NOT NULL,
+    geoprocessing_reference_id text,
+    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
+    fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
+    fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
+    fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
+    fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
+    fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
+    fts_nl tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('dutch'::text, title, metadata, translated_props)) STORED,
+    fts_fr tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('french'::text, title, metadata, translated_props)) STORED,
+    fts_de tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('german'::text, title, metadata, translated_props)) STORED,
+    fts_id tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('indonesian'::text, title, metadata, translated_props)) STORED,
+    fts_it tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('italian'::text, title, metadata, translated_props)) STORED,
+    fts_lt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('lithuanian'::text, title, metadata, translated_props)) STORED,
+    fts_no tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('norwegian'::text, title, metadata, translated_props)) STORED,
+    fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
+    fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
+    fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
+    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
+    data_source_type text,
+    original_source_upload_available boolean DEFAULT false NOT NULL,
+    data_library_template_id text,
+    copied_from_data_library_template_id text,
+    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
+    CONSTRAINT titlechk CHECK ((char_length(title) > 0))
+);
+
+
+--
+-- Name: TABLE table_of_contents_items; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.table_of_contents_items IS '
+@omit all
+TableOfContentsItems represent a tree-view of folders and operational layers 
+that can be added to the map. Both layers and folders may be nested into other 
+folders for organization, and each folder has its own access control list.
+
+Items that represent data layers have a `DataLayer` relation, which in turn has
+a reference to a `DataSource`. Usually these relations should be fetched in 
+batch only once the layer is turned on, using the 
+`dataLayersAndSourcesByLayerId` query.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.path; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.path IS '
+@omit
+ltree-compatible, period delimited list of ancestor stable_ids
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.stable_id IS '
+The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
+should be used with a custom alphabet that excludes dashes and has a lenght of 
+9. The purpose of the stable_id is to control the nesting arrangement of items
+and provide a stable reference for layer visibility settings and map bookmarks.
+When published, the id primary key property of the item will change but not the 
+stable_id.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.parent_stable_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.parent_stable_id IS '
+stable_id of the parent folder, if any. This property cannot be changed 
+directly. To rearrange items into folders, use the 
+`updateTableOfContentsItemParent` mutation.
+';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_draft; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_draft IS 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation';
+
+
+--
+-- Name: COLUMN table_of_contents_items.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.title IS 'Name used in the table of contents rendering';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_folder; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_folder IS 'If not a folder, the item is a layer-type and must have a data_layer_id';
+
+
+--
+-- Name: COLUMN table_of_contents_items.show_radio_children; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.show_radio_children IS 'If set, children of this folder will appear as radio options so that only one may be toggle at a time';
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_click_off_only; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.is_click_off_only IS 'If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off';
+
+
+--
+-- Name: COLUMN table_of_contents_items.metadata; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.metadata IS 'DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders';
+
+
+--
+-- Name: COLUMN table_of_contents_items.bounds; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.bounds IS 'If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]';
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_layer_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.data_layer_id IS 'If is_folder=false, a DataLayers visibility will be controlled by this item';
+
+
+--
+-- Name: COLUMN table_of_contents_items.sort_index; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.sort_index IS 'Position in the layer list';
+
+
+--
+-- Name: COLUMN table_of_contents_items.original_source_upload_available; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_available IS '@name has_original_source_upload';
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_library_template_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.data_library_template_id IS '@omit';
+
+
+--
+-- Name: copy_data_library_template_item(text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_data_library_template_item(template_id text, project_slug text) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      pid int;
+      item_id int;
+      copy_id int;
+      r record;
+    begin
+      select id into pid from projects where slug = project_slug;
+      select id into item_id from table_of_contents_items where data_library_template_id = template_id and is_draft = true and data_library_template_id is not null;
+      if item_id is null then
+        raise exception 'Template not found';
+      end if;
+      if session_is_admin(pid) then
+        copy_id := copy_table_of_contents_item_recursive(item_id, false, false, pid, ''::ltree, null);
+        select * into r from table_of_contents_items where id = copy_id;
+        return r;
+      else
+        raise exception 'You do not have permission to copy this item';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: create_bbox(public.geometry, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5530,6 +5863,308 @@ CREATE FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id intege
 --
 
 COMMENT ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) IS '@omit';
+
+
+--
+-- Name: copy_table_of_contents_item(integer, boolean, boolean, integer, public.ltree, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_source boolean, append_copy_to_name boolean, "projectId" integer, lpath public.ltree, "parentStableId" text) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      copy_id int;
+      child record;
+      data_layer_copy_id int;
+      original_data_source_id int;
+      original_data_layer_id int;
+      ds_id int;
+      interactivity_id int;
+      new_stable_id text;
+      new_lpath ltree;
+      isfolder boolean;
+    begin
+      select 
+        data_layer_id, 
+        is_folder 
+      into 
+        original_data_layer_id, 
+        isfolder 
+      from 
+        table_of_contents_items 
+      where 
+        id = item_id;
+      if isfolder = false and original_data_layer_id is null then
+        raise exception 'original_data_layer_id is null';
+      end if;
+      select 
+        data_source_id 
+      into 
+        original_data_source_id 
+      from 
+        data_layers 
+      where 
+        id = original_data_layer_id;
+      if isfolder = false and original_data_source_id is null then
+        raise exception 'original_data_source_id is null. original_data_layer=%', original_data_layer_id;
+      end if;
+      -- copy data source, if necessary
+      if isfolder = false and copy_data_source then
+        insert into data_sources (
+          project_id,
+          type,
+          attribution,
+          bounds,
+          maxzoom,
+          minzoom,
+          url,
+          scheme,
+          tiles,
+          tile_size,
+          encoding,
+          buffer,
+          cluster,
+          cluster_max_zoom,
+          cluster_properties,
+          cluster_radius,
+          generate_id,
+          line_metrics,
+          promote_id,
+          tolerance,
+          coordinates,
+          urls,
+          query_parameters,
+          use_device_pixel_ratio,
+          import_type,
+          original_source_url,
+          enhanced_security,
+          bucket_id,
+          object_key,
+          byte_length,
+          supports_dynamic_layers,
+          uploaded_source_filename,
+          uploaded_source_layername,
+          normalized_source_object_key,
+          normalized_source_bytes,
+          geostats,
+          upload_task_id,
+          translated_props,
+          arcgis_fetch_strategy,
+          uploaded_by,
+          was_converted_from_esri_feature_layer,
+          created_by,
+          changelog
+        ) select
+          "projectId",
+          type,
+          attribution,
+          bounds,
+          maxzoom,
+          minzoom,
+          url,
+          scheme,
+          tiles,
+          tile_size,
+          encoding,
+          buffer,
+          cluster,
+          cluster_max_zoom,
+          cluster_properties,
+          cluster_radius,
+          generate_id,
+          line_metrics,
+          promote_id,
+          tolerance,
+          coordinates,
+          urls,
+          query_parameters,
+          use_device_pixel_ratio,
+          import_type,
+          original_source_url,
+          enhanced_security,
+          bucket_id,
+          object_key,
+          byte_length,
+          supports_dynamic_layers,
+          uploaded_source_filename,
+          uploaded_source_layername,
+          normalized_source_object_key,
+          normalized_source_bytes,
+          geostats,
+          upload_task_id,
+          translated_props,
+          arcgis_fetch_strategy,
+          uploaded_by,
+          was_converted_from_esri_feature_layer,
+          created_by,
+          changelog
+        from 
+          data_sources
+        where 
+          id = original_data_source_id 
+        returning 
+          id 
+        into 
+          ds_id;     
+        if ds_id is null then
+          raise exception 'Failed to copy data source. original_data_source_id=%', original_data_source_id;
+        end if;   
+        -- copy data_upload_outputs
+        insert into data_upload_outputs (
+          data_source_id,
+          project_id,
+          type,
+          created_at,
+          url,
+          remote,
+          is_original,
+          size,
+          filename,
+          original_filename
+        ) select 
+            ds_id,
+            "projectId",
+            type,
+            created_at,
+            url,
+            remote,
+            is_original,
+            size,
+            filename,
+            original_filename
+          from 
+            data_upload_outputs 
+          where 
+            data_source_id = original_data_source_id;
+      else
+        ds_id := original_data_source_id;
+      end if;
+      if isfolder = false then
+        -- copy interactivity settings
+        insert into interactivity_settings (
+          type,
+          short_template,
+          long_template,
+          cursor,
+          layers,
+          title
+        ) select
+          type,
+          short_template,
+          long_template,
+          cursor,
+          layers,
+          title
+        from interactivity_settings where id = (select interactivity_settings_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = item_id)) returning id into interactivity_id;
+        -- copy data layer
+
+        insert into data_layers (
+          project_id,
+          data_source_id,
+          source_layer,
+          sublayer,
+          render_under,
+          mapbox_gl_styles,
+          z_index,
+          interactivity_settings_id,
+          static_id,
+          sublayer_type
+        ) select
+          "projectId",
+          ds_id,
+          source_layer,
+          sublayer,
+          render_under,
+          mapbox_gl_styles,
+          z_index,
+          interactivity_id,
+          static_id,
+          sublayer_type
+        from data_layers where id = original_data_layer_id
+        returning id into data_layer_copy_id;
+      end if;
+      -- copy toc item
+      new_stable_id := create_stable_id();
+      -- create new lpath by appending new_stable_id to lpath using ltree api
+      new_lpath := lpath || new_stable_id;
+      insert into table_of_contents_items (
+        path,
+        project_id,
+        stable_id,
+        parent_stable_id,
+        title,
+        is_folder,
+        show_radio_children,
+        is_click_off_only,
+        metadata,
+        bounds,
+        data_layer_id,
+        sort_index,
+        hide_children,
+        enable_download,
+        translated_props,
+        data_source_type,
+        original_source_upload_available,
+        copied_from_data_library_template_id
+      ) select
+        new_lpath,
+        "projectId",
+        new_stable_id,
+        "parentStableId",
+        (
+          case 
+            when append_copy_to_name then title || ' (copy)'
+            else title
+          end
+        ),
+        is_folder,
+        show_radio_children,
+        is_click_off_only,
+        metadata,
+        bounds,
+        data_layer_copy_id,
+        sort_index,
+        hide_children,
+        enable_download,
+        translated_props,
+        data_source_type,
+        original_source_upload_available,
+        data_library_template_id
+      from table_of_contents_items where id = item_id returning id into copy_id;
+      return copy_id;
+    end;
+  $$;
+
+
+--
+-- Name: copy_table_of_contents_item_recursive(integer, boolean, boolean, integer, public.ltree, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      copy_id int;
+      child record;
+      new_stable_id text;
+      old_stable_id text;
+    begin
+      select stable_id into old_stable_id from table_of_contents_items where id = item_id;
+      copy_id := copy_table_of_contents_item(item_id, copy_data_source, append_copy_to_name, project_id, lpath, parent_stable_id);
+      select stable_id into new_stable_id from table_of_contents_items where id = copy_id; 
+      for child in select * from table_of_contents_items where table_of_contents_items.parent_stable_id = old_stable_id and is_draft = true loop
+        perform copy_table_of_contents_item_recursive(
+          child.id, 
+          copy_data_source, 
+          false, 
+          project_id, 
+          lpath || new_stable_id, 
+          new_stable_id
+        );
+      end loop;
+      return copy_id;
+    end;
+  $$;
 
 
 --
@@ -6423,238 +7058,6 @@ sent later.
 
 More details on project invite management [can be found in the wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
 ';
-
-
---
--- Name: toc_to_tsvector(text, text, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
-    LANGUAGE plpgsql IMMUTABLE
-    AS $$
-    DECLARE
-      title_translated_prop_is_filled_in boolean;
-      supported_languages jsonb := get_supported_languages();
-      langkey text := supported_languages->>lang;
-      conf regconfig := lang::regconfig;
-    BEGIN
-      title_translated_prop_is_filled_in = (translated_props->lang->>'title') is not null and (translated_props->lang->>'title') <> '';
-      if supported_languages->>lang is null then
-        raise exception 'Language % not supported', lang;
-      end if;
-      -- TODO: add support for translating metadata
-      if lang = 'simple' THEN
-        -- The simple index matches against absolutely everything in
-        -- all languages. It's a fallback that can be used when you
-        -- aren't getting any matches from the language-specific
-        -- indexes.
-        return (
-          setweight(to_tsvector(conf, title), 'A') || 
-          setweight(
-            to_tsvector(conf, extract_all_titles(translated_props)),  
-          'A') ||
-          setweight(
-            jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'
-          ), 'B')
-        );
-      elsif lang = 'english' THEN
-          return (
-            setweight(to_tsvector(conf, title), 'A') ||
-            setweight(
-              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
-            'A') ||
-            setweight(
-              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
-            'B')
-          );
-      else
-        return (
-          setweight(
-              to_tsvector(conf, coalesce(translated_props->langkey->>'title'::text, ''::text)), 
-            'A') ||
-            setweight(
-              jsonb_to_tsvector(conf, collect_prosemirror_text_nodes(metadata), '["string"]'), 
-            'B') ||
-            setweight(to_tsvector(conf, title), 'C')
-        );
-      end if;
-    end;
-  $$;
-
-
---
--- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) IS '@omit';
-
-
---
--- Name: table_of_contents_items; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.table_of_contents_items (
-    id integer NOT NULL,
-    path public.ltree NOT NULL,
-    stable_id text NOT NULL,
-    parent_stable_id text,
-    is_draft boolean DEFAULT true NOT NULL,
-    project_id integer NOT NULL,
-    title text NOT NULL,
-    is_folder boolean DEFAULT true NOT NULL,
-    show_radio_children boolean DEFAULT false NOT NULL,
-    is_click_off_only boolean DEFAULT false NOT NULL,
-    metadata jsonb,
-    bounds numeric[],
-    data_layer_id integer,
-    sort_index integer NOT NULL,
-    hide_children boolean DEFAULT false NOT NULL,
-    enable_download boolean DEFAULT true NOT NULL,
-    geoprocessing_reference_id text,
-    translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
-    fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
-    fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
-    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
-    fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
-    fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
-    fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
-    fts_nl tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('dutch'::text, title, metadata, translated_props)) STORED,
-    fts_fr tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('french'::text, title, metadata, translated_props)) STORED,
-    fts_de tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('german'::text, title, metadata, translated_props)) STORED,
-    fts_id tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('indonesian'::text, title, metadata, translated_props)) STORED,
-    fts_it tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('italian'::text, title, metadata, translated_props)) STORED,
-    fts_lt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('lithuanian'::text, title, metadata, translated_props)) STORED,
-    fts_no tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('norwegian'::text, title, metadata, translated_props)) STORED,
-    fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
-    fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
-    fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
-    data_source_type text,
-    original_source_upload_available boolean DEFAULT false NOT NULL,
-    CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
-    CONSTRAINT titlechk CHECK ((char_length(title) > 0))
-);
-
-
---
--- Name: TABLE table_of_contents_items; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.table_of_contents_items IS '
-@omit all
-TableOfContentsItems represent a tree-view of folders and operational layers 
-that can be added to the map. Both layers and folders may be nested into other 
-folders for organization, and each folder has its own access control list.
-
-Items that represent data layers have a `DataLayer` relation, which in turn has
-a reference to a `DataSource`. Usually these relations should be fetched in 
-batch only once the layer is turned on, using the 
-`dataLayersAndSourcesByLayerId` query.
-';
-
-
---
--- Name: COLUMN table_of_contents_items.path; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.path IS '
-@omit
-ltree-compatible, period delimited list of ancestor stable_ids
-';
-
-
---
--- Name: COLUMN table_of_contents_items.stable_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.stable_id IS '
-The stable_id property must be set by clients when creating new items. [Nanoid](https://github.com/ai/nanoid#readme) 
-should be used with a custom alphabet that excludes dashes and has a lenght of 
-9. The purpose of the stable_id is to control the nesting arrangement of items
-and provide a stable reference for layer visibility settings and map bookmarks.
-When published, the id primary key property of the item will change but not the 
-stable_id.
-';
-
-
---
--- Name: COLUMN table_of_contents_items.parent_stable_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.parent_stable_id IS '
-stable_id of the parent folder, if any. This property cannot be changed 
-directly. To rearrange items into folders, use the 
-`updateTableOfContentsItemParent` mutation.
-';
-
-
---
--- Name: COLUMN table_of_contents_items.is_draft; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.is_draft IS 'Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation';
-
-
---
--- Name: COLUMN table_of_contents_items.title; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.title IS 'Name used in the table of contents rendering';
-
-
---
--- Name: COLUMN table_of_contents_items.is_folder; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.is_folder IS 'If not a folder, the item is a layer-type and must have a data_layer_id';
-
-
---
--- Name: COLUMN table_of_contents_items.show_radio_children; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.show_radio_children IS 'If set, children of this folder will appear as radio options so that only one may be toggle at a time';
-
-
---
--- Name: COLUMN table_of_contents_items.is_click_off_only; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.is_click_off_only IS 'If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off';
-
-
---
--- Name: COLUMN table_of_contents_items.metadata; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.metadata IS 'DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders';
-
-
---
--- Name: COLUMN table_of_contents_items.bounds; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.bounds IS 'If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy]';
-
-
---
--- Name: COLUMN table_of_contents_items.data_layer_id; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.data_layer_id IS 'If is_folder=false, a DataLayers visibility will be controlled by this item';
-
-
---
--- Name: COLUMN table_of_contents_items.sort_index; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.sort_index IS 'Position in the layer list';
-
-
---
--- Name: COLUMN table_of_contents_items.original_source_upload_available; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.table_of_contents_items.original_source_upload_available IS '@name has_original_source_upload';
 
 
 --
@@ -7791,9 +8194,10 @@ CREATE TABLE public.data_sources (
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     created_by integer,
     changelog text,
-    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
     raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
+    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
+    data_library_template_id text,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -8232,7 +8636,7 @@ CREATE FUNCTION public.data_sources_uploaded_by(data_source public.data_sources)
   declare
     author text;
   begin
-    if session_is_admin(data_source.project_id) then
+    if session_is_admin(data_source.project_id) or data_source.data_library_template_id is not null then
       if data_source.uploaded_by is null then
         return null;
       else
@@ -8587,6 +8991,46 @@ CREATE FUNCTION public.draft_table_of_contents_has_changes_notify() RETURNS trig
     end if;
     return NEW;
   end;
+  $$;
+
+
+--
+-- Name: duplicate_table_of_contents_item(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.duplicate_table_of_contents_item(item_id integer) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      copy_id int;
+      pid int;
+      lpath ltree;
+      parent_stableid text;
+      r record;
+      policy_passed boolean;
+    begin
+      policy_passed := check_sketch_rls_policy(item_id);
+      if policy_passed = false then
+        raise exception 'Permission denied';
+      end if;
+      select
+        project_id,
+        path,
+        parent_stable_id
+      into 
+        pid,
+        lpath,
+        parent_stableid
+      from
+        table_of_contents_items
+      where
+        id = item_id;
+      -- pop one level off the path
+      lpath := subpath(lpath, 0, nlevel(lpath) - 1);
+      copy_id := copy_table_of_contents_item_recursive(item_id, true, true, pid, lpath, parent_stableid);
+      select * into r from table_of_contents_items where id = copy_id;
+      return r;
+    end;
   $$;
 
 
@@ -9808,7 +10252,7 @@ COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bo
 CREATE FUNCTION public.get_supported_languages() RETURNS jsonb
     LANGUAGE sql IMMUTABLE
     AS $$
-    select '{"simple": "simple", "english": "en", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "greek": "el", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
+    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
   $$;
 
 
@@ -9881,6 +10325,23 @@ CREATE FUNCTION public.has_session() RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.has_session() IS '@omit';
+
+
+--
+-- Name: id_lookup_get_key(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.id_lookup_get_key(key integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    begin
+      if lookup is null then
+        raise exception 'lookup is null';
+      else
+        return (lookup->key)::int;
+      end if;
+    end;
+  $$;
 
 
 --
@@ -11921,7 +12382,7 @@ CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETUR
       data_source_id = any (
         select id from data_sources where id = any (
           select data_source_id from data_layers where id = any (
-            select data_layer_id from table_of_contents_items where project_id = p.id and data_layer_id is not null and is_draft = true
+            select data_layer_id from table_of_contents_items where project_id = p.id and data_layer_id is not null and is_draft = true and data_library_template_id is null and copied_from_data_library_template_id is null
           ) union
           select data_source_id from archived_data_sources where data_source_id = any (
             select id from data_sources where project_id = p.id
@@ -13904,7 +14365,19 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
       old_source_id integer;
       old_source_type text;
       old_metadata_is_dynamic boolean;
+      dl_template_id text;
     begin
+        -- first, determine if a related table_of_contents_item has
+        -- data_library_template_id set. If so, we need to update the
+        -- related Toc items that have copied_from_data_library_template_id
+        -- matching.
+
+        select data_library_template_id into dl_template_id from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and data_library_template_id is not null limit 1;
+
+        if dl_template_id is null then
+          raise exception 'fuck you %', dl_template_id;
+        end if;
+
         select data_layers.data_source_id into old_source_id from data_layers where id = replace_data_source.data_layer_id;
         select type into old_source_type from data_sources where id = old_source_id;
         select metadata is null and (old_source_type = 'arcgis-vector' or old_source_type = 'arcgis-dynamic-mapserver') into old_metadata_is_dynamic from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id limit 1;
@@ -13945,8 +14418,71 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
           old_metadata_is_dynamic,
           (select project_id from data_sources where id = replace_data_source.data_source_id)
         );
-        update data_layers set data_source_id = replace_data_source.data_source_id, source_layer = replace_data_source.source_layer, mapbox_gl_styles = coalesce(gl_styles, data_layers.mapbox_gl_styles), sublayer = null where id = replace_data_source.data_layer_id;
-        update table_of_contents_items set bounds = replace_data_source.bounds where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id;
+        
+        if dl_template_id is not null then
+          update 
+            data_sources
+          set data_library_template_id = dl_template_id
+          where 
+          id = replace_data_source.data_source_id or
+          id = any((
+            select
+              data_layers.data_source_id
+            from
+              data_layers
+            where
+              id = any (
+                select
+                  table_of_contents_items.data_layer_id
+                from
+                  table_of_contents_items
+                where
+                  copied_from_data_library_template_id = dl_template_id or
+                  data_library_template_id = dl_template_id
+              )
+          )) or id = any ((
+            select 
+              data_layers.data_source_id 
+            from
+              data_layers
+            where
+              id = replace_data_source.data_layer_id 
+          ));
+        end if;
+
+        update 
+          data_layers 
+        set 
+          data_source_id = replace_data_source.data_source_id, 
+          source_layer = replace_data_source.source_layer, 
+          mapbox_gl_styles = coalesce(
+            gl_styles, data_layers.mapbox_gl_styles
+          ), 
+          sublayer = null 
+        where 
+          id = replace_data_source.data_layer_id;
+
+        if dl_template_id is not null then
+          update
+            data_layers
+          set
+            data_source_id = replace_data_source.data_source_id
+          where
+            id = any (
+              select table_of_contents_items.data_layer_id from table_of_contents_items where copied_from_data_library_template_id = dl_template_id
+            );
+        end if;
+        
+        update 
+          table_of_contents_items 
+        set bounds = replace_data_source.bounds 
+        where 
+          table_of_contents_items.data_layer_id = replace_data_source.data_layer_id or (
+            case 
+              when dl_template_id is not null then copied_from_data_library_template_id = dl_template_id
+              else false
+            end
+          );
     end;
   $$;
 
@@ -14132,309 +14668,25 @@ CREATE FUNCTION public.search_overlays(lang text, query text, "projectId" intege
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
-      supported_languages jsonb := get_supported_languages();
-      config regconfig;
-      q tsquery := websearch_to_tsquery(config, query);
+      q tsquery := websearch_to_tsquery('english'::regconfig, query);
     begin
-      select key::regconfig into config from jsonb_each_text(get_supported_languages()) where value = lower(lang);
       IF position(' ' in query) <= 0 THEN
-        q := to_tsquery(config, query || ':*');
+        q := to_tsquery('english'::regconfig, query || ':*');
       end if;
-      if config is null then
-        q = plainto_tsquery('simple', query);
-        IF position(' ' in query) <= 0 THEN
-          q := to_tsquery('simple', query || ':*');
-        end if;
-        -- use the simple index
-        return query select
-          id, 
-          stable_id, 
-          ts_headline('simple', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline('simple', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from 
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_simple @@ q
-        limit
-          coalesce("limit", 10);
-      elsif config = 'english'::regconfig then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from 
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_en @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'es' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from 
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_es @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'pt' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline('portuguese', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_pt @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'ar' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline('arabic', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_ar @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'da' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_da @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'nl' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_nl @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'fr' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_fr @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'de' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_de @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'el' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_el @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'id' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_id @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'it' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_it @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'lt' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_lt @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'no' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_no @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'ro' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_ro @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'ru' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_ru @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'sv' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_sv @@ q
-        limit
-          coalesce("limit", 10);
-      else
-        raise exception 'Unsupported language: %', lang;
-      end if;
+      return query select
+        id, 
+        stable_id, 
+        ts_headline('english', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+        ts_headline('english', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+        is_folder
+      from 
+        table_of_contents_items 
+      where 
+        project_id = "projectId" and
+        is_draft = draft and
+        fts_en @@ q
+      limit
+        coalesce("limit", 10);
     end;
   $$;
 
@@ -16397,7 +16649,7 @@ CREATE FUNCTION public.table_of_contents_items_quota_used(item public.table_of_c
       data_upload_outputs
     where
       data_source_id = (
-        select data_source_id from data_layers where id = item.data_layer_id
+        select data_source_id from data_layers where id = item.data_layer_id and item.copied_from_data_library_template_id is null and item.data_library_template_id is null
       )
     union all
     select
@@ -16410,7 +16662,7 @@ CREATE FUNCTION public.table_of_contents_items_quota_used(item public.table_of_c
       data_upload_outputs
     where
       data_source_id in (
-        select data_source_id from archived_data_sources where data_layer_id = item.data_layer_id
+        select data_source_id from archived_data_sources where data_layer_id = item.data_layer_id and item.copied_from_data_library_template_id is null and item.data_library_template_id is null
       )
   $$;
 
@@ -19568,6 +19820,14 @@ ALTER TABLE ONLY public.table_of_contents_items
 
 
 --
+-- Name: table_of_contents_items table_of_contents_items_data_library_template_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.table_of_contents_items
+    ADD CONSTRAINT table_of_contents_items_data_library_template_id_key UNIQUE (data_library_template_id);
+
+
+--
 -- Name: table_of_contents_items table_of_contents_items_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -22195,7 +22455,7 @@ CREATE POLICY data_sources_insert ON public.data_sources FOR INSERT WITH CHECK (
 -- Name: data_sources data_sources_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY data_sources_select ON public.data_sources FOR SELECT USING ((public.session_is_admin(project_id) OR public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
+CREATE POLICY data_sources_select ON public.data_sources FOR SELECT USING (((data_library_template_id IS NOT NULL) OR public.session_is_admin(project_id) OR public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
    FROM public.table_of_contents_items
   WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = ( SELECT data_layers.id
            FROM public.data_layers
@@ -24479,6 +24739,13 @@ REVOKE ALL ON FUNCTION public.armor(bytea, text[], text[]) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION assign_data_library_template_id(stable_id text, template_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.assign_data_library_template_id(stable_id text, template_id text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION assign_file_upload_node_post_ids(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25097,6 +25364,13 @@ REVOKE ALL ON FUNCTION public.check_sketch_rls_policy(id integer) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION check_toc_item_rls_policy(id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_toc_item_rls_policy(id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION checkauth(text, text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25413,6 +25687,168 @@ GRANT ALL ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_
 
 
 --
+-- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) TO anon;
+
+
+--
+-- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.path; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(path) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.stable_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(stable_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.parent_stable_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(parent_stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(parent_stable_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_draft; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_draft) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(project_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(project_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.title; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(title),UPDATE(title) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(title) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_folder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(is_folder) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(is_folder) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.show_radio_children; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(show_radio_children),UPDATE(show_radio_children) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(show_radio_children) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.is_click_off_only; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(is_click_off_only),UPDATE(is_click_off_only) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(is_click_off_only) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.metadata; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(metadata),UPDATE(metadata) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(metadata) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.bounds; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(bounds),UPDATE(bounds) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(bounds) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.data_layer_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT INSERT(data_layer_id),UPDATE(data_layer_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(data_layer_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.sort_index; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sort_index) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.hide_children; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.enable_download; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(enable_download) ON TABLE public.table_of_contents_items TO anon;
+GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.geoprocessing_reference_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
+GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
+
+
+--
+-- Name: COLUMN table_of_contents_items.translated_props; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(translated_props) ON TABLE public.table_of_contents_items TO anon;
+GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_data_library_template_item(template_id text, project_slug text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_data_library_template_item(template_id text, project_slug text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_data_library_template_item(template_id text, project_slug text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_bbox(geom public.geometry, sketch_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25524,6 +25960,20 @@ GRANT ALL ON FUNCTION public.copy_sketch_toc_item_recursive(parent_id integer, t
 
 REVOKE ALL ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.copy_sketch_toc_item_recursive_for_forum(parent_id integer, type public.sketch_child_type, append_copy_to_name boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_table_of_contents_item(item_id integer, copy_data_source boolean, append_copy_to_name boolean, "projectId" integer, lpath public.ltree, "parentStableId" text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_source boolean, append_copy_to_name boolean, "projectId" integer, lpath public.ltree, "parentStableId" text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text) FROM PUBLIC;
 
 
 --
@@ -25712,160 +26162,6 @@ GRANT UPDATE(make_admin) ON TABLE public.project_invites TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.create_project_invites("projectId" integer, "sendEmailNow" boolean, "makeAdmin" boolean, "groupNames" text[], "projectInviteOptions" public.project_invite_options[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_project_invites("projectId" integer, "sendEmailNow" boolean, "makeAdmin" boolean, "groupNames" text[], "projectInviteOptions" public.project_invite_options[]) TO seasketch_user;
-
-
---
--- Name: FUNCTION toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) TO anon;
-
-
---
--- Name: TABLE table_of_contents_items; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.path; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(path) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.stable_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(stable_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.parent_stable_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(parent_stable_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(parent_stable_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.is_draft; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_draft) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(project_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(project_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.title; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(title),UPDATE(title) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(title) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.is_folder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(is_folder) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(is_folder) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.show_radio_children; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(show_radio_children),UPDATE(show_radio_children) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(show_radio_children) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.is_click_off_only; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(is_click_off_only),UPDATE(is_click_off_only) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(is_click_off_only) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.metadata; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(metadata),UPDATE(metadata) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(metadata) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.bounds; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(bounds),UPDATE(bounds) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(bounds) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.data_layer_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT INSERT(data_layer_id),UPDATE(data_layer_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(data_layer_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.sort_index; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(sort_index) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.hide_children; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(hide_children),INSERT(hide_children),UPDATE(hide_children) ON TABLE public.table_of_contents_items TO seasketch_user;
-
-
---
--- Name: COLUMN table_of_contents_items.enable_download; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(enable_download) ON TABLE public.table_of_contents_items TO anon;
-GRANT INSERT(enable_download),UPDATE(enable_download) ON TABLE public.table_of_contents_items TO seasketch_user;
-
-
---
--- Name: COLUMN table_of_contents_items.geoprocessing_reference_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO seasketch_user;
-GRANT SELECT(geoprocessing_reference_id) ON TABLE public.table_of_contents_items TO anon;
-
-
---
--- Name: COLUMN table_of_contents_items.translated_props; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(translated_props) ON TABLE public.table_of_contents_items TO anon;
-GRANT UPDATE(translated_props) ON TABLE public.table_of_contents_items TO seasketch_user;
 
 
 --
@@ -26602,6 +26898,14 @@ REVOKE ALL ON FUNCTION public.dropgeometrytable(schema_name character varying, t
 --
 
 REVOKE ALL ON FUNCTION public.dropgeometrytable(catalog_name character varying, schema_name character varying, table_name character varying) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION duplicate_table_of_contents_item(item_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.duplicate_table_of_contents_item(item_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.duplicate_table_of_contents_item(item_id integer) TO seasketch_user;
 
 
 --
@@ -27854,6 +28158,13 @@ REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION id_lookup_get_key(key integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.id_lookup_get_key(key integer) FROM PUBLIC;
 
 
 --

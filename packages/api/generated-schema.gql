@@ -2679,6 +2679,7 @@ type DataSource implements Node {
     """The method to use when ordering `DataLayer`."""
     orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataLayersConnection!
+  dataLibraryTemplateId: String
 
   """
   Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default
@@ -2949,6 +2950,7 @@ input DataSourceInput {
   coordinates: [BigFloat]
   createdAt: Datetime
   createdBy: Int
+  dataLibraryTemplateId: String
 
   """
   Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default

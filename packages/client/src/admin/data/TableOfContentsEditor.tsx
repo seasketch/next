@@ -693,13 +693,13 @@ function Header({
                 >
                   {t("Upload spatial data files")}
                 </MenuBarItem>
-                <MenuBarItem
+                {/* <MenuBarItem
                   onClick={() => {
                     setShowDataLibrary(true);
                   }}
                 >
                   {t("View the Data Library")}
-                </MenuBarItem>
+                </MenuBarItem> */}
 
                 <MenuBarSeparator />
                 <MenuBarLabel>{t("Connect to data services")}</MenuBarLabel>

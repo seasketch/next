@@ -2338,6 +2338,7 @@ export type DataSource = Node & {
   createdBy?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `DataLayer`. */
   dataLayersConnection: DataLayersConnection;
+  dataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
   /**
@@ -2587,6 +2588,7 @@ export type DataSourceInput = {
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
   createdBy?: Maybe<Scalars['Int']>;
+  dataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
   /**

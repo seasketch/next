@@ -4,15 +4,15 @@
 
  data_library_template_id of interest are:
 
+    - CRW_ROOT
+    - CRW_STATIONS
+    - CRW_OVERLAYS
     - CRW_BAA
     - CRW_DHW
     - CRW_HOTSPOTS
-    - CRW_OVERLAYS
-    - CRW_ROOT
     - CRW_SST
     - CRW_SSTA
     - CRW_SSTT
-    - CRW_STATIONS
  */
 import { parseKmlToGeoJson } from "../src/DataLibrary/crwVirtualStations";
 import { JobHelpers } from "graphile-worker";
@@ -88,9 +88,7 @@ module.exports = async (payload: any, helpers: JobHelpers) => {
       client
     );
     const now = new Date();
-    const diff = Math.abs(now.getTime() - lastUpdated.getTime());
     const anyUpdatedOverlays = promises.length > 0;
-    // if data is older than 3 hours, update
     if (payload.force || anyUpdatedOverlays) {
       const kmlData = await fetch(KML_URL).then((res) => res.text());
       const geojson = await parseKmlToGeoJson(kmlData);
