@@ -85,7 +85,6 @@ export default function LayerVersioning({
   ]);
 
   const versions = useMemo(() => {
-    console.log(item);
     let versions = [
       { version: item.dataLayer!.version, source: item.dataLayer!.dataSource! },
     ] as {
@@ -125,7 +124,6 @@ export default function LayerVersioning({
       );
   }, [data?.projectBySlug?.projectBackgroundJobs, versions, item.id]);
 
-  console.log(versions);
   // Jobs have string (UUID) ids, sources have number ids
   const [selectedItemId, setSelectedItemId] = useState<string | number>(
     versions[0]?.source?.id
