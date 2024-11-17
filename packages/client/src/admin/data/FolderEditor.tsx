@@ -11,6 +11,9 @@ import AccessControlListEditor from "../../components/AccessControlListEditor";
 import { folderToType, FolderType, typeToFolderProps } from "./EditFolderModal";
 import { MutationStateIndicator } from "../../components/MutationStateIndicator";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
+import useIsSuperuser from "../../useIsSuperuser";
+import { CopyIcon } from "@radix-ui/react-icons";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 export default function FolderEditor({
   id,
@@ -28,6 +31,7 @@ export default function FolderEditor({
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
   const [mutateFolder, mutateFolderState] = useUpdateFolderMutation();
 
+  const isSuperuser = useIsSuperuser();
   const folder = data?.tableOfContentsItem;
 
   const [state, setState] = useState<{ title: string; folderType: FolderType }>(
@@ -58,6 +62,8 @@ export default function FolderEditor({
       },
     });
   };
+
+  const [copied, setCopied] = useState(false);
 
   return (
     <div
@@ -240,6 +246,48 @@ export default function FolderEditor({
               <AccessControlListEditor nodeId={folder.acl?.nodeId} />
             )}
           </div>
+          {isSuperuser && (
+            <div className="mt-5 relative">
+              <h5 className="block text-sm font-medium leading-5 text-gray-800 ">
+                {t("Reference ID")}
+              </h5>
+              <div className="relative w-32">
+                <input
+                  className="rounded border-gray-200 text-sm font-mono mt-2 w-full"
+                  disabled
+                  type="text"
+                  value={folder.stableId}
+                />
+                <button className="text-primary-500 absolute right-2 top-1/2 -mt-1">
+                  <CopyIcon />
+                </button>
+                <Tooltip.Provider>
+                  <Tooltip.Root open={copied} onOpenChange={setCopied}>
+                    <Tooltip.Trigger asChild>
+                      <button
+                        className="text-primary-500 absolute right-2 top-1/2 -mt-1"
+                        onClick={() => {
+                          navigator.clipboard.writeText(folder.stableId);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 2000);
+                        }}
+                      >
+                        <CopyIcon />
+                      </button>
+                    </Tooltip.Trigger>
+                    <Tooltip.Content
+                      side="right"
+                      align="center"
+                      className="bg-black text-white p-1 rounded z-50"
+                    >
+                      {t("Copied")}
+                      <Tooltip.Arrow className="text-black fill-current" />
+                    </Tooltip.Content>
+                  </Tooltip.Root>
+                </Tooltip.Provider>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

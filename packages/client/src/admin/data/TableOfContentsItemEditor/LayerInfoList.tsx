@@ -59,7 +59,17 @@ export default function LayerInfoList({
   children?: ReactNode;
 }) {
   const { t } = useTranslation("admin:data");
-  const profile = source.authorProfile;
+  let profile = source.authorProfile;
+  // @ts-ignore
+  if (source.uploadedBy === "datalibrary@seasketch.org") {
+    profile = {
+      userId: -9999,
+      email: "support@seasketch.org",
+      fullname: "Data Library",
+      affiliations:
+        "These layers are automatically updated from their original sources",
+    };
+  }
   const isRemote = isRemoteSource(source.type);
   const geostatsLayer: GeostatsLayer | undefined = useMemo(() => {
     if (!source.geostats) return undefined;

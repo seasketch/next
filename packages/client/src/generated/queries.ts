@@ -906,6 +906,40 @@ export type CopyAppearancePayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
+/** All input for the `copyDataLibraryTemplateItem` mutation. */
+export type CopyDataLibraryTemplateItemInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectSlug?: Maybe<Scalars['String']>;
+  templateId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `copyDataLibraryTemplateItem` mutation. */
+export type CopyDataLibraryTemplateItemPayload = {
+  __typename?: 'CopyDataLibraryTemplateItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `copyDataLibraryTemplateItem` mutation. */
+export type CopyDataLibraryTemplateItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the `copySketchFolder` mutation. */
 export type CopySketchFolderInput = {
   /**
@@ -4341,6 +4375,39 @@ export type DownloadOption = {
   url?: Maybe<Scalars['String']>;
 };
 
+/** All input for the `duplicateTableOfContentsItem` mutation. */
+export type DuplicateTableOfContentsItemInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  itemId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `duplicateTableOfContentsItem` mutation. */
+export type DuplicateTableOfContentsItemPayload = {
+  __typename?: 'DuplicateTableOfContentsItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `duplicateTableOfContentsItem` mutation. */
+export type DuplicateTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 
 /**
  * Email notification preferences can be read and set by the current user session.
@@ -6635,6 +6702,7 @@ export type Mutation = {
    * from the defaults set by a previous question.
    */
   copyAppearance?: Maybe<CopyAppearancePayload>;
+  copyDataLibraryTemplateItem?: Maybe<CopyDataLibraryTemplateItemPayload>;
   copySketch?: Maybe<CopySketchPayload>;
   copySketchFolder?: Maybe<CopySketchFolderPayload>;
   copySketchTocItem?: Maybe<CopySketchTocItemResults>;
@@ -6849,6 +6917,7 @@ export type Mutation = {
   /** Ban a user from posting in the discussion forum */
   disableForumPosting?: Maybe<DisableForumPostingPayload>;
   dismissFailedJob?: Maybe<DismissFailedJobPayload>;
+  duplicateTableOfContentsItem?: Maybe<DuplicateTableOfContentsItemPayload>;
   enableDownloadForEligibleLayers?: Maybe<EnableDownloadForEligibleLayersPayload>;
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
@@ -7254,6 +7323,12 @@ export type MutationConvertEsriFeatureLayerToSeasketchHostedArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopyAppearanceArgs = {
   input: CopyAppearanceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCopyDataLibraryTemplateItemArgs = {
+  input: CopyDataLibraryTemplateItemInput;
 };
 
 
@@ -7874,6 +7949,12 @@ export type MutationDisableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDismissFailedJobArgs = {
   input: DismissFailedJobInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDuplicateTableOfContentsItemArgs = {
+  input: DuplicateTableOfContentsItemInput;
 };
 
 
@@ -13055,6 +13136,7 @@ export type TableOfContentsItem = Node & {
    */
   computedMetadata?: Maybe<Scalars['JSON']>;
   containedBy?: Maybe<Array<Maybe<TableOfContentsItem>>>;
+  copiedFromDataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
   dataLayer?: Maybe<DataLayer>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
@@ -17081,7 +17163,7 @@ export type GetFolderQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'title' | 'hideChildren'>
+    & Pick<TableOfContentsItem, 'id' | 'bounds' | 'isClickOffOnly' | 'showRadioChildren' | 'title' | 'stableId' | 'hideChildren'>
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'nodeId' | 'id'>
@@ -17159,7 +17241,7 @@ export type FullAdminDataLayerFragment = (
 
 export type FullAdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'copiedFromDataLibraryTemplateId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -17431,6 +17513,17 @@ export type GetMetadataQuery = (
     & { metadataXml?: Maybe<(
       { __typename?: 'DataUploadOutput' }
       & MetadataXmlFileFragment
+    )>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id'>
+        & { outputs?: Maybe<Array<(
+          { __typename?: 'DataUploadOutput' }
+          & Pick<DataUploadOutput, 'id' | 'createdAt'>
+        )>> }
+      )> }
     )> }
   )> }
 );
@@ -17855,6 +17948,39 @@ export type EstimatedDataHostingQuotaUsageQuery = (
     & { estimateDeletedDataForRetentionChange?: Maybe<(
       { __typename?: 'RetentionChangeEstimate' }
       & Pick<RetentionChangeEstimate, 'bytes' | 'numSources'>
+    )> }
+  )> }
+);
+
+export type CopyDataLibraryTemplateMutationVariables = Exact<{
+  slug: Scalars['String'];
+  templateId: Scalars['String'];
+}>;
+
+
+export type CopyDataLibraryTemplateMutation = (
+  { __typename?: 'Mutation' }
+  & { copyDataLibraryTemplateItem?: Maybe<(
+    { __typename?: 'CopyDataLibraryTemplateItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & FullAdminOverlayFragment
+    )> }
+  )> }
+);
+
+export type DuplicateTableOfContentsItemMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DuplicateTableOfContentsItemMutation = (
+  { __typename?: 'Mutation' }
+  & { duplicateTableOfContentsItem?: Maybe<(
+    { __typename?: 'DuplicateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & FullAdminOverlayFragment
     )> }
   )> }
 );
@@ -21855,6 +21981,7 @@ export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
   title
   enableDownload
   geoprocessingReferenceId
+  copiedFromDataLibraryTemplateId
   primaryDownloadUrl
   projectBackgroundJobs {
     id
@@ -23737,6 +23864,7 @@ export const GetFolderDocument = /*#__PURE__*/ gql`
     isClickOffOnly
     showRadioChildren
     title
+    stableId
     hideChildren
     acl {
       nodeId
@@ -23977,6 +24105,16 @@ export const GetMetadataDocument = /*#__PURE__*/ gql`
       ...MetadataXmlFile
     }
     metadataFormat
+    dataLayer {
+      id
+      dataSource {
+        id
+        outputs {
+          id
+          createdAt
+        }
+      }
+    }
   }
 }
     ${MetadataXmlFileFragmentDoc}`;
@@ -24286,6 +24424,26 @@ export const EstimatedDataHostingQuotaUsageDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CopyDataLibraryTemplateDocument = /*#__PURE__*/ gql`
+    mutation CopyDataLibraryTemplate($slug: String!, $templateId: String!) {
+  copyDataLibraryTemplateItem(
+    input: {projectSlug: $slug, templateId: $templateId}
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}`;
+export const DuplicateTableOfContentsItemDocument = /*#__PURE__*/ gql`
+    mutation DuplicateTableOfContentsItem($id: Int!) {
+  duplicateTableOfContentsItem(input: {itemId: $id}) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -26532,6 +26690,8 @@ export const namedOperations = {
     DeleteArchivedDataSource: 'DeleteArchivedDataSource',
     RollbackArchivedDataSource: 'RollbackArchivedDataSource',
     SetProjectDataHostingRetentionPeriod: 'SetProjectDataHostingRetentionPeriod',
+    CopyDataLibraryTemplate: 'CopyDataLibraryTemplate',
+    DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

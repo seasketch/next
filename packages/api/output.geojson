@@ -1,0 +1,4823 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.825,
+          32.35
+        ]
+      },
+      "properties": {
+        "name": "Bermuda",
+        "date": "2024-11-11",
+        "SST": 24.32,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.758,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/bermuda.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/atlantic_ocean.php#bermuda",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.425,
+          23.9
+        ]
+      },
+      "properties": {
+        "name": "Central Bahamas",
+        "date": "2024-11-11",
+        "SST": 28.28,
+        "HotSpot": 0,
+        "DHW": 10.644,
+        "Anomaly": 0.968,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/central_bahamas.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/atlantic_ocean.php#central_bahamas",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.95,
+          26.5
+        ]
+      },
+      "properties": {
+        "name": "Northern Bahamas",
+        "date": "2024-11-11",
+        "SST": 27.09,
+        "HotSpot": 0,
+        "DHW": 1.617,
+        "Anomaly": 0.127,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_bahamas.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/atlantic_ocean.php#northern_bahamas",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -72.725,
+          22
+        ]
+      },
+      "properties": {
+        "name": "Turks and Caicos",
+        "date": "2024-11-11",
+        "SST": 28.8,
+        "HotSpot": 0.21,
+        "DHW": 15.796,
+        "Anomaly": 0.966,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/turks_caicos.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/atlantic_ocean.php#turks_caicos",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -24.025,
+          15.975
+        ]
+      },
+      "properties": {
+        "name": "Cape Verde Islands",
+        "date": "2024-11-11",
+        "SST": 26.86,
+        "HotSpot": 0.69,
+        "DHW": 10.146,
+        "Anomaly": 1.422,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/cape_verde.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_atlantic.php#cape_verde",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.95,
+          0.825
+        ]
+      },
+      "properties": {
+        "name": "Sao Tome and Principe",
+        "date": "2024-11-11",
+        "SST": 28.18,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.827,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/sao_tome_principe.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_atlantic.php#sao_tome_principe",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -80.075,
+          26.3
+        ]
+      },
+      "properties": {
+        "name": "Southeast Florida",
+        "date": "2024-11-11",
+        "SST": 28.12,
+        "HotSpot": 0,
+        "DHW": 5.143,
+        "Anomaly": 1.22,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southeast_florida.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/florida.php#southeast_florida",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.625,
+          24.75
+        ]
+      },
+      "properties": {
+        "name": "Florida Keys",
+        "date": "2024-11-11",
+        "SST": 28.14,
+        "HotSpot": 0,
+        "DHW": 5.757,
+        "Anomaly": 1.547,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/florida_keys.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/florida.php#florida_keys",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -93.975,
+          28.05
+        ]
+      },
+      "properties": {
+        "name": "Flower Garden Banks, Texas",
+        "date": "2024-11-11",
+        "SST": 27.53,
+        "HotSpot": 0,
+        "DHW": 2.413,
+        "Anomaly": 2.705,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/flower_garden.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/gulf_of_mexico.php#flower_garden",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -96.075,
+          20.35
+        ]
+      },
+      "properties": {
+        "name": "Veracruz, Mexico",
+        "date": "2024-11-11",
+        "SST": 28.73,
+        "HotSpot": 0,
+        "DHW": 12.009,
+        "Anomaly": 2.282,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/veracruz.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/gulf_of_mexico.php#veracruz",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -90.325,
+          21.3
+        ]
+      },
+      "properties": {
+        "name": "Yucatan Peninsula",
+        "date": "2024-11-11",
+        "SST": 28.26,
+        "HotSpot": 0.49,
+        "DHW": 17.376,
+        "Anomaly": 1.972,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/yucatan.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/gulf_of_mexico.php#yucatan",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.275,
+          22.65
+        ]
+      },
+      "properties": {
+        "name": "Northwestern Cuba",
+        "date": "2024-11-11",
+        "SST": 28.23,
+        "HotSpot": 0,
+        "DHW": 12.49,
+        "Anomaly": 0.997,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northwestern_cuba.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#northwestern_cuba",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.925,
+          21.225
+        ]
+      },
+      "properties": {
+        "name": "Northeastern Cuba",
+        "date": "2024-11-11",
+        "SST": 28.63,
+        "HotSpot": 0,
+        "DHW": 14.46,
+        "Anomaly": 0.607,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northeastern_cuba.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#northeastern_cuba",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.475,
+          21.75
+        ]
+      },
+      "properties": {
+        "name": "Southwestern Cuba",
+        "date": "2024-11-11",
+        "SST": 29.09,
+        "HotSpot": 0,
+        "DHW": 9.173,
+        "Anomaly": 1.113,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southwestern_cuba.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#southwestern_cuba",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.025,
+          20.675
+        ]
+      },
+      "properties": {
+        "name": "Southeastern Cuba",
+        "date": "2024-11-11",
+        "SST": 29.32,
+        "HotSpot": 0.01,
+        "DHW": 13.86,
+        "Anomaly": 0.78,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southeastern_cuba.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#southeastern_cuba",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -80.575,
+          19.5
+        ]
+      },
+      "properties": {
+        "name": "Cayman Islands",
+        "date": "2024-11-11",
+        "SST": 29.28,
+        "HotSpot": 0.05,
+        "DHW": 8.734,
+        "Anomaly": 1.01,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/cayman_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#cayman_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -77.25,
+          17.675
+        ]
+      },
+      "properties": {
+        "name": "Jamaica",
+        "date": "2024-11-11",
+        "SST": 29.75,
+        "HotSpot": 1.1,
+        "DHW": 18.647,
+        "Anomaly": 1.402,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/jamaica.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#jamaica",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -70.675,
+          19.325
+        ]
+      },
+      "properties": {
+        "name": "Northern Hispaniola",
+        "date": "2024-11-11",
+        "SST": 29.26,
+        "HotSpot": 0.9,
+        "DHW": 17.834,
+        "Anomaly": 1.347,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_hispaniola.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#northern_hispaniola",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.775,
+          18.65
+        ]
+      },
+      "properties": {
+        "name": "Southern Hispaniola",
+        "date": "2024-11-11",
+        "SST": 29.82,
+        "HotSpot": 1.24,
+        "DHW": 21.324,
+        "Anomaly": 1.533,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_hispaniola.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#southern_hispaniola",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.625,
+          18.2
+        ]
+      },
+      "properties": {
+        "name": "Puerto Rico",
+        "date": "2024-11-11",
+        "SST": 29.52,
+        "HotSpot": 0.9,
+        "DHW": 21.009,
+        "Anomaly": 1.356,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/puerto_rico.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#puerto_rico",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -64.55,
+          18.2
+        ]
+      },
+      "properties": {
+        "name": "Virgin Islands",
+        "date": "2024-11-11",
+        "SST": 29.66,
+        "HotSpot": 1.14,
+        "DHW": 22.291,
+        "Anomaly": 1.686,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/usvi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#usvi",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -62.325,
+          16.775
+        ]
+      },
+      "properties": {
+        "name": "Leeward Caribbean Islands",
+        "date": "2024-11-11",
+        "SST": 29.76,
+        "HotSpot": 1.39,
+        "DHW": 23.14,
+        "Anomaly": 1.704,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/leeward_caribbean.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#leeward_caribbean",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.475,
+          13.4
+        ]
+      },
+      "properties": {
+        "name": "Windward Caribbean Islands",
+        "date": "2024-11-11",
+        "SST": 29.94,
+        "HotSpot": 1.65,
+        "DHW": 24.41,
+        "Anomaly": 2.005,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/windward_caribbean.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#windward_caribbean",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -60.725,
+          10.875
+        ]
+      },
+      "properties": {
+        "name": "Trinidad and Tobago",
+        "date": "2024-11-11",
+        "SST": 29.92,
+        "HotSpot": 1.47,
+        "DHW": 24.474,
+        "Anomaly": 2.063,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/trinidad_tobago.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#trinidad_tobago",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -66.275,
+          10.625
+        ]
+      },
+      "properties": {
+        "name": "Nearshore Venezuela",
+        "date": "2024-11-11",
+        "SST": 29.47,
+        "HotSpot": 2.1,
+        "DHW": 26.503,
+        "Anomaly": 2.257,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/nearshore_venezuela.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#nearshore_venezuela",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -65.35,
+          11.425
+        ]
+      },
+      "properties": {
+        "name": "Offshore Venezuela",
+        "date": "2024-11-11",
+        "SST": 28.89,
+        "HotSpot": 1.92,
+        "DHW": 26.646,
+        "Anomaly": 2.26,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/offshore_venezuela.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#offshore_venezuela",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -69.125,
+          12.3
+        ]
+      },
+      "properties": {
+        "name": "Aruba, Curacao, and Bonaire",
+        "date": "2024-11-11",
+        "SST": 29.69,
+        "HotSpot": 1.57,
+        "DHW": 23.921,
+        "Anomaly": 1.814,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/abc_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#abc_islands",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -71.925,
+          12.075
+        ]
+      },
+      "properties": {
+        "name": "La Guajira, Colombia",
+        "date": "2024-11-11",
+        "SST": 29.59,
+        "HotSpot": 2.18,
+        "DHW": 24.307,
+        "Anomaly": 2.65,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/la_guajira.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#la_guajira",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -75.525,
+          9.925
+        ]
+      },
+      "properties": {
+        "name": "Colombia Atlantic",
+        "date": "2024-11-11",
+        "SST": 29.5,
+        "HotSpot": 0.9,
+        "DHW": 19.043,
+        "Anomaly": 1.218,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/colombia_atlantic.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#colombia_atlantic",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -78.7,
+          9.2
+        ]
+      },
+      "properties": {
+        "name": "Panama Atlantic East",
+        "date": "2024-11-11",
+        "SST": 29.56,
+        "HotSpot": 1.12,
+        "DHW": 17.376,
+        "Anomaly": 1.373,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/panama_atlantic_east.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#panama_atlantic_east",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.65,
+          9.2
+        ]
+      },
+      "properties": {
+        "name": "Panama Atlantic West",
+        "date": "2024-11-11",
+        "SST": 29.12,
+        "HotSpot": 0.71,
+        "DHW": 17.936,
+        "Anomaly": 0.919,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/panama_atlantic_west.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#panama_atlantic_west",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.85,
+          9.9
+        ]
+      },
+      "properties": {
+        "name": "Costa Rica Atlantic",
+        "date": "2024-11-11",
+        "SST": 29.22,
+        "HotSpot": 0.78,
+        "DHW": 15.011,
+        "Anomaly": 1.128,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/costa_rica_atlantic.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#costa_rica_atlantic",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -81.75,
+          14.125
+        ]
+      },
+      "properties": {
+        "name": "Nicaragua",
+        "date": "2024-11-11",
+        "SST": 29.88,
+        "HotSpot": 1.48,
+        "DHW": 22.141,
+        "Anomaly": 1.68,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/nicaragua.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#nicaragua",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -85.85,
+          16.7
+        ]
+      },
+      "properties": {
+        "name": "Honduras",
+        "date": "2024-11-11",
+        "SST": 29.7,
+        "HotSpot": 0.81,
+        "DHW": 16.327,
+        "Anomaly": 1.759,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/honduras.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#honduras",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -88.075,
+          17.025
+        ]
+      },
+      "properties": {
+        "name": "Belize",
+        "date": "2024-11-11",
+        "SST": 29.63,
+        "HotSpot": 0.89,
+        "DHW": 16.387,
+        "Anomaly": 1.689,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/belize.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#belize",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -87.4,
+          19.925
+        ]
+      },
+      "properties": {
+        "name": "Quintana Roo, Mexico",
+        "date": "2024-11-11",
+        "SST": 29.59,
+        "HotSpot": 0.81,
+        "DHW": 14.197,
+        "Anomaly": 1.715,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/quintana_roo.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/caribbean.php#quintana_roo",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -33.1,
+          -3.875
+        ]
+      },
+      "properties": {
+        "name": "Fernando de Noronha, Brazil",
+        "date": "2024-11-11",
+        "SST": 27.02,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.417,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/fernando_de_noronha.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#fernando_de_noronha",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -35.125,
+          -6.1
+        ]
+      },
+      "properties": {
+        "name": "Maracajau, Brazil",
+        "date": "2024-11-11",
+        "SST": 27.59,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.514,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/maracajau.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#maracajau",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -35.525,
+          -9.25
+        ]
+      },
+      "properties": {
+        "name": "Costa dos Corais, Brazil",
+        "date": "2024-11-11",
+        "SST": 27.39,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.064,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/costa_dos_corais.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#costa_dos_corais",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -38.375,
+          -13.375
+        ]
+      },
+      "properties": {
+        "name": "Todos os Santos, Brazil",
+        "date": "2024-11-11",
+        "SST": 27.53,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.255,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/todos_os_santos.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#todos_os_santos",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -39,
+          -17.225
+        ]
+      },
+      "properties": {
+        "name": "Abrolhos Reefs, Brazil",
+        "date": "2024-11-11",
+        "SST": 26.68,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.261,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/abrolhos_reefs.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#abrolhos_reefs",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -29.125,
+          -20.475
+        ]
+      },
+      "properties": {
+        "name": "Trinadade and Martim Vaz, Brazil",
+        "date": "2024-11-11",
+        "SST": 25.33,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.782,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/trinadade_martim_vaz.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#trinadade_martim_vaz",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -41.8,
+          -22.725
+        ]
+      },
+      "properties": {
+        "name": "Buzios, Brazil",
+        "date": "2024-11-11",
+        "SST": 23.14,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.612,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/buzios.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/brazil.php#buzios",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -87.75,
+          13.175
+        ]
+      },
+      "properties": {
+        "name": "El Salvador",
+        "date": "2024-11-11",
+        "SST": 29.04,
+        "HotSpot": 0,
+        "DHW": 6.499,
+        "Anomaly": 0.322,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/el_salvador.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#el_salvador",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -109.2,
+          10.3
+        ]
+      },
+      "properties": {
+        "name": "Clipperton Island, France",
+        "date": "2024-11-11",
+        "SST": 27.41,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": -0.272,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/clipperton_island.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#clipperton_island",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -84.425,
+          9.5
+        ]
+      },
+      "properties": {
+        "name": "Costa Rica Pacific",
+        "date": "2024-11-11",
+        "SST": 28.3,
+        "HotSpot": 0,
+        "DHW": 2.181,
+        "Anomaly": 0.54,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/costa_rica_pacific.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#costa_rica_pacific",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -82.25,
+          7.725
+        ]
+      },
+      "properties": {
+        "name": "Panama Pacific West",
+        "date": "2024-11-11",
+        "SST": 28.12,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.132,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/panama_pacific_west.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#panama_pacific_west",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -79.325,
+          8.175
+        ]
+      },
+      "properties": {
+        "name": "Panama Pacific East",
+        "date": "2024-11-11",
+        "SST": 27.84,
+        "HotSpot": 0,
+        "DHW": 5.131,
+        "Anomaly": 0.38,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/panama_pacific_east.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#panama_pacific_east",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -87.075,
+          5.55
+        ]
+      },
+      "properties": {
+        "name": "Isla del Coco, Costa Rica",
+        "date": "2024-11-11",
+        "SST": 26.98,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.206,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/isla_del_coco.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#isla_del_coco",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -90.625,
+          0.15
+        ]
+      },
+      "properties": {
+        "name": "Galapagos, Ecuador",
+        "date": "2024-11-11",
+        "SST": 25.14,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.768,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/galapagos.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/eastern_pacific.php#galapagos",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -170.125,
+          25.675
+        ]
+      },
+      "properties": {
+        "name": "Northwestern Hawaiian Islands",
+        "date": "2024-11-11",
+        "SST": 27.02,
+        "HotSpot": 0,
+        "DHW": 1.27,
+        "Anomaly": 1.29,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/nwhi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#nwhi",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -157.7,
+          20.575
+        ]
+      },
+      "properties": {
+        "name": "Main Hawaiian Islands",
+        "date": "2024-11-11",
+        "SST": 26.35,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.077,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/hawaii.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#hawaii",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -159.8,
+          3.025
+        ]
+      },
+      "properties": {
+        "name": "Northern Line Islands",
+        "date": "2024-11-11",
+        "SST": 28.73,
+        "HotSpot": 0.24,
+        "DHW": 0,
+        "Anomaly": 0.292,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_line_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#northern_line_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -153.075,
+          -7.7
+        ]
+      },
+      "properties": {
+        "name": "Southern Line Islands",
+        "date": "2024-11-11",
+        "SST": 28.96,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.514,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_line_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#southern_line_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          177.975,
+          -7.525
+        ]
+      },
+      "properties": {
+        "name": "Tuvalu",
+        "date": "2024-11-11",
+        "SST": 30.51,
+        "HotSpot": 0.73,
+        "DHW": 0,
+        "Anomaly": 1.021,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/tuvalu.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#tuvalu",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -165.2,
+          -10.95
+        ]
+      },
+      "properties": {
+        "name": "Northern Cook Islands",
+        "date": "2024-11-11",
+        "SST": 29.91,
+        "HotSpot": 0.53,
+        "DHW": 0,
+        "Anomaly": 0.75,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_cook_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#northern_cook_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -170.475,
+          -12.825
+        ]
+      },
+      "properties": {
+        "name": "Samoas",
+        "date": "2024-11-11",
+        "SST": 28.93,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.702,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/samoas.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#samoas",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -176.9,
+          -13.625
+        ]
+      },
+      "properties": {
+        "name": "Wallis and Futuna",
+        "date": "2024-11-11",
+        "SST": 29.1,
+        "HotSpot": 0.01,
+        "DHW": 0,
+        "Anomaly": 0.544,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/wallis_futuna.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#wallis_futuna",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -175.2,
+          -15.8
+        ]
+      },
+      "properties": {
+        "name": "Northern Tonga",
+        "date": "2024-11-11",
+        "SST": 28.37,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.805,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_tonga.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#northern_tonga",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -175.05,
+          -19.95
+        ]
+      },
+      "properties": {
+        "name": "Southern Tonga",
+        "date": "2024-11-11",
+        "SST": 26.33,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.791,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_tonga.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#southern_tonga",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -163.625,
+          -19.975
+        ]
+      },
+      "properties": {
+        "name": "Southern Cook Islands",
+        "date": "2024-11-11",
+        "SST": 26.85,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.206,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_cook_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#southern_cook_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -139.625,
+          -9.275
+        ]
+      },
+      "properties": {
+        "name": "Marquesas Islands",
+        "date": "2024-11-11",
+        "SST": 27.72,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.056,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/marquesas_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#marquesas_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -141.5,
+          -18.975
+        ]
+      },
+      "properties": {
+        "name": "Tuamotu Archipelago",
+        "date": "2024-11-11",
+        "SST": 28.2,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.003,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/tuamotu_archipelago.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#tuamotu_archipelago",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -151.375,
+          -16.95
+        ]
+      },
+      "properties": {
+        "name": "Society Archipelago",
+        "date": "2024-11-11",
+        "SST": 28.11,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.812,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/society_archipelago.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#society_archipelago",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -149.1,
+          -24.825
+        ]
+      },
+      "properties": {
+        "name": "Austral Islands",
+        "date": "2024-11-11",
+        "SST": 24.08,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.386,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/austral_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#austral_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -129.575,
+          -24.35
+        ]
+      },
+      "properties": {
+        "name": "Pitcairn Islands",
+        "date": "2024-11-11",
+        "SST": 23.9,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.778,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/pitcairn.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#pitcairn",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -109.325,
+          -27.175
+        ]
+      },
+      "properties": {
+        "name": "Easter Island, Chile",
+        "date": "2024-11-11",
+        "SST": 21.02,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": -0.419,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/easter_island.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/polynesia.php#easter_island",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          166.8,
+          19.3
+        ]
+      },
+      "properties": {
+        "name": "Wake Atoll",
+        "date": "2024-11-11",
+        "SST": 28.94,
+        "HotSpot": 0.22,
+        "DHW": 0.286,
+        "Anomaly": 1.276,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/wake_atoll.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/us_pacific_remote_islands.php#wake_atoll",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -169.475,
+          16.7
+        ]
+      },
+      "properties": {
+        "name": "Johnston Atoll",
+        "date": "2024-11-11",
+        "SST": 27.83,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.343,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/johnston_atoll.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/us_pacific_remote_islands.php#johnston_atoll",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -176.525,
+          0.5
+        ]
+      },
+      "properties": {
+        "name": "Howland and Baker",
+        "date": "2024-11-11",
+        "SST": 28.84,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.421,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/howland_baker.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/us_pacific_remote_islands.php#howland_baker",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          166.8,
+          19.3
+        ]
+      },
+      "properties": {
+        "name": "Wake Atoll",
+        "date": "2024-11-11",
+        "SST": 28.94,
+        "HotSpot": 0.22,
+        "DHW": 0.286,
+        "Anomaly": 1.276,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/wake_atoll.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#wake_atoll",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          145.55,
+          17.25
+        ]
+      },
+      "properties": {
+        "name": "Northern Mariana Islands",
+        "date": "2024-11-11",
+        "SST": 29.48,
+        "HotSpot": 0.37,
+        "DHW": 3.12,
+        "Anomaly": 0.772,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_cnmi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#northern_cnmi",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          144.625,
+          13.15
+        ]
+      },
+      "properties": {
+        "name": "Guam",
+        "date": "2024-11-11",
+        "SST": 29.57,
+        "HotSpot": 0.5,
+        "DHW": 7.421,
+        "Anomaly": 0.784,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/guam.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#guam",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          139.45,
+          9.1
+        ]
+      },
+      "properties": {
+        "name": "Western FSM",
+        "date": "2024-11-11",
+        "SST": 30.12,
+        "HotSpot": 0.95,
+        "DHW": 10.874,
+        "Anomaly": 0.969,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_fsm.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#western_fsm",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          134.425,
+          7.675
+        ]
+      },
+      "properties": {
+        "name": "Palau",
+        "date": "2024-11-11",
+        "SST": 30.51,
+        "HotSpot": 1.3,
+        "DHW": 8.414,
+        "Anomaly": 1.401,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/palau.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#palau",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          153,
+          5.15
+        ]
+      },
+      "properties": {
+        "name": "Eastern FSM",
+        "date": "2024-11-11",
+        "SST": 30.51,
+        "HotSpot": 1.1,
+        "DHW": 17.27,
+        "Anomaly": 1.121,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eastern_fsm.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#eastern_fsm",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          167.1,
+          8.45
+        ]
+      },
+      "properties": {
+        "name": "Marshall Islands",
+        "date": "2024-11-11",
+        "SST": 30.28,
+        "HotSpot": 0.94,
+        "DHW": 12.663,
+        "Anomaly": 1.123,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/marshall_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#marshall_islands",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          173.2,
+          0.35
+        ]
+      },
+      "properties": {
+        "name": "Gilbert Islands, Kiribati",
+        "date": "2024-11-11",
+        "SST": 29.89,
+        "HotSpot": 0.67,
+        "DHW": 1.456,
+        "Anomaly": 0.783,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gilbert_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#gilbert_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          166.925,
+          -0.525
+        ]
+      },
+      "properties": {
+        "name": "Nauru",
+        "date": "2024-11-11",
+        "SST": 29.69,
+        "HotSpot": 0.4,
+        "DHW": 0.296,
+        "Anomaly": 0.436,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/nauru.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#nauru",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -176.525,
+          0.5
+        ]
+      },
+      "properties": {
+        "name": "Howland and Baker",
+        "date": "2024-11-11",
+        "SST": 28.84,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.421,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/howland_baker.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#howland_baker",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          -172.825,
+          -3.15
+        ]
+      },
+      "properties": {
+        "name": "Phoenix Islands, Kiribati",
+        "date": "2024-11-11",
+        "SST": 29.54,
+        "HotSpot": 0.21,
+        "DHW": 0,
+        "Anomaly": 0.419,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/phoenix_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/micronesia.php#phoenix_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          133.9,
+          -1.625
+        ]
+      },
+      "properties": {
+        "name": "West Papua",
+        "date": "2024-11-11",
+        "SST": 30.76,
+        "HotSpot": 1.23,
+        "DHW": 9.281,
+        "Anomaly": 1.334,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_papua.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#west_papua",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          151.15,
+          -6.425
+        ]
+      },
+      "properties": {
+        "name": "Papua New Guinea",
+        "date": "2024-11-11",
+        "SST": 30.7,
+        "HotSpot": 1.18,
+        "DHW": 7.951,
+        "Anomaly": 1.251,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_3_to_3.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/papua_new_guinea.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#papua_new_guinea",
+        "alertLevel": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          162.175,
+          -8.7
+        ]
+      },
+      "properties": {
+        "name": "Solomon Islands",
+        "date": "2024-11-11",
+        "SST": 30.11,
+        "HotSpot": 0.77,
+        "DHW": 0,
+        "Anomaly": 1.324,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/solomon_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#solomon_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          179.35,
+          -16.775
+        ]
+      },
+      "properties": {
+        "name": "Fiji",
+        "date": "2024-11-11",
+        "SST": 28.08,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.877,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/fiji.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#fiji",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          168.375,
+          -16.65
+        ]
+      },
+      "properties": {
+        "name": "Vanuatu",
+        "date": "2024-11-11",
+        "SST": 28.69,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.157,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/vanuatu.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#vanuatu",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          165.975,
+          -20.75
+        ]
+      },
+      "properties": {
+        "name": "Eastern New Caledonia",
+        "date": "2024-11-11",
+        "SST": 26.6,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.962,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eastern_new_caledonia.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#eastern_new_caledonia",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          165.075,
+          -21.025
+        ]
+      },
+      "properties": {
+        "name": "Western New Caledonia",
+        "date": "2024-11-11",
+        "SST": 24.34,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.919,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_new_caledonia.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#western_new_caledonia",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          158.9,
+          -20.4
+        ]
+      },
+      "properties": {
+        "name": "Chesterfield Islands",
+        "date": "2024-11-11",
+        "SST": 25.93,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.823,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/chesterfield_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/melanesia.php#chesterfield_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          142.175,
+          27.125
+        ]
+      },
+      "properties": {
+        "name": "Ogasawara Islands",
+        "date": "2024-11-11",
+        "SST": 27.35,
+        "HotSpot": 0,
+        "DHW": 4.576,
+        "Anomaly": 1.788,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/ogasawara.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#ogasawara",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          93.5,
+          18.15
+        ]
+      },
+      "properties": {
+        "name": "Northern Myanmar",
+        "date": "2024-11-11",
+        "SST": 29.57,
+        "HotSpot": 0.34,
+        "DHW": 4.92,
+        "Anomaly": 0.932,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_3_to_3.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_myanmar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#northern_myanmar",
+        "alertLevel": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          93.15,
+          12.725
+        ]
+      },
+      "properties": {
+        "name": "Andaman, India",
+        "date": "2024-11-11",
+        "SST": 29.48,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.2,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/andaman.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#andaman",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.9,
+          12.175
+        ]
+      },
+      "properties": {
+        "name": "Southern Myanmar",
+        "date": "2024-11-11",
+        "SST": 29.66,
+        "HotSpot": 0.11,
+        "DHW": 0,
+        "Anomaly": 1.338,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_myanmar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#southern_myanmar",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          93.325,
+          8.025
+        ]
+      },
+      "properties": {
+        "name": "Great Nicobar, India",
+        "date": "2024-11-11",
+        "SST": 29.7,
+        "HotSpot": 0.21,
+        "DHW": 0,
+        "Anomaly": 1.631,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/great_nicobar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#great_nicobar",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          98.875,
+          7.675
+        ]
+      },
+      "properties": {
+        "name": "Southwestern Thailand",
+        "date": "2024-11-11",
+        "SST": 29.92,
+        "HotSpot": 0.32,
+        "DHW": 0,
+        "Anomaly": 1.441,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southwestern_thailand.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#southwestern_thailand",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          101.35,
+          3.225
+        ]
+      },
+      "properties": {
+        "name": "Malacca Strait, Malaysia",
+        "date": "2024-11-11",
+        "SST": 30.52,
+        "HotSpot": 0.49,
+        "DHW": 0.146,
+        "Anomaly": 1.556,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/malacca_strait.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#malacca_strait",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          102.5,
+          11.25
+        ]
+      },
+      "properties": {
+        "name": "Eastern Gulf of Thailand",
+        "date": "2024-11-11",
+        "SST": 30.31,
+        "HotSpot": 0.16,
+        "DHW": 0,
+        "Anomaly": 1.512,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/east_gulf_of_thailand.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#east_gulf_of_thailand",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          99.75,
+          10.9
+        ]
+      },
+      "properties": {
+        "name": "Western Gulf of Thailand",
+        "date": "2024-11-11",
+        "SST": 29.53,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.237,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_gulf_of_thailand.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#west_gulf_of_thailand",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.75,
+          7.95
+        ]
+      },
+      "properties": {
+        "name": "Spratly Islands",
+        "date": "2024-11-11",
+        "SST": 30,
+        "HotSpot": 0.41,
+        "DHW": 1.269,
+        "Anomaly": 1.293,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/spratly_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#spratly_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          114.675,
+          5.025
+        ]
+      },
+      "properties": {
+        "name": "Brunei Darussalam",
+        "date": "2024-11-11",
+        "SST": 30.43,
+        "HotSpot": 0.67,
+        "DHW": 0.791,
+        "Anomaly": 1.083,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/brunei_darussalam.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#brunei_darussalam",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.425,
+          3.85
+        ]
+      },
+      "properties": {
+        "name": "Northern Borneo, Malaysia",
+        "date": "2024-11-11",
+        "SST": 30.13,
+        "HotSpot": 0.42,
+        "DHW": 0.769,
+        "Anomaly": 1.094,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_borneo.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#northern_borneo",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          103.15,
+          5.375
+        ]
+      },
+      "properties": {
+        "name": "Terengganu, Malaysia",
+        "date": "2024-11-11",
+        "SST": 30.13,
+        "HotSpot": 0.51,
+        "DHW": 0,
+        "Anomaly": 1.625,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/terengganu.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#terengganu",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          107.4,
+          2.475
+        ]
+      },
+      "properties": {
+        "name": "Riau Islands",
+        "date": "2024-11-11",
+        "SST": 30.34,
+        "HotSpot": 0.55,
+        "DHW": 0,
+        "Anomaly": 1.138,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/riau_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#riau_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          104.2,
+          2.25
+        ]
+      },
+      "properties": {
+        "name": "Johor and Pahang, Malaysia",
+        "date": "2024-11-11",
+        "SST": 30.6,
+        "HotSpot": 1,
+        "DHW": 0.143,
+        "Anomaly": 1.591,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/johor_pahang.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#johor_pahang",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          104.15,
+          0.2
+        ]
+      },
+      "properties": {
+        "name": "Singapore Strait",
+        "date": "2024-11-11",
+        "SST": 30.38,
+        "HotSpot": 0.7,
+        "DHW": 0,
+        "Anomaly": 1.528,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/singapore.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#singapore",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          109.375,
+          -1.05
+        ]
+      },
+      "properties": {
+        "name": "West Kalimantan",
+        "date": "2024-11-11",
+        "SST": 30.59,
+        "HotSpot": 0.92,
+        "DHW": 0.627,
+        "Anomaly": 1.218,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_kalimanta.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#west_kalimanta",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          107,
+          -2.3
+        ]
+      },
+      "properties": {
+        "name": "Bangka-Belitung Islands",
+        "date": "2024-11-11",
+        "SST": 30.28,
+        "HotSpot": 0.66,
+        "DHW": 0.147,
+        "Anomaly": 0.97,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/bangka_belitung.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#bangka_belitung",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          97.225,
+          2.95
+        ]
+      },
+      "properties": {
+        "name": "Northwestern Sumatra",
+        "date": "2024-11-11",
+        "SST": 30.08,
+        "HotSpot": 0.65,
+        "DHW": 0.294,
+        "Anomaly": 1.932,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northwestern_sumatra.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#northwestern_sumatra",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          100.4,
+          -2.875
+        ]
+      },
+      "properties": {
+        "name": "Southwestern Sumatra",
+        "date": "2024-11-11",
+        "SST": 30.03,
+        "HotSpot": 0.81,
+        "DHW": 0.294,
+        "Anomaly": 2.426,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southwestern_sumatra.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#southwestern_sumatra",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.075,
+          -5.925
+        ]
+      },
+      "properties": {
+        "name": "Lampung and Banten",
+        "date": "2024-11-11",
+        "SST": 30.12,
+        "HotSpot": 0.76,
+        "DHW": 0.466,
+        "Anomaly": 0.837,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/lampung_banten.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#lampung_banten",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          109.525,
+          -6.225
+        ]
+      },
+      "properties": {
+        "name": "Northern Java",
+        "date": "2024-11-11",
+        "SST": 30.63,
+        "HotSpot": 1.23,
+        "DHW": 2.263,
+        "Anomaly": 1.372,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_java.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#northern_java",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          108.4,
+          -7.65
+        ]
+      },
+      "properties": {
+        "name": "Southern Java",
+        "date": "2024-11-11",
+        "SST": 29.31,
+        "HotSpot": 0.58,
+        "DHW": 0,
+        "Anomaly": 1.807,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_java.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/southeast_asia.php#southern_java",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          129,
+          28.3
+        ]
+      },
+      "properties": {
+        "name": "Northern Ryukyu Islands, Japan",
+        "date": "2024-11-11",
+        "SST": 27.71,
+        "HotSpot": 0,
+        "DHW": 7.133,
+        "Anomaly": 2.385,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_ryukyu_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#northern_ryukyu_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          124.2,
+          24.975
+        ]
+      },
+      "properties": {
+        "name": "Southern Ryukyu Islands, Japan",
+        "date": "2024-11-11",
+        "SST": 27.66,
+        "HotSpot": 0,
+        "DHW": 7.274,
+        "Anomaly": 1.787,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_ryukyu_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#southern_ryukyu_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.725,
+          25.1
+        ]
+      },
+      "properties": {
+        "name": "Northern Taiwan",
+        "date": "2024-11-11",
+        "SST": 25.07,
+        "HotSpot": 0,
+        "DHW": 6.701,
+        "Anomaly": 0.744,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_taiwan.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#northern_taiwan",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          120.55,
+          22.875
+        ]
+      },
+      "properties": {
+        "name": "Southern Taiwan",
+        "date": "2024-11-11",
+        "SST": 27.53,
+        "HotSpot": 0,
+        "DHW": 7.739,
+        "Anomaly": 1,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_taiwan.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#southern_taiwan",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.225,
+          20.975
+        ]
+      },
+      "properties": {
+        "name": "Dongsha, Taiwan",
+        "date": "2024-11-11",
+        "SST": 26.62,
+        "HotSpot": 0,
+        "DHW": 7.733,
+        "Anomaly": 1.138,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/dongsha.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#dongsha",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          114.375,
+          22.25
+        ]
+      },
+      "properties": {
+        "name": "Hong Kong, China",
+        "date": "2024-11-11",
+        "SST": 25.22,
+        "HotSpot": 0,
+        "DHW": 6.471,
+        "Anomaly": 1.49,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/hong_kong.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#hong_kong",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          109.85,
+          19.125
+        ]
+      },
+      "properties": {
+        "name": "Hainan Island, China",
+        "date": "2024-11-11",
+        "SST": 26.79,
+        "HotSpot": 0,
+        "DHW": 6.716,
+        "Anomaly": 0.35,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/hainan_island.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#hainan_island",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          112.025,
+          16.45
+        ]
+      },
+      "properties": {
+        "name": "Paracel Islands, China",
+        "date": "2024-11-11",
+        "SST": 28.52,
+        "HotSpot": 0,
+        "DHW": 5.733,
+        "Anomaly": 1.722,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/paracel_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#paracel_islands",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          107.475,
+          18.1
+        ]
+      },
+      "properties": {
+        "name": "Northern Vietnam",
+        "date": "2024-11-11",
+        "SST": 26.6,
+        "HotSpot": 0,
+        "DHW": 6.316,
+        "Anomaly": 0.199,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_vietnam.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#northern_vietnam",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          108.125,
+          11.3
+        ]
+      },
+      "properties": {
+        "name": "Southern Vietnam",
+        "date": "2024-11-11",
+        "SST": 28.73,
+        "HotSpot": 0,
+        "DHW": 4.304,
+        "Anomaly": 1.018,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_vietnam.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/east_asia.php#southern_vietnam",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          121.125,
+          17.75
+        ]
+      },
+      "properties": {
+        "name": "Northern Philippines",
+        "date": "2024-11-11",
+        "SST": 29.51,
+        "HotSpot": 0,
+        "DHW": 3.514,
+        "Anomaly": 0.836,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_philippines.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#northern_philippines",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          122.225,
+          13.95
+        ]
+      },
+      "properties": {
+        "name": "Central Philippines",
+        "date": "2024-11-11",
+        "SST": 29.14,
+        "HotSpot": 0,
+        "DHW": 2.399,
+        "Anomaly": 0.945,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/central_philippines.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#central_philippines",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.225,
+          10.5
+        ]
+      },
+      "properties": {
+        "name": "Western Philippines",
+        "date": "2024-11-11",
+        "SST": 29.84,
+        "HotSpot": 0.45,
+        "DHW": 1.406,
+        "Anomaly": 1.003,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_philippines.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#western_philippines",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          123.9,
+          10.95
+        ]
+      },
+      "properties": {
+        "name": "Eastern Philippines",
+        "date": "2024-11-11",
+        "SST": 30.02,
+        "HotSpot": 0.82,
+        "DHW": 4.379,
+        "Anomaly": 1.294,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eastern_philippines.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#eastern_philippines",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          122.9,
+          7.4
+        ]
+      },
+      "properties": {
+        "name": "Southern Philippines",
+        "date": "2024-11-11",
+        "SST": 30.1,
+        "HotSpot": 0.98,
+        "DHW": 4.88,
+        "Anomaly": 1.334,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_philippines.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#southern_philippines",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          117.2,
+          5.8
+        ]
+      },
+      "properties": {
+        "name": "Sabah, Malaysia",
+        "date": "2024-11-11",
+        "SST": 30.33,
+        "HotSpot": 1.07,
+        "DHW": 2.7,
+        "Anomaly": 1.499,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/sabah.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#sabah",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          125.075,
+          2.575
+        ]
+      },
+      "properties": {
+        "name": "North Sulawesi",
+        "date": "2024-11-11",
+        "SST": 30.53,
+        "HotSpot": 1.31,
+        "DHW": 5.591,
+        "Anomaly": 1.55,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_3_to_3.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/north_sulawesi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#north_sulawesi",
+        "alertLevel": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          123.025,
+          -1.05
+        ]
+      },
+      "properties": {
+        "name": "Central Sulawesi and Gorontalo",
+        "date": "2024-11-11",
+        "SST": 30.4,
+        "HotSpot": 1.11,
+        "DHW": 0.913,
+        "Anomaly": 1.467,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/sulawesi_gorontalo.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#sulawesi_gorontalo",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          117.925,
+          0.625
+        ]
+      },
+      "properties": {
+        "name": "East Kalimantan",
+        "date": "2024-11-11",
+        "SST": 30.26,
+        "HotSpot": 1.12,
+        "DHW": 3.057,
+        "Anomaly": 1.371,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/east_kalimantan.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#east_kalimantan",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.55,
+          -3.575
+        ]
+      },
+      "properties": {
+        "name": "Southern Borneo",
+        "date": "2024-11-11",
+        "SST": 30.57,
+        "HotSpot": 1.23,
+        "DHW": 0.7,
+        "Anomaly": 1.311,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_borneo.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#southern_borneo",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          126.7,
+          0.125
+        ]
+      },
+      "properties": {
+        "name": "North Maluku, Indonesia",
+        "date": "2024-11-11",
+        "SST": 30.37,
+        "HotSpot": 1.26,
+        "DHW": 2.346,
+        "Anomaly": 1.561,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/north_maluku.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#north_maluku",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          133.9,
+          -1.625
+        ]
+      },
+      "properties": {
+        "name": "West Papua",
+        "date": "2024-11-11",
+        "SST": 30.76,
+        "HotSpot": 1.23,
+        "DHW": 9.281,
+        "Anomaly": 1.334,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_4.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_papua.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#west_papua",
+        "alertLevel": 5
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          130.425,
+          -5.55
+        ]
+      },
+      "properties": {
+        "name": "Maluku, Indonesia",
+        "date": "2024-11-11",
+        "SST": 30.25,
+        "HotSpot": 1,
+        "DHW": 0.436,
+        "Anomaly": 1.28,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/maluku.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#maluku",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.075,
+          -2.275
+        ]
+      },
+      "properties": {
+        "name": "West Sulawesi",
+        "date": "2024-11-11",
+        "SST": 29.93,
+        "HotSpot": 0.7,
+        "DHW": 0.15,
+        "Anomaly": 0.86,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_sulawesi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#west_sulawesi",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.625,
+          -5.325
+        ]
+      },
+      "properties": {
+        "name": "South Sulawesi",
+        "date": "2024-11-11",
+        "SST": 30.31,
+        "HotSpot": 1.09,
+        "DHW": 1.046,
+        "Anomaly": 1.311,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/south_sulawesi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#south_sulawesi",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          122.75,
+          -5
+        ]
+      },
+      "properties": {
+        "name": "South East Sulawesi",
+        "date": "2024-11-11",
+        "SST": 30.79,
+        "HotSpot": 1.13,
+        "DHW": 0.457,
+        "Anomaly": 1.505,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southeast_sulawesi.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#southeast_sulawesi",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          114.1,
+          -6.95
+        ]
+      },
+      "properties": {
+        "name": "East Java and Bali",
+        "date": "2024-11-11",
+        "SST": 29.69,
+        "HotSpot": 1.2,
+        "DHW": 1.787,
+        "Anomaly": 1.649,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/east_java_bali.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#east_java_bali",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          117.625,
+          -8.625
+        ]
+      },
+      "properties": {
+        "name": "West Nusa Tenggara",
+        "date": "2024-11-11",
+        "SST": 30.36,
+        "HotSpot": 1.28,
+        "DHW": 1,
+        "Anomaly": 1.392,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_nusa_tenggara.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#west_nusa_tenggara",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          122.05,
+          -9.325
+        ]
+      },
+      "properties": {
+        "name": "East Nusa Tenggara",
+        "date": "2024-11-11",
+        "SST": 29.53,
+        "HotSpot": 1.02,
+        "DHW": 0.453,
+        "Anomaly": 1.155,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/east_nusa_tenggara.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#east_nusa_tenggara",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          123.775,
+          -9.925
+        ]
+      },
+      "properties": {
+        "name": "West Timor",
+        "date": "2024-11-11",
+        "SST": 30.06,
+        "HotSpot": 0.95,
+        "DHW": 0,
+        "Anomaly": 1.228,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/west_timor.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#west_timor",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          127.225,
+          -8.325
+        ]
+      },
+      "properties": {
+        "name": "Timor-Leste",
+        "date": "2024-11-11",
+        "SST": 30.06,
+        "HotSpot": 0.59,
+        "DHW": 0,
+        "Anomaly": 0.716,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/timor_leste.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#timor_leste",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          151.15,
+          -6.425
+        ]
+      },
+      "properties": {
+        "name": "Papua New Guinea",
+        "date": "2024-11-11",
+        "SST": 30.7,
+        "HotSpot": 1.18,
+        "DHW": 7.951,
+        "Anomaly": 1.251,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_3_to_3.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/papua_new_guinea.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#papua_new_guinea",
+        "alertLevel": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          162.175,
+          -8.7
+        ]
+      },
+      "properties": {
+        "name": "Solomon Islands",
+        "date": "2024-11-11",
+        "SST": 30.11,
+        "HotSpot": 0.77,
+        "DHW": 0,
+        "Anomaly": 1.324,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/solomon_islands.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/coral_triangle.php#solomon_islands",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          105.575,
+          -10.375
+        ]
+      },
+      "properties": {
+        "name": "Christmas Island, Australia",
+        "date": "2024-11-11",
+        "SST": 28.58,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.551,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/christmas_island.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#christmas_island",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          96.9,
+          -12.025
+        ]
+      },
+      "properties": {
+        "name": "Pulu Keeling, Australia",
+        "date": "2024-11-11",
+        "SST": 27.17,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.601,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/pulu_keeling.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#pulu_keeling",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          138.85,
+          -14.5
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Carpentaria",
+        "date": "2024-11-11",
+        "SST": 30.81,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.282,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_carpentaria.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#gulf_of_carpentaria",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          134.3,
+          -10.975
+        ]
+      },
+      "properties": {
+        "name": "Northern Territory",
+        "date": "2024-11-11",
+        "SST": 30.52,
+        "HotSpot": 0.2,
+        "DHW": 0,
+        "Anomaly": 0.653,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_territory.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#northern_territory",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          130.425,
+          -12.775
+        ]
+      },
+      "properties": {
+        "name": "Beagle Gulf",
+        "date": "2024-11-11",
+        "SST": 31.57,
+        "HotSpot": 1.01,
+        "DHW": 1.401,
+        "Anomaly": 1.373,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/beagle_gulf.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#beagle_gulf",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          122.625,
+          -13.475
+        ]
+      },
+      "properties": {
+        "name": "Scott to Ashmore Reefs",
+        "date": "2024-11-11",
+        "SST": 31.6,
+        "HotSpot": 1.99,
+        "DHW": 1.573,
+        "Anomaly": 2.256,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/scott_ashmore.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#scott_ashmore",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          124.775,
+          -15.75
+        ]
+      },
+      "properties": {
+        "name": "North Western Australia",
+        "date": "2024-11-11",
+        "SST": 31.29,
+        "HotSpot": 1.25,
+        "DHW": 0.343,
+        "Anomaly": 2.29,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/north_western_aus.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#north_western_aus",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          119.25,
+          -17.325
+        ]
+      },
+      "properties": {
+        "name": "Rowley Shoals",
+        "date": "2024-11-11",
+        "SST": 30.25,
+        "HotSpot": 0.46,
+        "DHW": 0,
+        "Anomaly": 2.734,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/rowley_shoals.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#rowley_shoals",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          116.9,
+          -20.7
+        ]
+      },
+      "properties": {
+        "name": "Central Western Australia",
+        "date": "2024-11-11",
+        "SST": 29.82,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 3.565,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/central_western_aus.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#central_western_aus",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.9,
+          -23.225
+        ]
+      },
+      "properties": {
+        "name": "Ningaloo",
+        "date": "2024-11-11",
+        "SST": 25.54,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.871,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/ningaloo.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#ningaloo",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113,
+          -25.475
+        ]
+      },
+      "properties": {
+        "name": "Shark Bay",
+        "date": "2024-11-11",
+        "SST": 21.79,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.618,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/shark_bay.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#shark_bay",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.95,
+          -26.1
+        ]
+      },
+      "properties": {
+        "name": "Hamelin Pool",
+        "date": "2024-11-11",
+        "SST": 22.8,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.889,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/hamelin_pool.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#hamelin_pool",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          113.85,
+          -28.5
+        ]
+      },
+      "properties": {
+        "name": "Houtman Abrolhos",
+        "date": "2024-11-11",
+        "SST": 21.53,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.934,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/houtman_abrolhos.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#houtman_abrolhos",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.5,
+          -31.925
+        ]
+      },
+      "properties": {
+        "name": "Marmion and Rottnest Island",
+        "date": "2024-11-11",
+        "SST": 19.82,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.746,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/marmion_rottnest.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#marmion_rottnest",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          153.575,
+          -27.075
+        ]
+      },
+      "properties": {
+        "name": "Moreton Bay, Australia",
+        "date": "2024-11-11",
+        "SST": 24.81,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.901,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/moreton_bay.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#moreton_bay",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          159.225,
+          -31.275
+        ]
+      },
+      "properties": {
+        "name": "Lord Howe Island, Australia",
+        "date": "2024-11-11",
+        "SST": 23.28,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 2.832,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/lord_howe_island.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#lord_howe_island",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          167.95,
+          -29.05
+        ]
+      },
+      "properties": {
+        "name": "Norfolk Island, Australia",
+        "date": "2024-11-11",
+        "SST": 21.96,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.717,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/norfolk_island.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/australia.php#norfolk_island",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          143.65,
+          -9.95
+        ]
+      },
+      "properties": {
+        "name": "Torres Strait",
+        "date": "2024-11-11",
+        "SST": 28.07,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.833,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/torres_strait.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#torres_strait",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          144.1,
+          -12.675
+        ]
+      },
+      "properties": {
+        "name": "Far Northern GBR",
+        "date": "2024-11-11",
+        "SST": 28.3,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.366,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gbr_far_northern.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#gbr_far_northern",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          145.975,
+          -16.1
+        ]
+      },
+      "properties": {
+        "name": "Northern GBR",
+        "date": "2024-11-11",
+        "SST": 27.61,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.772,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gbr_northern.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#gbr_northern",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          148.275,
+          -19.225
+        ]
+      },
+      "properties": {
+        "name": "Central GBR",
+        "date": "2024-11-11",
+        "SST": 27.66,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.076,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gbr_central.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#gbr_central",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          151.125,
+          -22.625
+        ]
+      },
+      "properties": {
+        "name": "Southern GBR",
+        "date": "2024-11-11",
+        "SST": 26.02,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.803,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gbr_southern.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#gbr_southern",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          149.35,
+          -16
+        ]
+      },
+      "properties": {
+        "name": "Northern Coral Sea Islands",
+        "date": "2024-11-11",
+        "SST": 27.15,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.617,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_coral_sea.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#northern_coral_sea",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          153.975,
+          -21.1
+        ]
+      },
+      "properties": {
+        "name": "Southern Coral Sea Islands",
+        "date": "2024-11-11",
+        "SST": 26.15,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.637,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_coral_sea.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/great_barrier_reef.php#southern_coral_sea",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.375,
+          28.325
+        ]
+      },
+      "properties": {
+        "name": "Western Persian Gulf",
+        "date": "2024-11-11",
+        "SST": 27.44,
+        "HotSpot": 0,
+        "DHW": 8.407,
+        "Anomaly": 0.586,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_persian_gulf.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#western_persian_gulf",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          50.75,
+          26.125
+        ]
+      },
+      "properties": {
+        "name": "Bahrain",
+        "date": "2024-11-11",
+        "SST": 28.04,
+        "HotSpot": 0,
+        "DHW": 5.259,
+        "Anomaly": 0.738,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/bahrain.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#bahrain",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          54.05,
+          25.925
+        ]
+      },
+      "properties": {
+        "name": "Eastern Persian Gulf",
+        "date": "2024-11-11",
+        "SST": 30.52,
+        "HotSpot": 0,
+        "DHW": 3.036,
+        "Anomaly": 1.755,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eastern_persian_gulf.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#eastern_persian_gulf",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          58.5,
+          24.1
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Oman",
+        "date": "2024-11-11",
+        "SST": 29.41,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 2.029,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_oman.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#gulf_of_oman",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          57.9,
+          19.625
+        ]
+      },
+      "properties": {
+        "name": "Al Wusta, Oman",
+        "date": "2024-11-11",
+        "SST": 28.5,
+        "HotSpot": 1.38,
+        "DHW": 5.491,
+        "Anomaly": 2.012,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_3.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/al_wusta.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#al_wusta",
+        "alertLevel": 4
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          55.5,
+          17.375
+        ]
+      },
+      "properties": {
+        "name": "Dhofar, Oman",
+        "date": "2024-11-11",
+        "SST": 29.1,
+        "HotSpot": 0.92,
+        "DHW": 2.721,
+        "Anomaly": 2.052,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_2.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/dhofar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#dhofar",
+        "alertLevel": 3
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          53.25,
+          12.425
+        ]
+      },
+      "properties": {
+        "name": "Socotra, Yemen",
+        "date": "2024-11-11",
+        "SST": 28.03,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.838,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/socotra.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#socotra",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.675,
+          14.475
+        ]
+      },
+      "properties": {
+        "name": "Eastern Yemen",
+        "date": "2024-11-11",
+        "SST": 28.26,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.023,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eastern_yemen.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#eastern_yemen",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.925,
+          12.775
+        ]
+      },
+      "properties": {
+        "name": "Aden, Yemen",
+        "date": "2024-11-11",
+        "SST": 29.61,
+        "HotSpot": 0,
+        "DHW": 4.653,
+        "Anomaly": 1.507,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/aden.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#aden",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.3,
+          11.775
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Tadjoura, Djubouti",
+        "date": "2024-11-11",
+        "SST": 30.18,
+        "HotSpot": 0,
+        "DHW": 5.251,
+        "Anomaly": 1.816,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_tadjoura.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#gulf_of_tadjoura",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          42.6,
+          14.35
+        ]
+      },
+      "properties": {
+        "name": "Western Yemen",
+        "date": "2024-11-11",
+        "SST": 31.34,
+        "HotSpot": 0,
+        "DHW": 5.05,
+        "Anomaly": 2.138,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_yemen.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#western_yemen",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.75,
+          15.525
+        ]
+      },
+      "properties": {
+        "name": "Eritrea",
+        "date": "2024-11-11",
+        "SST": 32.04,
+        "HotSpot": 0.05,
+        "DHW": 3.971,
+        "Anomaly": 2.039,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eritrea.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#eritrea",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41.8,
+          17.175
+        ]
+      },
+      "properties": {
+        "name": "Jazan, Saudi Arabia",
+        "date": "2024-11-11",
+        "SST": 31.99,
+        "HotSpot": 0.3,
+        "DHW": 9.263,
+        "Anomaly": 1.601,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/jazan.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#jazan",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          37.625,
+          20.4
+        ]
+      },
+      "properties": {
+        "name": "Sudan",
+        "date": "2024-11-11",
+        "SST": 31.24,
+        "HotSpot": 0.33,
+        "DHW": 7.837,
+        "Anomaly": 1.838,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/sudan.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#sudan",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          36.175,
+          26
+        ]
+      },
+      "properties": {
+        "name": "Tabuk, Saudi Arabia",
+        "date": "2024-11-11",
+        "SST": 28.84,
+        "HotSpot": 0,
+        "DHW": 9.739,
+        "Anomaly": 0.643,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/tabuk.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#tabuk",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.45,
+          21.125
+        ]
+      },
+      "properties": {
+        "name": "Al Madinah and Makkah",
+        "date": "2024-11-11",
+        "SST": 31.87,
+        "HotSpot": 0.3,
+        "DHW": 15.091,
+        "Anomaly": 1.241,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_4_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/madinah_makkah.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#madinah_makkah",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          34.625,
+          28.6
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Aqaba",
+        "date": "2024-11-11",
+        "SST": 27.32,
+        "HotSpot": 0,
+        "DHW": 9.994,
+        "Anomaly": 1.044,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_aqaba.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#gulf_of_aqaba",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.575,
+          24.325
+        ]
+      },
+      "properties": {
+        "name": "Egypt",
+        "date": "2024-11-11",
+        "SST": 29.39,
+        "HotSpot": 0,
+        "DHW": 9.361,
+        "Anomaly": 1.673,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/egypt.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#egypt",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.35,
+          28.4
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Suez",
+        "date": "2024-11-11",
+        "SST": 27.14,
+        "HotSpot": 0,
+        "DHW": 12.974,
+        "Anomaly": 1.118,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_suez.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/middle_east.php#gulf_of_suez",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          69.575,
+          22.225
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Kutch, India",
+        "date": "2024-11-11",
+        "SST": 28.9,
+        "HotSpot": 0.13,
+        "DHW": 2.101,
+        "Anomaly": 1.922,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_kutch.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#gulf_of_kutch",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          72.2,
+          17.675
+        ]
+      },
+      "properties": {
+        "name": "Western India",
+        "date": "2024-11-11",
+        "SST": 29.75,
+        "HotSpot": 0.18,
+        "DHW": 1.679,
+        "Anomaly": 1.225,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_india.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#western_india",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          76.3,
+          9.9
+        ]
+      },
+      "properties": {
+        "name": "Kerala, India",
+        "date": "2024-11-11",
+        "SST": 30.05,
+        "HotSpot": 0.6,
+        "DHW": 0,
+        "Anomaly": 1.9,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/kerala.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#kerala",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          72.875,
+          10.325
+        ]
+      },
+      "properties": {
+        "name": "Lakshadweep, India",
+        "date": "2024-11-11",
+        "SST": 30.2,
+        "HotSpot": 0.22,
+        "DHW": 0,
+        "Anomaly": 1.585,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/lakshadweep.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#lakshadweep",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          78.975,
+          8.85
+        ]
+      },
+      "properties": {
+        "name": "Gulf of Mannar",
+        "date": "2024-11-11",
+        "SST": 29.53,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.377,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/gulf_of_mannar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#gulf_of_mannar",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          80.65,
+          6.3
+        ]
+      },
+      "properties": {
+        "name": "Southern Sri Lanka",
+        "date": "2024-11-11",
+        "SST": 29.99,
+        "HotSpot": 0.66,
+        "DHW": 0,
+        "Anomaly": 1.631,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_sri_lanka.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#southern_sri_lanka",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          81.575,
+          8.075
+        ]
+      },
+      "properties": {
+        "name": "Eastern Sri Lanka",
+        "date": "2024-11-11",
+        "SST": 29.91,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.263,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/eastern_sri_lanka.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#eastern_sri_lanka",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          80.15,
+          11.7
+        ]
+      },
+      "properties": {
+        "name": "Southeastern India",
+        "date": "2024-11-11",
+        "SST": 29.43,
+        "HotSpot": 0.22,
+        "DHW": 0.95,
+        "Anomaly": 1.256,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_2_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southeastern_india.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#southeastern_india",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          72.95,
+          3.3
+        ]
+      },
+      "properties": {
+        "name": "Maldives",
+        "date": "2024-11-11",
+        "SST": 30.04,
+        "HotSpot": 0.31,
+        "DHW": 0,
+        "Anomaly": 1.711,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/maldives.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#maldives",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          71.75,
+          -6.2
+        ]
+      },
+      "properties": {
+        "name": "Chagos Archipelago, UK",
+        "date": "2024-11-11",
+        "SST": 29.75,
+        "HotSpot": 0.73,
+        "DHW": 0,
+        "Anomaly": 1.951,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/chagos_archipelago.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/south_asia.php#chagos_archipelago",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.075,
+          0.575
+        ]
+      },
+      "properties": {
+        "name": "Somalia",
+        "date": "2024-11-11",
+        "SST": 28.27,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.245,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/somalia.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#somalia",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.525,
+          -3.2
+        ]
+      },
+      "properties": {
+        "name": "Kenya",
+        "date": "2024-11-11",
+        "SST": 28.91,
+        "HotSpot": 0.25,
+        "DHW": 0,
+        "Anomaly": 1.89,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/kenya.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#kenya",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.725,
+          -7.575
+        ]
+      },
+      "properties": {
+        "name": "Tanzania",
+        "date": "2024-11-11",
+        "SST": 28.91,
+        "HotSpot": 0.04,
+        "DHW": 0,
+        "Anomaly": 1.365,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/tanzania.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#tanzania",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          51.325,
+          -7
+        ]
+      },
+      "properties": {
+        "name": "Seychelles",
+        "date": "2024-11-11",
+        "SST": 29.17,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.525,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/seychelles.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#seychelles",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.775,
+          -11.975
+        ]
+      },
+      "properties": {
+        "name": "Glorioso Islands",
+        "date": "2024-11-11",
+        "SST": 28.78,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.713,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/glorieuse_geyser.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#glorieuse_geyser",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.8,
+          -11.9
+        ]
+      },
+      "properties": {
+        "name": "Comoros",
+        "date": "2024-11-11",
+        "SST": 28.91,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.64,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/comoros.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#comoros",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          45.4,
+          -12.925
+        ]
+      },
+      "properties": {
+        "name": "Mayotte, France",
+        "date": "2024-11-11",
+        "SST": 29.04,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.802,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/mayotte.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#mayotte",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          41,
+          -12.625
+        ]
+      },
+      "properties": {
+        "name": "Northern Mozambique",
+        "date": "2024-11-11",
+        "SST": 28.86,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.702,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_mozambique.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#northern_mozambique",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          39.55,
+          -16.2
+        ]
+      },
+      "properties": {
+        "name": "Central Mozambique",
+        "date": "2024-11-11",
+        "SST": 27.98,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.08,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/central_mozambique.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#central_mozambique",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          46.8,
+          -14.05
+        ]
+      },
+      "properties": {
+        "name": "Northwestern Madagascar",
+        "date": "2024-11-11",
+        "SST": 29.86,
+        "HotSpot": 0.54,
+        "DHW": 0,
+        "Anomaly": 1.607,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_1_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northwestern_madagascar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#northwestern_madagascar",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          43.45,
+          -17.45
+        ]
+      },
+      "properties": {
+        "name": "Western Madagascar",
+        "date": "2024-11-11",
+        "SST": 29.68,
+        "HotSpot": 0.39,
+        "DHW": 0,
+        "Anomaly": 1.901,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/western_madagascar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#western_madagascar",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          40.025,
+          -21.9
+        ]
+      },
+      "properties": {
+        "name": "Bassas da India, France",
+        "date": "2024-11-11",
+        "SST": 27.66,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.423,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/bassas_da_india.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#bassas_da_india",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          44.05,
+          -22.675
+        ]
+      },
+      "properties": {
+        "name": "Southwestern Madagascar",
+        "date": "2024-11-11",
+        "SST": 28.85,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.359,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southwestern_madagascar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#southwestern_madagascar",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          35.975,
+          -23
+        ]
+      },
+      "properties": {
+        "name": "Inhambane, Mozambique",
+        "date": "2024-11-11",
+        "SST": 27.21,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.474,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/inhambane.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#inhambane",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          33.275,
+          -26.15
+        ]
+      },
+      "properties": {
+        "name": "Maputo, Mozambique",
+        "date": "2024-11-11",
+        "SST": 24.59,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.347,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/maputo.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#maputo",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          32.725,
+          -27.775
+        ]
+      },
+      "properties": {
+        "name": "South Africa",
+        "date": "2024-11-11",
+        "SST": 24.99,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 0.961,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/south_africa.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#south_africa",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          58.675,
+          -10.575
+        ]
+      },
+      "properties": {
+        "name": "Northern Mauritius",
+        "date": "2024-11-11",
+        "SST": 28.6,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.637,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_1.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northern_mauritius.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#northern_mauritius",
+        "alertLevel": 2
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          60.45,
+          -18.75
+        ]
+      },
+      "properties": {
+        "name": "Southern Mauritius",
+        "date": "2024-11-11",
+        "SST": 26.04,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.538,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southern_mauritius.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#southern_mauritius",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          49.875,
+          -15.325
+        ]
+      },
+      "properties": {
+        "name": "Northeastern Madagascar",
+        "date": "2024-11-11",
+        "SST": 27.33,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.608,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/northeastern_madagascar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#northeastern_madagascar",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          54.975,
+          -18.625
+        ]
+      },
+      "properties": {
+        "name": "Tromelin and Reunion, France",
+        "date": "2024-11-11",
+        "SST": 26.32,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.648,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/tromelin_reunion.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#tromelin_reunion",
+        "alertLevel": 1
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          47.75,
+          -22.35
+        ]
+      },
+      "properties": {
+        "name": "Southeastern Madagascar",
+        "date": "2024-11-11",
+        "SST": 25.09,
+        "HotSpot": 0,
+        "DHW": 0,
+        "Anomaly": 1.452,
+        "chartUrl": "https://coralreefwatch.noaa.gov/product/vs/gauge_images/Coral_Bleaching_Alert_Level_0_to_0.bmp",
+        "alertGaugesUrl": "https://coralreefwatch.noaa.gov/product/vs/gauges/southeastern_madagascar.php",
+        "timeSeriesUrl": "https://coralreefwatch.noaa.gov/product/vs/timeseries/western_indian_ocean.php#southeastern_madagascar",
+        "alertLevel": 1
+      }
+    }
+  ]
+}

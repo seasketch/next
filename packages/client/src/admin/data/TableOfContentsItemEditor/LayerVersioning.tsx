@@ -70,11 +70,18 @@ export default function LayerVersioning({
         onlyIfNotVisible: true,
       });
     }
-    jobContext.setUploadType("replace", item.id);
+    if (!item.copiedFromDataLibraryTemplateId) {
+      jobContext.setUploadType("replace", item.id);
+    }
     return () => {
       jobContext.setUploadType("create");
     };
-  }, [item.id, item.stableId, item.dataLayer?.dataSourceId]);
+  }, [
+    item.id,
+    item.stableId,
+    item.dataLayer?.dataSourceId,
+    item.copiedFromDataLibraryTemplateId,
+  ]);
 
   const versions = useMemo(() => {
     const versions = [
@@ -123,7 +130,7 @@ export default function LayerVersioning({
   const mapContext = useContext(MapContext);
 
   useEffect(() => {
-    if (jobContext.manager) {
+    if (jobContext.manager && !item.copiedFromDataLibraryTemplateId) {
       const manager = jobContext.manager;
       const handler = (e: { uploadTaskId: number; jobId: number }) => {
         setChangelogState((prev) => ({
@@ -138,7 +145,7 @@ export default function LayerVersioning({
         manager.off("upload-submitted", handler);
       };
     }
-  }, [jobContext.manager]);
+  }, [jobContext.manager, item.copiedFromDataLibraryTemplateId]);
 
   const currentJob = data?.projectBySlug?.projectBackgroundJobs.find(
     (j) => j.id === changelogState.jobId
@@ -186,7 +193,11 @@ export default function LayerVersioning({
   }, [changelogState.content, currentJob, setChangelogMutation]);
 
   return (
-    <Container dragActive={jobContext.dragActive}>
+    <Container
+      dragActive={
+        jobContext.dragActive && !item.copiedFromDataLibraryTemplateId
+      }
+    >
       <h2 className="font-medium px-2 py-2 border-b">{t("Versions")}</h2>
       <VersionsContainer>
         <div className="px-4 py-4 space-y-2">
@@ -206,7 +217,16 @@ export default function LayerVersioning({
             <VersionListItem
               key={source.id}
               isUpload={!isRemoteSource(source.type)}
-              authorProfile={source.authorProfile || undefined}
+              authorProfile={
+                source.authorProfile ||
+                source.uploadedBy === "datalibrary@seasketch.org"
+                  ? {
+                      userId: -9999,
+                      email: "support@seasketch.org",
+                      fullname: "SeaSketch Data Library",
+                    }
+                  : undefined
+              }
               version={
                 source.isArchived ? version : item.dataLayer?.version || version
               }
@@ -237,19 +257,29 @@ export default function LayerVersioning({
               </p>
             )}
             <p>
-              <Trans ns="admin:data">
-                Drag & Drop a spatial data file here to create a new version of
-                this layer, or{" "}
-                <button
-                  className="underline text-primary-500"
-                  onClick={() => {
-                    jobContext.browseForFiles(false);
-                  }}
-                >
-                  browse for files on your computer
-                </button>
-                .
-              </Trans>
+              {item.copiedFromDataLibraryTemplateId ? (
+                <Warning level="warning">
+                  <Trans ns="admin:data">
+                    This layer was added from the SeaSketch Data Library. As
+                    such, it cannot be edited. Updates from the original source
+                    will be automatically applied by the SeaSketch team.
+                  </Trans>
+                </Warning>
+              ) : (
+                <Trans ns="admin:data">
+                  Drag & Drop a spatial data file here to create a new version
+                  of this layer, or{" "}
+                  <button
+                    className="underline text-primary-500"
+                    onClick={() => {
+                      jobContext.browseForFiles(false);
+                    }}
+                  >
+                    browse for files on your computer
+                  </button>
+                  .
+                </Trans>
+              )}
             </p>
           </div>
         </>
@@ -528,86 +558,89 @@ function VersionDetails({
           )}
         </LayerInfoList>
       </div>
-      <div className="py-2 flex space-x-2">
-        {source.isArchived && (
-          <button
-            onClick={
-              async () => {
-                confirmDelete({
-                  message: `Are you sure you want to delete version ${version}?`,
-                  description: "This action cannot be undone.",
-
-                  onDelete: async () => {
-                    await deleteArchive({
-                      variables: {
-                        id: source.id,
-                      },
-                    });
-                    if (onDelete) {
-                      onDelete();
-                    }
-                  },
-                });
-              }
-              //   if (jobContext.manager) {
-              //     jobContext.manager.dismissFailedUpload(job.id);
-              //     if (onDismissed) {
-              //       onDismissed(job.id);
-              //     }
-              //   }
-            }
-            className="px-2 py-1 text-sm text-black border-black border-opacity-20 font-medium bg-white rounded border shadow-sm"
-          >
-            <Trans ns="admin:data">Delete Version</Trans>
-          </button>
-        )}
-        {source.isArchived && (
-          <button
-            onClick={
-              async () => {
-                confirmDelete({
-                  primaryButtonText: "Rollback",
-                  message: `Are you sure you want to rollback to version ${version}?`,
-                  description: confirmRollbackDescription,
-                  onDelete: async () => {
-                    await rollback();
-                    if (onRollback) {
-                      onRollback({ sourceId: source.id });
-                    }
-                  },
-                });
-              }
-              //   if (jobContext.manager) {
-              //     jobContext.manager.dismissFailedUpload(job.id);
-              //     if (onDismissed) {
-              //       onDismissed(job.id);
-              //     }
-              //   }
-            }
-            className="px-2 py-1 text-sm text-black border-black border-opacity-20 font-medium bg-white rounded border shadow-sm"
-          >
-            <Trans ns="admin:data">Rollback to Version {{ version }}</Trans>
-          </button>
-        )}
-        {!source.isArchived &&
-          (source.type === DataSourceTypes.ArcgisVector ||
-            (source.type === DataSourceTypes.ArcgisDynamicMapserver &&
-              layer.sublayerType === SublayerType.Vector)) && (
+      {(getSlug() === "superuser" ||
+        source.uploadedBy !== "datalibrary@seasketch.org") && (
+        <div className="py-2 flex space-x-2">
+          {source.isArchived && (
             <button
-              onClick={() => setHostOnSeasketch(itemId)}
+              onClick={
+                async () => {
+                  confirmDelete({
+                    message: `Are you sure you want to delete version ${version}?`,
+                    description: "This action cannot be undone.",
+
+                    onDelete: async () => {
+                      await deleteArchive({
+                        variables: {
+                          id: source.id,
+                        },
+                      });
+                      if (onDelete) {
+                        onDelete();
+                      }
+                    },
+                  });
+                }
+                //   if (jobContext.manager) {
+                //     jobContext.manager.dismissFailedUpload(job.id);
+                //     if (onDismissed) {
+                //       onDismissed(job.id);
+                //     }
+                //   }
+              }
               className="px-2 py-1 text-sm text-black border-black border-opacity-20 font-medium bg-white rounded border shadow-sm"
             >
-              <Trans ns="admin:data">Convert to Hosted Layer</Trans>
+              <Trans ns="admin:data">Delete Version</Trans>
             </button>
           )}
+          {source.isArchived && (
+            <button
+              onClick={
+                async () => {
+                  confirmDelete({
+                    primaryButtonText: "Rollback",
+                    message: `Are you sure you want to rollback to version ${version}?`,
+                    description: confirmRollbackDescription,
+                    onDelete: async () => {
+                      await rollback();
+                      if (onRollback) {
+                        onRollback({ sourceId: source.id });
+                      }
+                    },
+                  });
+                }
+                //   if (jobContext.manager) {
+                //     jobContext.manager.dismissFailedUpload(job.id);
+                //     if (onDismissed) {
+                //       onDismissed(job.id);
+                //     }
+                //   }
+              }
+              className="px-2 py-1 text-sm text-black border-black border-opacity-20 font-medium bg-white rounded border shadow-sm"
+            >
+              <Trans ns="admin:data">Rollback to Version {{ version }}</Trans>
+            </button>
+          )}
+          {!source.isArchived &&
+            (source.type === DataSourceTypes.ArcgisVector ||
+              (source.type === DataSourceTypes.ArcgisDynamicMapserver &&
+                layer.sublayerType === SublayerType.Vector)) && (
+              <button
+                onClick={() => setHostOnSeasketch(itemId)}
+                className="px-2 py-1 text-sm text-black border-black border-opacity-20 font-medium bg-white rounded border shadow-sm"
+              >
+                <Trans ns="admin:data">Convert to Hosted Layer</Trans>
+              </button>
+            )}
 
-        {hostOnSeaSketch && (
-          <ConvertFeatureLayerToHostedModal
-            tocId={hostOnSeaSketch}
-            onRequestClose={() => setHostOnSeasketch(null)}
-          />
-        )}
-      </div>
+          {hostOnSeaSketch && (
+            <ConvertFeatureLayerToHostedModal
+              tocId={hostOnSeaSketch}
+              onRequestClose={() => setHostOnSeasketch(null)}
+            />
+          )}
+        </div>
+      )}
     </div>
   );
 }

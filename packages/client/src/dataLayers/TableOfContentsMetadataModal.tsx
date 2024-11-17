@@ -43,6 +43,10 @@ export default function TableOfContentsMetadataModal({
       error={error}
       onRequestClose={onRequestClose}
       title={title}
+      hostedSourceLastUpdated={
+        data?.tableOfContentsItem?.dataLayer?.dataSource?.outputs?.[0]
+          ?.createdAt
+      }
     />
   );
 }
