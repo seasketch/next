@@ -9270,7 +9270,7 @@ CREATE FUNCTION public.fail_data_upload(id uuid, msg text) RETURNS public.data_u
 
 CREATE FUNCTION public.filter_state_to_search_string(filters jsonb, sketch_class_id integer) RETURNS text
     LANGUAGE plpgsql
-    AS $$
+    AS $_$
 DECLARE
     state jsonb := '{}';
     filter jsonb;
@@ -9291,6 +9291,8 @@ BEGIN
     IF filter_server_location IS NULL THEN
         RETURN NULL;
     END IF;
+
+    filter_server_location := regexp_replace(filter_server_location, '/$', '', '');
 
     -- Loop through each attribute in the input JSONB object
     FOR attr, filter IN
@@ -9351,7 +9353,7 @@ BEGIN
         RETURN final_url;
     END IF;
 END;
-$$;
+$_$;
 
 
 --
