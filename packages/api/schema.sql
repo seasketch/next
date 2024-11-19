@@ -14375,9 +14375,6 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
 
         select data_library_template_id into dl_template_id from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and data_library_template_id is not null limit 1;
 
-        if dl_template_id is null then
-          raise exception 'fuck you %', dl_template_id;
-        end if;
 
         select data_layers.data_source_id into old_source_id from data_layers where id = replace_data_source.data_layer_id;
         select type into old_source_type from data_sources where id = old_source_id;
