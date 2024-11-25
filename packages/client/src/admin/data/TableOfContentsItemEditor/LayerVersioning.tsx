@@ -220,14 +220,13 @@ export default function LayerVersioning({
               key={source.id}
               isUpload={!isRemoteSource(source.type)}
               authorProfile={
-                source.authorProfile ||
                 source.uploadedBy === "datalibrary@seasketch.org"
                   ? {
                       userId: -9999,
                       email: "support@seasketch.org",
                       fullname: "SeaSketch Data Library",
                     }
-                  : undefined
+                  : source.authorProfile!
               }
               version={
                 source.isArchived ? version : item.dataLayer?.version || version
