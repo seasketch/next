@@ -2923,12 +2923,12 @@ CREATE TABLE public.archived_data_sources (
     sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_style)::text)) STORED,
     changelog text,
     source_layer text,
-    project_id integer NOT NULL,
     bounds numeric[],
     created_at timestamp with time zone DEFAULT now(),
     sublayer text,
     sublayer_type public.sublayer_type,
-    dynamic_metadata boolean DEFAULT false NOT NULL
+    dynamic_metadata boolean DEFAULT false NOT NULL,
+    project_id integer NOT NULL
 );
 
 
@@ -5286,7 +5286,6 @@ CREATE TABLE public.table_of_contents_items (
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
     fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
-    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
     fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
     fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
     fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
@@ -5300,6 +5299,7 @@ CREATE TABLE public.table_of_contents_items (
     fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
     fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
     fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
+    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
     data_source_type text,
     original_source_upload_available boolean DEFAULT false NOT NULL,
     data_library_template_id text,
@@ -6137,22 +6137,6 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
 
 
 --
--- Name: copy_table_of_contents_item_recursive(integer, boolean, boolean, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare 
-      copy_id int;
-      child record;
-    begin
-      copy_id := copy_table_of_contents_item(item_id, copy_data_source, append_copy_to_name, project_id);
-    end;
-  $$;
-
-
---
 -- Name: copy_table_of_contents_item_recursive(integer, boolean, boolean, integer, public.ltree, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6262,7 +6246,8 @@ CREATE TABLE public.data_upload_tasks (
     outputs jsonb,
     project_background_job_id uuid NOT NULL,
     changelog text,
-    replace_table_of_contents_item_id integer
+    replace_table_of_contents_item_id integer,
+    data_library_metadata jsonb
 );
 
 
@@ -8210,10 +8195,11 @@ CREATE TABLE public.data_sources (
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     created_by integer,
     changelog text,
-    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
     raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
+    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     data_library_template_id text,
+    data_library_metadata jsonb,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -10270,7 +10256,7 @@ COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bo
 CREATE FUNCTION public.get_supported_languages() RETURNS jsonb
     LANGUAGE sql IMMUTABLE
     AS $$
-    select '{"simple": "simple", "english": "en", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "greek": "el", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
+    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
   $$;
 
 
@@ -10343,6 +10329,23 @@ CREATE FUNCTION public.has_session() RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.has_session() IS '@omit';
+
+
+--
+-- Name: id_lookup_get_key(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.id_lookup_get_key(key integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+    begin
+      if lookup is null then
+        raise exception 'lookup is null';
+      else
+        return (lookup->key)::int;
+      end if;
+    end;
+  $$;
 
 
 --
@@ -14375,6 +14378,9 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
 
         select data_library_template_id into dl_template_id from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and data_library_template_id is not null limit 1;
 
+        if dl_template_id is null then
+          raise exception 'fuck you %', dl_template_id;
+        end if;
 
         select data_layers.data_source_id into old_source_id from data_layers where id = replace_data_source.data_layer_id;
         select type into old_source_type from data_sources where id = old_source_id;
@@ -14464,8 +14470,7 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
           update
             data_layers
           set
-            data_source_id = replace_data_source.data_source_id,
-            source_layer = replace_data_source.source_layer
+            data_source_id = replace_data_source.data_source_id
           where
             id = any (
               select table_of_contents_items.data_layer_id from table_of_contents_items where copied_from_data_library_template_id = dl_template_id
@@ -14667,309 +14672,25 @@ CREATE FUNCTION public.search_overlays(lang text, query text, "projectId" intege
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
-      supported_languages jsonb := get_supported_languages();
-      config regconfig;
-      q tsquery := websearch_to_tsquery(config, query);
+      q tsquery := websearch_to_tsquery('english'::regconfig, query);
     begin
-      select key::regconfig into config from jsonb_each_text(get_supported_languages()) where value = lower(lang);
       IF position(' ' in query) <= 0 THEN
-        q := to_tsquery(config, query || ':*');
+        q := to_tsquery('english'::regconfig, query || ':*');
       end if;
-      if config is null then
-        q = plainto_tsquery('simple', query);
-        IF position(' ' in query) <= 0 THEN
-          q := to_tsquery('simple', query || ':*');
-        end if;
-        -- use the simple index
-        return query select
-          id, 
-          stable_id, 
-          ts_headline('simple', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline('simple', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from 
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_simple @@ q
-        limit
-          coalesce("limit", 10);
-      elsif config = 'english'::regconfig then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from 
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_en @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'es' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from 
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_es @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'pt' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline('portuguese', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_pt @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'ar' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline('arabic', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_ar @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'da' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_da @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'nl' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_nl @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'fr' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_fr @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'de' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_de @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'el' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_el @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'id' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_id @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'it' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_it @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'lt' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where 
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_lt @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'no' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_no @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'ro' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_ro @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'ru' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_ru @@ q
-        limit
-          coalesce("limit", 10);
-      elsif lower(lang) = 'sv' then
-        return query select
-          id, 
-          stable_id, 
-          ts_headline(config, coalesce(
-            translated_props->lang->>'title'::text, title
-          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-          is_folder
-        from
-          table_of_contents_items 
-        where
-          project_id = "projectId" and
-          is_draft = draft and
-          fts_sv @@ q
-        limit
-          coalesce("limit", 10);
-      else
-        raise exception 'Unsupported language: %', lang;
-      end if;
+      return query select
+        id, 
+        stable_id, 
+        ts_headline('english', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+        ts_headline('english', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+        is_folder
+      from 
+        table_of_contents_items 
+      where 
+        project_id = "projectId" and
+        is_draft = draft and
+        fts_en @@ q
+      limit
+        coalesce("limit", 10);
     end;
   $$;
 
@@ -26253,13 +25974,6 @@ REVOKE ALL ON FUNCTION public.copy_table_of_contents_item(item_id integer, copy_
 
 
 --
--- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28448,6 +28162,13 @@ REVOKE ALL ON FUNCTION public.hmac(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION id_lookup_get_key(key integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.id_lookup_get_key(key integer) FROM PUBLIC;
 
 
 --

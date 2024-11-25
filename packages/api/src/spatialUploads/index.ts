@@ -41,6 +41,16 @@ export async function createDBRecordsForProcessedLayer(
     layerId: number;
   }
 ) {
+  let dataLibraryMetadata: any;
+  if (replace) {
+    const metadataQuery = await client.query(
+      `
+      select data_library_metadata from data_upload_tasks where project_background_job_id = $1
+    `,
+      [jobId]
+    );
+    dataLibraryMetadata = metadataQuery.rows[0]?.data_library_metadata;
+  }
   const uploadCountResult = await client.query(
     `
       select 
@@ -157,8 +167,9 @@ export async function createDBRecordsForProcessedLayer(
         was_converted_from_esri_feature_layer,
         uploaded_by,
         created_by,
-        changelog
-      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19, $20)
+        changelog,
+        data_library_metadata
+      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19, $20, $21)
       returning *
     `,
     [
@@ -203,6 +214,7 @@ export async function createDBRecordsForProcessedLayer(
       Boolean(conversionTask),
       uploadedBy,
       changelog,
+      dataLibraryMetadata || null,
     ]
   );
   const dataSourceId = rows[0].id;

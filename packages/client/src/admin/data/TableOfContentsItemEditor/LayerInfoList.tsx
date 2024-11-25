@@ -50,6 +50,7 @@ export default function LayerInfoList({
     | "maxzoom"
     | "minzoom"
     | "arcgisFetchStrategy"
+    | "dataLibraryMetadata"
   >;
   layer: Pick<
     FullAdminDataLayerFragment,
@@ -177,6 +178,16 @@ export default function LayerInfoList({
                   {source.url}
                   {layer.sublayer ? `/${layer.sublayer}` : ""}
                 </a>
+              </div>
+            }
+          />
+        )}
+        {source.dataLibraryMetadata && (
+          <SettingsDLListItem
+            term={t("Data Library Metadata")}
+            description={
+              <div className="w-full truncate">
+                <pre>{JSON.stringify(source.dataLibraryMetadata, null, 2)}</pre>
               </div>
             }
           />

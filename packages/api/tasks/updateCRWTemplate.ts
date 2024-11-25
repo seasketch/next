@@ -56,21 +56,23 @@ module.exports = async (payload: any, helpers: JobHelpers) => {
   await helpers.withPgClient(async (client) => {
     const promises: Promise<any>[] = [];
     for (const [templateId, baseUrl] of Object.entries(overlays)) {
-      const { itemId, dataSourceId, lastUpdated } = await getTemplateDetails(
-        templateId,
-        client
-      );
+      const { itemId, dataSourceId, metadata } = await getTemplateDetails<{
+        date: string;
+      }>(templateId, client);
       const now = new Date();
+      const lastUpdated = new Date(metadata?.date || 0);
       const diff = Math.abs(now.getTime() - lastUpdated.getTime());
-      // if data is older than 3 hours, update
-      if (payload.force || diff > 3 * 60 * 60 * 1000) {
+      // if data is older than 12 hours, attempt to update
+      if (payload.force || diff > 12 * 60 * 60 * 1000) {
         const { url, date } = await getLatestOverlayNetCDF(baseUrl);
         if (date > lastUpdated || payload.force) {
           helpers.logger.info(
             `update ${templateId} with ${url}, dataSourceId: ${dataSourceId}`
           );
           promises.push(
-            updateSourceWithUrl(url, itemId, templateId, client, helpers)
+            updateSourceWithUrl(url, itemId, templateId, client, helpers, {
+              date,
+            })
           );
         } else {
           helpers.logger.info(
@@ -83,24 +85,32 @@ module.exports = async (payload: any, helpers: JobHelpers) => {
         );
       }
     }
-    const { itemId, dataSourceId, lastUpdated } = await getTemplateDetails(
-      "CRW_STATIONS",
-      client
-    );
-    const now = new Date();
-    const anyUpdatedOverlays = promises.length > 0;
-    if (payload.force || anyUpdatedOverlays) {
+    const { itemId, dataSourceId, metadata } = await getTemplateDetails<{
+      date: string;
+    }>("CRW_STATIONS", client);
+    const lastUpdated = new Date(metadata?.date || 0);
+    if (
+      payload.force ||
+      lastUpdated.getTime() < new Date().getTime() - 24 * 60 * 60 * 1000
+    ) {
       const kmlData = await fetch(KML_URL).then((res) => res.text());
       const geojson = await parseKmlToGeoJson(kmlData);
-      await updateSourceWithGeoJSON(
-        geojson,
-        itemId,
-        "CRW_STATIONS",
-        client,
-        helpers
-      );
+      // get the date of the first feature
+      const date = new Date(geojson.features[0].properties!.date);
+      if (date > lastUpdated) {
+        await updateSourceWithGeoJSON(
+          geojson,
+          itemId,
+          "CRW_STATIONS",
+          client,
+          helpers,
+          { date }
+        );
+      } else {
+        helpers.logger.info(`CRW_STATIONS data is up to date, skipping update`);
+      }
     } else {
-      helpers.logger.info(`CRW_STATIONS data is up to date, skipping update`);
+      helpers.logger.info(`CRW_STATIONS data < 24 hrs old, skipping check`);
     }
   });
 };

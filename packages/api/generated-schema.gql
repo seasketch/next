@@ -2679,6 +2679,7 @@ type DataSource implements Node {
     """The method to use when ordering `DataLayer`."""
     orderBy: [DataLayersOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataLayersConnection!
+  dataLibraryMetadata: JSON
   dataLibraryTemplateId: String
 
   """
@@ -2950,6 +2951,7 @@ input DataSourceInput {
   coordinates: [BigFloat]
   createdAt: Datetime
   createdBy: Int
+  dataLibraryMetadata: JSON
   dataLibraryTemplateId: String
 
   """
@@ -3440,6 +3442,7 @@ type DataUploadTask implements Node {
   """Content-Type of the original upload."""
   contentType: String!
   createdAt: Datetime!
+  dataLibraryMetadata: JSON
   dataSource: DataSource
 
   """Original name of file as uploaded by the user."""

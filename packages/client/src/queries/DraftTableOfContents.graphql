@@ -250,6 +250,7 @@ fragment FullAdminSource on DataSource {
   geostats
   translatedProps
   arcgisFetchStrategy
+  dataLibraryMetadata
   rasterRepresentativeColors
   authorProfile {
     userId

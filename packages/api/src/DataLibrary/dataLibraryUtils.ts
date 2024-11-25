@@ -15,7 +15,8 @@ export async function createSourceReplacementJob(
   contentType: string,
   itemId: number,
   client: PoolClient,
-  interval = "15 minutes"
+  metadata: any = {},
+  timeoutInterval = "15 minutes"
 ) {
   const r0 = await client.query(
     `select id from projects where slug = 'superuser'`
@@ -38,7 +39,7 @@ export async function createSourceReplacementJob(
       'Updating NOAA Coral Reef Watch Data Library template', 
       (select id from users where sub = 'data-library-template-updater'), 
       'data_upload',
-      timezone('utc'::text, now()) + interval '${interval}'
+      timezone('utc'::text, now()) + interval '${timeoutInterval}'
     )
     returning *
     `,
@@ -48,74 +49,82 @@ export async function createSourceReplacementJob(
     throw new Error("Failed to create project_background_job");
   }
   const jobId = r1.rows[0].id;
-  const r2 = await client.query(
+  await client.query(
     `
     insert into data_upload_tasks(
       filename, 
       content_type, 
       project_background_job_id,
-      replace_table_of_contents_item_id
+      replace_table_of_contents_item_id,
+      data_library_metadata
     ) values (
       $1, 
       $2, 
       $3,
-      $4
+      $4,
+      $5
     ) returning *
     `,
-    [filename, contentType, jobId, itemId]
+    [filename, contentType, jobId, itemId, metadata]
   );
   return jobId;
 }
 
-export async function getTemplateDetails(
+export async function getTemplateDetails<T>(
   templateId: string,
   client: PoolClient
-): Promise<{ itemId: number; dataSourceId: number; lastUpdated: Date }> {
+): Promise<{
+  itemId: number;
+  dataSourceId: number;
+  metadata?: T;
+}> {
   const r0 = await client.query(`
     select
-      id
+      id,
+      data_layer_id
     from
       table_of_contents_items
     where
       is_draft = true and
-      data_library_template_id = '${templateId}'
+      data_library_template_id = '${templateId}' and
+      project_id = (select id from projects where slug = 'superuser')
   `);
   if (r0.rows.length === 0) {
     throw new Error("Data layer not found (" + templateId + ")");
   }
   const itemId = r0.rows[0].id as number;
-  const r1 = await client.query(`
+  const dataLayerId = r0.rows[0].data_layer_id as number;
+  const r1 = await client.query(
+    `
     select
-      created_at,
       data_source_id
     from
-      data_upload_outputs
+      data_layers
     where
-      data_source_id = (
-        select
-          data_source_id
-        from
-          data_layers
-        where
-          id = (
-            select
-              data_layer_id
-            from
-              table_of_contents_items
-            where
-              is_draft = true and
-              data_library_template_id = '${templateId}'
-          )
-      )
-  `);
+      id = $1
+  `,
+    [dataLayerId]
+  );
   if (r1.rows.length === 0) {
     throw new Error(`Data source not found (${templateId})`);
   }
-  const { created_at, data_source_id } = r1.rows[0];
+  const { data_source_id } = r1.rows[0];
+  const r2 = await client.query(
+    `
+    select
+      data_library_metadata
+    from
+      data_sources
+    where
+      id = $1
+  `,
+    [data_source_id]
+  );
+  const metadata = r2.rows[0].data_library_metadata;
   return {
     itemId,
     dataSourceId: parseInt(data_source_id),
-    lastUpdated: new Date(created_at),
+    metadata,
   };
 }
 
@@ -124,7 +133,8 @@ export async function updateSourceWithGeoJSON(
   itemId: number,
   templateId: string,
   client: PoolClient,
-  helpers: JobHelpers
+  helpers: JobHelpers,
+  metadata: any = {}
 ) {
   const geojsonStr = JSON.stringify(data);
   const key = `${templateId}/${uuid()}.geojson`;
@@ -132,7 +142,8 @@ export async function updateSourceWithGeoJSON(
     templateId + ".geojson",
     "application/json",
     itemId,
-    client
+    client,
+    metadata
   );
   helpers.logger.info(`Uploading ${key} to S3`);
   await s3
@@ -161,7 +172,8 @@ export async function updateSourceWithUrl(
   itemId: number,
   templateId: string,
   client: PoolClient,
-  helpers: JobHelpers
+  helpers: JobHelpers,
+  metadata: any = {}
 ) {
   const fileName = url.split("/").pop()!;
   const fileExtension = /\.\w+$/.test(url) ? url.split(".").pop()! : "";
@@ -170,7 +182,8 @@ export async function updateSourceWithUrl(
     fileName,
     "application/octet-stream",
     itemId,
-    client
+    client,
+    metadata
   );
   // save the contents of the url to a temporary file
   const tmpFile = tmp.fileSync();

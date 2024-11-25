@@ -2338,6 +2338,7 @@ export type DataSource = Node & {
   createdBy?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `DataLayer`. */
   dataLayersConnection: DataLayersConnection;
+  dataLibraryMetadata?: Maybe<Scalars['JSON']>;
   dataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
@@ -2588,6 +2589,7 @@ export type DataSourceInput = {
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
   createdBy?: Maybe<Scalars['Int']>;
+  dataLibraryMetadata?: Maybe<Scalars['JSON']>;
   dataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
@@ -2940,6 +2942,7 @@ export type DataUploadTask = Node & {
   /** Content-Type of the original upload. */
   contentType: Scalars['String'];
   createdAt: Scalars['Datetime'];
+  dataLibraryMetadata?: Maybe<Scalars['JSON']>;
   dataSource?: Maybe<DataSource>;
   /** Original name of file as uploaded by the user. */
   filename: Scalars['String'];
@@ -17196,7 +17199,7 @@ export type UpdateFolderMutation = (
 
 export type FullAdminSourceFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'dataLibraryMetadata' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
@@ -21873,6 +21876,7 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
   geostats
   translatedProps
   arcgisFetchStrategy
+  dataLibraryMetadata
   rasterRepresentativeColors
   authorProfile {
     userId

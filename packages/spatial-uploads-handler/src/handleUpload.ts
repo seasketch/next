@@ -165,6 +165,9 @@ export default async function handleUpload(
     keyParts[keyParts.length - 1]
   )}`;
   await updateProgress("running", "fetching", 0.0);
+  if (DEBUG) {
+    console.log("Fetching", objectKey, "to", workingFilePath);
+  }
   await getObject(
     workingFilePath,
     `s3://${path.join(process.env.BUCKET!, objectKey)}`,
