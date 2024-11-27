@@ -68,7 +68,17 @@ export default function layerApi(loadersPool: DBClient) {
       [data_source_id]
     );
     const geostats = q3.rows[0].geostats;
-    res.json({ mapbox_gl_styles, data_upload_outputs, geostats });
+    res.json({
+      style: mapbox_gl_styles,
+      outputs: data_upload_outputs.map((output) => ({
+        url: output.url,
+        originalFilename: output.original_filename,
+        type: output.type,
+        isOriginal: output.is_original,
+        size: output.size,
+      })),
+      geostats,
+    });
   });
 
   return router;
