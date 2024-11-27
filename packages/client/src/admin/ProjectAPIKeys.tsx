@@ -37,9 +37,16 @@ export default function ProjectAPIKeys({ projectId }: { projectId: number }) {
   );
 
   return (
-    <div className="">
+    <div>
       <div className="shadow sm:rounded-md sm:overflow-hidden">
-        <div className="px-4 py-5 bg-white sm:p-6 space-y-5">
+        <div
+          style={
+            apiKeysQuery?.data?.project?.apiKeysConnection.nodes.length === 0
+              ? { paddingBottom: 0 }
+              : {}
+          }
+          className={`py-5 px-4 bg-white sm:p-6 space-y-5`}
+        >
           <h3 className="text-lg font-medium leading-6 text-gray-900">
             {t("API Keys")}
           </h3>
@@ -149,6 +156,11 @@ export default function ProjectAPIKeys({ projectId }: { projectId: number }) {
             </div>
           )}
           <Button
+            className={
+              apiKeysQuery.data?.project?.apiKeysConnection?.nodes?.length === 0
+                ? "-top-12"
+                : ""
+            }
             onClick={() => {
               prompt({
                 placeholder: "e.g. data-access-geoprocessing-prod",
