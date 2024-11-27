@@ -27,6 +27,7 @@ import { ManagementClient } from "auth0";
 import * as cache from "./cache";
 import { verifyEmailWithToken } from "./emailVerification";
 import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";
+import layerApi from "./layerApi";
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -132,6 +133,11 @@ app.get("/.well-known/jwks.json", async (req, res) => {
   const keys = await getJWKS(pool);
   res.json(keys);
 });
+
+const loadersPool = createPool({}, "admin");
+// Layers API comes before the authorization middleware because it makes
+// use of project api keys
+app.use("/layers", layerApi(loadersPool));
 
 // Parse Bearer tokens and populate req.user with valid claims
 app.use(
@@ -313,7 +319,6 @@ run({
 const tilesetPool = createPool();
 const geoPool = createPool();
 const bookmarksPool = createPool();
-const loadersPool = createPool({}, "admin");
 
 app.use("/verify-email", async function (req, res, next) {
   // get token from query string
