@@ -7,8 +7,10 @@ import { usePopper } from "react-popper";
 
 export default function InlineAuthor({
   profile,
+  className,
 }: {
   profile: AuthorProfileFragment;
+  className?: string;
 }) {
   const [referenceElement, setReferenceElement] = useState<any | null>(null);
   const [showPopup, setShowPopup] = useState(false);
@@ -48,6 +50,7 @@ export default function InlineAuthor({
           document.body
         )}
       <InlineAuthorDetails
+        className={className}
         onProfileClick={(e) => {
           setReferenceElement(e.target);
           setShowPopup(true);

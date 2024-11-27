@@ -2923,12 +2923,12 @@ CREATE TABLE public.archived_data_sources (
     sprite_ids integer[] GENERATED ALWAYS AS (public.extract_sprite_ids((mapbox_gl_style)::text)) STORED,
     changelog text,
     source_layer text,
+    project_id integer NOT NULL,
     bounds numeric[],
     created_at timestamp with time zone DEFAULT now(),
     sublayer text,
     sublayer_type public.sublayer_type,
-    dynamic_metadata boolean DEFAULT false NOT NULL,
-    project_id integer NOT NULL
+    dynamic_metadata boolean DEFAULT false NOT NULL
 );
 
 
@@ -5286,6 +5286,7 @@ CREATE TABLE public.table_of_contents_items (
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     fts_simple tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('simple'::text, title, metadata, translated_props)) STORED,
     fts_en tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('english'::text, title, metadata, translated_props)) STORED,
+    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
     fts_pt tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('portuguese'::text, title, metadata, translated_props)) STORED,
     fts_ar tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('arabic'::text, title, metadata, translated_props)) STORED,
     fts_da tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('danish'::text, title, metadata, translated_props)) STORED,
@@ -5299,7 +5300,6 @@ CREATE TABLE public.table_of_contents_items (
     fts_ro tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('romanian'::text, title, metadata, translated_props)) STORED,
     fts_ru tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('russian'::text, title, metadata, translated_props)) STORED,
     fts_sv tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('swedish'::text, title, metadata, translated_props)) STORED,
-    fts_es tsvector GENERATED ALWAYS AS (public.toc_to_tsvector('spanish'::text, title, metadata, translated_props)) STORED,
     data_source_type text,
     original_source_upload_available boolean DEFAULT false NOT NULL,
     data_library_template_id text,
@@ -6137,6 +6137,22 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
 
 
 --
+-- Name: copy_table_of_contents_item_recursive(integer, boolean, boolean, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      copy_id int;
+      child record;
+    begin
+      copy_id := copy_table_of_contents_item(item_id, copy_data_source, append_copy_to_name, project_id);
+    end;
+  $$;
+
+
+--
 -- Name: copy_table_of_contents_item_recursive(integer, boolean, boolean, integer, public.ltree, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6165,6 +6181,54 @@ CREATE FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, co
       return copy_id;
     end;
   $$;
+
+
+--
+-- Name: api_keys; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.api_keys (
+    id uuid DEFAULT gen_random_uuid() NOT NULL,
+    label text NOT NULL,
+    project_id integer NOT NULL,
+    created_by integer NOT NULL,
+    is_revoked boolean DEFAULT false NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_used_at timestamp with time zone,
+    expires_at timestamp with time zone
+);
+
+
+--
+-- Name: TABLE api_keys; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.api_keys IS '@omit create,update,delete';
+
+
+--
+-- Name: create_api_key(integer, text, integer, timestamp with time zone); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_api_key(_project_id integer, _label text, _created_by integer, _expires_at timestamp with time zone) RETURNS public.api_keys
+    LANGUAGE sql
+    AS $$
+    insert into api_keys (project_id, label, created_by, expires_at)
+    values (
+      _project_id, 
+      _label, 
+       _created_by, 
+      _expires_at
+    )
+    returning *;
+  $$;
+
+
+--
+-- Name: FUNCTION create_api_key(_project_id integer, _label text, _created_by integer, _expires_at timestamp with time zone); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_api_key(_project_id integer, _label text, _created_by integer, _expires_at timestamp with time zone) IS '@omit';
 
 
 --
@@ -8195,9 +8259,9 @@ CREATE TABLE public.data_sources (
     was_converted_from_esri_feature_layer boolean DEFAULT false NOT NULL,
     created_by integer,
     changelog text,
+    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     raster_offset real GENERATED ALWAYS AS (public.get_first_band_offset(geostats)) STORED,
     raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
-    raster_representative_colors jsonb GENERATED ALWAYS AS (public.get_representative_colors(geostats)) STORED,
     data_library_template_id text,
     data_library_metadata jsonb,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
@@ -9138,6 +9202,46 @@ CREATE FUNCTION public.enable_offline_support(project_id integer, enable boolean
     AS $$
     update projects set is_offline_enabled = enable where projects.id = project_id and session_is_superuser() returning *; 
   $$;
+
+
+--
+-- Name: enforce_api_key_limit(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enforce_api_key_limit() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- Check the count of existing API keys for the project
+  IF (
+    SELECT COUNT(*)
+    FROM api_keys
+    WHERE project_id = NEW.project_id AND is_revoked = false AND (
+      expires_at IS NULL OR expires_at > now()
+    )
+  ) >= 4 THEN
+    RAISE EXCEPTION 'Project % already has the maximum number of active API keys', NEW.project_id;
+  END IF;
+
+  RETURN NEW; -- Allow the insert if the condition is not met
+END;
+$$;
+
+
+--
+-- Name: enforce_api_keys_admin_required(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enforce_api_keys_admin_required() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  IF NOT (is_admin(NEW.project_id, NEW.created_by)) THEN
+    RAISE EXCEPTION 'Only admins can create API keys';
+  END IF;
+  RETURN NEW;
+END;
+$$;
 
 
 --
@@ -10256,7 +10360,7 @@ COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bo
 CREATE FUNCTION public.get_supported_languages() RETURNS jsonb
     LANGUAGE sql IMMUTABLE
     AS $$
-    select '{"simple": "simple", "english": "EN", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
+    select '{"simple": "simple", "english": "en", "spanish": "es", "portuguese": "pt", "arabic": "ar", "danish": "da", "dutch": "nl", "french": "fr", "german": "de", "greek": "el", "indonesian": "id", "italian": "it", "lithuanian": "lt", "norwegian": "no", "romanian": "ro", "russian": "ru", "swedish": "sv"}'::jsonb;
   $$;
 
 
@@ -10329,23 +10433,6 @@ CREATE FUNCTION public.has_session() RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.has_session() IS '@omit';
-
-
---
--- Name: id_lookup_get_key(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.id_lookup_get_key(key integer) RETURNS integer
-    LANGUAGE plpgsql
-    AS $$
-    begin
-      if lookup is null then
-        raise exception 'lookup is null';
-      else
-        return (lookup->key)::int;
-      end if;
-    end;
-  $$;
 
 
 --
@@ -10815,6 +10902,29 @@ $$;
 --
 
 COMMENT ON FUNCTION public.is_admin(_project_id integer, _user_id integer) IS '@omit';
+
+
+--
+-- Name: is_api_key_in_good_standing(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_api_key_in_good_standing(id uuid) RETURNS boolean
+    LANGUAGE plpgsql
+    AS $$
+    declare
+      is_good boolean;
+    begin
+      select 
+        not is_revoked and (expires_at is null or expires_at > now())
+      into is_good
+      from api_keys
+      where api_keys.id = is_api_key_in_good_standing.id;
+      if is_good then
+        update api_keys set last_used_at = now() where api_keys.id = is_api_key_in_good_standing.id;
+      end if;
+      return is_good;
+    end;
+  $$;
 
 
 --
@@ -14378,9 +14488,6 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
 
         select data_library_template_id into dl_template_id from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and data_library_template_id is not null limit 1;
 
-        if dl_template_id is null then
-          raise exception 'fuck you %', dl_template_id;
-        end if;
 
         select data_layers.data_source_id into old_source_id from data_layers where id = replace_data_source.data_layer_id;
         select type into old_source_type from data_sources where id = old_source_id;
@@ -14470,7 +14577,8 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
           update
             data_layers
           set
-            data_source_id = replace_data_source.data_source_id
+            data_source_id = replace_data_source.data_source_id,
+            source_layer = replace_data_source.source_layer
           where
             id = any (
               select table_of_contents_items.data_layer_id from table_of_contents_items where copied_from_data_library_template_id = dl_template_id
@@ -14519,6 +14627,22 @@ CREATE FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer
 COMMENT ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) IS '
 Remove participant admin privileges.
 ';
+
+
+--
+-- Name: revoke_api_key(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.revoke_api_key(id uuid) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    BEGIN
+      if not session_is_admin((select project_id from api_keys where api_keys.id = revoke_api_key.id)) then
+        raise exception 'permission denied';
+      end if;
+      update api_keys set is_revoked = true where api_keys.id = revoke_api_key.id;
+    end;
+  $$;
 
 
 --
@@ -14672,25 +14796,309 @@ CREATE FUNCTION public.search_overlays(lang text, query text, "projectId" intege
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
     declare
-      q tsquery := websearch_to_tsquery('english'::regconfig, query);
+      supported_languages jsonb := get_supported_languages();
+      config regconfig;
+      q tsquery := websearch_to_tsquery(config, query);
     begin
+      select key::regconfig into config from jsonb_each_text(get_supported_languages()) where value = lower(lang);
       IF position(' ' in query) <= 0 THEN
-        q := to_tsquery('english'::regconfig, query || ':*');
+        q := to_tsquery(config, query || ':*');
       end if;
-      return query select
-        id, 
-        stable_id, 
-        ts_headline('english', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
-        ts_headline('english', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
-        is_folder
-      from 
-        table_of_contents_items 
-      where 
-        project_id = "projectId" and
-        is_draft = draft and
-        fts_en @@ q
-      limit
-        coalesce("limit", 10);
+      if config is null then
+        q = plainto_tsquery('simple', query);
+        IF position(' ' in query) <= 0 THEN
+          q := to_tsquery('simple', query || ':*');
+        end if;
+        -- use the simple index
+        return query select
+          id, 
+          stable_id, 
+          ts_headline('simple', title, q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline('simple', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_simple @@ q
+        limit
+          coalesce("limit", 10);
+      elsif config = 'english'::regconfig then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_en @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'es' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from 
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_es @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'pt' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline('portuguese', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_pt @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'ar' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline('arabic', jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_ar @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'da' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_da @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'nl' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_nl @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'fr' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_fr @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'de' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_de @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'el' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_el @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'id' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_id @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'it' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_it @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'lt' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where 
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_lt @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'no' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_no @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'ro' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_ro @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'ru' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_ru @@ q
+        limit
+          coalesce("limit", 10);
+      elsif lower(lang) = 'sv' then
+        return query select
+          id, 
+          stable_id, 
+          ts_headline(config, coalesce(
+            translated_props->lang->>'title'::text, title
+          ), q, 'StartSel=<<<, StopSel=>>>') as title_headline,
+          ts_headline(config, jsonb_array_to_string(collect_prosemirror_text_nodes(metadata)), q, 'MaxFragments=10, MaxWords=7, MinWords=3, StartSel=<<<, StopSel=>>>') as metadata_headline,
+          is_folder
+        from
+          table_of_contents_items 
+        where
+          project_id = "projectId" and
+          is_draft = draft and
+          fts_sv @@ q
+        limit
+          coalesce("limit", 10);
+      else
+        raise exception 'Unsupported language: %', lang;
+      end if;
     end;
   $$;
 
@@ -19241,6 +19649,14 @@ ALTER TABLE ONLY public.access_control_lists
 
 
 --
+-- Name: api_keys api_keys_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: archived_data_sources archived_data_sources_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -19972,6 +20388,20 @@ CREATE UNIQUE INDEX access_control_lists_sketch_class_id_idx ON public.access_co
 --
 
 CREATE UNIQUE INDEX access_control_lists_table_of_contents_item_id_idx ON public.access_control_lists USING btree (table_of_contents_item_id) WHERE (table_of_contents_item_id IS NOT NULL);
+
+
+--
+-- Name: api_keys_creator_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX api_keys_creator_idx ON public.api_keys USING btree (created_by);
+
+
+--
+-- Name: api_keys_project_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX api_keys_project_idx ON public.api_keys USING btree (project_id);
 
 
 --
@@ -20990,6 +21420,13 @@ CREATE TRIGGER interactivity_settings_update_draft_toc_has_changes_trigger AFTER
 
 
 --
+-- Name: api_keys limit_api_keys_per_project; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER limit_api_keys_per_project BEFORE INSERT ON public.api_keys FOR EACH ROW EXECUTE FUNCTION public.enforce_api_key_limit();
+
+
+--
 -- Name: offline_tile_packages offline_tile_packages_on_insert_1; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -21036,6 +21473,13 @@ CREATE TRIGGER record_project_activity_on_delete AFTER DELETE ON public.data_upl
 --
 
 CREATE TRIGGER record_project_activity_on_delete AFTER DELETE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.record_project_activity_on_delete();
+
+
+--
+-- Name: api_keys require_admin_on_api_key; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER require_admin_on_api_key BEFORE INSERT ON public.api_keys FOR EACH ROW EXECUTE FUNCTION public.enforce_api_keys_admin_required();
 
 
 --
@@ -21205,6 +21649,22 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: api_keys api_keys_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: api_keys api_keys_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.api_keys
+    ADD CONSTRAINT api_keys_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -22350,6 +22810,12 @@ CREATE POLICY access_control_lists_update ON public.access_control_lists FOR UPD
 
 
 --
+-- Name: api_keys; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.api_keys ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: archived_data_sources; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -22616,6 +23082,13 @@ CREATE POLICY forums_select ON public.forums FOR SELECT USING ((public.session_h
 
 
 --
+-- Name: api_keys insert_api_keys; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY insert_api_keys ON public.api_keys FOR INSERT WITH CHECK (public.session_is_admin(project_id));
+
+
+--
 -- Name: interactivity_settings; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -22855,6 +23328,13 @@ CREATE POLICY projects_shared_basemaps_select ON public.projects_shared_basemaps
 --
 
 CREATE POLICY projects_update ON public.projects FOR UPDATE TO seasketch_user USING (public.session_is_admin(id)) WITH CHECK (public.session_is_admin(id));
+
+
+--
+-- Name: api_keys select_api_keys; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY select_api_keys ON public.api_keys FOR SELECT USING (public.session_is_admin(project_id));
 
 
 --
@@ -25974,10 +26454,31 @@ REVOKE ALL ON FUNCTION public.copy_table_of_contents_item(item_id integer, copy_
 
 
 --
+-- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text) FROM PUBLIC;
+
+
+--
+-- Name: TABLE api_keys; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT ON TABLE public.api_keys TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_api_key(_project_id integer, _label text, _created_by integer, _expires_at timestamp with time zone); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_api_key(_project_id integer, _label text, _created_by integer, _expires_at timestamp with time zone) FROM PUBLIC;
 
 
 --
@@ -26963,6 +27464,20 @@ REVOKE ALL ON FUNCTION public.encrypt(bytea, bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.encrypt_iv(bytea, bytea, bytea, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enforce_api_key_limit(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enforce_api_key_limit() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enforce_api_keys_admin_required(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enforce_api_keys_admin_required() FROM PUBLIC;
 
 
 --
@@ -28165,13 +28680,6 @@ REVOKE ALL ON FUNCTION public.hmac(text, text, text) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION id_lookup_get_key(key integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.id_lookup_get_key(key integer) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION id_lookup_get_key(lookup jsonb, key integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28256,6 +28764,13 @@ REVOKE ALL ON FUNCTION public.interactivity_settings_update_draft_toc_has_change
 --
 
 REVOKE ALL ON FUNCTION public.is_admin(_project_id integer, _user_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION is_api_key_in_good_standing(id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_api_key_in_good_standing(id uuid) FROM PUBLIC;
 
 
 --
@@ -30108,6 +30623,14 @@ REVOKE ALL ON FUNCTION public.replace_data_source(data_layer_id integer, data_so
 
 REVOKE ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION revoke_api_key(id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.revoke_api_key(id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.revoke_api_key(id uuid) TO seasketch_user;
 
 
 --

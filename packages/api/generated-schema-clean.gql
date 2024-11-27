@@ -180,6 +180,81 @@ type AlternateLanguageLabelsForFormElementPayload {
   query: Query
 }
 
+type ApiKey implements Node {
+  createdAt: Datetime!
+  createdBy: Int!
+  expiresAt: Datetime
+  id: UUID!
+  isRevoked: Boolean!
+  label: String!
+  lastUsedAt: Datetime
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """Reads a single `Project` that is related to this `ApiKey`."""
+  project: Project
+  projectId: Int!
+
+  """Reads a single `User` that is related to this `ApiKey`."""
+  userByCreatedBy: User
+}
+
+"""
+A condition to be used against `ApiKey` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input ApiKeyCondition {
+  """Checks for equality with the object’s `createdBy` field."""
+  createdBy: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""A connection to a list of `ApiKey` values."""
+type ApiKeysConnection {
+  """
+  A list of edges which contains the `ApiKey` and cursor to aid in pagination.
+  """
+  edges: [ApiKeysEdge!]!
+
+  """A list of `ApiKey` objects."""
+  nodes: [ApiKey!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `ApiKey` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `ApiKey` edge in the connection."""
+type ApiKeysEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `ApiKey` at the end of the edge."""
+  node: ApiKey!
+}
+
+"""Methods to use when ordering `ApiKey`."""
+enum ApiKeysOrderBy {
+  CREATED_BY_ASC
+  CREATED_BY_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
 """All input for the `approveParticipant` mutation."""
 input ApproveParticipantInput {
   """
@@ -1161,6 +1236,10 @@ type CopySketchTocItemResults {
   Returns the parent collection (if exists) so that the client can select an updated updatedAt
   """
   updatedCollection: Sketch
+}
+
+type CreateApiKeyResponse {
+  token: String!
 }
 
 """All input for the create `Basemap` mutation."""
@@ -7849,6 +7928,7 @@ type Mutation {
     input: CopySketchFolderInput!
   ): CopySketchFolderPayload
   copySketchTocItem(forForum: Boolean, id: Int!, type: SketchChildType!): CopySketchTocItemResults
+  createApiKey(label: String!, projectId: Int!, ttlMs: Int): CreateApiKeyResponse!
 
   """Creates a single `Basemap`."""
   createBasemap(
@@ -8860,6 +8940,12 @@ type Mutation {
     """
     input: RevokeAdminAccessInput!
   ): RevokeAdminAccessPayload
+  revokeApiKey(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RevokeApiKeyInput!
+  ): RevokeApiKeyPayload
   rollbackToArchivedSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10315,6 +10401,35 @@ type Project implements Node {
     offset: Int
   ): [User!]
 
+  """Reads and enables pagination through a set of `ApiKey`."""
+  apiKeysConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ApiKeyCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ApiKey`."""
+    orderBy: [ApiKeysOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ApiKeysConnection!
+
   """Reads and enables pagination through a set of `Basemap`."""
   basemaps(
     """Only read the first `n` values of the set."""
@@ -11543,6 +11658,42 @@ type Query implements Node {
     offset: Int
     period: ActivityStatsPeriod
   ): [Project!]
+  apiKey(id: UUID!): ApiKey
+
+  """Reads a single `ApiKey` using its globally unique `ID`."""
+  apiKeyByNodeId(
+    """The globally unique `ID` to be used in selecting a single `ApiKey`."""
+    nodeId: ID!
+  ): ApiKey
+
+  """Reads and enables pagination through a set of `ApiKey`."""
+  apiKeysConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ApiKeyCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ApiKey`."""
+    orderBy: [ApiKeysOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ApiKeysConnection
   archivedDataSource(dataLayerId: Int!, dataSourceId: Int!, version: Int!): ArchivedDataSource
 
   """Reads a single `ArchivedDataSource` using its globally unique `ID`."""
@@ -12695,6 +12846,30 @@ input RevokeAdminAccessInput {
 
 """The output of our `revokeAdminAccess` mutation."""
 type RevokeAdminAccessPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `revokeApiKey` mutation."""
+input RevokeApiKeyInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: UUID
+}
+
+"""The output of our `revokeApiKey` mutation."""
+type RevokeApiKeyPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -17102,6 +17277,35 @@ used to accept project invite tokens.
 """
 type User implements Node {
   accessRequestDenied(slug: String): Boolean
+
+  """Reads and enables pagination through a set of `ApiKey`."""
+  apiKeysByCreatedByConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ApiKeyCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ApiKey`."""
+    orderBy: [ApiKeysOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ApiKeysConnection!
   approvedBy(projectId: Int): User
   approvedOrDeniedOn(projectId: Int): Datetime
 

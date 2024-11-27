@@ -73,6 +73,7 @@ export default function useDialog() {
         onSubmit: (value: string) => void | Promise<string | void>;
         onCancel?: () => void;
         icon?: "alert" | "delete";
+        placeholder?: string;
       }) => {
         context.setState({
           type: "prompt",
@@ -83,6 +84,7 @@ export default function useDialog() {
           onCancel: options.onCancel,
           submitting: false,
           disableBackdropClick: true,
+          placeholder: options.placeholder,
         });
       },
       alert: (
@@ -169,6 +171,7 @@ type DialogContextState = {
   secondaryButtonText?: string;
   disableBackdropClick?: boolean;
   choices?: ReactNode[];
+  placeholder?: string;
 };
 
 const ResetState: DialogContextState = {
@@ -339,13 +342,14 @@ export function DialogProvider({ children }: { children?: ReactNode }) {
             )}
             {state.type === "prompt" && (
               <TextInput
-                name="name"
+                name="prompt"
                 autocomplete="off"
                 error={error}
                 label={""}
                 value={value}
                 onChange={setValue}
                 autoFocus
+                placeholder={state.placeholder || ""}
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     onSubmit();

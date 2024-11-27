@@ -19,6 +19,7 @@ export default function InlineAuthorDetails({
   onProfileClick,
   link,
   isFocused,
+  className,
 }: {
   profile: AuthorProfileFragment;
   dateString?: string;
@@ -29,6 +30,7 @@ export default function InlineAuthorDetails({
   ) => void;
   link?: string;
   isFocused?: boolean;
+  className?: string;
 }) {
   const sidebarContext = useContext(ProjectAppSidebarContext);
   const date = dateString ? new Date(dateString) : null;
@@ -55,7 +57,7 @@ export default function InlineAuthorDetails({
     [onProfileClick, profile]
   );
   return (
-    <div className={`flex items-center `}>
+    <div className={`flex items-center ${className}`}>
       <button onClick={onClick} className="w-6 h-6 flex items-center flex-none">
         <ProfilePhoto {...profile} canonicalEmail="" />
       </button>

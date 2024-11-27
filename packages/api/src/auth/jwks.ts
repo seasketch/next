@@ -124,12 +124,11 @@ async function createKey() {
 export async function sign(
   client: DBClient,
   payload: any,
-  expiresIn: string,
+  expiresIn: string | number | undefined,
   issuer: string
 ) {
   const privateKey = await getPrivateKey(client);
   return jwt.sign(payload, privateKey.pem, {
-    expiresIn,
     issuer,
     keyid: privateKey.kid,
     algorithm: "RS256",
@@ -138,6 +137,7 @@ export async function sign(
         /^http/.test(issuer) ? "" : "https://"
       }${issuer}/.well-known/jwks.json`,
     },
+    ...(expiresIn ? { expiresIn } : {}),
   });
 }
 

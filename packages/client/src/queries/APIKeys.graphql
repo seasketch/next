@@ -23,3 +23,42 @@ mutation updateSecretKey($id: Int!, $mapboxSecretKey: String) {
     }
   }
 }
+
+fragment APIKeyDetails on ApiKey {
+  id
+  label
+  expiresAt
+  createdAt
+  lastUsedAt
+  isRevoked
+  projectId
+  userByCreatedBy {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+}
+
+query APIKeys($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    apiKeysConnection {
+      nodes {
+        ...APIKeyDetails
+      }
+    }
+  }
+}
+
+mutation createAPIKey($projectId: Int!, $label: String!, $ttlMs: Int) {
+  createApiKey(label: $label, projectId: $projectId, ttlMs: $ttlMs) {
+    token
+  }
+}
+
+mutation revokeAPIKey($id: UUID!) {
+  revokeApiKey(input: { id: $id }) {
+    clientMutationId
+  }
+}

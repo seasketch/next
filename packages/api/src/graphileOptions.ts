@@ -43,6 +43,7 @@ import ComputedMetadataPlugin from "./plugins/computedMetadataPlugin";
 import SearchOverlaysRateLimiterPlugin from "./plugins/searchOverlaysRateLimiterPlugin";
 import ProjectBackgroundJobSubscriptionPlugin from "./plugins/projectBackgroundJobSubscriptionPlugin";
 import MetadataParserPlugin from "./plugins/metadataParserPlugin";
+import ApiKeyPlugin from "./plugins/apiKeyPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -96,6 +97,7 @@ export default function graphileOptions(): PostGraphileOptions {
       SearchOverlaysRateLimiterPlugin,
       ProjectBackgroundJobSubscriptionPlugin,
       MetadataParserPlugin,
+      ApiKeyPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

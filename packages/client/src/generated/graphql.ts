@@ -210,6 +210,69 @@ export type AlternateLanguageLabelsForFormElementPayload = {
   query?: Maybe<Query>;
 };
 
+export type ApiKey = Node & {
+  __typename?: 'ApiKey';
+  createdAt: Scalars['Datetime'];
+  createdBy: Scalars['Int'];
+  expiresAt?: Maybe<Scalars['Datetime']>;
+  id: Scalars['UUID'];
+  isRevoked: Scalars['Boolean'];
+  label: Scalars['String'];
+  lastUsedAt?: Maybe<Scalars['Datetime']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `ApiKey`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  /** Reads a single `User` that is related to this `ApiKey`. */
+  userByCreatedBy?: Maybe<User>;
+};
+
+/** A condition to be used against `ApiKey` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type ApiKeyCondition = {
+  /** Checks for equality with the object’s `createdBy` field. */
+  createdBy?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `ApiKey` values. */
+export type ApiKeysConnection = {
+  __typename?: 'ApiKeysConnection';
+  /** A list of edges which contains the `ApiKey` and cursor to aid in pagination. */
+  edges: Array<ApiKeysEdge>;
+  /** A list of `ApiKey` objects. */
+  nodes: Array<ApiKey>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ApiKey` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ApiKey` edge in the connection. */
+export type ApiKeysEdge = {
+  __typename?: 'ApiKeysEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ApiKey` at the end of the edge. */
+  node: ApiKey;
+};
+
+/** Methods to use when ordering `ApiKey`. */
+export enum ApiKeysOrderBy {
+  CreatedByAsc = 'CREATED_BY_ASC',
+  CreatedByDesc = 'CREATED_BY_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
 /** All input for the `approveParticipant` mutation. */
 export type ApproveParticipantInput = {
   /**
@@ -1013,6 +1076,11 @@ export type CopySketchTocItemResults = {
   sketches?: Maybe<Array<Sketch>>;
   /** Returns the parent collection (if exists) so that the client can select an updated updatedAt */
   updatedCollection?: Maybe<Sketch>;
+};
+
+export type CreateApiKeyResponse = {
+  __typename?: 'CreateApiKeyResponse';
+  token: Scalars['String'];
 };
 
 /** All input for the create `Basemap` mutation. */
@@ -6713,6 +6781,7 @@ export type Mutation = {
   copySketch?: Maybe<CopySketchPayload>;
   copySketchFolder?: Maybe<CopySketchFolderPayload>;
   copySketchTocItem?: Maybe<CopySketchTocItemResults>;
+  createApiKey: CreateApiKeyResponse;
   /** Creates a single `Basemap`. */
   createBasemap?: Maybe<CreateBasemapPayload>;
   /** Creates a single `CommunityGuideline`. */
@@ -6996,6 +7065,7 @@ export type Mutation = {
   resendVerificationEmail: SendVerificationEmailResults;
   /** Remove participant admin privileges. */
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
+  revokeApiKey?: Maybe<RevokeApiKeyPayload>;
   rollbackToArchivedSource?: Maybe<RollbackToArchivedSourcePayload>;
   /** Send all UNSENT invites in the current project. */
   sendAllProjectInvites?: Maybe<SendAllProjectInvitesPayload>;
@@ -7356,6 +7426,14 @@ export type MutationCopySketchTocItemArgs = {
   forForum?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
   type: SketchChildType;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateApiKeyArgs = {
+  label: Scalars['String'];
+  projectId: Scalars['Int'];
+  ttlMs?: Maybe<Scalars['Int']>;
 };
 
 
@@ -8117,6 +8195,12 @@ export type MutationRemoveValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRevokeAdminAccessArgs = {
   input: RevokeAdminAccessInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRevokeApiKeyArgs = {
+  input: RevokeApiKeyInput;
 };
 
 
@@ -9226,6 +9310,8 @@ export type Project = Node & {
   adminCount?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `User`. */
   admins?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `ApiKey`. */
+  apiKeysConnection: ApiKeysConnection;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -9462,6 +9548,21 @@ export type ProjectActivityArgs = {
 export type ProjectAdminsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectApiKeysConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ApiKeyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ApiKeysOrderBy>>;
 };
 
 
@@ -10382,6 +10483,11 @@ export type Query = Node & {
   aclByTableOfContentsItemId?: Maybe<Acl>;
   /** Reads and enables pagination through a set of `Project`. */
   activeProjects?: Maybe<Array<Project>>;
+  apiKey?: Maybe<ApiKey>;
+  /** Reads a single `ApiKey` using its globally unique `ID`. */
+  apiKeyByNodeId?: Maybe<ApiKey>;
+  /** Reads and enables pagination through a set of `ApiKey`. */
+  apiKeysConnection?: Maybe<ApiKeysConnection>;
   archivedDataSource?: Maybe<ArchivedDataSource>;
   /** Reads a single `ArchivedDataSource` using its globally unique `ID`. */
   archivedDataSourceByNodeId?: Maybe<ArchivedDataSource>;
@@ -10664,6 +10770,30 @@ export type QueryActiveProjectsArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryApiKeyArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryApiKeyByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryApiKeysConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ApiKeyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ApiKeysOrderBy>>;
 };
 
 
@@ -11758,6 +11888,28 @@ export type RevokeAdminAccessInput = {
 /** The output of our `revokeAdminAccess` mutation. */
 export type RevokeAdminAccessPayload = {
   __typename?: 'RevokeAdminAccessPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `revokeApiKey` mutation. */
+export type RevokeApiKeyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `revokeApiKey` mutation. */
+export type RevokeApiKeyPayload = {
+  __typename?: 'RevokeApiKeyPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -15419,6 +15571,8 @@ export type UploaderResponse = {
 export type User = Node & {
   __typename?: 'User';
   accessRequestDenied?: Maybe<Scalars['Boolean']>;
+  /** Reads and enables pagination through a set of `ApiKey`. */
+  apiKeysByCreatedByConnection: ApiKeysConnection;
   approvedBy?: Maybe<User>;
   approvedOrDeniedOn?: Maybe<Scalars['Datetime']>;
   /**
@@ -15474,6 +15628,26 @@ export type User = Node & {
  */
 export type UserAccessRequestDeniedArgs = {
   slug?: Maybe<Scalars['String']>;
+};
+
+
+/**
+ * The SeaSketch User type is quite sparse since authentication is handled by Auth0
+ * and we store no personal information unless the user explicitly adds it to the
+ * user `Profile`.
+ *
+ * During operation of the system, users identify themselves using bearer tokens.
+ * These tokens contain ephemeral information like `canonical_email` which can be
+ * used to accept project invite tokens.
+ */
+export type UserApiKeysByCreatedByConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ApiKeyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ApiKeysOrderBy>>;
 };
 
 
@@ -15939,6 +16113,67 @@ export type UpdateSecretKeyMutation = (
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'mapboxSecretKey'>
     )> }
+  )> }
+);
+
+export type ApiKeyDetailsFragment = (
+  { __typename?: 'ApiKey' }
+  & Pick<ApiKey, 'id' | 'label' | 'expiresAt' | 'createdAt' | 'lastUsedAt' | 'isRevoked' | 'projectId'>
+  & { userByCreatedBy?: Maybe<(
+    { __typename?: 'User' }
+    & Pick<User, 'id'>
+    & { profile?: Maybe<(
+      { __typename?: 'Profile' }
+      & AuthorProfileFragment
+    )> }
+  )> }
+);
+
+export type ApiKeysQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ApiKeysQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { apiKeysConnection: (
+      { __typename?: 'ApiKeysConnection' }
+      & { nodes: Array<(
+        { __typename?: 'ApiKey' }
+        & ApiKeyDetailsFragment
+      )> }
+    ) }
+  )> }
+);
+
+export type CreateApiKeyMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  label: Scalars['String'];
+  ttlMs?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type CreateApiKeyMutation = (
+  { __typename?: 'Mutation' }
+  & { createApiKey: (
+    { __typename?: 'CreateApiKeyResponse' }
+    & Pick<CreateApiKeyResponse, 'token'>
+  ) }
+);
+
+export type RevokeApiKeyMutationVariables = Exact<{
+  id: Scalars['UUID'];
+}>;
+
+
+export type RevokeApiKeyMutation = (
+  { __typename?: 'Mutation' }
+  & { revokeApiKey?: Maybe<(
+    { __typename?: 'RevokeApiKeyPayload' }
+    & Pick<RevokeApiKeyPayload, 'clientMutationId'>
   )> }
 );
 
@@ -21624,6 +21859,33 @@ export const DataFragmentDoc = gql`
   name
 }
     `;
+export const AuthorProfileFragmentDoc = gql`
+    fragment AuthorProfile on Profile {
+  affiliations
+  email
+  fullname
+  nickname
+  picture
+  userId
+}
+    `;
+export const ApiKeyDetailsFragmentDoc = gql`
+    fragment APIKeyDetails on ApiKey {
+  id
+  label
+  expiresAt
+  createdAt
+  lastUsedAt
+  isRevoked
+  projectId
+  userByCreatedBy {
+    id
+    profile {
+      ...AuthorProfile
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}`;
 export const BackgroundJobDetailsFragmentDoc = gql`
     fragment BackgroundJobDetails on ProjectBackgroundJob {
   id
@@ -22033,16 +22295,6 @@ export const ForumListDetailsFragmentDoc = gql`
     nodeId
   }
   translatedProps
-}
-    `;
-export const AuthorProfileFragmentDoc = gql`
-    fragment AuthorProfile on Profile {
-  affiliations
-  email
-  fullname
-  nickname
-  picture
-  userId
 }
     `;
 export const JobFragmentDoc = gql`
@@ -23138,6 +23390,114 @@ export function useUpdateSecretKeyMutation(baseOptions?: Apollo.MutationHookOpti
 export type UpdateSecretKeyMutationHookResult = ReturnType<typeof useUpdateSecretKeyMutation>;
 export type UpdateSecretKeyMutationResult = Apollo.MutationResult<UpdateSecretKeyMutation>;
 export type UpdateSecretKeyMutationOptions = Apollo.BaseMutationOptions<UpdateSecretKeyMutation, UpdateSecretKeyMutationVariables>;
+export const ApiKeysDocument = gql`
+    query APIKeys($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    apiKeysConnection {
+      nodes {
+        ...APIKeyDetails
+      }
+    }
+  }
+}
+    ${ApiKeyDetailsFragmentDoc}`;
+
+/**
+ * __useApiKeysQuery__
+ *
+ * To run a query within a React component, call `useApiKeysQuery` and pass it any options that fit your needs.
+ * When your component renders, `useApiKeysQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useApiKeysQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useApiKeysQuery(baseOptions: Apollo.QueryHookOptions<ApiKeysQuery, ApiKeysQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ApiKeysQuery, ApiKeysQueryVariables>(ApiKeysDocument, options);
+      }
+export function useApiKeysLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ApiKeysQuery, ApiKeysQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ApiKeysQuery, ApiKeysQueryVariables>(ApiKeysDocument, options);
+        }
+export type ApiKeysQueryHookResult = ReturnType<typeof useApiKeysQuery>;
+export type ApiKeysLazyQueryHookResult = ReturnType<typeof useApiKeysLazyQuery>;
+export type ApiKeysQueryResult = Apollo.QueryResult<ApiKeysQuery, ApiKeysQueryVariables>;
+export const CreateApiKeyDocument = gql`
+    mutation createAPIKey($projectId: Int!, $label: String!, $ttlMs: Int) {
+  createApiKey(label: $label, projectId: $projectId, ttlMs: $ttlMs) {
+    token
+  }
+}
+    `;
+export type CreateApiKeyMutationFn = Apollo.MutationFunction<CreateApiKeyMutation, CreateApiKeyMutationVariables>;
+
+/**
+ * __useCreateApiKeyMutation__
+ *
+ * To run a mutation, you first call `useCreateApiKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateApiKeyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createApiKeyMutation, { data, loading, error }] = useCreateApiKeyMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      label: // value for 'label'
+ *      ttlMs: // value for 'ttlMs'
+ *   },
+ * });
+ */
+export function useCreateApiKeyMutation(baseOptions?: Apollo.MutationHookOptions<CreateApiKeyMutation, CreateApiKeyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateApiKeyMutation, CreateApiKeyMutationVariables>(CreateApiKeyDocument, options);
+      }
+export type CreateApiKeyMutationHookResult = ReturnType<typeof useCreateApiKeyMutation>;
+export type CreateApiKeyMutationResult = Apollo.MutationResult<CreateApiKeyMutation>;
+export type CreateApiKeyMutationOptions = Apollo.BaseMutationOptions<CreateApiKeyMutation, CreateApiKeyMutationVariables>;
+export const RevokeApiKeyDocument = gql`
+    mutation revokeAPIKey($id: UUID!) {
+  revokeApiKey(input: {id: $id}) {
+    clientMutationId
+  }
+}
+    `;
+export type RevokeApiKeyMutationFn = Apollo.MutationFunction<RevokeApiKeyMutation, RevokeApiKeyMutationVariables>;
+
+/**
+ * __useRevokeApiKeyMutation__
+ *
+ * To run a mutation, you first call `useRevokeApiKeyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRevokeApiKeyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [revokeApiKeyMutation, { data, loading, error }] = useRevokeApiKeyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRevokeApiKeyMutation(baseOptions?: Apollo.MutationHookOptions<RevokeApiKeyMutation, RevokeApiKeyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RevokeApiKeyMutation, RevokeApiKeyMutationVariables>(RevokeApiKeyDocument, options);
+      }
+export type RevokeApiKeyMutationHookResult = ReturnType<typeof useRevokeApiKeyMutation>;
+export type RevokeApiKeyMutationResult = Apollo.MutationResult<RevokeApiKeyMutation>;
+export type RevokeApiKeyMutationOptions = Apollo.BaseMutationOptions<RevokeApiKeyMutation, RevokeApiKeyMutationVariables>;
 export const GetAclDocument = gql`
     query GetAcl($nodeId: ID!) {
   aclByNodeId(nodeId: $nodeId) {
@@ -33535,6 +33895,7 @@ export const namedOperations = {
   Query: {
     ProjectBucketSetting: 'ProjectBucketSetting',
     MapboxAPIKeys: 'MapboxAPIKeys',
+    APIKeys: 'APIKeys',
     GetAcl: 'GetAcl',
     Groups: 'Groups',
     VerifyProjectInvite: 'VerifyProjectInvite',
@@ -33624,6 +33985,8 @@ export const namedOperations = {
     UpdateProjectStorageBucket: 'UpdateProjectStorageBucket',
     updatePublicKey: 'updatePublicKey',
     updateSecretKey: 'updateSecretKey',
+    createAPIKey: 'createAPIKey',
+    revokeAPIKey: 'revokeAPIKey',
     UpdateAclType: 'UpdateAclType',
     AddGroupToAcl: 'AddGroupToAcl',
     RemoveGroupFromAcl: 'RemoveGroupFromAcl',
@@ -33813,6 +34176,7 @@ export const namedOperations = {
     SketchPopupDetails: 'SketchPopupDetails',
     PopupShareDetails: 'PopupShareDetails',
     data: 'data',
+    APIKeyDetails: 'APIKeyDetails',
     BackgroundJobDetails: 'BackgroundJobDetails',
     BasemapDetails: 'BasemapDetails',
     BasemapAdminDetails: 'BasemapAdminDetails',
