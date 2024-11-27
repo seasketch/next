@@ -2,18 +2,18 @@ import { GeoJsonGeometryTypes } from "geojson";
 /**
  * Attribute type as translated to a javacsript type
  */
-export type GeostatsAttributeType = "string" | "number" | "boolean" | "null" | "mixed" | "object" | "array";
+export declare type GeostatsAttributeType = "string" | "number" | "boolean" | "null" | "mixed" | "object" | "array";
 /**
  * A bucket is a tuple of [break, count]. Each bucket has a count of the number
  * of features between the break and the next break. The last bucket will have
  * a null count.
  */
-export type Bucket = [number, number | null];
+export declare type Bucket = [number, number | null];
 /**
  * A set of buckets for a given number of breaks. This way cartography
  * interfaces can give the user an option to choose the number of breaks
  */
-export type Buckets = {
+export declare type Buckets = {
     [numBreaks: number]: Bucket[];
 };
 export interface BaseGeostatsAttribute {
@@ -74,8 +74,8 @@ export interface NumericGeostatsAttribute extends BaseGeostatsAttribute {
         stdev: number;
     };
 }
-export type GeostatsAttribute = BaseGeostatsAttribute | NumericGeostatsAttribute;
-export type LegacyGeostatsAttribute = Omit<BaseGeostatsAttribute, "values" | "countDistinct"> & {
+export declare type GeostatsAttribute = BaseGeostatsAttribute | NumericGeostatsAttribute;
+export declare type LegacyGeostatsAttribute = Omit<BaseGeostatsAttribute, "values" | "countDistinct"> & {
     values: (string | number | boolean | null)[];
     quantiles?: number[];
 };
@@ -84,7 +84,7 @@ export declare enum MetadataType {
     ISO19139 = "ISO19139",
     FGDC = "FGDC"
 }
-export type GeostatsMetadata = {
+export declare type GeostatsMetadata = {
     /**
      * metadata for the layer summarized as a prosemirror document
      */
@@ -124,7 +124,7 @@ export interface GeostatsLayer {
     bounds?: number[];
     metadata?: GeostatsMetadata;
 }
-export type LegacyGeostatsLayer = Omit<GeostatsLayer, "attributes" | "bounds"> & {
+export declare type LegacyGeostatsLayer = Omit<GeostatsLayer, "attributes" | "bounds"> & {
     attributes: LegacyGeostatsAttribute[];
 };
 export declare function isLegacyGeostatsLayer(layer: LegacyGeostatsLayer | GeostatsLayer): layer is LegacyGeostatsLayer;
@@ -134,12 +134,12 @@ export declare function isLegacyGeostatsAttribute(attr: LegacyGeostatsAttribute 
  * number of features between the break and the next break. The last bucket will
  * have a null fraction.
  */
-export type RasterBucket = [number, number | null];
+export declare type RasterBucket = [number, number | null];
 /**
  * A set of buckets for a given number of breaks. This way cartography
  * interfaces can give the user an option to choose the number of breaks
  */
-export type RasterBuckets = {
+export declare type RasterBuckets = {
     [numBreaks: number]: RasterBucket[];
 };
 /**
@@ -147,8 +147,8 @@ export type RasterBuckets = {
  * raster value and the color is a CSS color string. Raster values should match
  * those in the stats.categories array.
  */
-export type ColorTableEntry = [number, string];
-export type RasterBandInfo = {
+export declare type ColorTableEntry = [number, string];
+export declare type RasterBandInfo = {
     name: string;
     colorInterpretation: "Red" | "Green" | "Blue" | "Alpha" | "Gray" | string | null;
     base: number;

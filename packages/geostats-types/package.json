@@ -1,7 +1,7 @@
 {
   "name": "@seasketch/geostats-types",
   "version": "1.0.0",
-  "description": "Types for metadata describing vector and raster data, useful for cartography and data handling",
+  "description": "Types for metadata describing vector and raster data, useful for cartography and data handling in SeaSketch",
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
