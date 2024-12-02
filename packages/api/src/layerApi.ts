@@ -37,7 +37,7 @@ export default function layerApi(loadersPool: DBClient) {
           data_layers 
         where id = (
           select 
-            data_layer_id 
+            data_layer_id
           from 
             table_of_contents_items 
           where 
@@ -68,6 +68,27 @@ export default function layerApi(loadersPool: DBClient) {
       [data_source_id]
     );
     const geostats = q3.rows[0].geostats;
+    const q4 = await loadersPool.query(
+      `
+      select
+        title,
+        translated_props
+      from
+        table_of_contents_items
+      where
+        stable_id = $1 and
+        is_draft = true and
+        project_id = (
+          select id from projects where slug = $2
+        )
+      `,
+      [req.params.stableId, req.params.slug]
+    );
+    if (q4.rows.length === 0) {
+      res.status(404).send("Not found");
+      return;
+    }
+    const { title, translated_props } = q4.rows[0];
     res.json({
       style: mapbox_gl_styles,
       outputs: data_upload_outputs.map((output) => ({
@@ -78,6 +99,8 @@ export default function layerApi(loadersPool: DBClient) {
         size: output.size,
       })),
       geostats,
+      title,
+      translated_props,
     });
   });
 
