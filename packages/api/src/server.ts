@@ -264,7 +264,6 @@ run({
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
   * * * * * deleteExpiredArchivedDataSources
-  1 * * * * updateCRWTemplate
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {
