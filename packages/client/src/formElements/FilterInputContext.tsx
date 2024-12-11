@@ -15,6 +15,38 @@ import { MapContext } from "../dataLayers/MapContextManager";
 import { FormElementDetailsFragment } from "../generated/graphql";
 import useDebounce from "../useDebounce";
 
+// TODO: this should be derived from the metadata once the service is updated
+export type Stop = {
+  h3Resolution: number;
+  zoomLevel: number;
+  gridSize: number;
+};
+
+/**
+ * These stops represent the zoom levels at which each h3 resolution should be
+ * displayed. The algorithm will fill in the gaps, starting at the highest zoom
+ * level and working its way down to MIN_ZOOM.
+ */
+export const stops: Stop[] = [
+  { h3Resolution: 11, zoomLevel: 14, gridSize: 44 },
+  { h3Resolution: 10, zoomLevel: 13, gridSize: 116 },
+  { h3Resolution: 9, zoomLevel: 12, gridSize: 306 },
+  { h3Resolution: 8, zoomLevel: 10, gridSize: 810 },
+  { h3Resolution: 7, zoomLevel: 8, gridSize: 2100 },
+  { h3Resolution: 6, zoomLevel: 6, gridSize: 5700 },
+].sort((a, b) => b.zoomLevel - a.zoomLevel);
+
+export function zoomToStop(zoom: number, stops: Stop[]): Stop {
+  let stop = stops[0];
+  for (let i = 0; i < stops.length; i++) {
+    if (zoom > stops[i].zoomLevel) {
+      break;
+    }
+    stop = stops[i];
+  }
+  return stop;
+}
+
 export type FilterGeostatsAttribute = Pick<
   GeostatsAttribute,
   "attribute" | "type" | "max" | "min" | "values"
@@ -49,6 +81,11 @@ export const FilterInputServiceContext = createContext<{
   updatingCount: boolean;
   count: number;
   fullCellCount: number;
+  stopInformation?: {
+    resolution: number;
+    area: number;
+    unit: string;
+  };
 }>({
   loading: false,
   getAttributeDetails: () => null,
@@ -147,12 +184,36 @@ export function FilterInputServiceContextProvider({
     }
   }, [mapContext.manager, state.metadata, serviceLocation]);
 
+  const [zoom, setZoom] = useState(0);
+  useEffect(() => {
+    const map = mapContext.manager?.map;
+    if (map) {
+      const listener = () => {
+        setZoom(map.getZoom());
+      };
+      map.on("zoom", listener);
+      return () => {
+        map.off("zoom", listener);
+      };
+    }
+  }, [mapContext.manager?.map]);
+
+  const stopInformation = useMemo(() => {
+    const stop = zoomToStop(Math.floor(zoom), stops);
+    return {
+      resolution: stop.h3Resolution,
+      area: stop.gridSize > 1000 ? stop.gridSize / 1000 : stop.gridSize,
+      unit: stop.gridSize > 1000 ? "kilometer" : "meter",
+    };
+  }, [zoom]);
+
   const value = useMemo(() => {
     return {
       ...state,
       getAttributeDetails,
+      stopInformation,
     };
-  }, [state, getAttributeDetails]);
+  }, [state, getAttributeDetails, stopInformation]);
 
   const debouncedStartingProperties = useDebounce(startingProperties, 100);
 
