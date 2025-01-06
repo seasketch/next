@@ -9298,6 +9298,8 @@ export enum ProfilesOrderBy {
  */
 export type Project = Node & {
   __typename?: 'Project';
+  aboutPageContents: Scalars['JSON'];
+  aboutPageEnabled: Scalars['Boolean'];
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl: ProjectAccessControlSetting;
   /** Reads and enables pagination through a set of `User`. */
@@ -19153,7 +19155,7 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -22569,6 +22571,8 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   hideForums
   hideSketches
   hideOverlays
+  aboutPageContents
+  aboutPageEnabled
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`

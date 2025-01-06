@@ -10353,6 +10353,9 @@ needed to drive the application.
 
 """
 type Project implements Node {
+  aboutPageContents: JSON!
+  aboutPageEnabled: Boolean!
+
   """
   Admins can control whether a project is public, invite-only, or admins-only.
   """
