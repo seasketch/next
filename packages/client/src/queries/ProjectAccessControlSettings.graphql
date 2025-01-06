@@ -58,3 +58,27 @@ mutation setTranslatedProps(
     typeName
   }
 }
+
+mutation updateAboutPageContents(
+  $slug: String!
+  $content: JSON!
+  $lang: String!
+) {
+  updateAboutPageContent(
+    input: { slug: $slug, content: $content, lang: $lang }
+  ) {
+    project {
+      id
+      aboutPageContents
+    }
+  }
+}
+
+mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
+  updateAboutPageEnabled(input: { slug: $slug, enabled: $enabled }) {
+    project {
+      id
+      aboutPageEnabled
+    }
+  }
+}

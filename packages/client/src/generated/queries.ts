@@ -7133,6 +7133,8 @@ export type Mutation = {
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
   toggleLanguageSupport?: Maybe<ToggleLanguageSupportPayload>;
   toggleResponsesPractice?: Maybe<ToggleResponsesPracticePayload>;
+  updateAboutPageContent?: Maybe<UpdateAboutPageContentPayload>;
+  updateAboutPageEnabled?: Maybe<UpdateAboutPageEnabledPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
@@ -8349,6 +8351,18 @@ export type MutationToggleLanguageSupportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleResponsesPracticeArgs = {
   input: ToggleResponsesPracticeInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAboutPageContentArgs = {
+  input: UpdateAboutPageContentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAboutPageEnabledArgs = {
+  input: UpdateAboutPageEnabledInput;
 };
 
 
@@ -13928,6 +13942,75 @@ export type UnsplashUser = {
   username: Scalars['String'];
 };
 
+/** All input for the `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  content?: Maybe<Scalars['JSON']>;
+  lang?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentPayload = {
+  __typename?: 'UpdateAboutPageContentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enabled?: Maybe<Scalars['Boolean']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledPayload = {
+  __typename?: 'UpdateAboutPageEnabledPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `updateAclByBasemapId` mutation. */
 export type UpdateAclByBasemapIdInput = {
   basemapId: Scalars['Int'];
@@ -19117,6 +19200,41 @@ export type SetTranslatedPropsMutation = (
     { __typename?: 'setTranslatedPropResult' }
     & Pick<SetTranslatedPropResult, 'id' | 'translatedProps' | 'typeName'>
   ) }
+);
+
+export type UpdateAboutPageContentsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  content: Scalars['JSON'];
+  lang: Scalars['String'];
+}>;
+
+
+export type UpdateAboutPageContentsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAboutPageContent?: Maybe<(
+    { __typename?: 'UpdateAboutPageContentPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'aboutPageContents'>
+    )> }
+  )> }
+);
+
+export type UpdateAboutPageEnabledMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAboutPageEnabledMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAboutPageEnabled?: Maybe<(
+    { __typename?: 'UpdateAboutPageEnabledPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'aboutPageEnabled'>
+    )> }
+  )> }
 );
 
 export type ProjectDashboardQueryVariables = Exact<{
@@ -25242,6 +25360,26 @@ export const SetTranslatedPropsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateAboutPageContentsDocument = /*#__PURE__*/ gql`
+    mutation updateAboutPageContents($slug: String!, $content: JSON!, $lang: String!) {
+  updateAboutPageContent(input: {slug: $slug, content: $content, lang: $lang}) {
+    project {
+      id
+      aboutPageContents
+    }
+  }
+}
+    `;
+export const UpdateAboutPageEnabledDocument = /*#__PURE__*/ gql`
+    mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
+  updateAboutPageEnabled(input: {slug: $slug, enabled: $enabled}) {
+    project {
+      id
+      aboutPageEnabled
+    }
+  }
+}
+    `;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -27000,6 +27138,8 @@ export const namedOperations = {
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',
+    updateAboutPageContents: 'updateAboutPageContents',
+    updateAboutPageEnabled: 'updateAboutPageEnabled',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

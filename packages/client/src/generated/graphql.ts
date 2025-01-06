@@ -7135,6 +7135,8 @@ export type Mutation = {
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
   toggleLanguageSupport?: Maybe<ToggleLanguageSupportPayload>;
   toggleResponsesPractice?: Maybe<ToggleResponsesPracticePayload>;
+  updateAboutPageContent?: Maybe<UpdateAboutPageContentPayload>;
+  updateAboutPageEnabled?: Maybe<UpdateAboutPageEnabledPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
@@ -8351,6 +8353,18 @@ export type MutationToggleLanguageSupportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationToggleResponsesPracticeArgs = {
   input: ToggleResponsesPracticeInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAboutPageContentArgs = {
+  input: UpdateAboutPageContentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAboutPageEnabledArgs = {
+  input: UpdateAboutPageEnabledInput;
 };
 
 
@@ -13930,6 +13944,75 @@ export type UnsplashUser = {
   username: Scalars['String'];
 };
 
+/** All input for the `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  content?: Maybe<Scalars['JSON']>;
+  lang?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentPayload = {
+  __typename?: 'UpdateAboutPageContentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enabled?: Maybe<Scalars['Boolean']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledPayload = {
+  __typename?: 'UpdateAboutPageEnabledPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `updateAclByBasemapId` mutation. */
 export type UpdateAclByBasemapIdInput = {
   basemapId: Scalars['Int'];
@@ -19119,6 +19202,41 @@ export type SetTranslatedPropsMutation = (
     { __typename?: 'setTranslatedPropResult' }
     & Pick<SetTranslatedPropResult, 'id' | 'translatedProps' | 'typeName'>
   ) }
+);
+
+export type UpdateAboutPageContentsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  content: Scalars['JSON'];
+  lang: Scalars['String'];
+}>;
+
+
+export type UpdateAboutPageContentsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAboutPageContent?: Maybe<(
+    { __typename?: 'UpdateAboutPageContentPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'aboutPageContents'>
+    )> }
+  )> }
+);
+
+export type UpdateAboutPageEnabledMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAboutPageEnabledMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAboutPageEnabled?: Maybe<(
+    { __typename?: 'UpdateAboutPageEnabledPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'aboutPageEnabled'>
+    )> }
+  )> }
 );
 
 export type ProjectDashboardQueryVariables = Exact<{
@@ -29307,6 +29425,81 @@ export function useSetTranslatedPropsMutation(baseOptions?: Apollo.MutationHookO
 export type SetTranslatedPropsMutationHookResult = ReturnType<typeof useSetTranslatedPropsMutation>;
 export type SetTranslatedPropsMutationResult = Apollo.MutationResult<SetTranslatedPropsMutation>;
 export type SetTranslatedPropsMutationOptions = Apollo.BaseMutationOptions<SetTranslatedPropsMutation, SetTranslatedPropsMutationVariables>;
+export const UpdateAboutPageContentsDocument = gql`
+    mutation updateAboutPageContents($slug: String!, $content: JSON!, $lang: String!) {
+  updateAboutPageContent(input: {slug: $slug, content: $content, lang: $lang}) {
+    project {
+      id
+      aboutPageContents
+    }
+  }
+}
+    `;
+export type UpdateAboutPageContentsMutationFn = Apollo.MutationFunction<UpdateAboutPageContentsMutation, UpdateAboutPageContentsMutationVariables>;
+
+/**
+ * __useUpdateAboutPageContentsMutation__
+ *
+ * To run a mutation, you first call `useUpdateAboutPageContentsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAboutPageContentsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAboutPageContentsMutation, { data, loading, error }] = useUpdateAboutPageContentsMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      content: // value for 'content'
+ *      lang: // value for 'lang'
+ *   },
+ * });
+ */
+export function useUpdateAboutPageContentsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAboutPageContentsMutation, UpdateAboutPageContentsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAboutPageContentsMutation, UpdateAboutPageContentsMutationVariables>(UpdateAboutPageContentsDocument, options);
+      }
+export type UpdateAboutPageContentsMutationHookResult = ReturnType<typeof useUpdateAboutPageContentsMutation>;
+export type UpdateAboutPageContentsMutationResult = Apollo.MutationResult<UpdateAboutPageContentsMutation>;
+export type UpdateAboutPageContentsMutationOptions = Apollo.BaseMutationOptions<UpdateAboutPageContentsMutation, UpdateAboutPageContentsMutationVariables>;
+export const UpdateAboutPageEnabledDocument = gql`
+    mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
+  updateAboutPageEnabled(input: {slug: $slug, enabled: $enabled}) {
+    project {
+      id
+      aboutPageEnabled
+    }
+  }
+}
+    `;
+export type UpdateAboutPageEnabledMutationFn = Apollo.MutationFunction<UpdateAboutPageEnabledMutation, UpdateAboutPageEnabledMutationVariables>;
+
+/**
+ * __useUpdateAboutPageEnabledMutation__
+ *
+ * To run a mutation, you first call `useUpdateAboutPageEnabledMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAboutPageEnabledMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAboutPageEnabledMutation, { data, loading, error }] = useUpdateAboutPageEnabledMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      enabled: // value for 'enabled'
+ *   },
+ * });
+ */
+export function useUpdateAboutPageEnabledMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAboutPageEnabledMutation, UpdateAboutPageEnabledMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAboutPageEnabledMutation, UpdateAboutPageEnabledMutationVariables>(UpdateAboutPageEnabledDocument, options);
+      }
+export type UpdateAboutPageEnabledMutationHookResult = ReturnType<typeof useUpdateAboutPageEnabledMutation>;
+export type UpdateAboutPageEnabledMutationResult = Apollo.MutationResult<UpdateAboutPageEnabledMutation>;
+export type UpdateAboutPageEnabledMutationOptions = Apollo.BaseMutationOptions<UpdateAboutPageEnabledMutation, UpdateAboutPageEnabledMutationVariables>;
 export const ProjectDashboardDocument = gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -34078,6 +34271,8 @@ export const namedOperations = {
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',
+    updateAboutPageContents: 'updateAboutPageContents',
+    updateAboutPageEnabled: 'updateAboutPageEnabled',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

@@ -223,6 +223,11 @@ const forumPostSchema = new Schema({
   }),
 });
 
+const aboutPageSchema = new Schema({
+  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  marks: baseMarks,
+});
+
 export const metadata = {
   schema: metadataSchema,
   plugins: exampleSetup({ schema: metadataSchema, menuBar: false }),
@@ -248,6 +253,14 @@ export const forumPosts = {
   schema: forumPostSchema,
   plugins: exampleSetup({
     schema: forumPostSchema,
+    menuBar: false,
+  }),
+};
+
+export const aboutPage = {
+  schema: aboutPageSchema,
+  plugins: exampleSetup({
+    schema: aboutPageSchema,
     menuBar: false,
   }),
 };
