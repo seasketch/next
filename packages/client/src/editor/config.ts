@@ -228,6 +228,14 @@ const aboutPageSchema = new Schema({
   marks: baseMarks,
 });
 
+export const aboutPage = {
+  schema: aboutPageSchema,
+  plugins: exampleSetup({
+    schema: aboutPageSchema,
+    menuBar: false,
+  }),
+};
+
 export const metadata = {
   schema: metadataSchema,
   plugins: exampleSetup({ schema: metadataSchema, menuBar: false }),
@@ -253,14 +261,6 @@ export const forumPosts = {
   schema: forumPostSchema,
   plugins: exampleSetup({
     schema: forumPostSchema,
-    menuBar: false,
-  }),
-};
-
-export const aboutPage = {
-  schema: aboutPageSchema,
-  plugins: exampleSetup({
-    schema: aboutPageSchema,
     menuBar: false,
   }),
 };

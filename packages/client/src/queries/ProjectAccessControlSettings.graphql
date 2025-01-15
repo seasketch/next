@@ -70,6 +70,10 @@ mutation updateAboutPageContents(
     project {
       id
       aboutPageContents
+      aboutPageRenderedContent {
+        lang
+        html
+      }
     }
   }
 }
@@ -79,6 +83,10 @@ mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
     project {
       id
       aboutPageEnabled
+      aboutPageRenderedContent {
+        lang
+        html
+      }
     }
   }
 }

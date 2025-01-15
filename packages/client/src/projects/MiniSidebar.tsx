@@ -8,6 +8,7 @@ import {
   ForumsButton,
   AdminButton,
   LanguageButton,
+  AboutButton,
 } from "./MiniSidebarButtons";
 import { useHistory, useParams } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
@@ -57,43 +58,59 @@ export default function MiniSidebar({
   return (
     <motion.div
       style={{ boxShadow: "0px -2px 5px rgba(0,0,0,0.5)" }}
-      className={`absolute left-0 w-16 h-full ${dark ? "bg-cool-gray-800 text-gray-400" : "bg-white text-gray-700"
-        }  z-20 p-0 flex flex-col items-center`}
+      className={`absolute left-0 w-16 h-full ${
+        dark ? "bg-cool-gray-800 text-gray-400" : "bg-white text-gray-700"
+      }  z-20 p-0 flex flex-col items-center`}
     >
       <MenuToggle
         className={`mt-4 ${dark ? "text-gray-400" : "text-gray-700"}`}
         onClick={onExpand}
       />
+      {data?.project?.aboutPageEnabled && (
+        <AboutButton
+          tooltip={t("About")}
+          tabIndex={1}
+          className="mt-4"
+          sidebarOpen={sidebar === "about"}
+          onClick={openSidebar("about")}
+          anySidebarOpen={!!sidebar}
+        />
+      )}
       <MapButton
         tooltip={t("Maps")}
         tabIndex={2}
-        className="mt-4"
+        className={!data?.project?.aboutPageEnabled ? "mt-4" : ""}
         onClick={openSidebar("maps")}
         sidebarOpen={sidebar === "maps"}
         anySidebarOpen={!!sidebar}
       />
-      {data?.project?.hideOverlays !== true &&
+      {data?.project?.hideOverlays !== true && (
         <LayersButton
           sidebarOpen={sidebar === "overlays"}
           onClick={openSidebar("overlays")}
           tooltip={t("Overlay Layers")}
           tabIndex={3}
           anySidebarOpen={!!sidebar}
-        />}
-      {data?.project?.hideSketches !== true && <SketchingButton
-        tooltip={t("Sketches")}
-        sidebarOpen={sidebar === "sketches"}
-        onClick={openSidebar("sketches")}
-        tabIndex={4}
-        anySidebarOpen={!!sidebar}
-      />}
-      {data?.project?.hideForums !== true && <ForumsButton
-        tooltip={t("Discussion Forums")}
-        sidebarOpen={sidebar === "forums"}
-        onClick={openSidebar("forums")}
-        tabIndex={5}
-        anySidebarOpen={!!sidebar}
-      />}
+        />
+      )}
+      {data?.project?.hideSketches !== true && (
+        <SketchingButton
+          tooltip={t("Sketches")}
+          sidebarOpen={sidebar === "sketches"}
+          onClick={openSidebar("sketches")}
+          tabIndex={4}
+          anySidebarOpen={!!sidebar}
+        />
+      )}
+      {data?.project?.hideForums !== true && (
+        <ForumsButton
+          tooltip={t("Discussion Forums")}
+          sidebarOpen={sidebar === "forums"}
+          onClick={openSidebar("forums")}
+          tabIndex={5}
+          anySidebarOpen={!!sidebar}
+        />
+      )}
       {/* <SettingsButton
         tooltip={t("Account Settings")}
         sidebarOpen={sidebar === "settings"}

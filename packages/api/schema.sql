@@ -2010,6 +2010,8 @@ CREATE TABLE public.projects (
     hide_overlays boolean DEFAULT false NOT NULL,
     enable_download_by_default boolean DEFAULT false NOT NULL,
     data_hosting_retention_period interval,
+    about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
+    about_page_enabled boolean DEFAULT false NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -6132,22 +6134,6 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
         data_library_template_id
       from table_of_contents_items where id = item_id returning id into copy_id;
       return copy_id;
-    end;
-  $$;
-
-
---
--- Name: copy_table_of_contents_item_recursive(integer, boolean, boolean, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare 
-      copy_id int;
-      child record;
-    begin
-      copy_id := copy_table_of_contents_item(item_id, copy_data_source, append_copy_to_name, project_id);
     end;
   $$;
 
@@ -17555,6 +17541,36 @@ COMMENT ON FUNCTION public.unsubscribed("userId" integer) IS '@omit';
 
 
 --
+-- Name: update_about_page_content(text, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_about_page_content(slug text, content jsonb, lang text) RETURNS public.projects
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update projects
+    set about_page_contents = jsonb_set(about_page_contents, array[lang], content)
+    where projects.slug = update_about_page_content.slug
+    and session_is_admin(projects.id)
+    returning *;
+  $$;
+
+
+--
+-- Name: update_about_page_enabled(text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_about_page_enabled(slug text, enabled boolean) RETURNS public.projects
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update projects
+    set about_page_enabled = enabled
+    where projects.slug = update_about_page_enabled.slug
+    and session_is_admin(projects.id)
+    returning *;
+  $$;
+
+
+--
 -- Name: update_basemap_offline_tile_settings(integer, integer, boolean, integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -26454,13 +26470,6 @@ REVOKE ALL ON FUNCTION public.copy_table_of_contents_item(item_id integer, copy_
 
 
 --
--- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34417,6 +34426,22 @@ REVOKE ALL ON FUNCTION public.unlockrows(text) FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.unsubscribed("userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.unsubscribed("userId" integer) TO graphile;
+
+
+--
+-- Name: FUNCTION update_about_page_content(slug text, content jsonb, lang text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_about_page_content(slug text, content jsonb, lang text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_about_page_content(slug text, content jsonb, lang text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_about_page_enabled(slug text, enabled boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_about_page_enabled(slug text, enabled boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_about_page_enabled(slug text, enabled boolean) TO seasketch_user;
 
 
 --

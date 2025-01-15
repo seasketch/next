@@ -152,4 +152,9 @@ const forums = new Schema({
   }),
 });
 
-export { forums };
+const aboutPageSchema = new Schema({
+  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  marks: baseMarks,
+});
+
+export { forums, aboutPageSchema };

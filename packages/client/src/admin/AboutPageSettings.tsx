@@ -3,63 +3,44 @@ import { useParams } from "react-router-dom";
 import {
   useProjectMetadataQuery,
   useUpdateAboutPageContentsMutation,
+  useUpdateAboutPageEnabledMutation,
 } from "../generated/graphql";
 import { ProseMirror, useProseMirror } from "use-prosemirror";
 import { aboutPage as editorConfig } from "../editor/config";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { EditorView } from "prosemirror-view";
-import { Node, Slice } from "prosemirror-model";
-import { EditorState, Transaction } from "prosemirror-state";
+import { Node } from "prosemirror-model";
+import { EditorState } from "prosemirror-state";
 import EditorMenuBar from "../editor/EditorMenuBar";
 import languages from "../lang/supported";
-import { useDebouncedFn } from "beautiful-react-hooks";
 import useDebounce from "../useDebounce";
+import MutationStateCheckmarkIndicator from "../components/MutationStateCheckmarkIndicator";
+import Switch from "../components/Switch";
 
 const { schema, plugins } = editorConfig;
 
 export default function AboutPageSettings() {
-  const { t, i18n } = useTranslation("admin");
+  const { t } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
   const { data, loading } = useProjectMetadataQuery({
     variables: { slug },
   });
+
   const [mutate, mutationState] = useUpdateAboutPageContentsMutation();
+  const [enableMutate] = useUpdateAboutPageEnabledMutation();
   const [state, setState] = useProseMirror({ schema });
-  const [changes, setChanges] = useState(false);
   const viewRef = useRef<{ view: EditorView }>();
+
   const [lang, setLang] = useState("EN");
 
   const debouncedDoc = useDebounce(state.doc, 500);
-  console.log(
-    loading,
-    JSON.stringify(
-      data?.project?.aboutPageContents?.[lang]?.content?.[0]?.content
-    )
-  );
+  const [hasChanges, setHasChanges] = useState(false);
 
-  // TODO: Problem here with cached projectmetadata setting the contents of the
-  // editor, and then being updated by the network. stale content shows up after
-  // refresh.
   useEffect(() => {
     const doc = data?.project?.aboutPageContents?.[lang];
-    return;
-    if (state && doc && state.doc) {
+    if (state && doc && state.doc && !hasChanges) {
       try {
-        console.log("dispatching", state.doc);
         const node = Node.fromJSON(schema, doc);
-        // const t = state.tr;
-        // state.tr.replace(
-        //   0,
-        //   state.doc.content.size,
-        //   new Slice(node.content, 0, 0)
-        // );
-
-        // t.doc = node;
-        // console.log("t", t, node);
-        // t.replace(0, state.doc.nodeSize, new Slice(node.content, 0, 0));
-        // // t.replaceRangeWith(0, state.doc.nodeSize, node);
-        // console.log(t);
-        // viewRef.current?.view.dispatch(t);
         const newState = EditorState.create({
           ...state,
           schema: state.schema,
@@ -67,18 +48,20 @@ export default function AboutPageSettings() {
           doc: node,
           selection: state.selection,
         });
-        onChange(newState);
+        setState(newState);
       } catch (e) {
         // do nothing
-        // console.error(e);
-        throw e;
       }
     }
-  }, [data?.project?.aboutPageContents, lang]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.project?.aboutPageContents]);
 
   useEffect(() => {
     if (!loading) {
-      const startingDocument = data?.project?.aboutPageContents?.[lang];
+      let startingDocument: any = data?.project?.aboutPageContents?.["EN"];
+      if (lang !== "EN" && lang in data?.project?.aboutPageContents) {
+        startingDocument = data?.project?.aboutPageContents?.[lang];
+      }
       try {
         const doc = startingDocument
           ? Node.fromJSON(schema, startingDocument)
@@ -90,6 +73,7 @@ export default function AboutPageSettings() {
           doc,
         });
         setState(state);
+        setHasChanges(false);
       } catch (e) {
         const doc = startingDocument
           ? Node.fromJSON(schema, {
@@ -120,14 +104,13 @@ export default function AboutPageSettings() {
         setState(state);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, setState, lang]);
-
-  const [hasChanges, setHasChanges] = useState(false);
 
   const onChange = useCallback(
     (state: EditorState) => {
-      setState(state);
       setHasChanges(true);
+      setState(state);
     },
     [setState]
   );
@@ -141,17 +124,41 @@ export default function AboutPageSettings() {
           slug,
         },
       });
-      setHasChanges(false);
     }
   }, [debouncedDoc]);
+
+  const enabled = data?.project?.aboutPageEnabled;
 
   return (
     <>
       <div className="relative">
         <div className="shadow sm:rounded-md sm:overflow-hidden">
           <div className="px-4 py-5 bg-white sm:p-6">
-            <h3 className="text-lg font-medium leading-6 text-gray-900">
-              {t("About Page")}
+            <h3 className="text-lg font-medium leading-6 text-gray-900 flex items-center space-x-2 py-1">
+              <span>{t("About Page")}</span>
+              <MutationStateCheckmarkIndicator
+                state={
+                  mutationState.called
+                    ? mutationState.loading
+                      ? "SAVING"
+                      : "SAVED"
+                    : "NONE"
+                }
+                error={mutationState.error?.message}
+              />
+              <div className="flex-1 flex items-center justify-end">
+                <Switch
+                  onClick={(enable) =>
+                    enableMutate({
+                      variables: {
+                        enabled: enable,
+                        slug,
+                      },
+                    })
+                  }
+                  isToggled={enabled}
+                />
+              </div>
             </h3>
             {/* {mutationState.error && <p>{mutationState.error.message}</p>} */}
             <p className="mt-1 text-sm leading-5 text-gray-500">
@@ -163,7 +170,12 @@ export default function AboutPageSettings() {
                 translated content.
               </Trans>
             </p>
-            <div className="py-4">
+            <div
+              className={`py-4 ${
+                enabled ? "" : "opacity-10 pointer-events-none"
+              }`}
+              aria-disabled={!enabled}
+            >
               <div className="bg-gray-50 rounded shadow">
                 <EditorMenuBar
                   view={viewRef.current?.view}
@@ -171,7 +183,10 @@ export default function AboutPageSettings() {
                   schema={schema}
                 >
                   <div className="border-r-1 w-1 border-gray-300 border-r h-5 mx-2"></div>
-                  <select className="text-sm ml-2 px-3 py-0.5 rounded border-gray-300">
+                  <select
+                    className="text-sm ml-2 px-3 py-0.5 pr-8 rounded border-gray-300"
+                    onChange={(e) => setLang(e.target.value)}
+                  >
                     <option value="EN">{t("English")}</option>
                     {data?.project?.supportedLanguages?.map((l) => {
                       const lang = languages.find((lang) => lang.code === l);
@@ -190,7 +205,10 @@ export default function AboutPageSettings() {
 
               <div className="pt-4 flex-1 overflow-y-auto">
                 <ProseMirror
-                  className="metadata small-variant"
+                  // style={{ height: 800 }}
+                  className={`metadata about-editor ${
+                    enabled ? "h-64" : "h-12 overlflow-y-hidden"
+                  }`}
                   state={state}
                   onChange={onChange}
                   // @ts-ignore

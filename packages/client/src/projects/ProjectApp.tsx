@@ -31,6 +31,7 @@ import { MeasureControlContextProvider } from "../MeasureControl";
 import ProjectMapLegend from "./ProjectMapLegend";
 import { TableOfContentsMetadataModalProvider } from "../dataLayers/TableOfContentsMetadataModal";
 import { DataDownloadModalProvider } from "../dataLayers/DataDownloadModal";
+import AboutPage from "./AboutPage";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -87,6 +88,7 @@ export default function ProjectApp() {
     sketches: t("Sketching Tools"),
     forums: t("Discussion Forums"),
     settings: t("Cache Settings"),
+    about: t("About this Project"),
   };
   const { basemaps, tableOfContentsItems, dataLayers, dataSources } =
     useMapData(mapContext);
@@ -182,6 +184,9 @@ export default function ProjectApp() {
                                 : ""
                             }`}
                           >
+                            <Route path={`/${slug}/app/about`}>
+                              <AboutPage />
+                            </Route>
                             <Route path={`/${slug}/app/maps`}>
                               <BasemapControl basemaps={basemaps} />
                             </Route>

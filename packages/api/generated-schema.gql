@@ -10369,6 +10369,13 @@ type Project implements Node {
   aboutPageEnabled: Boolean!
 
   """
+  Metadata will be returned as directly stored in the SeaSketch
+  database or computed by fetching from a 3rd party service,
+  depending on the data source type.
+  """
+  aboutPageRenderedContent: [RenderedAboutPageContent]
+
+  """
   Admins can control whether a project is public, invite-only, or admins-only.
   """
   accessControl: ProjectAccessControlSetting!
@@ -12835,6 +12842,11 @@ type RemoveValidChildSketchClassPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type RenderedAboutPageContent {
+  html: String
+  lang: String
 }
 
 enum RenderUnderType {

@@ -9314,6 +9314,12 @@ export type Project = Node & {
   __typename?: 'Project';
   aboutPageContents: Scalars['JSON'];
   aboutPageEnabled: Scalars['Boolean'];
+  /**
+   * Metadata will be returned as directly stored in the SeaSketch
+   * database or computed by fetching from a 3rd party service,
+   * depending on the data source type.
+   */
+  aboutPageRenderedContent?: Maybe<Array<Maybe<RenderedAboutPageContent>>>;
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl: ProjectAccessControlSetting;
   /** Reads and enables pagination through a set of `User`. */
@@ -11881,6 +11887,12 @@ export enum RenderUnderType {
   Land = 'LAND',
   None = 'NONE'
 }
+
+export type RenderedAboutPageContent = {
+  __typename?: 'RenderedAboutPageContent';
+  html?: Maybe<Scalars['String']>;
+  lang?: Maybe<Scalars['String']>;
+};
 
 export type RetentionChangeEstimate = {
   __typename?: 'RetentionChangeEstimate';
@@ -19216,6 +19228,10 @@ export type UpdateAboutPageContentsMutation = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'aboutPageContents'>
+      & { aboutPageRenderedContent?: Maybe<Array<Maybe<(
+        { __typename?: 'RenderedAboutPageContent' }
+        & Pick<RenderedAboutPageContent, 'lang' | 'html'>
+      )>>> }
     )> }
   )> }
 );
@@ -19233,6 +19249,10 @@ export type UpdateAboutPageEnabledMutation = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'aboutPageEnabled'>
+      & { aboutPageRenderedContent?: Maybe<Array<Maybe<(
+        { __typename?: 'RenderedAboutPageContent' }
+        & Pick<RenderedAboutPageContent, 'lang' | 'html'>
+      )>>> }
     )> }
   )> }
 );
@@ -19277,7 +19297,10 @@ export type ProjectMetadataFragment = (
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
-  )> }
+  )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
+    { __typename?: 'RenderedAboutPageContent' }
+    & Pick<RenderedAboutPageContent, 'lang' | 'html'>
+  )>>> }
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -22691,6 +22714,10 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   hideOverlays
   aboutPageContents
   aboutPageEnabled
+  aboutPageRenderedContent {
+    lang
+    html
+  }
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -25366,6 +25393,10 @@ export const UpdateAboutPageContentsDocument = /*#__PURE__*/ gql`
     project {
       id
       aboutPageContents
+      aboutPageRenderedContent {
+        lang
+        html
+      }
     }
   }
 }
@@ -25376,6 +25407,10 @@ export const UpdateAboutPageEnabledDocument = /*#__PURE__*/ gql`
     project {
       id
       aboutPageEnabled
+      aboutPageRenderedContent {
+        lang
+        html
+      }
     }
   }
 }

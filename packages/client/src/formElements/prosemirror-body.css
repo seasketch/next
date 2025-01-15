@@ -156,3 +156,7 @@ div[attachments="forumAttachments"] {
 .metadata .ProseMirror td {
   @apply border p-1;
 }
+
+.about-editor .ProseMirror {
+  height: 100%;
+}
