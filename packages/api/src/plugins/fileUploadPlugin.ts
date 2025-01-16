@@ -88,6 +88,7 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
       enum FileUploadUsageInput {
         forum_attachment
         survey_response
+        about_page
       }
 
       extend type Mutation {

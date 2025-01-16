@@ -1,0 +1,19 @@
+.imagePluginOverlay {
+  display: none !important;
+}
+
+.imageResizeBoxWrapper {
+  display: none;
+}
+
+.imagePluginRoot div.text {
+  /* display: none; */
+}
+
+.imagePluginRoot.ProseMirror-selectednode div.text {
+  display: block;
+}
+
+.imagePluginRoot.ProseMirror-selectednode {
+  outline-offset: -2px;
+}

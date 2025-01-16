@@ -6,8 +6,8 @@ import {
   useUpdateAboutPageEnabledMutation,
 } from "../generated/graphql";
 import { ProseMirror, useProseMirror } from "use-prosemirror";
-import { aboutPage as editorConfig } from "../editor/config";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createAboutPageEditorConfig } from "../editor/config";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { EditorView } from "prosemirror-view";
 import { Node } from "prosemirror-model";
 import { EditorState } from "prosemirror-state";
@@ -18,17 +18,26 @@ import MutationStateCheckmarkIndicator from "../components/MutationStateCheckmar
 import Switch from "../components/Switch";
 
 import "prosemirror-image-plugin/dist/styles/common.css";
-import "prosemirror-image-plugin/dist/styles/withResize.css";
-import "prosemirror-image-plugin/dist/styles/sideResize.css";
+import "./prosemirror-image.css";
+import { useApolloClient } from "@apollo/client";
+import { startImageUpload } from "prosemirror-image-plugin";
 
-const { schema, plugins } = editorConfig;
-
-export default function AboutPageSettings() {
+export default function AboutPageSettings({
+  projectId,
+}: {
+  projectId: number;
+}) {
   const { t } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
   const { data, loading } = useProjectMetadataQuery({
     variables: { slug },
   });
+
+  const client = useApolloClient();
+
+  const { schema, plugins, imageSettings } = useMemo(() => {
+    return createAboutPageEditorConfig(client, projectId);
+  }, [client, projectId]);
 
   const [mutate, mutationState] = useUpdateAboutPageContentsMutation();
   const [enableMutate] = useUpdateAboutPageEnabledMutation();
@@ -185,6 +194,21 @@ export default function AboutPageSettings() {
                   view={viewRef.current?.view}
                   state={state}
                   schema={schema}
+                  // @ts-ignore
+                  createImageUpload={async (file, altText) => {
+                    if (viewRef.current?.view) {
+                      startImageUpload(
+                        viewRef.current!.view,
+                        file,
+                        altText || "",
+                        imageSettings,
+                        schema
+                      );
+                      return {};
+                    } else {
+                      throw new Error("No editor view");
+                    }
+                  }}
                 >
                   <div className="border-r-1 w-1 border-gray-300 border-r h-5 mx-2"></div>
                   <select

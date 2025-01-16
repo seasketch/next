@@ -7,6 +7,8 @@ import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { addListNodes } from "prosemirror-schema-list";
 import sketchNodeSpec from "./SketchTocAttachmentSpec";
+import { defaultSettings, updateImageNode } from "prosemirror-image-plugin";
+
 let spec = baseSchema.spec;
 
 baseSchema.spec.marks.update("link", {

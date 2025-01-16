@@ -90,3 +90,24 @@ mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
     }
   }
 }
+
+mutation createFileUploadForAboutPage(
+  $contentType: String!
+  $filename: String!
+  $fileSizeBytes: Int!
+  $projectId: Int!
+) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: about_page
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}

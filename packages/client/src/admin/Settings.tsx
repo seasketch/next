@@ -94,7 +94,9 @@ export default function Settings() {
           <MapExtentSettings />
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
-          <AboutPageSettings />
+          {data?.project?.id && (
+            <AboutPageSettings projectId={data.project.id} />
+          )}
         </div>
         {/* Disabled until fixed */}
         {/* <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">

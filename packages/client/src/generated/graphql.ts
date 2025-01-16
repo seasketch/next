@@ -4793,11 +4793,13 @@ export type FileUploadCondition = {
 };
 
 export enum FileUploadUsage {
+  AboutPage = 'ABOUT_PAGE',
   ForumAttachment = 'FORUM_ATTACHMENT',
   SurveyResponse = 'SURVEY_RESPONSE'
 }
 
 export enum FileUploadUsageInput {
+  AboutPage = 'about_page',
   ForumAttachment = 'forum_attachment',
   SurveyResponse = 'survey_response'
 }
@@ -19259,6 +19261,27 @@ export type UpdateAboutPageEnabledMutation = (
   )> }
 );
 
+export type CreateFileUploadForAboutPageMutationVariables = Exact<{
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CreateFileUploadForAboutPageMutation = (
+  { __typename?: 'Mutation' }
+  & { createFileUpload: (
+    { __typename?: 'UploaderResponse' }
+    & Pick<UploaderResponse, 'cloudflareImagesUploadUrl'>
+    & { fileUpload: (
+      { __typename?: 'FileUpload' }
+      & Pick<FileUpload, 'presignedUploadUrl'>
+      & FileUploadDetailsFragment
+    ) }
+  ) }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period: ActivityStatsPeriod;
@@ -29535,6 +29558,52 @@ export function useUpdateAboutPageEnabledMutation(baseOptions?: Apollo.MutationH
 export type UpdateAboutPageEnabledMutationHookResult = ReturnType<typeof useUpdateAboutPageEnabledMutation>;
 export type UpdateAboutPageEnabledMutationResult = Apollo.MutationResult<UpdateAboutPageEnabledMutation>;
 export type UpdateAboutPageEnabledMutationOptions = Apollo.BaseMutationOptions<UpdateAboutPageEnabledMutation, UpdateAboutPageEnabledMutationVariables>;
+export const CreateFileUploadForAboutPageDocument = gql`
+    mutation createFileUploadForAboutPage($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: about_page
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
+export type CreateFileUploadForAboutPageMutationFn = Apollo.MutationFunction<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>;
+
+/**
+ * __useCreateFileUploadForAboutPageMutation__
+ *
+ * To run a mutation, you first call `useCreateFileUploadForAboutPageMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateFileUploadForAboutPageMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createFileUploadForAboutPageMutation, { data, loading, error }] = useCreateFileUploadForAboutPageMutation({
+ *   variables: {
+ *      contentType: // value for 'contentType'
+ *      filename: // value for 'filename'
+ *      fileSizeBytes: // value for 'fileSizeBytes'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useCreateFileUploadForAboutPageMutation(baseOptions?: Apollo.MutationHookOptions<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>(CreateFileUploadForAboutPageDocument, options);
+      }
+export type CreateFileUploadForAboutPageMutationHookResult = ReturnType<typeof useCreateFileUploadForAboutPageMutation>;
+export type CreateFileUploadForAboutPageMutationResult = Apollo.MutationResult<CreateFileUploadForAboutPageMutation>;
+export type CreateFileUploadForAboutPageMutationOptions = Apollo.BaseMutationOptions<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>;
 export const ProjectDashboardDocument = gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -34308,6 +34377,7 @@ export const namedOperations = {
     setTranslatedProps: 'setTranslatedProps',
     updateAboutPageContents: 'updateAboutPageContents',
     updateAboutPageEnabled: 'updateAboutPageEnabled',
+    createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

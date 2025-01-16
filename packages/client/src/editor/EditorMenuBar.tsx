@@ -20,7 +20,7 @@ import { forumPosts } from "./config";
 import { EditorState, Transaction } from "prosemirror-state";
 import { markActive } from "./utils";
 import TextInput from "../components/TextInput";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import { wrapInList } from "prosemirror-schema-list";
 import ShareSketchesModal from "../projects/Forums/ShareSketchesModal";
@@ -46,7 +46,7 @@ import {
   MenuBarContentClasses,
   MenuBarItemClasses,
 } from "../components/Menubar";
-import { UploadIcon } from "@radix-ui/react-icons";
+import { ImageIcon, UploadIcon } from "@radix-ui/react-icons";
 require("../admin/data/GLStyleEditor/RadixDropdown.css");
 
 interface EditorMenuBarProps {
@@ -67,6 +67,10 @@ interface EditorMenuBarProps {
   children?: ReactNode;
   tocId?: number;
   onUploadMetadataClick?: () => void;
+  createImageUpload?: (
+    file: File,
+    altText?: string
+  ) => Promise<{ error?: string; url?: string }>;
 }
 
 export default function EditorMenuBar(props: EditorMenuBarProps) {
@@ -86,6 +90,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
   const { progress, updateProgress } = useContext(
     EditorAttachmentProgressContext
   );
+  const [imageModalOpen, setImageModalOpen] = useState(false);
 
   useEffect(() => {
     if (props.state) {
@@ -173,6 +178,19 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
       style={{ ...props.style }}
       className={`${props.className} text-sm px-2 flex items-center`}
     >
+      {imageModalOpen && props.createImageUpload && (
+        <ImageModal
+          onRequestClose={() => setImageModalOpen(false)}
+          onSubmit={async (f, alt) => {
+            const result = await props.createImageUpload!(f, alt);
+            if (result.error) {
+              alert(result.error);
+            } else {
+              setImageModalOpen(false);
+            }
+          }}
+        />
+      )}
       <button
         title={t("Bold")}
         disabled={menuState?.disabled?.strong}
@@ -408,6 +426,14 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
           />
         </svg>
       </button>
+      {props.createImageUpload && (
+        <button
+          className={buttonClass(false, "")}
+          onClick={() => setImageModalOpen(true)}
+        >
+          <ImageIcon />
+        </button>
+      )}
       {props.showUploadOption && props.onUploadMetadataClick && (
         <button
           onClick={props.onUploadMetadataClick}
@@ -922,5 +948,66 @@ export function EditorAttachmentProgressProvider({
     >
       {children}
     </EditorAttachmentProgressContext.Provider>
+  );
+}
+
+function ImageModal({
+  onRequestClose,
+  onSubmit,
+}: {
+  onRequestClose: () => void;
+  onSubmit: (file: File, altText?: string) => Promise<void>;
+}) {
+  const { t } = useTranslation();
+  const [saving, setSaving] = useState(false);
+  return (
+    <Modal onRequestClose={onRequestClose} title={t("Upload Image")}>
+      <p className="text-sm text-gray-500">
+        <Trans>
+          Choose an image to upload, along with optional alternate text for
+          accessibility. You can also drag & drop images to the editor, though
+          you will not be able to specify alt text that way.
+        </Trans>
+      </p>
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const form = e.target as HTMLFormElement;
+          const data = new FormData(form);
+          const altText = data.get("alt-text");
+          const file = data.get("image");
+          if (file) {
+            setSaving(true);
+            await onSubmit(file as File, altText as string);
+            setSaving(false);
+          }
+        }}
+      >
+        <input
+          className="block text-sm py-2"
+          required
+          type="file"
+          name="image"
+          accept="image/*"
+        />
+        <input
+          className="block w-128 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-black"
+          type="text"
+          name="alt-text"
+          placeholder="Alt text"
+        />
+        <div className="space-x-2 pt-4">
+          <button
+            className="border rounded px-2 py-0.5 border-gray-500 bg-gray-200 "
+            disabled={saving}
+            type="submit"
+          >
+            {t("Submit")}
+          </button>
+          <button onClick={onRequestClose}>{t("cancel")}</button>
+        </div>
+      </form>
+    </Modal>
   );
 }

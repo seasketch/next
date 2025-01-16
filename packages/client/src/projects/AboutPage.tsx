@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useProjectMetadataQuery } from "../generated/graphql";
 import getSlug from "../getSlug";
+import "prosemirror-image-plugin/dist/styles/common.css";
 
 export default function AboutPage() {
   const { data, loading } = useProjectMetadataQuery({

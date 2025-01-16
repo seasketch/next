@@ -5588,11 +5588,13 @@ enum FileUploadsOrderBy {
 }
 
 enum FileUploadUsage {
+  ABOUT_PAGE
   FORUM_ATTACHMENT
   SURVEY_RESPONSE
 }
 
 enum FileUploadUsageInput {
+  about_page
   forum_attachment
   survey_response
 }

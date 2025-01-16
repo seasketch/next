@@ -4791,11 +4791,13 @@ export type FileUploadCondition = {
 };
 
 export enum FileUploadUsage {
+  AboutPage = 'ABOUT_PAGE',
   ForumAttachment = 'FORUM_ATTACHMENT',
   SurveyResponse = 'SURVEY_RESPONSE'
 }
 
 export enum FileUploadUsageInput {
+  AboutPage = 'about_page',
   ForumAttachment = 'forum_attachment',
   SurveyResponse = 'survey_response'
 }
@@ -19257,6 +19259,27 @@ export type UpdateAboutPageEnabledMutation = (
   )> }
 );
 
+export type CreateFileUploadForAboutPageMutationVariables = Exact<{
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CreateFileUploadForAboutPageMutation = (
+  { __typename?: 'Mutation' }
+  & { createFileUpload: (
+    { __typename?: 'UploaderResponse' }
+    & Pick<UploaderResponse, 'cloudflareImagesUploadUrl'>
+    & { fileUpload: (
+      { __typename?: 'FileUpload' }
+      & Pick<FileUpload, 'presignedUploadUrl'>
+      & FileUploadDetailsFragment
+    ) }
+  ) }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period: ActivityStatsPeriod;
@@ -25415,6 +25438,23 @@ export const UpdateAboutPageEnabledDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateFileUploadForAboutPageDocument = /*#__PURE__*/ gql`
+    mutation createFileUploadForAboutPage($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: about_page
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -27175,6 +27215,7 @@ export const namedOperations = {
     setTranslatedProps: 'setTranslatedProps',
     updateAboutPageContents: 'updateAboutPageContents',
     updateAboutPageEnabled: 'updateAboutPageEnabled',
+    createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

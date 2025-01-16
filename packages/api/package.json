@@ -114,6 +114,7 @@
     "pngjs": "^7.0.0",
     "postgraphile": "^4.14.0",
     "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",
+    "prosemirror-image-plugin": "^2.10.0",
     "prosemirror-model": "^1.19.3",
     "prosemirror-schema-list": "^1.1.4",
     "puppeteer": "^19.7.2",
