@@ -17,6 +17,10 @@ import useDebounce from "../useDebounce";
 import MutationStateCheckmarkIndicator from "../components/MutationStateCheckmarkIndicator";
 import Switch from "../components/Switch";
 
+import "prosemirror-image-plugin/dist/styles/common.css";
+import "prosemirror-image-plugin/dist/styles/withResize.css";
+import "prosemirror-image-plugin/dist/styles/sideResize.css";
+
 const { schema, plugins } = editorConfig;
 
 export default function AboutPageSettings() {

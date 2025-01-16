@@ -9,6 +9,12 @@ import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
 import { tableNodes } from "prosemirror-tables";
+import {
+  defaultSettings,
+  updateImageNode,
+  imagePlugin,
+  ImagePluginSettings,
+} from "prosemirror-image-plugin";
 
 let spec = baseSchema.spec;
 
@@ -223,17 +229,33 @@ const forumPostSchema = new Schema({
   }),
 });
 
+const imageSettings: ImagePluginSettings = {
+  ...defaultSettings,
+  isBlock: true,
+  // defaultTitle: "",
+};
+
 const aboutPageSchema = new Schema({
-  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  nodes: updateImageNode(
+    addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+    {
+      ...imageSettings,
+    }
+  ),
   marks: baseMarks,
 });
 
 export const aboutPage = {
   schema: aboutPageSchema,
-  plugins: exampleSetup({
-    schema: aboutPageSchema,
-    menuBar: false,
-  }),
+  plugins: [
+    ...exampleSetup({
+      schema: aboutPageSchema,
+      menuBar: false,
+    }),
+    imagePlugin({
+      ...imageSettings,
+    }),
+  ],
 };
 
 export const metadata = {
