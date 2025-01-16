@@ -58,3 +58,56 @@ mutation setTranslatedProps(
     typeName
   }
 }
+
+mutation updateAboutPageContents(
+  $slug: String!
+  $content: JSON!
+  $lang: String!
+) {
+  updateAboutPageContent(
+    input: { slug: $slug, content: $content, lang: $lang }
+  ) {
+    project {
+      id
+      aboutPageContents
+      aboutPageRenderedContent {
+        lang
+        html
+      }
+    }
+  }
+}
+
+mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
+  updateAboutPageEnabled(input: { slug: $slug, enabled: $enabled }) {
+    project {
+      id
+      aboutPageEnabled
+      aboutPageRenderedContent {
+        lang
+        html
+      }
+    }
+  }
+}
+
+mutation createFileUploadForAboutPage(
+  $contentType: String!
+  $filename: String!
+  $fileSizeBytes: Int!
+  $projectId: Int!
+) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: about_page
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}

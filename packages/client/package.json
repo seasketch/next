@@ -186,6 +186,7 @@
     "pbf": "^3.2.1",
     "prettier": "^2.7.1",
     "prosemirror-example-setup": "^1.1.2",
+    "prosemirror-image-plugin": "^2.10.0",
     "prosemirror-markdown": "^1.6.0",
     "prosemirror-model": "^1.13.1",
     "prosemirror-schema-basic": "^1.1.2",

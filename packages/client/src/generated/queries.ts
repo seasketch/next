@@ -4791,11 +4791,13 @@ export type FileUploadCondition = {
 };
 
 export enum FileUploadUsage {
+  AboutPage = 'ABOUT_PAGE',
   ForumAttachment = 'FORUM_ATTACHMENT',
   SurveyResponse = 'SURVEY_RESPONSE'
 }
 
 export enum FileUploadUsageInput {
+  AboutPage = 'about_page',
   ForumAttachment = 'forum_attachment',
   SurveyResponse = 'survey_response'
 }
@@ -7133,6 +7135,8 @@ export type Mutation = {
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
   toggleLanguageSupport?: Maybe<ToggleLanguageSupportPayload>;
   toggleResponsesPractice?: Maybe<ToggleResponsesPracticePayload>;
+  updateAboutPageContent?: Maybe<UpdateAboutPageContentPayload>;
+  updateAboutPageEnabled?: Maybe<UpdateAboutPageEnabledPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAcl?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
@@ -8353,6 +8357,18 @@ export type MutationToggleResponsesPracticeArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAboutPageContentArgs = {
+  input: UpdateAboutPageContentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAboutPageEnabledArgs = {
+  input: UpdateAboutPageEnabledInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclArgs = {
   input: UpdateAclInput;
 };
@@ -9298,6 +9314,14 @@ export enum ProfilesOrderBy {
  */
 export type Project = Node & {
   __typename?: 'Project';
+  aboutPageContents: Scalars['JSON'];
+  aboutPageEnabled: Scalars['Boolean'];
+  /**
+   * Metadata will be returned as directly stored in the SeaSketch
+   * database or computed by fetching from a 3rd party service,
+   * depending on the data source type.
+   */
+  aboutPageRenderedContent?: Maybe<Array<Maybe<RenderedAboutPageContent>>>;
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl: ProjectAccessControlSetting;
   /** Reads and enables pagination through a set of `User`. */
@@ -11866,6 +11890,12 @@ export enum RenderUnderType {
   None = 'NONE'
 }
 
+export type RenderedAboutPageContent = {
+  __typename?: 'RenderedAboutPageContent';
+  html?: Maybe<Scalars['String']>;
+  lang?: Maybe<Scalars['String']>;
+};
+
 export type RetentionChangeEstimate = {
   __typename?: 'RetentionChangeEstimate';
   bytes?: Maybe<Scalars['BigInt']>;
@@ -13924,6 +13954,75 @@ export type UnsplashUser = {
   links: UnsplashLinks;
   name: Scalars['String'];
   username: Scalars['String'];
+};
+
+/** All input for the `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  content?: Maybe<Scalars['JSON']>;
+  lang?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentPayload = {
+  __typename?: 'UpdateAboutPageContentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateAboutPageContent` mutation. */
+export type UpdateAboutPageContentPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
+/** All input for the `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enabled?: Maybe<Scalars['Boolean']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledPayload = {
+  __typename?: 'UpdateAboutPageEnabledPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateAboutPageEnabled` mutation. */
+export type UpdateAboutPageEnabledPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
 /** All input for the `updateAclByBasemapId` mutation. */
@@ -19117,6 +19216,70 @@ export type SetTranslatedPropsMutation = (
   ) }
 );
 
+export type UpdateAboutPageContentsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  content: Scalars['JSON'];
+  lang: Scalars['String'];
+}>;
+
+
+export type UpdateAboutPageContentsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAboutPageContent?: Maybe<(
+    { __typename?: 'UpdateAboutPageContentPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'aboutPageContents'>
+      & { aboutPageRenderedContent?: Maybe<Array<Maybe<(
+        { __typename?: 'RenderedAboutPageContent' }
+        & Pick<RenderedAboutPageContent, 'lang' | 'html'>
+      )>>> }
+    )> }
+  )> }
+);
+
+export type UpdateAboutPageEnabledMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAboutPageEnabledMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAboutPageEnabled?: Maybe<(
+    { __typename?: 'UpdateAboutPageEnabledPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'aboutPageEnabled'>
+      & { aboutPageRenderedContent?: Maybe<Array<Maybe<(
+        { __typename?: 'RenderedAboutPageContent' }
+        & Pick<RenderedAboutPageContent, 'lang' | 'html'>
+      )>>> }
+    )> }
+  )> }
+);
+
+export type CreateFileUploadForAboutPageMutationVariables = Exact<{
+  contentType: Scalars['String'];
+  filename: Scalars['String'];
+  fileSizeBytes: Scalars['Int'];
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CreateFileUploadForAboutPageMutation = (
+  { __typename?: 'Mutation' }
+  & { createFileUpload: (
+    { __typename?: 'UploaderResponse' }
+    & Pick<UploaderResponse, 'cloudflareImagesUploadUrl'>
+    & { fileUpload: (
+      { __typename?: 'FileUpload' }
+      & Pick<FileUpload, 'presignedUploadUrl'>
+      & FileUploadDetailsFragment
+    ) }
+  ) }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period: ActivityStatsPeriod;
@@ -19153,11 +19316,14 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
-  )> }
+  )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
+    { __typename?: 'RenderedAboutPageContent' }
+    & Pick<RenderedAboutPageContent, 'lang' | 'html'>
+  )>>> }
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -22569,6 +22735,12 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   hideForums
   hideSketches
   hideOverlays
+  aboutPageContents
+  aboutPageEnabled
+  aboutPageRenderedContent {
+    lang
+    html
+  }
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -25238,6 +25410,51 @@ export const SetTranslatedPropsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateAboutPageContentsDocument = /*#__PURE__*/ gql`
+    mutation updateAboutPageContents($slug: String!, $content: JSON!, $lang: String!) {
+  updateAboutPageContent(input: {slug: $slug, content: $content, lang: $lang}) {
+    project {
+      id
+      aboutPageContents
+      aboutPageRenderedContent {
+        lang
+        html
+      }
+    }
+  }
+}
+    `;
+export const UpdateAboutPageEnabledDocument = /*#__PURE__*/ gql`
+    mutation updateAboutPageEnabled($slug: String!, $enabled: Boolean!) {
+  updateAboutPageEnabled(input: {slug: $slug, enabled: $enabled}) {
+    project {
+      id
+      aboutPageEnabled
+      aboutPageRenderedContent {
+        lang
+        html
+      }
+    }
+  }
+}
+    `;
+export const CreateFileUploadForAboutPageDocument = /*#__PURE__*/ gql`
+    mutation createFileUploadForAboutPage($contentType: String!, $filename: String!, $fileSizeBytes: Int!, $projectId: Int!) {
+  createFileUpload(
+    contentType: $contentType
+    filename: $filename
+    fileSizeBytes: $fileSizeBytes
+    projectId: $projectId
+    usage: about_page
+  ) {
+    cloudflareImagesUploadUrl
+    fileUpload {
+      ...FileUploadDetails
+      presignedUploadUrl
+    }
+  }
+}
+    ${FileUploadDetailsFragmentDoc}`;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -26996,6 +27213,9 @@ export const namedOperations = {
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',
+    updateAboutPageContents: 'updateAboutPageContents',
+    updateAboutPageEnabled: 'updateAboutPageEnabled',
+    createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

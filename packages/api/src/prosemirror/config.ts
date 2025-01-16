@@ -7,6 +7,8 @@ import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { addListNodes } from "prosemirror-schema-list";
 import sketchNodeSpec from "./SketchTocAttachmentSpec";
+import { defaultSettings, updateImageNode } from "prosemirror-image-plugin";
+
 let spec = baseSchema.spec;
 
 baseSchema.spec.marks.update("link", {
@@ -152,4 +154,9 @@ const forums = new Schema({
   }),
 });
 
-export { forums };
+const aboutPageSchema = new Schema({
+  nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+  marks: baseMarks,
+});
+
+export { forums, aboutPageSchema };

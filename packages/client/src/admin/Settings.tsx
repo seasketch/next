@@ -53,6 +53,7 @@ import { TranslateIcon } from "@heroicons/react/outline";
 import TranslatedPropControl from "../components/TranslatedPropControl";
 import bytes from "bytes";
 import ProjectAPIKeys from "./ProjectAPIKeys";
+import AboutPageSettings from "./AboutPageSettings";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
@@ -91,6 +92,11 @@ export default function Settings() {
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <MapExtentSettings />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+          {data?.project?.id && (
+            <AboutPageSettings projectId={data.project.id} />
+          )}
         </div>
         {/* Disabled until fixed */}
         {/* <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">

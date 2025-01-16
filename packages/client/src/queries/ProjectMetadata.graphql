@@ -25,6 +25,12 @@ fragment ProjectMetadata on Project {
   hideForums
   hideSketches
   hideOverlays
+  aboutPageContents
+  aboutPageEnabled
+  aboutPageRenderedContent {
+    lang
+    html
+  }
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

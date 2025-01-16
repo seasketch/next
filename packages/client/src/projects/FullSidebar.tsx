@@ -3,6 +3,7 @@ import { Link, useHistory, useParams } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useTranslation, Trans } from "react-i18next";
 import {
+  AboutIcon,
   ForumsIcon,
   LayerIcon,
   MapIcon,
@@ -163,6 +164,13 @@ export default function FullSidebar({
             </svg>
           }
         /> */}
+        {data?.project?.aboutPageEnabled && (
+          <NavItem
+            onClick={chooseSidebar("about")}
+            label={t("About")}
+            icon={AboutIcon}
+          />
+        )}
         <NavItem
           onClick={chooseSidebar("maps")}
           label={t("Maps")}

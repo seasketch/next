@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
 import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
+import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 
 interface SidebarButtonProps {
   className?: string;
@@ -98,6 +99,12 @@ export const MapIcon = (
     />
   </svg>
 );
+
+export const AboutIcon = (
+  <QuestionMarkCircledIcon className="w-6 h-6 transform scale-110 inline-block" />
+);
+
+export const AboutButton = curry(AboutIcon);
 
 export const MapButton = curry(MapIcon);
 

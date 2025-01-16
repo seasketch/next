@@ -9,6 +9,15 @@ import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
 import { tableNodes } from "prosemirror-tables";
+import {
+  defaultSettings,
+  updateImageNode,
+  imagePlugin,
+  ImagePluginSettings,
+} from "prosemirror-image-plugin";
+import { ApolloClient } from "@apollo/client";
+import { CreateFileUploadForAboutPageDocument } from "../generated/graphql";
+import axios from "axios";
 
 let spec = baseSchema.spec;
 
@@ -222,6 +231,113 @@ const forumPostSchema = new Schema({
     ],
   }),
 });
+
+const imageSettings: ImagePluginSettings = {
+  ...defaultSettings,
+  isBlock: true,
+  hasTitle: false,
+  deleteSrc: async (src) => {
+    // TODO: There's no way to implement this safely since the user can
+    // later undo the deletion of the image, so it needs to stay available
+    // on the server.
+    // In the future, if uploads start to become costly, we can
+    // cross-reference the file_uploads table and the contents of the
+    // metadata and aboutPage prosemirror documents to find "orphaned"
+    // uploads that can be deleted. This could be a periodic
+    // graphile-worker job.
+  },
+  // defaultTitle: "",
+};
+
+const aboutPageSchema = new Schema({
+  nodes: updateImageNode(
+    addListNodes(baseSchema.spec.nodes, "paragraph block*", "block"),
+    {
+      ...imageSettings,
+    }
+  ),
+  marks: baseMarks,
+});
+
+export function createAboutPageEditorConfig(
+  client: ApolloClient<any>,
+  projectId: number
+) {
+  const uploadFile: (file: File) => Promise<string> = async (file) => {
+    const response = await client.mutate({
+      mutation: CreateFileUploadForAboutPageDocument,
+      variables: {
+        contentType: file.type,
+        filename: file.name,
+        fileSizeBytes: file.size,
+        projectId,
+      },
+    });
+    const uploadUrl =
+      response?.data?.createFileUpload?.cloudflareImagesUploadUrl;
+    if (!uploadUrl) {
+      throw new Error("Failed to get upload URL");
+    }
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await axios({
+      url: uploadUrl,
+      method: "POST",
+      data: formData,
+    });
+    if (
+      "data" in res &&
+      res.data &&
+      "result" in res.data &&
+      res.data["result"] &&
+      "variants" in res.data["result"] &&
+      res.data["result"]["variants"] &&
+      Array.isArray(res.data["result"]["variants"])
+    ) {
+      const variants = res.data["result"]["variants"] as string[];
+      const prosemirrorEmbed = variants.find((variant: any) =>
+        /prosemirrorEmbed/.test(variant)
+      );
+      if (!prosemirrorEmbed) {
+        throw new Error("Could not find prosemirrorEmbed variant");
+      }
+      // This rediculous hack is necessary to avoid having the image
+      // flash with a broken icon (in chrome, others?) for a second
+      // before it finally loads. The image is preloaded in a hidden
+      // position before being finally inserted into the prosemirror
+      // document.
+      return new Promise((resolve) => {
+        const img = document.createElement("img");
+        img.src = prosemirrorEmbed;
+        img.setAttribute(
+          "style",
+          "position: absolute; top: -10000px; left: -10000px;"
+        );
+        img.onload = () => {
+          resolve(prosemirrorEmbed);
+          document.body.removeChild(img);
+        };
+        document.body.append(img);
+      });
+    } else {
+      throw new Error("Could not get variants from upload response");
+    }
+  };
+  return {
+    schema: aboutPageSchema,
+    plugins: [
+      ...exampleSetup({
+        schema: aboutPageSchema,
+        menuBar: false,
+      }),
+      imagePlugin({
+        ...imageSettings,
+        uploadFile,
+      }),
+    ],
+    imageSettings: { ...imageSettings, uploadFile },
+  };
+}
 
 export const metadata = {
   schema: metadataSchema,
