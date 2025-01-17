@@ -13,14 +13,17 @@ const Path = (props: any) => (
 export const MenuToggle = ({
   onClick,
   className,
+  tabIndex,
 }: {
   onClick: () => void;
   className?: string;
+  tabIndex?: number;
 }) => (
   <button
-    className={`w-6 h-6 p-0 block active:outline-none focus:outline-none ${className}`}
+    className={`flex items-center justify-center w-9 h-9 rounded -mb-0.5 p-0 pt-0.5 active:outline-none focus:outline-none focus:ring-2 ring-blue-500 focus:bg-gray-700 active:bg-gray-700 ${className}`}
     onClick={onClick}
     style={{ paddingLeft: 1 }}
+    tabIndex={tabIndex}
   >
     <svg width="23" height="23" viewBox="0 0 23 23">
       <Path

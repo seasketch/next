@@ -9,6 +9,7 @@ export interface ProfileStatusButtonProps {
   onClick?: Function;
   loadingIndicatorDelay?: number;
   className?: string;
+  tabIndex?: number;
 }
 
 /**
@@ -30,6 +31,7 @@ function ProfileStatusButton({
   onClick,
   loadingIndicatorDelay,
   className,
+  tabIndex,
 }: ProfileStatusButtonProps) {
   // Use this state to delay the appearance of the loading indicator.
   // The indicator is useful for exceptional states where auth0 is slow to
@@ -90,6 +92,7 @@ function ProfileStatusButton({
   if (!isAuthenticated || !user || !data?.me) return <div>{children}</div>;
   return (
     <button
+      tabIndex={tabIndex}
       className={`
         max-w-xs flex items-center text-sm rounded-full text-white 
         focus:outline-none focus:shadow-solid hover:shadow-solid ${

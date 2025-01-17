@@ -6,9 +6,11 @@ import { ProfileStatusButton } from "../header/ProfileStatusButton";
 export default function SignedInAs({
   className,
   onClick,
+  tabIndex,
 }: {
   className?: string;
   onClick?: () => void;
+  tabIndex?: number;
 }) {
   const { t } = useTranslation("common");
   const { user, logout } = useAuth0();
@@ -31,7 +33,7 @@ export default function SignedInAs({
       className={`flex ${className} ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >
-      <ProfileStatusButton>
+      <ProfileStatusButton tabIndex={tabIndex}>
         <div className="flex items-center">
           <UserCircleIcon className="w-10 h-10 text-gray-500" />
         </div>

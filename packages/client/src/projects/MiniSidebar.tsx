@@ -65,6 +65,7 @@ export default function MiniSidebar({
       <MenuToggle
         className={`mt-4 ${dark ? "text-gray-400" : "text-gray-700"}`}
         onClick={onExpand}
+        tabIndex={1}
       />
       {data?.project?.aboutPageEnabled && (
         <AboutButton

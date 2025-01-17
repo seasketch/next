@@ -59,7 +59,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
       }}
       className={` w-10 h-10 my-2 ${
         props.className
-      } hover:bg-primary-300 hover:bg-opacity-10 focus:bg-white focus:bg-opacity-10 rounded p-1.5 focus:outline-none relative ${
+      } hover:bg-primary-300 hover:bg-opacity-10 focus:bg-white focus:bg-opacity-10 rounded p-1.5 focus:outline-none relative active:outline-none focus:ring-2 ring-blue-500 ${
         props.sidebarOpen ? "bg-opacity-20 bg-primary-300" : ""
       }`}
     >
