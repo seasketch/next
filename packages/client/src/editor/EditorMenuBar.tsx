@@ -960,6 +960,7 @@ function ImageModal({
 }) {
   const { t } = useTranslation();
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   return (
     <Modal onRequestClose={onRequestClose} title={t("Upload Image")}>
       <p className="text-sm text-gray-500">
@@ -990,6 +991,14 @@ function ImageModal({
           type="file"
           name="image"
           accept="image/*"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file && file.size >= 10 * 1024 * 1024) {
+              setError("File must be less than 10MB");
+            } else {
+              setError(null);
+            }
+          }}
         />
         <input
           className="block w-128 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 text-black"
@@ -997,10 +1006,13 @@ function ImageModal({
           name="alt-text"
           placeholder="Alt text"
         />
+        {error && <p className="text-red-500 text-sm py-2">{error}</p>}
         <div className="space-x-2 pt-4">
           <button
-            className="border rounded px-2 py-0.5 border-gray-500 bg-gray-200 "
-            disabled={saving}
+            className={`border rounded px-2 py-0.5 border-gray-500 bg-gray-200 ${
+              error || saving ? "opacity-50" : ""
+            }`}
+            disabled={saving || Boolean(error)}
             type="submit"
           >
             {t("Submit")}

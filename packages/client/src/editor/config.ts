@@ -261,66 +261,76 @@ const aboutPageSchema = new Schema({
 
 export function createAboutPageEditorConfig(
   client: ApolloClient<any>,
-  projectId: number
+  projectId: number,
+  onError: (e: Error) => void
 ) {
   const uploadFile: (file: File) => Promise<string> = async (file) => {
-    const response = await client.mutate({
-      mutation: CreateFileUploadForAboutPageDocument,
-      variables: {
-        contentType: file.type,
-        filename: file.name,
-        fileSizeBytes: file.size,
-        projectId,
-      },
-    });
-    const uploadUrl =
-      response?.data?.createFileUpload?.cloudflareImagesUploadUrl;
-    if (!uploadUrl) {
-      throw new Error("Failed to get upload URL");
-    }
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await axios({
-      url: uploadUrl,
-      method: "POST",
-      data: formData,
-    });
-    if (
-      "data" in res &&
-      res.data &&
-      "result" in res.data &&
-      res.data["result"] &&
-      "variants" in res.data["result"] &&
-      res.data["result"]["variants"] &&
-      Array.isArray(res.data["result"]["variants"])
-    ) {
-      const variants = res.data["result"]["variants"] as string[];
-      const prosemirrorEmbed = variants.find((variant: any) =>
-        /prosemirrorEmbed/.test(variant)
-      );
-      if (!prosemirrorEmbed) {
-        throw new Error("Could not find prosemirrorEmbed variant");
+    try {
+      const response = await client
+        .mutate({
+          mutation: CreateFileUploadForAboutPageDocument,
+          variables: {
+            contentType: file.type,
+            filename: file.name,
+            fileSizeBytes: file.size,
+            projectId,
+          },
+        })
+        .catch((e) => {
+          throw new Error(`Failed to create file upload. ${e.message}`);
+        });
+      const uploadUrl =
+        response?.data?.createFileUpload?.cloudflareImagesUploadUrl;
+      if (!uploadUrl) {
+        throw new Error("Failed to get upload URL");
       }
-      // This rediculous hack is necessary to avoid having the image
-      // flash with a broken icon (in chrome, others?) for a second
-      // before it finally loads. The image is preloaded in a hidden
-      // position before being finally inserted into the prosemirror
-      // document.
-      return new Promise((resolve) => {
-        const img = document.createElement("img");
-        img.src = prosemirrorEmbed;
-        img.setAttribute(
-          "style",
-          "position: absolute; top: -10000px; left: -10000px;"
-        );
-        img.onload = () => {
-          resolve(prosemirrorEmbed);
-          document.body.removeChild(img);
-        };
-        document.body.append(img);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await axios({
+        url: uploadUrl,
+        method: "POST",
+        data: formData,
       });
-    } else {
-      throw new Error("Could not get variants from upload response");
+      if (
+        "data" in res &&
+        res.data &&
+        "result" in res.data &&
+        res.data["result"] &&
+        "variants" in res.data["result"] &&
+        res.data["result"]["variants"] &&
+        Array.isArray(res.data["result"]["variants"])
+      ) {
+        const variants = res.data["result"]["variants"] as string[];
+        const prosemirrorEmbed = variants.find((variant: any) =>
+          /prosemirrorEmbed/.test(variant)
+        );
+        if (!prosemirrorEmbed) {
+          throw new Error("Could not find prosemirrorEmbed variant");
+        }
+        // This rediculous hack is necessary to avoid having the image
+        // flash with a broken icon (in chrome, others?) for a second
+        // before it finally loads. The image is preloaded in a hidden
+        // position before being finally inserted into the prosemirror
+        // document.
+        return new Promise((resolve) => {
+          const img = document.createElement("img");
+          img.src = prosemirrorEmbed;
+          img.setAttribute(
+            "style",
+            "position: absolute; top: -10000px; left: -10000px;"
+          );
+          img.onload = () => {
+            resolve(prosemirrorEmbed);
+            document.body.removeChild(img);
+          };
+          document.body.append(img);
+        });
+      } else {
+        throw new Error("Could not get variants from upload response");
+      }
+    } catch (e) {
+      onError(e);
+      throw e;
     }
   };
   return {

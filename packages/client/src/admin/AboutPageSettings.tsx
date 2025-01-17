@@ -21,6 +21,7 @@ import "prosemirror-image-plugin/dist/styles/common.css";
 import "./prosemirror-image.css";
 import { useApolloClient } from "@apollo/client";
 import { startImageUpload } from "prosemirror-image-plugin";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 
 export default function AboutPageSettings({
   projectId,
@@ -34,9 +35,10 @@ export default function AboutPageSettings({
   });
 
   const client = useApolloClient();
+  const onError = useGlobalErrorHandler();
 
   const { schema, plugins, imageSettings } = useMemo(() => {
-    return createAboutPageEditorConfig(client, projectId);
+    return createAboutPageEditorConfig(client, projectId, onError);
   }, [client, projectId]);
 
   const [mutate, mutationState] = useUpdateAboutPageContentsMutation();

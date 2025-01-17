@@ -121,7 +121,9 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
           const isCloudflareImagesSupported =
             cloudflareImagesSupported.includes(contentType) &&
             fileSizeBytes < bytes("10mb");
-          if (isCloudflareImagesSupported) {
+          if (usage === "about_page" && fileSizeBytes >= bytes("10mb")) {
+            throw new Error("File size must be less than 10MB");
+          } else if (isCloudflareImagesSupported) {
             const img = await getDirectCreatorUploadUrl();
 
             const { rows } = await context.adminPool.query(
