@@ -1,52 +1,40 @@
-/* .ProseMirrorBody h1 {
-  font-size: 1.2rem;
-  font-weight: bold;
+.ProseMirrorBody.required [data-question="yes"]:after {
+  content: "*";
+  margin-left: 2px;
+  opacity: 0.5;
 }
 
-.ProseMirrorBody h2 {
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin: 4px 0px;
-} */
+.ProseMirrorBody.required [data-question="yes"].empty-node:after {
+  content: none;
+}
 
-@layer components {
-  .ProseMirrorBody.required [data-question="yes"]:after {
-    content: "*";
-    margin-left: 2px;
-    opacity: 0.5;
-  }
+.ProseMirrorBody div[contenteditable].ProseMirror {
+  border: none;
+  outline: none;
+}
 
-  .ProseMirrorBody.required [data-question="yes"].empty-node:after {
-    content: none;
-  }
+.ProseMirrorBody.ForumPost div[contenteditable].ProseMirror {
+  /* min-height: 300px; */
+  padding-left: 16px;
+  padding-right: 16px;
+  padding-top: 16px;
+  @apply flex-1;
+}
 
-  .ProseMirrorBody div[contenteditable].ProseMirror {
-    border: none;
-    outline: none;
-  }
+.ForumPost .ProseMirror-menubar-wrapper {
+  @apply flex flex-col-reverse border-b border-black border-opacity-20;
+}
 
-  .ProseMirrorBody.ForumPost div[contenteditable].ProseMirror {
-    /* min-height: 300px; */
-    padding-left: 16px;
-    padding-right: 16px;
-    padding-top: 16px;
-    @apply flex-1;
-  }
+.ForumPost .ProseMirror-menubar {
+  border-bottom: none;
+  @apply border-t border-gray-200 text-black whitespace-nowrap pt-1.5 bg-gray-50 bg-opacity-50 pb-1;
+}
 
-  .ForumPost .ProseMirror-menubar-wrapper {
-    @apply flex flex-col-reverse border-b border-black border-opacity-20;
-  }
+.ForumPost .ProseMirror-menu-active {
+  @apply bg-gray-200;
+}
 
-  .ForumPost .ProseMirror-menubar {
-    border-bottom: none;
-    @apply border-t border-gray-200 text-black whitespace-nowrap pt-1.5 bg-gray-50 bg-opacity-50 pb-1;
-  }
-
-  .ForumPost .ProseMirror-menu-active {
-    @apply bg-gray-200;
-  }
-
-  /* .ProseMirrorBody a {
+/* .ProseMirrorBody a {
   text-decoration: underline;
 }
 
@@ -56,111 +44,110 @@
   list-style: disc;
 } */
 
-  .ProseMirror .empty-node::before {
-    position: absolute;
-    /* color: #aaa; */
-    opacity: 0.5;
-    cursor: text;
-  }
+.ProseMirror .empty-node::before {
+  position: absolute;
+  /* color: #aaa; */
+  opacity: 0.5;
+  cursor: text;
+}
 
-  .ProseMirror .empty-node:hover::before {
-    opacity: 0.3;
-  }
+.ProseMirror .empty-node:hover::before {
+  opacity: 0.3;
+}
 
-  .ProseMirror h1.empty-node::before {
-    content: "Type your question here...";
-  }
+.ProseMirror h1.empty-node::before {
+  content: "Type your question here...";
+}
 
-  /* @layer utilities { */
-  .ProseMirrorBody.ForumPost p {
-    margin-top: 0;
-    margin-bottom: 0;
-    @apply text-sm;
-  }
-  /* } */
+/* @layer utilities { */
+.ProseMirrorBody.ForumPost p {
+  margin-top: 0;
+  margin-bottom: 0;
+  @apply text-sm;
+}
+/* } */
 
-  .ForumPost.ProseMirrorBody a {
-    @apply text-primary-500;
-  }
+.ForumPost.ProseMirrorBody a {
+  @apply text-primary-500;
+}
 
-  .ProseMirror-prompt {
-    position: absolute;
-    z-index: 999999;
-    @apply bg-white p-4 rounded shadow;
-  }
+.ProseMirror-prompt {
+  position: absolute;
+  z-index: 999999;
+  @apply bg-white p-4 rounded shadow;
+}
 
-  .ForumPost.ProseMirrorBody h1 {
-    @apply text-xl;
-  }
+.ForumPost.ProseMirrorBody h1 {
+  @apply text-xl;
+}
 
-  .ForumPost.ProseMirrorBody h2 {
-    @apply text-lg;
-  }
+.ForumPost.ProseMirrorBody h2 {
+  @apply text-lg;
+}
 
-  .ForumPost.ProseMirrorBody h3 {
-    @apply text-base;
-  }
+.ForumPost.ProseMirrorBody h3 {
+  @apply text-base;
+}
 
-  .ProseMirror div.sketch-attachment {
-    @apply border border-blue-500 rounded px-1 bg-blue-50;
-    width: fit-content;
-  }
+.ProseMirror div.sketch-attachment {
+  @apply border border-blue-500 rounded px-1 bg-blue-50;
+  width: fit-content;
+}
 
-  .ProseMirrorBody button[data-attachment-id] {
-    @apply bg-blue-100  inline rounded-sm px-1 py-0;
-    line-height: 1.1rem;
-  }
+.ProseMirrorBody button[data-attachment-id] {
+  @apply bg-blue-100  inline rounded-sm px-1 py-0;
+  line-height: 1.1rem;
+}
 
-  .ProseMirrorBody button[data-attachment-id]:hover,
-  .ProseMirrorBody button[data-attachment-id].highlighted {
-    /* @apply shadow-sm; */
-    box-shadow: 0px 0px 0px 1px rgb(96, 165, 250);
-  }
+.ProseMirrorBody button[data-attachment-id]:hover,
+.ProseMirrorBody button[data-attachment-id].highlighted {
+  /* @apply shadow-sm; */
+  box-shadow: 0px 0px 0px 1px rgb(96, 165, 250);
+}
 
-  .ProseMirrorBody button[data-attachment-id][data-type="MapBookmark"]::after {
-    content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6A2.25 2.25 0 016 3.75h1.5m9 0h-9' /%3E%3C/svg%3E%0A");
-    @apply text-blue-900;
-    display: inline-block;
-    width: 16px;
-    height: 16px;
-    bottom: -3px;
-    margin-left: 2px;
-    position: relative;
-  }
+.ProseMirrorBody button[data-attachment-id][data-type="MapBookmark"]::after {
+  content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6A2.25 2.25 0 016 3.75h1.5m9 0h-9' /%3E%3C/svg%3E%0A");
+  @apply text-blue-900;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  bottom: -3px;
+  margin-left: 2px;
+  position: relative;
+}
 
-  .ProseMirror div[attachments] {
-    display: none;
-  }
+.ProseMirror div[attachments] {
+  display: none;
+}
 
-  div[attachments="forumAttachments"] {
-    display: none;
-  }
+div[attachments="forumAttachments"] {
+  display: none;
+}
 
-  .metadata .ProseMirror h1 {
-    @apply text-2xl;
-  }
+.metadata .ProseMirror h1 {
+  @apply text-2xl;
+}
 
-  .metadata .ProseMirror h2 {
-    @apply text-xl pt-3 pb-0.5;
-  }
+.metadata .ProseMirror h2 {
+  @apply text-xl pt-3 pb-0.5;
+}
 
-  .metadata .ProseMirror h3 {
-    @apply text-lg pt-2 pb-0.5;
-  }
+.metadata .ProseMirror h3 {
+  @apply text-lg pt-2 pb-0.5;
+}
 
-  .metadata .ProseMirror p {
-    @apply text-sm;
-  }
+.metadata .ProseMirror p {
+  @apply text-sm;
+}
 
-  .metadata .ProseMirror table {
-    @apply text-sm mt-1 mb-2;
-  }
+.metadata .ProseMirror table {
+  @apply text-sm mt-1 mb-2;
+}
 
-  .metadata .ProseMirror td {
-    @apply border p-1;
-  }
+.metadata .ProseMirror td {
+  @apply border p-1;
+}
 
-  .about-editor .ProseMirror {
-    height: 100%;
-  }
+.about-editor .ProseMirror {
+  height: 100%;
 }
