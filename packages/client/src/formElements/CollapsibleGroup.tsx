@@ -45,7 +45,7 @@ const CollapsibleGroup: FormElementComponent<{
                 props.onCollapse(!open);
               }
             }}
-            className="flex-1 prosemirror-body cursor-pointer flex items-center"
+            className="flex-1 ProseMirrorBody cursor-pointer flex items-center"
           >
             <Tooltip.Provider>
               <Tooltip.Root delayDuration={100}>

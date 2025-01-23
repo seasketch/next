@@ -448,7 +448,7 @@ export default function PostContentEditor({
       )}
       <div className="flex flex-col" style={{ minHeight: 300 }}>
         <div
-          className={`flex-1 flex flex-col prosemirror-body forum-post new-forum-post ${
+          className={`flex-1 flex flex-col ProseMirrorBody ForumPost new-ForumPost ${
             disabled === true ? "opacity-50" : "opacity-100"
           }`}
           onKeyDown={onKeyDown}

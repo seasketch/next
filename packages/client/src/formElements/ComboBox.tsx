@@ -169,7 +169,7 @@ const ComboBox: FormElementComponent<ComboBoxProps, ComboBoxValue> = (
       >
         <input
           spellCheck={false}
-          className={`flex-1 p-2 px-3 ring-0 outline-none rounded-l bg-transparent  ${
+          className={`border-0 focus:ring-0 flex-1 p-2 px-3 ring-0 outline-none rounded-l bg-transparent  ${
             selectedOption?.label === inputValue
               ? "text-black"
               : "text-gray-500"

@@ -9,6 +9,7 @@ import {
   TrashIcon,
 } from "@heroicons/react/outline";
 import { motion } from "framer-motion";
+import clsx from "clsx";
 
 export type FooterButtonProps = {
   disabled?: boolean;
@@ -346,9 +347,11 @@ function FooterButton(props: FooterButtonProps) {
       ref={ref}
       autoFocus={props.autoFocus || false}
       type="button"
-      className={`${
-        props.disabled && "pointer-events-none opacity-50"
-      } inline-flex justify-center w-full rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm ${colors} items-center`}
+      className={clsx(
+        props.disabled && "pointer-events-none opacity-50",
+        "inline-flex justify-center w-full rounded-md border shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm items-center",
+        colors
+      )}
       onClick={props.onClick}
     >
       {props.variant === "trash" && <TrashIcon className="w-4 h-4 mr-2" />}

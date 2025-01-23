@@ -127,7 +127,7 @@ const Number: FormElementComponent<NumberProps, number | null> = (props) => {
           <MinusIcon className={`h-4 w-4 ${style.secondaryTextClass}`} />
         </button>
         <input
-          className={`block bg-transparent ${
+          className={`block ${
             style.compactAppearance
               ? "text-base font-normal p-0"
               : "text-xl font-bold"

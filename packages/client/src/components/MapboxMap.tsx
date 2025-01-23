@@ -18,6 +18,7 @@ import MapSettingsPopup from "../draw/MapSettingsPopup";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
+import clsx from "clsx";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -178,11 +179,12 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             }
             setMapSettingsPopupOpen(true);
           }}
-          className={`absolute bg-white ring-2 ring-black ring-opacity-10 rounded top-28 ${
+          className={clsx(
+            "absolute bg-white ring-2 ring-black/10 rounded top-28",
             props.navigationControlsLocation === "top-right"
               ? "right-2.5"
               : "left-2.5"
-          }`}
+          )}
         >
           <CogIcon className="w-5 h-5" />
         </button>

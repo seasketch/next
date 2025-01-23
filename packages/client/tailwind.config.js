@@ -1,14 +1,15 @@
 const defaultTheme = require("tailwindcss/defaultTheme");
+const colors = require("tailwindcss/colors");
 
 module.exports = {
-  purge: [
+  content: [
     "src/**/*.js",
     "src/**/*.jsx",
     "src/**/*.ts",
     "src/**/*.tsx",
     "public/**/*.html",
+    "src/**/*.css",
   ],
-  darkMode: "media",
   theme: {
     extend: {
       cursor: {
@@ -65,8 +66,8 @@ module.exports = {
           900: "rgb(0 91 179)",
         },
         secondary: {
-          300: defaultTheme.colors.gray["500"],
-          500: defaultTheme.colors.gray["800"],
+          300: colors.gray["500"],
+          500: colors.gray["800"],
         },
         "cool-gray": {
           50: "#F9FAFB",
@@ -83,31 +84,18 @@ module.exports = {
         "deep-blue": {
           500: "#373c4e",
         },
+        green: colors.emerald,
+        yellow: colors.amber,
       },
       outline: {
         "blue-500": ["2px solid #3b82f6", "1px"],
       },
     },
   },
-  variants: {
-    extend: {
-      scale: ["active"],
-      padding: ["hover"],
-      display: ["group-hover"],
-      curosr: ["active"],
-    },
-    space: ["responsive", "direction"],
-    inset: ["responsive", "direction"],
-    padding: ["responsive", "direction"],
-    textAlign: ["responsive", "direction"],
-    borderRadius: ["responsive", "direction"],
-    translate: ["responsive", "direction"],
-  },
   plugins: [
     require("@tailwindcss/forms"),
     require("@tailwindcss/typography"),
     require("@tailwindcss/aspect-ratio"),
-    require("tailwindcss-dir")(),
   ],
   // plugins: [require("@tailwindcss/ui")],
 };
