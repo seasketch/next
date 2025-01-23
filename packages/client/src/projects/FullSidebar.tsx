@@ -8,7 +8,7 @@ import {
   LayerIcon,
   MapIcon,
   SketchingIcon,
-} from "./MiniSidebarButtons";
+} from "./ToolbarButtons";
 import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
@@ -88,7 +88,7 @@ export default function FullSidebar({
           },
         },
         open: {
-          translateX: 0,
+          translateX: 0 + 500,
           transition: {
             type: "spring",
             duration: 0.4,
@@ -282,7 +282,7 @@ export default function FullSidebar({
       {user && data?.me && (
         <>
           <nav className="mt-4">
-            <SignedInAs className="pb-1" tabIndex={open ? 9 : -1} />
+            <SignedInAs className="pb-1" />
             <LanguageSelector
               button={(onClick, lang) => (
                 <NavItem

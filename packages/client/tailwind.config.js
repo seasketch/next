@@ -34,6 +34,7 @@ module.exports = {
       },
       screens: {
         tall: { raw: "(min-height: 700px)" },
+        "mid-height": { raw: "(min-height: 600px)" },
       },
       flexGrow: {
         0: 0,
@@ -82,6 +83,9 @@ module.exports = {
         "deep-blue": {
           500: "#373c4e",
         },
+      },
+      outline: {
+        "blue-500": ["2px solid #3b82f6", "1px"],
       },
     },
   },

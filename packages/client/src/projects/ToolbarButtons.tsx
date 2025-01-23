@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
 import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
 import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
+import { ProfileStatusButton } from "../header/ProfileStatusButton";
 
 interface SidebarButtonProps {
   className?: string;
@@ -13,6 +14,9 @@ interface SidebarButtonProps {
   href?: string;
   anySidebarOpen?: boolean;
   sidebarOpen?: boolean;
+  hidden?: boolean;
+  expanded?: boolean;
+  variant?: "primary" | "secondary";
 }
 
 const curry =
@@ -27,6 +31,9 @@ const curry =
       | "href"
       | "anySidebarOpen"
       | "sidebarOpen"
+      | "hidden"
+      | "expanded"
+      | "variant"
     >
   ) =>
     <SidebarButton {...props} icon={icon} />;
@@ -42,8 +49,45 @@ export default function SidebarButton(props: SidebarButtonProps) {
       setHovered(false);
     };
   }
+  if (props.hidden) {
+    return null;
+  }
+  if (props.expanded) {
+    return (
+      <div style={{ padding: "0px 19px" }} className="w-full">
+        <button
+          key={props.tooltip}
+          className={`flex items-center w-full space-x-2 focus:outline-blue-500 rounded p-1 ${
+            props.variant === "primary"
+              ? "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded"
+              : ""
+          }`}
+          onClick={() => {
+            if (onClick) {
+              onClick();
+            }
+            setHovered(false);
+          }}
+        >
+          {/* <div className="w-full px-2 flex items-center space-x-2"> */}
+          <span className="w-7 h-7 text-gray-400 flex-none">{props.icon}</span>
+          <span className="whitespace-nowrap overflow-hidden">
+            {props.tooltip}
+          </span>
+          {/* </div> */}
+        </button>
+      </div>
+    );
+  }
   return (
     <motion.button
+      key={props.tooltip}
+      onFocus={(e) => {
+        setHovered(true);
+      }}
+      onBlur={(e) => {
+        setHovered(false);
+      }}
       onMouseOut={(e) => {
         setHovered(false);
         // @ts-ignore
@@ -57,13 +101,13 @@ export default function SidebarButton(props: SidebarButtonProps) {
         }
         setHovered(false);
       }}
-      className={` w-10 h-10 my-2 ${
+      className={`w-10 h-10 ${
         props.className
       } hover:bg-primary-300 hover:bg-opacity-10 focus:bg-white focus:bg-opacity-10 rounded p-1.5 focus:outline-none relative active:outline-none focus:ring-2 ring-blue-500 ${
         props.sidebarOpen ? "bg-opacity-20 bg-primary-300" : ""
       }`}
     >
-      {props.icon}
+      <span>{props.icon}</span>
       <AnimatePresence>
         {props.tooltip && hovered === true && !props.sidebarOpen && (
           <motion.div
@@ -108,9 +152,28 @@ export const AboutButton = curry(AboutIcon);
 
 export const MapButton = curry(MapIcon);
 
+export const CacheIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    // className="w-6 h-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+    />
+  </svg>
+);
+
+export const CacheButton = curry(CacheIcon);
+
 export const LayerIcon = (
   <svg
-    viewBox="2 1 21 21"
+    viewBox="1.5 1 21 21"
     focusable="false"
     role="img"
     fill="currentColor"
@@ -125,6 +188,62 @@ export const LayerIcon = (
   </svg>
 );
 export const LayersButton = curry(LayerIcon);
+
+export const MyProfileIcon = (
+  <div className="w-7 h-7 flex items-center justify-center">
+    <ProfileStatusButton tabIndex={-1} />
+  </div>
+);
+
+export const MyProfileButton = curry(MyProfileIcon);
+
+export const EditProfileButton = curry(
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="w-6 h-6"
+  >
+    <path
+      fillRule="evenodd"
+      d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+export const SignInButton = curry(
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
+  </svg>
+);
+
+export const SignOutButton = curry(
+  <svg
+    className="left-0.5 relative"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+    />
+  </svg>
+);
 
 export const SketchingIcon = (
   <svg
@@ -215,4 +334,8 @@ export const SettingsIcon = (
 );
 export const SettingsButton = curry(SettingsIcon);
 
-export const LanguageButton = curry(<TranslateIcon />);
+export const LanguageIcon = (
+  <TranslateIcon style={{ marginLeft: 1 }} className="w-7 h-7 inline-block " />
+);
+
+export const LanguageButton = curry(LanguageIcon);

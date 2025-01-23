@@ -11,7 +11,7 @@ import {
 } from "../dataLayers/MapContextManager";
 import { TableOfContentsItem } from "../generated/graphql";
 import FullSidebar from "./FullSidebar";
-import MiniSidebar from "./MiniSidebar";
+import Toolbar from "./Toolbar";
 import { useTranslation } from "react-i18next";
 import ProjectAppSidebar from "./ProjectAppSidebar";
 import { AnimatePresence, motion } from "framer-motion";
@@ -48,11 +48,6 @@ const LazyCacheSettingsPage = React.lazy(
       /* webpackChunkName: "CacheSettingsPage" */ "../auth/CacheSettingsPage"
     )
 );
-
-export const FullSidebarContext = createContext({
-  open: false,
-  setOpen: (open: boolean) => {},
-});
 
 export default function ProjectApp() {
   const [mapContainerPortal, setMapContainerPortal] =
@@ -98,172 +93,170 @@ export default function ProjectApp() {
   const dark = true;
   return (
     <div
-      className="h-screen flex flex-col ml-14"
+      className="h-screen overflow-hidden flex flex-col ml-14"
       style={{ width: "calc(100vw - 3.5rem)" }}
       // dir={selectedLang.rtl ? "rtl" : "ltr"}
     >
-      <FullSidebarContext.Provider
-        value={{ open: expandSidebar, setOpen: setExpandSidebar }}
-      >
-        <DndProvider backend={HTML5Backend}>
-          {/* <ProjectAppHeader /> */}
-          <MapContext.Provider value={contextValue}>
-            <MeasureControlContextProvider>
-              <SketchUIStateContextProvider>
-                <DataDownloadModalProvider>
-                  <TableOfContentsMetadataModalProvider>
-                    {/* <ProjectAppHeader /> */}
-                    <div className="flex flex-grow w-full">
-                      <ProjectMapLegend />
-                      <MapboxMap
-                        className="ml-2"
-                        showNavigationControls={true}
-                        navigationControlsLocation="top-right"
-                        onRequestSidebarClose={() => setExpandSidebar(false)}
-                        mapSettingsPopupActions={
-                          <>
-                            <ResetToProjectBounds
-                              mapContextManager={mapContext.manager}
-                            />
-                            <ShowScaleBar mapContext={mapContext} />
-                            <Measure />
-                          </>
-                        }
-                      />
-                      <div
-                        className="absolute flex items-center justify-center h-full pointer-events-none"
-                        style={{ width: "calc(100vw - 3.5rem)" }}
-                        ref={setMapContainerPortal}
-                      ></div>
-                    </div>
-                    <MiniSidebar
-                      dark={dark}
-                      onExpand={() => {
-                        setExpandSidebar((prev) => !prev);
-                        history.replace(`/${slug}/app`);
-                      }}
-                    />
+      <DndProvider backend={HTML5Backend}>
+        {/* <ProjectAppHeader /> */}
+        <MapContext.Provider value={contextValue}>
+          <MeasureControlContextProvider>
+            <SketchUIStateContextProvider>
+              <DataDownloadModalProvider>
+                <TableOfContentsMetadataModalProvider>
+                  <Toolbar
+                    dark={dark}
+                    onExpand={() => {
+                      setExpandSidebar((prev) => !prev);
+                      history.replace(`/${slug}/app`);
+                    }}
+                    expanded={expandSidebar}
+                  />
 
-                    <Route path={`/${slug}/profile`}>
-                      <UserProfileModal
-                        onRequestClose={() => history.push(`/${slug}/app`)}
-                      />
-                    </Route>
-                    <AnimatePresence initial={false}>
-                      <ProjectAppSidebar
-                        title={
-                          sidebarTitles[showSidebar?.params["sidebar"] || ""]
-                        }
-                        onClose={() => history.replace(`/${slug}/app`)}
-                        dark={dark}
-                        hidden={
-                          Boolean(!showSidebar) ||
-                          showSidebar?.params["sidebar"] === "embed"
-                        }
-                        noPadding={
-                          /sketches/.test(history.location.pathname) ||
-                          /forums/.test(history.location.pathname) ||
-                          /overlays/.test(history.location.pathname)
+                  {/* <ProjectAppHeader /> */}
+                  <div className="flex flex-grow w-full h-full">
+                    <ProjectMapLegend />
+                    <MapboxMap
+                      className="ml-2"
+                      showNavigationControls={true}
+                      navigationControlsLocation="top-right"
+                      onRequestSidebarClose={() => setExpandSidebar(false)}
+                      mapSettingsPopupActions={
+                        <>
+                          <ResetToProjectBounds
+                            mapContextManager={mapContext.manager}
+                          />
+                          <ShowScaleBar mapContext={mapContext} />
+                          <Measure />
+                        </>
+                      }
+                    />
+                    <div
+                      className="absolute flex items-center justify-center h-full pointer-events-none"
+                      style={{ width: "calc(100vw - 3.5rem)" }}
+                      ref={setMapContainerPortal}
+                    ></div>
+                  </div>
+
+                  <Route path={`/${slug}/profile`}>
+                    <UserProfileModal
+                      onRequestClose={() => history.push(`/${slug}/app`)}
+                    />
+                  </Route>
+                  <AnimatePresence initial={false}>
+                    <ProjectAppSidebar
+                      title={
+                        sidebarTitles[showSidebar?.params["sidebar"] || ""]
+                      }
+                      onClose={() => history.replace(`/${slug}/app`)}
+                      dark={dark}
+                      hidden={
+                        Boolean(!showSidebar) ||
+                        showSidebar?.params["sidebar"] === "embed"
+                      }
+                      noPadding={
+                        /sketches/.test(history.location.pathname) ||
+                        /forums/.test(history.location.pathname) ||
+                        /overlays/.test(history.location.pathname)
+                      }
+                    >
+                      <Suspense
+                        fallback={
+                          <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                            <Spinner />
+                          </div>
                         }
                       >
-                        <Suspense
-                          fallback={
-                            <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                              <Spinner />
-                            </div>
-                          }
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={{ duration: 0.2 }}
+                          className={`flex flex-col ${
+                            /app\/forums\//.test(location.pathname)
+                              ? "max-h-full overflow-hidden fffff"
+                              : ""
+                          }`}
                         >
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            exit={{ opacity: 0 }}
-                            transition={{ duration: 0.2 }}
-                            className={`flex flex-col ${
-                              /app\/forums\//.test(location.pathname)
-                                ? "max-h-full overflow-hidden fffff"
-                                : ""
-                            }`}
-                          >
-                            <Route path={`/${slug}/app/about`}>
-                              <AboutPage />
-                            </Route>
-                            <Route path={`/${slug}/app/maps`}>
-                              <BasemapControl basemaps={basemaps} />
-                            </Route>
-                            <Route path={`/${slug}/app/overlays`}>
-                              <LazyOverlays
-                                layers={dataLayers || []}
-                                sources={dataSources || []}
-                                items={
-                                  tableOfContentsItems as TableOfContentsItem[]
-                                }
-                              />
-                            </Route>
-                            <Route
-                              children={(match) => {
-                                return (
-                                  <LazyForums
-                                    hidden={!Boolean(match.match?.url)}
-                                    forumId={
-                                      match.match &&
-                                      match.match.params &&
-                                      "id" in match.match.params
-                                        ? parseInt(match.match.params.id)
-                                        : undefined
-                                    }
-                                    topicId={
-                                      match.match &&
-                                      match.match.params &&
-                                      "topicId" in match.match.params
-                                        ? parseInt(match.match.params.topicId)
-                                        : undefined
-                                    }
-                                    postNewTopic={Boolean(
-                                      match.match?.path &&
-                                        /new-post/.test(match.match.path)
-                                    )}
-                                  />
-                                );
-                              }}
-                              path={[
-                                `/${slug}/app/forums/:id/new-post`,
-                                `/${slug}/app/forums/:id/:topicId`,
-                                `/${slug}/app/forums/:id`,
-                                `/${slug}/app/forums`,
-                              ]}
-                              // component={SketchingTools}
+                          <Route path={`/${slug}/app/about`}>
+                            <AboutPage />
+                          </Route>
+                          <Route path={`/${slug}/app/maps`}>
+                            <BasemapControl basemaps={basemaps} />
+                          </Route>
+                          <Route path={`/${slug}/app/overlays`}>
+                            <LazyOverlays
+                              layers={dataLayers || []}
+                              sources={dataSources || []}
+                              items={
+                                tableOfContentsItems as TableOfContentsItem[]
+                              }
                             />
-                            <Route
-                              children={(match) => (
-                                <LazySketchingTools
-                                  hidden={!Boolean(match.match)}
+                          </Route>
+                          <Route
+                            children={(match) => {
+                              return (
+                                <LazyForums
+                                  hidden={!Boolean(match.match?.url)}
+                                  forumId={
+                                    match.match &&
+                                    match.match.params &&
+                                    "id" in match.match.params
+                                      ? parseInt(match.match.params.id)
+                                      : undefined
+                                  }
+                                  topicId={
+                                    match.match &&
+                                    match.match.params &&
+                                    "topicId" in match.match.params
+                                      ? parseInt(match.match.params.topicId)
+                                      : undefined
+                                  }
+                                  postNewTopic={Boolean(
+                                    match.match?.path &&
+                                      /new-post/.test(match.match.path)
+                                  )}
                                 />
-                              )}
-                              path={`/${slug}/app/sketches`}
-                            />
-                            <Route path={`/${slug}/app/settings`}>
-                              <LazyCacheSettingsPage />
-                            </Route>
-                          </motion.div>
-                        </Suspense>
-                      </ProjectAppSidebar>
-                    </AnimatePresence>
-                    <FullSidebar
-                      dark={dark}
-                      open={expandSidebar}
-                      onClose={() => {
-                        setExpandSidebar((prev) => false);
-                      }}
-                    />
-                    <OfflineToastNotification />
-                    <OfflineResponsesToastNotification />
-                  </TableOfContentsMetadataModalProvider>
-                </DataDownloadModalProvider>
-              </SketchUIStateContextProvider>
-            </MeasureControlContextProvider>
-          </MapContext.Provider>
-        </DndProvider>
-      </FullSidebarContext.Provider>
+                              );
+                            }}
+                            path={[
+                              `/${slug}/app/forums/:id/new-post`,
+                              `/${slug}/app/forums/:id/:topicId`,
+                              `/${slug}/app/forums/:id`,
+                              `/${slug}/app/forums`,
+                            ]}
+                            // component={SketchingTools}
+                          />
+                          <Route
+                            children={(match) => (
+                              <LazySketchingTools
+                                hidden={!Boolean(match.match)}
+                              />
+                            )}
+                            path={`/${slug}/app/sketches`}
+                          />
+                          <Route path={`/${slug}/app/settings`}>
+                            <LazyCacheSettingsPage />
+                          </Route>
+                        </motion.div>
+                      </Suspense>
+                    </ProjectAppSidebar>
+                  </AnimatePresence>
+                  {/* <FullSidebar
+                    dark={dark}
+                    open={expandSidebar}
+                    onClose={() => {
+                      setExpandSidebar((prev) => false);
+                    }}
+                  /> */}
+                  <OfflineToastNotification />
+                  <OfflineResponsesToastNotification />
+                </TableOfContentsMetadataModalProvider>
+              </DataDownloadModalProvider>
+            </SketchUIStateContextProvider>
+          </MeasureControlContextProvider>
+        </MapContext.Provider>
+      </DndProvider>
     </div>
   );
 }
