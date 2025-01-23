@@ -97,5 +97,4 @@ module.exports = {
     require("@tailwindcss/typography"),
     require("@tailwindcss/aspect-ratio"),
   ],
-  // plugins: [require("@tailwindcss/ui")],
 };
