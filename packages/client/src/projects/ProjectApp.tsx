@@ -113,31 +113,6 @@ export default function ProjectApp() {
                     expanded={expandSidebar}
                   />
 
-                  {/* <ProjectAppHeader /> */}
-                  <div className="flex flex-grow w-full h-full">
-                    <ProjectMapLegend />
-                    <MapboxMap
-                      className="ml-2"
-                      showNavigationControls={true}
-                      navigationControlsLocation="top-right"
-                      onRequestSidebarClose={() => setExpandSidebar(false)}
-                      mapSettingsPopupActions={
-                        <>
-                          <ResetToProjectBounds
-                            mapContextManager={mapContext.manager}
-                          />
-                          <ShowScaleBar mapContext={mapContext} />
-                          <Measure />
-                        </>
-                      }
-                    />
-                    <div
-                      className="absolute flex items-center justify-center h-full pointer-events-none"
-                      style={{ width: "calc(100vw - 3.5rem)" }}
-                      ref={setMapContainerPortal}
-                    ></div>
-                  </div>
-
                   <Route path={`/${slug}/profile`}>
                     <UserProfileModal
                       onRequestClose={() => history.push(`/${slug}/app`)}
@@ -242,6 +217,30 @@ export default function ProjectApp() {
                       </Suspense>
                     </ProjectAppSidebar>
                   </AnimatePresence>
+                  <div className="flex flex-grow w-full h-full">
+                    <ProjectMapLegend />
+                    <MapboxMap
+                      className="ml-2"
+                      showNavigationControls={true}
+                      navigationControlsLocation="top-right"
+                      onRequestSidebarClose={() => setExpandSidebar(false)}
+                      mapSettingsPopupActions={
+                        <>
+                          <ResetToProjectBounds
+                            mapContextManager={mapContext.manager}
+                          />
+                          <ShowScaleBar mapContext={mapContext} />
+                          <Measure />
+                        </>
+                      }
+                    />
+                    <div
+                      className="absolute flex items-center justify-center h-full pointer-events-none"
+                      style={{ width: "calc(100vw - 3.5rem)" }}
+                      ref={setMapContainerPortal}
+                    ></div>
+                  </div>
+
                   {/* <FullSidebar
                     dark={dark}
                     open={expandSidebar}

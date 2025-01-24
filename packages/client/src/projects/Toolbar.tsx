@@ -102,7 +102,8 @@ export default function Toolbar({
     expanded && !sketchingContext.editorIsOpen && !Boolean(showSidebar);
 
   return (
-    <motion.div
+    <motion.nav
+      role="navigation"
       style={{ boxShadow: "0px -2px 5px rgba(0,0,0,0.5)" }}
       className={`absolute left-0 h-screen bg-cool-gray-800 ${
         expanded ? "text-gray-300" : "text-gray-400"
@@ -134,7 +135,7 @@ export default function Toolbar({
         />
       </div>
       {expanded && (
-        <div className="flex w-full p-5 pt-0 pb-2 space-x-2 mid-height:min-h-20 min-h-[64px]">
+        <div className="flex w-full p-3 pt-0 pb-1 space-x-2 mid-height:min-h-20 min-h-[64px]">
           <div className="flex items-center flex-none py-2 mid-height:py-3 mid-height:pt-4">
             {data?.project?.logoUrl && !data?.project.logoLink && (
               <img
@@ -164,10 +165,10 @@ export default function Toolbar({
         </div>
       )}
       <div
-        className={`flex flex-col items-center w-full flex-1 space-y-2 mid-height:space-y-3 pt-1 ${
+        className={`pt-0.5 flex flex-col w-full flex-1 ${
           expanded
-            ? "justify-start overflow-y-auto overflow-x-hidden"
-            : "items-center"
+            ? "justify-start overflow-y-auto overflow-x-hidden -mt-3 space-y-3"
+            : "space-y-2 ml-[12px] mt-1"
         }`}
       >
         {data?.project?.aboutPageEnabled && (
@@ -182,7 +183,7 @@ export default function Toolbar({
         )}
         <MapButton
           tooltip={t("Maps")}
-          className={!data?.project?.aboutPageEnabled ? "mt-4" : ""}
+          className=""
           onClick={openSidebar("maps")}
           sidebarOpen={sidebar === "maps"}
           anySidebarOpen={!!sidebar}
@@ -238,6 +239,8 @@ export default function Toolbar({
             tooltip={t(`Signed in as ${userId}`)}
             onClick={onExpand}
             anySidebarOpen={!!sidebar}
+            details={t(`${userId}`)}
+            title={t("Signed in")}
           />
         )}
 
@@ -314,6 +317,8 @@ export default function Toolbar({
               // tabIndex={6}
               onClick={onClick}
               expanded={expanded}
+              title={t("Change language")}
+              details={lang.localName || lang.name}
             />
           )}
           options={data?.project?.supportedLanguages as string[]}
@@ -333,13 +338,16 @@ export default function Toolbar({
       <div className="flex flex-col items-center w-full p-4">
         {!expanded && (
           <a className={`w-8`} href="/">
-            <motion.img src={logo} />
+            <motion.img src={logo} alt="SeaSketch Logo" />
           </a>
         )}
         {expanded && (
           <div className="flex justify-start w-full overflow-hidden whitespace-nowrap pb-3 pl-1">
             <div className="flex items-center flex-none">
-              <a href="/">
+              <a
+                href="/"
+                className="focus:outline-0 focus-visible:ring-2 ring-blue-500 rounded-full"
+              >
                 <img
                   alt="SeaSketch Logo"
                   src={logo}
@@ -356,13 +364,20 @@ export default function Toolbar({
                 {t("About")}
               </a> */}
                 <a
+                  className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
                   // className="mx-1"
                   href="/terms-of-use"
                 >
                   {t("Terms of Use")}
                 </a>
-                <a href="mailto:support@seasketch.org">{t("Contact Us")}</a>
                 <a
+                  className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
+                  href="mailto:support@seasketch.org"
+                >
+                  {t("Contact Us")}
+                </a>
+                <a
+                  className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
                   target="_blank"
                   rel="noreferrer"
                   href="https://github.com/seasketch/next"
@@ -378,6 +393,6 @@ export default function Toolbar({
           </div>
         )}
       </div>
-    </motion.div>
+    </motion.nav>
   );
 }

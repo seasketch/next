@@ -176,6 +176,7 @@ export default function Button(props: ButtonProps) {
         </label>
       ) : (
         <button
+          disabled={props.disabled}
           name={props.name}
           type={props.type || "button"}
           ref={props.innerRef}

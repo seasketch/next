@@ -22,7 +22,8 @@ export const MenuToggle = ({
   isExpanded?: boolean;
 }) => (
   <button
-    className={`flex items-center justify-center w-9 h-9 rounded p-0 active:outline-none focus:outline-none focus:ring-2 ring-blue-500 focus:bg-gray-700 active:bg-gray-700 ${className}`}
+    title={isExpanded ? "Collapse Navigation" : "Expand Navigation"}
+    className={`flex items-center justify-center w-9 h-9 rounded p-0 active:outline-none focus:outline-none focus-visible:ring-2 ring-blue-500 focus:bg-gray-700 active:bg-gray-700 ${className}`}
     onClick={onClick}
     style={{ paddingLeft: 1 }}
     tabIndex={tabIndex}

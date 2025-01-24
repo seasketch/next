@@ -80,6 +80,9 @@ export default function Modal(props: ModalProps) {
         }
       }}
       initialFocus={props.initialFocus}
+      aria-roledescription="dialog"
+      aria-modal="true"
+      aria-label={typeof props.title === "string" ? props.title : undefined}
     >
       <Backdrop />
 

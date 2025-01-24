@@ -129,6 +129,8 @@ const MapSettingsPopup: FunctionComponent<{
         >
           <motion.div
             // onClick={(e) => e.stopPropagation()}
+            autoFocus
+            role="dialog"
             transition={{ duration: 0.15 }}
             initial="closed"
             animate="open"
@@ -209,7 +211,7 @@ const Item: FunctionComponent<{
   }
   return (
     <button
-      className={`flex text-left w-full items-center px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 rounded ${
+      className={`flex text-left w-full items-center px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 dark:hover:bg-opacity-50 rounded outline-0 focus-visible:ring-2 ${
         disabled ? "opacity-50" : ""
       } ${selected ? "font-semibold " : ""}`}
       onClick={(e) => {
@@ -423,6 +425,7 @@ export function ShowScaleBar(
       {...props}
       Icon={(childProps) => (
         <Switch
+          tabIndex={-1}
           {...childProps}
           className="scale-75"
           isToggled={show}

@@ -17,6 +17,8 @@ interface SidebarButtonProps {
   hidden?: boolean;
   expanded?: boolean;
   variant?: "primary" | "secondary";
+  details?: string;
+  title?: string;
 }
 
 const curry =
@@ -34,6 +36,8 @@ const curry =
       | "hidden"
       | "expanded"
       | "variant"
+      | "details"
+      | "title"
     >
   ) =>
     <SidebarButton {...props} icon={icon} />;
@@ -42,6 +46,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
   const [hovered, setHovered] = useState(false);
   const history = useHistory();
   let onClick = props.onClick;
+
   if (props.href) {
     const href = props.href;
     onClick = () => {
@@ -49,82 +54,47 @@ export default function SidebarButton(props: SidebarButtonProps) {
       setHovered(false);
     };
   }
+
   if (props.hidden) {
     return null;
   }
-  if (props.expanded) {
-    return (
-      <div style={{ padding: "0px 19px" }} className="w-full">
-        <button
-          key={props.tooltip}
-          className={`min-w-[346px] flex items-center w-full space-x-2 focus:outline-blue-500 rounded p-1 ${
-            props.variant === "primary"
-              ? "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded"
-              : ""
-          }`}
-          onClick={() => {
-            if (onClick) {
-              onClick();
-            }
-            setHovered(false);
-          }}
-        >
-          {/* <div className="w-full px-2 flex items-center space-x-2"> */}
-          <span className="w-7 h-7 text-gray-400 flex-none">{props.icon}</span>
-          <span className="whitespace-nowrap overflow-hidden">
-            {props.tooltip}
-          </span>
-          {/* </div> */}
-        </button>
-      </div>
-    );
-  }
+
   return (
-    <motion.button
-      key={props.tooltip}
-      onFocus={(e) => {
-        setHovered(true);
-      }}
-      onBlur={(e) => {
-        setHovered(false);
-      }}
-      onMouseOut={(e) => {
-        setHovered(false);
-        // @ts-ignore
-        e.target.blur();
-      }}
-      onMouseOver={() => setHovered(true)}
-      tabIndex={props.tabIndex}
-      onClick={() => {
-        if (onClick) {
-          onClick();
-        }
-        setHovered(false);
-      }}
-      className={`w-10 h-10 ${
-        props.className
-      } hover:bg-primary-300 hover:bg-opacity-10 focus:bg-white focus:bg-opacity-10 rounded p-1.5 focus:outline-none relative active:outline-none focus:ring-2 ring-blue-500 ${
-        props.sidebarOpen ? "bg-opacity-20 bg-primary-300" : ""
+    <div
+      style={{ padding: props.expanded ? "0px 14px" : "0px 2px" }}
+      className={`w-full flex items-center ${
+        props.expanded ? "min-w-[354px]" : "min-w-[40px]"
       }`}
     >
-      <span>{props.icon}</span>
-      <AnimatePresence>
-        {props.tooltip && hovered === true && !props.sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              transition: { delay: props.anySidebarOpen ? 0.5 : 0.2 },
-            }}
-            exit={{ opacity: 0, transition: { duration: 0.1 } }}
-            className="absolute left-14 z-0 top-1 bg-black px-2 py-1 rounded overflow-visible whitespace-nowrap pointer-events-none select-none"
-          >
-            {props.tooltip}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.button>
+      <button
+        title={props.title || props.tooltip}
+        aria-details={props.details}
+        key={props.tooltip}
+        className={`flex items-center space-x-2 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-500 focus:bg-gray-700/60 rounded p-1 ${
+          props.variant === "primary" && props.expanded
+            ? "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded"
+            : ""
+        } ${props.expanded ? "w-full" : "w-9"}`}
+        onClick={() => {
+          if (onClick) {
+            onClick();
+          }
+          setHovered(false);
+        }}
+      >
+        {/* Icon */}
+        <span className="w-7 h-7 text-gray-400 flex-none">{props.icon}</span>
+
+        {/* Text with fade-in animation */}
+        <span
+          className={`whitespace-nowrap overflow-hidden text-white/100 transition-opacity delay-50 duration-300 ${
+            props.expanded ? "opacity-100 visible" : "opacity-0 invisible w-0"
+          }`}
+        >
+          {props.tooltip}
+        </span>
+      </button>
+    </div>
   );
 }
 
