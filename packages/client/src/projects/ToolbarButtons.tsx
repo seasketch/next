@@ -57,7 +57,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
       <div style={{ padding: "0px 19px" }} className="w-full">
         <button
           key={props.tooltip}
-          className={`flex items-center w-full space-x-2 focus:outline-blue-500 rounded p-1 ${
+          className={`min-w-[346px] flex items-center w-full space-x-2 focus:outline-blue-500 rounded p-1 ${
             props.variant === "primary"
               ? "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded"
               : ""

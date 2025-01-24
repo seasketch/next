@@ -29,6 +29,7 @@ import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinPr
 import SignedInAs from "../components/SignedInAs";
 import { useContext } from "react";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
+import clsx from "clsx";
 
 export default function Toolbar({
   onExpand,
@@ -123,14 +124,17 @@ export default function Toolbar({
         }
       >
         <MenuToggle
-          className={`${dark ? "text-gray-400" : "text-gray-700"}`}
+          className={clsx(
+            dark ? "text-gray-400" : "text-gray-700",
+            expanded && "mt-2"
+          )}
           onClick={onExpand}
           tabIndex={1}
           isExpanded={expanded}
         />
       </div>
       {expanded && (
-        <div className="flex w-full p-5 pt-0 pb-2 space-x-2">
+        <div className="flex w-full p-5 pt-0 pb-2 space-x-2 mid-height:min-h-20 min-h-[64px]">
           <div className="flex items-center flex-none py-2 mid-height:py-3 mid-height:pt-4">
             {data?.project?.logoUrl && !data?.project.logoLink && (
               <img
@@ -155,7 +159,7 @@ export default function Toolbar({
             )}
           </div>
           <div className="flex-1 max-w-md flex items-center text-xl">
-            <h1 className=" ">{getTranslatedProp("name")}</h1>
+            <h1 className="min-w-[324px]">{getTranslatedProp("name")}</h1>
           </div>
         </div>
       )}
@@ -333,7 +337,7 @@ export default function Toolbar({
           </a>
         )}
         {expanded && (
-          <div className="flex justify-start w-full overflow-hidden whitespace-nowrap pb-3">
+          <div className="flex justify-start w-full overflow-hidden whitespace-nowrap pb-3 pl-1">
             <div className="flex items-center flex-none">
               <a href="/">
                 <img

@@ -4873,6 +4873,14 @@ select {
   height: 100vh;
 }
 
+.h-\[64\] {
+  height: 64;
+}
+
+.h-\[64px\] {
+  height: 64px;
+}
+
 .max-h-128 {
   max-height: 32rem;
 }
@@ -4935,6 +4943,14 @@ select {
 
 .min-h-screen {
   min-height: 100vh;
+}
+
+.min-h-20 {
+  min-height: 5rem;
+}
+
+.min-h-\[64px\] {
+  min-height: 64px;
 }
 
 .w-0 {
@@ -5140,6 +5156,38 @@ select {
 
 .min-w-lg {
   min-width: 32rem;
+}
+
+.min-w-72 {
+  min-width: 18rem;
+}
+
+.min-w-96 {
+  min-width: 24rem;
+}
+
+.min-w-\[350px\] {
+  min-width: 350px;
+}
+
+.min-w-\[350\] {
+  min-width: 350;
+}
+
+.min-w-\[324px\] {
+  min-width: 324px;
+}
+
+.min-w-\[330px\] {
+  min-width: 330px;
+}
+
+.min-w-\[326px\] {
+  min-width: 326px;
+}
+
+.min-w-\[346px\] {
+  min-width: 346px;
 }
 
 .max-w-1 {
@@ -9822,6 +9870,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
 }
 
 @media (min-height: 600px) {
+  .mid-height\:h-20 {
+    height: 5rem;
+  }
+
+  .mid-height\:min-h-20 {
+    min-height: 5rem;
+  }
+
   .mid-height\:space-y-3 > :not([hidden]) ~ :not([hidden]) {
     --tw-space-y-reverse: 0;
     margin-top: calc(0.75rem * calc(1 - var(--tw-space-y-reverse)));
