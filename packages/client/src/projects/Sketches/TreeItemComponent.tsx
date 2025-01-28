@@ -1,5 +1,4 @@
 import {
-  KeyboardEventHandler,
   MouseEventHandler,
   ReactNode,
   useCallback,
@@ -25,7 +24,7 @@ import {
   TooltipTrigger,
 } from "../../components/Tooltip";
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { EyeClosedIcon } from "@radix-ui/react-icons";
+import { DotsHorizontalIcon, EyeClosedIcon } from "@radix-ui/react-icons";
 
 export interface TreeNodeDataProps {
   id: number;
@@ -142,8 +141,16 @@ export default function TreeItemComponent({
           onSelect(e.metaKey, node, !isSelected);
         }
         var rect = e.currentTarget.getBoundingClientRect();
+        let target = e.currentTarget;
+        // check if the target is a button. If so, traverse to the parent and
+        // grab the parent's child label element
+        if (e.currentTarget.tagName === "BUTTON") {
+          target = e.currentTarget.parentElement?.querySelector("label")!;
+        }
+        e.target = target;
+        e.currentTarget = target;
         var offsetX = e.clientX - rect.left; //x position within the element.
-        onContextMenu(node, e.currentTarget, offsetX, e);
+        onContextMenu(node, target, offsetX, e);
         if (!allowContextMenuDefault) {
           e.preventDefault();
           e.stopPropagation();
@@ -271,19 +278,6 @@ export default function TreeItemComponent({
     [onSelect, node, isSelected, isContextMenuTarget, onVisibilityClick]
   );
 
-  const onLabelKeyDown: KeyboardEventHandler<any> = useCallback(
-    (e) => {
-      if (onSelect && e.key === "Enter") {
-        onSelect(e.metaKey, node, !isSelected);
-        e.preventDefault();
-        e.stopPropagation();
-      } else {
-        // do nothing
-      }
-    },
-    [onSelect, node, isSelected]
-  );
-
   const sortPlaceholder =
     sortState === SortingState.NONE ||
     sortState === SortingState.DIRECTLY_OVER_FOLDER ||
@@ -325,13 +319,120 @@ export default function TreeItemComponent({
     classNames = CLASSNAMES.SELECTED;
   }
 
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      switch (e.key) {
+        case "Enter":
+        case " ":
+          // Toggle selection
+          if (onSelect) {
+            if (e.key === "Enter") {
+              onSelect(e.metaKey, node, !isSelected);
+            } else {
+              onVisibilityClick();
+            }
+          } else {
+            onVisibilityClick();
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          break;
+        case "ArrowRight":
+          if (!isExpanded && !node.isLeaf) {
+            // Expand closed node
+            onExpand?.(node, true);
+          } else if (!node.isLeaf) {
+            // Focus first child
+            const firstChild =
+              itemRef.current?.querySelector('[role="treeitem"]');
+            if (firstChild instanceof HTMLElement) {
+              firstChild.focus();
+            }
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          break;
+        case "ArrowLeft":
+          if (isExpanded) {
+            // Collapse expanded node
+            onExpand?.(node, false);
+          } else {
+            // Focus parent
+            const parent =
+              itemRef.current?.parentElement?.closest('[role="treeitem"]');
+            if (parent instanceof HTMLElement) {
+              parent.focus();
+            }
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          break;
+        case "ArrowDown":
+          // Focus next visible node
+          const next = itemRef.current?.nextElementSibling;
+          if (next instanceof HTMLElement) {
+            next.focus();
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          break;
+        case "ArrowUp":
+          // Focus previous visible node
+          const prev = itemRef.current?.previousElementSibling;
+          if (prev instanceof HTMLElement) {
+            prev.focus();
+          }
+          e.preventDefault();
+          e.stopPropagation();
+          break;
+        case "F10":
+          if (e.shiftKey) {
+            const label = itemRef.current?.querySelector("label");
+            if (label instanceof HTMLElement) {
+              // Open context menu
+              // calculate the clientX and clientY from (end of) the label element
+              const rect = label.getBoundingClientRect();
+              const clientX = rect.left + rect.width;
+              const clientY = rect.top + rect.height;
+              const event = new MouseEvent("contextmenu", {
+                bubbles: true,
+                cancelable: true,
+                clientX,
+                clientY,
+                button: 2,
+              });
+              label.dispatchEvent(event);
+              e.preventDefault();
+              e.stopPropagation();
+            }
+          }
+          break;
+      }
+    },
+    [
+      onSelect,
+      node,
+      isSelected,
+      isExpanded,
+      onExpand,
+      onVisibilityClick,
+      itemRef,
+      contextMenuHandler,
+    ]
+  );
+
   return (
     <>
       <div
-        role={"treeitem"}
+        ref={itemRef}
+        role="treeitem"
+        aria-expanded={!node.isLeaf ? isExpanded : undefined}
         aria-selected={isSelected}
-        aria-checked={checked === CheckState.CHECKED}
-        ref={attachRef}
+        aria-label={node.title}
+        tabIndex={isSelected ? 0 : -1}
+        onKeyDown={handleKeyDown}
         onClick={(e) => {
           if (isSelected && onSelect) {
             onSelect(e.metaKey, node, false);
@@ -350,12 +451,12 @@ export default function TreeItemComponent({
                 opacity: 1,
               }
         }
-        className={`${classNames.container} rounded relative `}
+        className={`${classNames.container} rounded relative group`}
       >
         {sortable && canDrop && isOverCurrent && sortPlaceholder}
 
         <div
-          className={`label-container flex items-center text-sm space-x-0.5  ${classNames.label}`}
+          className={`label-container flex items-center text-sm space-x-0.5 group  ${classNames.label}`}
           style={{
             paddingTop: 5,
             paddingBottom: 5,
@@ -449,9 +550,6 @@ export default function TreeItemComponent({
               } ${isHidden ? "opacity-50" : ""}`}
               onClick={updateSelectionOnClick}
               onContextMenu={contextMenuHandler}
-              role={onSelect ? "button" : undefined}
-              tabIndex={onSelect ? 0 : undefined}
-              onKeyDown={onSelect ? onLabelKeyDown : undefined}
             >
               {highlights?.[node.id]?.title ? (
                 <SearchResultHighlights data={highlights[node.id].title!} />
@@ -471,6 +569,49 @@ export default function TreeItemComponent({
               <EyeClosedIcon className="text-black opacity-50 hover:opacity-80" />
             </button>
           )}
+          <ContextMenu.Trigger asChild={true}>
+            <button
+              aria-details="Open context menu (Shift + F10)"
+              tabIndex={0}
+              className="w-0 opacity-0 focus:opacity-100 focus:w-auto"
+              onContextMenu={contextMenuHandler}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  // get clientX and clientY from the button element
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clientX = rect.left + rect.width / 2;
+                  const clientY = rect.top + rect.height / 2;
+                  // Dispatch a contextmenu event
+                  const event = new MouseEvent("contextmenu", {
+                    bubbles: true,
+                    cancelable: true,
+                    clientX,
+                    clientY,
+                    button: 2,
+                  });
+                  e.currentTarget.dispatchEvent(event);
+                }
+              }}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                // Dispatch a contextmenu event
+
+                const event = new MouseEvent("contextmenu", {
+                  bubbles: true,
+                  cancelable: true,
+                  clientX: e.clientX,
+                  clientY: e.clientY,
+                  button: 2,
+                });
+                e.currentTarget.dispatchEvent(event);
+              }}
+            >
+              <DotsHorizontalIcon />
+            </button>
+          </ContextMenu.Trigger>
         </div>
         {highlights?.[node.id]?.metadata &&
           !Boolean(highlights?.[node.id]?.title?.length) && (
