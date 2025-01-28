@@ -24,43 +24,36 @@ export default function TopicListItem({
 
   return (
     <div className="">
-      <div className="flex">
+      <Link className="flex" to={`./${topic.forumId}/${topic.id}`}>
         <div className="flex-1 overflow-hidden">
-          <Link to={`./${topic.forumId}/${topic.id}`}>
-            <h4 className="text-base font-semibold">
-              <Link to={`./${topic.forumId}/${topic.id}`}>
-                {topic.title || (
-                  <span className="text-gray-500">
-                    <Trans ns="forums">Untitled</Trans>
-                  </span>
-                )}
-              </Link>
-            </h4>
-            <p className="text-sm truncate overflow-hidden whitespace-nowrap topic-blurb text-gray-500">
-              <Link to={`./${topic.forumId}/${topic.id}`}>{topic.blurb}</Link>
-            </p>
-            <div
-              title={new Date(
-                topic.lastPostDate || topic.createdAt
-              ).toLocaleString()}
-              className="text-sm text-primary-800 opacity-90"
-            >
-              {hasReplies ? (
-                <Trans i18nKey="lastReply" ns="forums">
-                  Last reply {{ timeAgo }}. Started by {{ lastAuthor }}
-                </Trans>
-              ) : (
-                <Trans i18nKey="postedAt" ns="forums">
-                  Posted {{ timeAgo }} by {{ lastAuthor }}
-                </Trans>
-              )}
-            </div>
-          </Link>
+          <h4 className="text-base font-semibold">
+            {topic.title || (
+              <span className="text-gray-500">
+                <Trans ns="forums">Untitled</Trans>
+              </span>
+            )}
+          </h4>
+          <p className="text-sm truncate overflow-hidden whitespace-nowrap topic-blurb text-gray-500">
+            {topic.blurb}
+          </p>
+          <div
+            title={new Date(
+              topic.lastPostDate || topic.createdAt
+            ).toLocaleString()}
+            className="text-sm text-primary-800 opacity-90"
+          >
+            {hasReplies ? (
+              <Trans i18nKey="lastReply" ns="forums">
+                Last reply {{ timeAgo }}. Started by {{ lastAuthor }}
+              </Trans>
+            ) : (
+              <Trans i18nKey="postedAt" ns="forums">
+                Posted {{ timeAgo }} by {{ lastAuthor }}
+              </Trans>
+            )}
+          </div>
         </div>
-        <Link
-          className="flex-none pl-2 flex flex-col text-xs items-center justify-center"
-          to={`./${topic.forumId}/${topic.id}`}
-        >
+        <div className="flex-none pl-2 flex flex-col text-xs items-center justify-center">
           <ParticipantAvatarCollection
             limit={isSmall ? 3 : 4}
             profiles={profiles}
@@ -76,8 +69,8 @@ export default function TopicListItem({
               </Trans>
             </span>
           )}
-        </Link>
-      </div>
+        </div>
+      </Link>
     </div>
   );
 }

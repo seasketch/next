@@ -120,9 +120,14 @@ export default function ShareSketchesModal({
               hideCheckboxes={true}
               selection={selection}
               onSelect={(metaKey, node, isSelected) => {
-                setSelected((prev) => {
-                  return [node.id];
-                });
+                if (!isSelected) {
+                  setSelected([]);
+                  return;
+                } else {
+                  setSelected((prev) => {
+                    return [node.id];
+                  });
+                }
               }}
             />
             <div className="h-4"></div>

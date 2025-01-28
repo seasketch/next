@@ -118,52 +118,53 @@ export default function Toolbar({
       animate={expanded ? "expanded" : "collapsed"}
     >
       <div
-        className={
-          expanded
-            ? "absolute right-2 top-2"
-            : `flex flex-col items-center w-full flex-none py-2 mid-height:py-3 mid-height:pt-4`
-        }
+        className={clsx(
+          expanded && "p-3 pt-0 pb-2 mid-height:min-h-20 min-h-[64px]",
+          `flex w-full space-x-2  items-center`,
+          !expanded && "justify-center pt-4 mb-3"
+        )}
       >
+        {expanded && (
+          <>
+            <div className="flex items-center flex-none py-2 mid-height:py-3 mid-height:pt-4">
+              {data?.project?.logoUrl && !data?.project.logoLink && (
+                <img
+                  alt="Project Logo"
+                  src={data?.project?.logoUrl}
+                  className="w-12 flex-0 mr-4"
+                />
+              )}
+              {data?.project?.logoUrl && data?.project.logoLink && (
+                <a
+                  href={data?.project.logoLink}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center w-full"
+                >
+                  <img
+                    alt="Project Logo"
+                    src={data?.project?.logoUrl}
+                    className="w-12 flex-0"
+                  />
+                </a>
+              )}
+            </div>
+            <div className="flex-1 max-w-md flex items-center text-xl">
+              <h1 className="whitespace-nowrap">{getTranslatedProp("name")}</h1>
+            </div>
+          </>
+        )}
         <MenuToggle
           className={clsx(
-            dark ? "text-gray-400" : "text-gray-700",
-            expanded && "mt-2"
+            "flex-none",
+            dark ? "text-gray-400" : "text-gray-700"
           )}
           onClick={onExpand}
           tabIndex={1}
           isExpanded={expanded}
         />
       </div>
-      {expanded && (
-        <div className="flex w-full p-3 pt-0 pb-1 space-x-2 mid-height:min-h-20 min-h-[64px]">
-          <div className="flex items-center flex-none py-2 mid-height:py-3 mid-height:pt-4">
-            {data?.project?.logoUrl && !data?.project.logoLink && (
-              <img
-                alt="Project Logo"
-                src={data?.project?.logoUrl}
-                className="w-12 flex-0 mr-4"
-              />
-            )}
-            {data?.project?.logoUrl && data?.project.logoLink && (
-              <a
-                href={data?.project.logoLink}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center w-full"
-              >
-                <img
-                  alt="Project Logo"
-                  src={data?.project?.logoUrl}
-                  className="w-12 flex-0"
-                />
-              </a>
-            )}
-          </div>
-          <div className="flex-1 max-w-md flex items-center text-xl">
-            <h1 className="min-w-[324px]">{getTranslatedProp("name")}</h1>
-          </div>
-        </div>
-      )}
+
       <div
         className={`pt-0.5 flex flex-col w-full flex-1 ${
           expanded

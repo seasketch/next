@@ -241,6 +241,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             }
             small
             onClick={menuOptions?.viewReports?.onClick}
+            buttonClassName="focus-visible:ring-2 focus-visible:ring-primary-500"
             label={
               isSmall ? (
                 <Trans ns="sketching">View Attributes</Trans>

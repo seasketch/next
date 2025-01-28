@@ -1,4 +1,5 @@
 import {
+  KeyboardEventHandler,
   MouseEventHandler,
   ReactNode,
   useCallback,
@@ -270,6 +271,19 @@ export default function TreeItemComponent({
     [onSelect, node, isSelected, isContextMenuTarget, onVisibilityClick]
   );
 
+  const onLabelKeyDown: KeyboardEventHandler<any> = useCallback(
+    (e) => {
+      if (onSelect && e.key === "Enter") {
+        onSelect(e.metaKey, node, !isSelected);
+        e.preventDefault();
+        e.stopPropagation();
+      } else {
+        // do nothing
+      }
+    },
+    [onSelect, node, isSelected]
+  );
+
   const sortPlaceholder =
     sortState === SortingState.NONE ||
     sortState === SortingState.DIRECTLY_OVER_FOLDER ||
@@ -314,6 +328,9 @@ export default function TreeItemComponent({
   return (
     <>
       <div
+        role={"treeitem"}
+        aria-selected={isSelected}
+        aria-checked={checked === CheckState.CHECKED}
         ref={attachRef}
         onClick={(e) => {
           if (isSelected && onSelect) {
@@ -333,7 +350,7 @@ export default function TreeItemComponent({
                 opacity: 1,
               }
         }
-        className={`${classNames.container} rounded relative`}
+        className={`${classNames.container} rounded relative `}
       >
         {sortable && canDrop && isOverCurrent && sortPlaceholder}
 
@@ -432,6 +449,9 @@ export default function TreeItemComponent({
               } ${isHidden ? "opacity-50" : ""}`}
               onClick={updateSelectionOnClick}
               onContextMenu={contextMenuHandler}
+              role={onSelect ? "button" : undefined}
+              tabIndex={onSelect ? 0 : undefined}
+              onKeyDown={onSelect ? onLabelKeyDown : undefined}
             >
               {highlights?.[node.id]?.title ? (
                 <SearchResultHighlights data={highlights[node.id].title!} />

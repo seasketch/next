@@ -110,6 +110,19 @@ export default function Topic({ id }: { id: number }) {
     []
   );
 
+  useEffect(() => {
+    if (authorProfile) {
+      // Listen for escape key to close
+      const handler = (e: any) => {
+        if (e.key === "Escape") {
+          setAuthorProfile(null);
+        }
+      };
+      window.addEventListener("keydown", handler);
+      return () => window.removeEventListener("keydown", handler);
+    }
+  }, [authorProfile]);
+
   return (
     <div className="max-h-full flex flex-col overflow-hidden flex-1">
       {authorProfile &&
@@ -120,7 +133,15 @@ export default function Topic({ id }: { id: number }) {
             {...attributes.popper}
             style={{ ...styles.popper, zIndex: 99999999 }}
           >
-            <AuthorProfilePopupContents profile={authorProfile} />
+            <AuthorProfilePopupContents
+              onClose={() => {
+                setAuthorProfile(null);
+                if (referenceElement) {
+                  referenceElement.focus();
+                }
+              }}
+              profile={authorProfile}
+            />
           </div>,
           document.body
         )}
