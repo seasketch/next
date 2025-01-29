@@ -6699,6 +6699,10 @@ select {
   background-image: linear-gradient(to top right, var(--tw-gradient-stops));
 }
 
+.bg-gradient-to-br {
+  background-image: linear-gradient(to bottom right, var(--tw-gradient-stops));
+}
+
 .from-gray-500 {
   --tw-gradient-from: #6b7280 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(107 114 128 / 0) var(--tw-gradient-to-position);
@@ -6744,6 +6748,12 @@ select {
 .from-cool-gray-800 {
   --tw-gradient-from: #1F2937 var(--tw-gradient-from-position);
   --tw-gradient-to: rgb(31 41 55 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
+}
+
+.from-cool-gray-900 {
+  --tw-gradient-from: #111827 var(--tw-gradient-from-position);
+  --tw-gradient-to: rgb(17 24 39 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to);
 }
 
@@ -6802,6 +6812,14 @@ select {
 
 .to-cool-gray-800\/75 {
   --tw-gradient-to: rgb(31 41 55 / 0.75) var(--tw-gradient-to-position);
+}
+
+.to-cool-gray-900 {
+  --tw-gradient-to: #111827 var(--tw-gradient-to-position);
+}
+
+.to-cool-gray-800\/20 {
+  --tw-gradient-to: rgb(31 41 55 / 0.2) var(--tw-gradient-to-position);
 }
 
 .bg-contain {
@@ -8699,6 +8717,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   width: auto;
 }
 
+.focus\:border:focus {
+  border-width: 1px;
+}
+
 .focus\:border-none:focus {
   border-style: none;
 }
@@ -8735,6 +8757,24 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus\:border-transparent:focus {
   border-color: transparent;
+}
+
+.focus\:border-gray-500:focus {
+  --tw-border-opacity: 1;
+  border-color: rgb(107 114 128 / var(--tw-border-opacity, 1));
+}
+
+.focus\:border-blue-500:focus {
+  --tw-border-opacity: 1;
+  border-color: rgb(59 130 246 / var(--tw-border-opacity, 1));
+}
+
+.focus\:border-blue-500\/80:focus {
+  border-color: rgb(59 130 246 / 0.8);
+}
+
+.focus\:border-blue-500\/60:focus {
+  border-color: rgb(59 130 246 / 0.6);
 }
 
 .focus\:bg-black:focus {
@@ -9004,6 +9044,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .active\:bg-primary-600:active {
   --tw-bg-opacity: 1;
   background-color: rgb(36 105 172 / var(--tw-bg-opacity, 1));
+}
+
+.active\:bg-gray-600:active {
+  --tw-bg-opacity: 1;
+  background-color: rgb(75 85 99 / var(--tw-bg-opacity, 1));
 }
 
 .active\:text-gray-500:active {

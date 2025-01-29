@@ -113,7 +113,7 @@ export default function Toolbar({
       className={`absolute left-0 h-screen overflow-y-auto ${
         expanded
           ? "text-gray-300 bg-gradient-to-r from-cool-gray-800 via-cool-gray-800 to-cool-gray-800/85 filter backdrop-blur-sm"
-          : "text-gray-400 bg-cool-gray-800"
+          : "text-gray-400 bg-gradient-to-r from-cool-gray-900 to-cool-gray-800 via-cool-gray-800"
       } text-gray-700"
       }  z-20 p-0 flex flex-col`}
       variants={{

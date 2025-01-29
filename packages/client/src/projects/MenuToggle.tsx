@@ -27,7 +27,7 @@ export const MenuToggle = ({
   <button
     title={isExpanded ? "Collapse Navigation" : "Expand Navigation"}
     className={clsx(
-      `flex items-center justify-center w-9 h-9 rounded p-0 active:outline-none focus:outline-none focus-visible:ring-2 ring-blue-500 focus:bg-gray-700 active:bg-gray-700 hover:bg-blue-500/15`,
+      `flex items-center justify-center w-9 h-9 rounded p-0 active:outline-none focus:outline-none focus-visible:ring-2 ring-blue-500 focus:bg-gray-700 focus:border-blue-500/60 focus:border active:bg-gray-700 hover:bg-blue-500/15`,
       animating ? "opacity-0" : "opacity-100 transition-opacity duration-300",
       className
     )}
