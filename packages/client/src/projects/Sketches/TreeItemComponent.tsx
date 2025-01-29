@@ -112,6 +112,7 @@ export default function TreeItemComponent({
   onUnhide,
   isHidden,
   highlights,
+  showContextMenuButtons,
 }: TreeNodeComponentProps) {
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
@@ -569,49 +570,51 @@ export default function TreeItemComponent({
               <EyeClosedIcon className="text-black opacity-50 hover:opacity-80" />
             </button>
           )}
-          <ContextMenu.Trigger asChild={true}>
-            <button
-              aria-details="Open context menu (Shift + F10)"
-              tabIndex={0}
-              className="w-0 opacity-0 focus:opacity-100 focus:w-auto pointer-events-none"
-              onContextMenu={contextMenuHandler}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
+          {showContextMenuButtons && showContextMenuButtons(node) && (
+            <ContextMenu.Trigger asChild={true}>
+              <button
+                aria-details="Open context menu (Shift + F10)"
+                tabIndex={0}
+                className="w-0 opacity-0 focus:opacity-100 focus:w-auto pointer-events-none"
+                onContextMenu={contextMenuHandler}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    // get clientX and clientY from the button element
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clientX = rect.left + rect.width / 2;
+                    const clientY = rect.top + rect.height / 2;
+                    // Dispatch a contextmenu event
+                    const event = new MouseEvent("contextmenu", {
+                      bubbles: true,
+                      cancelable: true,
+                      clientX,
+                      clientY,
+                      button: 2,
+                    });
+                    e.currentTarget.dispatchEvent(event);
+                  }
+                }}
+                onClick={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  // get clientX and clientY from the button element
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const clientX = rect.left + rect.width / 2;
-                  const clientY = rect.top + rect.height / 2;
                   // Dispatch a contextmenu event
+
                   const event = new MouseEvent("contextmenu", {
                     bubbles: true,
                     cancelable: true,
-                    clientX,
-                    clientY,
+                    clientX: e.clientX,
+                    clientY: e.clientY,
                     button: 2,
                   });
                   e.currentTarget.dispatchEvent(event);
-                }
-              }}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                // Dispatch a contextmenu event
-
-                const event = new MouseEvent("contextmenu", {
-                  bubbles: true,
-                  cancelable: true,
-                  clientX: e.clientX,
-                  clientY: e.clientY,
-                  button: 2,
-                });
-                e.currentTarget.dispatchEvent(event);
-              }}
-            >
-              <DotsHorizontalIcon />
-            </button>
-          </ContextMenu.Trigger>
+                }}
+              >
+                <DotsHorizontalIcon />
+              </button>
+            </ContextMenu.Trigger>
+          )}
         </div>
         {highlights?.[node.id]?.metadata &&
           !Boolean(highlights?.[node.id]?.title?.length) && (
@@ -672,6 +675,7 @@ export default function TreeItemComponent({
                   allowContextMenuDefault={allowContextMenuDefault}
                   isHidden={item.hidden}
                   onUnhide={onUnhide}
+                  showContextMenuButtons={showContextMenuButtons}
                 />
               ))}
             </ul>

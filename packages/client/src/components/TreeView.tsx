@@ -88,6 +88,7 @@ interface TreeViewProps {
   hiddenItems?: string[];
   onUnhide?: (stableId: string) => void;
   highlights?: { [id: string]: TreeItemHighlights };
+  showContextMenuButtons?: (node: TreeItem) => boolean;
 }
 
 export interface TreeNodeComponentProps {
@@ -138,6 +139,7 @@ export interface TreeNodeComponentProps {
   allowContextMenuDefault?: boolean;
   isHidden: boolean;
   onUnhide?: (stableId: string) => void;
+  showContextMenuButtons?: (node: TreeItem) => boolean;
 }
 export enum CheckState {
   CHECKED,
@@ -179,6 +181,7 @@ export default function TreeView({
   onDrop,
   sortable,
   onSortEnd,
+  showContextMenuButtons,
   ...props
 }: TreeViewProps) {
   const treeRef = useRef<HTMLDivElement>(null);
@@ -530,6 +533,7 @@ export default function TreeView({
             allowContextMenuDefault={Boolean(props.getContextMenuContent)}
             isHidden={item.hidden}
             onUnhide={props.onUnhide}
+            showContextMenuButtons={showContextMenuButtons}
           />
         ))}
       </ContextMenu.Root>

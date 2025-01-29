@@ -103,6 +103,9 @@ export default function OverlayLayers({
             checkedItems={checkedItems}
             onChecked={onChecked}
             ariaLabel="Overlay Layers"
+            showContextMenuButtons={(node) => {
+              return node.isLeaf;
+            }}
             getContextMenuContent={(treeItemId, clickEvent) => {
               const item = items.find((item) => item.stableId === treeItemId);
               if (item?.isFolder) {

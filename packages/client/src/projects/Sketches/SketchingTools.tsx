@@ -293,6 +293,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               errors={errors}
               loadingItems={loadingSketches}
               // getContextMenuItems={getContextMenuItems}
+              showContextMenuButtons={(node) => true}
               getContextMenuContent={(treeItemId, clickEvent) => {
                 const item = treeItems.find((item) => item.id === treeItemId);
                 if (!item) {
