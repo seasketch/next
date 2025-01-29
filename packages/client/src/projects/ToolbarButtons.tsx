@@ -45,7 +45,6 @@ const curry =
     <SidebarButton {...props} icon={icon} />;
 
 export default function SidebarButton(props: SidebarButtonProps) {
-  const [hovered, setHovered] = useState(false);
   const history = useHistory();
   let onClick = props.onClick;
 
@@ -53,7 +52,6 @@ export default function SidebarButton(props: SidebarButtonProps) {
     const href = props.href;
     onClick = () => {
       history.push(href);
-      setHovered(false);
     };
   }
 
@@ -80,15 +78,19 @@ export default function SidebarButton(props: SidebarButtonProps) {
               props.expanded ? "w-full p-2" : "w-9 p-1",
               props.variant === "primary" &&
                 props.expanded &&
-                "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded",
+                "bg-cool-gray-600/50 py-3 mt-4 justify-center text-center rounded",
               props.sidebarOpen && "bg-blue-500/15 ring-1"
             )}
             onClick={() => {
               if (onClick) {
                 onClick();
               }
-              setHovered(false);
             }}
+            style={
+              props.variant === "primary" && props.expanded
+                ? { minWidth: 356 }
+                : { minWidth: 0 }
+            }
           >
             {/* Icon */}
             <span className="w-7 h-7 text-gray-400 flex-none">

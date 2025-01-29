@@ -110,8 +110,10 @@ export default function Toolbar({
       onAnimationComplete={() => setAnimating(false)}
       role="navigation"
       style={{ boxShadow: "0px -2px 5px rgba(0,0,0,0.5)" }}
-      className={`absolute left-0 h-screen overflow-y-auto bg-cool-gray-800 ${
-        expanded ? "text-gray-300" : "text-gray-400"
+      className={`absolute left-0 h-screen overflow-y-auto ${
+        expanded
+          ? "text-gray-300 bg-gradient-to-r from-cool-gray-800 via-cool-gray-800 to-cool-gray-800/80 filter backdrop-blur-sm"
+          : "text-gray-400 bg-cool-gray-800"
       } text-gray-700"
       }  z-20 p-0 flex flex-col`}
       variants={{
@@ -177,7 +179,7 @@ export default function Toolbar({
         <div
           className={`pt-0.5 flex flex-col w-full flex-1 ${
             expanded
-              ? "justify-start overflow-y-auto overflow-x-hidden -mt-3 space-y-[6px]"
+              ? "justify-start overflow-y-auto overflow-x-hidden -mt-4 -ml-[4px] space-y-[6px]"
               : "space-y-3.5 ml-[12px] mt-1"
           }`}
         >
@@ -282,7 +284,7 @@ export default function Toolbar({
             <>
               <div
                 className="w-full"
-                style={{ padding: "0px 19px", paddingTop: 6 }}
+                style={{ padding: "0px 19px", paddingTop: 2, paddingLeft: 20 }}
               >
                 <SignedInAs animateText className="pb-1" tabIndex={-1} />
               </div>
