@@ -112,7 +112,7 @@ export default function Toolbar({
       style={{ boxShadow: "0px -2px 5px rgba(0,0,0,0.5)" }}
       className={`absolute left-0 h-screen overflow-y-auto ${
         expanded
-          ? "text-gray-300 bg-gradient-to-r from-cool-gray-800 via-cool-gray-800 to-cool-gray-800/80 filter backdrop-blur-sm"
+          ? "text-gray-300 bg-gradient-to-r from-cool-gray-800 via-cool-gray-800 to-cool-gray-800/85 filter backdrop-blur-sm"
           : "text-gray-400 bg-cool-gray-800"
       } text-gray-700"
       }  z-20 p-0 flex flex-col`}
