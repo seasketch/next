@@ -200,6 +200,17 @@ export default function SketchReportWindow({
     lang?.selectedLang?.code,
   ]);
 
+  // store close button ref
+  const closeButton = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    setTimeout(() => {
+      if (closeButton.current) {
+        closeButton.current.focus();
+      }
+    }, 10);
+  }, [closeButton]);
+
   return (
     <div
       className="flex-none flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg pointer-events-auto"
@@ -224,6 +235,8 @@ export default function SketchReportWindow({
           )}
         </h1>
         <button
+          ref={closeButton}
+          autoFocus
           className="hover:bg-gray-100 rounded-full p-2 -mr-2"
           onClick={() => onRequestClose(sketchId)}
         >

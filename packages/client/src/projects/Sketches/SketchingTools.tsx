@@ -19,6 +19,11 @@ import Skeleton from "../../components/Skeleton";
 import LoginPrompt from "./LoginPrompt";
 import decode from "jwt-decode";
 import { SketchUIStateContext } from "./SketchUIStateContextProvider";
+import * as ContextMenu from "@radix-ui/react-context-menu";
+import {
+  MenuBarContentClasses,
+  MenuBarItemClasses,
+} from "../../components/Menubar";
 
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const { isSmall } = useContext(ProjectAppSidebarContext);
@@ -287,7 +292,40 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               temporarilyHighlightedIds={temporarilyHighlightedIds}
               errors={errors}
               loadingItems={loadingSketches}
-              getContextMenuItems={getContextMenuItems}
+              // getContextMenuItems={getContextMenuItems}
+              getContextMenuContent={(treeItemId, clickEvent) => {
+                const item = treeItems.find((item) => item.id === treeItemId);
+                if (!item) {
+                  return null;
+                } else {
+                  const items = getContextMenuItems(item);
+                  const intersectsBottom =
+                    (clickEvent?.clientY || 0) > window.innerHeight - 260;
+
+                  return (
+                    <ContextMenu.Content
+                      style={{
+                        transform: `translate(${clickEvent.clientX}px, ${
+                          clickEvent.clientY
+                        }px)${intersectsBottom ? ` translateY(-100%)` : ""}`,
+                        backdropFilter: "blur(3px)",
+                      }}
+                      className={MenuBarContentClasses}
+                    >
+                      {items.map((item) => (
+                        <ContextMenu.Item
+                          key={item.id}
+                          className={MenuBarItemClasses}
+                          // @ts-ignore
+                          onSelect={item.onClick}
+                        >
+                          {item.label}
+                        </ContextMenu.Item>
+                      ))}
+                    </ContextMenu.Content>
+                  );
+                }
+              }}
               onDrop={onDrop}
             />
           )}

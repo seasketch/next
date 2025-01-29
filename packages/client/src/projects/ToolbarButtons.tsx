@@ -4,6 +4,8 @@ import { useHistory } from "react-router-dom";
 import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
 import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
+import clsx from "clsx";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 interface SidebarButtonProps {
   className?: string;
@@ -66,34 +68,62 @@ export default function SidebarButton(props: SidebarButtonProps) {
         props.expanded ? "min-w-[354px]" : "min-w-[40px]"
       }`}
     >
-      <button
-        title={props.title || props.tooltip}
-        aria-details={props.details}
-        key={props.tooltip}
-        className={`flex items-center space-x-2 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-500 focus:bg-gray-700/60 rounded p-1 ${
-          props.variant === "primary" && props.expanded
-            ? "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded"
-            : ""
-        } ${props.expanded ? "w-full" : "w-9"}`}
-        onClick={() => {
-          if (onClick) {
-            onClick();
-          }
-          setHovered(false);
-        }}
-      >
-        {/* Icon */}
-        <span className="w-7 h-7 text-gray-400 flex-none">{props.icon}</span>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <button
+            // title={props.expanded ? "" : props.title || props.tooltip}
+            aria-label={props.title}
+            aria-details={props.details}
+            key={props.tooltip}
+            className={clsx(
+              `flex items-center space-x-2 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-500 focus:bg-gray-700/60 hover:bg-blue-500/15 rounded`,
+              props.expanded ? "w-full p-2" : "w-9 p-1",
+              props.variant === "primary" &&
+                props.expanded &&
+                "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded",
+              props.sidebarOpen && "bg-blue-500/15 ring-1 "
+            )}
+            onClick={() => {
+              if (onClick) {
+                onClick();
+              }
+              setHovered(false);
+            }}
+          >
+            {/* Icon */}
+            <span className="w-7 h-7 text-gray-400 flex-none">
+              {props.icon}
+            </span>
 
-        {/* Text with fade-in animation */}
-        <span
-          className={`whitespace-nowrap overflow-hidden text-white/100 transition-opacity delay-50 duration-300 ${
-            props.expanded ? "opacity-100 visible" : "opacity-0 invisible w-0"
-          }`}
-        >
-          {props.tooltip}
-        </span>
-      </button>
+            {/* Text with fade-in animation */}
+            <motion.span
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1 },
+              }}
+              initial="hidden"
+              animate={props.expanded ? "visible" : "hidden"}
+              transition={{ duration: 0.2 }}
+              className={`whitespace-nowrap overflow-hidden text-white/100 ${
+                props.expanded ? "visible" : "invisible w-0"
+              }`}
+            >
+              {props.tooltip}
+            </motion.span>
+          </button>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            hidden={props.expanded || props.sidebarOpen}
+            className="select-none rounded bg-white px-[15px] py-2.5 text-[15px] leading-none text-violet11 shadow-[hsl(206_22%_7%_/_35%)_0px_10px_38px_-10px,_hsl(206_22%_7%_/_20%)_0px_10px_20px_-15px] will-change-[transform,opacity] data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade z-50"
+            sideOffset={5}
+            side="right"
+          >
+            {props.tooltip}
+            <Tooltip.Arrow className="fill-white" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
     </div>
   );
 }

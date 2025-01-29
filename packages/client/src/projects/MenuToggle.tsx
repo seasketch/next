@@ -1,3 +1,4 @@
+import clsx from "clsx";
 import { motion } from "framer-motion";
 
 const Path = (props: any) => (
@@ -15,15 +16,21 @@ export const MenuToggle = ({
   className,
   tabIndex,
   isExpanded,
+  animating,
 }: {
   onClick: () => void;
   className?: string;
   tabIndex?: number;
   isExpanded?: boolean;
+  animating?: boolean;
 }) => (
   <button
     title={isExpanded ? "Collapse Navigation" : "Expand Navigation"}
-    className={`flex items-center justify-center w-9 h-9 rounded p-0 active:outline-none focus:outline-none focus-visible:ring-2 ring-blue-500 focus:bg-gray-700 active:bg-gray-700 ${className}`}
+    className={clsx(
+      `flex items-center justify-center w-9 h-9 rounded p-0 active:outline-none focus:outline-none focus-visible:ring-2 ring-blue-500 focus:bg-gray-700 active:bg-gray-700 hover:bg-blue-500/15`,
+      animating ? "opacity-0" : "opacity-100 transition-opacity duration-300",
+      className
+    )}
     onClick={onClick}
     style={{ paddingLeft: 1 }}
     tabIndex={tabIndex}

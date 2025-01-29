@@ -573,7 +573,7 @@ export default function TreeItemComponent({
             <button
               aria-details="Open context menu (Shift + F10)"
               tabIndex={0}
-              className="w-0 opacity-0 focus:opacity-100 focus:w-auto"
+              className="w-0 opacity-0 focus:opacity-100 focus:w-auto pointer-events-none"
               onContextMenu={contextMenuHandler}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {

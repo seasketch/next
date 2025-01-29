@@ -3818,6 +3818,10 @@ select {
   left: -0.625rem;
 }
 
+.-left-20 {
+  left: -5rem;
+}
+
 .-left-3 {
   left: -0.75rem;
 }
@@ -4134,10 +4138,6 @@ select {
   top: 100%;
 }
 
-.-left-20 {
-  left: -5rem;
-}
-
 .isolate {
   isolation: isolate;
 }
@@ -4253,6 +4253,11 @@ select {
   margin-right: 0.25rem;
 }
 
+.mx-1\.5 {
+  margin-left: 0.375rem;
+  margin-right: 0.375rem;
+}
+
 .mx-2 {
   margin-left: 0.5rem;
   margin-right: 0.5rem;
@@ -4331,11 +4336,6 @@ select {
 .my-auto {
   margin-top: auto;
   margin-bottom: auto;
-}
-
-.mx-1\.5 {
-  margin-left: 0.375rem;
-  margin-right: 0.375rem;
 }
 
 .-mb-0 {
@@ -4538,6 +4538,10 @@ select {
   margin-bottom: 1.25rem;
 }
 
+.mb-6 {
+  margin-bottom: 1.5rem;
+}
+
 .mb-7 {
   margin-bottom: 1.75rem;
 }
@@ -4700,10 +4704,6 @@ select {
 
 .mt-8 {
   margin-top: 2rem;
-}
-
-.mb-6 {
-  margin-bottom: 1.5rem;
 }
 
 .box-content {
@@ -5174,10 +5174,6 @@ select {
 
 .min-w-0 {
   min-width: 0px;
-}
-
-.min-w-\[324px\] {
-  min-width: 324px;
 }
 
 .min-w-\[354px\] {
@@ -5755,6 +5751,48 @@ select {
   --tw-space-y-reverse: 0;
   margin-top: calc(1.5rem * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom: calc(1.5rem * var(--tw-space-y-reverse));
+}
+
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.375rem * var(--tw-space-y-reverse));
+}
+
+.space-y-\[12px\] > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(12px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(12px * var(--tw-space-y-reverse));
+}
+
+.space-y-\[10px\] > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(10px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(10px * var(--tw-space-y-reverse));
+}
+
+.space-y-\[8px\] > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(8px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(8px * var(--tw-space-y-reverse));
+}
+
+.space-y-\[6px\] > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(6px * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(6px * var(--tw-space-y-reverse));
+}
+
+.space-y-2\.5 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.625rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.625rem * var(--tw-space-y-reverse));
+}
+
+.space-y-3\.5 > :not([hidden]) ~ :not([hidden]) {
+  --tw-space-y-reverse: 0;
+  margin-top: calc(0.875rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom: calc(0.875rem * var(--tw-space-y-reverse));
 }
 
 .divide-y > :not([hidden]) ~ :not([hidden]) {
@@ -6567,6 +6605,10 @@ select {
   background-color: rgb(217 119 6 / var(--tw-bg-opacity, 1));
 }
 
+.bg-blue-500\/15 {
+  background-color: rgb(59 130 246 / 0.15);
+}
+
 .bg-opacity-10 {
   --tw-bg-opacity: 0.1;
 }
@@ -6902,6 +6944,16 @@ select {
   padding-bottom: 2rem;
 }
 
+.px-\[15px\] {
+  padding-left: 15px;
+  padding-right: 15px;
+}
+
+.py-2\.5 {
+  padding-top: 0.625rem;
+  padding-bottom: 0.625rem;
+}
+
 .pb-0 {
   padding-bottom: 0px;
 }
@@ -7182,6 +7234,10 @@ select {
 .text-xs {
   font-size: 0.75rem;
   line-height: 1rem;
+}
+
+.text-\[15px\] {
+  font-size: 15px;
 }
 
 .font-bold {
@@ -7689,6 +7745,12 @@ select {
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
 }
 
+.shadow-\[hsl\(206_22\%_7\%_\/_35\%\)_0px_10px_38px_-10px\2c _hsl\(206_22\%_7\%_\/_20\%\)_0px_10px_20px_-15px\] {
+  --tw-shadow: hsl(206 22% 7% / 35%) 0px 10px 38px -10px, hsl(206 22% 7% / 20%) 0px 10px 20px -15px;
+  --tw-shadow-colored: 0px 10px 38px -10px var(--tw-shadow-color), 0px 10px 20px -15px var(--tw-shadow-color);
+  box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
 .outline-none {
   outline: 2px solid transparent;
   outline-offset: 2px;
@@ -7788,6 +7850,32 @@ select {
 .ring-red-700 {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(185 28 28 / var(--tw-ring-opacity, 1));
+}
+
+.ring-blue-50 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(239 246 255 / var(--tw-ring-opacity, 1));
+}
+
+.ring-blue-50\/10 {
+  --tw-ring-color: rgb(239 246 255 / 0.1);
+}
+
+.ring-blue-50\/20 {
+  --tw-ring-color: rgb(239 246 255 / 0.2);
+}
+
+.ring-blue-100\/20 {
+  --tw-ring-color: rgb(219 234 254 / 0.2);
+}
+
+.ring-blue-100 {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(219 234 254 / var(--tw-ring-opacity, 1));
+}
+
+.ring-blue-100\/50 {
+  --tw-ring-color: rgb(219 234 254 / 0.5);
 }
 
 .ring-opacity-10 {
@@ -8256,14 +8344,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   transform: translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y));
 }
 
-.hover\:border:hover {
-  border-width: 1px;
-}
-
-.hover\:border-2:hover {
-  border-width: 2px;
-}
-
 .hover\:border-black:hover {
   --tw-border-opacity: 1;
   border-color: rgb(0 0 0 / var(--tw-border-opacity, 1));
@@ -8314,6 +8394,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:bg-blue-700:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(29 78 216 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-blue-700\/20:hover {
+  background-color: rgb(29 78 216 / 0.2);
 }
 
 .hover\:bg-cool-gray-100:hover {
@@ -8394,6 +8478,18 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:bg-white:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
+}
+
+.hover\:bg-blue-500\/10:hover {
+  background-color: rgb(59 130 246 / 0.1);
+}
+
+.hover\:bg-blue-500\/20:hover {
+  background-color: rgb(59 130 246 / 0.2);
+}
+
+.hover\:bg-blue-500\/15:hover {
+  background-color: rgb(59 130 246 / 0.15);
 }
 
 .hover\:bg-opacity-10:hover {
@@ -8542,6 +8638,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus\:z-20:focus {
   z-index: 20;
+}
+
+.focus\:w-auto:focus {
+  width: auto;
 }
 
 .focus\:border-none:focus {
@@ -8751,26 +8851,9 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-radius: 0.25rem;
 }
 
-.focus-visible\:rounded-sm:focus-visible {
-  border-radius: 0.125rem;
-}
-
-.focus-visible\:rounded-md:focus-visible {
-  border-radius: 0.375rem;
-}
-
-.focus-visible\:rounded-full:focus-visible {
-  border-radius: 9999px;
-}
-
 .focus-visible\:bg-blue-100:focus-visible {
   --tw-bg-opacity: 1;
   background-color: rgb(219 234 254 / var(--tw-bg-opacity, 1));
-}
-
-.focus-visible\:bg-gray-200:focus-visible {
-  --tw-bg-opacity: 1;
-  background-color: rgb(229 231 235 / var(--tw-bg-opacity, 1));
 }
 
 .focus-visible\:bg-blue-200:focus-visible {
@@ -8783,26 +8866,24 @@ input[type="checkbox"][indeterminate="true"]:checked {
   padding-right: 0.25rem;
 }
 
+.focus-visible\:opacity-100:focus-visible {
+  opacity: 1;
+}
+
 .focus-visible\:ring-2:focus-visible {
   --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
   --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
   box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
 }
 
-.focus-visible\:ring-4:focus-visible {
-  --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-  --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(4px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-  box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+.focus-visible\:ring-blue-300:focus-visible {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(147 197 253 / var(--tw-ring-opacity, 1));
 }
 
 .focus-visible\:ring-blue-500:focus-visible {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(59 130 246 / var(--tw-ring-opacity, 1));
-}
-
-.focus-visible\:ring-blue-300:focus-visible {
-  --tw-ring-opacity: 1;
-  --tw-ring-color: rgb(147 197 253 / var(--tw-ring-opacity, 1));
 }
 
 .focus-visible\:ring-primary-500:focus-visible {
@@ -8913,10 +8994,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .active\:ring-primary-500:active {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(46 115 182 / var(--tw-ring-opacity, 1));
-}
-
-.group:hover .group-hover\:inline-block {
-  display: inline-block;
 }
 
 .group:hover .group-hover\:border-blue-300 {
