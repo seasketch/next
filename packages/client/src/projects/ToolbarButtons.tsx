@@ -147,7 +147,7 @@ export const MapIcon = (
 );
 
 export const AboutIcon = (
-  <QuestionMarkCircledIcon className="w-6 h-6 transform scale-110 inline-block" />
+  <QuestionMarkCircledIcon className="w-6 h-6 transform scale-110 inline-block mt-[2px]" />
 );
 
 export const AboutButton = curry(AboutIcon);
@@ -249,7 +249,7 @@ export const SignOutButton = curry(
 
 export const SketchingIcon = (
   <svg
-    viewBox="0 0 448 512"
+    viewBox="0 -29 448 500"
     className="ml-auto mr-auto"
     width="90%"
     height="90%"
@@ -283,7 +283,7 @@ export const ForumsIcon = (
 export const ForumsButton = curry(ForumsIcon);
 
 export const AdminIcon = (
-  <CogIcon className="w-6 h-6 inline-block text-gray-300" />
+  <CogIcon className="w-6 h-6 inline-block text-gray-300 mt-[1px]" />
 );
 // export const AdminIcon = (
 //   // <div className="bg-gray-700 rounded py-1 px-1 flex items-center">

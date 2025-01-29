@@ -4722,6 +4722,22 @@ select {
   margin-left: -4px;
 }
 
+.-mb-\[2px\] {
+  margin-bottom: -2px;
+}
+
+.mt-\[5px\] {
+  margin-top: 5px;
+}
+
+.mt-\[1px\] {
+  margin-top: 1px;
+}
+
+.mt-\[2px\] {
+  margin-top: 2px;
+}
+
 .box-content {
   box-sizing: content-box;
 }
