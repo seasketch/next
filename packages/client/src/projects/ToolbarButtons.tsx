@@ -81,7 +81,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
               props.variant === "primary" &&
                 props.expanded &&
                 "bg-cool-gray-700 bg-opacity-60 py-3 mt-4 justify-center text-center rounded",
-              props.sidebarOpen && "bg-blue-500/15 ring-1 "
+              props.sidebarOpen && "bg-blue-500/15 ring-1"
             )}
             onClick={() => {
               if (onClick) {

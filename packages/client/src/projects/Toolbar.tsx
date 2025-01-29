@@ -15,7 +15,7 @@ import {
   SignOutButton,
   EditProfileButton,
 } from "./ToolbarButtons";
-import { useHistory, useParams, useRouteMatch } from "react-router-dom";
+import { Link, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
@@ -386,19 +386,25 @@ export default function Toolbar({
                   >
                     {t("Contact Us")}
                   </a>
-                  <a
+                  <Link
                     className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
-                    target="_blank"
-                    rel="noreferrer"
-                    href="https://github.com/seasketch/next"
+                    to="./app/accessibility"
                   >
-                    {
-                      // eslint-disable-next-line i18next/no-literal-string
-                      "Build "
-                    }
-                    {process.env.REACT_APP_BUILD || "local"}
-                  </a>
+                    {t("Accessibility")}
+                  </Link>
                 </nav>
+                <a
+                  className="text-xs text-gray-500 focus:outline-0 focus-visible:ring-2 ring-blue-500"
+                  target="_blank"
+                  rel="noreferrer"
+                  href="https://github.com/seasketch/next"
+                >
+                  {
+                    // eslint-disable-next-line i18next/no-literal-string
+                    "Build "
+                  }
+                  {process.env.REACT_APP_BUILD || "local"}
+                </a>
               </div>
             </div>
           )}

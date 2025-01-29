@@ -12,7 +12,7 @@ import {
 import { TableOfContentsItem } from "../generated/graphql";
 import FullSidebar from "./FullSidebar";
 import Toolbar from "./Toolbar";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import ProjectAppSidebar from "./ProjectAppSidebar";
 import { AnimatePresence, motion } from "framer-motion";
 import BasemapControl from "../dataLayers/BasemapControl";
@@ -84,6 +84,7 @@ export default function ProjectApp() {
     forums: t("Discussion Forums"),
     settings: t("Cache Settings"),
     about: t("About this Project"),
+    accessibility: t("Accessibility"),
   };
   const { basemaps, tableOfContentsItems, dataLayers, dataSources } =
     useMapData(mapContext);
@@ -212,6 +213,53 @@ export default function ProjectApp() {
                           />
                           <Route path={`/${slug}/app/settings`}>
                             <LazyCacheSettingsPage />
+                          </Route>
+                          <Route path={`/${slug}/app/accessibility`}>
+                            <div className="space-y-2 mt-2">
+                              <p className="text-sm">
+                                <Trans ns="accessibility">
+                                  Our team is committed to making SeaSketch
+                                  accessible to all users, including those with
+                                  disabilities. We strive to follow the Web
+                                  Content Accessibility Guidelines (WCAG) to
+                                  ensure a seamless experience, particularly
+                                  around keyboard navigation and overall
+                                  usability. While we continually work to
+                                  improve accessibility, we welcome feedback
+                                  from our users. If you encounter any issues or
+                                  have suggestions, please contact us at{" "}
+                                  <a
+                                    className="text-primary-500"
+                                    href="mailto:accessibility@seasketch.org"
+                                  >
+                                    accessibility@seasketch.org
+                                  </a>
+                                  .
+                                </Trans>
+                              </p>
+                              <h3 className="pt-5">
+                                <Trans ns="accessibility">Recent Updates</Trans>
+                              </h3>
+                              <div>
+                                <h4 className="text-sm font-bold text-gray-700">
+                                  {new Date("Jan 29 2025").toLocaleDateString()}
+                                </h4>
+                                <p className="text-sm">
+                                  <Trans ns="accessibility">
+                                    We conducted a comprehensive review of the
+                                    SeaSketch interface to improve
+                                    accessibility. Users can now fully navigate
+                                    basemaps, overlay layers, and discussion
+                                    forums using only keyboard input.
+                                    Additionally, we have implemented numerous
+                                    ARIA attributes to enhance compatibility
+                                    with screen readers and other assistive
+                                    technologies, ensuring a more inclusive
+                                    experience for all users.
+                                  </Trans>
+                                </p>
+                              </div>
+                            </div>
                           </Route>
                         </motion.div>
                       </Suspense>
