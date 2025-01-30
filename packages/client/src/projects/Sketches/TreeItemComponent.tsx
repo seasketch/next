@@ -246,6 +246,7 @@ export default function TreeItemComponent({
       drag(el);
       drop(el);
       rootRef.current = el;
+      // set rootRef manually from el
     },
     [drag, drop]
   );
@@ -320,8 +321,6 @@ export default function TreeItemComponent({
     classNames = CLASSNAMES.SELECTED;
   }
 
-  const itemRef = useRef<HTMLDivElement>(null);
-
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       switch (e.key) {
@@ -347,7 +346,7 @@ export default function TreeItemComponent({
           } else if (!node.isLeaf) {
             // Focus first child
             const firstChild =
-              itemRef.current?.querySelector('[role="treeitem"]');
+              rootRef.current?.querySelector('[role="treeitem"]');
             if (firstChild instanceof HTMLElement) {
               firstChild.focus();
             }
@@ -362,7 +361,7 @@ export default function TreeItemComponent({
           } else {
             // Focus parent
             const parent =
-              itemRef.current?.parentElement?.closest('[role="treeitem"]');
+              rootRef.current?.parentElement?.closest('[role="treeitem"]');
             if (parent instanceof HTMLElement) {
               parent.focus();
             }
@@ -372,7 +371,7 @@ export default function TreeItemComponent({
           break;
         case "ArrowDown":
           // Focus next visible node
-          const next = itemRef.current?.nextElementSibling;
+          const next = rootRef.current?.nextElementSibling;
           if (next instanceof HTMLElement) {
             next.focus();
           }
@@ -381,7 +380,7 @@ export default function TreeItemComponent({
           break;
         case "ArrowUp":
           // Focus previous visible node
-          const prev = itemRef.current?.previousElementSibling;
+          const prev = rootRef.current?.previousElementSibling;
           if (prev instanceof HTMLElement) {
             prev.focus();
           }
@@ -390,7 +389,7 @@ export default function TreeItemComponent({
           break;
         case "F10":
           if (e.shiftKey) {
-            const label = itemRef.current?.querySelector("label");
+            const label = rootRef.current?.querySelector("label");
             if (label instanceof HTMLElement) {
               // Open context menu
               // calculate the clientX and clientY from (end of) the label element
@@ -419,7 +418,7 @@ export default function TreeItemComponent({
       isExpanded,
       onExpand,
       onVisibilityClick,
-      itemRef,
+      rootRef,
       contextMenuHandler,
     ]
   );
@@ -427,7 +426,7 @@ export default function TreeItemComponent({
   return (
     <>
       <div
-        ref={itemRef}
+        ref={attachRef}
         role="treeitem"
         aria-expanded={!node.isLeaf ? isExpanded : undefined}
         aria-selected={isSelected}
