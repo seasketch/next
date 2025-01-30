@@ -31,6 +31,7 @@ import { useContext, useState } from "react";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import clsx from "clsx";
+import { Helmet } from "react-helmet";
 
 export default function Toolbar({
   onExpand,
@@ -124,8 +125,18 @@ export default function Toolbar({
       transition={{ duration: 0.15 }}
       animate={expanded ? "expanded" : "collapsed"}
     >
+      {data?.project?.name && (
+        <Helmet>
+          <title>{data.project.name} - SeaSketch</title>
+          <meta name="description" content={getTranslatedProp("description")} />
+          <link
+            rel="canonical"
+            href={`https://www.seasketch.org/${data.project.slug}/`}
+          />
+        </Helmet>
+      )}
       <Tooltip.Provider>
-        <div
+        <header
           className={clsx(
             expanded && "p-3 pt-0 pb-2 mid-height:min-h-20 min-h-[64px]",
             `flex w-full space-x-2  items-center`,
@@ -148,6 +159,7 @@ export default function Toolbar({
                     target="_blank"
                     rel="noreferrer"
                     className="flex items-center w-full"
+                    title={t("Link to related project website")}
                   >
                     <img
                       alt="Project Logo"
@@ -172,7 +184,7 @@ export default function Toolbar({
             isExpanded={expanded}
             animating={animating}
           />
-        </div>
+        </header>
 
         <div
           className={`pt-0.5 flex flex-col w-full flex-1 ${
@@ -366,7 +378,7 @@ export default function Toolbar({
                   />
                 </a>
               </div>
-              <div className="flex-col items-center">
+              <footer className="flex-col items-center">
                 <div className="text-xs">{t("Powered by")}</div>
                 <h2 className="text-xl">SeaSketch</h2>
                 <nav className="text-xs underline mt-1 flex space-x-2">
@@ -405,7 +417,7 @@ export default function Toolbar({
                   }
                   {process.env.REACT_APP_BUILD || "local"}
                 </a>
-              </div>
+              </footer>
             </div>
           )}
         </div>

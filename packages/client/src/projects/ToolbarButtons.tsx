@@ -70,8 +70,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
         <Tooltip.Trigger asChild>
           <button
             // title={props.expanded ? "" : props.title || props.tooltip}
-            aria-label={props.title}
-            aria-details={props.details}
+            aria-label={props.tooltip}
             key={props.tooltip}
             className={clsx(
               `flex items-center space-x-2 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-500 focus:bg-gray-700/60 hover:bg-blue-500/15 rounded`,

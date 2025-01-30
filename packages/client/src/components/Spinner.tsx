@@ -13,10 +13,12 @@ export default function Spinner(props: {
       style={props.style}
       className={`inline-block inset-y-0 items-center pointer-events-none transition-opacity duration-500 opacity-50 ${props.className}`}
       role="progressbar"
+      aria-label="Loading"
     >
       <svg
-        className={`animate-spin ${props.large ? "h-8 w-8" : props.mini ? "h-3 w-3" : "h-5 w-5"
-          } ${props.color === "white" ? "text-white" : "text-gray-500"}`}
+        className={`animate-spin ${
+          props.large ? "h-8 w-8" : props.mini ? "h-3 w-3" : "h-5 w-5"
+        } ${props.color === "white" ? "text-white" : "text-gray-500"}`}
         xmlns="http://www.w3.org/2000/svg"
         fill="none"
         viewBox="0 0 24 24"

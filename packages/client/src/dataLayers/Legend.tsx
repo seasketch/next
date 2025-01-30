@@ -111,12 +111,12 @@ export default function Legend({
             className="flex-none flex p-2 py-1.5 shadow"
           >
             <Accordion.Trigger className="flex w-full AccordionTrigger">
-              <h3 className="flex-1 text-left flex items-center">
+              <span className="flex-1 text-left flex items-center">
                 <span>{t("Legend")}</span>
                 {loading && !hidden && (
                   <Spinner className="scale-75 transform ml-1" />
                 )}
-              </h3>
+              </span>
               <CaretDownIcon
                 className="w-5 h-5 AccordionChevron text-gray-500"
                 aria-hidden

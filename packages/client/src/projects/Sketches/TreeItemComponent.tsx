@@ -465,6 +465,7 @@ export default function TreeItemComponent({
         >
           {!node.isLeaf && !node.hideChildren && (
             <button
+              aria-label={isExpanded ? "Collapse" : "Expand"}
               title={numChildren === 0 ? "Empty" : "Expand"}
               className={`pr-0.5 ${
                 !numChildren || numChildren < 1 ? "opacity-50" : ""
@@ -572,7 +573,7 @@ export default function TreeItemComponent({
           {showContextMenuButtons && showContextMenuButtons(node) && (
             <ContextMenu.Trigger asChild={true}>
               <button
-                aria-details="Open context menu (Shift + F10)"
+                aria-label="Open context menu (Shift + F10)"
                 tabIndex={0}
                 className="w-0 opacity-0 focus:opacity-100 focus:w-auto pointer-events-none"
                 onContextMenu={contextMenuHandler}
