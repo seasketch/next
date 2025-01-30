@@ -168,7 +168,7 @@ export default function Toolbar({
               dark ? "text-gray-400" : "text-gray-700"
             )}
             onClick={onExpand}
-            tabIndex={1}
+            tabIndex={0}
             isExpanded={expanded}
             animating={animating}
           />
