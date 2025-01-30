@@ -13,7 +13,7 @@ module.exports = {
           additionalManifestEntries: [
             "/favicon.ico",
             "/fonts.css",
-            "/tailwind-empty-vars.css",
+            "/tailwind-empty-vars-2.css",
             "/index.html",
             "/font/Inter-Regular.woff2",
             "/font/Inter-Regular.woff",
