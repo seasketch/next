@@ -26921,6 +26921,7 @@ GRANT ALL ON FUNCTION public.data_sources_is_archived(data_source public.data_so
 
 REVOKE ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO seasketch_user;
+GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO anon;
 
 
 --
