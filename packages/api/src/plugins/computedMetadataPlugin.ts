@@ -12,12 +12,22 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
         database or computed by fetching from a 3rd party service,
         depending on the data source type.
         """
-        computedMetadata: JSON @requires(columns: ["metadata", "data_layer_id"])
+        computedMetadata: JSON
+          @requires(columns: ["id", "metadata", "data_layer_id"])
       }
     `,
     resolvers: {
       TableOfContentsItem: {
-        computedMetadata: async (item, args, context, info) => {
+        computedMetadata: async ({ id }, args, context, info) => {
+          const r = await context.pgClient.query(
+            `select id, metadata, data_layer_id from table_of_contents_items where id = $1`,
+            [id]
+          );
+          if (r.rows.length === 0) {
+            return null;
+          }
+          const item = r.rows[0];
+          item.dataLayerId = item.data_layer_id;
           if (item.metadata) {
             return item.metadata;
           } else if (item.dataLayerId) {
@@ -29,10 +39,11 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
               return null;
             }
             const { data_source_id, sublayer } = q.rows[0];
-            let { rows } = await context.pgClient.query(
-              `select type, url from data_sources where id = $1`,
+            const r = await context.adminPool.query(
+              `select type, url from public.data_sources where id = $1`,
               [data_source_id]
             );
+            let rows = r.rows;
             if (rows.length === 0) {
               return null;
             }
