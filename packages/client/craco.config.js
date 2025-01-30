@@ -3,11 +3,6 @@ const WorkboxWebpackPlugin = require("workbox-webpack-plugin");
 // craco.config.js
 const path = require("path");
 module.exports = {
-  style: {
-    postcss: {
-      plugins: [require("tailwindcss"), require("autoprefixer")],
-    },
-  },
   webpack: {
     plugins: {
       add: [
@@ -18,6 +13,7 @@ module.exports = {
           additionalManifestEntries: [
             "/favicon.ico",
             "/fonts.css",
+            "/tailwind-empty-vars-2.css",
             "/index.html",
             "/font/Inter-Regular.woff2",
             "/font/Inter-Regular.woff",

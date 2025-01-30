@@ -1,16 +1,16 @@
-.SketchForm .prosemirror-body h1 {
+.SketchForm .ProseMirrorBody h1 {
   @apply block text-xl font-semibold leading-5 text-gray-800;
 }
 
-.SketchForm .prosemirror-body h2 {
+.SketchForm .ProseMirrorBody h2 {
   @apply block text-lg font-semibold leading-5 text-gray-800;
 }
 
-.SketchForm .prosemirror-body h3 {
+.SketchForm .ProseMirrorBody h3 {
   @apply block text-base font-medium leading-5 text-gray-800;
 }
 
-.SketchForm .prosemirror-body h1[data-question="yes"] {
+.SketchForm .ProseMirrorBody h1[data-question="yes"] {
   @apply block text-sm font-medium leading-5 text-gray-800;
   margin-top: 0px;
   margin-bottom: 0px;
@@ -20,12 +20,12 @@
   content: "Enter attribute name and description here...";
 }
 
-.SketchForm .prosemirror-body h1[data-question="yes"] {
+.SketchForm .ProseMirrorBody h1[data-question="yes"] {
   @apply block text-sm font-medium leading-5 text-gray-800;
   margin-top: 0px;
   margin-bottom: 0px;
 }
 
-.SketchForm .prosemirror-body p {
+.SketchForm .ProseMirrorBody p {
   @apply text-sm text-gray-500;
 }

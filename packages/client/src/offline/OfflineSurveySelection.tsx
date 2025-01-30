@@ -140,7 +140,7 @@ export default function OfflineSurveySelection({
                   <Trans ns="offline">Cache Status</Trans>
                 </span>
                 <DropdownButton
-                  buttonClassName="border-0 border-opacity-0 shadow-none"
+                  buttonClassName="border-0 border-opacity-0 !shadow-none"
                   label={<CogIcon className="w-5 h-5 text-gray-600" />}
                   small
                   options={[

@@ -31,6 +31,7 @@ import {
 } from "../admin/data/TableOfContentsItemMenu";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LayerEditingContext } from "../admin/data/LayerEditingContext";
+import clsx from "clsx";
 
 require("../admin/data/arcgis/Accordion.css");
 
@@ -213,7 +214,7 @@ function LegendListItem({
             className={`${
               contextMenuIsOpen
                 ? "opacity-50"
-                : "opacity-10 group-hover:opacity-50"
+                : "opacity-10 group-hover:opacity-50 focus:opacity-100 focus-visible:opacity-100"
             } flex-none group pl-1 flex items-center space-x-1 `}
           >
             {item.tableOfContentsItemDetails && (
@@ -230,13 +231,22 @@ function LegendListItem({
                   />
                 </DropdownMenu.Portal>
                 <DropdownMenu.Trigger asChild>
-                  <DotsHorizontalIcon
-                    className={`w-5 h-5 text-black  cursor-pointer ${
+                  <button
+                    aria-label="Open context menu"
+                    className={clsx(
                       contextMenuIsOpen
-                        ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
-                        : "hidden group-hover:inline-block"
-                    } `}
-                  />
+                        ? "opacity-100"
+                        : "opacity-80 group-hover:opacity-100 focus:opacity-100"
+                    )}
+                  >
+                    <DotsHorizontalIcon
+                      className={`w-5 h-5 text-black  cursor-pointer ${
+                        contextMenuIsOpen
+                          ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
+                          : "inline-block"
+                      } `}
+                    />
+                  </button>
                 </DropdownMenu.Trigger>
               </DropdownMenu.Root>
             )}
@@ -324,7 +334,11 @@ function Toggle({
   className?: string;
 }) {
   return (
-    <button onClick={onChange} className={`${className} text-black`}>
+    <button
+      aria-label="Hide layer"
+      onClick={onChange}
+      className={`${className} text-black`}
+    >
       {visible ? <EyeOpenIcon /> : <EyeClosedIcon />}
     </button>
   );

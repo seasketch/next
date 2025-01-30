@@ -48,7 +48,7 @@ const FeatureName: FormElementComponent<FeatureNameProps, string> = (props) => {
   return (
     <>
       {props.isSketchWorkflow && true ? (
-        <span className="prosemirror-body required input">
+        <span className="ProseMirrorBody required input">
           <h1 data-question="yes">
             <Trans ns="sketching">Name</Trans>
           </h1>

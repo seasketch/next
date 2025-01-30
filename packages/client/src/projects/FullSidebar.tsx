@@ -8,7 +8,7 @@ import {
   LayerIcon,
   MapIcon,
   SketchingIcon,
-} from "./MiniSidebarButtons";
+} from "./ToolbarButtons";
 import logo from "../header/seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
@@ -88,10 +88,9 @@ export default function FullSidebar({
           },
         },
         open: {
-          translateX: 0,
+          translateX: 0 + 500,
           transition: {
             type: "spring",
-            // ease: "easeOut",
             duration: 0.4,
           },
         },
@@ -102,6 +101,8 @@ export default function FullSidebar({
       }`}
       animate={open ? "open" : "closed"}
       initial={false}
+      aria-hidden={!open}
+      tabIndex={open ? 0 : -1}
     >
       <div className="flex w-full">
         <div className="flex-grow-0 flex items-center">
@@ -126,8 +127,10 @@ export default function FullSidebar({
           <h1 className=" ">{getTranslatedProp("name")}</h1>
         </div>
         <button
+          aria-label="Close sidebar"
+          tabIndex={open ? 1 : -1}
           onClick={onClose}
-          className=" w-10 h-10 rounded-full p-1 relative -right-2 flex items-center "
+          className="w-10 h-10 rounded-full p-1 relative -right-2 flex items-center "
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -169,18 +172,21 @@ export default function FullSidebar({
             onClick={chooseSidebar("about")}
             label={t("About")}
             icon={AboutIcon}
+            tabIndex={open ? 1 : -1}
           />
         )}
         <NavItem
           onClick={chooseSidebar("maps")}
           label={t("Maps")}
           icon={MapIcon}
+          tabIndex={open ? 2 : -1}
         />
         {data?.project?.hideOverlays !== true && (
           <NavItem
             label={t("Overlay Layers")}
             icon={LayerIcon}
             onClick={chooseSidebar("overlays")}
+            tabIndex={open ? 3 : -1}
           />
         )}
         {data?.project?.hideSketches !== true && (
@@ -195,6 +201,7 @@ export default function FullSidebar({
                 {SketchingIcon}
               </span>
             }
+            tabIndex={open ? 4 : -1}
           />
         )}
         {data?.project?.hideForums !== true && (
@@ -202,6 +209,7 @@ export default function FullSidebar({
             label={t("Discussion Forums")}
             icon={ForumsIcon}
             onClick={chooseSidebar("forums")}
+            tabIndex={open ? 5 : -1}
           />
         )}
         {project?.isOfflineEnabled && (
@@ -224,6 +232,7 @@ export default function FullSidebar({
             }
             label={t("Cache Settings")}
             onClick={chooseSidebar("settings")}
+            tabIndex={open ? 6 : -1}
           />
         )}
         <a
@@ -234,6 +243,7 @@ export default function FullSidebar({
           }`}
           className="flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full"
           role="menuitem"
+          tabIndex={open ? 7 : -1}
         >
           <div className="w-6 h-6 mr-3 opacity-80">
             <svg
@@ -260,6 +270,7 @@ export default function FullSidebar({
                   icon={<TranslateIcon className="w-6 h-6 inline -mr-0.5 " />}
                   onClick={onClick}
                   label={lang.localName || lang.name}
+                  tabIndex={open ? 8 : -1}
                 />
               )}
               options={data?.project?.supportedLanguages as string[]}
@@ -278,11 +289,13 @@ export default function FullSidebar({
                   icon={<TranslateIcon className="w-6 h-6 inline mr-1 " />}
                   onClick={onClick}
                   label={lang.localName || lang.name}
+                  tabIndex={open ? 10 : -1}
                 />
               )}
               options={data?.project?.supportedLanguages as string[]}
             />
             <NavItem
+              tabIndex={open ? 11 : -1}
               icon={
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -310,6 +323,7 @@ export default function FullSidebar({
               }}
             />
             <NavItem
+              tabIndex={open ? 12 : -1}
               icon={
                 <svg
                   className="left-0.5 relative"
@@ -345,6 +359,7 @@ export default function FullSidebar({
       )}
       {(!user || (!loading && !data?.me)) && (
         <NavItem
+          tabIndex={open ? 13 : -1}
           icon={
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -382,6 +397,7 @@ export default function FullSidebar({
       )}
       {project?.sessionIsAdmin && (
         <Link
+          tabIndex={open ? 14 : -1}
           to="./admin"
           className="bg-cool-gray-700 bg-opacity-50 block w-full p-4 rounded text-center mt-8 hover:bg-opacity-40"
         >
@@ -400,7 +416,7 @@ export default function FullSidebar({
         )} */}
         <div className="flex">
           <div className="flex items-center">
-            <a href="/">
+            <a tabIndex={open ? 15 : -1} href="/">
               <img
                 alt="SeaSketch Logo"
                 src={logo}
@@ -417,13 +433,17 @@ export default function FullSidebar({
                 {t("About")}
               </a> */}
               <a
+                tabIndex={open ? 16 : -1}
                 // className="mx-1"
                 href="/terms-of-use"
               >
                 {t("Terms of Use")}
               </a>
-              <a href="mailto:support@seasketch.org">{t("Contact Us")}</a>
+              <a tabIndex={open ? 17 : -1} href="mailto:support@seasketch.org">
+                {t("Contact Us")}
+              </a>
               <a
+                tabIndex={open ? 18 : -1}
                 target="_blank"
                 rel="noreferrer"
                 href="https://github.com/seasketch/next"
@@ -447,16 +467,23 @@ function NavItem({
   label,
   icon,
   target,
+  tabIndex,
 }: {
   onClick?: () => void;
-  label: string | ReactNode;
+  label: string;
   icon?: ReactNode;
   target?: string;
+  tabIndex?: number;
 }) {
   const className =
-    "flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full";
+    "flex p-1 rounded my-2 hover:bg-gray-900 hover:bg-opacity-20 w-full active:outline-none focus:outline-none focus:ring-2 ring-blue-500";
   return (
-    <button className={className} onClick={onClick}>
+    <button
+      tabIndex={tabIndex}
+      className={className}
+      onClick={onClick}
+      aria-label={label}
+    >
       <div className="w-6 h-6 mr-3 opacity-80">{icon}</div>
       {label}
     </button>

@@ -6,6 +6,7 @@ export interface SwitchProps {
   onClick?: (val: boolean, e?: React.MouseEvent<any, MouseEvent>) => void;
   className?: string;
   toggleColor?: string;
+  tabIndex?: number;
 }
 
 export default function Switch(props: SwitchProps) {
@@ -39,7 +40,7 @@ export default function Switch(props: SwitchProps) {
         }}
         role="switch"
         aria-readonly={!!props.disabled}
-        tabIndex={0}
+        tabIndex={props.tabIndex !== undefined ? props.tabIndex : 0}
         style={{
           backgroundColor: !!props.isToggled ? toggleColor : "rgba(0,0,0,0.18)",
         }}

@@ -1,13 +1,16 @@
+import { Trans } from "react-i18next";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import { AuthorProfileFragment } from "../../generated/graphql";
 
 export default function AuthorProfilePopupContents({
   profile,
+  onClose,
 }: {
   profile: AuthorProfileFragment;
+  onClose?: () => void;
 }) {
   return (
-    <div className="flex">
+    <div role="dialog" className="flex">
       <div className="w-16 h-16 flex-none m-1">
         <ProfilePhoto square canonicalEmail="" {...profile} />
       </div>
@@ -29,6 +32,14 @@ export default function AuthorProfilePopupContents({
           </a>
         )}
         {profile.affiliations && <p>{profile.affiliations}</p>}
+        <button
+          autoFocus
+          className="absolute"
+          style={{ left: -999 }}
+          onClick={onClose}
+        >
+          <Trans>close</Trans>
+        </button>
       </div>
     </div>
   );

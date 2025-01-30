@@ -41,5 +41,6 @@
   "[typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "testing.openTesting": "neverOpen"
+  "testing.openTesting": "neverOpen",
+  "testing.automaticallyOpenTestResults": "neverOpen"
 }

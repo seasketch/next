@@ -3,6 +3,9 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
 import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
 import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
+import { ProfileStatusButton } from "../header/ProfileStatusButton";
+import clsx from "clsx";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 interface SidebarButtonProps {
   className?: string;
@@ -13,6 +16,11 @@ interface SidebarButtonProps {
   href?: string;
   anySidebarOpen?: boolean;
   sidebarOpen?: boolean;
+  hidden?: boolean;
+  expanded?: boolean;
+  variant?: "primary" | "secondary";
+  details?: string;
+  title?: string;
 }
 
 const curry =
@@ -27,60 +35,98 @@ const curry =
       | "href"
       | "anySidebarOpen"
       | "sidebarOpen"
+      | "hidden"
+      | "expanded"
+      | "variant"
+      | "details"
+      | "title"
     >
   ) =>
     <SidebarButton {...props} icon={icon} />;
 
 export default function SidebarButton(props: SidebarButtonProps) {
-  const [hovered, setHovered] = useState(false);
   const history = useHistory();
   let onClick = props.onClick;
+
   if (props.href) {
     const href = props.href;
     onClick = () => {
       history.push(href);
-      setHovered(false);
     };
   }
+
+  if (props.hidden) {
+    return null;
+  }
+
   return (
-    <motion.button
-      onMouseOut={(e) => {
-        setHovered(false);
-        // @ts-ignore
-        e.target.blur();
-      }}
-      onMouseOver={() => setHovered(true)}
-      tabIndex={props.tabIndex}
-      onClick={() => {
-        if (onClick) {
-          onClick();
-        }
-        setHovered(false);
-      }}
-      className={` w-10 h-10 my-2 ${
-        props.className
-      } hover:bg-primary-300 hover:bg-opacity-10 focus:bg-white focus:bg-opacity-10 rounded p-1.5 focus:outline-none relative ${
-        props.sidebarOpen ? "bg-opacity-20 bg-primary-300" : ""
+    <div
+      style={{ padding: props.expanded ? "0px 14px" : "0px 2px" }}
+      className={`w-full flex items-center ${
+        props.expanded ? "min-w-[354px]" : "min-w-[40px]"
       }`}
     >
-      {props.icon}
-      <AnimatePresence>
-        {props.tooltip && hovered === true && !props.sidebarOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.5 }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-              transition: { delay: props.anySidebarOpen ? 0.5 : 0.2 },
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <button
+            // title={props.expanded ? "" : props.title || props.tooltip}
+            aria-label={props.title}
+            aria-details={props.details}
+            key={props.tooltip}
+            className={clsx(
+              `flex items-center space-x-2 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-500 focus:bg-gray-700/60 hover:bg-blue-500/15 rounded`,
+              props.expanded ? "w-full p-2" : "w-9 p-1",
+              props.variant === "primary" &&
+                props.expanded &&
+                "bg-cool-gray-600/50 py-3 mt-4 justify-center text-center rounded",
+              props.sidebarOpen && "bg-blue-500/15 ring-1"
+            )}
+            onClick={() => {
+              if (onClick) {
+                onClick();
+              }
             }}
-            exit={{ opacity: 0, transition: { duration: 0.1 } }}
-            className="absolute left-14 z-0 top-1 bg-black px-2 py-1 rounded overflow-visible whitespace-nowrap pointer-events-none select-none"
+            style={
+              props.variant === "primary" && props.expanded
+                ? { minWidth: 356 }
+                : { minWidth: 0 }
+            }
+          >
+            {/* Icon */}
+            <span className="w-7 h-7 text-gray-400 flex-none">
+              {props.icon}
+            </span>
+
+            {/* Text with fade-in animation */}
+            <motion.span
+              variants={{
+                hidden: { opacity: 0 },
+                visible: { opacity: 1 },
+              }}
+              initial="hidden"
+              animate={props.expanded ? "visible" : "hidden"}
+              transition={{ duration: 0.2 }}
+              className={`whitespace-nowrap overflow-hidden text-white/100 ${
+                props.expanded ? "visible" : "invisible w-0"
+              }`}
+            >
+              {props.tooltip}
+            </motion.span>
+          </button>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            hidden={props.expanded || props.sidebarOpen}
+            className="select-none rounded bg-white px-[15px] py-2.5 text-[15px] leading-none text-violet11 shadow-[hsl(206_22%_7%_/_35%)_0px_10px_38px_-10px,_hsl(206_22%_7%_/_20%)_0px_10px_20px_-15px] will-change-[transform,opacity] data-[state=delayed-open]:data-[side=bottom]:animate-slideUpAndFade data-[state=delayed-open]:data-[side=left]:animate-slideRightAndFade data-[state=delayed-open]:data-[side=right]:animate-slideLeftAndFade data-[state=delayed-open]:data-[side=top]:animate-slideDownAndFade z-50"
+            sideOffset={5}
+            side="right"
           >
             {props.tooltip}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.button>
+            <Tooltip.Arrow className="fill-white" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    </div>
   );
 }
 
@@ -101,16 +147,35 @@ export const MapIcon = (
 );
 
 export const AboutIcon = (
-  <QuestionMarkCircledIcon className="w-6 h-6 transform scale-110 inline-block" />
+  <QuestionMarkCircledIcon className="w-6 h-6 transform scale-110 inline-block mt-[2px]" />
 );
 
 export const AboutButton = curry(AboutIcon);
 
 export const MapButton = curry(MapIcon);
 
+export const CacheIcon = (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    strokeWidth={2}
+    stroke="currentColor"
+    // className="w-6 h-6"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 0v3.75m-16.5-3.75v3.75m16.5 0v3.75C20.25 16.153 16.556 18 12 18s-8.25-1.847-8.25-4.125v-3.75m16.5 0c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125"
+    />
+  </svg>
+);
+
+export const CacheButton = curry(CacheIcon);
+
 export const LayerIcon = (
   <svg
-    viewBox="2 1 21 21"
+    viewBox="1.5 1 21 21"
     focusable="false"
     role="img"
     fill="currentColor"
@@ -126,9 +191,65 @@ export const LayerIcon = (
 );
 export const LayersButton = curry(LayerIcon);
 
+export const MyProfileIcon = (
+  <div className="w-7 h-7 flex items-center justify-center">
+    <ProfileStatusButton tabIndex={-1} />
+  </div>
+);
+
+export const MyProfileButton = curry(MyProfileIcon);
+
+export const EditProfileButton = curry(
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className="w-6 h-6"
+  >
+    <path
+      fillRule="evenodd"
+      d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
+export const SignInButton = curry(
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+    />
+  </svg>
+);
+
+export const SignOutButton = curry(
+  <svg
+    className="left-0.5 relative"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+    stroke="currentColor"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+    />
+  </svg>
+);
+
 export const SketchingIcon = (
   <svg
-    viewBox="0 0 448 512"
+    viewBox="0 -29 448 500"
     className="ml-auto mr-auto"
     width="90%"
     height="90%"
@@ -162,7 +283,7 @@ export const ForumsIcon = (
 export const ForumsButton = curry(ForumsIcon);
 
 export const AdminIcon = (
-  <CogIcon className="w-6 h-6 inline-block text-gray-300" />
+  <CogIcon className="w-6 h-6 inline-block text-gray-300 mt-[1px]" />
 );
 // export const AdminIcon = (
 //   // <div className="bg-gray-700 rounded py-1 px-1 flex items-center">
@@ -215,4 +336,8 @@ export const SettingsIcon = (
 );
 export const SettingsButton = curry(SettingsIcon);
 
-export const LanguageButton = curry(<TranslateIcon />);
+export const LanguageIcon = (
+  <TranslateIcon style={{ marginLeft: 1 }} className="w-7 h-7 inline-block " />
+);
+
+export const LanguageButton = curry(LanguageIcon);

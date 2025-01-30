@@ -57,7 +57,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
       >
         {!Boolean(props.value?.selected) && !props.editable && (
           <div
-            className="flex-1 prosemirror-body cursor-pointer"
+            className="flex-1 ProseMirrorBody cursor-pointer"
             onClick={() => {
               if (
                 metadata?.type === "boolean" &&

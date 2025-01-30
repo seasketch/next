@@ -18,6 +18,9 @@ import MapSettingsPopup from "../draw/MapSettingsPopup";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
+import clsx from "clsx";
+import * as Popover from "@radix-ui/react-popover";
+import { Cross2Icon } from "@radix-ui/react-icons";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -154,21 +157,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         />,
         document.body
       )}
-      {props.mapSettingsPopupActions && (
-        <MapSettingsPopup
-          open={mapSettingsPopupOpen}
-          onRequestClose={() => setMapSettingsPopupOpen(false)}
-          anchor={mapSettingsPopupAnchor.current || undefined}
-        >
-          {props.mapSettingsPopupActions}
-        </MapSettingsPopup>
-      )}
-      <MeasurementToolsOverlay
-        // @ts-ignore
-        placement={measurementToolsPlacement}
-      />
-
-      {props.mapSettingsPopupActions && (
+      {/* {props.mapSettingsPopupActions && (
         <button
           ref={mapSettingsPopupAnchor}
           style={{ zIndex: 1, padding: 5 }}
@@ -178,15 +167,63 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             }
             setMapSettingsPopupOpen(true);
           }}
-          className={`absolute bg-white ring-2 ring-black ring-opacity-10 rounded top-28 ${
+          className={clsx(
+            "absolute bg-white ring-2 ring-black/10 rounded top-28",
             props.navigationControlsLocation === "top-right"
               ? "right-2.5"
               : "left-2.5"
-          }`}
+          )}
         >
           <CogIcon className="w-5 h-5" />
         </button>
-      )}
+      )} */}
+      {/* {props.mapSettingsPopupActions && (
+        <MapSettingsPopup
+          open={mapSettingsPopupOpen}
+          onRequestClose={() => setMapSettingsPopupOpen(false)}
+          anchor={mapSettingsPopupAnchor.current || undefined}
+        >
+          {props.mapSettingsPopupActions}
+        </MapSettingsPopup>
+      )} */}
+
+      <Popover.Root>
+        <Popover.Trigger asChild>
+          <button
+            className={clsx(
+              "absolute bg-white ring-2 ring-black/10 rounded top-28 z-10 p-[5px]",
+              props.navigationControlsLocation === "top-right"
+                ? "right-2.5"
+                : "left-2.5"
+            )}
+            aria-label="Map settings"
+          >
+            <CogIcon className="w-5 h-5" />
+          </button>
+        </Popover.Trigger>
+        <Popover.Portal>
+          <Popover.Content
+            className="w-[260px] rounded bg-white p-2 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity] focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
+            sideOffset={5}
+          >
+            <div className="flex flex-col gap-2.5">
+              {props.mapSettingsPopupActions}
+            </div>
+            <Popover.Close
+              className="absolute right-[-5px] top-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full text-white/0 outline-none hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7"
+              aria-label="Close"
+            >
+              <Cross2Icon />
+            </Popover.Close>
+            <Popover.Arrow className="fill-white" />
+          </Popover.Content>
+        </Popover.Portal>
+      </Popover.Root>
+      <MeasurementToolsOverlay
+        // @ts-ignore
+        placement={measurementToolsPlacement}
+      />
+
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
           mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"

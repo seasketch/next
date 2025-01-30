@@ -113,8 +113,9 @@ function BasemapSquareItem({
 }) {
   const getTranslatedProp = useTranslatedProps(basemap);
   return (
-    <div
-      className="flex flex-col m-2 cursor-pointer select-none w-32"
+    <button
+      aria-label={basemap.name}
+      className="flex flex-col m-2 cursor-pointer select-none outline-0 focus-visible:bg-blue-100 rounded-md p-2"
       onClick={onClick}
     >
       <div
@@ -133,12 +134,12 @@ function BasemapSquareItem({
         &nbsp;
       </div>
       <h4
-        className={`select-none w-full text-center font-medium  text-sm px-2 ${
+        className={`select-none w-full text-center font-medium max-w-24 lg:max-w-32 text-sm px-2 ${
           selected ? "text-gray-800 " : "text-gray-600"
         }`}
       >
         {getTranslatedProp("name")}
       </h4>
-    </div>
+    </button>
   );
 }

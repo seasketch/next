@@ -1,7 +1,7 @@
 // via https://gist.github.com/sw-yx/28c25962485101ca291ec1947b9d0b3e
 // recompile using
 // npx sass src/formElements/unreset.scss > src/formElements/unreset.css
-.prosemirror-body {
+.ProseMirrorBody {
   a {
     @apply underline;
   }

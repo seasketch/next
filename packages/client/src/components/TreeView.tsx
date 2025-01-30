@@ -88,6 +88,7 @@ interface TreeViewProps {
   hiddenItems?: string[];
   onUnhide?: (stableId: string) => void;
   highlights?: { [id: string]: TreeItemHighlights };
+  showContextMenuButtons?: (node: TreeItem) => boolean;
 }
 
 export interface TreeNodeComponentProps {
@@ -138,6 +139,7 @@ export interface TreeNodeComponentProps {
   allowContextMenuDefault?: boolean;
   isHidden: boolean;
   onUnhide?: (stableId: string) => void;
+  showContextMenuButtons?: (node: TreeItem) => boolean;
 }
 export enum CheckState {
   CHECKED,
@@ -179,8 +181,30 @@ export default function TreeView({
   onDrop,
   sortable,
   onSortEnd,
+  showContextMenuButtons,
   ...props
 }: TreeViewProps) {
+  const treeRef = useRef<HTMLDivElement>(null);
+
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!treeRef.current) return;
+
+    if (e.key === "Home") {
+      const firstItem = treeRef.current.querySelector('[role="treeitem"]');
+      if (firstItem instanceof HTMLElement) {
+        firstItem.focus();
+        e.preventDefault();
+      }
+    } else if (e.key === "End") {
+      const items = treeRef.current.querySelectorAll('[role="treeitem"]');
+      const lastItem = items[items.length - 1];
+      if (lastItem instanceof HTMLElement) {
+        lastItem.focus();
+        e.preventDefault();
+      }
+    }
+  }, []);
+
   const [contextMenu, setContextMenu] = useState<
     | {
         id: string;
@@ -414,12 +438,17 @@ export default function TreeView({
           target,
           clickEvent,
         });
+        if (props.getContextMenuContent) {
+          if (props.getContextMenuContent(node.id, clickEvent) === null) {
+            setContextMenu(undefined);
+          }
+        }
         if (getContextMenuItems) {
           setContextMenuOptions(getContextMenuItems(node));
         }
       }
     },
-    [setContextMenu, getContextMenuItems, props.getContextMenuContent]
+    [setContextMenu, getContextMenuItems, props.getContextMenuContent, onSelect]
   );
 
   useEffect(() => {
@@ -433,10 +462,13 @@ export default function TreeView({
   }, [props.selection]);
 
   return (
-    <ul
-      aria-multiselectable={Boolean(props.multipleSelect)}
+    <div
+      ref={treeRef}
       role="tree"
       aria-label={props.ariaLabel}
+      aria-multiselectable={Boolean(props.multipleSelect)}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
     >
       <ContextMenu.Root
         onOpenChange={(open) => {
@@ -501,10 +533,11 @@ export default function TreeView({
             allowContextMenuDefault={Boolean(props.getContextMenuContent)}
             isHidden={item.hidden}
             onUnhide={props.onUnhide}
+            showContextMenuButtons={showContextMenuButtons}
           />
         ))}
       </ContextMenu.Root>
-    </ul>
+    </div>
   );
 }
 

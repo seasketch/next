@@ -189,7 +189,7 @@ export function FormElementBody({
   if (editable) {
     return (
       <div
-        className={`prosemirror-body ${required && "required"} ${
+        className={`ProseMirrorBody ${required && "required"} ${
           isInput && "input"
         }`}
         style={{ minWidth: 300 }}
@@ -209,7 +209,7 @@ export function FormElementBody({
   } else {
     return (
       <div
-        className={`prosemirror-body ${required && "required"} ${
+        className={`ProseMirrorBody ${required && "required"} ${
           isInput && "input"
         }`}
         ref={target}

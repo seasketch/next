@@ -1,5 +1,11 @@
 // import Color from "color";
-import React, { CSSProperties, useState, useEffect } from "react";
+import React, {
+  CSSProperties,
+  useState,
+  useEffect,
+  DetailedHTMLProps,
+  ButtonHTMLAttributes,
+} from "react";
 import { Link, useHistory } from "react-router-dom";
 import { colord } from "colord";
 import { ChevronDownIcon } from "@heroicons/react/outline";
@@ -39,6 +45,7 @@ export interface ButtonProps {
   segmentItems?: string[];
   onSegmentClick?: (index: number) => void;
   "data-cy"?: string;
+  buttonProps?: ButtonHTMLAttributes<HTMLButtonElement>;
 }
 
 export default function Button(props: ButtonProps) {
@@ -176,6 +183,7 @@ export default function Button(props: ButtonProps) {
         </label>
       ) : (
         <button
+          disabled={props.disabled}
           name={props.name}
           type={props.type || "button"}
           ref={props.innerRef}
@@ -183,6 +191,7 @@ export default function Button(props: ButtonProps) {
           className={`${buttonClassName} ${props.buttonClassName}`}
           style={style}
           data-cy={cyLabel}
+          {...props.buttonProps}
         >
           {label}
           {props.loading && spinner}

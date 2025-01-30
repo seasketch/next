@@ -1,30 +1,19 @@
-/* .prosemirror-body h1 {
-  font-size: 1.2rem;
-  font-weight: bold;
-}
-
-.prosemirror-body h2 {
-  font-size: 1.1rem;
-  font-weight: bold;
-  margin: 4px 0px;
-} */
-
-.prosemirror-body.required [data-question="yes"]:after {
+.ProseMirrorBody.required [data-question="yes"]:after {
   content: "*";
   margin-left: 2px;
   opacity: 0.5;
 }
 
-.prosemirror-body.required [data-question="yes"].empty-node:after {
+.ProseMirrorBody.required [data-question="yes"].empty-node:after {
   content: none;
 }
 
-.prosemirror-body div[contenteditable].ProseMirror {
+.ProseMirrorBody div[contenteditable].ProseMirror {
   border: none;
   outline: none;
 }
 
-.prosemirror-body.forum-post div[contenteditable].ProseMirror {
+.ProseMirrorBody.ForumPost div[contenteditable].ProseMirror {
   /* min-height: 300px; */
   padding-left: 16px;
   padding-right: 16px;
@@ -32,25 +21,25 @@
   @apply flex-1;
 }
 
-.forum-post .ProseMirror-menubar-wrapper {
+.ForumPost .ProseMirror-menubar-wrapper {
   @apply flex flex-col-reverse border-b border-black border-opacity-20;
 }
 
-.forum-post .ProseMirror-menubar {
+.ForumPost .ProseMirror-menubar {
   border-bottom: none;
   @apply border-t border-gray-200 text-black whitespace-nowrap pt-1.5 bg-gray-50 bg-opacity-50 pb-1;
 }
 
-.forum-post .ProseMirror-menu-active {
+.ForumPost .ProseMirror-menu-active {
   @apply bg-gray-200;
 }
 
-/* .prosemirror-body a {
+/* .ProseMirrorBody a {
   text-decoration: underline;
 }
 
-.prosemirror-body ul,
-.prosemirror-body ol {
+.ProseMirrorBody ul,
+.ProseMirrorBody ol {
   margin: 5px 20px;
   list-style: disc;
 } */
@@ -70,13 +59,15 @@
   content: "Type your question here...";
 }
 
-.prosemirror-body.forum-post p {
+/* @layer utilities { */
+.ProseMirrorBody.ForumPost p {
   margin-top: 0;
   margin-bottom: 0;
   @apply text-sm;
 }
+/* } */
 
-.forum-post.prosemirror-body a {
+.ForumPost.ProseMirrorBody a {
   @apply text-primary-500;
 }
 
@@ -86,15 +77,15 @@
   @apply bg-white p-4 rounded shadow;
 }
 
-.forum-post.prosemirror-body h1 {
+.ForumPost.ProseMirrorBody h1 {
   @apply text-xl;
 }
 
-.forum-post.prosemirror-body h2 {
+.ForumPost.ProseMirrorBody h2 {
   @apply text-lg;
 }
 
-.forum-post.prosemirror-body h3 {
+.ForumPost.ProseMirrorBody h3 {
   @apply text-base;
 }
 
@@ -103,18 +94,18 @@
   width: fit-content;
 }
 
-.prosemirror-body button[data-attachment-id] {
+.ProseMirrorBody button[data-attachment-id] {
   @apply bg-blue-100  inline rounded-sm px-1 py-0;
   line-height: 1.1rem;
 }
 
-.prosemirror-body button[data-attachment-id]:hover,
-.prosemirror-body button[data-attachment-id].highlighted {
+.ProseMirrorBody button[data-attachment-id]:hover,
+.ProseMirrorBody button[data-attachment-id].highlighted {
   /* @apply shadow-sm; */
   box-shadow: 0px 0px 0px 1px rgb(96, 165, 250);
 }
 
-.prosemirror-body button[data-attachment-id][data-type="MapBookmark"]::after {
+.ProseMirrorBody button[data-attachment-id][data-type="MapBookmark"]::after {
   content: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-6 h-6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M16.5 3.75V16.5L12 14.25 7.5 16.5V3.75m9 0H18A2.25 2.25 0 0120.25 6v12A2.25 2.25 0 0118 20.25H6A2.25 2.25 0 013.75 18V6A2.25 2.25 0 016 3.75h1.5m9 0h-9' /%3E%3C/svg%3E%0A");
   @apply text-blue-900;
   display: inline-block;

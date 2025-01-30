@@ -3,6 +3,7 @@ import { Maybe } from "graphql/jsutils/Maybe";
 import React from "react";
 import Gravatar from "react-gravatar";
 import md5 from "md5";
+import clsx from "clsx";
 
 // const supportsSrcSet = "srcset" in document.createElement("img");
 
@@ -33,9 +34,15 @@ export default function ProfilePhoto({
     : `url("http://www.gravatar.com/avatar/${hash}?d=retro&r=g&s=200")`;
   return (
     <div
-      className={`w-full h-full inline-block ${
-        square ? "rounded-sm" : "rounded-full"
-      } ${border ? "border-2 shadow bg-white border-white" : ""}`}
+      role="img"
+      aria-label={
+        fullname || email || canonicalEmail ? "User photo" : undefined
+      }
+      className={clsx(
+        `w-full h-full inline-block`,
+        square ? "rounded-sm" : "rounded-full",
+        border ? "border-2 shadow bg-white border-white" : ""
+      )}
       style={{
         backgroundImage: bg,
         backgroundSize: "cover",

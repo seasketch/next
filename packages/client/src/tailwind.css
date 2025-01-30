@@ -1,0 +1,314 @@
+@import "./formElements/prosemirror-body.css";
+@import "./formElements/Number.css";
+@import "./formElements/unreset.css";
+@import "./formElements/SAPRange.css";
+@import "./admin/data/styleEditor/layer-editor.css";
+@import "./dataLayers/sidebar-popup.css";
+@import "./admin/data/GLStyleEditor/RadixDropdown.css";
+@import "./surveys/surveys.css";
+@import "./admin/data/arcgis/Accordion.css";
+@import "./components/Tooltip.css";
+@import "./projects/Sketches/sketching.css";
+@import "./admin/data/TableOfContentsItemEditor/TooltipContent.css";
+@import "./dataLayers/tableOfContents/TableOfContents.css";
+@import "./admin/data/GLStyleEditor/extensions/glStyleTooltips.css";
+@import "./admin/prosemirror-image.css";
+@import "./offline/DataCachingSlider.css";
+@import "./admin/surveys/IndeterminantLoadingBar.css";
+
+@tailwind base;
+
+@tailwind components;
+
+@tailwind utilities;
+
+/* @import url("https://rsms.me/inter/inter.css"); */
+html {
+  font-family: "Inter", sans-serif;
+}
+
+@supports (font-variation-settings: normal) {
+  html {
+    font-family: "Inter", sans-serif;
+    font-display: block;
+  }
+}
+
+body {
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
+    monospace;
+}
+
+@keyframes loader-rotate {
+  0% {
+    transform: rotate(0);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+.profile-loader {
+  border-right-color: transparent;
+  animation: loader-rotate 1s linear infinite;
+}
+
+.CodeMirror {
+  height: auto !important;
+}
+
+.mapboxgl-popup-close-button:focus {
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* .ZIndexEditor .rst__collapseButton {
+  display: none;
+} */
+
+.rst__row.basemap .rst__rowContents {
+  background-color: rgb(241, 241, 241);
+  border-style: solid;
+}
+
+/* .ZIndexEditor > .rst__tree > .rst__node > .rst__lineFullVertical {
+  display: none;
+} */
+
+.metadata .ProseMirror h1 {
+  font-size: 2rem;
+  /* line-height: 2.5rem; */
+  color: rgba(17, 24, 39, var(--tw-text-opacity));
+  font-weight: 800;
+  /* border-bottom: 2px solid #efefef; */
+}
+
+.metadata .ProseMirror h2 {
+  /* margin-top: 0.5rem; */
+  font-size: 1.5rem;
+  /* line-height: 2.5rem; */
+  color: rgba(17, 24, 39, var(--tw-text-opacity));
+  font-weight: 500;
+  /* border-bottom: 2px solid #efefef; */
+}
+
+.metadata .ProseMirror h3 {
+  /* margin-top: 0.5rem; */
+  color: rgba(17, 24, 39, var(--tw-text-opacity));
+  /* line-height: 1.5rem; */
+  font-size: 1.125rem;
+  font-weight: 500;
+}
+
+.metadata .ProseMirror[contenteditable]:focus {
+  outline: 0px solid transparent;
+}
+
+.metadata .ProseMirror a {
+  color: rgb(49, 115, 201);
+  text-decoration: underline;
+  max-width: 100%;
+  display: inline;
+  /* @apply truncate; */
+  /* margin-bottom: -0.4rem; */
+}
+
+.small-variant.metadata .ProseMirror a {
+  /* margin-bottom: -0.32rem; */
+}
+
+.metadata .ProseMirror ul,
+.metadata .ProseMirror ol {
+  padding-left: 2em;
+  margin-top: 0.5em;
+  margin-bottom: 0.5em;
+}
+
+.metadata .ProseMirror ul {
+  list-style: disc;
+}
+
+.metadata .ProseMirror ol {
+  list-style: decimal;
+}
+
+.metadata .ProseMirror ul ul {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  list-style: circle;
+}
+
+.metadata .ProseMirror ol ol {
+  margin-top: 0.25em;
+  margin-bottom: 0.25em;
+  list-style: lower-alpha;
+}
+
+.metadata .ProseMirror p:empty {
+  height: 1em;
+}
+
+.mapboxgl-ctrl-attrib-button {
+  position: absolute !important;
+}
+
+input::placeholder,
+textarea::placeholder {
+  /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: rgba(0, 0, 0, 0.3);
+  opacity: 1; /* Firefox */
+}
+
+.mapboxgl-canvas {
+  /* border: none !important; */
+  outline: none !important;
+}
+
+body .mapboxgl-canvas-container.mapboxgl-interactive {
+  cursor: default;
+}
+
+.hide-all-gl-controls .mapboxgl-control-container {
+  display: none;
+}
+
+.non-interactive .mapboxgl-canvas {
+  pointer-events: none;
+}
+
+.non-interactive .MapPicker {
+  display: none;
+}
+
+.hide-draw-controls .mapboxgl-ctrl-top-right {
+  display: none;
+}
+
+.survey .mapboxgl-ctrl-top-left {
+  margin-top: 10px;
+}
+
+.seasketch-skeleton {
+  background: linear-gradient(-100deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
+  background-size: 400% 400%;
+  animation: pulse 1.2s ease-in-out infinite;
+
+  @keyframes pulse {
+    0% {
+      background-position: 0% 0%;
+    }
+    100% {
+      background-position: -135% 0%;
+    }
+  }
+}
+
+.seasketch-skeleton::before {
+  content: "d";
+  opacity: 0;
+}
+
+.react-select input {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+label.required:after {
+  content: "*";
+  margin-left: 2px;
+  opacity: 0.5;
+}
+
+.form-element-short-text label.required:after {
+  display: none;
+}
+
+.my-masonry-grid {
+  display: -webkit-box; /* Not needed if autoprefixing */
+  display: -ms-flexbox; /* Not needed if autoprefixing */
+  display: flex;
+  margin-left: -10px; /* gutter size offset */
+  width: auto;
+}
+.my-masonry-grid_column {
+  padding-left: 10px; /* gutter size */
+  background-clip: padding-box;
+}
+
+/* Style your items */
+.my-masonry-grid_column > div {
+  /* change div to reference your elements you put in <Masonry> */
+  /* background: grey; */
+  margin-bottom: 10px;
+}
+
+.unsplash-thumb span {
+  display: none;
+}
+.unsplash-thumb:hover span {
+  display: block;
+}
+
+.absolute.mapboxgl-map {
+  position: absolute !important;
+}
+
+/* @media (max-width: 420px) {
+  .survey .absolute.mapboxgl-map .mapboxgl-ctrl-logo {
+    display: none;
+  }
+} */
+
+.zebra-stripe-child-div > div:nth-child(even) {
+  background-color: rgba(249, 250, 251);
+}
+
+.mapbox-gl-draw_ctrl-draw-btn {
+  display: none !important;
+}
+
+input[type="checkbox"][indeterminate="true"]:checked {
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='8' height='2' x='4' y='7' rx='1'/%3E%3C/svg%3E");
+}
+
+.SketchPopup .mapboxgl-popup-close-button {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.SketchPopup .mapboxgl-popup-content {
+  padding: 0;
+}
+
+/* .topic-blurb {
+  position: relative;
+}
+
+.topic-blurb:after {
+  content: " ";
+  display: inline-block;
+  width: 150px;
+  height: 1.5rem;
+  bottom: 0px;
+  color: red;
+  position: absolute;
+  right: 150px;
+  background-image: linear-gradient(to left, rgb(249, 250, 251), transparent);
+  z-index: 10;
+} */
+
+.mapboxgl-popup-close-button {
+  @apply px-0.5 bg-white z-10 flex items-center;
+  border-radius: 100%;
+}
+
+.mapboxgl-popup-content {
+  @apply px-3 pt-4 overflow-x-hidden !important;
+}

@@ -517,7 +517,7 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
             {props.tocItemId && (
               <div className="flex-1 flex items-center justify-end pr-2">
                 <span
-                  className={`transition-colors font-mono text-sm h-3/4 block ${"bg-gray-700 text-green-300 text-opacity-80 border border-opacity-0"} px-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2`}
+                  className={`transition-colors font-mono text-sm h-3/4  bg-gray-700 text-green-300 text-opacity-80 px-1 rounded w-24 text-center tabular-nums flex items-center justify-center space-x-2 `}
                 >
                   <span>zoom</span>
                   <span className="font-mono ">

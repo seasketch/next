@@ -263,7 +263,7 @@ export default function ForumPost({
         )}
       </div>
       <div
-        className="px-4 pb-4 prosemirror-body forum-post"
+        className="px-4 pb-4 ProseMirrorBody ForumPost"
         ref={setBodyRef}
         dangerouslySetInnerHTML={{ __html: post.html }}
       />

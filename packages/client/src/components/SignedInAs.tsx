@@ -2,13 +2,18 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { UserCircleIcon } from "@heroicons/react/solid";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
+import { motion } from "framer-motion";
 
 export default function SignedInAs({
   className,
   onClick,
+  tabIndex,
+  animateText,
 }: {
   className?: string;
   onClick?: () => void;
+  tabIndex?: number;
+  animateText?: boolean;
 }) {
   const { t } = useTranslation("common");
   const { user, logout } = useAuth0();
@@ -31,12 +36,17 @@ export default function SignedInAs({
       className={`flex ${className} ${onClick ? "cursor-pointer" : ""}`}
       onClick={onClick}
     >
-      <ProfileStatusButton>
+      <ProfileStatusButton tabIndex={tabIndex}>
         <div className="flex items-center">
           <UserCircleIcon className="w-10 h-10 text-gray-500" />
         </div>
       </ProfileStatusButton>
-      <div className="ml-2">
+      <motion.div
+        className="ml-2"
+        initial={animateText ? { opacity: 0 } : {}}
+        animate={animateText ? { opacity: 1 } : {}}
+        transition={{ duration: 0.2 }}
+      >
         <p className="text-base md:text-sm leading-5">
           {userId ? t("Signed in as") : t("Not signed in")}
         </p>
@@ -46,7 +56,7 @@ export default function SignedInAs({
         >
           {userId || "Anonymous"}
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

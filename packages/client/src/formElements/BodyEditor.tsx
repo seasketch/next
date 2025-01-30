@@ -232,7 +232,7 @@ export default function BodyEditor({
       }}
     >
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
-      <div className="prosemirror-body" ref={root}></div>
+      <div className="ProseMirrorBody" ref={root}></div>
       {surveyContext && (
         <EditorLanguageSelector className="absolute -top-10 left-0 opacity-50 hover:opacity-100 active:opacity-100" />
       )}

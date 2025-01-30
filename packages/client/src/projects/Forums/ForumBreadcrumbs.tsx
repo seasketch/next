@@ -11,6 +11,7 @@ import {
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useMemo } from "react";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
+import clsx from "clsx";
 
 export default function ForumBreadcrumbs({
   postingNewTopic,
@@ -50,7 +51,7 @@ export default function ForumBreadcrumbs({
   }, [forum]);
 
   return (
-    <div className="flex w-full overflow-hidden bg-gray-100 p-2 px-4 h-10 text-sm font-semibold border-b shadow-sm flex-none items-center">
+    <div className="flex w-full overflow-hidden bg-gray-100 p-2 px-4 h-10 text-sm font-semibold border-b shadow-sm flex-none items-center space-x-1">
       <div className="flex items-center w-full overflow-hidden">
         <BreadcrumbLink
           className="flex-none"
@@ -84,6 +85,10 @@ export default function ForumBreadcrumbs({
             <Button
               small
               href={`./${forumId}/new-post`}
+              buttonProps={{
+                tabIndex: -1,
+              }}
+              className="focus:ring-0 focus:outline-0 focus-visible:ring-2 focus-visible:rounded focus-visible:ring-blue-500"
               label={
                 <>
                   {t("Post a topic")}
@@ -114,7 +119,13 @@ function BreadcrumbLink({
       <NavLink
         exact
         className={(active) =>
-          `truncate ${active ? "" : "underline"} ${className}`
+          clsx(
+            active && "underline",
+            "truncate",
+            "focus:ring-0 focus:outline-0",
+            "focus-visible:bg-blue-200 focus-visible:rounded focus-visible:px-1",
+            className
+          )
         }
         activeClassName={"cursor-default"}
         to={to}

@@ -185,6 +185,7 @@ export default function ReplyForm({
           label={t("Post Reply")}
           primary
           onClick={onSubmit}
+          buttonClassName="focus:ring-0 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-300"
         />
       </div>
       {modalOpen && (

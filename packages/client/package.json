@@ -44,9 +44,9 @@
     "@seasketch/vector-data-source": "^1.0.0",
     "@sentry/react": "^6.17.1",
     "@sentry/tracing": "^6.17.1",
-    "@tailwindcss/aspect-ratio": "^0.2.0",
-    "@tailwindcss/forms": "^0.2.1",
-    "@tailwindcss/typography": "^0.4.0",
+    "@tailwindcss/aspect-ratio": "^0.4.2",
+    "@tailwindcss/forms": "^0.5.10",
+    "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^5.11.9",
     "@testing-library/react": "^11.2.5",
     "@testing-library/user-event": "^12.6.3",
@@ -132,6 +132,7 @@
     "cache-polyfill": "^1.0.1",
     "caniuse-lite": "^1.0.30001346",
     "cheap-ruler": "^3.0.2",
+    "clsx": "^2.1.1",
     "codemirror": "^5.58.1",
     "codemirror-colorpicker": "^1.9.72",
     "colord": "^2.9.0",
@@ -256,7 +257,7 @@
     "worker-loader": "^2.0.0"
   },
   "scripts": {
-    "build": "NODE_OPTIONS=--openssl-legacy-provider craco build",
+    "build": "npm run css:build && NODE_OPTIONS=--openssl-legacy-provider craco build",
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "analyze:serviceWorker": "source-map-explorer 'build/service-worker.js'",
     "test": "NODE_OPTIONS=--openssl-legacy-provider craco test",
@@ -274,7 +275,9 @@
     "cypress": "cypress open",
     "cypress:run": "cypress run",
     "generate-api-helpers": "node bin/buildApiHelpers.js && cp src/formElements/ExportUtils.d.ts ../api/src/",
-    "env:dev": "op inject -i .env.template > .env"
+    "env:dev": "op inject -i .env.template > .env",
+    "css:build": "npx tailwindcss -i ./src/tailwind.css -o ./src/index.css",
+    "css:watch": "npx tailwindcss -i ./src/tailwind.css -o ./src/index.css --watch"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -311,7 +314,7 @@
     "@types/pg": "^8.6.1",
     "@typescript-eslint/eslint-plugin": "^6.0",
     "@typescript-eslint/parser": "^6.0",
-    "autoprefixer": "^9.8.7",
+    "autoprefixer": "^10.4.20",
     "babel-eslint": "^10.1.0",
     "chokidar-cli": "^2.1.0",
     "esbuild": "^0.14.20",
@@ -331,6 +334,6 @@
     "prosemirror-dev-tools": "^3.0.2",
     "react-is": "^16.13.1",
     "request": "^2.88.2",
-    "tailwindcss": "npm:@tailwindcss/postcss7-compat@^2.2.16"
+    "tailwindcss": "3.4.17"
   }
 }

@@ -58,7 +58,10 @@ export default function InlineAuthorDetails({
   );
   return (
     <div className={`flex items-center ${className}`}>
-      <button onClick={onClick} className="w-6 h-6 flex items-center flex-none">
+      <button
+        onClick={onClick}
+        className="w-6 h-6 flex items-center flex-none rounded-full"
+      >
         <ProfilePhoto {...profile} canonicalEmail="" />
       </button>
       <motion.div
@@ -82,7 +85,7 @@ export default function InlineAuthorDetails({
       >
         <button
           onClick={onClick}
-          className="font-semibold truncate inline-block hover:underline"
+          className="font-semibold truncate inline-block hover:underline  rounded focus-visible:px-1"
           style={{
             maxWidth: sidebarContext.isSmall ? "11rem" : "13rem",
           }}
@@ -115,8 +118,8 @@ export default function InlineAuthorDetails({
       </motion.div>
       {link && (
         <Tooltip>
-          <TooltipTrigger>
-            <button className="ml-1.5" onClick={copyLink}>
+          <TooltipTrigger asChild>
+            <button className="mx-1.5 flex items-center" onClick={copyLink}>
               <LinkIcon className="w-3.5 h-3.5" />
             </button>
           </TooltipTrigger>
