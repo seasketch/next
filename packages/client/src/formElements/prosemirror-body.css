@@ -94,6 +94,10 @@
   width: fit-content;
 }
 
+.ProseMirrorBody.ForumPost [data-sketch-toc-attachment] {
+  @apply px-9 py-2;
+}
+
 .ProseMirrorBody button[data-attachment-id] {
   @apply bg-blue-100  inline rounded-sm px-1 py-0;
   line-height: 1.1rem;
