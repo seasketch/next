@@ -157,10 +157,8 @@ export default function Toolbar({
                   </a>
                 )}
               </div>
-              <div className="flex-1 max-w-md flex items-center text-xl">
-                <h1 className="whitespace-nowrap">
-                  {getTranslatedProp("name")}
-                </h1>
+              <div className="flex-1 max-w-md flex items-center text-xl overflow-hidden">
+                <h1 className="min-w-[260px]">{getTranslatedProp("name")}</h1>
               </div>
             </>
           )}

@@ -5208,6 +5208,10 @@ select {
   min-width: 32rem;
 }
 
+.min-w-\[260px\] {
+  min-width: 260px;
+}
+
 .max-w-1 {
   max-width: 0.25rem;
 }
