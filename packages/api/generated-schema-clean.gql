@@ -14607,6 +14607,7 @@ type TableOfContentsItem implements Node {
   hasMetadata: Boolean
   hasOriginalSourceUpload: Boolean!
   hideChildren: Boolean!
+  hostedSourceLastUpdated: Datetime
   id: Int!
 
   """

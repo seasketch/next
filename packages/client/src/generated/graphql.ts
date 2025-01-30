@@ -13355,6 +13355,7 @@ export type TableOfContentsItem = Node & {
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hasOriginalSourceUpload: Scalars['Boolean'];
   hideChildren: Scalars['Boolean'];
+  hostedSourceLastUpdated?: Maybe<Scalars['Datetime']>;
   id: Scalars['Int'];
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -17850,21 +17851,10 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'metadataFormat'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'metadataFormat' | 'hostedSourceLastUpdated'>
     & { metadataXml?: Maybe<(
       { __typename?: 'DataUploadOutput' }
       & MetadataXmlFileFragment
-    )>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id'>
-      & { dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id'>
-        & { outputs?: Maybe<Array<(
-          { __typename?: 'DataUploadOutput' }
-          & Pick<DataUploadOutput, 'id' | 'createdAt'>
-        )>> }
-      )> }
     )> }
   )> }
 );
@@ -26964,16 +26954,7 @@ export const GetMetadataDocument = gql`
       ...MetadataXmlFile
     }
     metadataFormat
-    dataLayer {
-      id
-      dataSource {
-        id
-        outputs {
-          id
-          createdAt
-        }
-      }
-    }
+    hostedSourceLastUpdated
   }
 }
     ${MetadataXmlFileFragmentDoc}`;

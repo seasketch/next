@@ -638,16 +638,7 @@ query GetMetadata($itemId: Int!) {
       ...MetadataXmlFile
     }
     metadataFormat
-    dataLayer {
-      id
-      dataSource {
-        id
-        outputs {
-          id
-          createdAt
-        }
-      }
-    }
+    hostedSourceLastUpdated
   }
 }
 

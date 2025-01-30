@@ -44,8 +44,7 @@ export default function TableOfContentsMetadataModal({
       onRequestClose={onRequestClose}
       title={title}
       hostedSourceLastUpdated={
-        data?.tableOfContentsItem?.dataLayer?.dataSource?.outputs?.[0]
-          ?.createdAt
+        data?.tableOfContentsItem?.hostedSourceLastUpdated
       }
     />
   );

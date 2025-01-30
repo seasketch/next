@@ -8006,6 +8006,13 @@ associated with a basemap.
 
 
 --
+-- Name: COLUMN data_layers.data_source_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.data_layers.data_source_id IS '@foreignFieldName dataSource @single';
+
+
+--
 -- Name: COLUMN data_layers.source_layer; Type: COMMENT; Schema: public; Owner: -
 --
 
@@ -16554,6 +16561,31 @@ CREATE FUNCTION public.table_of_contents_items_has_original_source_upload(item p
 --
 
 COMMENT ON FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) IS '@omit';
+
+
+--
+-- Name: table_of_contents_items_hosted_source_last_updated(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_hosted_source_last_updated(t public.table_of_contents_items) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select
+      created_at
+    from
+      data_upload_outputs
+    where
+      data_source_id = (
+        select 
+          data_source_id
+        from
+          data_layers
+        where
+          id = t.data_layer_id
+        limit 1
+      )
+    limit 1;
+  $$;
 
 
 --
@@ -33824,6 +33856,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.tab
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_has_original_source_upload(item public.table_of_contents_items) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_hosted_source_last_updated(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_hosted_source_last_updated(t public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_hosted_source_last_updated(t public.table_of_contents_items) TO anon;
 
 
 --
