@@ -187,38 +187,40 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         </MapSettingsPopup>
       )} */}
 
-      <Popover.Root>
-        <Popover.Trigger asChild>
-          <button
-            className={clsx(
-              "absolute bg-white ring-2 ring-black/10 rounded top-28 z-10 p-[5px]",
-              props.navigationControlsLocation === "top-right"
-                ? "right-2.5"
-                : "left-2.5"
-            )}
-            aria-label="Map settings"
-          >
-            <CogIcon className="w-5 h-5" />
-          </button>
-        </Popover.Trigger>
-        <Popover.Portal>
-          <Popover.Content
-            className="w-[260px] rounded bg-white p-2 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity] focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
-            sideOffset={5}
-          >
-            <div className="flex flex-col gap-2.5">
-              {props.mapSettingsPopupActions}
-            </div>
-            <Popover.Close
-              className="absolute right-[-5px] top-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full text-white/0 outline-none hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7"
-              aria-label="Close"
+      {props.mapSettingsPopupActions && (
+        <Popover.Root>
+          <Popover.Trigger asChild>
+            <button
+              className={clsx(
+                "absolute bg-white ring-2 ring-black/10 rounded top-28 z-10 p-[5px]",
+                props.navigationControlsLocation === "top-right"
+                  ? "right-2.5"
+                  : "left-2.5"
+              )}
+              aria-label="Map settings"
             >
-              <Cross2Icon />
-            </Popover.Close>
-            <Popover.Arrow className="fill-white" />
-          </Popover.Content>
-        </Popover.Portal>
-      </Popover.Root>
+              <CogIcon className="w-5 h-5" />
+            </button>
+          </Popover.Trigger>
+          <Popover.Portal>
+            <Popover.Content
+              className="w-[260px] rounded bg-white p-2 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity] focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
+              sideOffset={5}
+            >
+              <div className="flex flex-col gap-2.5">
+                {props.mapSettingsPopupActions}
+              </div>
+              <Popover.Close
+                className="absolute right-[-5px] top-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full text-white/0 outline-none hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7"
+                aria-label="Close"
+              >
+                <Cross2Icon />
+              </Popover.Close>
+              <Popover.Arrow className="fill-white" />
+            </Popover.Content>
+          </Popover.Portal>
+        </Popover.Root>
+      )}
       <MeasurementToolsOverlay
         // @ts-ignore
         placement={measurementToolsPlacement}
