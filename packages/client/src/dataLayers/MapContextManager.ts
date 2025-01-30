@@ -3013,7 +3013,7 @@ class MapContextManager extends EventEmitter {
                 } else if (item.legend) {
                   newLegendState[id] = {
                     type: "CustomGLSourceSymbolLegend",
-                    label: item.label,
+                    label: this.tocItems[layer.tocId]?.label || item.label,
                     supportsDynamicRendering: {
                       layerOpacity: true,
                       layerOrder: true,
