@@ -566,6 +566,35 @@ app.use(
   }
 );
 
+app.use("/sitemap.xml", async function (req, res, next) {
+  const { rows } = await pool.query(
+    `
+      SELECT slug, about_page_enabled from projects
+      WHERE is_listed = true
+      ORDER BY name
+    `
+  );
+  const projects = rows;
+  res.header("Content-Type", "text/xml");
+  res.send(
+    `<?xml version="1.0" encoding="UTF-8"?>
+      <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        ${projects
+          .map(
+            (project: { slug: string; about_page_enabled: boolean }) => `
+            <url>
+              <loc>https://${process.env.CLIENT_DOMAIN}/${project.slug}/app${
+              project.about_page_enabled ? "/about" : ""
+            }</loc>
+            </url>
+          `
+          )
+          .join("\n")}
+      </urlset>
+    `
+  );
+});
+
 app.use(
   postgraphile(pool, "public", {
     ...graphileOptions(),
