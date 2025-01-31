@@ -127,7 +127,7 @@ export default function Toolbar({
     >
       {data?.project?.name && (
         <Helmet>
-          <title>{data.project.name} - SeaSketch</title>
+          <title>{getTranslatedProp("name")} - SeaSketch</title>
           <meta name="description" content={getTranslatedProp("description")} />
           <link
             rel="canonical"
