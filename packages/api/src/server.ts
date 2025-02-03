@@ -567,9 +567,10 @@ app.use(
 );
 
 app.use("/sitemap.xml", async function (req, res, next) {
-  const client = await pool.connect();
-  const { rows } = await client.query(
-    `
+  try {
+    const client = await pool.connect();
+    const { rows } = await client.query(
+      `
       SELECT slug, about_page_enabled from projects
       WHERE is_listed = true and
       id = any (
@@ -582,11 +583,11 @@ app.use("/sitemap.xml", async function (req, res, next) {
       )
       ORDER BY name
     `
-  );
-  const projects = rows;
-  res.header("Content-Type", "text/xml");
-  res.send(
-    `<?xml version="1.0" encoding="UTF-8"?>
+    );
+    const projects = rows;
+    res.header("Content-Type", "text/xml");
+    res.send(
+      `<?xml version="1.0" encoding="UTF-8"?>
       <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
         ${projects
           .map(
@@ -601,8 +602,13 @@ app.use("/sitemap.xml", async function (req, res, next) {
           .join("\n")}
       </urlset>
     `
-  );
-  client.release();
+    );
+    client.release();
+    res.end();
+  } catch (e) {
+    console.error(e);
+    res.status(500);
+  }
 });
 
 app.use(
