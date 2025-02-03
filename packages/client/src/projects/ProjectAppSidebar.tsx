@@ -62,11 +62,16 @@ const ProjectAppSidebar: React.FunctionComponent<{
       }}
     >
       <div className="flex w-full bg-primary-800 bg-gradient-to-bl from-gray-700 to-primary-800 p-4 text-white shadow-lg">
-        <h1 id="sidebar-header" className="text-2xl flex flex-1 items-center">
+        <h2
+          aria-label={props.title}
+          id="sidebar-header"
+          className="text-2xl flex flex-1 items-center"
+        >
           {props.title}
-        </h1>
+        </h2>
         <button
           aria-hidden={props.hidden}
+          aria-label={t("Close sidebar")}
           title={t("Close sidebar")}
           disabled={props.hidden}
           onClick={props.onClose}

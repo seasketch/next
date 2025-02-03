@@ -378,7 +378,10 @@ export default function Toolbar({
                   />
                 </a>
               </div>
-              <footer className="flex-col items-center">
+              <footer
+                className="flex-col items-center"
+                aria-label="Footer links to information about the SeaSketch platform"
+              >
                 <div className="text-xs">{t("Powered by")}</div>
                 <h2 className="text-xl">SeaSketch</h2>
                 <nav className="text-xs underline mt-1 flex space-x-2">
@@ -406,6 +409,7 @@ export default function Toolbar({
                   </Link>
                 </nav>
                 <a
+                  aria-label="View source code on GitHub (opens in new tab)"
                   className="text-xs text-gray-500 focus:outline-0 focus-visible:ring-2 ring-blue-500"
                   target="_blank"
                   rel="noreferrer"
