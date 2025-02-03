@@ -567,7 +567,8 @@ app.use(
 );
 
 app.use("/sitemap.xml", async function (req, res, next) {
-  const { rows } = await pool.query(
+  const client = await pool.connect();
+  const { rows } = await client.query(
     `
       SELECT slug, about_page_enabled from projects
       WHERE is_listed = true and
@@ -601,6 +602,7 @@ app.use("/sitemap.xml", async function (req, res, next) {
       </urlset>
     `
   );
+  client.release();
 });
 
 app.use(
