@@ -570,7 +570,15 @@ app.use("/sitemap.xml", async function (req, res, next) {
   const { rows } = await pool.query(
     `
       SELECT slug, about_page_enabled from projects
-      WHERE is_listed = true
+      WHERE is_listed = true and
+      id = any (
+        select 
+          distinct(project_id)
+        from
+          table_of_contents_items
+        where
+          is_draft = false
+      )
       ORDER BY name
     `
   );
