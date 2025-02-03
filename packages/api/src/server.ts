@@ -568,7 +568,7 @@ app.use(
 
 app.use("/sitemap.xml", async function (req, res, next) {
   try {
-    const client = await pool.connect();
+    const client = await loadersPool.connect();
     const { rows } = await client.query(
       `
       SELECT slug, about_page_enabled from projects
