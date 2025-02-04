@@ -589,6 +589,18 @@ app.use("/sitemap.xml", async function (req, res, next) {
     res.send(
       `<?xml version="1.0" encoding="UTF-8"?>
       <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        <url>
+          <loc>https://${process.env.CLIENT_DOMAIN}/</loc>
+          <priority>1.0</priority>
+        </url>
+        <url>
+          <loc>https://${process.env.CLIENT_DOMAIN}/projects</loc>
+          <priority>0.9</priority>
+        </url>
+        <url>
+          <loc>https://docs.seasketch.org/</loc>
+          <priority>0.8</priority>
+        </url>
         ${projects
           .map(
             (project: { slug: string; about_page_enabled: boolean }) => `
