@@ -344,7 +344,7 @@ export function NumberConfig({
         minStepsBetweenThumbs={1}
         onValueChange={onChange}
       >
-        <Slider.Track className="bg-black relative grow rounded-full h-1">
+        <Slider.Track className="bg-transparent relative grow rounded-full">
           <Slider.Range className="absolute bg-white rounded-full h-full" />
         </Slider.Track>
         <Slider.Thumb

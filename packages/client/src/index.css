@@ -4914,6 +4914,10 @@ select {
   height: 24rem;
 }
 
+.h-\[1px\] {
+  height: 1px;
+}
+
 .h-auto {
   height: auto;
 }
