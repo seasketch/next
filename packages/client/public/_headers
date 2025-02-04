@@ -1,7 +1,4 @@
 # Update when deploying production site
-/*
-  X-Robots-Tag: noindex, nofollow
-
 /static/index.html
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
 
@@ -25,4 +22,6 @@
 
 /screenshot.html
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
+  X-Robots-Tag: noindex, nofollow
+
 
