@@ -19,6 +19,7 @@ import { ClientCacheManagerProvider } from "./offline/ClientCacheManager";
 import OfflineToastNotification from "./offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNotification";
 import DeveloperApiPage from "./DeveloperAPIPage";
+import { Helmet } from "react-helmet";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -177,6 +178,13 @@ function App() {
                   <OfflineResponsesToastNotification />
                   <LazyFullScreenOfflinePage />
                   <div className="p-4 pb-12 bg-white">
+                    <Helmet>
+                      <title>SeaSketch</title>
+                      <link
+                        rel="canonical"
+                        href={`https://www.seasketch.org/`}
+                      />
+                    </Helmet>
                     <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(
                         "SeaSketch Supports Collaborative Planning for our Oceans"
