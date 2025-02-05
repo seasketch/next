@@ -6,6 +6,7 @@ import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import clsx from "clsx";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { BookOpenIcon } from "@heroicons/react/outline";
 
 interface SidebarButtonProps {
   className?: string;
@@ -231,10 +232,10 @@ export const SignInButton = curry(
 
 export const SignOutButton = curry(
   <svg
-    className="left-0.5 relative"
+    className="relative"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
-    viewBox="0 0 24 24"
+    viewBox="-1 0 25 25"
     stroke="currentColor"
   >
     <path
@@ -334,6 +335,12 @@ export const SettingsIcon = (
   </svg>
 );
 export const SettingsButton = curry(SettingsIcon);
+
+export const HelpIcon = (
+  <BookOpenIcon className="w-6 h-6 inline-block mt-[1px]" />
+);
+
+export const HelpButton = curry(HelpIcon);
 
 export const LanguageIcon = (
   <TranslateIcon style={{ marginLeft: 1 }} className="w-7 h-7 inline-block " />

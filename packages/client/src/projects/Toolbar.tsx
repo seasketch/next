@@ -14,6 +14,7 @@ import {
   SignInButton,
   SignOutButton,
   EditProfileButton,
+  HelpButton,
 } from "./ToolbarButtons";
 import { Link, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
@@ -331,6 +332,17 @@ export default function Toolbar({
               />
             </>
           )}
+
+          <HelpButton
+            tooltip={t("User Guide")}
+            onClick={() =>
+              window.open(
+                "https://docs.seasketch.org/seasketch-documentation/users-guide/getting-started",
+                "_blank"
+              )
+            }
+            expanded={expanded}
+          />
 
           <LanguageSelector
             button={(onClick, lang) => (

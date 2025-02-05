@@ -32,6 +32,7 @@ import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphq
 import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
 import { useLocalStorage } from "beautiful-react-hooks";
+import { BookOpenIcon } from "@heroicons/react/outline";
 
 const LazyBasicSettings = React.lazy(
   /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
@@ -302,6 +303,11 @@ export default function AdminApp() {
           },
         ]
       : []),
+    {
+      breadcrumb: "Administrator Guide",
+      icon: <BookOpenIcon className={iconClassName} />,
+      path: "https://docs.seasketch.org/seasketch-documentation",
+    },
   ];
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [mobileHeaderState, setMobileHeaderState] =
@@ -506,7 +512,17 @@ function SidebarContents(props: {
             <NavLink
               exact={section.path === "/admin"}
               key={section.path}
-              onClick={section.new ? () => setNewDismissed(true) : undefined}
+              onClick={(e) => {
+                if (section.new) {
+                  setNewDismissed(true);
+                } else if (/http.*:\/\//.test(section.path)) {
+                  window.open(section.path, "_blank");
+                  e.preventDefault();
+                  e.stopPropagation();
+                } else {
+                  return;
+                }
+              }}
               to={`/${props.slug}${section.path}`}
               activeClassName="bg-primary-600 text-white"
               className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
