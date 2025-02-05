@@ -601,6 +601,10 @@ app.use("/sitemap.xml", async function (req, res, next) {
           <loc>https://docs.seasketch.org/</loc>
           <priority>0.8</priority>
         </url>
+        <url>
+          <loc>https://www.seasketch.org/new-project</loc>
+          <priority>0.8</priority>
+        </url>
         ${projects
           .map(
             (project: { slug: string; about_page_enabled: boolean }) => `

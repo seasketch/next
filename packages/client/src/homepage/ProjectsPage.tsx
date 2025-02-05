@@ -9,6 +9,7 @@ import Skeleton from "../components/Skeleton";
 import { useProjectListingQuery } from "../generated/graphql";
 import FeaturedProjectItem from "./FeaturedProjectItem";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
+import { Helmet } from "react-helmet";
 
 const LIST_SIZE = 12;
 
@@ -67,6 +68,14 @@ export default function ProjectsPage() {
 
   return (
     <div className="lg:flex w-full max-w-6xl sm:p-4 mx-auto">
+      <Helmet>
+        <title>SeaSketch Projects</title>
+        <meta
+          name="description"
+          content="Find a SeaSketch project in your region."
+        />
+        <link rel="canonical" href={`https://www.seasketch.org/projects/`} />
+      </Helmet>
       <div className="flex-1 px-2 sm:px-4">
         <h1 className="mt-4 text-xl tracking-tight font-extrabold ">
           Featured Projects

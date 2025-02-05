@@ -6,6 +6,7 @@ import NewProjectForm from "./NewProjectForm";
 import { Link } from "react-router-dom";
 import { useMeQuery, useVerifyEmailMutation } from "../generated/graphql";
 import Skeleton from "../components/Skeleton";
+import { Helmet } from "react-helmet";
 
 const logos = [
   {
@@ -41,6 +42,15 @@ export default function NewProjectPage() {
   const { data, loading, error } = useMeQuery();
   return (
     <main className="bg-gray-800 min-h-screen pt-12">
+      <Helmet>
+        <title>Create a SeaSketch Project</title>
+        <meta
+          name="description"
+          content="Create a free SeaSketch project for your marine spatial planning needs."
+        />
+        <link rel="canonical" href={`https://www.seasketch.org/new-project/`} />
+      </Helmet>
+
       <div className="mx-auto max-w-screen-xl">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">
           <div className="px-4 sm:px-6 sm:text-center md:max-w-2xl md:mx-auto lg:pl-8 lg:col-span-6 lg:text-left lg:flex lg:items-center">
@@ -96,12 +106,13 @@ export default function NewProjectPage() {
                             filter:
                               "grayscale(100%) contrast(0.3) brightness(1.5)",
                           }}
-                          className={`${user.bigger
-                            ? "h-15 sm:h-16"
-                            : user.smaller
+                          className={`${
+                            user.bigger
+                              ? "h-15 sm:h-16"
+                              : user.smaller
                               ? "h-8 sm:h-9"
                               : "h-10 sm:h-11"
-                            } w-auto ${user.className}`}
+                          } w-auto ${user.className}`}
                           src={user.src}
                           alt={user.title}
                         />
@@ -243,19 +254,20 @@ function PleaseVerifyEmail() {
               },
             });
           }}
-          className={`w-full flex items-center justify-center py-2 px-4 border border-transparent text-md font-medium rounded-md  transition duration-150 ease-in-out ${sendingEmail
-            ? "bg-primary-300 text-white pointer-events-none"
-            : sent
+          className={`w-full flex items-center justify-center py-2 px-4 border border-transparent text-md font-medium rounded-md  transition duration-150 ease-in-out ${
+            sendingEmail
+              ? "bg-primary-300 text-white pointer-events-none"
+              : sent
               ? "bg-primary-300 text-white pointer-events-none"
               : "text-white bg-primary-500 focus:outline-none focus:shadow-outline-indigo hover:bg-primary-600"
-            }`}
+          }`}
         >
           <span className="relative">
             {sendingEmail
               ? t("Sending email...")
               : sent
-                ? t("Email sent. Check your inbox  📨")
-                : t("Resend verification email")}{" "}
+              ? t("Email sent. Check your inbox  📨")
+              : t("Resend verification email")}{" "}
           </span>
         </button>
       </span>
