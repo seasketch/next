@@ -377,6 +377,10 @@ app.use(
     try {
       await client.query("BEGIN");
       let token: string | undefined = req.query.reporting_access_token;
+      // fixes https://github.com/seasketch/next/issues/840
+      if (token === "null" || token === "undefined" || token === "") {
+        token = undefined;
+      }
       let claims:
         | {
             userId?: number;
