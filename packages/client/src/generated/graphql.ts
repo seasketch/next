@@ -1005,70 +1005,6 @@ export type CopyDataLibraryTemplateItemPayloadTableOfContentsItemEdgeArgs = {
   orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
 };
 
-/** All input for the `copySketchFolder` mutation. */
-export type CopySketchFolderInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  folderId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `copySketchFolder` mutation. */
-export type CopySketchFolderPayload = {
-  __typename?: 'CopySketchFolderPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  sketchFolder?: Maybe<SketchFolder>;
-  /** An edge for our `SketchFolder`. May be used by Relay 1. */
-  sketchFolderEdge?: Maybe<SketchFoldersEdge>;
-};
-
-
-/** The output of our `copySketchFolder` mutation. */
-export type CopySketchFolderPayloadSketchFolderEdgeArgs = {
-  orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
-};
-
-/** All input for the `copySketch` mutation. */
-export type CopySketchInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `copySketch` mutation. */
-export type CopySketchPayload = {
-  __typename?: 'CopySketchPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Sketch` that is related to this `Sketch`. */
-  collection?: Maybe<Sketch>;
-  /** Reads a single `Sketch` that is related to this `Sketch`. */
-  copiedFrom?: Maybe<Sketch>;
-  /** Reads a single `FormElement` that is related to this `Sketch`. */
-  formElement?: Maybe<FormElement>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  sketch?: Maybe<Sketch>;
-  /** Reads a single `SketchClass` that is related to this `Sketch`. */
-  sketchClass?: Maybe<SketchClass>;
-  /** Reads a single `User` that is related to this `Sketch`. */
-  user?: Maybe<User>;
-};
-
 export type CopySketchTocItemResults = {
   __typename?: 'CopySketchTocItemResults';
   folders?: Maybe<Array<SketchFolder>>;
@@ -6780,8 +6716,6 @@ export type Mutation = {
    */
   copyAppearance?: Maybe<CopyAppearancePayload>;
   copyDataLibraryTemplateItem?: Maybe<CopyDataLibraryTemplateItemPayload>;
-  copySketch?: Maybe<CopySketchPayload>;
-  copySketchFolder?: Maybe<CopySketchFolderPayload>;
   copySketchTocItem?: Maybe<CopySketchTocItemResults>;
   createApiKey: CreateApiKeyResponse;
   /** Creates a single `Basemap`. */
@@ -7410,18 +7344,6 @@ export type MutationCopyAppearanceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCopyDataLibraryTemplateItemArgs = {
   input: CopyDataLibraryTemplateItemInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCopySketchArgs = {
-  input: CopySketchInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCopySketchFolderArgs = {
-  input: CopySketchFolderInput;
 };
 
 
