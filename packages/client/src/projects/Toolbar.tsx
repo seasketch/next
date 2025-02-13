@@ -130,10 +130,12 @@ export default function Toolbar({
         <Helmet>
           <title>{getTranslatedProp("name")} - SeaSketch</title>
           <meta name="description" content={getTranslatedProp("description")} />
-          <link
-            rel="canonical"
-            href={`https://www.seasketch.org/${data.project.slug}/`}
-          />
+          {window.location.pathname === `/${data.project.slug}/app` && (
+            <link
+              rel="canonical"
+              href={`https://www.seasketch.org/${data.project.slug}/app`}
+            />
+          )}
         </Helmet>
       )}
       <Tooltip.Provider>
