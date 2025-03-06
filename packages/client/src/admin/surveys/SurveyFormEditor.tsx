@@ -650,7 +650,7 @@ export default function SurveyFormEditor({
         <div
           className={`bg-white ${
             route === "logic" ? "w-72" : "w-64"
-          } shadow overflow-y-auto`}
+          } shadow overflow-y-auto z-50`}
         >
           <>
             <FormEditorHeader>
