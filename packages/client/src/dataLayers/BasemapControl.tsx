@@ -26,7 +26,7 @@ export default function BasemapControl(props: BasemapControlProps) {
   return (
     <>
       <div>
-        <div className="p-4">
+        <div className="">
           <div className="w-full flex flex-wrap justify-center">
             {[...(props.basemaps || [])]
               .sort((a, b) => a.name.localeCompare(b.name))
@@ -44,7 +44,7 @@ export default function BasemapControl(props: BasemapControlProps) {
           </div>
         </div>
         {showBasemapOptions && (
-          <div className="bottom-0 mt-5" style={{ minHeight: "20%" }}>
+          <div className="bottom-0 mt-5 px-4" style={{ minHeight: "20%" }}>
             <h4 className="pb-2 font-semibold">{t("Basemap Options")}</h4>
             {terrainOptional && (
               <div className="">
