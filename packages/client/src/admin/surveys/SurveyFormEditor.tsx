@@ -792,28 +792,30 @@ export default function SurveyFormEditor({
                     />
                   )}
                   <div className="px-3 text-base">
-                    <Button
-                      className="mb-1"
-                      label=""
-                      small
-                      onClick={() => {
-                        if (selectedFormElement) {
-                          setFormLogicRulesModal({
-                            id: selectedFormElement.id,
-                          });
-                        }
-                      }}
-                    >
-                      {t("Edit Visibility Logic")}
-                      <EyeOffIcon className="w-4 h-4 ml-1" />
-                      {(selectedSketchClass?.form?.logicRules || []).find(
-                        (r) => r.formElementId === selectedFormElement?.id
-                      ) && (
-                        <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 right-1.5 border-white border">
-                          {" "}
-                        </div>
-                      )}
-                    </Button>
+                    {selectedSketchClass && (
+                      <Button
+                        className="mb-1"
+                        label=""
+                        small
+                        onClick={() => {
+                          if (selectedFormElement) {
+                            setFormLogicRulesModal({
+                              id: selectedFormElement.id,
+                            });
+                          }
+                        }}
+                      >
+                        {t("Edit Visibility Logic")}
+                        <EyeOffIcon className="w-4 h-4 ml-1" />
+                        {(selectedSketchClass?.form?.logicRules || []).find(
+                          (r) => r.formElementId === selectedFormElement?.id
+                        ) && (
+                          <div className="bg-primary-500 w-2 h-2 rounded-full absolute top-1 right-1.5 border-white border">
+                            {" "}
+                          </div>
+                        )}
+                      </Button>
+                    )}
                     {selectedFormElement.type?.isInput &&
                       !selectedFormElement.type?.isSpatial && (
                         <div className="pt-2">
