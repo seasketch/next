@@ -9298,6 +9298,7 @@ export type Project = Node & {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault: Scalars['Boolean'];
+  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
@@ -10242,6 +10243,7 @@ export type ProjectPatch = {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault?: Maybe<Scalars['Boolean']>;
+  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   hideForums?: Maybe<Scalars['Boolean']>;
   hideOverlays?: Maybe<Scalars['Boolean']>;
   hideSketches?: Maybe<Scalars['Boolean']>;
@@ -19192,6 +19194,23 @@ export type CreateFileUploadForAboutPageMutation = (
   ) }
 );
 
+export type UpdateEnableReportBuilderMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateEnableReportBuilderMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'enableReportBuilder'>
+    )> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period: ActivityStatsPeriod;
@@ -19228,7 +19247,7 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -22653,6 +22672,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     lang
     html
   }
+  enableReportBuilder
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -25358,6 +25378,18 @@ export const CreateFileUploadForAboutPageDocument = /*#__PURE__*/ gql`
   }
 }
     ${FileUploadDetailsFragmentDoc}`;
+export const UpdateEnableReportBuilderDocument = /*#__PURE__*/ gql`
+    mutation updateEnableReportBuilder($slug: String!, $enabled: Boolean!) {
+  updateProjectBySlug(
+    input: {slug: $slug, patch: {enableReportBuilder: $enabled}}
+  ) {
+    project {
+      id
+      enableReportBuilder
+    }
+  }
+}
+    `;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -27119,6 +27151,7 @@ export const namedOperations = {
     updateAboutPageContents: 'updateAboutPageContents',
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
+    updateEnableReportBuilder: 'updateEnableReportBuilder',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',

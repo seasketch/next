@@ -22,6 +22,7 @@ import {
   useUpdateHideSketchesMutation,
   useUpdateHideForumsMutation,
   useUpdateHideOverlaysMutation,
+  useUpdateEnableReportBuilderMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -885,6 +886,9 @@ function SuperUserSettings() {
   const [updateOfflineEnabled, updateOfflineEnabledState] =
     useUpdateOfflineEnabledMutation();
 
+  const [updateEnableReportBuilder, updateEnableReportBuilderState] =
+    useUpdateEnableReportBuilderMutation();
+
   if (loading) {
     return null;
   }
@@ -966,6 +970,34 @@ function SuperUserSettings() {
                 description={t(
                   "If enabled, project administrators will have access to experimental offline survey functionality. Otherwise these options will be hidden."
                 )}
+              />
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={Boolean(data?.project?.enableReportBuilder)}
+                    onClick={(enabled) => {
+                      updateEnableReportBuilder({
+                        variables: {
+                          enabled,
+                          slug,
+                        },
+                        optimisticResponse: {
+                          __typename: "Mutation",
+                          updateProjectBySlug: {
+                            __typename: "UpdateProjectPayload",
+                            project: {
+                              __typename: "Project",
+                              id: data!.project!.id,
+                              enableReportBuilder: enabled,
+                            },
+                          },
+                        },
+                      });
+                    }}
+                  />
+                }
+                title={t("Enable New Report Builder")}
+                description={t("Pre-Alpha Preview for SeaSketch Team Only")}
               />
               <InputBlock
                 input={

@@ -10476,6 +10476,7 @@ type Project implements Node {
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean!
+  enableReportBuilder: Boolean
   estimateDeletedDataForRetentionChange(newRetentionPeriod: IntervalInput): RetentionChangeEstimate
 
   """Reads and enables pagination through a set of `Forum`."""
@@ -11375,6 +11376,7 @@ input ProjectPatch {
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean
+  enableReportBuilder: Boolean
   hideForums: Boolean
   hideOverlays: Boolean
   hideSketches: Boolean

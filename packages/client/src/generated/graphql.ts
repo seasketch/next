@@ -9300,6 +9300,7 @@ export type Project = Node & {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault: Scalars['Boolean'];
+  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
@@ -10244,6 +10245,7 @@ export type ProjectPatch = {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault?: Maybe<Scalars['Boolean']>;
+  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   hideForums?: Maybe<Scalars['Boolean']>;
   hideOverlays?: Maybe<Scalars['Boolean']>;
   hideSketches?: Maybe<Scalars['Boolean']>;
@@ -19194,6 +19196,23 @@ export type CreateFileUploadForAboutPageMutation = (
   ) }
 );
 
+export type UpdateEnableReportBuilderMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateEnableReportBuilderMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'enableReportBuilder'>
+    )> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period: ActivityStatsPeriod;
@@ -19230,7 +19249,7 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -22655,6 +22674,7 @@ export const ProjectMetadataFragmentDoc = gql`
     lang
     html
   }
+  enableReportBuilder
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -29507,6 +29527,45 @@ export function useCreateFileUploadForAboutPageMutation(baseOptions?: Apollo.Mut
 export type CreateFileUploadForAboutPageMutationHookResult = ReturnType<typeof useCreateFileUploadForAboutPageMutation>;
 export type CreateFileUploadForAboutPageMutationResult = Apollo.MutationResult<CreateFileUploadForAboutPageMutation>;
 export type CreateFileUploadForAboutPageMutationOptions = Apollo.BaseMutationOptions<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>;
+export const UpdateEnableReportBuilderDocument = gql`
+    mutation updateEnableReportBuilder($slug: String!, $enabled: Boolean!) {
+  updateProjectBySlug(
+    input: {slug: $slug, patch: {enableReportBuilder: $enabled}}
+  ) {
+    project {
+      id
+      enableReportBuilder
+    }
+  }
+}
+    `;
+export type UpdateEnableReportBuilderMutationFn = Apollo.MutationFunction<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>;
+
+/**
+ * __useUpdateEnableReportBuilderMutation__
+ *
+ * To run a mutation, you first call `useUpdateEnableReportBuilderMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateEnableReportBuilderMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateEnableReportBuilderMutation, { data, loading, error }] = useUpdateEnableReportBuilderMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      enabled: // value for 'enabled'
+ *   },
+ * });
+ */
+export function useUpdateEnableReportBuilderMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>(UpdateEnableReportBuilderDocument, options);
+      }
+export type UpdateEnableReportBuilderMutationHookResult = ReturnType<typeof useUpdateEnableReportBuilderMutation>;
+export type UpdateEnableReportBuilderMutationResult = Apollo.MutationResult<UpdateEnableReportBuilderMutation>;
+export type UpdateEnableReportBuilderMutationOptions = Apollo.BaseMutationOptions<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>;
 export const ProjectDashboardDocument = gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
   projectBySlug(slug: $slug) {
@@ -34281,6 +34340,7 @@ export const namedOperations = {
     updateAboutPageContents: 'updateAboutPageContents',
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
+    updateEnableReportBuilder: 'updateEnableReportBuilder',
     UpdateProjectRegion: 'UpdateProjectRegion',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',
