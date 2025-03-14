@@ -22763,6 +22763,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   }
   enableReportBuilder
   customDocLink
+  enableReportBuilder
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`

@@ -16,6 +16,7 @@ import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
 import { useLocalStorage } from "beautiful-react-hooks";
 import { BookOpenIcon } from "@heroicons/react/outline";
+import { GlobeIcon } from "@radix-ui/react-icons";
 import AdminRouter from "./AdminRouter";
 
 interface Section {

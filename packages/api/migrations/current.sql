@@ -82,3 +82,4 @@ CREATE OR REPLACE FUNCTION public.data_sources_author_profile(source public.data
 
 DROP POLICY table_of_contents_items_select on public.table_of_contents_items;
 CREATE POLICY table_of_contents_items_select ON public.table_of_contents_items FOR SELECT TO anon USING ((public.session_has_project_access(project_id) AND (is_draft = false) AND public._session_on_toc_item_acl(path)) or data_library_template_id is not null);
+grant update(enable_report_builder) on projects to seasketch_user;

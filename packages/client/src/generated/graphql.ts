@@ -22765,6 +22765,7 @@ export const ProjectMetadataFragmentDoc = gql`
   }
   enableReportBuilder
   customDocLink
+  enableReportBuilder
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
