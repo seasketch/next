@@ -1,3 +1,4 @@
+import bytes from "bytes";
 import { Logger } from "./logger";
 import {
   S3Client,
@@ -6,7 +7,9 @@ import {
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
 import { writeFileSync, createReadStream, createWriteStream } from "fs";
+import { ReadStream, statSync } from "node:fs";
 import { Readable } from "node:stream";
+import { Upload } from "@aws-sdk/lib-storage";
 
 const s3Client = new S3Client({ region: process.env.AWS_REGION! });
 const r2Client = new S3Client({
@@ -31,15 +34,22 @@ export async function putObject(
   const client = /r2:/.test(remote) ? r2Client : s3Client;
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
+  const fileSizeBytes = statSync(filepath).size;
   const fileStream = createReadStream(filepath);
   const uploadParams = {
     Bucket,
     Key,
     Body: fileStream,
   };
-  const logmsg = `putObject ${filepath} to ${remote}`;
+  let logmsg = `putObject ${filepath} (${bytes(fileSizeBytes)}) to ${remote}.`;
+  // if file size is larger than 500MB, use multipart upload
+  if (fileSizeBytes > 500 * 1024 * 1024) {
+    logmsg += " Using multipart upload.";
+    await putLargeObject(Bucket, Key, client, fileStream, fileSizeBytes);
+  } else {
+    await client.send(new PutObjectCommand(uploadParams));
+  }
   logger.output += logmsg + "\n";
-  await client.send(new PutObjectCommand(uploadParams));
   if (increment) {
     logger.updateProgress(increment);
   }
@@ -95,5 +105,44 @@ export async function getObject(
     });
   } else {
     throw new Error("Invalid response from s3");
+  }
+}
+
+async function putLargeObject(
+  Bucket: string,
+  Key: string,
+  client: S3Client,
+  Body: ReadStream,
+  fileSize: number
+) {
+  const minPartSize = 5 * 1024 * 1024; // 5MB minimum part size for R2
+  const maxParts = 10000; // Maximum number of parts allowed in a multipart upload
+
+  // Compute optimal part size: all parts except last must be equal in size
+  let partSize = Math.ceil(fileSize / maxParts); // Start with an even split
+  if (partSize < minPartSize) {
+    partSize = Math.ceil(fileSize / Math.ceil(fileSize / minPartSize)); // Ensure parts are at least 5MB
+  }
+
+  try {
+    const upload = new Upload({
+      client,
+      params: {
+        Bucket,
+        Key,
+        Body,
+      },
+      partSize, // Enforce part size constraint
+      queueSize: 5, // Number of parallel uploads
+    });
+
+    upload.on("httpUploadProgress", (progress) => {
+      console.log(`Uploaded ${progress.loaded} of ${progress.total}`);
+    });
+
+    await upload.done();
+    console.log("Upload completed successfully!");
+  } catch (error) {
+    console.error("Upload failed:", error);
   }
 }
