@@ -58,20 +58,20 @@ export async function geostatsForVectorLayers(
   filepath: string
 ): Promise<GeostatsLayer[]> {
   const layers: GeostatsLayer[] = [];
-  const layer = {
-    layer: "",
-    count: 0,
-    geometry: "Unknown",
-    attributeCount: 0,
-    attributes: [],
-    bounds: [],
-    hasZ: false,
-  } as GeostatsLayer;
   const dataset = await gdal.openAsync(filepath);
   // if (dataset.srs === null) {
   //   throw new Error("No spatial reference system found in dataset.");
   // }
   dataset.layers.forEach((lyr, lidx) => {
+    const layer = {
+      layer: "",
+      count: 0,
+      geometry: "Unknown",
+      attributeCount: 0,
+      attributes: [],
+      bounds: [],
+      hasZ: false,
+    } as GeostatsLayer;
     const extent = lyr.getExtent();
     if (extent) {
       layer.bounds = [extent.minX, extent.minY, extent.maxX, extent.maxY];
