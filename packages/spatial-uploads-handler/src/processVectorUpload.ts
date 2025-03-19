@@ -60,17 +60,26 @@ export async function processVectorUpload(options: {
   let type: SupportedTypes;
   let { ext } = parsePath(path);
   const isZip = ext === ".zip";
+  const isRar = ext === ".rar";
   let metadata: GeostatsMetadata | null = null;
 
   // Step 1) Unzip if necessary, and assume it is a shapefile
-  if (isZip) {
+  if (isZip || isRar) {
     await updateProgress("running", "unzipping");
     // // Unzip the file
-    await logger.exec(
-      ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
-      "Problem unzipping file",
-      1 / 30
-    );
+    if (isZip) {
+      await logger.exec(
+        ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
+        "Problem unzipping file",
+        1 / 30
+      );
+    } else {
+      await logger.exec(
+        ["unrar", ["x", "-op" + workingDirectory, workingFilePath]],
+        "Problem extracting .rar file",
+        1 / 30
+      );
+    }
 
     await updateProgress("running", "looking for .shp");
     // Find the first shapefile (.shp) in the working Dir
@@ -121,7 +130,13 @@ export async function processVectorUpload(options: {
       throw new Error("No projection file found (.prj) in zip archive");
     }
     if (!shapefile) {
-      throw new Error("No shape-file (.shp) found in zip archive");
+      if (isZip) {
+        throw new Error("No shape-file (.shp) found in zip archive");
+      } else if (isRar) {
+        throw new Error("No shape-file (.shp) found in rar archive");
+      } else {
+        throw new Error("No shape-file (.shp) found in archive");
+      }
     }
 
     // Consider that there may be multiple shapefiles in the zip archive

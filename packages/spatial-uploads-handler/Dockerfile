@@ -229,7 +229,14 @@ RUN mkdir /tmp/gdal \
     -DPNG_LIBRARY_RELEASE=$PREFIX/lib64/libpng.so \
     -DBUILD_PYTHON_BINDINGS=ON \
   && make -j $(nproc) --silent && make install \
-  && rm -rf /tmp/gdal  
+  && rm -rf /tmp/gdal
+
+# unar
+RUN curl -O https://www.rarlab.com/rar/unrarsrc-6.0.7.tar.gz && \
+  tar -xzf unrarsrc-6.0.7.tar.gz && \
+  cd unrar && \
+  make -f makefile && \
+  cp unrar /usr/local/bin/
 
 FROM amazon/aws-lambda-nodejs:20
 WORKDIR ${LAMBDA_TASK_ROOT}
@@ -255,6 +262,7 @@ COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
 COPY .rclone.conf /var/task/rclone.conf
+COPY --from=gdal /usr/local/bin/unrar /usr/bin/unrar
 # RUN dnf install -y openssl python-pip python3
 # LD_LIBRARY_PATH flag is necessary to avoid ssl errors
 RUN dnf install -y openssl python-pip python3 swig python-devel
