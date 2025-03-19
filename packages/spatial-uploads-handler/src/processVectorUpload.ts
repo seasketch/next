@@ -204,55 +204,65 @@ export async function processVectorUpload(options: {
     throw new Error("Not a recognized file type");
   }
 
+  let isCorrectProjection = false;
+  if (/World Geodetic System 1984/.test(ogrInfo)) {
+    isCorrectProjection = true;
+  }
+
   // Save original file to the list of outputs, with its determined type
   const originalOutput = {
-    type: type,
+    type,
     filename: jobId + ext,
     remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
     local: originalFilePath,
     size: statSync(originalFilePath).size,
     url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}${ext}`,
     isOriginal: true,
+    isNormalizedOutput: isCorrectProjection && type === "FlatGeobuf",
   };
   outputs.push(originalOutput);
 
-  // Convert vector to a normalized FlatGeobuf file for long-term archiving
-  // and for tiling.
-  const normalizedVectorPath = pathJoin(workingDirectory, jobId + ".fgb");
-  await updateProgress("running", "converting format");
-  await logger.exec(
-    [
-      "ogr2ogr",
+  let normalizedVectorPath = workingFilePath;
+  let normalizedVectorFileSize = statSync(workingFilePath).size;
+  if (!isCorrectProjection || type !== "FlatGeobuf") {
+    // Convert vector to a normalized FlatGeobuf file for long-term archiving
+    // and for tiling.
+    normalizedVectorPath = pathJoin(workingDirectory, jobId + ".fgb");
+    await updateProgress("running", "converting format");
+    await logger.exec(
       [
-        "-skipfailures",
-        "-t_srs",
-        "EPSG:4326",
-        "-nlt",
-        "PROMOTE_TO_MULTI",
-        "-oo",
-        "FLATTEN_NESTED_ATTRIBUTES=yes",
-        "-splitlistfields",
-        normalizedVectorPath,
-        workingFilePath,
-        "-nln",
-        originalName,
+        "ogr2ogr",
+        [
+          "-skipfailures",
+          "-t_srs",
+          "EPSG:4326",
+          "-nlt",
+          "PROMOTE_TO_MULTI",
+          "-oo",
+          "FLATTEN_NESTED_ATTRIBUTES=yes",
+          "-splitlistfields",
+          normalizedVectorPath,
+          workingFilePath,
+          "-nln",
+          originalName,
+        ],
       ],
-    ],
-    "Problem converting to FlatGeobuf",
-    2 / 30
-  );
+      "Problem converting to FlatGeobuf",
+      2 / 30
+    );
 
-  // Save normalized vector to the list of outputs
-  const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
-  outputs.push({
-    type: "FlatGeobuf",
-    filename: `${jobId}.fgb`,
-    remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}.fgb`,
-    local: normalizedVectorPath,
-    size: normalizedVectorFileSize,
-    url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.fgb`,
-    isNormalizedOutput: true,
-  });
+    // Save normalized vector to the list of outputs
+    normalizedVectorFileSize = statSync(normalizedVectorPath).size;
+    outputs.push({
+      type: "FlatGeobuf",
+      filename: `${jobId}.fgb`,
+      remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}.fgb`,
+      local: normalizedVectorPath,
+      size: normalizedVectorFileSize,
+      url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.fgb`,
+      isNormalizedOutput: true,
+    });
+  }
 
   // Compute metadata useful for cartography and data handling
   const stats = await geostatsForVectorLayers(normalizedVectorPath);
