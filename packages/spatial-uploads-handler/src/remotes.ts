@@ -115,13 +115,13 @@ async function putLargeObject(
   Body: ReadStream,
   fileSize: number
 ) {
-  const minPartSize = 5 * 1024 * 1024; // 5MB minimum part size for R2
-  const maxParts = 10000; // Maximum number of parts allowed in a multipart upload
+  const minPartSize = 5 * 1024 * 1024; // 5MB minimum part size
+  const maxPartSize = 500 * 1024 * 1024; // 500MB maximum part size
 
-  // Compute optimal part size: all parts except last must be equal in size
-  let partSize = Math.ceil(fileSize / maxParts); // Start with an even split
+  // Compute optimal part size: aim for parts no larger than 500MB and no smaller than 5MB
+  let partSize = Math.ceil(fileSize / Math.ceil(fileSize / maxPartSize));
   if (partSize < minPartSize) {
-    partSize = Math.ceil(fileSize / Math.ceil(fileSize / minPartSize)); // Ensure parts are at least 5MB
+    partSize = minPartSize; // Ensure parts are at least 5MB
   }
 
   try {
