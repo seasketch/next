@@ -13,6 +13,8 @@ import {
   stdDevBuckets,
 } from "./stats";
 
+const ATTRIBUTE_VALUES_LIMIT = 500;
+
 function isNumericGeostatsAttribute(
   attr: GeostatsAttribute | NumericGeostatsAttribute
 ): attr is NumericGeostatsAttribute {
@@ -206,13 +208,12 @@ export async function geostatsForVectorLayers(
         const stdev = Math.sqrt(variance);
         attribute.count = details.count;
         attribute.countDistinct = Object.keys(details.uniqueValues).length;
-        attribute.values = Object.keys(details.uniqueValues).reduce(
-          (acc, v) => {
+        attribute.values = Object.keys(details.uniqueValues)
+          .slice(0, ATTRIBUTE_VALUES_LIMIT)
+          .reduce((acc, v) => {
             acc[v] = details.uniqueValues[v];
             return acc;
-          },
-          {} as { [key: string]: number }
-        ) as { [key: string]: number };
+          }, {} as { [key: string]: number }) as { [key: string]: number };
         const sortedValues = Object.keys(details.uniqueValues)
           .sort()
           .reduce((acc, v) => {
