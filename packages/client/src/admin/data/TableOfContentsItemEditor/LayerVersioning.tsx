@@ -543,7 +543,7 @@ function VersionDetails({
     }
   }, [rollbackGLStyle, setDialogState]);
   return (
-    <div className="flex-2 p-4 border-t">
+    <div className="flex-2 p-4 border-t overflow-y-auto">
       <h2 className="text-base font-medium leading-6 text-gray-900">
         <Trans ns="admin:data">
           Version {{ version }} details and settings

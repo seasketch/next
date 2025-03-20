@@ -45,6 +45,7 @@ import ProjectBackgroundJobSubscriptionPlugin from "./plugins/projectBackgroundJ
 import MetadataParserPlugin from "./plugins/metadataParserPlugin";
 import ApiKeyPlugin from "./plugins/apiKeyPlugin";
 import AboutPagePlugin from "./plugins/aboutPagePlugin";
+import ReplacePMTilesPlugin from "./plugins/replacePMTilesPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -100,6 +101,7 @@ export default function graphileOptions(): PostGraphileOptions {
       MetadataParserPlugin,
       ApiKeyPlugin,
       AboutPagePlugin,
+      ReplacePMTilesPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

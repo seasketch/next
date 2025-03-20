@@ -5,7 +5,7 @@ drop table if exists project_geography_settings;
 
 create table project_geography_settings (
   project_id integer references projects(id) on delete cascade,
-  enabled_land_clipping boolean default true,
+  enable_land_clipping boolean default true,
   eez_selections text[] default '{}',
   enable_eez_clipping boolean default true
 );

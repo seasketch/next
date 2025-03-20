@@ -8843,6 +8843,9 @@ type Mutation {
     input: RemoveValidChildSketchClassInput!
   ): RemoveValidChildSketchClassPayload
 
+  """Replace the tileset for an existing data source"""
+  replacePMTiles(dataSourceId: Int!, pmtiles: Upload!): DataSource!
+
   """
   Re-sends an email verification link to the canonical email for the
   current user session

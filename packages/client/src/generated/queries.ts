@@ -6992,6 +6992,8 @@ export type Mutation = {
   removeUserFromGroup?: Maybe<RemoveUserFromGroupPayload>;
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
+  /** Replace the tileset for an existing data source */
+  replacePMTiles: DataSource;
   /**
    * Re-sends an email verification link to the canonical email for the
    * current user session
@@ -8113,6 +8115,13 @@ export type MutationRemoveUserFromGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveValidChildSketchClassArgs = {
   input: RemoveValidChildSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReplacePmTilesArgs = {
+  dataSourceId: Scalars['Int'];
+  pmtiles: Scalars['Upload'];
 };
 
 
@@ -17233,6 +17242,24 @@ export type ProjectBackgroundJobSubscription = (
   )> }
 );
 
+export type ReplacePmTilesMutationVariables = Exact<{
+  dataSourceId: Scalars['Int'];
+  pmtiles: Scalars['Upload'];
+}>;
+
+
+export type ReplacePmTilesMutation = (
+  { __typename?: 'Mutation' }
+  & { replacePMTiles: (
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id' | 'url'>
+    & { outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt'>
+    )>> }
+  ) }
+);
+
 export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -24068,6 +24095,21 @@ export const ProjectBackgroundJobDocument = /*#__PURE__*/ gql`
   }
 }
     ${BackgroundJobSubscriptionEventFragmentDoc}`;
+export const ReplacePmTilesDocument = /*#__PURE__*/ gql`
+    mutation ReplacePMTiles($dataSourceId: Int!, $pmtiles: Upload!) {
+  replacePMTiles(dataSourceId: $dataSourceId, pmtiles: $pmtiles) {
+    id
+    url
+    outputs {
+      id
+      url
+      type
+      size
+      createdAt
+    }
+  }
+}
+    `;
 export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -27100,6 +27142,7 @@ export const namedOperations = {
     FailUpload: 'FailUpload',
     CancelUpload: 'CancelUpload',
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
+    ReplacePMTiles: 'ReplacePMTiles',
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',

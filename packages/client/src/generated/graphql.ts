@@ -6994,6 +6994,8 @@ export type Mutation = {
   removeUserFromGroup?: Maybe<RemoveUserFromGroupPayload>;
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
+  /** Replace the tileset for an existing data source */
+  replacePMTiles: DataSource;
   /**
    * Re-sends an email verification link to the canonical email for the
    * current user session
@@ -8115,6 +8117,13 @@ export type MutationRemoveUserFromGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveValidChildSketchClassArgs = {
   input: RemoveValidChildSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReplacePmTilesArgs = {
+  dataSourceId: Scalars['Int'];
+  pmtiles: Scalars['Upload'];
 };
 
 
@@ -17235,6 +17244,24 @@ export type ProjectBackgroundJobSubscription = (
   )> }
 );
 
+export type ReplacePmTilesMutationVariables = Exact<{
+  dataSourceId: Scalars['Int'];
+  pmtiles: Scalars['Upload'];
+}>;
+
+
+export type ReplacePmTilesMutation = (
+  { __typename?: 'Mutation' }
+  & { replacePMTiles: (
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id' | 'url'>
+    & { outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt'>
+    )>> }
+  ) }
+);
+
 export type DownloadableOfflineTilePackagesQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -25795,6 +25822,48 @@ export function useProjectBackgroundJobSubscription(baseOptions: Apollo.Subscrip
       }
 export type ProjectBackgroundJobSubscriptionHookResult = ReturnType<typeof useProjectBackgroundJobSubscription>;
 export type ProjectBackgroundJobSubscriptionResult = Apollo.SubscriptionResult<ProjectBackgroundJobSubscription>;
+export const ReplacePmTilesDocument = gql`
+    mutation ReplacePMTiles($dataSourceId: Int!, $pmtiles: Upload!) {
+  replacePMTiles(dataSourceId: $dataSourceId, pmtiles: $pmtiles) {
+    id
+    url
+    outputs {
+      id
+      url
+      type
+      size
+      createdAt
+    }
+  }
+}
+    `;
+export type ReplacePmTilesMutationFn = Apollo.MutationFunction<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>;
+
+/**
+ * __useReplacePmTilesMutation__
+ *
+ * To run a mutation, you first call `useReplacePmTilesMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useReplacePmTilesMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [replacePmTilesMutation, { data, loading, error }] = useReplacePmTilesMutation({
+ *   variables: {
+ *      dataSourceId: // value for 'dataSourceId'
+ *      pmtiles: // value for 'pmtiles'
+ *   },
+ * });
+ */
+export function useReplacePmTilesMutation(baseOptions?: Apollo.MutationHookOptions<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>(ReplacePmTilesDocument, options);
+      }
+export type ReplacePmTilesMutationHookResult = ReturnType<typeof useReplacePmTilesMutation>;
+export type ReplacePmTilesMutationResult = Apollo.MutationResult<ReplacePmTilesMutation>;
+export type ReplacePmTilesMutationOptions = Apollo.BaseMutationOptions<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>;
 export const DownloadableOfflineTilePackagesDocument = gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34289,6 +34358,7 @@ export const namedOperations = {
     FailUpload: 'FailUpload',
     CancelUpload: 'CancelUpload',
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
+    ReplacePMTiles: 'ReplacePMTiles',
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
