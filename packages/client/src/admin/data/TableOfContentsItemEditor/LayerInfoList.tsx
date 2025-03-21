@@ -34,6 +34,7 @@ export default function LayerInfoList({
   readonly,
   layer,
   children,
+  isLatestVersion,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -60,6 +61,7 @@ export default function LayerInfoList({
   >;
   readonly?: boolean;
   children?: ReactNode;
+  isLatestVersion: boolean;
 }) {
   const { t } = useTranslation("admin:data");
   let profile = source.authorProfile;
@@ -203,14 +205,16 @@ export default function LayerInfoList({
               description={
                 <div className="flex space-x-1">
                   <TilesetDetails url={source.url! + ".json"} />
-                  <div className="flex-1 text-center">
-                    <button
-                      onClick={() => setShowCustomizeTilesModal(true)}
-                      className="text-primary-500"
-                    >
-                      {t("Customize tiles")}
-                    </button>
-                  </div>
+                  {isLatestVersion && (
+                    <div className="flex-1 text-center">
+                      <button
+                        onClick={() => setShowCustomizeTilesModal(true)}
+                        className="text-primary-500"
+                      >
+                        {t("Replace tiles")}
+                      </button>
+                    </div>
+                  )}
                 </div>
               }
             />

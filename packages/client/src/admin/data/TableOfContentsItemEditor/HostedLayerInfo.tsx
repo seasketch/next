@@ -134,6 +134,9 @@ export default function HostedLayerInfo({
                           <span className="w-36">
                             {humanizeOutputType(output.type)}{" "}
                             {output.isOriginal ? "(" + t("original") + ")" : ""}
+                            {output.isCustomUpload
+                              ? "(" + t("custom") + ")"
+                              : ""}
                           </span>
                           <span className="text-gray-500">
                             {bytes(parseInt(output.size), {

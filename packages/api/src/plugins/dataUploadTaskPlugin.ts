@@ -25,6 +25,7 @@ const DataUploadTaskPlugin = makeExtendSchemaPlugin((build) => {
             Key: `${task.id}/${task.filename}`,
             Expires: UPLOAD_TASK_PRESIGNED_URL_TTL,
             ContentType: task.contentType,
+
           });
         },
       },

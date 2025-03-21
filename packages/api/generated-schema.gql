@@ -3419,6 +3419,7 @@ type DataUploadOutput implements Node {
   dataSourceId: Int
   filename: String!
   id: Int!
+  isCustomUpload: Boolean
   isOriginal: Boolean!
 
   """
@@ -8683,6 +8684,7 @@ type Mutation {
     type: String
     width: Int!
   ): Sprite
+  getPresignedPMTilesUploadUrl(bytes: Int!, filename: String!): PresignedUrl!
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
@@ -8844,7 +8846,7 @@ type Mutation {
   ): RemoveValidChildSketchClassPayload
 
   """Replace the tileset for an existing data source"""
-  replacePMTiles(dataSourceId: Int!, pmtiles: Upload!): DataSource!
+  replacePMTiles(dataSourceId: Int!, pmtilesKey: String!): DataLayer!
 
   """
   Re-sends an email verification link to the canonical email for the
@@ -10212,6 +10214,11 @@ enum PostsOrderBy {
   PRIMARY_KEY_DESC
   TOPIC_ID_ASC
   TOPIC_ID_DESC
+}
+
+type PresignedUrl {
+  key: String!
+  url: String!
 }
 
 """

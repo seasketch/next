@@ -551,6 +551,7 @@ function VersionDetails({
       </h2>
       <div className="border rounded mt-4 overflow-hidden bg-white">
         <LayerInfoList
+          isLatestVersion={version === layer.version}
           source={source}
           layer={{
             ...layer,

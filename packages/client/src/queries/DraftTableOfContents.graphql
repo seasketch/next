@@ -270,6 +270,7 @@ fragment FullAdminSource on DataSource {
     originalFilename
     filename
     createdAt
+    isCustomUpload
   }
   changelog
 }
@@ -626,6 +627,7 @@ fragment MetadataXmlFile on DataUploadOutput {
   createdAt
   filename
   size
+  isCustomUpload
 }
 
 query GetMetadata($itemId: Int!) {

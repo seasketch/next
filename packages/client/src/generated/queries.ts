@@ -2918,6 +2918,7 @@ export type DataUploadOutput = Node & {
   dataSourceId?: Maybe<Scalars['Int']>;
   filename: Scalars['String'];
   id: Scalars['Int'];
+  isCustomUpload?: Maybe<Scalars['Boolean']>;
   isOriginal: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -6940,6 +6941,7 @@ export type Mutation = {
    * project has a matching md5 hash no new Sprite will be created.
    */
   getOrCreateSprite?: Maybe<Sprite>;
+  getPresignedPMTilesUploadUrl: PresignedUrl;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -6993,7 +6995,7 @@ export type Mutation = {
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
   /** Replace the tileset for an existing data source */
-  replacePMTiles: DataSource;
+  replacePMTiles: DataLayer;
   /**
    * Re-sends an email verification link to the canonical email for the
    * current user session
@@ -8017,6 +8019,13 @@ export type MutationGetOrCreateSpriteArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPresignedPmTilesUploadUrlArgs = {
+  bytes: Scalars['Int'];
+  filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationGrantAdminAccessArgs = {
   input: GrantAdminAccessInput;
 };
@@ -8121,7 +8130,7 @@ export type MutationRemoveValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationReplacePmTilesArgs = {
   dataSourceId: Scalars['Int'];
-  pmtiles: Scalars['Upload'];
+  pmtilesKey: Scalars['String'];
 };
 
 
@@ -9178,6 +9187,12 @@ export enum PostsOrderBy {
   TopicIdAsc = 'TOPIC_ID_ASC',
   TopicIdDesc = 'TOPIC_ID_DESC'
 }
+
+export type PresignedUrl = {
+  __typename?: 'PresignedUrl';
+  key: Scalars['String'];
+  url: Scalars['String'];
+};
 
 /**
  * Personal information that users have contributed. This information is only
@@ -17244,19 +17259,37 @@ export type ProjectBackgroundJobSubscription = (
 
 export type ReplacePmTilesMutationVariables = Exact<{
   dataSourceId: Scalars['Int'];
-  pmtiles: Scalars['Upload'];
+  pmtilesKey: Scalars['String'];
 }>;
 
 
 export type ReplacePmTilesMutation = (
   { __typename?: 'Mutation' }
   & { replacePMTiles: (
-    { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'url'>
-    & { outputs?: Maybe<Array<(
-      { __typename?: 'DataUploadOutput' }
-      & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt'>
-    )>> }
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'dataSourceId'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'url'>
+      & { outputs?: Maybe<Array<(
+        { __typename?: 'DataUploadOutput' }
+        & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt' | 'isCustomUpload'>
+      )>> }
+    )> }
+  ) }
+);
+
+export type GetPresignedPmTilesUploadUrlMutationVariables = Exact<{
+  filename: Scalars['String'];
+  bytes: Scalars['Int'];
+}>;
+
+
+export type GetPresignedPmTilesUploadUrlMutation = (
+  { __typename?: 'Mutation' }
+  & { getPresignedPMTilesUploadUrl: (
+    { __typename?: 'PresignedUrl' }
+    & Pick<PresignedUrl, 'url' | 'key'>
   ) }
 );
 
@@ -17491,7 +17524,7 @@ export type FullAdminSourceFragment = (
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )>, outputs?: Maybe<Array<(
     { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt'>
+    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload'>
   )>> }
 );
 
@@ -17788,7 +17821,7 @@ export type UpdateEnableHighDpiRequestsMutation = (
 
 export type MetadataXmlFileFragment = (
   { __typename?: 'DataUploadOutput' }
-  & Pick<DataUploadOutput, 'url' | 'createdAt' | 'filename' | 'size'>
+  & Pick<DataUploadOutput, 'url' | 'createdAt' | 'filename' | 'size' | 'isCustomUpload'>
 );
 
 export type GetMetadataQueryVariables = Exact<{
@@ -22282,6 +22315,7 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     originalFilename
     filename
     createdAt
+    isCustomUpload
   }
   changelog
 }
@@ -22396,6 +22430,7 @@ export const MetadataXmlFileFragmentDoc = /*#__PURE__*/ gql`
   createdAt
   filename
   size
+  isCustomUpload
 }
     `;
 export const ForumListDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -24096,17 +24131,29 @@ export const ProjectBackgroundJobDocument = /*#__PURE__*/ gql`
 }
     ${BackgroundJobSubscriptionEventFragmentDoc}`;
 export const ReplacePmTilesDocument = /*#__PURE__*/ gql`
-    mutation ReplacePMTiles($dataSourceId: Int!, $pmtiles: Upload!) {
-  replacePMTiles(dataSourceId: $dataSourceId, pmtiles: $pmtiles) {
+    mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
+  replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
     id
-    url
-    outputs {
-      id
+    dataSourceId
+    dataSource {
       url
-      type
-      size
-      createdAt
+      outputs {
+        id
+        url
+        type
+        size
+        createdAt
+        isCustomUpload
+      }
     }
+  }
+}
+    `;
+export const GetPresignedPmTilesUploadUrlDocument = /*#__PURE__*/ gql`
+    mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
+  getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
+    url
+    key
   }
 }
     `;
@@ -27143,6 +27190,7 @@ export const namedOperations = {
     CancelUpload: 'CancelUpload',
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
     ReplacePMTiles: 'ReplacePMTiles',
+    getPresignedPMTilesUploadUrl: 'getPresignedPMTilesUploadUrl',
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',

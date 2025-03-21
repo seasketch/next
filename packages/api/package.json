@@ -111,6 +111,7 @@
     "pg-mem": "^1.9.9",
     "pgmock2": "^2.0.6",
     "pluralize": "^8.0.0",
+    "pmtiles": "^4.3.0",
     "pngjs": "^7.0.0",
     "postgraphile": "^4.14.0",
     "postgraphile-plugin-upload-field": "^1.0.0-alpha.10",

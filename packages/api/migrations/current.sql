@@ -30,3 +30,5 @@ for each row
 execute function create_project_geography_settings();
 
 grant update(enable_report_builder) on projects to seasketch_user;
+
+alter table data_upload_outputs add column is_custom_upload boolean default false;

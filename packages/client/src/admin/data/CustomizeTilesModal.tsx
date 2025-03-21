@@ -1,9 +1,14 @@
+import { useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import axios from "axios";
 import Modal from "../../components/Modal";
+import ProgressBar from "../../components/ProgressBar";
 import {
   FullAdminSourceFragment,
+  useGetPresignedPmTilesUploadUrlMutation,
   useReplacePmTilesMutation,
 } from "../../generated/graphql";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function CustomizeTilesModal({
   onRequestClose,
@@ -14,6 +19,31 @@ export default function CustomizeTilesModal({
 }) {
   const { t } = useTranslation("admin:data");
   const [mutation, mutationState] = useReplacePmTilesMutation();
+  const [getPresignedUrl, getPresignedUrlState] =
+    useGetPresignedPmTilesUploadUrlMutation();
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const onError = useGlobalErrorHandler();
+
+  const handleFileUpload = async (file: File, url: string) => {
+    try {
+      await axios({
+        url,
+        method: "PUT",
+        data: file,
+        headers: {
+          "Content-Type": "application/vnd.pmtiles",
+        },
+        onUploadProgress: (progressEvent) => {
+          console.log(progressEvent);
+          const progress = (progressEvent.loaded / progressEvent.total) * 100;
+          setUploadProgress(progress);
+        },
+      });
+    } catch (error) {
+      onError(error);
+    }
+  };
+
   return (
     <Modal
       title={t("Replace Tileset")}
@@ -25,36 +55,40 @@ export default function CustomizeTilesModal({
         },
         {
           label: t("Choose a PMTiles file"),
-          loading: mutationState.loading,
-          disabled: mutationState.loading,
+          loading: mutationState.loading || uploadProgress !== null,
+          disabled: mutationState.loading || uploadProgress !== null,
           onClick: () => {
-            // create a file input element and click it to trigger the file
-            // dialog
             const input = document.createElement("input");
             input.type = "file";
             input.accept = ".pmtiles";
             input.onchange = async (e) => {
               const file = (e.target as HTMLInputElement).files?.[0];
               if (!file) return;
-              console.log(file);
-              if (
-                file.type !== "application/vnd.pmtiles" &&
-                !file.name.endsWith(".pmtiles")
-              ) {
-                alert("File must be a PMTiles file");
+              const response = await getPresignedUrl({
+                variables: {
+                  bytes: file.size,
+                  filename: file.name,
+                },
+              });
+              if (!response.data) {
+                alert("Failed to get presigned url");
                 return;
               }
-              await mutation({
-                variables: {
-                  dataSourceId: source.id,
-                  pmtiles: file,
-                },
-              }).catch((e) => {
-                alert(e.message);
-              });
-              // upload the file to the server
-              // const url = await uploadFile(file);
-              // console.log("uploaded file to", url);
+              const { url, key } = response.data.getPresignedPMTilesUploadUrl;
+              try {
+                await handleFileUpload(file, url);
+                await mutation({
+                  variables: {
+                    dataSourceId: source.id,
+                    pmtilesKey: key,
+                  },
+                });
+                setUploadProgress(null);
+                onRequestClose();
+                // alert("File uploaded successfully");
+              } catch (error) {
+                alert(error.message);
+              }
             };
             input.click();
           },
@@ -66,20 +100,22 @@ export default function CustomizeTilesModal({
         <p className="text-sm">
           <Trans ns="admin:data">
             When you upload data to SeaSketch, the system creates a vector or
-            raster tileset from the source upload. Sometimes it is desireable to
+            raster tileset from the source upload. Sometimes it is desirable to
             build your own custom tileset as a replacement. For example, some
             global datasets may be too large to render in full detail within the
             limits of our hosted tiling system. You may want to use your
-            workstation to create a full resolution tilese, which may take hours
-            or days of processing.
+            workstation to create a full resolution tileset, which may take
+            hours or days of processing.
           </Trans>
         </p>
         <p className="text-sm">
           <Trans ns="admin:data">
-            It is your responsibilty to ensure the tileset being uploaded is
-            based on the same uploaded vector or raster source. Otherwise there
-            will be inconsistencies between data for download or analysis and
-            what is presented on the map. Tilesets must be a{" "}
+            <b className="font-bold">
+              It is your responsibilty to ensure the tileset being uploaded is
+              based on the same uploaded vector or raster source
+            </b>
+            . Otherwise there will be inconsistencies between data for download
+            or analysis and what is presented on the map. Tilesets must be a{" "}
             <a
               className="text-primary-500"
               href="https://github.com/protomaps/PMTiles"
@@ -91,6 +127,24 @@ export default function CustomizeTilesModal({
           </Trans>
         </p>
       </div>
+      {uploadProgress !== null && (
+        <ProgressBar
+          indeterminate={mutationState.loading}
+          progress={mutationState.loading ? 0 : uploadProgress / 100}
+        />
+      )}
+      {!mutationState.loading && uploadProgress !== null && (
+        <div className="text-sm">
+          <Trans ns="admin:data">
+            Upload Progress: {uploadProgress.toFixed(1)}%
+          </Trans>
+        </div>
+      )}
+      {mutationState.loading && (
+        <div className="text-sm">
+          <Trans ns="admin:data">Server is processing tileset...</Trans>
+        </div>
+      )}
     </Modal>
   );
 }
