@@ -6995,11 +6995,7 @@ export type Mutation = {
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
   /** Replace the tileset for an existing data source */
-<<<<<<< HEAD
   replacePMTiles: DataLayer;
-=======
-  replacePMTiles: DataSource;
->>>>>>> 7dcce31f (WIP)
   /**
    * Re-sends an email verification link to the canonical email for the
    * current user session
@@ -8134,11 +8130,7 @@ export type MutationRemoveValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationReplacePmTilesArgs = {
   dataSourceId: Scalars['Int'];
-<<<<<<< HEAD
   pmtilesKey: Scalars['String'];
-=======
-  pmtiles: Scalars['Upload'];
->>>>>>> 7dcce31f (WIP)
 };
 
 
@@ -17279,10 +17271,14 @@ export type ProjectBackgroundJobSubscription = (
 export type ReplacePmTilesMutationVariables = Exact<{
   dataSourceId: Scalars['Int'];
 <<<<<<< HEAD
+<<<<<<< HEAD
   pmtilesKey: Scalars['String'];
 =======
   pmtiles: Scalars['Upload'];
 >>>>>>> 2873b7ff (Merging)
+=======
+  pmtilesKey: Scalars['String'];
+>>>>>>> 11bf212e (WIP)
 }>;
 
 
@@ -17290,6 +17286,9 @@ export type ReplacePmTilesMutation = (
   { __typename?: 'Mutation' }
   & { replacePMTiles: (
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 11bf212e (WIP)
     { __typename?: 'DataLayer' }
     & Pick<DataLayer, 'id' | 'dataSourceId'>
     & { dataSource?: Maybe<(
@@ -17314,6 +17313,7 @@ export type GetPresignedPmTilesUploadUrlMutation = (
   & { getPresignedPMTilesUploadUrl: (
     { __typename?: 'PresignedUrl' }
     & Pick<PresignedUrl, 'url' | 'key'>
+<<<<<<< HEAD
 =======
     { __typename?: 'DataSource' }
     & Pick<DataSource, 'id' | 'url'>
@@ -17322,6 +17322,8 @@ export type GetPresignedPmTilesUploadUrlMutation = (
       & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt'>
     )>> }
 >>>>>>> 2873b7ff (Merging)
+=======
+>>>>>>> 11bf212e (WIP)
   ) }
 );
 
@@ -24182,6 +24184,7 @@ export const ProjectBackgroundJobDocument = /*#__PURE__*/ gql`
     ${BackgroundJobSubscriptionEventFragmentDoc}`;
 export const ReplacePmTilesDocument = /*#__PURE__*/ gql`
 <<<<<<< HEAD
+<<<<<<< HEAD
     mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
   replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
     id
@@ -24199,20 +24202,37 @@ export const ReplacePmTilesDocument = /*#__PURE__*/ gql`
 =======
     mutation ReplacePMTiles($dataSourceId: Int!, $pmtiles: Upload!) {
   replacePMTiles(dataSourceId: $dataSourceId, pmtiles: $pmtiles) {
+=======
+    mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
+  replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
+>>>>>>> 11bf212e (WIP)
     id
-    url
-    outputs {
-      id
+    dataSourceId
+    dataSource {
       url
+<<<<<<< HEAD
       type
       size
       createdAt
 >>>>>>> 2873b7ff (Merging)
+=======
+      outputs {
+        id
+        url
+        type
+        size
+        createdAt
+        isCustomUpload
+      }
+>>>>>>> 11bf212e (WIP)
     }
   }
 }
     `;
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> 11bf212e (WIP)
 export const GetPresignedPmTilesUploadUrlDocument = /*#__PURE__*/ gql`
     mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
   getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
@@ -24221,8 +24241,11 @@ export const GetPresignedPmTilesUploadUrlDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+<<<<<<< HEAD
 =======
 >>>>>>> 2873b7ff (Merging)
+=======
+>>>>>>> 11bf212e (WIP)
 export const DownloadableOfflineTilePackagesDocument = /*#__PURE__*/ gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -27275,9 +27298,13 @@ export const namedOperations = {
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
     ReplacePMTiles: 'ReplacePMTiles',
 <<<<<<< HEAD
+<<<<<<< HEAD
     getPresignedPMTilesUploadUrl: 'getPresignedPMTilesUploadUrl',
 =======
 >>>>>>> 2873b7ff (Merging)
+=======
+    getPresignedPMTilesUploadUrl: 'getPresignedPMTilesUploadUrl',
+>>>>>>> 11bf212e (WIP)
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
