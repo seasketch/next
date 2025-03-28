@@ -70,7 +70,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       slug: getSlug(),
     },
     onError,
-    skip: !user,
+    // skip: !user,
   });
 
   useEffect(() => {
