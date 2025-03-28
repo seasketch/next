@@ -10423,6 +10423,7 @@ type Project implements Node {
   communityGuidelines: CommunityGuideline
   createdAt: Datetime
   creatorId: Int!
+  customDocLink: String
   dataHostingQuota: BigInt
   dataHostingQuotaUsed: BigInt
   dataHostingRetentionPeriod: Interval
@@ -11374,6 +11375,7 @@ input ProjectPatch {
   Admins can control whether a project is public, invite-only, or admins-only.
   """
   accessControl: ProjectAccessControlSetting
+  customDocLink: String
   dataHostingRetentionPeriod: IntervalInput
   dataSourcesBucketId: String
 

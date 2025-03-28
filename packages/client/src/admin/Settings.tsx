@@ -129,6 +129,7 @@ function BasicSettingsForm(props: {
   logo?: string;
   logoUrl?: string | null;
   logoLink?: string | null;
+  customDocLink?: string | null;
   description?: string | null;
   url: string;
   slug: string;
@@ -260,6 +261,28 @@ function BasicSettingsForm(props: {
                     </span>
                   </>
                 }
+              />
+            </div>
+            <div className="md:max-w-xs mt-5">
+              <ProjectAutosaveInput
+                propName="customDocLink"
+                label={t("Custom Documentation Link")}
+                description={
+                  <Trans ns="admin">
+                    If provided, used as the User Guide link in place of the
+                    SeaSketch guide. We recommend linking to{" "}
+                    <a
+                      target="_blank"
+                      className="underline"
+                      href="https://docs.seasketch.org"
+                    >
+                      docs.seasketch.org
+                    </a>{" "}
+                    from your custom documentation.
+                  </Trans>
+                }
+                value={props.customDocLink || ""}
+                slug={props.slug}
               />
             </div>
           </div>

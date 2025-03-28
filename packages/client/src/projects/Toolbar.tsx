@@ -339,7 +339,10 @@ export default function Toolbar({
             tooltip={t("User Guide")}
             onClick={() =>
               window.open(
-                "https://docs.seasketch.org/seasketch-documentation/users-guide/getting-started",
+                data?.project?.customDocLink &&
+                  data.project.customDocLink.length > 1
+                  ? data.project.customDocLink
+                  : "https://docs.seasketch.org/seasketch-documentation/users-guide/getting-started",
                 "_blank"
               )
             }
