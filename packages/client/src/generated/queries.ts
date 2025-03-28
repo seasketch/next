@@ -9264,6 +9264,7 @@ export type Project = Node & {
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
   creatorId: Scalars['Int'];
+  customDocLink?: Maybe<Scalars['String']>;
   dataHostingQuota?: Maybe<Scalars['BigInt']>;
   dataHostingQuotaUsed?: Maybe<Scalars['BigInt']>;
   dataHostingRetentionPeriod?: Maybe<Interval>;
@@ -10232,6 +10233,7 @@ export type ProjectMapDataRequest = Node & {
 export type ProjectPatch = {
   /** Admins can control whether a project is public, invite-only, or admins-only. */
   accessControl?: Maybe<ProjectAccessControlSetting>;
+  customDocLink?: Maybe<Scalars['String']>;
   dataHostingRetentionPeriod?: Maybe<IntervalInput>;
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
@@ -19228,7 +19230,7 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'customDocLink'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -21044,6 +21046,7 @@ export type UpdateProjectSettingsMutationVariables = Exact<{
   logoLink?: Maybe<Scalars['String']>;
   isFeatured?: Maybe<Scalars['Boolean']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
+  customDocLink?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -21054,7 +21057,7 @@ export type UpdateProjectSettingsMutation = (
     & Pick<UpdateProjectPayload, 'clientMutationId'>
     & { project?: Maybe<(
       { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured'>
+      & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'logoLink' | 'mapboxPublicKey' | 'mapboxSecretKey' | 'isFeatured' | 'customDocLink'>
     )> }
   )> }
 );
@@ -22653,6 +22656,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     lang
     html
   }
+  customDocLink
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -26511,9 +26515,9 @@ export const UpdateProjectNameDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
-    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String) {
+    mutation UpdateProjectSettings($slug: String!, $clientMutationId: String, $name: String, $description: String, $logoUrl: Upload, $logoLink: String, $isFeatured: Boolean, $mapboxPublicKey: String, $customDocLink: String) {
   updateProjectBySlug(
-    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey}}
+    input: {slug: $slug, clientMutationId: $clientMutationId, patch: {name: $name, description: $description, logoUrl: $logoUrl, logoLink: $logoLink, isFeatured: $isFeatured, mapboxPublicKey: $mapboxPublicKey, customDocLink: $customDocLink}}
   ) {
     clientMutationId
     project {
@@ -26525,6 +26529,7 @@ export const UpdateProjectSettingsDocument = /*#__PURE__*/ gql`
       mapboxPublicKey
       mapboxSecretKey
       isFeatured
+      customDocLink
     }
   }
 }
