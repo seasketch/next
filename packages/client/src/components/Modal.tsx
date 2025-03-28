@@ -148,7 +148,7 @@ export default function Modal(props: ModalProps) {
                       <Dialog.Title
                         tabIndex={-1}
                         as="h3"
-                        className={`truncate p-6 text-lg leading-6 font-medium text-gray-900 ${
+                        className={`p-6 text-lg leading-6 font-medium text-gray-900 ${
                           props.tabs !== undefined ? "pb-0" : "pb-4"
                         } ${
                           (props.tabs !== undefined || props.scrollable) &&
