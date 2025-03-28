@@ -130,7 +130,7 @@ export default function ForumTreeView(props: {
   );
 
   return (
-    <div className={`text-sm -ml-6`}>
+    <div className={`text-sm ml-2`}>
       <TreeView
         items={treeItems}
         ariaLabel="Table of Contents"
