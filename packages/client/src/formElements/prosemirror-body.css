@@ -95,7 +95,7 @@
 }
 
 .ProseMirrorBody.ForumPost [data-sketch-toc-attachment] {
-  @apply px-9 py-2;
+  @apply py-2;
 }
 
 .ProseMirrorBody button[data-attachment-id] {
