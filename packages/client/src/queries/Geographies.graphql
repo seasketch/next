@@ -1,0 +1,14 @@
+query GeographyClippingLayers {
+  geographyClippingLayers {
+    id
+    sourceLayer
+    version
+    mapboxGlStyles
+    dataSourceId
+    dataSource {
+      id
+      type
+      url
+    }
+  }
+}

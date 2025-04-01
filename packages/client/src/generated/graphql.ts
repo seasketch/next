@@ -10542,6 +10542,8 @@ export type Query = Node & {
   forumByNodeId?: Maybe<Forum>;
   generateExportId?: Maybe<Scalars['String']>;
   generateLabel?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  geographyClippingLayers?: Maybe<Array<DataLayer>>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
@@ -11093,6 +11095,13 @@ export type QueryGenerateExportIdArgs = {
 export type QueryGenerateLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
   id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -18804,6 +18813,21 @@ export type DeleteSpriteMutation = (
       & SpriteDetailsFragment
     )> }
   )> }
+);
+
+export type GeographyClippingLayersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GeographyClippingLayersQuery = (
+  { __typename?: 'Query' }
+  & { geographyClippingLayers?: Maybe<Array<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'type' | 'url'>
+    )> }
+  )>> }
 );
 
 export type JoinProjectMutationVariables = Exact<{
@@ -28907,6 +28931,48 @@ export function useDeleteSpriteMutation(baseOptions?: Apollo.MutationHookOptions
 export type DeleteSpriteMutationHookResult = ReturnType<typeof useDeleteSpriteMutation>;
 export type DeleteSpriteMutationResult = Apollo.MutationResult<DeleteSpriteMutation>;
 export type DeleteSpriteMutationOptions = Apollo.BaseMutationOptions<DeleteSpriteMutation, DeleteSpriteMutationVariables>;
+export const GeographyClippingLayersDocument = gql`
+    query GeographyClippingLayers {
+  geographyClippingLayers {
+    id
+    sourceLayer
+    version
+    mapboxGlStyles
+    dataSource {
+      id
+      type
+      url
+    }
+  }
+}
+    `;
+
+/**
+ * __useGeographyClippingLayersQuery__
+ *
+ * To run a query within a React component, call `useGeographyClippingLayersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeographyClippingLayersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeographyClippingLayersQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGeographyClippingLayersQuery(baseOptions?: Apollo.QueryHookOptions<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>(GeographyClippingLayersDocument, options);
+      }
+export function useGeographyClippingLayersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>(GeographyClippingLayersDocument, options);
+        }
+export type GeographyClippingLayersQueryHookResult = ReturnType<typeof useGeographyClippingLayersQuery>;
+export type GeographyClippingLayersLazyQueryHookResult = ReturnType<typeof useGeographyClippingLayersLazyQuery>;
+export type GeographyClippingLayersQueryResult = Apollo.QueryResult<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -34342,6 +34408,7 @@ export const namedOperations = {
     GetBookmark: 'GetBookmark',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
+    GeographyClippingLayers: 'GeographyClippingLayers',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',

@@ -11983,6 +11983,15 @@ type Query implements Node {
   ): Forum
   generateExportId(body: JSON, exportId: String, id: Int): String
   generateLabel(body: JSON, id: Int): String
+
+  """Reads and enables pagination through a set of `DataLayer`."""
+  geographyClippingLayers(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DataLayer!]
   getDefaultDataSourcesBucket: String
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float

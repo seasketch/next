@@ -142,7 +142,7 @@ export default function CustomizeTilesModal({
       )}
       {mutationState.loading && (
         <div className="text-sm">
-          <Trans ns="admin:data">Server is processing tileset...</Trans>
+          <Trans ns="admin:data">Server is processing the tileset...</Trans>
         </div>
       )}
     </Modal>

@@ -10540,6 +10540,8 @@ export type Query = Node & {
   forumByNodeId?: Maybe<Forum>;
   generateExportId?: Maybe<Scalars['String']>;
   generateLabel?: Maybe<Scalars['String']>;
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  geographyClippingLayers?: Maybe<Array<DataLayer>>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
@@ -11091,6 +11093,13 @@ export type QueryGenerateExportIdArgs = {
 export type QueryGenerateLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
   id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -18804,6 +18813,21 @@ export type DeleteSpriteMutation = (
   )> }
 );
 
+export type GeographyClippingLayersQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GeographyClippingLayersQuery = (
+  { __typename?: 'Query' }
+  & { geographyClippingLayers?: Maybe<Array<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'id' | 'type' | 'url'>
+    )> }
+  )>> }
+);
+
 export type JoinProjectMutationVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
@@ -25183,6 +25207,21 @@ export const DeleteSpriteDocument = /*#__PURE__*/ gql`
   }
 }
     ${SpriteDetailsFragmentDoc}`;
+export const GeographyClippingLayersDocument = /*#__PURE__*/ gql`
+    query GeographyClippingLayers {
+  geographyClippingLayers {
+    id
+    sourceLayer
+    version
+    mapboxGlStyles
+    dataSource {
+      id
+      type
+      url
+    }
+  }
+}
+    `;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -27099,6 +27138,7 @@ export const namedOperations = {
     GetBookmark: 'GetBookmark',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
+    GeographyClippingLayers: 'GeographyClippingLayers',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
