@@ -18845,7 +18845,11 @@ export type GeographyClippingLayersQuery = (
   { __typename?: 'Query' }
   & { geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
+<<<<<<< HEAD
     & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles' | 'dataSourceId'>
+=======
+    & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles'>
+>>>>>>> f59c2a98 (WIP)
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
       & Pick<DataSource, 'id' | 'type' | 'url'>
@@ -25279,7 +25283,10 @@ export const GeographyClippingLayersDocument = /*#__PURE__*/ gql`
     sourceLayer
     version
     mapboxGlStyles
+<<<<<<< HEAD
     dataSourceId
+=======
+>>>>>>> f59c2a98 (WIP)
     dataSource {
       id
       type
