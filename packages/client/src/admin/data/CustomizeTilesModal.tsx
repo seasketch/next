@@ -23,23 +23,32 @@ export default function CustomizeTilesModal({
     useGetPresignedPmTilesUploadUrlMutation();
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const onError = useGlobalErrorHandler();
+  const [abortController, setAbortController] =
+    useState<AbortController | null>(null);
 
-  const handleFileUpload = async (file: File, url: string) => {
+  const handleFileUpload = async (
+    file: File,
+    url: string,
+    signal: AbortSignal
+  ) => {
     try {
       await axios({
         url,
         method: "PUT",
         data: file,
+        signal,
         headers: {
           "Content-Type": "application/vnd.pmtiles",
         },
         onUploadProgress: (progressEvent) => {
-          console.log(progressEvent);
           const progress = (progressEvent.loaded / progressEvent.total) * 100;
           setUploadProgress(progress);
         },
       });
     } catch (error) {
+      if (signal?.aborted) {
+        return;
+      }
       onError(error);
     }
   };
@@ -47,17 +56,24 @@ export default function CustomizeTilesModal({
   return (
     <Modal
       title={t("Replace Tileset")}
+      disableBackdropClick={mutationState.loading}
       onRequestClose={onRequestClose}
       footer={[
         {
           label: t("Cancel"),
-          onClick: onRequestClose,
+          disabled: mutationState.loading,
+          onClick: () => {
+            abortController?.abort();
+            onRequestClose();
+          },
         },
         {
           label: t("Choose a PMTiles file"),
           loading: mutationState.loading || uploadProgress !== null,
           disabled: mutationState.loading || uploadProgress !== null,
           onClick: () => {
+            const ac = new AbortController();
+            setAbortController(ac);
             const input = document.createElement("input");
             input.type = "file";
             input.accept = ".pmtiles";
@@ -76,7 +92,12 @@ export default function CustomizeTilesModal({
               }
               const { url, key } = response.data.getPresignedPMTilesUploadUrl;
               try {
-                await handleFileUpload(file, url);
+                await handleFileUpload(file, url, ac.signal);
+                if (ac?.signal?.aborted) {
+                  setUploadProgress(null);
+                  onRequestClose();
+                  return;
+                }
                 await mutation({
                   variables: {
                     dataSourceId: source.id,
@@ -87,6 +108,9 @@ export default function CustomizeTilesModal({
                 onRequestClose();
                 // alert("File uploaded successfully");
               } catch (error) {
+                if (error.name === "AbortError") {
+                  return;
+                }
                 alert(error.message);
               }
             };

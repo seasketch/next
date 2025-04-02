@@ -9363,6 +9363,12 @@ type Mutation {
     """
     input: UpdateInteractivitySettingByNodeIdInput!
   ): UpdateInteractivitySettingPayload
+  updateLandClippingSettings(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateLandClippingSettingsInput!
+  ): UpdateLandClippingSettingsPayload
   updateMapboxSecretKey(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10506,6 +10512,7 @@ type Project implements Node {
     """The method to use when ordering `Forum`."""
     orderBy: [ForumsOrderBy!]
   ): [Forum!]!
+  geographySettings: ProjectGeographySetting
 
   """Reads and enables pagination through a set of `Group`."""
   groups(
@@ -11116,6 +11123,19 @@ type ProjectDraftTableOfContentsStatusPayload {
   hasChanges: Boolean!
   project: Project
   projectId: Int!
+}
+
+type ProjectGeographySetting implements Node {
+  eezSelections: [String]
+  enableEezClipping: Boolean
+  enableLandClipping: Boolean
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  projectId: Int
 }
 
 """
@@ -11842,6 +11862,7 @@ type Query implements Node {
     """The method to use when ordering `DataUploadTask`."""
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection
+  eezlayer: TableOfContentsItem
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
   """
@@ -12601,6 +12622,7 @@ type Query implements Node {
     """The method to use when ordering `Topic`."""
     orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TopicsConnection
+  updateEezClippingSettings(enableClipping: Boolean, selections: [String], slug: String): ProjectGeographySetting
   user(id: Int!): User
 
   """Reads a single `User` using its globally unique `ID`."""
@@ -16227,6 +16249,32 @@ type UpdateInteractivitySettingPayload {
 
   """The `InteractivitySetting` that was updated by this mutation."""
   interactivitySetting: InteractivitySetting
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateLandClippingSettings` mutation."""
+input UpdateLandClippingSettingsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  enableClipping: Boolean
+  slug: String
+}
+
+"""The output of our `updateLandClippingSettings` mutation."""
+type UpdateLandClippingSettingsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  projectGeographySetting: ProjectGeographySetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

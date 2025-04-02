@@ -7143,6 +7143,7 @@ export type Mutation = {
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
+  updateLandClippingSettings?: Maybe<UpdateLandClippingSettingsPayload>;
   updateMapboxSecretKey?: Maybe<UpdateMapboxSecretKeyPayload>;
   /** Updates a single `OfflineTileSetting` using a unique key and a patch. */
   updateOfflineTileSetting?: Maybe<UpdateOfflineTileSettingPayload>;
@@ -8515,6 +8516,12 @@ export type MutationUpdateInteractivitySettingByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateLandClippingSettingsArgs = {
+  input: UpdateLandClippingSettingsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateMapboxSecretKeyArgs = {
   input: UpdateMapboxSecretKeyInput;
 };
@@ -9329,6 +9336,7 @@ export type Project = Node & {
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
+  geographySettings?: Maybe<ProjectGeographySetting>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   hideForums: Scalars['Boolean'];
@@ -10022,6 +10030,17 @@ export type ProjectDraftTableOfContentsStatusPayload = {
   projectId: Scalars['Int'];
 };
 
+export type ProjectGeographySetting = Node & {
+  __typename?: 'ProjectGeographySetting';
+  eezSelections?: Maybe<Array<Maybe<Scalars['String']>>>;
+  enableEezClipping?: Maybe<Scalars['Boolean']>;
+  enableLandClipping?: Maybe<Scalars['Boolean']>;
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  projectId?: Maybe<Scalars['Int']>;
+};
+
 /**
  * Admins can invite users to their project, adding them to user groups and
  * distributing admin privileges as needed. Invitations can be immediately sent via
@@ -10510,6 +10529,7 @@ export type Query = Node & {
   dataUploadTaskByNodeId?: Maybe<DataUploadTask>;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
+  eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
@@ -10680,6 +10700,7 @@ export type Query = Node & {
   topicByNodeId?: Maybe<Topic>;
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection?: Maybe<TopicsConnection>;
+  updateEezClippingSettings?: Maybe<ProjectGeographySetting>;
   user?: Maybe<User>;
   /** Reads a single `User` using its globally unique `ID`. */
   userByNodeId?: Maybe<User>;
@@ -11694,6 +11715,14 @@ export type QueryTopicsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<TopicsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryUpdateEezClippingSettingsArgs = {
+  enableClipping?: Maybe<Scalars['Boolean']>;
+  selections?: Maybe<Array<Maybe<Scalars['String']>>>;
+  slug?: Maybe<Scalars['String']>;
 };
 
 
@@ -14741,6 +14770,30 @@ export type UpdateInteractivitySettingPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateLandClippingSettings` mutation. */
+export type UpdateLandClippingSettingsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enableClipping?: Maybe<Scalars['Boolean']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateLandClippingSettings` mutation. */
+export type UpdateLandClippingSettingsPayload = {
+  __typename?: 'UpdateLandClippingSettingsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectGeographySetting?: Maybe<ProjectGeographySetting>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `updateMapboxSecretKey` mutation. */
 export type UpdateMapboxSecretKeyInput = {
   /**
@@ -17272,25 +17325,13 @@ export type ProjectBackgroundJobSubscription = (
 
 export type ReplacePmTilesMutationVariables = Exact<{
   dataSourceId: Scalars['Int'];
-<<<<<<< HEAD
-<<<<<<< HEAD
   pmtilesKey: Scalars['String'];
-=======
-  pmtiles: Scalars['Upload'];
->>>>>>> 2873b7ff (Merging)
-=======
-  pmtilesKey: Scalars['String'];
->>>>>>> 11bf212e (WIP)
 }>;
 
 
 export type ReplacePmTilesMutation = (
   { __typename?: 'Mutation' }
   & { replacePMTiles: (
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 11bf212e (WIP)
     { __typename?: 'DataLayer' }
     & Pick<DataLayer, 'id' | 'dataSourceId'>
     & { dataSource?: Maybe<(
@@ -17315,17 +17356,6 @@ export type GetPresignedPmTilesUploadUrlMutation = (
   & { getPresignedPMTilesUploadUrl: (
     { __typename?: 'PresignedUrl' }
     & Pick<PresignedUrl, 'url' | 'key'>
-<<<<<<< HEAD
-=======
-    { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'url'>
-    & { outputs?: Maybe<Array<(
-      { __typename?: 'DataUploadOutput' }
-      & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt'>
-    )>> }
->>>>>>> 2873b7ff (Merging)
-=======
->>>>>>> 11bf212e (WIP)
   ) }
 );
 
@@ -18840,23 +18870,68 @@ export type DeleteSpriteMutation = (
   )> }
 );
 
-export type GeographyClippingLayersQueryVariables = Exact<{ [key: string]: never; }>;
+export type GeographyClippingLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
 
 
 export type GeographyClippingLayersQuery = (
   { __typename?: 'Query' }
   & { geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
-<<<<<<< HEAD
     & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles' | 'dataSourceId'>
-=======
-    & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles'>
->>>>>>> f59c2a98 (WIP)
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'type' | 'url'>
+      & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
+      & { authorProfile?: Maybe<(
+        { __typename?: 'Profile' }
+        & UserProfileDetailsFragment
+      )> }
     )> }
-  )>> }
+  )>>, projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { geographySettings?: Maybe<(
+      { __typename?: 'ProjectGeographySetting' }
+      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'eezSelections' | 'enableEezClipping' | 'enableLandClipping'>
+    )> }
+  )> }
+);
+
+export type UpdateLandClippingSettingsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enable: Scalars['Boolean'];
+}>;
+
+
+export type UpdateLandClippingSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateLandClippingSettings?: Maybe<(
+    { __typename?: 'UpdateLandClippingSettingsPayload' }
+    & { projectGeographySetting?: Maybe<(
+      { __typename?: 'ProjectGeographySetting' }
+      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'enableLandClipping' | 'eezSelections'>
+    )> }
+  )> }
+);
+
+export type EezLayerQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type EezLayerQuery = (
+  { __typename?: 'Query' }
+  & { eezlayer?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'url' | 'type' | 'geostats'>
+      )> }
+    )> }
+  )> }
 );
 
 export type JoinProjectMutationVariables = Exact<{
@@ -25914,8 +25989,6 @@ export function useProjectBackgroundJobSubscription(baseOptions: Apollo.Subscrip
 export type ProjectBackgroundJobSubscriptionHookResult = ReturnType<typeof useProjectBackgroundJobSubscription>;
 export type ProjectBackgroundJobSubscriptionResult = Apollo.SubscriptionResult<ProjectBackgroundJobSubscription>;
 export const ReplacePmTilesDocument = gql`
-<<<<<<< HEAD
-<<<<<<< HEAD
     mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
   replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
     id
@@ -25930,32 +26003,6 @@ export const ReplacePmTilesDocument = gql`
         createdAt
         isCustomUpload
       }
-=======
-    mutation ReplacePMTiles($dataSourceId: Int!, $pmtiles: Upload!) {
-  replacePMTiles(dataSourceId: $dataSourceId, pmtiles: $pmtiles) {
-=======
-    mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
-  replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
->>>>>>> 11bf212e (WIP)
-    id
-    dataSourceId
-    dataSource {
-      url
-<<<<<<< HEAD
-      type
-      size
-      createdAt
->>>>>>> 2873b7ff (Merging)
-=======
-      outputs {
-        id
-        url
-        type
-        size
-        createdAt
-        isCustomUpload
-      }
->>>>>>> 11bf212e (WIP)
     }
   }
 }
@@ -25976,15 +26023,7 @@ export type ReplacePmTilesMutationFn = Apollo.MutationFunction<ReplacePmTilesMut
  * const [replacePmTilesMutation, { data, loading, error }] = useReplacePmTilesMutation({
  *   variables: {
  *      dataSourceId: // value for 'dataSourceId'
-<<<<<<< HEAD
-<<<<<<< HEAD
  *      pmtilesKey: // value for 'pmtilesKey'
-=======
- *      pmtiles: // value for 'pmtiles'
->>>>>>> 2873b7ff (Merging)
-=======
- *      pmtilesKey: // value for 'pmtilesKey'
->>>>>>> 11bf212e (WIP)
  *   },
  * });
  */
@@ -25995,10 +26034,6 @@ export function useReplacePmTilesMutation(baseOptions?: Apollo.MutationHookOptio
 export type ReplacePmTilesMutationHookResult = ReturnType<typeof useReplacePmTilesMutation>;
 export type ReplacePmTilesMutationResult = Apollo.MutationResult<ReplacePmTilesMutation>;
 export type ReplacePmTilesMutationOptions = Apollo.BaseMutationOptions<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>;
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
->>>>>>> 11bf212e (WIP)
 export const GetPresignedPmTilesUploadUrlDocument = gql`
     mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
   getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
@@ -26034,11 +26069,6 @@ export function useGetPresignedPmTilesUploadUrlMutation(baseOptions?: Apollo.Mut
 export type GetPresignedPmTilesUploadUrlMutationHookResult = ReturnType<typeof useGetPresignedPmTilesUploadUrlMutation>;
 export type GetPresignedPmTilesUploadUrlMutationResult = Apollo.MutationResult<GetPresignedPmTilesUploadUrlMutation>;
 export type GetPresignedPmTilesUploadUrlMutationOptions = Apollo.BaseMutationOptions<GetPresignedPmTilesUploadUrlMutation, GetPresignedPmTilesUploadUrlMutationVariables>;
-<<<<<<< HEAD
-=======
->>>>>>> 2873b7ff (Merging)
-=======
->>>>>>> 11bf212e (WIP)
 export const DownloadableOfflineTilePackagesDocument = gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29009,24 +29039,36 @@ export type DeleteSpriteMutationHookResult = ReturnType<typeof useDeleteSpriteMu
 export type DeleteSpriteMutationResult = Apollo.MutationResult<DeleteSpriteMutation>;
 export type DeleteSpriteMutationOptions = Apollo.BaseMutationOptions<DeleteSpriteMutation, DeleteSpriteMutationVariables>;
 export const GeographyClippingLayersDocument = gql`
-    query GeographyClippingLayers {
+    query GeographyClippingLayers($slug: String!) {
   geographyClippingLayers {
     id
     sourceLayer
     version
     mapboxGlStyles
-<<<<<<< HEAD
     dataSourceId
-=======
->>>>>>> f59c2a98 (WIP)
     dataSource {
       id
       type
       url
+      dataLibraryTemplateId
+      createdAt
+      authorProfile {
+        ...UserProfileDetails
+      }
+    }
+  }
+  projectBySlug(slug: $slug) {
+    id
+    geographySettings {
+      id
+      projectId
+      eezSelections
+      enableEezClipping
+      enableLandClipping
     }
   }
 }
-    `;
+    ${UserProfileDetailsFragmentDoc}`;
 
 /**
  * __useGeographyClippingLayersQuery__
@@ -29040,10 +29082,11 @@ export const GeographyClippingLayersDocument = gql`
  * @example
  * const { data, loading, error } = useGeographyClippingLayersQuery({
  *   variables: {
+ *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useGeographyClippingLayersQuery(baseOptions?: Apollo.QueryHookOptions<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>) {
+export function useGeographyClippingLayersQuery(baseOptions: Apollo.QueryHookOptions<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>(GeographyClippingLayersDocument, options);
       }
@@ -29054,6 +29097,88 @@ export function useGeographyClippingLayersLazyQuery(baseOptions?: Apollo.LazyQue
 export type GeographyClippingLayersQueryHookResult = ReturnType<typeof useGeographyClippingLayersQuery>;
 export type GeographyClippingLayersLazyQueryHookResult = ReturnType<typeof useGeographyClippingLayersLazyQuery>;
 export type GeographyClippingLayersQueryResult = Apollo.QueryResult<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>;
+export const UpdateLandClippingSettingsDocument = gql`
+    mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
+  updateLandClippingSettings(input: {slug: $slug, enableClipping: $enable}) {
+    projectGeographySetting {
+      id
+      projectId
+      enableLandClipping
+      eezSelections
+    }
+  }
+}
+    `;
+export type UpdateLandClippingSettingsMutationFn = Apollo.MutationFunction<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>;
+
+/**
+ * __useUpdateLandClippingSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateLandClippingSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateLandClippingSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateLandClippingSettingsMutation, { data, loading, error }] = useUpdateLandClippingSettingsMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      enable: // value for 'enable'
+ *   },
+ * });
+ */
+export function useUpdateLandClippingSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>(UpdateLandClippingSettingsDocument, options);
+      }
+export type UpdateLandClippingSettingsMutationHookResult = ReturnType<typeof useUpdateLandClippingSettingsMutation>;
+export type UpdateLandClippingSettingsMutationResult = Apollo.MutationResult<UpdateLandClippingSettingsMutation>;
+export type UpdateLandClippingSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>;
+export const EezLayerDocument = gql`
+    query EEZLayer {
+  eezlayer {
+    id
+    dataLayer {
+      id
+      dataSource {
+        id
+        url
+        type
+        geostats
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useEezLayerQuery__
+ *
+ * To run a query within a React component, call `useEezLayerQuery` and pass it any options that fit your needs.
+ * When your component renders, `useEezLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useEezLayerQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useEezLayerQuery(baseOptions?: Apollo.QueryHookOptions<EezLayerQuery, EezLayerQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<EezLayerQuery, EezLayerQueryVariables>(EezLayerDocument, options);
+      }
+export function useEezLayerLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<EezLayerQuery, EezLayerQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<EezLayerQuery, EezLayerQueryVariables>(EezLayerDocument, options);
+        }
+export type EezLayerQueryHookResult = ReturnType<typeof useEezLayerQuery>;
+export type EezLayerLazyQueryHookResult = ReturnType<typeof useEezLayerLazyQuery>;
+export type EezLayerQueryResult = Apollo.QueryResult<EezLayerQuery, EezLayerQueryVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -34492,6 +34617,7 @@ export const namedOperations = {
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GeographyClippingLayers: 'GeographyClippingLayers',
+    EEZLayer: 'EEZLayer',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -34583,14 +34709,7 @@ export const namedOperations = {
     CancelUpload: 'CancelUpload',
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
     ReplacePMTiles: 'ReplacePMTiles',
-<<<<<<< HEAD
-<<<<<<< HEAD
     getPresignedPMTilesUploadUrl: 'getPresignedPMTilesUploadUrl',
-=======
->>>>>>> 2873b7ff (Merging)
-=======
-    getPresignedPMTilesUploadUrl: 'getPresignedPMTilesUploadUrl',
->>>>>>> 11bf212e (WIP)
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
@@ -34632,6 +34751,7 @@ export const namedOperations = {
     createFileUploadForPost: 'createFileUploadForPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
+    UpdateLandClippingSettings: 'UpdateLandClippingSettings',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

@@ -47,6 +47,13 @@ const LazySketchingAdmin = React.lazy(
     )
 );
 
+const LazyGeographyAdmin = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminGeography" */ "./Geography/GeographyAdmin"
+    )
+);
+
 export default function AdminRouter() {
   let { path } = useRouteMatch();
   const { t } = useTranslation("admin");
@@ -127,6 +134,11 @@ export default function AdminRouter() {
       <Route path={`${path}/offline/:subpath?`}>
         <React.Suspense fallback={<Spinner />}>
           <LazyOfflineAdmin />
+        </React.Suspense>
+      </Route>
+      <Route path={`${path}/geography`}>
+        <React.Suspense fallback={<Spinner />}>
+          <LazyGeographyAdmin />
         </React.Suspense>
       </Route>
     </Switch>

@@ -8,12 +8,7 @@ import { createHash } from "crypto";
 import { DBClient } from "../dbClient";
 import { PMTiles, TileType } from "pmtiles";
 
-const {
-  R2_ACCESS_KEY_ID,
-  R2_SECRET_ACCESS_KEY,
-  R2_ENDPOINT,
-  R2_FILE_UPLOADS_BUCKET,
-} = process.env;
+const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT } = process.env;
 
 const r2 = new S3.default({
   region: "auto",
@@ -177,7 +172,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
               Key: pmtilesKey,
             })
             .createReadStream();
-          const r2Key = `${row.slug}/public/${layerName}.pmtiles`;
+          const r2Key = `${row.slug}/public/${uuid()}.pmtiles`;
           const r2Url = `https://tiles.seasketch.org/${r2Key.replace(
             ".pmtiles",
             ""
@@ -192,10 +187,12 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
               CacheControl: "public, max-age=31536000",
             })
             .promise();
+          console.log("Uploading to R2", r2Key);
           s3Stream.pipe(pass).on("error", (error: Error) => {
             throw error;
           });
           await promise;
+          console.log("done uploading");
 
           // update the data_source.url
           await pgClient.query(

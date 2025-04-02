@@ -1,4 +1,4 @@
-query GeographyClippingLayers {
+query GeographyClippingLayers($slug: String!) {
   geographyClippingLayers {
     id
     sourceLayer
@@ -9,6 +9,47 @@ query GeographyClippingLayers {
       id
       type
       url
+      dataLibraryTemplateId
+      createdAt
+      authorProfile {
+        ...UserProfileDetails
+      }
+    }
+  }
+  projectBySlug(slug: $slug) {
+    id
+    geographySettings {
+      id
+      projectId
+      eezSelections
+      enableEezClipping
+      enableLandClipping
+    }
+  }
+}
+
+mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
+  updateLandClippingSettings(input: { slug: $slug, enableClipping: $enable }) {
+    projectGeographySetting {
+      id
+      projectId
+      enableLandClipping
+      eezSelections
+    }
+  }
+}
+
+query EEZLayer {
+  eezlayer {
+    id
+    dataLayer {
+      id
+      dataSource {
+        id
+        url
+        type
+        geostats
+      }
     }
   }
 }
