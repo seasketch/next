@@ -6997,7 +6997,11 @@ export type Mutation = {
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
   /** Replace the tileset for an existing data source */
+<<<<<<< HEAD
   replacePMTiles: DataLayer;
+=======
+  replacePMTiles: DataSource;
+>>>>>>> 7dcce31f (WIP)
   /**
    * Re-sends an email verification link to the canonical email for the
    * current user session
@@ -8132,7 +8136,11 @@ export type MutationRemoveValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationReplacePmTilesArgs = {
   dataSourceId: Scalars['Int'];
+<<<<<<< HEAD
   pmtilesKey: Scalars['String'];
+=======
+  pmtiles: Scalars['Upload'];
+>>>>>>> 7dcce31f (WIP)
 };
 
 
@@ -17272,13 +17280,18 @@ export type ProjectBackgroundJobSubscription = (
 
 export type ReplacePmTilesMutationVariables = Exact<{
   dataSourceId: Scalars['Int'];
+<<<<<<< HEAD
   pmtilesKey: Scalars['String'];
+=======
+  pmtiles: Scalars['Upload'];
+>>>>>>> 2873b7ff (Merging)
 }>;
 
 
 export type ReplacePmTilesMutation = (
   { __typename?: 'Mutation' }
   & { replacePMTiles: (
+<<<<<<< HEAD
     { __typename?: 'DataLayer' }
     & Pick<DataLayer, 'id' | 'dataSourceId'>
     & { dataSource?: Maybe<(
@@ -17303,6 +17316,14 @@ export type GetPresignedPmTilesUploadUrlMutation = (
   & { getPresignedPMTilesUploadUrl: (
     { __typename?: 'PresignedUrl' }
     & Pick<PresignedUrl, 'url' | 'key'>
+=======
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id' | 'url'>
+    & { outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'url' | 'type' | 'size' | 'createdAt'>
+    )>> }
+>>>>>>> 2873b7ff (Merging)
   ) }
 );
 
@@ -25887,6 +25908,7 @@ export function useProjectBackgroundJobSubscription(baseOptions: Apollo.Subscrip
 export type ProjectBackgroundJobSubscriptionHookResult = ReturnType<typeof useProjectBackgroundJobSubscription>;
 export type ProjectBackgroundJobSubscriptionResult = Apollo.SubscriptionResult<ProjectBackgroundJobSubscription>;
 export const ReplacePmTilesDocument = gql`
+<<<<<<< HEAD
     mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
   replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
     id
@@ -25901,6 +25923,18 @@ export const ReplacePmTilesDocument = gql`
         createdAt
         isCustomUpload
       }
+=======
+    mutation ReplacePMTiles($dataSourceId: Int!, $pmtiles: Upload!) {
+  replacePMTiles(dataSourceId: $dataSourceId, pmtiles: $pmtiles) {
+    id
+    url
+    outputs {
+      id
+      url
+      type
+      size
+      createdAt
+>>>>>>> 2873b7ff (Merging)
     }
   }
 }
@@ -25921,7 +25955,11 @@ export type ReplacePmTilesMutationFn = Apollo.MutationFunction<ReplacePmTilesMut
  * const [replacePmTilesMutation, { data, loading, error }] = useReplacePmTilesMutation({
  *   variables: {
  *      dataSourceId: // value for 'dataSourceId'
+<<<<<<< HEAD
  *      pmtilesKey: // value for 'pmtilesKey'
+=======
+ *      pmtiles: // value for 'pmtiles'
+>>>>>>> 2873b7ff (Merging)
  *   },
  * });
  */
@@ -25932,6 +25970,7 @@ export function useReplacePmTilesMutation(baseOptions?: Apollo.MutationHookOptio
 export type ReplacePmTilesMutationHookResult = ReturnType<typeof useReplacePmTilesMutation>;
 export type ReplacePmTilesMutationResult = Apollo.MutationResult<ReplacePmTilesMutation>;
 export type ReplacePmTilesMutationOptions = Apollo.BaseMutationOptions<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>;
+<<<<<<< HEAD
 export const GetPresignedPmTilesUploadUrlDocument = gql`
     mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
   getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
@@ -25967,6 +26006,8 @@ export function useGetPresignedPmTilesUploadUrlMutation(baseOptions?: Apollo.Mut
 export type GetPresignedPmTilesUploadUrlMutationHookResult = ReturnType<typeof useGetPresignedPmTilesUploadUrlMutation>;
 export type GetPresignedPmTilesUploadUrlMutationResult = Apollo.MutationResult<GetPresignedPmTilesUploadUrlMutation>;
 export type GetPresignedPmTilesUploadUrlMutationOptions = Apollo.BaseMutationOptions<GetPresignedPmTilesUploadUrlMutation, GetPresignedPmTilesUploadUrlMutationVariables>;
+=======
+>>>>>>> 2873b7ff (Merging)
 export const DownloadableOfflineTilePackagesDocument = gql`
     query DownloadableOfflineTilePackages($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34508,7 +34549,10 @@ export const namedOperations = {
     CancelUpload: 'CancelUpload',
     UpdateDataHostingQuota: 'UpdateDataHostingQuota',
     ReplacePMTiles: 'ReplacePMTiles',
+<<<<<<< HEAD
     getPresignedPMTilesUploadUrl: 'getPresignedPMTilesUploadUrl',
+=======
+>>>>>>> 2873b7ff (Merging)
     CreateFolder: 'CreateFolder',
     DeleteBranch: 'DeleteBranch',
     UpdateTableOfContentsItemChildren: 'UpdateTableOfContentsItemChildren',
