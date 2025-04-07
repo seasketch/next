@@ -45,6 +45,31 @@ mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
   }
 }
 
+mutation UpdateEEZClippingSettings(
+  $slug: String!
+  $enable: Boolean!
+  $eezSelections: [String!]!
+  $ids: [Int!]!
+) {
+  updateEezClippingSettings(
+    input: {
+      slug: $slug
+      enableClipping: $enable
+      selections: $eezSelections
+      ids: $ids
+    }
+  ) {
+    projectGeographySetting {
+      id
+      projectId
+      enableLandClipping
+      enableEezClipping
+      eezSelections
+      mrgidEez
+    }
+  }
+}
+
 query EEZLayer {
   eezlayer {
     id

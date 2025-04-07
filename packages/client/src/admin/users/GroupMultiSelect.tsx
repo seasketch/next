@@ -16,7 +16,7 @@ interface Props {
   onChange: (values: Group[]) => void;
 }
 
-export default function GroupMultiSelect({
+export default function MultiSelect({
   onChange,
   loading,
   groups,

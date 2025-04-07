@@ -7120,6 +7120,7 @@ export type Mutation = {
   updateDataSource?: Maybe<UpdateDataSourcePayload>;
   /** Updates a single `DataSource` using its globally unique id and a patch. */
   updateDataSourceByNodeId?: Maybe<UpdateDataSourcePayload>;
+  updateEezClippingSettings?: Maybe<UpdateEezClippingSettingsPayload>;
   /** Updates a single `EmailNotificationPreference` using a unique key and a patch. */
   updateEmailNotificationPreferenceByUserId?: Maybe<UpdateEmailNotificationPreferencePayload>;
   /** Updates a single `Form` using a unique key and a patch. */
@@ -8417,6 +8418,12 @@ export type MutationUpdateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateDataSourceByNodeIdArgs = {
   input: UpdateDataSourceByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateEezClippingSettingsArgs = {
+  input: UpdateEezClippingSettingsInput;
 };
 
 
@@ -10715,7 +10722,6 @@ export type Query = Node & {
   topicByNodeId?: Maybe<Topic>;
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection?: Maybe<TopicsConnection>;
-  updateEezClippingSettings?: Maybe<ProjectGeographySetting>;
   user?: Maybe<User>;
   /** Reads a single `User` using its globally unique `ID`. */
   userByNodeId?: Maybe<User>;
@@ -11730,15 +11736,6 @@ export type QueryTopicsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<TopicsOrderBy>>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryUpdateEezClippingSettingsArgs = {
-  enableClipping?: Maybe<Scalars['Boolean']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  selections?: Maybe<Array<Maybe<Scalars['String']>>>;
-  slug?: Maybe<Scalars['String']>;
 };
 
 
@@ -14387,6 +14384,32 @@ export type UpdateDataSourcePayload = {
 /** The output of our update `DataSource` mutation. */
 export type UpdateDataSourcePayloadDataSourceEdgeArgs = {
   orderBy?: Maybe<Array<DataSourcesOrderBy>>;
+};
+
+/** All input for the `updateEezClippingSettings` mutation. */
+export type UpdateEezClippingSettingsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enableClipping?: Maybe<Scalars['Boolean']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  selections?: Maybe<Array<Maybe<Scalars['String']>>>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateEezClippingSettings` mutation. */
+export type UpdateEezClippingSettingsPayload = {
+  __typename?: 'UpdateEezClippingSettingsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectGeographySetting?: Maybe<ProjectGeographySetting>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `updateEmailNotificationPreferenceByUserId` mutation. */
@@ -18930,6 +18953,25 @@ export type UpdateLandClippingSettingsMutation = (
     & { projectGeographySetting?: Maybe<(
       { __typename?: 'ProjectGeographySetting' }
       & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'enableLandClipping' | 'eezSelections'>
+    )> }
+  )> }
+);
+
+export type UpdateEezClippingSettingsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enable: Scalars['Boolean'];
+  eezSelections: Array<Scalars['String']> | Scalars['String'];
+  ids: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type UpdateEezClippingSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateEezClippingSettings?: Maybe<(
+    { __typename?: 'UpdateEezClippingSettingsPayload' }
+    & { projectGeographySetting?: Maybe<(
+      { __typename?: 'ProjectGeographySetting' }
+      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'enableLandClipping' | 'enableEezClipping' | 'eezSelections' | 'mrgidEez'>
     )> }
   )> }
 );
@@ -25384,6 +25426,22 @@ export const UpdateLandClippingSettingsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateEezClippingSettingsDocument = /*#__PURE__*/ gql`
+    mutation UpdateEEZClippingSettings($slug: String!, $enable: Boolean!, $eezSelections: [String!]!, $ids: [Int!]!) {
+  updateEezClippingSettings(
+    input: {slug: $slug, enableClipping: $enable, selections: $eezSelections, ids: $ids}
+  ) {
+    projectGeographySetting {
+      id
+      projectId
+      enableLandClipping
+      enableEezClipping
+      eezSelections
+      mrgidEez
+    }
+  }
+}
+    `;
 export const EezLayerDocument = /*#__PURE__*/ gql`
     query EEZLayer {
   eezlayer {
@@ -27453,6 +27511,7 @@ export const namedOperations = {
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     UpdateLandClippingSettings: 'UpdateLandClippingSettings',
+    UpdateEEZClippingSettings: 'UpdateEEZClippingSettings',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

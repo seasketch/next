@@ -9,7 +9,7 @@ import {
   useCreateProjectInvitesMutation,
   useUserAdminCountsQuery,
 } from "../../generated/graphql";
-import GroupMultiSelect from "./GroupMultiSelect";
+import MultiSelect from "./GroupMultiSelect";
 import Papa from "papaparse";
 import Badge from "../../components/Badge";
 import Modal from "../../components/Modal";
@@ -64,11 +64,11 @@ export default function InviteUsersModal({
       userDetails: state.multi
         ? state.userDetails
         : [
-          {
-            email: state.email,
-            fullname: state.fullname,
-          },
-        ],
+            {
+              email: state.email,
+              fullname: state.fullname,
+            },
+          ],
     },
     // @ts-ignore
     optimisticResponse: () => {
@@ -298,7 +298,7 @@ export default function InviteUsersModal({
             />
           </div>
           <div className="mb-4">
-            <GroupMultiSelect
+            <MultiSelect
               title={t("Assign Group Membership")}
               groups={(data?.projectBySlug?.groups || []).map((g) => ({
                 value: g.id,

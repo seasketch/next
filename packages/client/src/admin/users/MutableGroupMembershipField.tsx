@@ -3,7 +3,7 @@ import InputBlock from "../../components/InputBlock";
 import { Trans, useTranslation } from "react-i18next";
 import { useSetUserGroupsMutation } from "../../generated/graphql";
 import Select from "react-select";
-import GroupMultiSelect from "./GroupMultiSelect";
+import MultiSelect from "./GroupMultiSelect";
 
 interface MutableGroupMembershipFieldProps {
   userId: number;
@@ -39,7 +39,7 @@ export default function MutableGroupMembershipField({
   });
 
   return (
-    <GroupMultiSelect
+    <MultiSelect
       title={t("User Groups")}
       description={t(
         "Groups can be used to organize users and control access to resources like data layers and discussion forums."

@@ -12,6 +12,7 @@ import InlineAuthorDetails from "../../projects/Forums/InlineAuthorDetails";
 import InlineAuthor from "../../components/InlineAuthor";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Select from "react-select";
+import useEEZChoices from "./useEEZChoices";
 
 export default function EEZClippingModal({
   onRequestClose,
@@ -19,12 +20,14 @@ export default function EEZClippingModal({
   lastUpdated,
   author,
   selectedEEZs,
+  onRequestEEZPicker,
 }: {
   onRequestClose: () => void;
   enabled: boolean;
   lastUpdated: Date;
   author: UserProfileDetailsFragment;
   selectedEEZs?: string[];
+  onRequestEEZPicker?: () => void;
 }) {
   const { t } = useTranslation("admin:geography");
   const onError = useGlobalErrorHandler();
@@ -35,67 +38,6 @@ export default function EEZClippingModal({
     hasChanges: boolean;
   }>({ enabled, selectedEEZs: selectedEEZs || [], hasChanges: false });
   const [mutation, mutationState] = useUpdateLandClippingSettingsMutation();
-
-  const [eezChoices, setEezChoices] = useState<
-    { label: string; value: number }[]
-  >([]);
-
-  console.log(eezChoices, "eezChoices"); // for debugging
-
-  useEffect(() => {
-    if (data?.eezlayer?.dataLayer?.dataSource?.url) {
-      const sourceUrl = data.eezlayer.dataLayer.dataSource.url;
-      // eslint-disable-next-line i18next/no-literal-string
-      const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&dataset=${sourceUrl
-        .split("/")
-        .slice(3)
-        .join("/")}.fgb`;
-      console.log("fetching eez choices from: ", url);
-      fetch(url)
-        .then((response) => {
-          if (!response.ok) {
-            throw new Error(
-              `Failed to fetch EEZ choices from ${url}: ${response.statusText}`
-            );
-          }
-          return response.json();
-        })
-        .then(
-          (
-            json: { MRGID_EEZ: number; SOVEREIGN1: string; UNION: string }[]
-          ) => {
-            if (json && json.length) {
-              const choices = json
-                .sort((a, b) => a.SOVEREIGN1.localeCompare(b.SOVEREIGN1)) // sort by MRGID_EEZ
-                .map((props) => {
-                  let label = `${props.MRGID_EEZ} - ${props.UNION}`;
-                  if (props.UNION !== props.SOVEREIGN1) {
-                    label += `, ${props.SOVEREIGN1}`;
-                  }
-                  return {
-                    label,
-                    value: props.MRGID_EEZ,
-                  };
-                })
-                .filter((choice: any) => choice.label && choice.value); // filter out empty labels/values
-              setEezChoices(choices);
-            }
-          }
-        )
-        .catch((error) => {
-          // handle fetch error
-          console.error("Error fetching EEZ choices: ", error);
-          onError(
-            new Error(
-              `Failed to fetch EEZ choices from ${data?.eezlayer?.dataLayer?.dataSource?.url}: ${error.message}`
-            )
-          );
-          setEezChoices([]); // reset choices on error
-        });
-    } else {
-      setEezChoices([]); // reset choices if no url
-    }
-  }, [data?.eezlayer?.dataLayer?.dataSource?.url]);
 
   return (
     <Modal
@@ -135,38 +77,19 @@ export default function EEZClippingModal({
             }))
           }
         />
-        <label>{t("Limit to the chosen EEZ(s)")}</label>
-      </p>
-      <select
-        multiple
-        value={state.selectedEEZs}
-        onChange={(e) => {
-          const options = Array.from(
-            e.target.selectedOptions
-          ) as HTMLOptionElement[];
-          const selectedValues = options.map((option) => option.value);
-          setState((prev) => ({
-            ...prev,
-            selectedEEZs: selectedValues,
-            hasChanges: true, // enable save button
-          }));
-        }}
-        className={`w-full border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-primary-500 focus:border-primary-500 ${
-          state.enabled ? "" : "opacity-50 cursor-not-allowed"
-        }`}
-        disabled={!state.enabled || eezChoices.length === 0}
-      >
-        {eezChoices.map(({ label, value }) => (
-          <option
-            key={value}
-            value={value}
-            className="p-2"
-            selected={state.selectedEEZs.includes(value.toString())}
+        <label className="flex space-x-2">
+          <span>{t("Limit to")}</span>
+          <span className="italic flex-1 truncate">
+            {(selectedEEZs || []).join(", ")}
+          </span>
+          <button
+            className="mx-4 text-primary-500"
+            onClick={onRequestEEZPicker}
           >
-            {label}
-          </option>
-        ))}
-      </select>
+            {t("change choices")}
+          </button>
+        </label>
+      </p>
 
       <p className="text-sm">
         <Trans ns="admin:geography">
