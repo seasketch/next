@@ -6847,6 +6847,23 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
+type GoogleMapsTileApiSession implements Node {
+  expiresAt: Datetime!
+  id: Int!
+  imageFormat: String!
+  language: String!
+  mapType: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  region: String!
+  session: String!
+  tileHeight: Int!
+  tileWidth: Int!
+}
+
 """All input for the `grantAdminAccess` mutation."""
 input GrantAdminAccessInput {
   """
@@ -11130,6 +11147,7 @@ type ProjectGeographySetting implements Node {
   enableEezClipping: Boolean
   enableLandClipping: Boolean
   id: Int!
+  mrgidEez: [Int]
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
@@ -12030,6 +12048,7 @@ type Query implements Node {
     offset: Int
   ): [Survey!]
   getUnsplashPhotos(query: String!): UnsplashSearchResult!
+  gmapssatellitesession: GoogleMapsTileApiSession
   group(id: Int!): Group
 
   """Reads a single `Group` using its globally unique `ID`."""
@@ -12622,7 +12641,7 @@ type Query implements Node {
     """The method to use when ordering `Topic`."""
     orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TopicsConnection
-  updateEezClippingSettings(enableClipping: Boolean, selections: [String], slug: String): ProjectGeographySetting
+  updateEezClippingSettings(enableClipping: Boolean, ids: [Int], selections: [String], slug: String): ProjectGeographySetting
   user(id: Int!): User
 
   """Reads a single `User` using its globally unique `ID`."""

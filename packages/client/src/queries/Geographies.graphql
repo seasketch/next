@@ -1,4 +1,9 @@
-query GeographyClippingLayers($slug: String!) {
+query GeographyClippingSettings($slug: String!) {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
   geographyClippingLayers {
     id
     sourceLayer
@@ -22,6 +27,7 @@ query GeographyClippingLayers($slug: String!) {
       id
       projectId
       eezSelections
+      mrgidEez
       enableEezClipping
       enableLandClipping
     }

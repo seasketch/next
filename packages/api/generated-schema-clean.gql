@@ -3419,6 +3419,7 @@ type DataUploadOutput implements Node {
   dataSourceId: Int
   filename: String!
   id: Int!
+  isCustomUpload: Boolean
   isOriginal: Boolean!
 
   """
@@ -8683,6 +8684,7 @@ type Mutation {
     type: String
     width: Int!
   ): Sprite
+  getPresignedPMTilesUploadUrl(bytes: Int!, filename: String!): PresignedUrl!
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
@@ -8842,6 +8844,9 @@ type Mutation {
     """
     input: RemoveValidChildSketchClassInput!
   ): RemoveValidChildSketchClassPayload
+
+  """Replace the tileset for an existing data source"""
+  replacePMTiles(dataSourceId: Int!, pmtilesKey: String!): DataLayer!
 
   """
   Re-sends an email verification link to the canonical email for the
@@ -9358,6 +9363,12 @@ type Mutation {
     """
     input: UpdateInteractivitySettingByNodeIdInput!
   ): UpdateInteractivitySettingPayload
+  updateLandClippingSettings(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateLandClippingSettingsInput!
+  ): UpdateLandClippingSettingsPayload
   updateMapboxSecretKey(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10211,6 +10222,11 @@ enum PostsOrderBy {
   TOPIC_ID_DESC
 }
 
+type PresignedUrl {
+  key: String!
+  url: String!
+}
+
 """
 Personal information that users have contributed. This information is only 
 accessible directly to admins on projects where the user has chosen to share the
@@ -10477,6 +10493,7 @@ type Project implements Node {
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean!
+  enableReportBuilder: Boolean
   estimateDeletedDataForRetentionChange(newRetentionPeriod: IntervalInput): RetentionChangeEstimate
 
   """Reads and enables pagination through a set of `Forum`."""
@@ -10495,6 +10512,7 @@ type Project implements Node {
     """The method to use when ordering `Forum`."""
     orderBy: [ForumsOrderBy!]
   ): [Forum!]!
+  geographySettings: ProjectGeographySetting
 
   """Reads and enables pagination through a set of `Group`."""
   groups(
@@ -11107,6 +11125,20 @@ type ProjectDraftTableOfContentsStatusPayload {
   projectId: Int!
 }
 
+type ProjectGeographySetting implements Node {
+  eezSelections: [String]
+  enableEezClipping: Boolean
+  enableLandClipping: Boolean
+  id: Int!
+  mrgidEez: [Int]
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  projectId: Int
+}
+
 """
 Admins can invite users to their project, adding them to user groups and 
 distributing admin privileges as needed. Invitations can be immediately sent via
@@ -11377,6 +11409,7 @@ input ProjectPatch {
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean
+  enableReportBuilder: Boolean
   hideForums: Boolean
   hideOverlays: Boolean
   hideSketches: Boolean
@@ -11830,6 +11863,7 @@ type Query implements Node {
     """The method to use when ordering `DataUploadTask`."""
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection
+  eezlayer: TableOfContentsItem
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
   """
@@ -11973,6 +12007,15 @@ type Query implements Node {
   ): Forum
   generateExportId(body: JSON, exportId: String, id: Int): String
   generateLabel(body: JSON, id: Int): String
+
+  """Reads and enables pagination through a set of `DataLayer`."""
+  geographyClippingLayers(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [DataLayer!]
   getDefaultDataSourcesBucket: String
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
@@ -12580,6 +12623,7 @@ type Query implements Node {
     """The method to use when ordering `Topic`."""
     orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TopicsConnection
+  updateEezClippingSettings(enableClipping: Boolean, ids: [Int], selections: [String], slug: String): ProjectGeographySetting
   user(id: Int!): User
 
   """Reads a single `User` using its globally unique `ID`."""
@@ -16206,6 +16250,32 @@ type UpdateInteractivitySettingPayload {
 
   """The `InteractivitySetting` that was updated by this mutation."""
   interactivitySetting: InteractivitySetting
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateLandClippingSettings` mutation."""
+input UpdateLandClippingSettingsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  enableClipping: Boolean
+  slug: String
+}
+
+"""The output of our `updateLandClippingSettings` mutation."""
+type UpdateLandClippingSettingsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  projectGeographySetting: ProjectGeographySetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

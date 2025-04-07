@@ -5932,6 +5932,21 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+export type GoogleMapsTileApiSession = Node & {
+  __typename?: 'GoogleMapsTileApiSession';
+  expiresAt: Scalars['Datetime'];
+  id: Scalars['Int'];
+  imageFormat: Scalars['String'];
+  language: Scalars['String'];
+  mapType: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  region: Scalars['String'];
+  session: Scalars['String'];
+  tileHeight: Scalars['Int'];
+  tileWidth: Scalars['Int'];
+};
+
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
   /**
@@ -10034,6 +10049,7 @@ export type ProjectGeographySetting = Node & {
   enableEezClipping?: Maybe<Scalars['Boolean']>;
   enableLandClipping?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
+  mrgidEez?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   projectId?: Maybe<Scalars['Int']>;
@@ -10571,6 +10587,7 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
+  gmapssatellitesession?: Maybe<GoogleMapsTileApiSession>;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
   groupByNodeId?: Maybe<Group>;
@@ -11719,6 +11736,7 @@ export type QueryTopicsConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryUpdateEezClippingSettingsArgs = {
   enableClipping?: Maybe<Scalars['Boolean']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
   selections?: Maybe<Array<Maybe<Scalars['String']>>>;
   slug?: Maybe<Scalars['String']>;
 };
@@ -18868,14 +18886,17 @@ export type DeleteSpriteMutation = (
   )> }
 );
 
-export type GeographyClippingLayersQueryVariables = Exact<{
+export type GeographyClippingSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type GeographyClippingLayersQuery = (
+export type GeographyClippingSettingsQuery = (
   { __typename?: 'Query' }
-  & { geographyClippingLayers?: Maybe<Array<(
+  & { gmapssatellitesession?: Maybe<(
+    { __typename?: 'GoogleMapsTileApiSession' }
+    & Pick<GoogleMapsTileApiSession, 'expiresAt' | 'mapType' | 'session'>
+  )>, geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
     & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles' | 'dataSourceId'>
     & { dataSource?: Maybe<(
@@ -18891,7 +18912,7 @@ export type GeographyClippingLayersQuery = (
     & Pick<Project, 'id'>
     & { geographySettings?: Maybe<(
       { __typename?: 'ProjectGeographySetting' }
-      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'eezSelections' | 'enableEezClipping' | 'enableLandClipping'>
+      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'eezSelections' | 'mrgidEez' | 'enableEezClipping' | 'enableLandClipping'>
     )> }
   )> }
 );
@@ -25314,8 +25335,13 @@ export const DeleteSpriteDocument = /*#__PURE__*/ gql`
   }
 }
     ${SpriteDetailsFragmentDoc}`;
-export const GeographyClippingLayersDocument = /*#__PURE__*/ gql`
-    query GeographyClippingLayers($slug: String!) {
+export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
+    query GeographyClippingSettings($slug: String!) {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
   geographyClippingLayers {
     id
     sourceLayer
@@ -25339,6 +25365,7 @@ export const GeographyClippingLayersDocument = /*#__PURE__*/ gql`
       id
       projectId
       eezSelections
+      mrgidEez
       enableEezClipping
       enableLandClipping
     }
@@ -27290,7 +27317,7 @@ export const namedOperations = {
     GetBookmark: 'GetBookmark',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
-    GeographyClippingLayers: 'GeographyClippingLayers',
+    GeographyClippingSettings: 'GeographyClippingSettings',
     EEZLayer: 'EEZLayer',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',

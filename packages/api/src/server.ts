@@ -264,6 +264,7 @@ run({
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
   * * * * * deleteExpiredArchivedDataSources
+  * 1 * * * refreshGmapsApiSession
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

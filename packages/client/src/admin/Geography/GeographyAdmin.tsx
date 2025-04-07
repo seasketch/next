@@ -1,17 +1,17 @@
 import { DotsHorizontalIcon, FileTextIcon } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
-  GeographyClippingLayersDocument,
-  useGeographyClippingLayersQuery,
+  useGeographyClippingSettingsQuery,
   useUpdateLandClippingSettingsMutation,
 } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import Switch from "../../components/Switch";
 import getSlug from "../../getSlug";
 import LandClippingModal from "./LandClippingModal";
 import EEZClippingModal from "./EEZClippingModal";
+import mapboxgl from "mapbox-gl";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -19,7 +19,7 @@ const COASTLINE = "DAYLIGHT_COASTLINE";
 export default function GeographyAdmin() {
   const { t } = useTranslation("admin:geography");
   const slug = getSlug();
-  const { data, loading, error } = useGeographyClippingLayersQuery({
+  const { data, loading, error } = useGeographyClippingSettingsQuery({
     variables: { slug },
     skip: !slug,
   });
@@ -27,6 +27,8 @@ export default function GeographyAdmin() {
     land: boolean;
     eez: boolean;
   }>({ land: false, eez: false });
+
+  const [showEEZPicker, setShowEEZPicker] = useState(false);
 
   const [updateLandClippingMutation, updateLandClippingState] =
     useUpdateLandClippingSettingsMutation();
@@ -40,6 +42,172 @@ export default function GeographyAdmin() {
   );
 
   const hasBuiltInLayers = Boolean(coastline) && Boolean(eez);
+
+  const mapRef = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<mapboxgl.Map | null>(null);
+
+  useEffect(() => {
+    if (
+      mapRef.current &&
+      // !map &&
+      data?.gmapssatellitesession?.session &&
+      eez?.dataSource?.url &&
+      coastline?.dataSource?.url
+    ) {
+      // const session = data.gmapssatellitesession.session;
+      const newMap = new mapboxgl.Map({
+        container: mapRef.current,
+        style: "mapbox://styles/seasketch/cm91u6t3c000401sz5w8w33aw",
+        // style: {
+        //   version: 8, // Mapbox GL JS version
+        //   sources: {
+        //     // Use a placeholder source to initialize the map
+        //     satellite: {
+        //       type: "raster",
+        //       tiles: [
+        //         // eslint-disable-next-line i18next/no-literal-string
+        //         `https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${session}&key=${process.env.REACT_APP_GOOGLE_MAPS_2D_TILE_API_KEY}`,
+        //       ],
+        //       format: "jpeg",
+        //       attribution: "Google",
+        //       tileSize: 512, // Standard tile size for raster tiles
+        //     },
+        //     eez: {
+        //       type: "vector", // Use vector tiles for EEZ
+        //       url: eez.dataSource.url + ".json",
+        //     },
+        //     coastline: {
+        //       type: "vector", // Use vector tiles for coastline
+        //       url: coastline.dataSource.url + ".json",
+        //     },
+        //   },
+        //   layers: [
+        //     {
+        //       id: "satellite-layer", // The layer ID
+        //       type: "raster", // Layer type
+        //       source: "satellite", // Source ID
+        //       minzoom: 0, // Minimum zoom level
+        //       maxzoom: 22, // Maximum zoom level
+        //     },
+        //     {
+        //       id: "coastline-layer", // Layer ID for coastline
+        //       type: "line", // Layer type
+        //       source: "coastline", // Source ID for coastline
+        //       "source-layer": coastline.sourceLayer!, // Source layer for coastline
+        //       layout: {
+        //         "line-cap": "round", // Line cap style
+        //         "line-join": "round", // Line join style
+        //       },
+        //       paint: {
+        //         "line-color": "white", // Coastline color
+        //         "line-width": 1, // Coastline width
+        //         "line-dasharray": [2, 2],
+        //       },
+        //     },
+        //   ],
+        // }, // Use a default style
+        // // center on santa barbara channel
+        center: [
+          // Longitude, Latitude
+          -119.7145, 34.4208,
+        ],
+        zoom: 3,
+        // // @ts-ignore
+        // projection: "globe",
+      });
+
+      newMap.on("load", () => {
+        setMap(newMap);
+        // newMap.setFog({});
+        // @ts-ignore
+        window.map = newMap;
+        // add the coastline layer
+        newMap.addSource("coastline", {
+          type: "vector", // Use vector tiles for coastline
+          url: coastline.dataSource!.url + ".json",
+        });
+        // newMap.addLayer({
+        //   id: "coastline-layer", // Layer ID for coastline
+        //   type: "line", // Layer type
+        //   source: "coastline", // Source ID for coastline
+        //   "source-layer": coastline.sourceLayer!, // Source layer for coastline
+        //   layout: {
+        //     "line-cap": "round", // Line cap style
+        //     "line-join": "round", // Line join style
+        //   },
+        //   paint: {
+        //     "line-color": "white", // Coastline color
+        //     "line-width": 1, // Coastline width
+        //     "line-dasharray": [2, 2],
+        //   },
+        // });
+        // add the eez layer
+        if (eez && eez.dataSource) {
+          newMap.addSource("eez", {
+            type: "vector", // Use vector tiles for EEZ
+            url: eez.dataSource.url + ".json",
+          });
+
+          newMap.addLayer({
+            id: "eez-layer", // Layer ID for EEZ
+            type: "fill", // Layer type
+            source: "eez", // Source ID for EEZ
+            "source-layer": eez.sourceLayer!, // Source layer for EEZ
+            paint: {
+              "fill-color": "#007cbf", // EEZ fill color
+              "fill-opacity": 0.1, // EEZ fill opacity
+            },
+          });
+
+          newMap.addLayer({
+            id: "eez-line",
+            type: "line", // Layer type for EEZ boundaries
+            source: "eez", // Source ID for EEZ
+            "source-layer": eez.sourceLayer!, // Source layer for EEZ
+            layout: {
+              "line-cap": "round", // Line cap style
+              "line-join": "round", // Line join style
+            },
+            paint: {
+              "line-color": "#007cbf", // EEZ boundary color
+              "line-width": 1, // EEZ boundary width
+              "line-opacity": 1, // EEZ boundary opacity
+            },
+          });
+        }
+        // newMap.addSource("satellite", {
+        //   type: "raster",
+        //   tiles: [
+        //     // eslint-disable-next-line i18next/no-literal-string
+        //     `https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${session}&key=${process.env.REACT_APP_GOOGLE_MAPS_2D_TILE_API_KEY}`,
+        //   ],
+        //   format: "jpeg",
+        //   attribution: "Google",
+        //   tileSize: 256, // Standard tile size for raster tiles
+        // });
+        // newMap.addLayer({
+        //   id: "satellite-layer",
+        //   type: "raster",
+        //   source: "satellite",
+        //   minzoom: 0,
+        //   maxzoom: 22,
+        // });
+      });
+
+      return () => {
+        if (newMap) {
+          newMap.remove();
+        }
+      };
+    }
+    // Cleanup function to remove the map when the component unmounts
+    return () => {
+      if (map) {
+        map.remove(); // Remove the map instance
+        setMap(null); // Clear the state
+      }
+    };
+  }, [mapRef, data?.gmapssatellitesession?.session]);
 
   return (
     <div className="w-full h-full flex">
@@ -99,7 +267,7 @@ export default function GeographyAdmin() {
                       updateLandClippingSettings: {
                         __typename: "UpdateLandClippingSettingsPayload",
                         projectGeographySetting: {
-                          id: data?.projectBySlug?.geographySettings?.id,
+                          id: data!.projectBySlug!.geographySettings!.id,
                           __typename: "ProjectGeographySetting",
                           enableLandClipping: enabled,
                           projectId: data?.projectBySlug?.id,
@@ -168,7 +336,7 @@ export default function GeographyAdmin() {
           author={eez?.dataSource?.authorProfile!}
         />
       )}
-      <div className="flex-1"></div>
+      <div ref={mapRef} className="flex-1"></div>
     </div>
   );
 }

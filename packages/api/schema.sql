@@ -2013,6 +2013,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
+    enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -6722,7 +6724,8 @@ CREATE TABLE public.data_upload_outputs (
     is_original boolean DEFAULT false NOT NULL,
     size bigint NOT NULL,
     filename text NOT NULL,
-    original_filename text
+    original_filename text,
+    is_custom_upload boolean DEFAULT false
 );
 
 
@@ -6976,6 +6979,21 @@ $$;
 --
 
 COMMENT ON FUNCTION public.create_project(name text, slug text, OUT project public.projects) IS 'Users with verified emails can create new projects by choosing a unique name and url slug. This project will be unlisted with admin_only access and the user will be automatically added to the list of admins.';
+
+
+--
+-- Name: create_project_geography_settings(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_project_geography_settings() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  insert into project_geography_settings (project_id)
+  values (new.id);
+  return new;
+end;
+$$;
 
 
 --
@@ -8609,10 +8627,11 @@ CREATE FUNCTION public.data_sources_author_profile(source public.data_sources) R
     on
       project_participants.user_id = coalesce(source.created_by, source.uploaded_by)
     where
-      session_is_admin(source.project_id) and
+
+      (source.data_library_template_id is not null or (session_is_admin(source.project_id) and
       (project_participants.is_admin = true or (
       project_participants.share_profile = true and
-      project_participants.project_id = source.project_id)) and
+      project_participants.project_id = source.project_id)))) and
       user_profiles.user_id = coalesce(source.created_by, source.uploaded_by)
     limit 1;
   $$;
@@ -9109,6 +9128,17 @@ CREATE FUNCTION public.duplicate_table_of_contents_item(item_id integer) RETURNS
       return r;
     end;
   $$;
+
+
+--
+-- Name: eezlayer(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.eezlayer() RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from table_of_contents_items where data_library_template_id = 'MARINE_REGIONS_EEZ_LAND_JOINED';
+    $$;
 
 
 --
@@ -9849,6 +9879,35 @@ CREATE FUNCTION public.generate_offline_tile_package("projectId" integer, "dataS
       return pkg;
     end;
   $$;
+
+
+--
+-- Name: geography_clipping_layers(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.geography_clipping_layers() RETURNS SETOF public.data_layers
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from data_layers where id in (
+      select 
+        data_layer_id 
+      from 
+        table_of_contents_items 
+      where project_id = (
+        select id from projects where slug = 'superuser'
+      ) and data_library_template_id in (
+        'DAYLIGHT_COASTLINE', 
+        'MARINE_REGIONS_EEZ_LAND_JOINED'
+      ) and is_draft = true
+    )
+  $$;
+
+
+--
+-- Name: FUNCTION geography_clipping_layers(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.geography_clipping_layers() IS '@simpleCollections only';
 
 
 --
@@ -11895,6 +11954,22 @@ CREATE FUNCTION public.posts_sketch_ids(post public.posts) RETURNS integer[]
 
 
 --
+-- Name: prevent_eez_clipping_without_selections(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.prevent_eez_clipping_without_selections() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+  begin
+    if new.enable_eez_clipping = true and (new.eez_selections is null or array_length(new.eez_selections, 1) is null or new.eez_selections = '{}') then
+      raise exception 'Cannot enable eez clipping without selecting any eezs';
+    end if;
+    return new;
+  end;
+  $$;
+
+
+--
 -- Name: project_access_status(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12708,6 +12783,31 @@ CREATE FUNCTION public.projects_estimate_deleted_data_for_retention_change(proje
         raise exception 'permission denied';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: project_geography_settings; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_geography_settings (
+    id integer NOT NULL,
+    project_id integer,
+    enable_land_clipping boolean DEFAULT true,
+    eez_selections text[] DEFAULT '{}'::text[],
+    mrgid_eez integer[] DEFAULT '{}'::integer[],
+    enable_eez_clipping boolean DEFAULT false
+);
+
+
+--
+-- Name: projects_geography_settings(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_geography_settings(p public.projects) RETURNS public.project_geography_settings
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from project_geography_settings where project_id = p.id;
   $$;
 
 
@@ -17672,6 +17772,39 @@ CREATE FUNCTION public.update_data_hosting_quota(project_id integer, quota bigin
 
 
 --
+-- Name: update_eez_clipping_settings(text, text[], integer[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean) RETURNS public.project_geography_settings
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    update project_geography_settings
+    set eez_selections = selections, mrgid_eez = ids, enable_eez_clipping = (
+      case
+        when array_length(selections, 1) is null or selections = '{}' or array_length(ids, 1) is null or ids = '{}' then false
+        else enable_clipping
+      end
+    )
+    where project_id = (select id from projects where projects.slug = update_eez_clipping_settings.slug and session_is_admin(projects.id))
+    returning *;
+  $$;
+
+
+--
+-- Name: update_land_clipping_settings(text, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_land_clipping_settings(slug text, enable_clipping boolean) RETURNS public.project_geography_settings
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    update project_geography_settings
+    set enable_land_clipping = enable_clipping
+    where project_id = (select id from projects where projects.slug = update_land_clipping_settings.slug and session_is_admin(projects.id))
+    returning *;
+    $$;
+
+
+--
 -- Name: update_mapbox_secret_key(integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -19190,6 +19323,20 @@ ALTER TABLE public.posts ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
+-- Name: project_geography_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography_settings ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.project_geography_settings_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: project_group_members; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -20056,6 +20203,14 @@ ALTER TABLE ONLY public.project_activity
 
 ALTER TABLE ONLY public.project_background_jobs
     ADD CONSTRAINT project_background_jobs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: project_geography_settings project_geography_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_geography_settings
+    ADD CONSTRAINT project_geography_settings_pkey PRIMARY KEY (id);
 
 
 --
@@ -21276,6 +21431,13 @@ CREATE TRIGGER after_post_insert_trigger AFTER INSERT ON public.posts FOR EACH R
 
 
 --
+-- Name: projects after_project_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER after_project_insert AFTER INSERT ON public.projects FOR EACH ROW EXECUTE FUNCTION public.create_project_geography_settings();
+
+
+--
 -- Name: project_group_members after_remove_user_from_group_update_survey_invites; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -21518,6 +21680,13 @@ CREATE TRIGGER on_map_bookmark_update_trigger AFTER UPDATE ON public.map_bookmar
 --
 
 CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.posts FOR EACH ROW EXECUTE FUNCTION public.after_post_insert_notify_subscriptions();
+
+
+--
+-- Name: project_geography_settings prevent_eez_clipping_without_selections; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER prevent_eez_clipping_without_selections BEFORE INSERT OR UPDATE ON public.project_geography_settings FOR EACH ROW EXECUTE FUNCTION public.prevent_eez_clipping_without_selections();
 
 
 --
@@ -22266,6 +22435,14 @@ ALTER TABLE ONLY public.project_background_jobs
 
 ALTER TABLE ONLY public.project_background_jobs
     ADD CONSTRAINT project_background_jobs_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: project_geography_settings project_geography_settings_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.project_geography_settings
+    ADD CONSTRAINT project_geography_settings_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -23684,7 +23861,7 @@ CREATE POLICY table_of_contents_items_admin ON public.table_of_contents_items US
 -- Name: table_of_contents_items table_of_contents_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY table_of_contents_items_select ON public.table_of_contents_items FOR SELECT TO anon USING ((public.session_has_project_access(project_id) AND (is_draft = false) AND public._session_on_toc_item_acl(path)));
+CREATE POLICY table_of_contents_items_select ON public.table_of_contents_items FOR SELECT TO anon USING (((public.session_has_project_access(project_id) AND (is_draft = false) AND public._session_on_toc_item_acl(path)) OR (data_library_template_id IS NOT NULL)));
 
 
 --
@@ -25017,6 +25194,20 @@ GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_u
 --
 
 GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -26709,6 +26900,13 @@ GRANT ALL ON FUNCTION public.create_project(name text, slug text, OUT project pu
 
 
 --
+-- Name: FUNCTION create_project_geography_settings(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_project_geography_settings() FROM PUBLIC;
+
+
+--
 -- Name: TABLE project_invites; Type: ACL; Schema: public; Owner: -
 --
 
@@ -27229,6 +27427,7 @@ GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO seasketch_user;
+GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO anon;
 
 
 --
@@ -27487,6 +27686,14 @@ REVOKE ALL ON FUNCTION public.dropgeometrytable(catalog_name character varying, 
 
 REVOKE ALL ON FUNCTION public.duplicate_table_of_contents_item(item_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.duplicate_table_of_contents_item(item_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION eezlayer(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.eezlayer() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.eezlayer() TO anon;
 
 
 --
@@ -27822,6 +28029,15 @@ GRANT ALL ON FUNCTION public.geography(bytea) TO anon;
 
 REVOKE ALL ON FUNCTION public.geography(public.geometry) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
+
+
+--
+-- Name: FUNCTION geography_clipping_layers(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
 --
@@ -30098,6 +30314,13 @@ GRANT ALL ON FUNCTION public.posts_sketch_ids(post public.posts) TO anon;
 
 
 --
+-- Name: FUNCTION prevent_eez_clipping_without_selections(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.prevent_eez_clipping_without_selections() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION project_access_status(pid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -30303,6 +30526,14 @@ GRANT ALL ON FUNCTION public.projects_eligable_downloadable_layers_count(p publi
 
 REVOKE ALL ON FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_geography_settings(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_geography_settings(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_geography_settings(p public.projects) TO anon;
 
 
 --
@@ -34533,6 +34764,22 @@ GRANT ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" in
 
 REVOKE ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) TO seasketch_superuser;
+
+
+--
+-- Name: FUNCTION update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_land_clipping_settings(slug text, enable_clipping boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_land_clipping_settings(slug text, enable_clipping boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_land_clipping_settings(slug text, enable_clipping boolean) TO seasketch_user;
 
 
 --

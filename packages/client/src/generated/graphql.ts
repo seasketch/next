@@ -5934,6 +5934,21 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+export type GoogleMapsTileApiSession = Node & {
+  __typename?: 'GoogleMapsTileApiSession';
+  expiresAt: Scalars['Datetime'];
+  id: Scalars['Int'];
+  imageFormat: Scalars['String'];
+  language: Scalars['String'];
+  mapType: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  region: Scalars['String'];
+  session: Scalars['String'];
+  tileHeight: Scalars['Int'];
+  tileWidth: Scalars['Int'];
+};
+
 /** All input for the `grantAdminAccess` mutation. */
 export type GrantAdminAccessInput = {
   /**
@@ -10036,6 +10051,7 @@ export type ProjectGeographySetting = Node & {
   enableEezClipping?: Maybe<Scalars['Boolean']>;
   enableLandClipping?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
+  mrgidEez?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   projectId?: Maybe<Scalars['Int']>;
@@ -10573,6 +10589,7 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
+  gmapssatellitesession?: Maybe<GoogleMapsTileApiSession>;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
   groupByNodeId?: Maybe<Group>;
@@ -11721,6 +11738,7 @@ export type QueryTopicsConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryUpdateEezClippingSettingsArgs = {
   enableClipping?: Maybe<Scalars['Boolean']>;
+  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
   selections?: Maybe<Array<Maybe<Scalars['String']>>>;
   slug?: Maybe<Scalars['String']>;
 };
@@ -18870,14 +18888,17 @@ export type DeleteSpriteMutation = (
   )> }
 );
 
-export type GeographyClippingLayersQueryVariables = Exact<{
+export type GeographyClippingSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
 
 
-export type GeographyClippingLayersQuery = (
+export type GeographyClippingSettingsQuery = (
   { __typename?: 'Query' }
-  & { geographyClippingLayers?: Maybe<Array<(
+  & { gmapssatellitesession?: Maybe<(
+    { __typename?: 'GoogleMapsTileApiSession' }
+    & Pick<GoogleMapsTileApiSession, 'expiresAt' | 'mapType' | 'session'>
+  )>, geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
     & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles' | 'dataSourceId'>
     & { dataSource?: Maybe<(
@@ -18893,7 +18914,7 @@ export type GeographyClippingLayersQuery = (
     & Pick<Project, 'id'>
     & { geographySettings?: Maybe<(
       { __typename?: 'ProjectGeographySetting' }
-      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'eezSelections' | 'enableEezClipping' | 'enableLandClipping'>
+      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'eezSelections' | 'mrgidEez' | 'enableEezClipping' | 'enableLandClipping'>
     )> }
   )> }
 );
@@ -29038,8 +29059,13 @@ export function useDeleteSpriteMutation(baseOptions?: Apollo.MutationHookOptions
 export type DeleteSpriteMutationHookResult = ReturnType<typeof useDeleteSpriteMutation>;
 export type DeleteSpriteMutationResult = Apollo.MutationResult<DeleteSpriteMutation>;
 export type DeleteSpriteMutationOptions = Apollo.BaseMutationOptions<DeleteSpriteMutation, DeleteSpriteMutationVariables>;
-export const GeographyClippingLayersDocument = gql`
-    query GeographyClippingLayers($slug: String!) {
+export const GeographyClippingSettingsDocument = gql`
+    query GeographyClippingSettings($slug: String!) {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
   geographyClippingLayers {
     id
     sourceLayer
@@ -29063,6 +29089,7 @@ export const GeographyClippingLayersDocument = gql`
       id
       projectId
       eezSelections
+      mrgidEez
       enableEezClipping
       enableLandClipping
     }
@@ -29071,32 +29098,32 @@ export const GeographyClippingLayersDocument = gql`
     ${UserProfileDetailsFragmentDoc}`;
 
 /**
- * __useGeographyClippingLayersQuery__
+ * __useGeographyClippingSettingsQuery__
  *
- * To run a query within a React component, call `useGeographyClippingLayersQuery` and pass it any options that fit your needs.
- * When your component renders, `useGeographyClippingLayersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useGeographyClippingSettingsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeographyClippingSettingsQuery` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useGeographyClippingLayersQuery({
+ * const { data, loading, error } = useGeographyClippingSettingsQuery({
  *   variables: {
  *      slug: // value for 'slug'
  *   },
  * });
  */
-export function useGeographyClippingLayersQuery(baseOptions: Apollo.QueryHookOptions<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>) {
+export function useGeographyClippingSettingsQuery(baseOptions: Apollo.QueryHookOptions<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>(GeographyClippingLayersDocument, options);
+        return Apollo.useQuery<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>(GeographyClippingSettingsDocument, options);
       }
-export function useGeographyClippingLayersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>) {
+export function useGeographyClippingSettingsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>) {
           const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>(GeographyClippingLayersDocument, options);
+          return Apollo.useLazyQuery<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>(GeographyClippingSettingsDocument, options);
         }
-export type GeographyClippingLayersQueryHookResult = ReturnType<typeof useGeographyClippingLayersQuery>;
-export type GeographyClippingLayersLazyQueryHookResult = ReturnType<typeof useGeographyClippingLayersLazyQuery>;
-export type GeographyClippingLayersQueryResult = Apollo.QueryResult<GeographyClippingLayersQuery, GeographyClippingLayersQueryVariables>;
+export type GeographyClippingSettingsQueryHookResult = ReturnType<typeof useGeographyClippingSettingsQuery>;
+export type GeographyClippingSettingsLazyQueryHookResult = ReturnType<typeof useGeographyClippingSettingsLazyQuery>;
+export type GeographyClippingSettingsQueryResult = Apollo.QueryResult<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>;
 export const UpdateLandClippingSettingsDocument = gql`
     mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
   updateLandClippingSettings(input: {slug: $slug, enableClipping: $enable}) {
@@ -34616,7 +34643,7 @@ export const namedOperations = {
     GetBookmark: 'GetBookmark',
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
-    GeographyClippingLayers: 'GeographyClippingLayers',
+    GeographyClippingSettings: 'GeographyClippingSettings',
     EEZLayer: 'EEZLayer',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',

@@ -50,5 +50,6 @@ declare namespace NodeJS {
     CLOUDFLARE_SITE_TAG: string;
     PMTILES_SERVER_ZONE: string;
     R2_TILES_BUCKET: string;
+    GOOGLE_MAPS_2D_TILE_API_KEY: string;
   }
 }
