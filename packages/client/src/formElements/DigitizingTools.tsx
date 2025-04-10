@@ -18,6 +18,7 @@ import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
 import { MeasureControlContext } from "../MeasureControl";
+import clsx from "clsx";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
@@ -44,6 +45,7 @@ interface DigitizingInstructionsProps {
   /** Sketching as opposed to survey response */
   isSketchingWorkflow?: boolean;
   preprocessingError?: string;
+  className?: string;
 }
 
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
@@ -62,6 +64,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   createStateButtons,
   isSketchingWorkflow,
   preprocessingError,
+  className,
 }) => {
   const { t } = useTranslation("surveys");
   const style = useContext(FormElementLayoutContext).style;
@@ -254,7 +257,10 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 duration: 0.1,
               }}
               // exit={{ scale: 0 }}
-              className={`rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`}
+              className={clsx(
+                `rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`,
+                className
+              )}
             >
               <p className="text-sm select-none">
                 {isSketchingWorkflow &&

@@ -94,7 +94,8 @@ export default function PreproccessingFactory(
   setPreprocessingError: Dispatch<SetStateAction<string | null>>,
   preprocessingEndpoint?: string,
   preprocessingResults?: { [id: string]: Feature<any> },
-  onPreprocessedGeometry?: (geometry: Geometry) => void
+  onPreprocessedGeometry?: (geometry: Geometry) => void,
+  extraRequestParams?: { [key: string]: any }
 ) {
   return {
     ...Preprocessing,
@@ -122,7 +123,8 @@ export default function PreproccessingFactory(
         feature,
         this.changeMode.bind(this),
         state.preprocessingResults,
-        state.onPreprocessedGeometry
+        state.onPreprocessedGeometry,
+        extraRequestParams
       ).catch((e: Error) => {
         setPreprocessingError(e.message);
         this.changeMode("direct_select", { ...opts, preprocessingError: true });

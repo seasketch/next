@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { useEezLayerQuery } from "../../generated/graphql";
 
-type EEZProps = { MRGID_EEZ: number; SOVEREIGN1?: string; UNION: string };
+type EEZProps = {
+  MRGID_EEZ: number;
+  SOVEREIGN1?: string;
+  UNION: string;
+  bbox: number[];
+};
 
 export default function useEEZChoices(): {
   loading: boolean;
@@ -10,11 +15,10 @@ export default function useEEZChoices(): {
 } {
   const { data, loading } = useEezLayerQuery({
     onError: (e) => {
-      setState({
-        loading: false,
+      setState((prev) => ({
+        ...prev,
         error: e,
-        data: [],
-      });
+      }));
     },
   });
 
@@ -29,13 +33,12 @@ export default function useEEZChoices(): {
 
   useEffect(() => {
     if (data?.eezlayer?.dataLayer?.dataSource?.url) {
-      setState({ loading: true, data: [] });
       const sourceUrl = data.eezlayer.dataLayer.dataSource.url;
       // eslint-disable-next-line i18next/no-literal-string
-      const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&dataset=${sourceUrl
+      const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${sourceUrl
         .split("/")
         .slice(3)
-        .join("/")}.fgb`;
+        .join("/")}.fgb&v=3`;
       fetch(url)
         .then((response) => {
           if (!response.ok) {
@@ -45,32 +48,28 @@ export default function useEEZChoices(): {
           }
           return response.json();
         })
-        .then(
-          (
-            json: { MRGID_EEZ: number; SOVEREIGN1?: string; UNION: string }[]
-          ) => {
-            if (json && json.length) {
-              const choices = json
-                .sort((a, b) =>
-                  (a.SOVEREIGN1 || "").localeCompare(b.SOVEREIGN1 || "")
-                ) // sort by MRGID_EEZ
-                .map((props) => {
-                  return {
-                    label: labelForEEZ(props),
-                    value: props.MRGID_EEZ,
-                  };
-                })
-                .filter((choice: any) => choice.label && choice.value); // filter out empty labels/values
-              setState({
-                loading: false,
-                data: choices.map((choice) => ({
-                  ...choice,
-                  data: json.find((j) => j.MRGID_EEZ === choice.value)!,
-                })),
-              });
-            }
+        .then((json: EEZProps[]) => {
+          if (json && json.length) {
+            const choices = json
+              .sort((a, b) =>
+                (a.SOVEREIGN1 || "").localeCompare(b.SOVEREIGN1 || "")
+              ) // sort by MRGID_EEZ
+              .map((props) => {
+                return {
+                  label: labelForEEZ(props),
+                  value: props.MRGID_EEZ,
+                };
+              })
+              .filter((choice: any) => choice.label && choice.value); // filter out empty labels/values
+            setState({
+              loading: false,
+              data: choices.map((choice) => ({
+                ...choice,
+                data: json.find((j) => j.MRGID_EEZ === choice.value)!,
+              })),
+            });
           }
-        )
+        })
         .catch((error) => {
           // handle fetch error
           console.error("Error fetching EEZ choices: ", error);
@@ -82,11 +81,6 @@ export default function useEEZChoices(): {
             data: [],
           });
         });
-    } else {
-      setState({
-        loading: false,
-        data: [],
-      });
     }
   }, [data?.eezlayer?.dataLayer?.dataSource?.url]);
 

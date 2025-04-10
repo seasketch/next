@@ -1,13 +1,18 @@
-import { DotsHorizontalIcon, FileTextIcon } from "@radix-ui/react-icons";
+import {
+  DotsHorizontalIcon,
+  FileTextIcon,
+  Pencil1Icon,
+} from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  SketchGeometryType,
   useGeographyClippingSettingsQuery,
   useUpdateEezClippingSettingsMutation,
   useUpdateLandClippingSettingsMutation,
 } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Switch from "../../components/Switch";
 import getSlug from "../../getSlug";
 import LandClippingModal from "./LandClippingModal";
@@ -17,6 +22,12 @@ import useEEZChoices, { labelForEEZ } from "./useEEZChoices";
 import { createPortal } from "react-dom";
 import MultiSelect from "../users/GroupMultiSelect";
 import Button from "../../components/Button";
+import useMapboxGLDraw, {
+  DigitizingState,
+  EMPTY_FEATURE_COLLECTION,
+} from "../../draw/useMapboxGLDraw";
+import { Feature } from "geojson";
+import DigitizingTools from "../../formElements/DigitizingTools";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -83,16 +94,48 @@ export default function GeographyAdmin() {
       ...prevState,
       selectedEEZs: selectedGroups.map((group) => group.value),
     }));
+    const eezs = eezChoices.data.filter((choice) =>
+      selectedGroups.map((group) => group.value).includes(choice.value)
+    );
+    const bboxes = eezs.map((choice) => choice.data?.bbox);
+    const bbox = combineBBoxes(bboxes);
+    if (bbox) {
+      map?.fitBounds(
+        [
+          [bbox[0], bbox[1]],
+          [bbox[2], bbox[3]],
+        ],
+        {
+          padding: 80,
+          animate: true,
+        }
+      );
+    }
   };
 
   useEffect(() => {
     if (
+      !map &&
       mapRef.current &&
       data?.gmapssatellitesession?.session &&
       eez?.dataSource?.url &&
       coastline?.dataSource?.url &&
-      !map
+      !eezChoices.loading &&
+      data?.projectBySlug?.geographySettings?.mrgidEez
     ) {
+      let bbox: number[] | undefined;
+      if (data.projectBySlug.geographySettings.mrgidEez.length > 0) {
+        const ids = data.projectBySlug.geographySettings.mrgidEez as number[];
+        // get bboxes for each eez
+        const eezs = eezChoices.data.filter((choice) =>
+          ids.includes(choice.value)
+        );
+        const bboxes = eezs.map((choice) => choice.data?.bbox);
+        // combine bboxes
+        if (bboxes.length > 0) {
+          bbox = combineBBoxes(bboxes);
+        }
+      }
       const session = data.gmapssatellitesession.session;
       const newMap = new mapboxgl.Map({
         container: mapRef.current,
@@ -128,8 +171,15 @@ export default function GeographyAdmin() {
             },
           ],
         },
-        center: [-119.7145, 34.4208],
-        zoom: 3,
+        ...(bbox
+          ? {
+              bounds: [
+                [bbox[0], bbox[1]],
+                [bbox[2], bbox[3]],
+              ],
+              fitBoundsOptions: { padding: 80 },
+            }
+          : { center: [-119.7145, 34.4208], zoom: 3 }),
       });
 
       newMap.on("load", () => {
@@ -179,7 +229,7 @@ export default function GeographyAdmin() {
                     data?.projectBySlug?.geographySettings?.mrgidEez || [],
                   ],
                 ],
-                0.5,
+                0.6,
                 0,
               ],
               "line-color": "grey",
@@ -201,6 +251,8 @@ export default function GeographyAdmin() {
     data?.gmapssatellitesession?.session,
     eez?.dataSource?.url,
     coastline?.dataSource?.url,
+    data?.projectBySlug?.geographySettings?.mrgidEez,
+    eezChoices.loading,
   ]);
 
   // Setup tooltip and hover effects for when eez picker is active
@@ -311,17 +363,6 @@ export default function GeographyAdmin() {
     }
   }, [map, eezPickerState.active]);
 
-  // useEffect(() => {
-  //   if (map && eez) {
-  //     console.log("useeffect a");
-  //     const selectedEEZs = eezPickerState.selectedEEZs;
-
-  //     // Update the fill color for the EEZ layer
-
-  //     // Update the line color for the EEZ layer
-  //   }
-  // }, [map, eez, eezPickerState.selectedEEZs, eezPickerState.active]);
-
   // Update EEZ layers whenever eez geography settings change
   useEffect(() => {
     if (map && eez) {
@@ -350,7 +391,7 @@ export default function GeographyAdmin() {
           0.5, // Higher opacity when in EEZ picker mode
           // If the picker is not active, hide non-selected EEZs
           ["in", ["get", "MRGID_EEZ"], ["literal", selectedEEZs]],
-          0.5, // Default opacity for selected EEZs
+          0.6, // Default opacity for selected EEZs
           0, // Hide non-selected EEZs
         ]);
       } else {
@@ -384,6 +425,63 @@ export default function GeographyAdmin() {
     eezPickerState.selectedEEZs,
     data?.projectBySlug?.geographySettings?.enableEezClipping,
   ]);
+
+  const mapContext = useMemo(() => {
+    return {
+      manager: {
+        map: map || undefined,
+        requestDigitizingLock: () => {},
+        releaseDigitizingLock: () => {},
+      },
+    };
+  }, [map]);
+
+  const [drawFeature, setDrawFeature] = useState<Feature | null>(null);
+
+  const extraRequestParams = useMemo(() => {
+    return {
+      removeLand:
+        data?.projectBySlug?.geographySettings?.enableLandClipping || false,
+      landDataset:
+        (coastline?.dataSource?.url || "").replace(
+          "https://tiles.seasketch.org/",
+          ""
+        ) + ".fgb",
+      clipToEEZIds: data?.projectBySlug?.geographySettings?.enableEezClipping
+        ? data?.projectBySlug?.geographySettings?.mrgidEez || []
+        : [],
+      eezDataset:
+        (eez?.dataSource?.url || "").replace(
+          "https://tiles.seasketch.org/",
+          ""
+        ) + ".fgb",
+    };
+  }, [
+    data?.projectBySlug?.geographySettings?.enableLandClipping,
+    data?.projectBySlug?.geographySettings?.enableEezClipping,
+    data?.projectBySlug?.geographySettings?.mrgidEez,
+    coastline?.dataSource?.url,
+    eez?.dataSource?.url,
+  ]);
+
+  const draw = useMapboxGLDraw(
+    mapContext,
+    SketchGeometryType.Polygon,
+    EMPTY_FEATURE_COLLECTION,
+    (feature) => {
+      console.log("feature", feature);
+      setDrawFeature(feature);
+      // setFeature(feature);
+    },
+    undefined,
+    "https://overlay.seasketch.org/clip",
+    // "http://localhost:8787/clip",
+    // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand", // preprocessing function
+    (geom) => {
+      console.log("geom", geom);
+    },
+    extraRequestParams
+  );
 
   return (
     <div className="w-full h-full flex">
@@ -545,15 +643,80 @@ export default function GeographyAdmin() {
           }
           onRequestEEZPicker={() => {
             setOpenModalsState({ land: false, eez: false });
-            console.log(eezPickerState);
             setEEZPickerState((prev) => ({
               ...prev,
               active: true,
+              selectedEEZs:
+                (data?.projectBySlug?.geographySettings
+                  ?.mrgidEez as number[]) || [],
             }));
           }}
         />
       )}
-      <div ref={mapRef} className="flex-1">
+      <div ref={mapRef} className="flex-1 relative">
+        {map && !eezPickerState.active && (
+          <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
+            <Button
+              className=""
+              small
+              label={t("Draw polygon")}
+              onClick={() => {
+                draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                draw.create(false, true);
+              }}
+            >
+              <span className="flex items-center space-x-1">
+                <Pencil1Icon />
+                <span>{t("Draw polygon")}</span>
+              </span>
+            </Button>
+            {(drawFeature ||
+              (draw.digitizingState !== DigitizingState.DISABLED &&
+                draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
+              <>
+                <Button
+                  small
+                  label={t("Clear")}
+                  onClick={() => {
+                    setDrawFeature(null);
+                    draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                  }}
+                >
+                  <span className="flex items-center space-x-1">
+                    <span>{t("Clear")}</span>
+                  </span>
+                </Button>
+              </>
+            )}
+          </div>
+        )}
+        {(drawFeature ||
+          (draw.digitizingState !== DigitizingState.DISABLED &&
+            draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
+          <div className="absolute w-full h-10 bottom-4 flex items-center justify-center">
+            <DigitizingTools
+              className="!-bottom-2"
+              preprocessingError={draw.preprocessingError || undefined}
+              multiFeature={false}
+              isSketchingWorkflow={true}
+              selfIntersects={draw.selfIntersects}
+              onRequestResetFeature={() => {
+                draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                draw.create(false, true);
+              }}
+              onRequestFinishEditing={draw.actions.finishEditing}
+              geometryType={SketchGeometryType.Polygon}
+              state={draw.digitizingState}
+              onRequestSubmit={() => {}}
+              onRequestDelete={() => {
+                draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                setDrawFeature(null);
+              }}
+              onRequestEdit={draw.actions.edit}
+            />
+          </div>
+        )}
+        <Spinner large className="absolute left-1/2 top-1/2" />
         {eezPickerState.active && (
           <div className="absolute w-full h-32 z-50 text-base">
             <div
@@ -626,6 +789,23 @@ export default function GeographyAdmin() {
                       saving: false,
                       selectedEEZs: eezPickerState.selectedEEZs,
                     }));
+                    const eezs = eezChoices.data.filter((choice) =>
+                      eezPickerState.selectedEEZs.includes(choice.value)
+                    );
+                    const bboxes = eezs.map((choice) => choice.data?.bbox);
+                    const bbox = combineBBoxes(bboxes);
+                    if (bbox) {
+                      map?.fitBounds(
+                        [
+                          [bbox[0], bbox[1]],
+                          [bbox[2], bbox[3]],
+                        ],
+                        {
+                          padding: 80,
+                          animate: true,
+                        }
+                      );
+                    }
                   } catch (error) {
                     setEEZPickerState((prev) => ({
                       ...prev,
@@ -688,4 +868,91 @@ function GeographyLayerItem({
       </button>
     </div>
   );
+}
+
+function combineBBoxes(bboxes: number[][]) {
+  if (bboxes.length === 0) {
+    return undefined;
+  }
+
+  // Track if we're crossing the antimeridian
+  let crossesAntimeridian = false;
+
+  // Initialize with the first box
+  const firstBox = bboxes[0];
+  let minX = firstBox[0];
+  let minY = firstBox[1];
+  let maxX = firstBox[2];
+  let maxY = firstBox[3];
+
+  // Check each box to see if any individual box spans the antimeridian
+  for (const box of bboxes) {
+    if (box[0] > box[2]) {
+      crossesAntimeridian = true;
+      break;
+    }
+  }
+
+  if (crossesAntimeridian) {
+    // Handle antimeridian crossing by shifting coordinates
+    // For each bbox, if it's in the eastern hemisphere (positive longitude),
+    // shift it to be "east" of the western hemisphere by adding 360
+    for (const box of bboxes) {
+      // If a box spans the antimeridian itself
+      if (box[0] > box[2]) {
+        minX = Math.min(minX, box[0]);
+        maxX = Math.max(maxX, box[2] + 360); // Shift the east side
+      } else if (box[0] > 0) {
+        // Box is in eastern hemisphere
+        minX = Math.min(minX, box[0] - 360); // Shift to continue from western hemisphere
+        maxX = Math.max(maxX, box[2]);
+      } else {
+        // Box is in western hemisphere
+        minX = Math.min(minX, box[0]);
+        maxX = Math.max(maxX, box[2]);
+      }
+      minY = Math.min(minY, box[1]);
+      maxY = Math.max(maxY, box[3]);
+    }
+  } else {
+    // Standard case - check if the combined boxes might cross the antimeridian
+    let eastMost = -180;
+    let westMost = 180;
+
+    for (const box of bboxes) {
+      minY = Math.min(minY, box[1]);
+      maxY = Math.max(maxY, box[3]);
+
+      eastMost = Math.max(eastMost, box[2]);
+      westMost = Math.min(westMost, box[0]);
+    }
+
+    // If we have boxes on both sides of the meridian and they're far apart
+    if (westMost < 0 && eastMost > 0 && eastMost - westMost > 180) {
+      // We need to shift coordinates
+      crossesAntimeridian = true;
+
+      // Recalculate with shifting
+      minX = 180;
+      maxX = -180;
+
+      for (const box of bboxes) {
+        if (box[0] > 0) {
+          // Eastern hemisphere
+          minX = Math.min(minX, box[0] - 360);
+          maxX = Math.max(maxX, box[2] - 360);
+        } else {
+          // Western hemisphere
+          minX = Math.min(minX, box[0]);
+          maxX = Math.max(maxX, box[2]);
+        }
+      }
+    } else {
+      // Standard case, no special handling needed
+      minX = westMost;
+      maxX = eastMost;
+    }
+  }
+
+  return [minX, minY, maxX, maxY];
 }
