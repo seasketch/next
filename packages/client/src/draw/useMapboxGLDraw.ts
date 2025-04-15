@@ -19,6 +19,7 @@ import {
   DigitizingLockState,
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
+import { SpanJSONOutput } from "./preprocess";
 
 function hasKinks(feature?: Feature<any>) {
   if (feature && feature.geometry.type === "Polygon") {
@@ -104,7 +105,10 @@ export default function useMapboxGLDraw(
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
   onCancelNewShape?: () => void,
   preprocessingEndpoint?: string,
-  onPreprocessedGeometry?: (geom: Geometry) => void,
+  onPreprocessedGeometry?: (
+    geom: Geometry,
+    performance?: SpanJSONOutput
+  ) => void,
   extraRequestParams: { [key: string]: any } = {}
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
@@ -135,6 +139,20 @@ export default function useMapboxGLDraw(
   handlerState.current.preprocessingError = preprocessingError;
 
   const [selfIntersects, setSelfIntersects] = useState<boolean>(false);
+  const [performance, setPerformance] = useState<SpanJSONOutput | null>(null);
+  const handlePreprocessedResult = useCallback(
+    (geom: Geometry, performance?: SpanJSONOutput) => {
+      if (performance) {
+        setPerformance(performance);
+      } else {
+        setPerformance(null);
+      }
+      if (onPreprocessedGeometry) {
+        onPreprocessedGeometry(geom, performance);
+      }
+    },
+    [onPreprocessedGeometry, setPerformance]
+  );
 
   const [preprocessingResults] = useState<{
     [id: string]: Feature<any>;
@@ -175,7 +193,7 @@ export default function useMapboxGLDraw(
             setPreprocessingError,
             preprocessingEndpoint,
             preprocessingResults,
-            onPreprocessedGeometry,
+            handlePreprocessedResult,
             extraRequestParams
           ),
         },
@@ -712,6 +730,7 @@ export default function useMapboxGLDraw(
     selfIntersects,
     resetFeature,
     preprocessingError,
+    performance,
   };
 }
 

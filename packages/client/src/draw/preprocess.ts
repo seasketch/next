@@ -1,11 +1,22 @@
 import { Feature, Geometry } from "geojson";
 
+export type SpanJSONOutput = {
+  id: string;
+  start: number;
+  end: number;
+  children: SpanJSONOutput[];
+  metadata?: Record<string, any>;
+};
+
 export async function preprocess(
   endpoint: string,
   drawFeature: any,
   changeMode: (mode: string, args?: any) => void,
   preprocessingResults?: { [id: string]: Feature<any> },
-  onPreprocessedGeometry?: (geometry: Geometry) => void,
+  onPreprocessedGeometry?: (
+    geometry: Geometry,
+    performance?: SpanJSONOutput
+  ) => void,
   extraRequestParams?: { [key: string]: any }
 ) {
   return fetch(endpoint, {
@@ -29,7 +40,7 @@ export async function preprocess(
       }
       preprocessingResults[drawFeature.id] = data.data;
       if (onPreprocessedGeometry) {
-        onPreprocessedGeometry(data.data.geometry);
+        onPreprocessedGeometry(data.data.geometry, data.spans);
       }
       changeMode("simple_select", {
         preprocessingEndpoint: endpoint,

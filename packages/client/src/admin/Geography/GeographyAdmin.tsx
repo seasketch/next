@@ -477,8 +477,8 @@ export default function GeographyAdmin() {
     "https://overlay.seasketch.org/clip",
     // "http://localhost:8787/clip",
     // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand", // preprocessing function
-    (geom) => {
-      console.log("geom", geom);
+    (geom, performance) => {
+      console.log("geom", geom, performance);
     },
     extraRequestParams
   );
@@ -713,6 +713,12 @@ export default function GeographyAdmin() {
                 setDrawFeature(null);
               }}
               onRequestEdit={draw.actions.edit}
+              performance={
+                draw.digitizingState === DigitizingState.NO_SELECTION &&
+                drawFeature
+                  ? draw.performance || undefined
+                  : undefined
+              }
             />
           </div>
         )}

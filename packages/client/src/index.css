@@ -4743,6 +4743,18 @@ select {
   margin-top: 2px;
 }
 
+.mb-2\.5 {
+  margin-bottom: 0.625rem;
+}
+
+.ml-60 {
+  margin-left: 15rem;
+}
+
+.ml-40 {
+  margin-left: 10rem;
+}
+
 .box-content {
   box-sizing: content-box;
 }
@@ -4992,6 +5004,14 @@ select {
   max-height: 100vh;
 }
 
+.max-h-\[50vh\] {
+  max-height: 50vh;
+}
+
+.max-h-\[45vh\] {
+  max-height: 45vh;
+}
+
 .min-h-0 {
   min-height: 0px;
 }
@@ -5209,6 +5229,14 @@ select {
   width: 100vw;
 }
 
+.w-60 {
+  width: 15rem;
+}
+
+.w-\[960px\] {
+  width: 960px;
+}
+
 .min-w-0 {
   min-width: 0px;
 }
@@ -5231,6 +5259,14 @@ select {
 
 .min-w-lg {
   min-width: 32rem;
+}
+
+.min-w-60 {
+  min-width: 15rem;
+}
+
+.min-w-40 {
+  min-width: 10rem;
 }
 
 .max-w-1 {
@@ -5606,6 +5642,10 @@ select {
   align-items: baseline;
 }
 
+.items-stretch {
+  align-items: stretch;
+}
+
 .justify-start {
   justify-content: flex-start;
 }
@@ -5892,6 +5932,10 @@ select {
   text-overflow: ellipsis;
 }
 
+.text-ellipsis {
+  text-overflow: ellipsis;
+}
+
 .whitespace-nowrap {
   white-space: nowrap;
 }
@@ -6092,6 +6136,10 @@ select {
   border-top-width: 2px;
 }
 
+.border-l-2 {
+  border-left-width: 2px;
+}
+
 .border-dashed {
   border-style: dashed;
 }
@@ -6276,6 +6324,11 @@ select {
 .border-yellow-600 {
   --tw-border-opacity: 1;
   border-color: rgb(217 119 6 / var(--tw-border-opacity, 1));
+}
+
+.border-yellow-300 {
+  --tw-border-opacity: 1;
+  border-color: rgb(252 211 77 / var(--tw-border-opacity, 1));
 }
 
 .border-opacity-0 {
@@ -7293,6 +7346,10 @@ select {
   line-height: 1rem;
 }
 
+.text-\[10px\] {
+  font-size: 10px;
+}
+
 .font-bold {
   font-weight: 700;
 }
@@ -7381,6 +7438,10 @@ select {
 
 .leading-none {
   line-height: 1;
+}
+
+.leading-4 {
+  line-height: 1rem;
 }
 
 .tracking-tight {
@@ -7652,6 +7713,11 @@ select {
 .text-yellow-800 {
   --tw-text-opacity: 1;
   color: rgb(146 64 14 / var(--tw-text-opacity, 1));
+}
+
+.text-yellow-300 {
+  --tw-text-opacity: 1;
+  color: rgb(252 211 77 / var(--tw-text-opacity, 1));
 }
 
 .text-opacity-80 {
@@ -8539,6 +8605,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color: rgb(255 255 255 / var(--tw-bg-opacity, 1));
 }
 
+.hover\:bg-yellow-200:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(253 230 138 / var(--tw-bg-opacity, 1));
+}
+
 .hover\:bg-opacity-10:hover {
   --tw-bg-opacity: 0.1;
 }
@@ -8681,6 +8752,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   --tw-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   --tw-shadow-colored: 0 1px 2px 0 var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.hover\:brightness-95:hover {
+  --tw-brightness: brightness(.95);
+  filter: var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow);
 }
 
 .focus\:z-20:focus {

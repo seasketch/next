@@ -19,6 +19,9 @@ import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
 import { MeasureControlContext } from "../MeasureControl";
 import clsx from "clsx";
+import { SpanJSONOutput } from "../draw/preprocess";
+import { MagnifyingGlassIcon, StopwatchIcon } from "@radix-ui/react-icons";
+import ClippingProfilingModal from "../admin/Geography/ClippingProfilingModal";
 
 interface DigitizingInstructionsProps {
   geometryType: SketchGeometryType;
@@ -46,6 +49,8 @@ interface DigitizingInstructionsProps {
   isSketchingWorkflow?: boolean;
   preprocessingError?: string;
   className?: string;
+  /** Set on successful completion of preprocessing by newer clipping service */
+  performance?: SpanJSONOutput;
 }
 
 const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
@@ -65,6 +70,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   isSketchingWorkflow,
   preprocessingError,
   className,
+  performance,
 }) => {
   const { t } = useTranslation("surveys");
   const style = useContext(FormElementLayoutContext).style;
@@ -72,6 +78,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
   const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
+  const [showProfilingModal, setShowProfilingModal] = useState<
+    false | SpanJSONOutput
+  >(false);
 
   const measureContext = useContext(MeasureControlContext);
 
@@ -265,9 +274,24 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               <p className="text-sm select-none">
                 {isSketchingWorkflow &&
                 state === DigitizingState.NO_SELECTION ? (
-                  <Trans ns="digitizing">
-                    Click your sketch to edit geometry
-                  </Trans>
+                  <span className="flex space-x-2">
+                    <span>
+                      <Trans ns="digitizing">
+                        Click your sketch to edit geometry
+                      </Trans>
+                    </span>
+                    {performance && (
+                      <button
+                        title={t("Profile clipping performance")}
+                        className="flex items-center pointer-events-auto"
+                        onClick={() => {
+                          setShowProfilingModal(performance);
+                        }}
+                      >
+                        <StopwatchIcon />
+                      </button>
+                    )}
+                  </span>
                 ) : (
                   <DigitizingInstructions
                     state={state}
@@ -292,6 +316,12 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           {children}
         </MapSettingsPopup>
         {/* </div> */}
+        {showProfilingModal && (
+          <ClippingProfilingModal
+            data={showProfilingModal}
+            onRequestClose={() => setShowProfilingModal(false)}
+          />
+        )}
       </>
     );
   }

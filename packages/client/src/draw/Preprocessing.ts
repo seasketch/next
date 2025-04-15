@@ -1,7 +1,7 @@
 import { Feature, Geometry } from "geojson";
 import { Dispatch, SetStateAction } from "react";
 import DS from "./DirectSelect";
-import { preprocess } from "./preprocess";
+import { preprocess, SpanJSONOutput } from "./preprocess";
 
 const DirectSelect = DS();
 const _onSetup = DirectSelect.onSetup;
@@ -94,7 +94,10 @@ export default function PreproccessingFactory(
   setPreprocessingError: Dispatch<SetStateAction<string | null>>,
   preprocessingEndpoint?: string,
   preprocessingResults?: { [id: string]: Feature<any> },
-  onPreprocessedGeometry?: (geometry: Geometry) => void,
+  onPreprocessedGeometry?: (
+    geometry: Geometry,
+    performance?: SpanJSONOutput
+  ) => void,
   extraRequestParams?: { [key: string]: any }
 ) {
   return {
