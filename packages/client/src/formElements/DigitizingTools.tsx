@@ -20,7 +20,7 @@ import { XCircleIcon } from "@heroicons/react/solid";
 import { MeasureControlContext } from "../MeasureControl";
 import clsx from "clsx";
 import { SpanJSONOutput } from "../draw/preprocess";
-import { MagnifyingGlassIcon, StopwatchIcon } from "@radix-ui/react-icons";
+import { StopwatchIcon } from "@radix-ui/react-icons";
 import ClippingProfilingModal from "../admin/Geography/ClippingProfilingModal";
 
 interface DigitizingInstructionsProps {

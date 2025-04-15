@@ -1,8 +1,8 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import Modal from "../../components/Modal";
 import { SpanJSONOutput } from "../../draw/preprocess";
 import { StopwatchIcon } from "@radix-ui/react-icons";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 // Fix d3 imports
 import { scaleLinear } from "d3-scale";
 import { ticks as d3Ticks } from "d3-array";
@@ -138,7 +138,6 @@ export default function ClippingProfilingModal({
   data: SpanJSONOutput;
   onRequestClose: () => void;
 }) {
-  const { t } = useTranslation("admin:geography");
   const totalDuration = data ? data.end - data.start : 0;
   const timelineHeight = 38;
   const width = 600;

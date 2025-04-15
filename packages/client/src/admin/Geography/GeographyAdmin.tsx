@@ -469,16 +469,14 @@ export default function GeographyAdmin() {
     SketchGeometryType.Polygon,
     EMPTY_FEATURE_COLLECTION,
     (feature) => {
-      console.log("feature", feature);
       setDrawFeature(feature);
-      // setFeature(feature);
     },
     undefined,
     "https://overlay.seasketch.org/clip",
     // "http://localhost:8787/clip",
     // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand", // preprocessing function
     (geom, performance) => {
-      console.log("geom", geom, performance);
+      // console.log("geom", geom, performance);
     },
     extraRequestParams
   );
