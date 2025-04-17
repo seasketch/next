@@ -9345,6 +9345,7 @@ export type Project = Node & {
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+  eezSettings?: Maybe<ProjectEezSetting>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
@@ -9356,7 +9357,6 @@ export type Project = Node & {
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
-  geographySettings?: Maybe<ProjectGeographySetting>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   hideForums: Scalars['Boolean'];
@@ -10050,8 +10050,8 @@ export type ProjectDraftTableOfContentsStatusPayload = {
   projectId: Scalars['Int'];
 };
 
-export type ProjectGeographySetting = Node & {
-  __typename?: 'ProjectGeographySetting';
+export type ProjectEezSetting = Node & {
+  __typename?: 'ProjectEezSetting';
   eezSelections?: Maybe<Array<Maybe<Scalars['String']>>>;
   enableEezClipping?: Maybe<Scalars['Boolean']>;
   enableLandClipping?: Maybe<Scalars['Boolean']>;
@@ -14407,7 +14407,7 @@ export type UpdateEezClippingSettingsPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  projectGeographySetting?: Maybe<ProjectGeographySetting>;
+  projectEezSetting?: Maybe<ProjectEezSetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -14828,7 +14828,7 @@ export type UpdateLandClippingSettingsPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  projectGeographySetting?: Maybe<ProjectGeographySetting>;
+  projectEezSetting?: Maybe<ProjectEezSetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -18933,9 +18933,9 @@ export type GeographyClippingSettingsQuery = (
   )>>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { geographySettings?: Maybe<(
-      { __typename?: 'ProjectGeographySetting' }
-      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'eezSelections' | 'mrgidEez' | 'enableEezClipping' | 'enableLandClipping'>
+    & { eezSettings?: Maybe<(
+      { __typename?: 'ProjectEezSetting' }
+      & Pick<ProjectEezSetting, 'id' | 'projectId' | 'eezSelections' | 'mrgidEez' | 'enableEezClipping' | 'enableLandClipping'>
     )> }
   )> }
 );
@@ -18950,9 +18950,9 @@ export type UpdateLandClippingSettingsMutation = (
   { __typename?: 'Mutation' }
   & { updateLandClippingSettings?: Maybe<(
     { __typename?: 'UpdateLandClippingSettingsPayload' }
-    & { projectGeographySetting?: Maybe<(
-      { __typename?: 'ProjectGeographySetting' }
-      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'enableLandClipping' | 'eezSelections'>
+    & { projectEezSetting?: Maybe<(
+      { __typename?: 'ProjectEezSetting' }
+      & Pick<ProjectEezSetting, 'id' | 'projectId' | 'enableLandClipping' | 'eezSelections'>
     )> }
   )> }
 );
@@ -18969,9 +18969,9 @@ export type UpdateEezClippingSettingsMutation = (
   { __typename?: 'Mutation' }
   & { updateEezClippingSettings?: Maybe<(
     { __typename?: 'UpdateEezClippingSettingsPayload' }
-    & { projectGeographySetting?: Maybe<(
-      { __typename?: 'ProjectGeographySetting' }
-      & Pick<ProjectGeographySetting, 'id' | 'projectId' | 'enableLandClipping' | 'enableEezClipping' | 'eezSelections' | 'mrgidEez'>
+    & { projectEezSetting?: Maybe<(
+      { __typename?: 'ProjectEezSetting' }
+      & Pick<ProjectEezSetting, 'id' | 'projectId' | 'enableLandClipping' | 'enableEezClipping' | 'eezSelections' | 'mrgidEez'>
     )> }
   )> }
 );
@@ -25403,7 +25403,7 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
   }
   projectBySlug(slug: $slug) {
     id
-    geographySettings {
+    eezSettings {
       id
       projectId
       eezSelections
@@ -25417,7 +25417,7 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
 export const UpdateLandClippingSettingsDocument = /*#__PURE__*/ gql`
     mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
   updateLandClippingSettings(input: {slug: $slug, enableClipping: $enable}) {
-    projectGeographySetting {
+    projectEezSetting {
       id
       projectId
       enableLandClipping
@@ -25431,7 +25431,7 @@ export const UpdateEezClippingSettingsDocument = /*#__PURE__*/ gql`
   updateEezClippingSettings(
     input: {slug: $slug, enableClipping: $enable, selections: $eezSelections, ids: $ids}
   ) {
-    projectGeographySetting {
+    projectEezSetting {
       id
       projectId
       enableLandClipping

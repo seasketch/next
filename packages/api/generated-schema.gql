@@ -10508,6 +10508,7 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [TableOfContentsItem!]
+  eezSettings: ProjectEezSetting
   eligableDownloadableLayersCount: Int
 
   """
@@ -10535,7 +10536,6 @@ type Project implements Node {
     """The method to use when ordering `Forum`."""
     orderBy: [ForumsOrderBy!]
   ): [Forum!]!
-  geographySettings: ProjectGeographySetting
 
   """Reads and enables pagination through a set of `Group`."""
   groups(
@@ -11148,7 +11148,7 @@ type ProjectDraftTableOfContentsStatusPayload {
   projectId: Int!
 }
 
-type ProjectGeographySetting implements Node {
+type ProjectEezSetting implements Node {
   eezSelections: [String]
   enableEezClipping: Boolean
   enableLandClipping: Boolean
@@ -15804,7 +15804,7 @@ type UpdateEezClippingSettingsPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  projectGeographySetting: ProjectGeographySetting
+  projectEezSetting: ProjectEezSetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -16326,7 +16326,7 @@ type UpdateLandClippingSettingsPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-  projectGeographySetting: ProjectGeographySetting
+  projectEezSetting: ProjectEezSetting
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

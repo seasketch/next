@@ -23,7 +23,7 @@ query GeographyClippingSettings($slug: String!) {
   }
   projectBySlug(slug: $slug) {
     id
-    geographySettings {
+    eezSettings {
       id
       projectId
       eezSelections
@@ -36,7 +36,7 @@ query GeographyClippingSettings($slug: String!) {
 
 mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
   updateLandClippingSettings(input: { slug: $slug, enableClipping: $enable }) {
-    projectGeographySetting {
+    projectEezSetting {
       id
       projectId
       enableLandClipping
@@ -59,7 +59,7 @@ mutation UpdateEEZClippingSettings(
       ids: $ids
     }
   ) {
-    projectGeographySetting {
+    projectEezSetting {
       id
       projectId
       enableLandClipping

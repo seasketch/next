@@ -56,14 +56,14 @@ export default function GeographyAdmin() {
   });
 
   useEffect(() => {
-    if (data?.projectBySlug?.geographySettings?.mrgidEez) {
-      const ids = data.projectBySlug.geographySettings.mrgidEez as number[];
+    if (data?.projectBySlug?.eezSettings?.mrgidEez) {
+      const ids = data.projectBySlug.eezSettings.mrgidEez as number[];
       setEEZPickerState((prev) => ({
         ...prev,
         selectedEEZs: ids,
       }));
     }
-  }, [data?.projectBySlug?.geographySettings?.mrgidEez]);
+  }, [data?.projectBySlug?.eezSettings?.mrgidEez]);
 
   const [updateLandClippingMutation, updateLandClippingState] =
     useUpdateLandClippingSettingsMutation();
@@ -121,11 +121,11 @@ export default function GeographyAdmin() {
       eez?.dataSource?.url &&
       coastline?.dataSource?.url &&
       !eezChoices.loading &&
-      data?.projectBySlug?.geographySettings?.mrgidEez
+      data?.projectBySlug?.eezSettings?.mrgidEez
     ) {
       let bbox: number[] | undefined;
-      if (data.projectBySlug.geographySettings.mrgidEez.length > 0) {
-        const ids = data.projectBySlug.geographySettings.mrgidEez as number[];
+      if (data.projectBySlug.eezSettings.mrgidEez.length > 0) {
+        const ids = data.projectBySlug.eezSettings.mrgidEez as number[];
         // get bboxes for each eez
         const eezs = eezChoices.data.filter((choice) =>
           ids.includes(choice.value)
@@ -197,10 +197,7 @@ export default function GeographyAdmin() {
                 [
                   "in",
                   ["get", "MRGID_EEZ"],
-                  [
-                    "literal",
-                    data?.projectBySlug?.geographySettings?.mrgidEez || [],
-                  ],
+                  ["literal", data?.projectBySlug?.eezSettings?.mrgidEez || []],
                 ],
                 0.1,
                 0,
@@ -224,10 +221,7 @@ export default function GeographyAdmin() {
                 [
                   "in",
                   ["get", "MRGID_EEZ"],
-                  [
-                    "literal",
-                    data?.projectBySlug?.geographySettings?.mrgidEez || [],
-                  ],
+                  ["literal", data?.projectBySlug?.eezSettings?.mrgidEez || []],
                 ],
                 0.6,
                 0,
@@ -251,7 +245,7 @@ export default function GeographyAdmin() {
     data?.gmapssatellitesession?.session,
     eez?.dataSource?.url,
     coastline?.dataSource?.url,
-    data?.projectBySlug?.geographySettings?.mrgidEez,
+    data?.projectBySlug?.eezSettings?.mrgidEez,
     eezChoices.loading,
   ]);
 
@@ -368,10 +362,10 @@ export default function GeographyAdmin() {
     if (map && eez) {
       const selectedEEZs = eezPickerState.active
         ? eezPickerState.selectedEEZs
-        : data?.projectBySlug?.geographySettings?.mrgidEez || [];
+        : data?.projectBySlug?.eezSettings?.mrgidEez || [];
       // Update the fill-opacity for the EEZ layer based on eezPickerState
       if (
-        data?.projectBySlug?.geographySettings?.enableEezClipping ||
+        data?.projectBySlug?.eezSettings?.enableEezClipping ||
         eezPickerState.active
       ) {
         map.setPaintProperty("eez-layer", "fill-opacity", [
@@ -421,9 +415,9 @@ export default function GeographyAdmin() {
     map,
     eez,
     eezPickerState.active,
-    data?.projectBySlug?.geographySettings?.mrgidEez,
+    data?.projectBySlug?.eezSettings?.mrgidEez,
     eezPickerState.selectedEEZs,
-    data?.projectBySlug?.geographySettings?.enableEezClipping,
+    data?.projectBySlug?.eezSettings?.enableEezClipping,
   ]);
 
   const mapContext = useMemo(() => {
@@ -440,15 +434,14 @@ export default function GeographyAdmin() {
 
   const extraRequestParams = useMemo(() => {
     return {
-      removeLand:
-        data?.projectBySlug?.geographySettings?.enableLandClipping || false,
+      removeLand: data?.projectBySlug?.eezSettings?.enableLandClipping || false,
       landDataset:
         (coastline?.dataSource?.url || "").replace(
           "https://tiles.seasketch.org/",
           ""
         ) + ".fgb",
-      clipToEEZIds: data?.projectBySlug?.geographySettings?.enableEezClipping
-        ? data?.projectBySlug?.geographySettings?.mrgidEez || []
+      clipToEEZIds: data?.projectBySlug?.eezSettings?.enableEezClipping
+        ? data?.projectBySlug?.eezSettings?.mrgidEez || []
         : [],
       eezDataset:
         (eez?.dataSource?.url || "").replace(
@@ -457,9 +450,9 @@ export default function GeographyAdmin() {
         ) + ".fgb",
     };
   }, [
-    data?.projectBySlug?.geographySettings?.enableLandClipping,
-    data?.projectBySlug?.geographySettings?.enableEezClipping,
-    data?.projectBySlug?.geographySettings?.mrgidEez,
+    data?.projectBySlug?.eezSettings?.enableLandClipping,
+    data?.projectBySlug?.eezSettings?.enableEezClipping,
+    data?.projectBySlug?.eezSettings?.mrgidEez,
     coastline?.dataSource?.url,
     eez?.dataSource?.url,
   ]);
@@ -528,7 +521,7 @@ export default function GeographyAdmin() {
               <GeographyLayerItem
                 name="Remove Land"
                 enabled={Boolean(
-                  data?.projectBySlug?.geographySettings?.enableLandClipping
+                  data?.projectBySlug?.eezSettings?.enableLandClipping
                 )}
                 onEdit={() => setOpenModalsState({ land: true, eez: false })}
                 onToggle={(enabled) => {
@@ -538,14 +531,13 @@ export default function GeographyAdmin() {
                       __typename: "Mutation",
                       updateLandClippingSettings: {
                         __typename: "UpdateLandClippingSettingsPayload",
-                        projectGeographySetting: {
-                          id: data!.projectBySlug!.geographySettings!.id,
-                          __typename: "ProjectGeographySetting",
+                        projectEezSetting: {
+                          id: data!.projectBySlug!.eezSettings!.id,
+                          __typename: "ProjectEezSetting",
                           enableLandClipping: enabled,
                           projectId: data?.projectBySlug?.id,
                           eezSelections:
-                            data?.projectBySlug?.geographySettings
-                              ?.eezSelections,
+                            data?.projectBySlug?.eezSettings?.eezSelections,
                         },
                       },
                     },
@@ -555,19 +547,15 @@ export default function GeographyAdmin() {
               <GeographyLayerItem
                 name="Limit to Exclusive Economic Zone"
                 enabled={Boolean(
-                  data?.projectBySlug?.geographySettings?.enableEezClipping &&
-                    data?.projectBySlug?.geographySettings?.eezSelections
-                      ?.length
+                  data?.projectBySlug?.eezSettings?.enableEezClipping &&
+                    data?.projectBySlug?.eezSettings?.eezSelections?.length
                 )}
                 onEdit={() => {
                   setOpenModalsState({ land: false, eez: true });
                 }}
                 description={
-                  data?.projectBySlug?.geographySettings?.eezSelections
-                    ?.length ? (
-                    data.projectBySlug.geographySettings.eezSelections.join(
-                      ", "
-                    )
+                  data?.projectBySlug?.eezSettings?.eezSelections?.length ? (
+                    data.projectBySlug.eezSettings.eezSelections.join(", ")
                   ) : (
                     <Trans ns="admin:geography">
                       <button
@@ -587,10 +575,8 @@ export default function GeographyAdmin() {
                 }
                 onToggle={(enabled) => {
                   if (
-                    (
-                      data?.projectBySlug?.geographySettings?.eezSelections ||
-                      []
-                    ).length === 0
+                    (data?.projectBySlug?.eezSettings?.eezSelections || [])
+                      .length === 0
                   ) {
                     setEEZPickerState((prev) => ({
                       ...prev,
@@ -601,11 +587,11 @@ export default function GeographyAdmin() {
                     // do the mutation
                     updateEEZClippingMutation({
                       variables: {
-                        eezSelections: data?.projectBySlug?.geographySettings
+                        eezSelections: data?.projectBySlug?.eezSettings
                           ?.eezSelections as string[],
                         slug,
                         enable: enabled,
-                        ids: data?.projectBySlug?.geographySettings
+                        ids: data?.projectBySlug?.eezSettings
                           ?.mrgidEez as number[],
                       },
                     });
@@ -620,7 +606,7 @@ export default function GeographyAdmin() {
         <LandClippingModal
           onRequestClose={() => setOpenModalsState({ land: false, eez: false })}
           enabled={Boolean(
-            data?.projectBySlug?.geographySettings?.enableLandClipping
+            data?.projectBySlug?.eezSettings?.enableLandClipping
           )}
           lastUpdated={new Date(coastline?.dataSource?.createdAt)}
           author={coastline?.dataSource?.authorProfile!}
@@ -630,14 +616,13 @@ export default function GeographyAdmin() {
         <EEZClippingModal
           onRequestClose={() => setOpenModalsState({ land: false, eez: false })}
           enabled={Boolean(
-            data?.projectBySlug?.geographySettings?.enableEezClipping &&
-              data?.projectBySlug?.geographySettings?.eezSelections?.length
+            data?.projectBySlug?.eezSettings?.enableEezClipping &&
+              data?.projectBySlug?.eezSettings?.eezSelections?.length
           )}
           lastUpdated={new Date(eez?.dataSource?.createdAt)}
           author={eez?.dataSource?.authorProfile!}
           selectedEEZs={
-            (data?.projectBySlug?.geographySettings
-              ?.eezSelections as string[]) || []
+            (data?.projectBySlug?.eezSettings?.eezSelections as string[]) || []
           }
           onRequestEEZPicker={() => {
             setOpenModalsState({ land: false, eez: false });
@@ -645,8 +630,7 @@ export default function GeographyAdmin() {
               ...prev,
               active: true,
               selectedEEZs:
-                (data?.projectBySlug?.geographySettings
-                  ?.mrgidEez as number[]) || [],
+                (data?.projectBySlug?.eezSettings?.mrgidEez as number[]) || [],
             }));
           }}
         />
@@ -760,8 +744,8 @@ export default function GeographyAdmin() {
                   setEEZPickerState({
                     ...eezPickerState,
                     active: false,
-                    selectedEEZs: (data?.projectBySlug?.geographySettings
-                      ?.mrgidEez || []) as number[],
+                    selectedEEZs: (data?.projectBySlug?.eezSettings?.mrgidEez ||
+                      []) as number[],
                   })
                 }
               />
