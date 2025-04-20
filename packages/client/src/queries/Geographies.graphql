@@ -23,49 +23,17 @@ query GeographyClippingSettings($slug: String!) {
   }
   projectBySlug(slug: $slug) {
     id
-    eezSettings {
+    geographies {
       id
-      projectId
-      eezSelections
-      mrgidEez
-      enableEezClipping
-      enableLandClipping
-    }
-  }
-}
-
-mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
-  updateLandClippingSettings(input: { slug: $slug, enableClipping: $enable }) {
-    projectEezSetting {
-      id
-      projectId
-      enableLandClipping
-      eezSelections
-    }
-  }
-}
-
-mutation UpdateEEZClippingSettings(
-  $slug: String!
-  $enable: Boolean!
-  $eezSelections: [String!]!
-  $ids: [Int!]!
-) {
-  updateEezClippingSettings(
-    input: {
-      slug: $slug
-      enableClipping: $enable
-      selections: $eezSelections
-      ids: $ids
-    }
-  ) {
-    projectEezSetting {
-      id
-      projectId
-      enableLandClipping
-      enableEezClipping
-      eezSelections
-      mrgidEez
+      name
+      createdAt
+      hash
+      reportingOnly
+      clippingLayers {
+        id
+        cql2Query
+        templateId
+      }
     }
   }
 }

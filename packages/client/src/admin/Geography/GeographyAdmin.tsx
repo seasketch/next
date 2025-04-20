@@ -2,20 +2,18 @@ import {
   DotsHorizontalIcon,
   FileTextIcon,
   Pencil1Icon,
+  PlusIcon,
 } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
   SketchGeometryType,
   useGeographyClippingSettingsQuery,
-  useUpdateEezClippingSettingsMutation,
-  useUpdateLandClippingSettingsMutation,
 } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Switch from "../../components/Switch";
 import getSlug from "../../getSlug";
-import LandClippingModal from "./LandClippingModal";
 import EEZClippingModal from "./EEZClippingModal";
 import mapboxgl from "mapbox-gl";
 import useEEZChoices, { labelForEEZ } from "./useEEZChoices";
@@ -28,6 +26,9 @@ import useMapboxGLDraw, {
 } from "../../draw/useMapboxGLDraw";
 import { Feature } from "geojson";
 import DigitizingTools from "../../formElements/DigitizingTools";
+import CreateGeographyWizard, {
+  CreateGeographyWizardState,
+} from "./CreateGeographyWizard";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -39,37 +40,29 @@ export default function GeographyAdmin() {
     variables: { slug },
     skip: !slug,
   });
-  const [openModalsState, setOpenModalsState] = useState<{
-    land: boolean;
-    eez: boolean;
-  }>({ land: false, eez: false });
+
+  const [geographyWizardState, setGeographyWizardState] = useState<
+    {
+      active: boolean;
+    } & CreateGeographyWizardState
+  >({
+    active: false,
+    step: "chooseTemplate",
+    multipleEEZHandling: "separate",
+    eraseLand: true,
+  });
 
   const [eezPickerState, setEEZPickerState] = useState<{
     active: boolean;
     selectedEEZs: number[];
     saving: boolean;
     error?: Error;
+    resultResolver?: (selectedEEZs: number[]) => void;
   }>({
     active: false,
     selectedEEZs: [],
     saving: false,
   });
-
-  useEffect(() => {
-    if (data?.projectBySlug?.eezSettings?.mrgidEez) {
-      const ids = data.projectBySlug.eezSettings.mrgidEez as number[];
-      setEEZPickerState((prev) => ({
-        ...prev,
-        selectedEEZs: ids,
-      }));
-    }
-  }, [data?.projectBySlug?.eezSettings?.mrgidEez]);
-
-  const [updateLandClippingMutation, updateLandClippingState] =
-    useUpdateLandClippingSettingsMutation();
-
-  const [updateEEZClippingMutation, updateEEZClippingMutationState] =
-    useUpdateEezClippingSettingsMutation();
 
   const coastline = data?.geographyClippingLayers?.find(
     (l) => l.dataSource?.dataLibraryTemplateId === COASTLINE
@@ -120,22 +113,21 @@ export default function GeographyAdmin() {
       data?.gmapssatellitesession?.session &&
       eez?.dataSource?.url &&
       coastline?.dataSource?.url &&
-      !eezChoices.loading &&
-      data?.projectBySlug?.eezSettings?.mrgidEez
+      !eezChoices.loading
     ) {
       let bbox: number[] | undefined;
-      if (data.projectBySlug.eezSettings.mrgidEez.length > 0) {
-        const ids = data.projectBySlug.eezSettings.mrgidEez as number[];
-        // get bboxes for each eez
-        const eezs = eezChoices.data.filter((choice) =>
-          ids.includes(choice.value)
-        );
-        const bboxes = eezs.map((choice) => choice.data?.bbox);
-        // combine bboxes
-        if (bboxes.length > 0) {
-          bbox = combineBBoxes(bboxes);
-        }
-      }
+      // if (data.projectBySlug.eezSettings.mrgidEez.length > 0) {
+      //   const ids = data.projectBySlug.eezSettings.mrgidEez as number[];
+      //   // get bboxes for each eez
+      //   const eezs = eezChoices.data.filter((choice) =>
+      //     ids.includes(choice.value)
+      //   );
+      //   const bboxes = eezs.map((choice) => choice.data?.bbox);
+      //   // combine bboxes
+      //   if (bboxes.length > 0) {
+      //     bbox = combineBBoxes(bboxes);
+      //   }
+      // }
       const session = data.gmapssatellitesession.session;
       const newMap = new mapboxgl.Map({
         container: mapRef.current,
@@ -180,10 +172,22 @@ export default function GeographyAdmin() {
               fitBoundsOptions: { padding: 80 },
             }
           : { center: [-119.7145, 34.4208], zoom: 3 }),
+        // @ts-ignore
+        projection: "globe",
       });
 
+      const activeEEZIds: number[] = [];
+      // data?.projectBySlug?.eezSettings?.mrgidEez || [];
       newMap.on("load", () => {
         setMap(newMap);
+        newMap.setFog({
+          range: [1, 5],
+          color: "rgba(255, 255, 255, 0.4)",
+          "horizon-blend": 0.1,
+          "high-color": "rgba(55, 120, 255, 0.5)",
+          "space-color": "rgba(0, 0, 0, 1)",
+          "star-intensity": 0.5,
+        });
 
         if (eez && eez.dataSource) {
           newMap.addLayer({
@@ -194,11 +198,7 @@ export default function GeographyAdmin() {
             paint: {
               "fill-opacity": [
                 "case",
-                [
-                  "in",
-                  ["get", "MRGID_EEZ"],
-                  ["literal", data?.projectBySlug?.eezSettings?.mrgidEez || []],
-                ],
+                ["in", ["get", "MRGID_EEZ"], ["literal", activeEEZIds]],
                 0.1,
                 0,
               ],
@@ -218,11 +218,7 @@ export default function GeographyAdmin() {
             paint: {
               "line-opacity": [
                 "case",
-                [
-                  "in",
-                  ["get", "MRGID_EEZ"],
-                  ["literal", data?.projectBySlug?.eezSettings?.mrgidEez || []],
-                ],
+                ["in", ["get", "MRGID_EEZ"], ["literal", activeEEZIds]],
                 0.6,
                 0,
               ],
@@ -245,7 +241,6 @@ export default function GeographyAdmin() {
     data?.gmapssatellitesession?.session,
     eez?.dataSource?.url,
     coastline?.dataSource?.url,
-    data?.projectBySlug?.eezSettings?.mrgidEez,
     eezChoices.loading,
   ]);
 
@@ -362,10 +357,10 @@ export default function GeographyAdmin() {
     if (map && eez) {
       const selectedEEZs = eezPickerState.active
         ? eezPickerState.selectedEEZs
-        : data?.projectBySlug?.eezSettings?.mrgidEez || [];
+        : [];
       // Update the fill-opacity for the EEZ layer based on eezPickerState
       if (
-        data?.projectBySlug?.eezSettings?.enableEezClipping ||
+        // data?.projectBySlug?.eezSettings?.enableEezClipping ||
         eezPickerState.active
       ) {
         map.setPaintProperty("eez-layer", "fill-opacity", [
@@ -411,14 +406,7 @@ export default function GeographyAdmin() {
         map.setPaintProperty("eez-line", "line-color", "grey");
       }
     }
-  }, [
-    map,
-    eez,
-    eezPickerState.active,
-    data?.projectBySlug?.eezSettings?.mrgidEez,
-    eezPickerState.selectedEEZs,
-    data?.projectBySlug?.eezSettings?.enableEezClipping,
-  ]);
+  }, [map, eez, eezPickerState.active, eezPickerState.selectedEEZs]);
 
   const mapContext = useMemo(() => {
     return {
@@ -434,28 +422,20 @@ export default function GeographyAdmin() {
 
   const extraRequestParams = useMemo(() => {
     return {
-      removeLand: data?.projectBySlug?.eezSettings?.enableLandClipping || false,
+      removeLand: true,
       landDataset:
         (coastline?.dataSource?.url || "").replace(
           "https://tiles.seasketch.org/",
           ""
         ) + ".fgb",
-      clipToEEZIds: data?.projectBySlug?.eezSettings?.enableEezClipping
-        ? data?.projectBySlug?.eezSettings?.mrgidEez || []
-        : [],
+      clipToEEZIds: [],
       eezDataset:
         (eez?.dataSource?.url || "").replace(
           "https://tiles.seasketch.org/",
           ""
         ) + ".fgb",
     };
-  }, [
-    data?.projectBySlug?.eezSettings?.enableLandClipping,
-    data?.projectBySlug?.eezSettings?.enableEezClipping,
-    data?.projectBySlug?.eezSettings?.mrgidEez,
-    coastline?.dataSource?.url,
-    eez?.dataSource?.url,
-  ]);
+  }, [coastline?.dataSource?.url, eez?.dataSource?.url]);
 
   const draw = useMapboxGLDraw(
     mapContext,
@@ -499,6 +479,18 @@ export default function GeographyAdmin() {
           </a>
         </p>
         <div className="flex flex-col overflow-y-auto bg-gray-200 h-full shadow-inner">
+          <div className="flex items-center justify-center p-6">
+            <Button
+              onClick={() => {
+                setGeographyWizardState((prev) => ({
+                  ...prev,
+                  active: true,
+                  step: "chooseTemplate",
+                }));
+              }}
+              label={t("Create Your First Geography")}
+            />
+          </div>
           {loading && (
             <div className="w-full text-center p-5">
               <Spinner />
@@ -516,103 +508,10 @@ export default function GeographyAdmin() {
               </Trans>
             </Warning>
           )}
-          {!loading && (
-            <ul className="w-full p-2">
-              <GeographyLayerItem
-                name="Remove Land"
-                enabled={Boolean(
-                  data?.projectBySlug?.eezSettings?.enableLandClipping
-                )}
-                onEdit={() => setOpenModalsState({ land: true, eez: false })}
-                onToggle={(enabled) => {
-                  updateLandClippingMutation({
-                    variables: { enable: enabled, slug },
-                    optimisticResponse: {
-                      __typename: "Mutation",
-                      updateLandClippingSettings: {
-                        __typename: "UpdateLandClippingSettingsPayload",
-                        projectEezSetting: {
-                          id: data!.projectBySlug!.eezSettings!.id,
-                          __typename: "ProjectEezSetting",
-                          enableLandClipping: enabled,
-                          projectId: data?.projectBySlug?.id,
-                          eezSelections:
-                            data?.projectBySlug?.eezSettings?.eezSelections,
-                        },
-                      },
-                    },
-                  });
-                }}
-              />
-              <GeographyLayerItem
-                name="Limit to Exclusive Economic Zone"
-                enabled={Boolean(
-                  data?.projectBySlug?.eezSettings?.enableEezClipping &&
-                    data?.projectBySlug?.eezSettings?.eezSelections?.length
-                )}
-                onEdit={() => {
-                  setOpenModalsState({ land: false, eez: true });
-                }}
-                description={
-                  data?.projectBySlug?.eezSettings?.eezSelections?.length ? (
-                    data.projectBySlug.eezSettings.eezSelections.join(", ")
-                  ) : (
-                    <Trans ns="admin:geography">
-                      <button
-                        onClick={() =>
-                          setEEZPickerState((prev) => ({
-                            ...prev,
-                            active: true,
-                          }))
-                        }
-                        className="hover:underline"
-                      >
-                        Choose an EEZ
-                      </button>{" "}
-                      to enable this layer
-                    </Trans>
-                  )
-                }
-                onToggle={(enabled) => {
-                  if (
-                    (data?.projectBySlug?.eezSettings?.eezSelections || [])
-                      .length === 0
-                  ) {
-                    setEEZPickerState((prev) => ({
-                      ...prev,
-                      active: true,
-                    }));
-                    // setOpenModalsState({ land: false, eez: true });
-                  } else {
-                    // do the mutation
-                    updateEEZClippingMutation({
-                      variables: {
-                        eezSelections: data?.projectBySlug?.eezSettings
-                          ?.eezSelections as string[],
-                        slug,
-                        enable: enabled,
-                        ids: data?.projectBySlug?.eezSettings
-                          ?.mrgidEez as number[],
-                      },
-                    });
-                  }
-                }}
-              />
-            </ul>
-          )}
+          {!loading && <ul className="w-full p-2"></ul>}
         </div>
       </nav>
-      {openModalsState.land && (
-        <LandClippingModal
-          onRequestClose={() => setOpenModalsState({ land: false, eez: false })}
-          enabled={Boolean(
-            data?.projectBySlug?.eezSettings?.enableLandClipping
-          )}
-          lastUpdated={new Date(coastline?.dataSource?.createdAt)}
-          author={coastline?.dataSource?.authorProfile!}
-        />
-      )}
-      {openModalsState.eez && (
+      {/* {openModalsState.eez && (
         <EEZClippingModal
           onRequestClose={() => setOpenModalsState({ land: false, eez: false })}
           enabled={Boolean(
@@ -634,44 +533,46 @@ export default function GeographyAdmin() {
             }));
           }}
         />
-      )}
+      )} */}
       <div ref={mapRef} className="flex-1 relative">
-        {map && !eezPickerState.active && (
-          <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
-            <Button
-              className=""
-              small
-              label={t("Draw polygon")}
-              onClick={() => {
-                draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                draw.create(false, true);
-              }}
-            >
-              <span className="flex items-center space-x-1">
-                <Pencil1Icon />
-                <span>{t("Draw polygon")}</span>
-              </span>
-            </Button>
-            {(drawFeature ||
-              (draw.digitizingState !== DigitizingState.DISABLED &&
-                draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
-              <>
-                <Button
-                  small
-                  label={t("Clear")}
-                  onClick={() => {
-                    setDrawFeature(null);
-                    draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                  }}
-                >
-                  <span className="flex items-center space-x-1">
-                    <span>{t("Clear")}</span>
-                  </span>
-                </Button>
-              </>
-            )}
-          </div>
-        )}
+        {map &&
+          !eezPickerState.active &&
+          data?.projectBySlug?.geographies?.length && (
+            <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
+              <Button
+                className=""
+                small
+                label={t("Draw polygon")}
+                onClick={() => {
+                  draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                  draw.create(false, true);
+                }}
+              >
+                <span className="flex items-center space-x-1">
+                  <Pencil1Icon />
+                  <span>{t("Draw polygon")}</span>
+                </span>
+              </Button>
+              {(drawFeature ||
+                (draw.digitizingState !== DigitizingState.DISABLED &&
+                  draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
+                <>
+                  <Button
+                    small
+                    label={t("Clear")}
+                    onClick={() => {
+                      setDrawFeature(null);
+                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                    }}
+                  >
+                    <span className="flex items-center space-x-1">
+                      <span>{t("Clear")}</span>
+                    </span>
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
         {(drawFeature ||
           (draw.digitizingState !== DigitizingState.DISABLED &&
             draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
@@ -712,14 +613,19 @@ export default function GeographyAdmin() {
               style={{ maxWidth: "50%" }}
             >
               <MultiSelect
+                filterOption={(option, rawInput) => {
+                  const input = rawInput.toLowerCase();
+                  return (
+                    option.label.toLowerCase().includes(input) ||
+                    option.value.toString().includes(input) ||
+                    option.data?.data?.SOVEREIGN1?.toLowerCase().includes(input)
+                  );
+                }}
                 title={t("Select one or more Exclusive Economic Zones")}
                 description={t(
                   "Nations may have more than one polygon associated with their EEZ. You should select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
                 )}
-                groups={eezChoices.data.map((choice) => ({
-                  value: choice.value,
-                  label: choice.label,
-                }))}
+                groups={eezChoices.data}
                 value={eezPickerState.selectedEEZs
                   .map((id) => {
                     const match = eezChoices.data.find(
@@ -737,45 +643,35 @@ export default function GeographyAdmin() {
               {eezPickerState.error && (
                 <Warning level="error">{eezPickerState.error.message}</Warning>
               )}
-              <Button
-                label={t("Cancel")}
-                disabled={eezPickerState.saving}
-                onClick={() =>
-                  setEEZPickerState({
-                    ...eezPickerState,
-                    active: false,
-                    selectedEEZs: (data?.projectBySlug?.eezSettings?.mrgidEez ||
-                      []) as number[],
-                  })
-                }
-              />
-              <Button
-                label={t("Save")}
-                primary
-                loading={eezPickerState.saving}
-                onClick={async () => {
-                  setEEZPickerState((prev) => ({
-                    ...prev,
-                    saving: true,
-                  }));
-                  try {
-                    await updateEEZClippingMutation({
-                      variables: {
-                        eezSelections: eezChoices.data
-                          .filter((eez) =>
-                            eezPickerState.selectedEEZs.includes(eez.value)
-                          )
-                          .map((eez) => eez.label),
-                        slug: getSlug(),
-                        enable: true,
-                        ids: eezPickerState.selectedEEZs,
-                      },
-                    });
+              <div className="space-x-2">
+                <Button
+                  label={t("Cancel")}
+                  disabled={eezPickerState.saving}
+                  onClick={() =>
+                    setEEZPickerState({
+                      ...eezPickerState,
+                      active: false,
+                      selectedEEZs: [] as number[],
+                    })
+                  }
+                />
+                <Button
+                  label={t("Continue")}
+                  primary
+                  loading={eezPickerState.saving}
+                  onClick={async () => {
+                    if (eezPickerState.resultResolver) {
+                      // If we have a result promise, resolve it with the selected EEZs
+                      eezPickerState.resultResolver(
+                        eezPickerState.selectedEEZs
+                      );
+                    }
                     setEEZPickerState((prev) => ({
                       ...prev,
                       active: false,
                       saving: false,
                       selectedEEZs: eezPickerState.selectedEEZs,
+                      resultResolver: undefined,
                     }));
                     const eezs = eezChoices.data.filter((choice) =>
                       eezPickerState.selectedEEZs.includes(choice.value)
@@ -794,23 +690,45 @@ export default function GeographyAdmin() {
                         }
                       );
                     }
-                  } catch (error) {
-                    setEEZPickerState((prev) => ({
-                      ...prev,
-                      error: error as Error,
-                      saving: false,
-                    }));
+                  }}
+                  disabled={
+                    eezPickerState.selectedEEZs.length === 0 ||
+                    eezPickerState.saving
                   }
-                }}
-                disabled={
-                  eezPickerState.selectedEEZs.length === 0 ||
-                  eezPickerState.saving
-                }
-              />
+                />
+              </div>
             </div>
           </div>
         )}
       </div>
+      {geographyWizardState.active && (
+        <CreateGeographyWizard
+          state={geographyWizardState}
+          // @ts-ignore
+          setState={setGeographyWizardState}
+          onRequestClose={() => {
+            setGeographyWizardState((prev) => ({
+              ...prev,
+              active: false,
+            }));
+          }}
+          onRequestEEZPicker={() => {
+            console.log("onRequestEEZPicker");
+            setEEZPickerState((prev) => ({
+              ...prev,
+              active: true,
+              selectedEEZs: [],
+            }));
+            return new Promise<number[]>((resolve) => {
+              console.log("inside promise");
+              setEEZPickerState((prev) => ({
+                ...prev,
+                resultResolver: resolve,
+              }));
+            });
+          }}
+        />
+      )}
       {createPortal(
         <div
           className={`${

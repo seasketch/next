@@ -3,14 +3,7 @@ alter table if exists project_geography_settings rename to project_eez_settings;
 
 DROP FUNCTION IF EXISTS public.projects_geography_settings(p public.projects);
 
-CREATE OR REPLACE FUNCTION public.projects_eez_settings(p public.projects) RETURNS public.project_eez_settings
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select * from project_eez_settings where project_id = p.id;
-  $$;
-
-grant execute on function public.projects_eez_settings(public.projects) to anon;
-
+drop function if exists project_geography_clipping_layers;
 drop table if exists project_geography_settings;
 drop type if exists project_geography_settings;
 drop table if exists geography_clipping_layers;
@@ -19,17 +12,16 @@ drop type if exists geography_layer_operation;
 
 create type geography_layer_operation as enum (
   'intersect',
-  'difference',
-  'exception'
+  'difference'
 );
 
 create table if not exists project_geography (
   id integer generated always as identity primary key,
   project_id integer not null references projects(id) on delete cascade,
   name text not null,
-  reporting_only boolean default false,
   created_at timestamptz default now(),
-  hash text
+  hash text,
+  translated_props jsonb
 );
 
 create index on project_geography(project_id);
@@ -44,9 +36,7 @@ create table if not exists geography_clipping_layers (
     AND cql2_query ? 'op'
     AND cql2_query ? 'args'
   ),
-  template_id text,
-  exception_message text,
-  translated_props jsonb
+  template_id text
 );
 
 create index on geography_clipping_layers(project_geography_id);
@@ -116,3 +106,31 @@ begin
     set hash = compute_project_geography_hash(id);
 end;
 $$;
+
+drop table if exists project_eez_settings cascade;
+
+drop function if exists update_land_clipping_settings;
+drop function if exists update_eez_clipping_settings;
+
+-- add postgraphile "smart comment" to rename ProjectGeography to Geography
+comment on type project_geography is E'@name Geography\n@plural Geography\n@description "Geography settings for a project, including clipping layers and operations."';
+
+comment on table project_geography is E'@simpleCollections only';
+
+grant select on project_geography to anon;
+
+grant select on geography_clipping_layers to anon;
+
+create or replace function project_geography_clipping_layers(geography project_geography)
+  returns setof geography_clipping_layers
+  language sql
+  security definer
+  stable
+  as $$
+    select * from geography_clipping_layers
+    where project_geography_id = geography.id;
+  $$;
+
+grant execute on function project_geography_clipping_layers(geography project_geography) to anon;
+
+comment on function project_geography_clipping_layers(geography project_geography) is E'@simpleCollections only\n@description "Returns the clipping layers for a given geography."';

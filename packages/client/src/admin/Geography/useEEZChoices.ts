@@ -58,15 +58,13 @@ export default function useEEZChoices(): {
                 return {
                   label: labelForEEZ(props),
                   value: props.MRGID_EEZ,
+                  data: props,
                 };
               })
               .filter((choice: any) => choice.label && choice.value); // filter out empty labels/values
             setState({
               loading: false,
-              data: choices.map((choice) => ({
-                ...choice,
-                data: json.find((j) => j.MRGID_EEZ === choice.value)!,
-              })),
+              data: choices,
             });
           }
         })
@@ -88,9 +86,9 @@ export default function useEEZChoices(): {
 }
 
 export function labelForEEZ(props: EEZProps): string {
-  let label = `${props.SOVEREIGN1 || props.UNION}`;
-  if (props.SOVEREIGN1 && props.UNION !== props.SOVEREIGN1) {
-    label += ` - ${props.UNION}`;
-  }
+  let label = `${props.UNION || props.SOVEREIGN1}`;
+  // if (props.SOVEREIGN1 && props.UNION !== props.SOVEREIGN1) {
+  //   label += ` - ${props.UNION}`;
+  // }
   return label;
 }

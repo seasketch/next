@@ -2077,6 +2077,8 @@ export type DataLayer = Node & {
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  geographyClippingLayersConnection: GeographyClippingLayersConnection;
   id: Scalars['Int'];
   /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
@@ -2132,6 +2134,25 @@ export type DataLayer = Node & {
 export type DataLayerArchivedSourcesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * Data layers represent multiple MapBox GL Style layers tied to a single source.
+ * These layers could also be called "operational layers" in that they are meant to
+ * be overlaid on a basemap.
+ *
+ * The layers can appear tied to a TableOfContentsItem or be part of rich features
+ * associated with a basemap.
+ */
+export type DataLayerGeographyClippingLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<GeographyClippingLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
 };
 
 
@@ -5627,6 +5648,129 @@ export type GenerateOfflineTilePackagePayloadOfflineTilePackageEdgeArgs = {
 };
 
 
+/** Methods to use when ordering `Geography`. */
+export enum GeographiesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+export type Geography = Node & {
+  __typename?: 'Geography';
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  clippingLayers?: Maybe<Array<GeographyClippingLayer>>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  geographyClippingLayersConnection: GeographyClippingLayersConnection;
+  hash?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `Geography`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  reportingOnly?: Maybe<Scalars['Boolean']>;
+};
+
+
+export type GeographyClippingLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type GeographyGeographyClippingLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<GeographyClippingLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+export type GeographyClippingLayer = Node & {
+  __typename?: 'GeographyClippingLayer';
+  cql2Query?: Maybe<Scalars['JSON']>;
+  /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
+  dataLayer?: Maybe<DataLayer>;
+  dataLayerId: Scalars['Int'];
+  exceptionMessage?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  operationType: GeographyLayerOperation;
+  /** Reads a single `Geography` that is related to this `GeographyClippingLayer`. */
+  projectGeography?: Maybe<Geography>;
+  projectGeographyId: Scalars['Int'];
+  templateId?: Maybe<Scalars['String']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
+};
+
+/**
+ * A condition to be used against `GeographyClippingLayer` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type GeographyClippingLayerCondition = {
+  /** Checks for equality with the object’s `dataLayerId` field. */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectGeographyId` field. */
+  projectGeographyId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `GeographyClippingLayer` values. */
+export type GeographyClippingLayersConnection = {
+  __typename?: 'GeographyClippingLayersConnection';
+  /** A list of edges which contains the `GeographyClippingLayer` and cursor to aid in pagination. */
+  edges: Array<GeographyClippingLayersEdge>;
+  /** A list of `GeographyClippingLayer` objects. */
+  nodes: Array<GeographyClippingLayer>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `GeographyClippingLayer` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `GeographyClippingLayer` edge in the connection. */
+export type GeographyClippingLayersEdge = {
+  __typename?: 'GeographyClippingLayersEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `GeographyClippingLayer` at the end of the edge. */
+  node: GeographyClippingLayer;
+};
+
+/** Methods to use when ordering `GeographyClippingLayer`. */
+export enum GeographyClippingLayersOrderBy {
+  DataLayerIdAsc = 'DATA_LAYER_ID_ASC',
+  DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectGeographyIdAsc = 'PROJECT_GEOGRAPHY_ID_ASC',
+  ProjectGeographyIdDesc = 'PROJECT_GEOGRAPHY_ID_DESC'
+}
+
+/**
+ * A condition to be used against `Geography` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type GeographyCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
 /** All geography XY types implement this interface */
 export type GeographyGeometry = {
   /** Converts the object to GeoJSON */
@@ -5642,6 +5786,11 @@ export type GeographyInterface = {
   /** Spatial reference identifier (SRID) */
   srid: Scalars['Int'];
 };
+
+export enum GeographyLayerOperation {
+  Difference = 'DIFFERENCE',
+  Intersect = 'INTERSECT'
+}
 
 export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   __typename?: 'GeographyLineString';
@@ -7122,7 +7271,6 @@ export type Mutation = {
   updateDataSource?: Maybe<UpdateDataSourcePayload>;
   /** Updates a single `DataSource` using its globally unique id and a patch. */
   updateDataSourceByNodeId?: Maybe<UpdateDataSourcePayload>;
-  updateEezClippingSettings?: Maybe<UpdateEezClippingSettingsPayload>;
   /** Updates a single `EmailNotificationPreference` using a unique key and a patch. */
   updateEmailNotificationPreferenceByUserId?: Maybe<UpdateEmailNotificationPreferencePayload>;
   /** Updates a single `Form` using a unique key and a patch. */
@@ -7159,7 +7307,6 @@ export type Mutation = {
   updateInteractivitySetting?: Maybe<UpdateInteractivitySettingPayload>;
   /** Updates a single `InteractivitySetting` using its globally unique id and a patch. */
   updateInteractivitySettingByNodeId?: Maybe<UpdateInteractivitySettingPayload>;
-  updateLandClippingSettings?: Maybe<UpdateLandClippingSettingsPayload>;
   updateMapboxSecretKey?: Maybe<UpdateMapboxSecretKeyPayload>;
   /** Updates a single `OfflineTileSetting` using a unique key and a patch. */
   updateOfflineTileSetting?: Maybe<UpdateOfflineTileSettingPayload>;
@@ -8424,12 +8571,6 @@ export type MutationUpdateDataSourceByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateEezClippingSettingsArgs = {
-  input: UpdateEezClippingSettingsInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateEmailNotificationPreferenceByUserIdArgs = {
   input: UpdateEmailNotificationPreferenceByUserIdInput;
 };
@@ -8534,12 +8675,6 @@ export type MutationUpdateInteractivitySettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateInteractivitySettingByNodeIdArgs = {
   input: UpdateInteractivitySettingByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateLandClippingSettingsArgs = {
-  input: UpdateLandClippingSettingsInput;
 };
 
 
@@ -9347,7 +9482,6 @@ export type Project = Node & {
    * then use the `publishTableOfContents` mutation when it is ready for end-users.
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
-  eezSettings?: Maybe<ProjectEezSetting>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
@@ -9359,6 +9493,8 @@ export type Project = Node & {
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
+  /** Reads and enables pagination through a set of `Geography`. */
+  geographies: Array<Geography>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   hideForums: Scalars['Boolean'];
@@ -9643,6 +9779,18 @@ export type ProjectForumsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ForumsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectGeographiesArgs = {
+  condition?: Maybe<GeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographiesOrderBy>>;
 };
 
 
@@ -10050,18 +10198,6 @@ export type ProjectDraftTableOfContentsStatusPayload = {
   hasChanges: Scalars['Boolean'];
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
-};
-
-export type ProjectEezSetting = Node & {
-  __typename?: 'ProjectEezSetting';
-  eezSelections?: Maybe<Array<Maybe<Scalars['String']>>>;
-  enableEezClipping?: Maybe<Scalars['Boolean']>;
-  enableLandClipping?: Maybe<Scalars['Boolean']>;
-  id: Scalars['Int'];
-  mrgidEez?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  projectId?: Maybe<Scalars['Int']>;
 };
 
 /**
@@ -10587,8 +10723,18 @@ export type Query = Node & {
   forumByNodeId?: Maybe<Forum>;
   generateExportId?: Maybe<Scalars['String']>;
   generateLabel?: Maybe<Scalars['String']>;
+  /** Reads a set of `Geography`. */
+  geographies?: Maybe<Array<Geography>>;
+  geography?: Maybe<Geography>;
+  /** Reads a single `Geography` using its globally unique `ID`. */
+  geographyByNodeId?: Maybe<Geography>;
+  geographyClippingLayer?: Maybe<GeographyClippingLayer>;
+  /** Reads a single `GeographyClippingLayer` using its globally unique `ID`. */
+  geographyClippingLayerByNodeId?: Maybe<GeographyClippingLayer>;
   /** Reads and enables pagination through a set of `DataLayer`. */
   geographyClippingLayers?: Maybe<Array<DataLayer>>;
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  geographyClippingLayersConnection?: Maybe<GeographyClippingLayersConnection>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
@@ -11145,9 +11291,54 @@ export type QueryGenerateLabelArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryGeographiesArgs = {
+  condition?: Maybe<GeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographiesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayerArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayerByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryGeographyClippingLayersArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<GeographyClippingLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
 };
 
 
@@ -14388,32 +14579,6 @@ export type UpdateDataSourcePayloadDataSourceEdgeArgs = {
   orderBy?: Maybe<Array<DataSourcesOrderBy>>;
 };
 
-/** All input for the `updateEezClippingSettings` mutation. */
-export type UpdateEezClippingSettingsInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  enableClipping?: Maybe<Scalars['Boolean']>;
-  ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
-  selections?: Maybe<Array<Maybe<Scalars['String']>>>;
-  slug?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `updateEezClippingSettings` mutation. */
-export type UpdateEezClippingSettingsPayload = {
-  __typename?: 'UpdateEezClippingSettingsPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectEezSetting?: Maybe<ProjectEezSetting>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** All input for the `updateEmailNotificationPreferenceByUserId` mutation. */
 export type UpdateEmailNotificationPreferenceByUserIdInput = {
   /**
@@ -14807,30 +14972,6 @@ export type UpdateInteractivitySettingPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** The `InteractivitySetting` that was updated by this mutation. */
   interactivitySetting?: Maybe<InteractivitySetting>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-/** All input for the `updateLandClippingSettings` mutation. */
-export type UpdateLandClippingSettingsInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  enableClipping?: Maybe<Scalars['Boolean']>;
-  slug?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `updateLandClippingSettings` mutation. */
-export type UpdateLandClippingSettingsPayload = {
-  __typename?: 'UpdateLandClippingSettingsPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectEezSetting?: Maybe<ProjectEezSetting>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -18935,45 +19076,13 @@ export type GeographyClippingSettingsQuery = (
   )>>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { eezSettings?: Maybe<(
-      { __typename?: 'ProjectEezSetting' }
-      & Pick<ProjectEezSetting, 'id' | 'projectId' | 'eezSelections' | 'mrgidEez' | 'enableEezClipping' | 'enableLandClipping'>
-    )> }
-  )> }
-);
-
-export type UpdateLandClippingSettingsMutationVariables = Exact<{
-  slug: Scalars['String'];
-  enable: Scalars['Boolean'];
-}>;
-
-
-export type UpdateLandClippingSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateLandClippingSettings?: Maybe<(
-    { __typename?: 'UpdateLandClippingSettingsPayload' }
-    & { projectEezSetting?: Maybe<(
-      { __typename?: 'ProjectEezSetting' }
-      & Pick<ProjectEezSetting, 'id' | 'projectId' | 'enableLandClipping' | 'eezSelections'>
-    )> }
-  )> }
-);
-
-export type UpdateEezClippingSettingsMutationVariables = Exact<{
-  slug: Scalars['String'];
-  enable: Scalars['Boolean'];
-  eezSelections: Array<Scalars['String']> | Scalars['String'];
-  ids: Array<Scalars['Int']> | Scalars['Int'];
-}>;
-
-
-export type UpdateEezClippingSettingsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateEezClippingSettings?: Maybe<(
-    { __typename?: 'UpdateEezClippingSettingsPayload' }
-    & { projectEezSetting?: Maybe<(
-      { __typename?: 'ProjectEezSetting' }
-      & Pick<ProjectEezSetting, 'id' | 'projectId' | 'enableLandClipping' | 'enableEezClipping' | 'eezSelections' | 'mrgidEez'>
+    & { geographies: Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'reportingOnly'>
+      & { clippingLayers?: Maybe<Array<(
+        { __typename?: 'GeographyClippingLayer' }
+        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId'>
+      )>> }
     )> }
   )> }
 );
@@ -29127,13 +29236,17 @@ export const GeographyClippingSettingsDocument = gql`
   }
   projectBySlug(slug: $slug) {
     id
-    eezSettings {
+    geographies {
       id
-      projectId
-      eezSelections
-      mrgidEez
-      enableEezClipping
-      enableLandClipping
+      name
+      createdAt
+      hash
+      reportingOnly
+      clippingLayers {
+        id
+        cql2Query
+        templateId
+      }
     }
   }
 }
@@ -29166,90 +29279,6 @@ export function useGeographyClippingSettingsLazyQuery(baseOptions?: Apollo.LazyQ
 export type GeographyClippingSettingsQueryHookResult = ReturnType<typeof useGeographyClippingSettingsQuery>;
 export type GeographyClippingSettingsLazyQueryHookResult = ReturnType<typeof useGeographyClippingSettingsLazyQuery>;
 export type GeographyClippingSettingsQueryResult = Apollo.QueryResult<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>;
-export const UpdateLandClippingSettingsDocument = gql`
-    mutation UpdateLandClippingSettings($slug: String!, $enable: Boolean!) {
-  updateLandClippingSettings(input: {slug: $slug, enableClipping: $enable}) {
-    projectEezSetting {
-      id
-      projectId
-      enableLandClipping
-      eezSelections
-    }
-  }
-}
-    `;
-export type UpdateLandClippingSettingsMutationFn = Apollo.MutationFunction<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>;
-
-/**
- * __useUpdateLandClippingSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateLandClippingSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateLandClippingSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateLandClippingSettingsMutation, { data, loading, error }] = useUpdateLandClippingSettingsMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      enable: // value for 'enable'
- *   },
- * });
- */
-export function useUpdateLandClippingSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>(UpdateLandClippingSettingsDocument, options);
-      }
-export type UpdateLandClippingSettingsMutationHookResult = ReturnType<typeof useUpdateLandClippingSettingsMutation>;
-export type UpdateLandClippingSettingsMutationResult = Apollo.MutationResult<UpdateLandClippingSettingsMutation>;
-export type UpdateLandClippingSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateLandClippingSettingsMutation, UpdateLandClippingSettingsMutationVariables>;
-export const UpdateEezClippingSettingsDocument = gql`
-    mutation UpdateEEZClippingSettings($slug: String!, $enable: Boolean!, $eezSelections: [String!]!, $ids: [Int!]!) {
-  updateEezClippingSettings(
-    input: {slug: $slug, enableClipping: $enable, selections: $eezSelections, ids: $ids}
-  ) {
-    projectEezSetting {
-      id
-      projectId
-      enableLandClipping
-      enableEezClipping
-      eezSelections
-      mrgidEez
-    }
-  }
-}
-    `;
-export type UpdateEezClippingSettingsMutationFn = Apollo.MutationFunction<UpdateEezClippingSettingsMutation, UpdateEezClippingSettingsMutationVariables>;
-
-/**
- * __useUpdateEezClippingSettingsMutation__
- *
- * To run a mutation, you first call `useUpdateEezClippingSettingsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateEezClippingSettingsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateEezClippingSettingsMutation, { data, loading, error }] = useUpdateEezClippingSettingsMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      enable: // value for 'enable'
- *      eezSelections: // value for 'eezSelections'
- *      ids: // value for 'ids'
- *   },
- * });
- */
-export function useUpdateEezClippingSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEezClippingSettingsMutation, UpdateEezClippingSettingsMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateEezClippingSettingsMutation, UpdateEezClippingSettingsMutationVariables>(UpdateEezClippingSettingsDocument, options);
-      }
-export type UpdateEezClippingSettingsMutationHookResult = ReturnType<typeof useUpdateEezClippingSettingsMutation>;
-export type UpdateEezClippingSettingsMutationResult = Apollo.MutationResult<UpdateEezClippingSettingsMutation>;
-export type UpdateEezClippingSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateEezClippingSettingsMutation, UpdateEezClippingSettingsMutationVariables>;
 export const EezLayerDocument = gql`
     query EEZLayer {
   eezlayer {
@@ -34865,8 +34894,6 @@ export const namedOperations = {
     createFileUploadForPost: 'createFileUploadForPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
-    UpdateLandClippingSettings: 'UpdateLandClippingSettings',
-    UpdateEEZClippingSettings: 'UpdateEEZClippingSettings',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

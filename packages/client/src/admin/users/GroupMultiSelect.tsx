@@ -14,6 +14,10 @@ interface Props {
   title: string;
   loading?: boolean;
   onChange: (values: Group[]) => void;
+  filterOption?:
+    | ((option: any, rawInput: string) => boolean)
+    | null
+    | undefined;
 }
 
 export default function MultiSelect({
@@ -23,6 +27,7 @@ export default function MultiSelect({
   value,
   description,
   title,
+  filterOption,
 }: Props) {
   return (
     <InputBlock
@@ -30,6 +35,7 @@ export default function MultiSelect({
       children={description ? <p>{description}</p> : undefined}
       input={
         <Select
+          filterOption={filterOption}
           isMulti
           menuPortalTarget={document.body}
           menuPosition="absolute"
