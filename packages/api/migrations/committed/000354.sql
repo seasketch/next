@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:4345fac0990437b48303fa34fe112a0f8b567796
 --! Hash: sha1:80c2c819ee7a506b3f64ea2f7e77bfe258b0a74c
 
@@ -76,21 +77,3 @@ create or replace function update_google_maps_tile_api_session(
     end;
 
   $$;
-
-  create or replace function update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean)
-  returns project_geography_settings
-  language sql
-  security definer
-  as $$
-    update project_geography_settings
-    set eez_selections = selections, mrgid_eez = ids, enable_eez_clipping = (
-      case
-        when array_length(selections, 1) is null or selections = '{}' or array_length(ids, 1) is null or ids = '{}' then false
-        else enable_clipping
-      end
-    )
-    where project_id = (select id from projects where projects.slug = update_eez_clipping_settings.slug and session_is_admin(projects.id))
-    returning *;
-  $$;
-
-  grant execute on function update_eez_clipping_settings to seasketch_user;
