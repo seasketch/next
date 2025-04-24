@@ -806,6 +806,26 @@ export type ClearFormElementStylePayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
+export type ClippingLayerInput = {
+  /**
+   * If provided, features used for clipping will be filtered based on this
+   * JSON-encoded OGC Common Query Language (CQL2) query
+   */
+  cql2Query?: Maybe<Scalars['JSON']>;
+  /**
+   * If provided, this layer will be associated with this geography. Either
+   * templateId or dataLayerId must be provided
+   */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  /** Type of operation to perform on the clipping layer (e.g. intersect, difference). */
+  operationType: GeographyLayerOperation;
+  /**
+   * If provided, this template layer will be cloned into the project. Either
+   * templateId or dataLayerId must be provided
+   */
+  templateId?: Maybe<Scalars['String']>;
+};
+
 /**
  * Community guidelines can be set by project admins with standards for using the
  * discussion forums. Users will be shown this content before making their first
@@ -834,6 +854,29 @@ export type CommunityGuidelineInput = {
 export type CommunityGuidelinePatch = {
   /** JSON contents are expected to be used with a system like DraftJS on the client. */
   content?: Maybe<Scalars['JSON']>;
+};
+
+/** All input for the `computeProjectGeographyHash` mutation. */
+export type ComputeProjectGeographyHashInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  geogId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `computeProjectGeographyHash` mutation. */
+export type ComputeProjectGeographyHashPayload = {
+  __typename?: 'ComputeProjectGeographyHashPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  string?: Maybe<Scalars['String']>;
 };
 
 /** All input for the `confirmOnboarded` mutation. */
@@ -1393,6 +1436,92 @@ export type CreateForumPayload = {
 /** The output of our create `Forum` mutation. */
 export type CreateForumPayloadForumEdgeArgs = {
   orderBy?: Maybe<Array<ForumsOrderBy>>;
+};
+
+export type CreateGeographiesPayload = {
+  __typename?: 'CreateGeographiesPayload';
+  /** The newly created geography */
+  geographies: Array<Geography>;
+};
+
+export type CreateGeographyArgs = {
+  /**
+   * Used to identify Geographies that are created using a particular wizard
+   * flow like "Pick an EEZ" or "Terrestrial Areas".
+   */
+  clientTemplate?: Maybe<Scalars['String']>;
+  /** Clipping layers to associate with this geography */
+  clippingLayers: Array<Maybe<ClippingLayerInput>>;
+  /** Name of the geography */
+  name: Scalars['String'];
+  /** Slug of the project to create the geography in */
+  slug: Scalars['String'];
+  /** Translated strings */
+  translatedProps?: Maybe<Scalars['JSON']>;
+};
+
+/** All input for the create `GeographyClippingLayer` mutation. */
+export type CreateGeographyClippingLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `GeographyClippingLayer` to be created by this mutation. */
+  geographyClippingLayer: GeographyClippingLayerInput;
+};
+
+/** The output of our create `GeographyClippingLayer` mutation. */
+export type CreateGeographyClippingLayerPayload = {
+  __typename?: 'CreateGeographyClippingLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** The `GeographyClippingLayer` that was created by this mutation. */
+  geographyClippingLayer?: Maybe<GeographyClippingLayer>;
+  /** An edge for our `GeographyClippingLayer`. May be used by Relay 1. */
+  geographyClippingLayerEdge?: Maybe<GeographyClippingLayersEdge>;
+  /** Reads a single `Geography` that is related to this `GeographyClippingLayer`. */
+  projectGeography?: Maybe<Geography>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `GeographyClippingLayer` mutation. */
+export type CreateGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = {
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+/** All input for the create `Geography` mutation. */
+export type CreateGeographyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `Geography` to be created by this mutation. */
+  geography: GeographyInput;
+};
+
+/** The output of our create `Geography` mutation. */
+export type CreateGeographyPayload = {
+  __typename?: 'CreateGeographyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `Geography` that was created by this mutation. */
+  geography?: Maybe<Geography>;
+  /** Reads a single `Project` that is related to this `Geography`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the create `Group` mutation. */
@@ -3508,6 +3637,92 @@ export type DeleteForumPayload = {
 /** The output of our delete `Forum` mutation. */
 export type DeleteForumPayloadForumEdgeArgs = {
   orderBy?: Maybe<Array<ForumsOrderBy>>;
+};
+
+/** All input for the `deleteGeographyByNodeId` mutation. */
+export type DeleteGeographyByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Geography` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteGeographyClippingLayerByNodeId` mutation. */
+export type DeleteGeographyClippingLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `GeographyClippingLayer` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteGeographyClippingLayer` mutation. */
+export type DeleteGeographyClippingLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `GeographyClippingLayer` mutation. */
+export type DeleteGeographyClippingLayerPayload = {
+  __typename?: 'DeleteGeographyClippingLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
+  dataLayer?: Maybe<DataLayer>;
+  deletedGeographyClippingLayerNodeId?: Maybe<Scalars['ID']>;
+  /** The `GeographyClippingLayer` that was deleted by this mutation. */
+  geographyClippingLayer?: Maybe<GeographyClippingLayer>;
+  /** An edge for our `GeographyClippingLayer`. May be used by Relay 1. */
+  geographyClippingLayerEdge?: Maybe<GeographyClippingLayersEdge>;
+  /** Reads a single `Geography` that is related to this `GeographyClippingLayer`. */
+  projectGeography?: Maybe<Geography>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our delete `GeographyClippingLayer` mutation. */
+export type DeleteGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = {
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+/** All input for the `deleteGeography` mutation. */
+export type DeleteGeographyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `Geography` mutation. */
+export type DeleteGeographyPayload = {
+  __typename?: 'DeleteGeographyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedProjectGeographyNodeId?: Maybe<Scalars['ID']>;
+  /** The `Geography` that was deleted by this mutation. */
+  geography?: Maybe<Geography>;
+  /** Reads a single `Project` that is related to this `Geography`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `deleteGroupByNodeId` mutation. */
@@ -5659,6 +5874,7 @@ export enum GeographiesOrderBy {
 
 export type Geography = Node & {
   __typename?: 'Geography';
+  clientTemplate?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
   clippingLayers?: Maybe<Array<GeographyClippingLayer>>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -5672,7 +5888,7 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
-  reportingOnly?: Maybe<Scalars['Boolean']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -5698,7 +5914,6 @@ export type GeographyClippingLayer = Node & {
   /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
   dataLayer?: Maybe<DataLayer>;
   dataLayerId: Scalars['Int'];
-  exceptionMessage?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -5707,7 +5922,6 @@ export type GeographyClippingLayer = Node & {
   projectGeography?: Maybe<Geography>;
   projectGeographyId: Scalars['Int'];
   templateId?: Maybe<Scalars['String']>;
-  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /**
@@ -5721,6 +5935,24 @@ export type GeographyClippingLayerCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectGeographyId` field. */
   projectGeographyId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `GeographyClippingLayer` */
+export type GeographyClippingLayerInput = {
+  cql2Query?: Maybe<Scalars['JSON']>;
+  dataLayerId: Scalars['Int'];
+  operationType: GeographyLayerOperation;
+  projectGeographyId: Scalars['Int'];
+  templateId?: Maybe<Scalars['String']>;
+};
+
+/** Represents an update to a `GeographyClippingLayer`. Fields that are set will be updated. */
+export type GeographyClippingLayerPatch = {
+  cql2Query?: Maybe<Scalars['JSON']>;
+  dataLayerId?: Maybe<Scalars['Int']>;
+  operationType?: Maybe<GeographyLayerOperation>;
+  projectGeographyId?: Maybe<Scalars['Int']>;
+  templateId?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `GeographyClippingLayer` values. */
@@ -5777,6 +6009,16 @@ export type GeographyGeometry = {
   srid: Scalars['Int'];
 };
 
+/** An input for mutations affecting `Geography` */
+export type GeographyInput = {
+  clientTemplate?: Maybe<Scalars['String']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  hash?: Maybe<Scalars['String']>;
+  name: Scalars['String'];
+  projectId: Scalars['Int'];
+  translatedProps?: Maybe<Scalars['JSON']>;
+};
+
 /** All geography types implement this interface */
 export type GeographyInterface = {
   /** Converts the object to GeoJSON */
@@ -5795,6 +6037,16 @@ export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   geojson?: Maybe<Scalars['GeoJSON']>;
   points?: Maybe<Array<Maybe<GeographyPoint>>>;
   srid: Scalars['Int'];
+};
+
+/** Represents an update to a `Geography`. Fields that are set will be updated. */
+export type GeographyPatch = {
+  clientTemplate?: Maybe<Scalars['String']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  hash?: Maybe<Scalars['String']>;
+  name?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 export type GeographyPoint = GeographyGeometry & GeographyInterface & {
@@ -6840,6 +7092,7 @@ export type Mutation = {
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
+  computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
   /**
@@ -6901,6 +7154,12 @@ export type Mutation = {
   createFormTemplateFromSurvey?: Maybe<CreateFormTemplateFromSurveyPayload>;
   /** Creates a single `Forum`. */
   createForum?: Maybe<CreateForumPayload>;
+  /** Create a new geography with associated clipping layers */
+  createGeographies?: Maybe<CreateGeographiesPayload>;
+  /** Creates a single `Geography`. */
+  createGeography?: Maybe<CreateGeographyPayload>;
+  /** Creates a single `GeographyClippingLayer`. */
+  createGeographyClippingLayer?: Maybe<CreateGeographyClippingLayerPayload>;
   /** Creates a single `Group`. */
   createGroup?: Maybe<CreateGroupPayload>;
   /** Creates a single `InteractivitySetting`. */
@@ -7001,6 +7260,14 @@ export type Mutation = {
   deleteForum?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Forum` using its globally unique id. */
   deleteForumByNodeId?: Maybe<DeleteForumPayload>;
+  /** Deletes a single `Geography` using a unique key. */
+  deleteGeography?: Maybe<DeleteGeographyPayload>;
+  /** Deletes a single `Geography` using its globally unique id. */
+  deleteGeographyByNodeId?: Maybe<DeleteGeographyPayload>;
+  /** Deletes a single `GeographyClippingLayer` using a unique key. */
+  deleteGeographyClippingLayer?: Maybe<DeleteGeographyClippingLayerPayload>;
+  /** Deletes a single `GeographyClippingLayer` using its globally unique id. */
+  deleteGeographyClippingLayerByNodeId?: Maybe<DeleteGeographyClippingLayerPayload>;
   /** Deletes a single `Group` using a unique key. */
   deleteGroup?: Maybe<DeleteGroupPayload>;
   /** Deletes a single `Group` using its globally unique id. */
@@ -7295,6 +7562,14 @@ export type Mutation = {
   updateForum?: Maybe<UpdateForumPayload>;
   /** Updates a single `Forum` using its globally unique id and a patch. */
   updateForumByNodeId?: Maybe<UpdateForumPayload>;
+  /** Updates a single `Geography` using a unique key and a patch. */
+  updateGeography?: Maybe<UpdateGeographyPayload>;
+  /** Updates a single `Geography` using its globally unique id and a patch. */
+  updateGeographyByNodeId?: Maybe<UpdateGeographyPayload>;
+  /** Updates a single `GeographyClippingLayer` using a unique key and a patch. */
+  updateGeographyClippingLayer?: Maybe<UpdateGeographyClippingLayerPayload>;
+  /** Updates a single `GeographyClippingLayer` using its globally unique id and a patch. */
+  updateGeographyClippingLayerByNodeId?: Maybe<UpdateGeographyClippingLayerPayload>;
   /** Updates a single `Group` using a unique key and a patch. */
   updateGroup?: Maybe<UpdateGroupPayload>;
   /** Updates a single `Group` using its globally unique id and a patch. */
@@ -7472,6 +7747,12 @@ export type MutationClearFormElementStyleArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationComputeProjectGeographyHashArgs = {
+  input: ComputeProjectGeographyHashInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationConfirmOnboardedArgs = {
   input: ConfirmOnboardedInput;
 };
@@ -7602,6 +7883,24 @@ export type MutationCreateFormTemplateFromSurveyArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateForumArgs = {
   input: CreateForumInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateGeographiesArgs = {
+  input: Array<CreateGeographyArgs>;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateGeographyArgs = {
+  input: CreateGeographyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateGeographyClippingLayerArgs = {
+  input: CreateGeographyClippingLayerInput;
 };
 
 
@@ -7880,6 +8179,30 @@ export type MutationDeleteForumArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteForumByNodeIdArgs = {
   input: DeleteForumByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteGeographyArgs = {
+  input: DeleteGeographyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteGeographyByNodeIdArgs = {
+  input: DeleteGeographyByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteGeographyClippingLayerArgs = {
+  input: DeleteGeographyClippingLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteGeographyClippingLayerByNodeIdArgs = {
+  input: DeleteGeographyClippingLayerByNodeIdInput;
 };
 
 
@@ -8643,6 +8966,30 @@ export type MutationUpdateForumArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateForumByNodeIdArgs = {
   input: UpdateForumByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateGeographyArgs = {
+  input: UpdateGeographyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateGeographyByNodeIdArgs = {
+  input: UpdateGeographyByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateGeographyClippingLayerArgs = {
+  input: UpdateGeographyClippingLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateGeographyClippingLayerByNodeIdArgs = {
+  input: UpdateGeographyClippingLayerByNodeIdInput;
 };
 
 
@@ -14880,6 +15227,98 @@ export type UpdateForumPayloadForumEdgeArgs = {
   orderBy?: Maybe<Array<ForumsOrderBy>>;
 };
 
+/** All input for the `updateGeographyByNodeId` mutation. */
+export type UpdateGeographyByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Geography` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `Geography` being updated. */
+  patch: GeographyPatch;
+};
+
+/** All input for the `updateGeographyClippingLayerByNodeId` mutation. */
+export type UpdateGeographyClippingLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `GeographyClippingLayer` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `GeographyClippingLayer` being updated. */
+  patch: GeographyClippingLayerPatch;
+};
+
+/** All input for the `updateGeographyClippingLayer` mutation. */
+export type UpdateGeographyClippingLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `GeographyClippingLayer` being updated. */
+  patch: GeographyClippingLayerPatch;
+};
+
+/** The output of our update `GeographyClippingLayer` mutation. */
+export type UpdateGeographyClippingLayerPayload = {
+  __typename?: 'UpdateGeographyClippingLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** The `GeographyClippingLayer` that was updated by this mutation. */
+  geographyClippingLayer?: Maybe<GeographyClippingLayer>;
+  /** An edge for our `GeographyClippingLayer`. May be used by Relay 1. */
+  geographyClippingLayerEdge?: Maybe<GeographyClippingLayersEdge>;
+  /** Reads a single `Geography` that is related to this `GeographyClippingLayer`. */
+  projectGeography?: Maybe<Geography>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our update `GeographyClippingLayer` mutation. */
+export type UpdateGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = {
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+/** All input for the `updateGeography` mutation. */
+export type UpdateGeographyInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `Geography` being updated. */
+  patch: GeographyPatch;
+};
+
+/** The output of our update `Geography` mutation. */
+export type UpdateGeographyPayload = {
+  __typename?: 'UpdateGeographyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `Geography` that was updated by this mutation. */
+  geography?: Maybe<Geography>;
+  /** Reads a single `Project` that is related to this `Geography`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `updateGroupByNodeId` mutation. */
 export type UpdateGroupByNodeIdInput = {
   /**
@@ -19050,6 +19489,35 @@ export type DeleteSpriteMutation = (
   )> }
 );
 
+export type ClippingLayerDetailsFragment = (
+  { __typename?: 'DataLayer' }
+  & Pick<DataLayer, 'id' | 'version' | 'mapboxGlStyles' | 'sourceLayer'>
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
+    & { authorProfile?: Maybe<(
+      { __typename?: 'Profile' }
+      & UserProfileDetailsFragment
+    )>, outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'type' | 'url'>
+    )>> }
+  )> }
+);
+
+export type GeographyDetailsFragment = (
+  { __typename?: 'Geography' }
+  & Pick<Geography, 'id' | 'hash' | 'name' | 'translatedProps' | 'clientTemplate'>
+  & { clippingLayers?: Maybe<Array<(
+    { __typename?: 'GeographyClippingLayer' }
+    & Pick<GeographyClippingLayer, 'id' | 'operationType' | 'templateId' | 'cql2Query'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & ClippingLayerDetailsFragment
+    )> }
+  )>> }
+);
+
 export type GeographyClippingSettingsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -19062,27 +19530,22 @@ export type GeographyClippingSettingsQuery = (
     & Pick<GoogleMapsTileApiSession, 'expiresAt' | 'mapType' | 'session'>
   )>, geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id' | 'sourceLayer' | 'version' | 'mapboxGlStyles' | 'dataSourceId'>
-    & { dataSource?: Maybe<(
-      { __typename?: 'DataSource' }
-      & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
-      & { authorProfile?: Maybe<(
-        { __typename?: 'Profile' }
-        & UserProfileDetailsFragment
-      )> }
-    )> }
+    & ClippingLayerDetailsFragment
   )>>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
-      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'reportingOnly'>
+      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'clientTemplate'>
       & { clippingLayers?: Maybe<Array<(
         { __typename?: 'GeographyClippingLayer' }
         & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId'>
       )>> }
     )> }
-  )> }
+  )>, geographies?: Maybe<Array<(
+    { __typename?: 'Geography' }
+    & GeographyDetailsFragment
+  )>> }
 );
 
 export type EezLayerQueryVariables = Exact<{ [key: string]: never; }>;
@@ -19100,6 +19563,38 @@ export type EezLayerQuery = (
         { __typename?: 'DataSource' }
         & Pick<DataSource, 'id' | 'url' | 'type' | 'geostats'>
       )> }
+    )> }
+  )> }
+);
+
+export type CreateGeographiesMutationVariables = Exact<{
+  geographies: Array<CreateGeographyArgs> | CreateGeographyArgs;
+}>;
+
+
+export type CreateGeographiesMutation = (
+  { __typename?: 'Mutation' }
+  & { createGeographies?: Maybe<(
+    { __typename?: 'CreateGeographiesPayload' }
+    & { geographies: Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'projectId'>
+      & { clippingLayers?: Maybe<Array<(
+        { __typename?: 'GeographyClippingLayer' }
+        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId' | 'operationType' | 'projectGeographyId'>
+        & { dataLayer?: Maybe<(
+          { __typename?: 'DataLayer' }
+          & Pick<DataLayer, 'id'>
+          & { dataSource?: Maybe<(
+            { __typename?: 'DataSource' }
+            & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
+            & { authorProfile?: Maybe<(
+              { __typename?: 'Profile' }
+              & UserProfileDetailsFragment
+            )> }
+          )> }
+        )> }
+      )>> }
     )> }
   )> }
 );
@@ -22910,6 +23405,57 @@ export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment UserProfileDetails on Profile {
+  userId
+  fullname
+  affiliations
+  email
+  nickname
+  picture
+}
+    `;
+export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ClippingLayerDetails on DataLayer {
+  id
+  version
+  mapboxGlStyles
+  sourceLayer
+  dataSource {
+    id
+    type
+    url
+    dataLibraryTemplateId
+    createdAt
+    authorProfile {
+      ...UserProfileDetails
+    }
+    outputs {
+      id
+      type
+      url
+    }
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
+export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment GeographyDetails on Geography {
+  id
+  hash
+  name
+  translatedProps
+  clientTemplate
+  clippingLayers {
+    id
+    operationType
+    templateId
+    cql2Query
+    dataLayer {
+      ...ClippingLayerDetails
+    }
+  }
+}
+    ${ClippingLayerDetailsFragmentDoc}`;
 export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
     fragment MapEssentials on Project {
   id
@@ -23637,16 +24183,6 @@ export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
   tokenExpiresAt
   error
   updatedAt
-}
-    `;
-export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment UserProfileDetails on Profile {
-  userId
-  fullname
-  affiliations
-  email
-  nickname
-  picture
 }
     `;
 export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
@@ -25494,21 +26030,7 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
     session
   }
   geographyClippingLayers {
-    id
-    sourceLayer
-    version
-    mapboxGlStyles
-    dataSourceId
-    dataSource {
-      id
-      type
-      url
-      dataLibraryTemplateId
-      createdAt
-      authorProfile {
-        ...UserProfileDetails
-      }
-    }
+    ...ClippingLayerDetails
   }
   projectBySlug(slug: $slug) {
     id
@@ -25517,7 +26039,7 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
       name
       createdAt
       hash
-      reportingOnly
+      clientTemplate
       clippingLayers {
         id
         cql2Query
@@ -25525,8 +26047,12 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
       }
     }
   }
+  geographies {
+    ...GeographyDetails
+  }
 }
-    ${UserProfileDetailsFragmentDoc}`;
+    ${ClippingLayerDetailsFragmentDoc}
+${GeographyDetailsFragmentDoc}`;
 export const EezLayerDocument = /*#__PURE__*/ gql`
     query EEZLayer {
   eezlayer {
@@ -25543,6 +26069,39 @@ export const EezLayerDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateGeographiesDocument = /*#__PURE__*/ gql`
+    mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
+  createGeographies(input: $geographies) {
+    geographies {
+      id
+      name
+      createdAt
+      hash
+      projectId
+      clippingLayers {
+        id
+        cql2Query
+        templateId
+        operationType
+        projectGeographyId
+        dataLayer {
+          id
+          dataSource {
+            id
+            type
+            url
+            dataLibraryTemplateId
+            createdAt
+            authorProfile {
+              ...UserProfileDetails
+            }
+          }
+        }
+      }
+    }
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -27595,6 +28154,7 @@ export const namedOperations = {
     createFileUploadForPost: 'createFileUploadForPost',
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
+    CreateGeographies: 'CreateGeographies',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
@@ -27733,6 +28293,8 @@ export const namedOperations = {
     SketchPresent: 'SketchPresent',
     FileUploadDetails: 'FileUploadDetails',
     SpriteDetails: 'SpriteDetails',
+    ClippingLayerDetails: 'ClippingLayerDetails',
+    GeographyDetails: 'GeographyDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',

@@ -1,8 +1,10 @@
 import {
   DotsHorizontalIcon,
+  EnterFullScreenIcon,
   FileTextIcon,
   Pencil1Icon,
-  PlusIcon,
+  Pencil2Icon,
+  PlusCircledIcon,
 } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -14,7 +16,6 @@ import Warning from "../../components/Warning";
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import Switch from "../../components/Switch";
 import getSlug from "../../getSlug";
-import EEZClippingModal from "./EEZClippingModal";
 import mapboxgl from "mapbox-gl";
 import useEEZChoices, { labelForEEZ } from "./useEEZChoices";
 import { createPortal } from "react-dom";
@@ -29,6 +30,7 @@ import DigitizingTools from "../../formElements/DigitizingTools";
 import CreateGeographyWizard, {
   CreateGeographyWizardState,
 } from "./CreateGeographyWizard";
+import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -44,12 +46,14 @@ export default function GeographyAdmin() {
   const [geographyWizardState, setGeographyWizardState] = useState<
     {
       active: boolean;
+      usedTemplates: string[];
     } & CreateGeographyWizardState
   >({
     active: false,
     step: "chooseTemplate",
     multipleEEZHandling: "separate",
     eraseLand: true,
+    usedTemplates: [],
   });
 
   const [eezPickerState, setEEZPickerState] = useState<{
@@ -454,6 +458,22 @@ export default function GeographyAdmin() {
     extraRequestParams
   );
 
+  useEffect(() => {
+    if (!data?.projectBySlug?.geographies) {
+      return;
+    }
+    const usedTemplates = [] as string[];
+    for (const geography of data.projectBySlug.geographies) {
+      if (geography.clientTemplate) {
+        usedTemplates.push(geography.clientTemplate);
+      }
+    }
+    setGeographyWizardState((prev) => ({
+      ...prev,
+      usedTemplates: Array.from(new Set(usedTemplates)),
+    }));
+  }, [data?.projectBySlug?.geographies]);
+
   return (
     <div className="w-full h-full flex">
       <nav className="w-96 bg-white h-full overflow-y-auto border-r border-black border-opacity-10 flex flex-col">
@@ -479,18 +499,6 @@ export default function GeographyAdmin() {
           </a>
         </p>
         <div className="flex flex-col overflow-y-auto bg-gray-200 h-full shadow-inner">
-          <div className="flex items-center justify-center p-6">
-            <Button
-              onClick={() => {
-                setGeographyWizardState((prev) => ({
-                  ...prev,
-                  active: true,
-                  step: "chooseTemplate",
-                }));
-              }}
-              label={t("Create Your First Geography")}
-            />
-          </div>
           {loading && (
             <div className="w-full text-center p-5">
               <Spinner />
@@ -508,32 +516,50 @@ export default function GeographyAdmin() {
               </Trans>
             </Warning>
           )}
-          {!loading && <ul className="w-full p-2"></ul>}
+          {!loading && (
+            <ul className="w-full p-2 py-4 space-y-2">
+              {data?.projectBySlug?.geographies?.map((geog) => (
+                <li
+                  className="bg-white rounded p-4 shadow-sm flex items-center space-x-2"
+                  key={geog.id}
+                >
+                  <VisibilityCheckbox
+                    disabled={false}
+                    visibility={true}
+                    id={0}
+                  />
+                  <span className="flex-1">{geog.name}</span>
+                  <span className="space-x-2 flex items-center">
+                    <EnterFullScreenIcon />
+                    <Pencil2Icon />
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+          {!loading && (
+            <div className="px-2 -mt-1">
+              <button
+                onClick={() => {
+                  setGeographyWizardState((prev) => ({
+                    ...prev,
+                    active: true,
+                    step: "chooseTemplate",
+                  }));
+                }}
+                className="border-2 border-black border-opacity-10 border-dashed rounded w-full text-left flex items-center space-x-2 p-4 text-gray-500"
+              >
+                <PlusCircledIcon />
+                <span>
+                  {(data?.projectBySlug?.geographies || []).length === 0
+                    ? t("Create Your First Geography")
+                    : t("Create a New Geography")}
+                </span>
+              </button>
+            </div>
+          )}
         </div>
       </nav>
-      {/* {openModalsState.eez && (
-        <EEZClippingModal
-          onRequestClose={() => setOpenModalsState({ land: false, eez: false })}
-          enabled={Boolean(
-            data?.projectBySlug?.eezSettings?.enableEezClipping &&
-              data?.projectBySlug?.eezSettings?.eezSelections?.length
-          )}
-          lastUpdated={new Date(eez?.dataSource?.createdAt)}
-          author={eez?.dataSource?.authorProfile!}
-          selectedEEZs={
-            (data?.projectBySlug?.eezSettings?.eezSelections as string[]) || []
-          }
-          onRequestEEZPicker={() => {
-            setOpenModalsState({ land: false, eez: false });
-            setEEZPickerState((prev) => ({
-              ...prev,
-              active: true,
-              selectedEEZs:
-                (data?.projectBySlug?.eezSettings?.mrgidEez as number[]) || [],
-            }));
-          }}
-        />
-      )} */}
       <div ref={mapRef} className="flex-1 relative">
         {map &&
           !eezPickerState.active &&
@@ -701,11 +727,12 @@ export default function GeographyAdmin() {
           </div>
         )}
       </div>
-      {geographyWizardState.active && (
+      {geographyWizardState.active && coastline && eez && (
         <CreateGeographyWizard
           state={geographyWizardState}
           // @ts-ignore
           setState={setGeographyWizardState}
+          usedTemplates={geographyWizardState.usedTemplates}
           onRequestClose={() => {
             setGeographyWizardState((prev) => ({
               ...prev,
@@ -727,6 +754,8 @@ export default function GeographyAdmin() {
               }));
             });
           }}
+          landLayerId={coastline.id}
+          eezLayerId={eez.id}
         />
       )}
       {createPortal(

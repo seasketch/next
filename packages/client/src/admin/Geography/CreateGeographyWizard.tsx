@@ -8,6 +8,15 @@ import Button from "../../components/Button";
 import RadioGroup from "../../components/RadioGroup";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
+import {
+  CreateGeographyArgs,
+  GeographyClippingSettingsDocument,
+  GeographyLayerOperation,
+  useCreateGeographiesMutation,
+} from "../../generated/graphql";
+import getSlug from "../../getSlug";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import Spinner from "../../components/Spinner";
 
 export type CreateGeographyWizardState = {
   step: "chooseTemplate" | "eezPicker" | "layerPicker" | "config";
@@ -20,6 +29,7 @@ export type CreateGeographyWizardState = {
   selectedEEZs?: number[];
   multipleEEZHandling: "separate" | "combine";
   eraseLand: boolean;
+  savingTemplate?: string;
 };
 
 export default function CreateGeographyWizard({
@@ -27,6 +37,9 @@ export default function CreateGeographyWizard({
   onRequestClose,
   setState,
   onRequestEEZPicker,
+  landLayerId,
+  eezLayerId,
+  usedTemplates,
 }: {
   state: CreateGeographyWizardState;
   onRequestClose: () => void;
@@ -37,6 +50,10 @@ export default function CreateGeographyWizard({
       | CreateGeographyWizardState
   ) => void;
   onRequestEEZPicker?: () => Promise<number[]>;
+  landLayerId: number;
+  eezLayerId: number;
+  usedTemplates: string[];
+  savingTemplate?: string;
 }) {
   const { t } = useTranslation("admin:geography");
   const eezChoices = useEEZChoices();
@@ -49,6 +66,14 @@ export default function CreateGeographyWizard({
     }
     return [];
   }, [state.selectedEEZs, eezChoices]);
+
+  const onError = useGlobalErrorHandler();
+
+  const [mutation, mutationState] = useCreateGeographiesMutation({
+    onError,
+    refetchQueries: [GeographyClippingSettingsDocument],
+    awaitRefetchQueries: true,
+  });
 
   return (
     <Modal
@@ -65,6 +90,7 @@ export default function CreateGeographyWizard({
         <div className="bg-white w-128 border-collapse pb-1 z-50">
           {/* <h3 className="p-2">{t("Create a Geography using...")}</h3> */}
           <GeographyTypeChoice
+            disabled={mutationState.loading}
             autoFocus
             label={t("Use a Custom Layer")}
             description={t(
@@ -84,7 +110,8 @@ export default function CreateGeographyWizard({
             {t("Or, create a Geography using authoritative data sources")}
           </p>
           <GeographyTypeChoice
-            checked={false}
+            disabled={mutationState.loading}
+            checked={usedTemplates.includes("eez")}
             label={t("Exclusive Economic Zones (EEZ)")}
             description={t(
               "Choose one or more EEZ's using data from MarineRegions.org"
@@ -113,15 +140,17 @@ export default function CreateGeographyWizard({
           />
           <GeographyTypeChoice
             label={t("Territorial Sea")}
-            checked={false}
+            disabled={mutationState.loading}
+            checked={usedTemplates.includes("territorial_sea")}
             description={t(
               "Include 12nm boundaries for one or more nations using data from MarineRegions.org"
             )}
             onClick={() => {}}
           />
           <GeographyTypeChoice
+            disabled={mutationState.loading}
             label={t("Contiguous Zone")}
-            checked={false}
+            checked={usedTemplates.includes("contiguous_zone")}
             description={t(
               "Represent the 24nm contiguous zone using data from MarineRegions.org"
             )}
@@ -137,7 +166,8 @@ export default function CreateGeographyWizard({
           />
           <GeographyTypeChoice
             label={t("High Seas")}
-            checked={false}
+            disabled={mutationState.loading}
+            checked={usedTemplates.includes("high_seas")}
             description={t(
               "Represent areas beyond national jurisdiction using data from MarineRegions.org"
             )}
@@ -153,17 +183,38 @@ export default function CreateGeographyWizard({
           />
           <GeographyTypeChoice
             label={t("Terrestrial Areas")}
-            checked={false}
+            disabled={mutationState.loading}
+            saving={
+              mutationState.loading &&
+              state.savingTemplate === "DAYLIGHT_COASTLINE"
+            }
+            checked={usedTemplates.includes("terrestrial_areas")}
             description={t(
               "Design and evaluate sketches on land using OpenStreetMap"
             )}
             onClick={() => {
-              setState((prev) => {
-                return {
-                  ...prev,
-                  step: "config",
-                  template: "DAYLIGHT_COASTLINE",
-                };
+              const input: CreateGeographyArgs = {
+                slug: getSlug(),
+                name: "Terrestrial Areas",
+                clientTemplate: "terrestrial_areas",
+                clippingLayers: [
+                  {
+                    templateId: "DAYLIGHT_COASTLINE",
+                    dataLayerId: landLayerId,
+                    operationType: GeographyLayerOperation.Intersect,
+                  },
+                ],
+              };
+              setState((prev) => ({
+                ...prev,
+                savingTemplate: "DAYLIGHT_COASTLINE",
+              }));
+              mutation({
+                variables: {
+                  geographies: [input],
+                },
+              }).then(() => {
+                onRequestClose();
               });
             }}
           />
@@ -236,8 +287,14 @@ export default function CreateGeographyWizard({
               />
             </div>
             <div className="bg-gray-100 border-t p-2 px-4 space-x-2 mt-2">
-              <Button label={t("Cancel")} onClick={onRequestClose} />
               <Button
+                disabled={mutationState.loading}
+                label={t("Cancel")}
+                onClick={onRequestClose}
+              />
+              <Button
+                disabled={mutationState.loading}
+                loading={mutationState.loading}
                 label={
                   state.multipleEEZHandling === "separate" &&
                   state.selectedEEZs &&
@@ -246,6 +303,65 @@ export default function CreateGeographyWizard({
                     : t("Create Geography")
                 }
                 primary
+                autofocus
+                onClick={() => {
+                  if (!eezChoices.dataLayerId) {
+                    throw new Error(
+                      "EEZ data layer ID is not available. Please check the EEZ choices."
+                    );
+                  }
+                  if (!state.selectedEEZs || state.selectedEEZs.length === 0) {
+                    throw new Error(
+                      "No EEZs selected. Please select at least one EEZ."
+                    );
+                  }
+                  const input: CreateGeographyArgs[] = [];
+                  if (state.multipleEEZHandling === "separate") {
+                    for (const eez of state.selectedEEZs) {
+                      const label = eezChoices.data.find(
+                        (c) => c.value === eez
+                      )?.label;
+                      input.push(
+                        buildCreateGeographyInputForEEZ(
+                          eezLayerId,
+                          [eez],
+                          "EEZ: " + label!,
+                          state.eraseLand,
+                          landLayerId
+                        )
+                      );
+                    }
+                  } else {
+                    input.push(
+                      buildCreateGeographyInputForEEZ(
+                        eezLayerId,
+                        state.selectedEEZs!,
+                        state.selectedEEZs.length > 1
+                          ? "EEZ: " +
+                              eezChoices.data
+                                .filter((c) =>
+                                  state.selectedEEZs?.includes(c.value)
+                                )
+                                .map((c) => c.label)
+                                .join(", ")
+                          : "EEZ: " +
+                              eezChoices.data.find(
+                                (c) => c.value === state.selectedEEZs![0]
+                              )?.label!,
+                        state.eraseLand,
+                        landLayerId
+                      )
+                    );
+                  }
+                  console.log(input);
+                  mutation({
+                    variables: {
+                      geographies: input,
+                    },
+                  }).then(() => {
+                    onRequestClose();
+                  });
+                }}
               />
             </div>
           </div>
@@ -263,19 +379,35 @@ function GeographyTypeChoice({
   onClick,
   checked,
   autoFocus,
+  saving,
+  disabled,
 }: {
   label: string | ReactNode;
   description?: string;
   onClick?: () => void;
   checked?: boolean;
   autoFocus?: boolean;
+  saving?: boolean;
+  disabled?: boolean;
 }) {
+  let icon = <CircleIcon className="w-[16px] h-[16px]" />;
+  if (saving) {
+    icon = <Spinner />;
+  } else if (checked) {
+    icon = <CheckCircleIcon className="w-[19px] h-[19px]" />;
+  }
+
   return (
     <button
+      disabled={disabled || saving}
       autoFocus={autoFocus}
-      className="p-4 border hover:bg-indigo-300/5 w-full text-left border-b-0 flex space-x-3"
+      className={`p-4 border hover:bg-indigo-300/5 ${
+        saving ? "bg-indigo-300/10" : ""
+      } w-full text-left border-b-0 flex space-x-3 ${
+        disabled && !saving ? "opacity-50" : ""
+      }`}
       onClick={(e) => {
-        if (onClick) {
+        if (onClick && !disabled) {
           onClick();
         }
       }}
@@ -283,14 +415,10 @@ function GeographyTypeChoice({
       {checked !== undefined && (
         <div
           className={`w-5 flex items-center justify-center ${
-            checked ? "text-indigo-500" : "opacity-20"
+            checked || saving ? "text-gray-400" : "opacity-20"
           }`}
         >
-          {checked ? (
-            <CheckCircleIcon className="w-[19px] h-[19px]" />
-          ) : (
-            <CircleIcon className="w-[16px] h-[16px]" />
-          )}
+          {icon}
         </div>
       )}
       <div className="flex-1">
@@ -299,4 +427,51 @@ function GeographyTypeChoice({
       </div>
     </button>
   );
+}
+
+function buildCreateGeographyInputForEEZ(
+  eezDataLayerId: number,
+  choices: number[],
+  name: string,
+  clipToLand: boolean,
+  landDataLayerId: number
+): CreateGeographyArgs {
+  const payload: CreateGeographyArgs = {
+    slug: getSlug(),
+    name,
+    clientTemplate: "eez",
+    clippingLayers: [
+      {
+        dataLayerId: eezDataLayerId,
+        templateId: "MARINE_REGIONS_EEZ_LAND_JOINED",
+        operationType: GeographyLayerOperation.Intersect,
+        cql2Query: JSON.stringify(
+          choices.length === 1
+            ? {
+                op: "=",
+                args: [
+                  {
+                    property: "MRGID_EEZ",
+                  },
+                  choices[0],
+                ],
+              }
+            : {
+                op: "in",
+                args: [{ property: "MRGID_EEZ" }, choices],
+              }
+        ),
+      },
+      ...(clipToLand
+        ? [
+            {
+              dataLayerId: landDataLayerId,
+              templateId: "DAYLIGHT_COASTLINE",
+              operationType: GeographyLayerOperation.Difference,
+            },
+          ]
+        : []),
+    ],
+  };
+  return payload;
 }

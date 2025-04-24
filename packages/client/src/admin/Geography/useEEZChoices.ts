@@ -8,11 +8,7 @@ type EEZProps = {
   bbox: number[];
 };
 
-export default function useEEZChoices(): {
-  loading: boolean;
-  error?: Error;
-  data: { label: string; value: number; data: EEZProps }[];
-} {
+export default function useEEZChoices() {
   const { data, loading } = useEezLayerQuery({
     onError: (e) => {
       setState((prev) => ({
@@ -25,6 +21,7 @@ export default function useEEZChoices(): {
   const [state, setState] = useState<{
     loading: boolean;
     error?: Error;
+    dataLayerId?: number;
     data: { label: string; value: number; data: EEZProps }[];
   }>({
     loading: true,
@@ -65,6 +62,7 @@ export default function useEEZChoices(): {
             setState({
               loading: false,
               data: choices,
+              dataLayerId: data.eezlayer?.dataLayer?.id || undefined,
             });
           }
         })

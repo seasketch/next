@@ -21,7 +21,8 @@ create table if not exists project_geography (
   name text not null,
   created_at timestamptz default now(),
   hash text,
-  translated_props jsonb
+  translated_props jsonb,
+  client_template text
 );
 
 create index on project_geography(project_id);
@@ -134,3 +135,33 @@ create or replace function project_geography_clipping_layers(geography project_g
 grant execute on function project_geography_clipping_layers(geography project_geography) to anon;
 
 comment on function project_geography_clipping_layers(geography project_geography) is E'@simpleCollections only\n@description "Returns the clipping layers for a given geography."';
+
+grant insert, update, delete on project_geography to seasketch_user;
+grant insert, update, delete on geography_clipping_layers to seasketch_user;
+
+alter table project_geography enable row level security;
+alter table geography_clipping_layers enable row level security;
+
+-- Create policies for project_geography
+create policy "Allow all users to read project geography" on project_geography
+  for select using (true);
+create policy "Allow project owners to insert, update, and delete their own project geography" on project_geography
+  for all
+  to seasketch_user
+  using (session_is_admin(project_id))
+  with check (session_is_admin(project_id));
+
+-- Create policies for geography_clipping_layers
+create policy "Allow all users to read geography clipping layers" on geography_clipping_layers
+  for select using (true);
+
+create policy "Allow project owners to insert, update, and delete their own geography clipping layers" on geography_clipping_layers
+  for all
+  to seasketch_user
+  using (session_is_admin((select project_id from project_geography where project_geography.id = project_geography_id)))
+  with check (session_is_admin((select project_id from project_geography where project_geography.id = project_geography_id)));
+
+grant execute on function compute_project_geography_hash(geog_id integer) to seasketch_user;
+
+grant execute on function digest(bytea, text) to anon;
+grant execute on function digest(text, text) to anon;

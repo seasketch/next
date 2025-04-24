@@ -1,3 +1,42 @@
+fragment ClippingLayerDetails on DataLayer {
+  id
+  version
+  mapboxGlStyles
+  sourceLayer
+  dataSource {
+    id
+    type
+    url
+    dataLibraryTemplateId
+    createdAt
+    authorProfile {
+      ...UserProfileDetails
+    }
+    outputs {
+      id
+      type
+      url
+    }
+  }
+}
+
+fragment GeographyDetails on Geography {
+  id
+  hash
+  name
+  translatedProps
+  clientTemplate
+  clippingLayers {
+    id
+    operationType
+    templateId
+    cql2Query
+    dataLayer {
+      ...ClippingLayerDetails
+    }
+  }
+}
+
 query GeographyClippingSettings($slug: String!) {
   gmapssatellitesession {
     expiresAt
@@ -5,21 +44,7 @@ query GeographyClippingSettings($slug: String!) {
     session
   }
   geographyClippingLayers {
-    id
-    sourceLayer
-    version
-    mapboxGlStyles
-    dataSourceId
-    dataSource {
-      id
-      type
-      url
-      dataLibraryTemplateId
-      createdAt
-      authorProfile {
-        ...UserProfileDetails
-      }
-    }
+    ...ClippingLayerDetails
   }
   projectBySlug(slug: $slug) {
     id
@@ -28,13 +53,16 @@ query GeographyClippingSettings($slug: String!) {
       name
       createdAt
       hash
-      reportingOnly
+      clientTemplate
       clippingLayers {
         id
         cql2Query
         templateId
       }
     }
+  }
+  geographies {
+    ...GeographyDetails
   }
 }
 
@@ -48,6 +76,38 @@ query EEZLayer {
         url
         type
         geostats
+      }
+    }
+  }
+}
+
+mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
+  createGeographies(input: $geographies) {
+    geographies {
+      id
+      name
+      createdAt
+      hash
+      projectId
+      clippingLayers {
+        id
+        cql2Query
+        templateId
+        operationType
+        projectGeographyId
+        dataLayer {
+          id
+          dataSource {
+            id
+            type
+            url
+            dataLibraryTemplateId
+            createdAt
+            authorProfile {
+              ...UserProfileDetails
+            }
+          }
+        }
       }
     }
   }
