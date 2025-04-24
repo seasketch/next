@@ -161,6 +161,14 @@ export interface LayerState {
   hidden?: boolean;
 }
 
+export interface SketchClassLayerState extends LayerState {
+  sketchClassId: number;
+  name: string;
+  zOrderOverride?: number;
+  legendItem: LegendItem;
+  styles: any[];
+}
+
 export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
   filterMvtUrl?: string;
@@ -226,6 +234,9 @@ class MapContextManager extends EventEmitter {
       listenersAdded: boolean;
       sublayers?: OrderedLayerSettings;
     };
+  } = {};
+  private sketchClassLayerStates: {
+    [sketchClassId: string]: SketchClassLayerState;
   } = {};
 
   constructor(
@@ -1134,24 +1145,56 @@ class MapContextManager extends EventEmitter {
         this.sketchTimestamps.delete(sketch.id);
       }
     }
+    // update sketchClassLayerStates
+    for (const id in this.sketchClassLayerStates) {
+      this.sketchClassLayerStates[id].visible = false;
+      // see if any sketches are visible for this sketch class
+      for (const sketchState of Object.values(
+        this.internalState.sketchLayerStates
+      )) {
+        if (sketchState.sketchClassId === parseInt(id) && sketchState.visible) {
+          this.sketchClassLayerStates[id].visible = true;
+          break;
+        }
+      }
+    }
     // request a redraw
     this.debouncedUpdateStyle();
+    this.updateLegends();
   }
-
-  private sketchClassGLStyles: { [sketchClassId: number]: AnyLayer[] } = {};
 
   getSketchClassGLStyles(sketchClassId: number): AnyLayer[] {
     // Clone the style layers. Mapbox GL JS will freeze the objects after adding
     // to the map, which will prevent us from modifying the style later and
     // throw exceptions
     return cloneDeep(
-      this.sketchClassGLStyles[sketchClassId] || this.defaultSketchLayers
+      this.sketchClassLayerStates[sketchClassId]?.styles ||
+        this.defaultSketchLayers
     );
   }
 
-  setSketchClassGlStyles(styles: { [sketchClassId: number]: AnyLayer[] }) {
-    this.sketchClassGLStyles = styles;
+  setSketchClassLayerConfig(config: {
+    [sketchClassId: number]: {
+      styles: any[];
+      legendItem: LegendItem;
+      name: string;
+    };
+  }) {
+    for (const key in config) {
+      const existingState = this.sketchClassLayerStates[key];
+      this.sketchClassLayerStates[key] = {
+        ...{
+          visible: false,
+          hidden: false,
+          loading: false,
+          error: undefined,
+        },
+        ...(existingState || {}),
+        ...config[key],
+      };
+    }
     this.debouncedUpdateStyle();
+    this.updateLegends();
   }
 
   setSelectedSketches(sketchIds: number[]) {
@@ -1778,11 +1821,18 @@ class MapContextManager extends EventEmitter {
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
-        const layers = this.getLayersForSketch(
+        let layers = this.getLayersForSketch(
           id,
           id === this.editableSketchId,
           sketchClassId
         );
+        if (sketchClassId && this.sketchClassLayerStates[sketchClassId]) {
+          const state = this.sketchClassLayerStates[sketchClassId];
+          console.log("adjust", state);
+          if (state.opacity !== undefined && state.opacity < 1) {
+            layers = adjustLayerOpacities(layers, state.opacity);
+          }
+        }
         if (
           layers.length > 0 &&
           "metadata" in layers[0] &&
@@ -1912,7 +1962,7 @@ class MapContextManager extends EventEmitter {
             // "line-offset": -1,
           },
           // @ts-ignore
-          slot: "top",
+          // slot: "top",
           layout: {},
           // layout: { "line-join": "miter" },
         } as LineLayer;
@@ -3036,6 +3086,17 @@ class MapContextManager extends EventEmitter {
         }
       }
     }
+    // add visible sketchClass layer legends
+    for (const sketchClassId in this.sketchClassLayerStates) {
+      const sketchClassLayerState = this.sketchClassLayerStates[sketchClassId];
+      console.log("state", sketchClassLayerState);
+      if (sketchClassLayerState.visible && sketchClassLayerState.legendItem) {
+        newLegendState[sketchClassId] = sketchClassLayerState.legendItem;
+        changes = true;
+      }
+    }
+
+    console.log("new state", newLegendState, changes);
     if (changes) {
       this.setState((prev) => ({
         ...prev,
@@ -3254,6 +3315,78 @@ class MapContextManager extends EventEmitter {
     }
   }
 
+  /**
+   * Sets the opacity of a sketch class's layers
+   */
+  setSketchClassOpacity(sketchClassId: number, opacity: number) {
+    const classId = sketchClassId.toString();
+    if (!this.sketchClassLayerStates[classId]) {
+      throw new Error(`Sketch class with id ${sketchClassId} does not exist`);
+    } else {
+      this.sketchClassLayerStates[classId].opacity = opacity;
+    }
+
+    this.setState((prev) => ({
+      ...prev,
+      sketchClassLayerStates: { ...this.sketchClassLayerStates },
+    }));
+
+    // see if you can do an update of layers in place
+    for (const sketchId in this.internalState.sketchLayerStates) {
+      const sketchLayerState = this.internalState.sketchLayerStates[sketchId];
+      const layers = this.map?.getStyle().layers;
+      if (layers?.length) {
+        if (
+          sketchLayerState.sketchClassId === sketchClassId &&
+          sketchLayerState.visible
+        ) {
+          let glLayers = this.getLayersForSketch(
+            parseInt(sketchId),
+            false,
+            sketchClassId
+          );
+          if (glLayers.length > 0) {
+            adjustLayerOpacities(glLayers, opacity, this.map);
+          }
+        }
+      }
+    }
+
+    // this.debouncedUpdateStyle();
+  }
+
+  setSketchClassHidden(sketchClassId: number, hidden: boolean) {
+    const classId = sketchClassId.toString();
+    if (!this.sketchClassLayerStates[classId]) {
+      throw new Error(`Sketch class with id ${sketchClassId} does not exist`);
+    } else {
+      this.sketchClassLayerStates[classId].hidden = hidden;
+    }
+
+    this.setState((prev) => ({
+      ...prev,
+      sketchClassLayerStates: { ...this.sketchClassLayerStates },
+    }));
+
+    this.debouncedUpdateStyle();
+  }
+
+  setSketchClassZOrder(sketchClassId: number, zOrder: number) {
+    const classId = sketchClassId.toString();
+    if (!this.sketchClassLayerStates[classId]) {
+      throw new Error(`Sketch class with id ${sketchClassId} does not exist`);
+    } else {
+      this.sketchClassLayerStates[classId].zOrderOverride = zOrder;
+    }
+
+    this.setState((prev) => ({
+      ...prev,
+      sketchClassLayerStates: { ...this.sketchClassLayerStates },
+    }));
+
+    this.debouncedUpdateStyle();
+  }
+
   private boundsForTocItem = async (stableId: string) => {
     let bounds: [number, number, number, number] | undefined;
     const item = this.tocItems[stableId];
@@ -3368,6 +3501,7 @@ export interface Tooltip {
 export interface MapContextInterface {
   layerStatesByTocStaticId: { [id: string]: LayerState };
   sketchLayerStates: { [id: number]: SketchLayerState };
+  sketchClassLayerStates: { [sketchClassId: string]: SketchClassLayerState };
   manager?: MapContextManager;
   bannerMessages: string[];
   tooltip?: Tooltip;
@@ -3441,6 +3575,7 @@ export function useMapContext(options?: MapContextOptions) {
     containerPortal: containerPortal || null,
     legends: {},
     digitizingLockState: DigitizingLockState.Free,
+    sketchClassLayerStates: {},
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -3516,11 +3651,13 @@ export function useMapContext(options?: MapContextOptions) {
 export const MapContext = createContext<MapContextInterface>({
   layerStatesByTocStaticId: {},
   sketchLayerStates: {},
+  sketchClassLayerStates: {},
   styleHash: "",
   manager: new MapContextManager(
     {
       layerStatesByTocStaticId: {},
       sketchLayerStates: {},
+      sketchClassLayerStates: {},
       bannerMessages: [],
       fixedBlocks: [],
       ready: false,

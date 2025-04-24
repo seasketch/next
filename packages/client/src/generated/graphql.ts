@@ -2077,6 +2077,8 @@ export type DataLayer = Node & {
   /** Reads a single `DataSource` that is related to this `DataLayer`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  geographyClippingLayersConnection: GeographyClippingLayersConnection;
   id: Scalars['Int'];
   /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
@@ -2132,6 +2134,25 @@ export type DataLayer = Node & {
 export type DataLayerArchivedSourcesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * Data layers represent multiple MapBox GL Style layers tied to a single source.
+ * These layers could also be called "operational layers" in that they are meant to
+ * be overlaid on a basemap.
+ *
+ * The layers can appear tied to a TableOfContentsItem or be part of rich features
+ * associated with a basemap.
+ */
+export type DataLayerGeographyClippingLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<GeographyClippingLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
 };
 
 
@@ -2920,6 +2941,7 @@ export type DataUploadOutput = Node & {
   dataSourceId?: Maybe<Scalars['Int']>;
   filename: Scalars['String'];
   id: Scalars['Int'];
+  isCustomUpload?: Maybe<Scalars['Boolean']>;
   isOriginal: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -5626,6 +5648,127 @@ export type GenerateOfflineTilePackagePayloadOfflineTilePackageEdgeArgs = {
 };
 
 
+/** Methods to use when ordering `Geography`. */
+export enum GeographiesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
+export type Geography = Node & {
+  __typename?: 'Geography';
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  clippingLayers?: Maybe<Array<GeographyClippingLayer>>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  geographyClippingLayersConnection: GeographyClippingLayersConnection;
+  hash?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  name: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `Geography`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  translatedProps?: Maybe<Scalars['JSON']>;
+};
+
+
+export type GeographyClippingLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type GeographyGeographyClippingLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<GeographyClippingLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+export type GeographyClippingLayer = Node & {
+  __typename?: 'GeographyClippingLayer';
+  cql2Query?: Maybe<Scalars['JSON']>;
+  /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
+  dataLayer?: Maybe<DataLayer>;
+  dataLayerId: Scalars['Int'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  operationType: GeographyLayerOperation;
+  /** Reads a single `Geography` that is related to this `GeographyClippingLayer`. */
+  projectGeography?: Maybe<Geography>;
+  projectGeographyId: Scalars['Int'];
+  templateId?: Maybe<Scalars['String']>;
+};
+
+/**
+ * A condition to be used against `GeographyClippingLayer` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type GeographyClippingLayerCondition = {
+  /** Checks for equality with the object’s `dataLayerId` field. */
+  dataLayerId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectGeographyId` field. */
+  projectGeographyId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `GeographyClippingLayer` values. */
+export type GeographyClippingLayersConnection = {
+  __typename?: 'GeographyClippingLayersConnection';
+  /** A list of edges which contains the `GeographyClippingLayer` and cursor to aid in pagination. */
+  edges: Array<GeographyClippingLayersEdge>;
+  /** A list of `GeographyClippingLayer` objects. */
+  nodes: Array<GeographyClippingLayer>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `GeographyClippingLayer` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `GeographyClippingLayer` edge in the connection. */
+export type GeographyClippingLayersEdge = {
+  __typename?: 'GeographyClippingLayersEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `GeographyClippingLayer` at the end of the edge. */
+  node: GeographyClippingLayer;
+};
+
+/** Methods to use when ordering `GeographyClippingLayer`. */
+export enum GeographyClippingLayersOrderBy {
+  DataLayerIdAsc = 'DATA_LAYER_ID_ASC',
+  DataLayerIdDesc = 'DATA_LAYER_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectGeographyIdAsc = 'PROJECT_GEOGRAPHY_ID_ASC',
+  ProjectGeographyIdDesc = 'PROJECT_GEOGRAPHY_ID_DESC'
+}
+
+/**
+ * A condition to be used against `Geography` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type GeographyCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
 /** All geography XY types implement this interface */
 export type GeographyGeometry = {
   /** Converts the object to GeoJSON */
@@ -5641,6 +5784,11 @@ export type GeographyInterface = {
   /** Spatial reference identifier (SRID) */
   srid: Scalars['Int'];
 };
+
+export enum GeographyLayerOperation {
+  Difference = 'DIFFERENCE',
+  Intersect = 'INTERSECT'
+}
 
 export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   __typename?: 'GeographyLineString';
@@ -5931,6 +6079,21 @@ export type GetChildFoldersRecursivePayload = {
   integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type GoogleMapsTileApiSession = Node & {
+  __typename?: 'GoogleMapsTileApiSession';
+  expiresAt: Scalars['Datetime'];
+  id: Scalars['Int'];
+  imageFormat: Scalars['String'];
+  language: Scalars['String'];
+  mapType: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  region: Scalars['String'];
+  session: Scalars['String'];
+  tileHeight: Scalars['Int'];
+  tileWidth: Scalars['Int'];
 };
 
 /** All input for the `grantAdminAccess` mutation. */
@@ -9301,9 +9464,12 @@ export type Project = Node & {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault: Scalars['Boolean'];
+  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
+  /** Reads and enables pagination through a set of `Geography`. */
+  geographies: Array<Geography>;
   /** Reads and enables pagination through a set of `Group`. */
   groups: Array<Group>;
   hideForums: Scalars['Boolean'];
@@ -9588,6 +9754,18 @@ export type ProjectForumsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ForumsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectGeographiesArgs = {
+  condition?: Maybe<GeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographiesOrderBy>>;
 };
 
 
@@ -10246,6 +10424,7 @@ export type ProjectPatch = {
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault?: Maybe<Scalars['Boolean']>;
+  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   hideForums?: Maybe<Scalars['Boolean']>;
   hideOverlays?: Maybe<Scalars['Boolean']>;
   hideSketches?: Maybe<Scalars['Boolean']>;
@@ -10484,6 +10663,7 @@ export type Query = Node & {
   dataUploadTaskByNodeId?: Maybe<DataUploadTask>;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
+  eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
@@ -10518,6 +10698,18 @@ export type Query = Node & {
   forumByNodeId?: Maybe<Forum>;
   generateExportId?: Maybe<Scalars['String']>;
   generateLabel?: Maybe<Scalars['String']>;
+  /** Reads a set of `Geography`. */
+  geographies?: Maybe<Array<Geography>>;
+  geography?: Maybe<Geography>;
+  /** Reads a single `Geography` using its globally unique `ID`. */
+  geographyByNodeId?: Maybe<Geography>;
+  geographyClippingLayer?: Maybe<GeographyClippingLayer>;
+  /** Reads a single `GeographyClippingLayer` using its globally unique `ID`. */
+  geographyClippingLayerByNodeId?: Maybe<GeographyClippingLayer>;
+  /** Reads and enables pagination through a set of `DataLayer`. */
+  geographyClippingLayers?: Maybe<Array<DataLayer>>;
+  /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
+  geographyClippingLayersConnection?: Maybe<GeographyClippingLayersConnection>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
@@ -10525,6 +10717,7 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
+  gmapssatellitesession?: Maybe<GoogleMapsTileApiSession>;
   group?: Maybe<Group>;
   /** Reads a single `Group` using its globally unique `ID`. */
   groupByNodeId?: Maybe<Group>;
@@ -11069,6 +11262,58 @@ export type QueryGenerateExportIdArgs = {
 export type QueryGenerateLabelArgs = {
   body?: Maybe<Scalars['JSON']>;
   id?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographiesArgs = {
+  condition?: Maybe<GeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographiesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayerArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayerByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGeographyClippingLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<GeographyClippingLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
 };
 
 
@@ -20195,7 +20440,7 @@ export type FormElementDetailsFragment = (
 
 export type SketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'filterApiServerLocation' | 'allowMulti'>
+  & Pick<SketchClass, 'id' | 'name' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'filterApiServerLocation' | 'allowMulti'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -23040,6 +23285,7 @@ export const FormElementDetailsFragmentDoc = gql`
 export const SketchClassDetailsFragmentDoc = gql`
     fragment SketchClassDetails on SketchClass {
   id
+  name
   mapboxGlStyle
   formElementId
   geometryType

@@ -62,6 +62,8 @@ import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { createPortal } from "react-dom";
 import { LayerTemplate } from "../../formElements/FilterLayerManager";
+import { LegendItem } from "../../dataLayers/Legend";
+import { compileLegendFromGLStyleLayers } from "../../dataLayers/legends/compileLegend";
 
 type ReportState = {
   sketchId: number;
@@ -153,7 +155,11 @@ interface SketchUIStateContextValue {
   setSketchClasses: (
     sketchClasses: Pick<
       SketchClassDetailsFragment,
-      "id" | "mapboxGlStyle" | "geometryType" | "filterApiServerLocation"
+      | "id"
+      | "mapboxGlStyle"
+      | "geometryType"
+      | "filterApiServerLocation"
+      | "name"
     >[]
   ) => void;
 }
@@ -221,13 +227,20 @@ export default function SketchUIStateContextProvider({
   const [sketchClasses, setSketchClasses] = useState<
     Pick<
       SketchClassDetailsFragment,
-      "id" | "mapboxGlStyle" | "filterApiServerLocation"
+      "id" | "mapboxGlStyle" | "filterApiServerLocation" | "name"
     >[]
   >([]);
 
   useEffect(() => {
     if (mapContext.manager && mapContext.ready) {
       const styles: { [sketchClassId: number]: any[] } = {};
+      const layerConfig: {
+        [sketchClassId: number]: {
+          styles: any[];
+          legendItem: LegendItem;
+          name: string;
+        };
+      } = {};
       for (const sketchClass of sketchClasses) {
         if (sketchClass.mapboxGlStyle && sketchClass.mapboxGlStyle.length > 0) {
           styles[sketchClass.id] = sketchClass.mapboxGlStyle;
@@ -242,8 +255,26 @@ export default function SketchUIStateContextProvider({
           };
           styles[sketchClass.id] = [layer];
         }
+        const glStyles = styles[sketchClass.id];
+        console.log("glStyles", glStyles, sketchClass);
+        if (sketchClass.id in styles) {
+          const legendItem: LegendItem = {
+            legend: compileLegendFromGLStyleLayers(glStyles, "vector"),
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `sketch-class-${sketchClass.id}`,
+            label: sketchClass.name,
+            type: "GLStyleLegendItem",
+            isSketchClass: true,
+          };
+          layerConfig[sketchClass.id] = {
+            styles: glStyles,
+            legendItem,
+            name: sketchClass.name,
+          };
+        }
       }
-      mapContext.manager.setSketchClassGlStyles(styles);
+      mapContext.manager.setSketchClassLayerConfig(layerConfig);
+      console.log(layerConfig);
     }
   }, [mapContext.manager, mapContext.ready, sketchClasses]);
 
