@@ -93,7 +93,6 @@ export default function Legend({
   persistedStateKey?: string;
   editable?: boolean;
 }) {
-  console.log("render legend", items);
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
   const [hidden, setHidden] = useLocalForage<boolean>(
@@ -101,6 +100,7 @@ export default function Legend({
     true
   );
   const layerEditingContext = useContext(LayerEditingContext);
+  console.log("Legend", items);
   return (
     <div
       style={

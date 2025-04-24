@@ -256,7 +256,6 @@ export default function SketchUIStateContextProvider({
           styles[sketchClass.id] = [layer];
         }
         const glStyles = styles[sketchClass.id];
-        console.log("glStyles", glStyles, sketchClass);
         if (sketchClass.id in styles) {
           const legendItem: LegendItem = {
             legend: compileLegendFromGLStyleLayers(glStyles, "vector"),
@@ -274,7 +273,6 @@ export default function SketchUIStateContextProvider({
         }
       }
       mapContext.manager.setSketchClassLayerConfig(layerConfig);
-      console.log(layerConfig);
     }
   }, [mapContext.manager, mapContext.ready, sketchClasses]);
 

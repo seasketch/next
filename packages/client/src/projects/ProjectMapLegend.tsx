@@ -16,7 +16,6 @@ export default function ProjectMapLegend() {
 
   const legendProps = useCommonLegendProps(mapContext);
 
-  console.log("legend props", legendProps);
   if (legendProps.items.length > 0) {
     return (
       <Legend

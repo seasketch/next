@@ -47,17 +47,21 @@ export default function useCommonLegendProps(mapContext: MapContextInterface) {
   const items = useMemo<LegendItem[]>(() => {
     if (mapContext.legends) {
       const visibleLegends: LegendItem[] = [];
-      for (const layerId in mapContext.legends) {
-        const legend = mapContext.legends[layerId];
-        if (legend && /sketch-class/.test(legend?.id || "")) {
-          visibleLegends.push(legend);
-        }
-      }
+      // for (const layerId in mapContext.legends) {
+      //   const legend = mapContext.legends[layerId];
+      //   if (legend && /sketch-class/.test(legend?.id || "")) {
+      //     visibleLegends.push(legend);
+      //   }
+      // }
       for (const layer of mapContext.manager?.getVisibleLayersByZIndex() ||
         []) {
-        const legend = mapContext.legends[layer.tocId];
-        if (legend) {
-          visibleLegends.push(legend);
+        if (layer.sketchClassLayerState) {
+          visibleLegends.push(layer.sketchClassLayerState.legendItem);
+        } else {
+          const legend = mapContext.legends[layer.dataLayer?.tocId || ""];
+          if (legend) {
+            visibleLegends.push(legend);
+          }
         }
       }
       return visibleLegends;

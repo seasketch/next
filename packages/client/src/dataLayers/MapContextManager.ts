@@ -74,6 +74,7 @@ import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 import { createBoundsRecursive } from "../projects/OverlayLayers";
 import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
 import { isExpression } from "./legends/utils";
+import { layer } from "@uiw/react-codemirror";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -234,9 +235,6 @@ class MapContextManager extends EventEmitter {
       listenersAdded: boolean;
       sublayers?: OrderedLayerSettings;
     };
-  } = {};
-  private sketchClassLayerStates: {
-    [sketchClassId: string]: SketchClassLayerState;
   } = {};
 
   constructor(
@@ -639,7 +637,7 @@ class MapContextManager extends EventEmitter {
     }
     this.onMapMoveDebouncerReference = setTimeout(() => {
       delete this.onMapMoveDebouncerReference;
-      this.updatePreferences();
+      this.debouncedUpdatePreferences();
     }, 1000);
   };
 
@@ -805,7 +803,7 @@ class MapContextManager extends EventEmitter {
       ),
       terrainEnabled,
     }));
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
     // this.updateState();
     this.debouncedUpdateStyle();
     if (previousBasemap && basemap) {
@@ -826,7 +824,7 @@ class MapContextManager extends EventEmitter {
         (!selectedBasemap?.terrainOptional ||
           selectedBasemap?.terrainVisibilityDefault === true),
     }));
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
   }
 
   /**
@@ -856,6 +854,31 @@ class MapContextManager extends EventEmitter {
   }
 
   private updatePreferences() {
+    const sketchClassLayerStates = cloneDeep(
+      this.internalState.sketchClassLayerStates || {}
+    );
+    // strip sketchClassLayerStates of anything other than opacity and zOrderOverride
+    for (const id in sketchClassLayerStates) {
+      const state = sketchClassLayerStates[id];
+      if (state.visible === false) {
+        // If the sketch class is not visible, remove it from the states
+        delete sketchClassLayerStates[id];
+        continue;
+      }
+      sketchClassLayerStates[id] = {
+        opacity: state.opacity,
+        zOrderOverride: state.zOrderOverride,
+      } as any;
+      if (
+        !sketchClassLayerStates[id].opacity ||
+        sketchClassLayerStates[id].opacity === 1
+      ) {
+        delete sketchClassLayerStates[id].opacity;
+      }
+      if (sketchClassLayerStates[id].zOrderOverride === undefined) {
+        delete sketchClassLayerStates[id].zOrderOverride;
+      }
+    }
     if (this.preferencesKey) {
       const prefs = {
         basemap: this.internalState.selectedBasemap,
@@ -873,16 +896,21 @@ class MapContextManager extends EventEmitter {
         prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
         basemapOptionalLayerStatePreferences:
           this.internalState.basemapOptionalLayerStatePreferences,
+        sketchClassLayerStates: sketchClassLayerStates,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
   }
 
+  private debouncedUpdatePreferences = debounce(() => {
+    this.updatePreferences();
+  }, 200);
+
   resetLayers() {
     const visibleLayerIds = Object.keys(this.visibleLayers);
     this.hideTocItems(visibleLayerIds);
     this.visibleLayers = {};
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
   }
 
   private updateStyleDebouncerReference: any | undefined;
@@ -1146,14 +1174,14 @@ class MapContextManager extends EventEmitter {
       }
     }
     // update sketchClassLayerStates
-    for (const id in this.sketchClassLayerStates) {
-      this.sketchClassLayerStates[id].visible = false;
+    for (const id in this.internalState.sketchClassLayerStates) {
+      this.internalState.sketchClassLayerStates[id].visible = false;
       // see if any sketches are visible for this sketch class
       for (const sketchState of Object.values(
         this.internalState.sketchLayerStates
       )) {
         if (sketchState.sketchClassId === parseInt(id) && sketchState.visible) {
-          this.sketchClassLayerStates[id].visible = true;
+          this.internalState.sketchClassLayerStates[id].visible = true;
           break;
         }
       }
@@ -1168,7 +1196,7 @@ class MapContextManager extends EventEmitter {
     // to the map, which will prevent us from modifying the style later and
     // throw exceptions
     return cloneDeep(
-      this.sketchClassLayerStates[sketchClassId]?.styles ||
+      this.internalState.sketchClassLayerStates[sketchClassId]?.styles ||
         this.defaultSketchLayers
     );
   }
@@ -1181,8 +1209,8 @@ class MapContextManager extends EventEmitter {
     };
   }) {
     for (const key in config) {
-      const existingState = this.sketchClassLayerStates[key];
-      this.sketchClassLayerStates[key] = {
+      const existingState = this.internalState.sketchClassLayerStates[key];
+      this.internalState.sketchClassLayerStates[key] = {
         ...{
           visible: false,
           hidden: false,
@@ -1191,8 +1219,10 @@ class MapContextManager extends EventEmitter {
         },
         ...(existingState || {}),
         ...config[key],
+        sketchClassId: parseInt(key),
       };
     }
+    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
     this.updateLegends();
   }
@@ -1477,7 +1507,13 @@ class MapContextManager extends EventEmitter {
     const insertedCustomSourceIds: number[] = [];
     // reset sublayer settings before proceeding
     while (i--) {
-      const layerId = layersByZIndex[i].tocId;
+      if (layersByZIndex[i].sketchClassLayerState) {
+        continue;
+      }
+      if (!layersByZIndex[i].dataLayer) {
+        throw new Error(`Layer ${layersByZIndex[i].id} has no dataLayer`);
+      }
+      const layerId = layersByZIndex[i].dataLayer!.tocId;
       if (layerId === "LABELS") {
         isUnderLabels = false;
       } else {
@@ -1826,9 +1862,12 @@ class MapContextManager extends EventEmitter {
           id === this.editableSketchId,
           sketchClassId
         );
-        if (sketchClassId && this.sketchClassLayerStates[sketchClassId]) {
-          const state = this.sketchClassLayerStates[sketchClassId];
-          console.log("adjust", state);
+        if (
+          sketchClassId &&
+          this.internalState.sketchClassLayerStates[sketchClassId]
+        ) {
+          const state =
+            this.internalState.sketchClassLayerStates[sketchClassId];
           if (state.opacity !== undefined && state.opacity < 1) {
             layers = adjustLayerOpacities(layers, state.opacity);
           }
@@ -2251,7 +2290,7 @@ class MapContextManager extends EventEmitter {
           delete this.visibleLayers[key];
         }
       }
-      this.updatePreferences();
+      this.debouncedUpdatePreferences();
     }
     this.debouncedUpdateStyle();
     this.updateInteractivitySettings();
@@ -2508,8 +2547,9 @@ class MapContextManager extends EventEmitter {
       ...oldState,
       layerStatesByTocStaticId: { ...this.visibleLayers },
       sketchLayerStates: { ...this.internalState.sketchLayerStates },
+      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
     }));
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
     this.updateInteractivitySettings();
   };
 
@@ -2536,7 +2576,7 @@ class MapContextManager extends EventEmitter {
       return newState;
     });
 
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
     this.debouncedUpdateStyle();
   }
 
@@ -2559,7 +2599,7 @@ class MapContextManager extends EventEmitter {
         }
       ),
     }));
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
     this.debouncedUpdateStyle();
   }
 
@@ -2572,7 +2612,7 @@ class MapContextManager extends EventEmitter {
         {}
       ),
     }));
-    this.updatePreferences();
+    this.debouncedUpdatePreferences();
     this.debouncedUpdateStyle();
   }
 
@@ -2944,9 +2984,21 @@ class MapContextManager extends EventEmitter {
     const newLegendState: { [layerId: string]: LegendItem | null } = {};
     let changes = false;
     const layers = this.getVisibleLayersByZIndex();
+    console.log("layers", layers);
     for (const layer of layers) {
-      const id = layer.tocId;
-      if (this.visibleLayers[id]?.visible) {
+      if (layer.sketchClassLayerState) {
+        // add visible sketchClass layer legends
+        const sketchClassLayerState = layer.sketchClassLayerState;
+        if (sketchClassLayerState.visible && sketchClassLayerState.legendItem) {
+          newLegendState[sketchClassLayerState.legendItem.id] =
+            sketchClassLayerState.legendItem;
+          changes = true;
+        }
+      } else if (
+        layer.dataLayer?.tocId &&
+        this.visibleLayers[layer.dataLayer.tocId]?.visible
+      ) {
+        const id = layer.dataLayer.tocId;
         if (clearCache === true && id in this.internalState.legends) {
           newLegendState[id] = this.internalState.legends[id];
         } else {
@@ -3080,23 +3132,16 @@ class MapContextManager extends EventEmitter {
           }
         }
       } else {
-        if (id in this.internalState.legends) {
+        const id = layer.dataLayer?.tocId || layer.id;
+        if (id && id in this.internalState.legends) {
           delete newLegendState[id];
           changes = true;
         }
       }
     }
-    // add visible sketchClass layer legends
-    for (const sketchClassId in this.sketchClassLayerStates) {
-      const sketchClassLayerState = this.sketchClassLayerStates[sketchClassId];
-      console.log("state", sketchClassLayerState);
-      if (sketchClassLayerState.visible && sketchClassLayerState.legendItem) {
-        newLegendState[sketchClassId] = sketchClassLayerState.legendItem;
-        changes = true;
-      }
-    }
 
-    console.log("new state", newLegendState, changes);
+    console.log("newlegendstate", newLegendState);
+
     if (changes) {
       this.setState((prev) => ({
         ...prev,
@@ -3168,15 +3213,19 @@ class MapContextManager extends EventEmitter {
   }
 
   getVisibleLayersByZIndex() {
-    const visible = Object.values(this.layers).filter(
+    const visibleLayers = Object.values(this.layers).filter(
       (l) => this.visibleLayers[l.tocId]?.visible === true
     );
+    const visibleSketchClassLayers = Object.values(
+      this.internalState.sketchClassLayerStates
+    ).filter((l) => l.visible === true);
+
     // First, create a lookup table of the lowest sublayer z-index for each
     // datasource. This way sublayers are grouped together in the listing
     const sublayerZIndexLookup: {
       [dataSourceId: number]: number;
     } = {};
-    for (const layer of visible) {
+    for (const layer of visibleLayers) {
       if (layer.sublayer !== undefined) {
         const dataSourceId = layer.dataSourceId;
         const zIndex =
@@ -3191,65 +3240,140 @@ class MapContextManager extends EventEmitter {
         }
       }
     }
-    const getZIndex = (layer: (typeof visible)[0], sameDataSource = false) => {
-      if (!sameDataSource && layer.dataSourceId in sublayerZIndexLookup) {
-        return sublayerZIndexLookup[layer.dataSourceId];
-      } else if (
-        typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
-      ) {
-        return this.visibleLayers[layer.tocId].zOrderOverride!;
+
+    console.log({ sublayerZIndexLookup });
+
+    const getZIndexOverride = (
+      layer: (typeof visibleLayers)[0] | (typeof visibleSketchClassLayers)[0]
+    ) => {
+      if (isSketchClassLayerState(layer)) {
+        return layer.zOrderOverride || undefined;
+      } else {
+        return this.visibleLayers[layer.tocId]?.zOrderOverride || undefined;
       }
-      return layer.zIndex;
     };
 
-    return visible
+    const getZIndex = (
+      layer: (typeof visibleLayers)[0] | (typeof visibleSketchClassLayers)[0],
+      sameDataSource = false
+    ) => {
+      console.log("getZIndex", layer);
+      const zIndexOverride = getZIndexOverride(layer);
+      if (isSketchClassLayerState(layer)) {
+        // For sketch class layers, use the zIndex from the state
+        if (typeof zIndexOverride === "number") {
+          console.log(
+            "returning override -- isSketchClassLayerState",
+            zIndexOverride
+          );
+          return zIndexOverride;
+        }
+        console.log("returning default -- isSketchClassLayerState");
+        return isPointLayer(layer.styles) ? -2 : -1;
+      } else {
+        if (!sameDataSource && layer.dataSourceId in sublayerZIndexLookup) {
+          console.log("returnign sublayer lookup");
+          const value = sublayerZIndexLookup[layer.dataSourceId];
+          return isPointLayer(layer.mapboxGlStyles) ? value * -1 - 1000 : value;
+        } else if (typeof zIndexOverride === "number") {
+          return zIndexOverride;
+        } else {
+          return isPointLayer(layer.mapboxGlStyles)
+            ? (layer.zIndex || 1) * -1 - 1000
+            : layer.zIndex;
+        }
+      }
+    };
+
+    return [...visibleSketchClassLayers, ...visibleLayers]
       .sort((a, b) => {
+        // if (
+        //   a.renderUnder === RenderUnderType.Labels &&
+        //   b.renderUnder !== RenderUnderType.Labels
+        // ) {
+        //   return 1;
+        // } else if (
+        //   b.renderUnder === RenderUnderType.Labels &&
+        //   a.renderUnder !== RenderUnderType.Labels
+        // ) {
+        //   return -1;
+        // } else
         if (
-          a.renderUnder === RenderUnderType.Labels &&
-          b.renderUnder !== RenderUnderType.Labels
-        ) {
-          return 1;
-        } else if (
-          b.renderUnder === RenderUnderType.Labels &&
-          a.renderUnder !== RenderUnderType.Labels
-        ) {
-          return -1;
-        } else if (
           // comparing two sublayers under the same datasource
+          !isSketchClassLayerState(a) &&
+          !isSketchClassLayerState(b) &&
           a.dataSourceId === b.dataSourceId
         ) {
           return getZIndex(a, true) - getZIndex(b, true);
+        } else if (
+          getZIndexOverride(a) === undefined &&
+          getZIndexOverride(b) === undefined
+        ) {
+          // if neither layer has a zOrderOverride, sort by whether they are point layers
+          const aIsPointLayer = isPointLayer(
+            isSketchClassLayerState(a) ? a.styles : a.mapboxGlStyles
+          );
+          const bIsPointLayer = isPointLayer(
+            isSketchClassLayerState(b) ? b.styles : b.mapboxGlStyles
+          );
+          // always sort point layers above non-point layers
+          if (aIsPointLayer && !bIsPointLayer) {
+            return -1;
+          } else if (!aIsPointLayer && bIsPointLayer) {
+            return 1;
+          } else {
+            // if both are point layers or both are non-point layers, sort by zIndex
+            return getZIndex(a) - getZIndex(b);
+          }
         } else {
           return getZIndex(a) - getZIndex(b);
         }
       })
-      .map((l) => ({
-        ...l,
-        finalZIndex: getZIndex(l),
-      }));
+      .map((l) => {
+        const isSketchClass = isSketchClassLayerState(l);
+        return {
+          id: isSketchClass ? l.sketchClassId.toString() : l.tocId,
+          finalZIndex: getZIndex(l),
+          isPointLayer: isPointLayer(
+            isSketchClass ? l.styles : l.mapboxGlStyles
+          ),
+          dataLayer: isSketchClass ? undefined : { ...l },
+          sketchClassLayerState: isSketchClass ? l : undefined,
+        };
+      });
   }
 
   private getCurrentZOrder() {
-    return this.getVisibleLayersByZIndex()
-      .filter(
-        (layer) =>
-          layer.tocId in this.visibleLayers &&
-          this.visibleLayers[layer.tocId].visible === true
-      )
-      .map((layer) => ({
-        id: layer.tocId,
-        label: this.tocItems[layer.tocId]?.label || "",
-        zIndex: (typeof this.visibleLayers[layer.tocId].zOrderOverride ===
-        "number"
-          ? this.visibleLayers[layer.tocId].zOrderOverride
-          : this.layers[layer.tocId].zIndex || 0) as number,
-      }));
+    // return this.getVisibleLayersByZIndex()
+    //   .filter(
+    //     (layer) =>
+    //       layer.dataLayer?.tocId in this.visibleLayers &&
+    //       this.visibleLayers[layer.dataLayer?.tocId].visible === true
+    //   )
+    //   .map((layer) => {
+    //     return {
+    //       id: layer.dataLayer.tocId,
+    //       label: this.tocItems[layer.dataLayer.tocId]?.label || "",
+    //       zIndex: layer.finalZIndex,
+    //     };
+    //   });
+    return this.getVisibleLayersByZIndex().map((layer) => {
+      return {
+        id: layer.id,
+        label: layer.sketchClassLayerState
+          ? layer.sketchClassLayerState.legendItem.label
+          : this.tocItems[layer.dataLayer?.tocId || ""]?.label || "",
+        zIndex: layer.finalZIndex,
+      };
+    });
   }
 
   moveLayerToTop(stableId: string) {
     const currentOrder = this.getCurrentZOrder();
+    console.log(stableId, { currentOrder });
     if (currentOrder.length > 1) {
       const top = currentOrder[0];
+      console.log(top.zIndex, top.zIndex - 1);
       if (top.id !== stableId) {
         this.setZOrderOverride(stableId, top.zIndex - 1);
       }
@@ -3320,16 +3444,11 @@ class MapContextManager extends EventEmitter {
    */
   setSketchClassOpacity(sketchClassId: number, opacity: number) {
     const classId = sketchClassId.toString();
-    if (!this.sketchClassLayerStates[classId]) {
+    if (!this.internalState.sketchClassLayerStates[classId]) {
       throw new Error(`Sketch class with id ${sketchClassId} does not exist`);
     } else {
-      this.sketchClassLayerStates[classId].opacity = opacity;
+      this.internalState.sketchClassLayerStates[classId].opacity = opacity;
     }
-
-    this.setState((prev) => ({
-      ...prev,
-      sketchClassLayerStates: { ...this.sketchClassLayerStates },
-    }));
 
     // see if you can do an update of layers in place
     for (const sketchId in this.internalState.sketchLayerStates) {
@@ -3352,20 +3471,22 @@ class MapContextManager extends EventEmitter {
       }
     }
 
+    this.debouncedUpdateLayerState();
+
     // this.debouncedUpdateStyle();
   }
 
   setSketchClassHidden(sketchClassId: number, hidden: boolean) {
     const classId = sketchClassId.toString();
-    if (!this.sketchClassLayerStates[classId]) {
+    if (!this.internalState.sketchClassLayerStates[classId]) {
       throw new Error(`Sketch class with id ${sketchClassId} does not exist`);
     } else {
-      this.sketchClassLayerStates[classId].hidden = hidden;
+      this.internalState.sketchClassLayerStates[classId].hidden = hidden;
     }
 
     this.setState((prev) => ({
       ...prev,
-      sketchClassLayerStates: { ...this.sketchClassLayerStates },
+      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
     }));
 
     this.debouncedUpdateStyle();
@@ -3373,15 +3494,16 @@ class MapContextManager extends EventEmitter {
 
   setSketchClassZOrder(sketchClassId: number, zOrder: number) {
     const classId = sketchClassId.toString();
-    if (!this.sketchClassLayerStates[classId]) {
+    if (!this.internalState.sketchClassLayerStates[classId]) {
       throw new Error(`Sketch class with id ${sketchClassId} does not exist`);
     } else {
-      this.sketchClassLayerStates[classId].zOrderOverride = zOrder;
+      this.internalState.sketchClassLayerStates[classId].zOrderOverride =
+        zOrder;
     }
 
     this.setState((prev) => ({
       ...prev,
-      sketchClassLayerStates: { ...this.sketchClassLayerStates },
+      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
     }));
 
     this.debouncedUpdateStyle();
@@ -3601,6 +3723,11 @@ export function useMapContext(options?: MapContextOptions) {
         };
         initialState.basemapOptionalLayerStates = {
           ...prefs.basemapOptionalLayerStates,
+        };
+      }
+      if (prefs.sketchClassLayerStates) {
+        initialState.sketchClassLayerStates = {
+          ...prefs.sketchClassLayerStates,
         };
       }
       if ("prefersTerrainEnabled" in prefs) {
@@ -3960,4 +4087,19 @@ function boundsIntersect(
   const [minX, minY, maxX, maxY] = mapBounds;
   const [minX2, minY2, maxX2, maxY2] = bounds;
   return minX <= maxX2 && maxX >= minX2 && minY <= maxY2 && maxY >= minY2;
+}
+
+function isPointLayer(mapboxGlStyles?: any): boolean {
+  if (!mapboxGlStyles || mapboxGlStyles.length === 0) {
+    return false;
+  }
+  return mapboxGlStyles.some(
+    (l: any) => l.type === "circle" || l.type === "symbol"
+  );
+}
+
+export function isSketchClassLayerState(
+  layer: any
+): layer is SketchClassLayerState {
+  return layer && "sketchClassId" in layer;
 }
