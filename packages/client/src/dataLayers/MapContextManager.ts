@@ -1505,9 +1505,35 @@ class MapContextManager extends EventEmitter {
     const layersByZIndex = this.getVisibleLayersByZIndex();
     let i = layersByZIndex.length;
     const insertedCustomSourceIds: number[] = [];
+    const sketchClassLayers = this.computeSketchLayers();
+    const sketchLayerIds: string[] = [];
+
     // reset sublayer settings before proceeding
     while (i--) {
-      if (layersByZIndex[i].sketchClassLayerState) {
+      if (layersByZIndex[i].sketchClassLayerState?.sketchClassId) {
+        const state = layersByZIndex[i].sketchClassLayerState!;
+        // add all sources and layers for this sketchClassLayer
+        const { layers: layerIds, sources: sourceIds } =
+          sketchClassLayers.sketchClassLayers[state.sketchClassId];
+        // add sources
+        for (const sourceId of sourceIds) {
+          if (!(sourceId in baseStyle.sources)) {
+            const source = sketchClassLayers.sources[sourceId];
+            if (source) {
+              baseStyle.sources[sourceId] = source;
+            }
+          }
+        }
+        // add layers
+        const layers = sketchClassLayers.layers.filter(
+          (l) => layerIds.indexOf(l.id) > -1
+        );
+        if (layers.length) {
+          // add layers to the end of the list
+          baseStyle.layers.push(...layers);
+          // add sketch class layer id to the list of sketch layer ids
+          sketchLayerIds.push(state.sketchClassId.toString());
+        }
         continue;
       }
       if (!layersByZIndex[i].dataLayer) {
@@ -1822,16 +1848,20 @@ class MapContextManager extends EventEmitter {
     // Evaluate any basemap optional layers
     this.applyOptionalBasemapLayerStates(baseStyle, basemap);
 
-    // Add sketches
-    const sketchLayerIds: string[] = [];
-    const sketchData = this.computeSketchLayers();
-    baseStyle.layers.push(...sketchData.layers);
-    sketchLayerIds.push(
-      ...sketchData.layers.filter((l) => l.type !== "symbol").map((l) => l.id)
-    );
-    for (const sourceId in sketchData.sources) {
-      baseStyle.sources[sourceId] = sketchData.sources[sourceId];
-    }
+    // // Add sketches
+    // const sketchLayerIds: string[] = [];
+    // const sketchData = this.computeSketchLayers();
+    // baseStyle.layers.push(...sketchData.layers);
+    // sketchLayerIds.push(
+    //   ...sketchData.layers.filter((l) => l.type !== "symbol").map((l) => l.id)
+    // );
+    // for (const sourceId in sketchData.sources) {
+    //   baseStyle.sources[sourceId] = sketchData.sources[sourceId];
+    // }
+    // if (this.interactivityManager) {
+    //   this.interactivityManager.setSketchLayerIds(sketchLayerIds);
+    // }
+
     if (this.interactivityManager) {
       this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     }
@@ -1850,10 +1880,24 @@ class MapContextManager extends EventEmitter {
   computeSketchLayers() {
     const allLayers: AnyLayer[] = [];
     const sources: Sources = {};
+    const sketchClassLayers: {
+      [id: number]: { layers: string[]; sources: string[] };
+    } = {};
     for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
       const id = parseInt(stringId);
       const sketchClassId =
         this.internalState.sketchLayerStates[id].sketchClassId;
+      if (!sketchClassId) {
+        throw new Error(
+          `Sketch ${id} has no sketchClassId. This is required for sketch layers`
+        );
+      }
+      if (!sketchClassLayers[sketchClassId]) {
+        sketchClassLayers[sketchClassId] = {
+          layers: [],
+          sources: [],
+        };
+      }
       if (id !== this.hideEditableSketchId) {
         const timestamp = this.sketchTimestamps.get(id);
         const cache = LocalSketchGeometryCache.get(id);
@@ -1883,6 +1927,11 @@ class MapContextManager extends EventEmitter {
             maxzoom: 14,
           };
           allLayers.push(...layers);
+          // eslint-disable-next-line i18next/no-literal-string
+          sketchClassLayers[sketchClassId].sources.push(`sketch-${id}`);
+          sketchClassLayers[sketchClassId].layers.push(
+            ...layers.map((l) => l.id)
+          );
         } else {
           sources[`sketch-${id}`] = {
             type: "geojson",
@@ -1895,10 +1944,15 @@ class MapContextManager extends EventEmitter {
             reduceOpacity(layers);
           }
           allLayers.push(...layers);
+          // eslint-disable-next-line i18next/no-literal-string
+          sketchClassLayers[sketchClassId].sources.push(`sketch-${id}`);
+          sketchClassLayers[sketchClassId].layers.push(
+            ...layers.map((l) => l.id)
+          );
         }
       }
     }
-    return { layers: allLayers, sources };
+    return { layers: allLayers, sources, sketchClassLayers };
   }
 
   defaultSketchLayers = [
