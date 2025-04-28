@@ -1508,6 +1508,7 @@ class MapContextManager extends EventEmitter {
     const sketchClassLayers = this.computeSketchLayers();
     const sketchLayerIds: string[] = [];
 
+    console.log(layersByZIndex);
     // reset sublayer settings before proceeding
     while (i--) {
       if (layersByZIndex[i].sketchClassLayerState?.sketchClassId) {
@@ -1516,6 +1517,8 @@ class MapContextManager extends EventEmitter {
         const { layers: layerIds, sources: sourceIds } =
           sketchClassLayers.sketchClassLayers[state.sketchClassId];
         // add sources
+        const sources = sourceIds.map((id) => sketchClassLayers.sources[id]!);
+        // add sources to the end of the list
         for (const sourceId of sourceIds) {
           if (!(sourceId in baseStyle.sources)) {
             const source = sketchClassLayers.sources[sourceId];
@@ -1530,7 +1533,7 @@ class MapContextManager extends EventEmitter {
         );
         if (layers.length) {
           // add layers to the end of the list
-          baseStyle.layers.push(...layers);
+          underLabels.push(...layers);
           // add sketch class layer id to the list of sketch layer ids
           sketchLayerIds.push(state.sketchClassId.toString());
         }
@@ -3038,7 +3041,7 @@ class MapContextManager extends EventEmitter {
     const newLegendState: { [layerId: string]: LegendItem | null } = {};
     let changes = false;
     const layers = this.getVisibleLayersByZIndex();
-    console.log("layers", layers);
+    // console.log("layers", layers);
     for (const layer of layers) {
       if (layer.sketchClassLayerState) {
         // add visible sketchClass layer legends
@@ -3194,7 +3197,7 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    console.log("newlegendstate", newLegendState);
+    // console.log("newlegendstate", newLegendState);
 
     if (changes) {
       this.setState((prev) => ({
@@ -3295,7 +3298,7 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    console.log({ sublayerZIndexLookup });
+    // console.log({ sublayerZIndexLookup });
 
     const getZIndexOverride = (
       layer: (typeof visibleLayers)[0] | (typeof visibleSketchClassLayers)[0]
@@ -3311,22 +3314,22 @@ class MapContextManager extends EventEmitter {
       layer: (typeof visibleLayers)[0] | (typeof visibleSketchClassLayers)[0],
       sameDataSource = false
     ) => {
-      console.log("getZIndex", layer);
+      // console.log("getZIndex", layer);
       const zIndexOverride = getZIndexOverride(layer);
       if (isSketchClassLayerState(layer)) {
         // For sketch class layers, use the zIndex from the state
         if (typeof zIndexOverride === "number") {
-          console.log(
-            "returning override -- isSketchClassLayerState",
-            zIndexOverride
-          );
+          // console.log(
+          //   "returning override -- isSketchClassLayerState",
+          //   zIndexOverride
+          // );
           return zIndexOverride;
         }
-        console.log("returning default -- isSketchClassLayerState");
+        // console.log("returning default -- isSketchClassLayerState");
         return isPointLayer(layer.styles) ? -2 : -1;
       } else {
         if (!sameDataSource && layer.dataSourceId in sublayerZIndexLookup) {
-          console.log("returnign sublayer lookup");
+          // console.log("returnign sublayer lookup");
           const value = sublayerZIndexLookup[layer.dataSourceId];
           return isPointLayer(layer.mapboxGlStyles) ? value * -1 - 1000 : value;
         } else if (typeof zIndexOverride === "number") {
@@ -3424,10 +3427,10 @@ class MapContextManager extends EventEmitter {
 
   moveLayerToTop(stableId: string) {
     const currentOrder = this.getCurrentZOrder();
-    console.log(stableId, { currentOrder });
+    // console.log(stableId, { currentOrder });
     if (currentOrder.length > 1) {
       const top = currentOrder[0];
-      console.log(top.zIndex, top.zIndex - 1);
+      // console.log(top.zIndex, top.zIndex - 1);
       if (top.id !== stableId) {
         this.setZOrderOverride(stableId, top.zIndex - 1);
       }

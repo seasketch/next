@@ -100,7 +100,6 @@ export default function Legend({
     true
   );
   const layerEditingContext = useContext(LayerEditingContext);
-  console.log("Legend", items);
   return (
     <div
       style={
