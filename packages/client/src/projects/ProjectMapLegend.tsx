@@ -7,7 +7,10 @@ export default function ProjectMapLegend() {
   const mapContext = useContext(MapContext);
   const loading = useMemo(() => {
     for (const key in mapContext.layerStatesByTocStaticId) {
-      if (mapContext.layerStatesByTocStaticId[key].loading) {
+      if (
+        mapContext.layerStatesByTocStaticId[key].loading &&
+        mapContext.layerStatesByTocStaticId[key].visible
+      ) {
         return true;
       }
     }
