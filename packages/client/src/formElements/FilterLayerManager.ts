@@ -4,16 +4,15 @@ import { FilterServiceMetadata } from "./FilterInputContext";
 import * as d3Colors from "d3-scale-chromatic";
 import debounce from "lodash.debounce";
 
-const colorScale = d3Colors.interpolateViridis;
+export const filterLayerColorScale = d3Colors.interpolateViridis;
 
 const colors = {
   highlight: "rgba(255, 125, 0, 0.8)",
   empty: "rgba(100, 100, 100, 0.2)",
   stale: "rgba(155, 125, 100, 0.5)",
 };
-function colorScaleForResolution(resolution: number) {
-  const scale = colorScale;
-  const maxValue = 7 ** (11 - resolution);
+export function colorScaleForResolution(resolution: number) {
+  const scale = filterLayerColorScale;
   return [
     "interpolate",
     ["linear"],
@@ -35,7 +34,7 @@ function colorScaleForResolution(resolution: number) {
 
 export const LayerTemplate = {
   type: "fill",
-  slot: "top",
+  // slot: "top",
   source: "all-cells",
   "source-layer": "cells",
   paint: {
@@ -59,11 +58,11 @@ export const LayerTemplate = {
           colorScaleForResolution(10),
           ["==", ["get", "resolution"], 11],
           colorScaleForResolution(11),
-          colorScale(1),
+          filterLayerColorScale(1),
         ],
         colors.empty,
       ],
-      colorScale(1),
+      filterLayerColorScale(1),
     ],
     "fill-outline-color": "black",
     "fill-opacity": 0.8,

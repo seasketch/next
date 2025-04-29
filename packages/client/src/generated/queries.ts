@@ -21065,7 +21065,7 @@ export type FormElementDetailsFragment = (
 
 export type SketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'filterApiServerLocation' | 'allowMulti'>
+  & Pick<SketchClass, 'id' | 'name' | 'mapboxGlStyle' | 'formElementId' | 'geometryType' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'filterApiServerLocation' | 'allowMulti'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -23965,6 +23965,7 @@ export const FormElementDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const SketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchClassDetails on SketchClass {
   id
+  name
   mapboxGlStyle
   formElementId
   geometryType

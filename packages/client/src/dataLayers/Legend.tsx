@@ -5,13 +5,15 @@ import {
 import { GLLegendPanel, LegendForGLLayers } from "./legends/LegendDataModel";
 import * as Accordion from "@radix-ui/react-accordion";
 import {
+  ArrowDownIcon,
+  ArrowUpIcon,
   CaretDownIcon,
   DotsHorizontalIcon,
   EyeClosedIcon,
   EyeOpenIcon,
   HeightIcon,
 } from "@radix-ui/react-icons";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
 import SimpleSymbol from "./legends/SimpleSymbol";
 import { Map } from "mapbox-gl";
@@ -32,6 +34,14 @@ import {
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { LayerEditingContext } from "../admin/data/LayerEditingContext";
 import clsx from "clsx";
+import {
+  MenuBarContentClasses,
+  MenuBarItemClasses,
+} from "../components/Menubar";
+import {
+  SketchClassItemMenu,
+  SketchClassMenuItemType,
+} from "./SketchClassItemMenu";
 
 require("../admin/data/arcgis/Accordion.css");
 
@@ -53,6 +63,7 @@ interface GLStyleLegendItem {
 
 export type LegendItem = (GLStyleLegendItem | CustomGLSourceSymbolLegend) & {
   tableOfContentsItemDetails?: TocMenuItemType;
+  isSketchClass?: boolean;
 };
 
 const PANEL_WIDTH = 180;
@@ -226,6 +237,39 @@ function LegendListItem({
                     items={[item.tableOfContentsItemDetails]}
                     type={DropdownMenu}
                     editable={editable}
+                    top={top}
+                    bottom={bottom}
+                  />
+                </DropdownMenu.Portal>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    aria-label="Open context menu"
+                    className={clsx(
+                      contextMenuIsOpen
+                        ? "opacity-100"
+                        : "opacity-80 group-hover:opacity-100 focus:opacity-100"
+                    )}
+                  >
+                    <DotsHorizontalIcon
+                      className={`w-5 h-5 text-black  cursor-pointer ${
+                        contextMenuIsOpen
+                          ? "inline-block bg-gray-200 border border-black border-opacity-20 rounded-full"
+                          : "inline-block"
+                      } `}
+                    />
+                  </button>
+                </DropdownMenu.Trigger>
+              </DropdownMenu.Root>
+            )}
+            {item.isSketchClass && (
+              <DropdownMenu.Root
+                onOpenChange={(open) => setContextMenuIsOpen(open)}
+              >
+                <DropdownMenu.Portal>
+                  <SketchClassItemMenu
+                    item={item}
+                    sketchClassId={parseInt(item.id.split("sketch-class-")[1])}
+                    type={DropdownMenu}
                     top={top}
                     bottom={bottom}
                   />

@@ -333,8 +333,14 @@ export default class LayerInteractivityManager extends EventEmitter {
     const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
       layers: this.sketchLayerIds || [],
     });
-    if (sketchFeatures.length) {
-      const feature = sketchFeatures[0];
+    const features = this.map!.queryRenderedFeatures(e.point, {
+      layers: this.interactiveVectorLayerIds,
+    });
+    const allFeatures = [...sketchFeatures, ...features];
+    sortFeaturesByLayer(allFeatures, this.map.getStyle());
+    const top = allFeatures[0];
+    if (sketchFeatures.includes(top)) {
+      const feature = top;
       if (this.focusedSketchId) {
         const id = feature.id?.toString();
         if (id) {
@@ -352,10 +358,6 @@ export default class LayerInteractivityManager extends EventEmitter {
         return;
       }
     }
-    const features = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.interactiveVectorLayerIds,
-    });
-    const top = features[0];
     let vectorPopupOpened = false;
     if (top) {
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
@@ -880,3 +882,19 @@ const mustacheHelpers = {
     return `${Math.round(parseFloat(render(text)) * 100) / 100}`;
   },
 };
+
+function sortFeaturesByLayer(
+  features: mapboxgl.MapboxGeoJSONFeature[],
+  style: mapboxgl.Style
+) {
+  // sort features by their index in the style's layer list
+  return features.sort((a, b) => {
+    const aLayerIndex = style.layers.findIndex(
+      (layer) => layer.id === a.layer.id
+    );
+    const bLayerIndex = style.layers.findIndex(
+      (layer) => layer.id === b.layer.id
+    );
+    return bLayerIndex - aLayerIndex;
+  });
+}

@@ -89,6 +89,7 @@ fragment FormElementDetails on FormElement {
 
 fragment SketchClassDetails on SketchClass {
   id
+  name
   mapboxGlStyle
   formElementId
   geometryType
