@@ -1508,7 +1508,6 @@ class MapContextManager extends EventEmitter {
     const sketchClassLayers = this.computeSketchLayers();
     const sketchLayerIds: string[] = [];
 
-    console.log(layersByZIndex);
     // reset sublayer settings before proceeding
     while (i--) {
       if (layersByZIndex[i].sketchClassLayerState?.sketchClassId) {
@@ -1516,8 +1515,6 @@ class MapContextManager extends EventEmitter {
         // add all sources and layers for this sketchClassLayer
         const { layers: layerIds, sources: sourceIds } =
           sketchClassLayers.sketchClassLayers[state.sketchClassId];
-        // add sources
-        const sources = sourceIds.map((id) => sketchClassLayers.sources[id]!);
         // add sources to the end of the list
         for (const sourceId of sourceIds) {
           if (!(sourceId in baseStyle.sources)) {
@@ -1531,11 +1528,11 @@ class MapContextManager extends EventEmitter {
         const layers = sketchClassLayers.layers.filter(
           (l) => layerIds.indexOf(l.id) > -1
         );
-        if (layers.length) {
+        if (layers.length && state.hidden !== true) {
           // add layers to the end of the list
           underLabels.push(...layers);
           // add sketch class layer id to the list of sketch layer ids
-          sketchLayerIds.push(state.sketchClassId.toString());
+          sketchLayerIds.push(...layers.map((l) => l.id));
         }
         continue;
       }
@@ -3249,21 +3246,42 @@ class MapContextManager extends EventEmitter {
     this.updateStyle();
   }
 
-  private setZOrderOverride(stableId: string, zOrder: number) {
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.zOrderOverride = zOrder;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      layerStatesByTocStaticId: {
-        ...prev.layerStatesByTocStaticId,
-        [stableId]: {
-          ...prev.layerStatesByTocStaticId[stableId],
-          zOrderOverride: zOrder,
+  private setZOrderOverride(
+    stableId: string,
+    zOrder: number,
+    isSketchClassLayer = false
+  ) {
+    if (isSketchClassLayer) {
+      const id = parseInt(stableId.replace("sketch-class-", ""));
+      const state = this.internalState.sketchClassLayerStates[id];
+      if (state) {
+        this.setState((prev) => ({
+          ...prev,
+          sketchClassLayerStates: {
+            ...prev.sketchClassLayerStates,
+            [id]: {
+              ...prev.sketchClassLayerStates[id],
+              zOrderOverride: zOrder,
+            },
+          },
+        }));
+      }
+    } else {
+      const state = this.visibleLayers[stableId];
+      if (state) {
+        state.zOrderOverride = zOrder;
+      }
+      this.setState((prev) => ({
+        ...prev,
+        layerStatesByTocStaticId: {
+          ...prev.layerStatesByTocStaticId,
+          [stableId]: {
+            ...prev.layerStatesByTocStaticId[stableId],
+            zOrderOverride: zOrder,
+          },
         },
-      },
-    }));
+      }));
+    }
     // this.resetLayersByZIndex();
     this.debouncedUpdateLayerState();
     this.updateStyle();
@@ -3283,7 +3301,7 @@ class MapContextManager extends EventEmitter {
       [dataSourceId: number]: number;
     } = {};
     for (const layer of visibleLayers) {
-      if (layer.sublayer !== undefined) {
+      if (layer.sublayer !== undefined && layer.sublayer !== null) {
         const dataSourceId = layer.dataSourceId;
         const zIndex =
           typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
@@ -3314,24 +3332,16 @@ class MapContextManager extends EventEmitter {
       layer: (typeof visibleLayers)[0] | (typeof visibleSketchClassLayers)[0],
       sameDataSource = false
     ) => {
-      // console.log("getZIndex", layer);
       const zIndexOverride = getZIndexOverride(layer);
       if (isSketchClassLayerState(layer)) {
         // For sketch class layers, use the zIndex from the state
         if (typeof zIndexOverride === "number") {
-          // console.log(
-          //   "returning override -- isSketchClassLayerState",
-          //   zIndexOverride
-          // );
           return zIndexOverride;
         }
-        // console.log("returning default -- isSketchClassLayerState");
         return isPointLayer(layer.styles) ? -2 : -1;
       } else {
         if (!sameDataSource && layer.dataSourceId in sublayerZIndexLookup) {
-          // console.log("returnign sublayer lookup");
-          const value = sublayerZIndexLookup[layer.dataSourceId];
-          return isPointLayer(layer.mapboxGlStyles) ? value * -1 - 1000 : value;
+          return sublayerZIndexLookup[layer.dataSourceId];
         } else if (typeof zIndexOverride === "number") {
           return zIndexOverride;
         } else {
@@ -3344,6 +3354,11 @@ class MapContextManager extends EventEmitter {
 
     return [...visibleSketchClassLayers, ...visibleLayers]
       .sort((a, b) => {
+        // cb - 4/29/2025 - removed renderunder checks. It just doesn't seem
+        // that useful and obfuscates the logic such that I'm having trouble
+        // implementing more important features like putting points on top by
+        // default and integrating sketchclass layers with the z-order stacking
+        // controls
         // if (
         //   a.renderUnder === RenderUnderType.Labels &&
         //   b.renderUnder !== RenderUnderType.Labels
@@ -3391,6 +3406,8 @@ class MapContextManager extends EventEmitter {
         return {
           id: isSketchClass ? l.sketchClassId.toString() : l.tocId,
           finalZIndex: getZIndex(l),
+          originalZIndex: "zIndex" in l ? l.zIndex : 0,
+          zOrderOverride: getZIndexOverride(l),
           isPointLayer: isPointLayer(
             isSketchClass ? l.styles : l.mapboxGlStyles
           ),
@@ -3401,19 +3418,6 @@ class MapContextManager extends EventEmitter {
   }
 
   private getCurrentZOrder() {
-    // return this.getVisibleLayersByZIndex()
-    //   .filter(
-    //     (layer) =>
-    //       layer.dataLayer?.tocId in this.visibleLayers &&
-    //       this.visibleLayers[layer.dataLayer?.tocId].visible === true
-    //   )
-    //   .map((layer) => {
-    //     return {
-    //       id: layer.dataLayer.tocId,
-    //       label: this.tocItems[layer.dataLayer.tocId]?.label || "",
-    //       zIndex: layer.finalZIndex,
-    //     };
-    //   });
     return this.getVisibleLayersByZIndex().map((layer) => {
       return {
         id: layer.id,
@@ -3421,28 +3425,30 @@ class MapContextManager extends EventEmitter {
           ? layer.sketchClassLayerState.legendItem.label
           : this.tocItems[layer.dataLayer?.tocId || ""]?.label || "",
         zIndex: layer.finalZIndex,
+        zOrderOverride: layer.zOrderOverride,
+        originalZIndex: layer.originalZIndex,
       };
     });
   }
 
-  moveLayerToTop(stableId: string) {
+  moveLayerToTop(stableId: string, isSketchClassLayer?: boolean) {
     const currentOrder = this.getCurrentZOrder();
     // console.log(stableId, { currentOrder });
     if (currentOrder.length > 1) {
       const top = currentOrder[0];
       // console.log(top.zIndex, top.zIndex - 1);
       if (top.id !== stableId) {
-        this.setZOrderOverride(stableId, top.zIndex - 1);
+        this.setZOrderOverride(stableId, top.zIndex - 1, isSketchClassLayer);
       }
     }
   }
 
-  moveLayerToBottom(stableId: string) {
+  moveLayerToBottom(stableId: string, isSketchClassLayer?: boolean) {
     const currentOrder = this.getCurrentZOrder();
     if (currentOrder.length > 1) {
       const bottom = currentOrder[currentOrder.length - 1];
       if (bottom.id !== stableId) {
-        this.setZOrderOverride(stableId, bottom.zIndex + 1);
+        this.setZOrderOverride(stableId, bottom.zIndex + 1, isSketchClassLayer);
       }
     }
   }

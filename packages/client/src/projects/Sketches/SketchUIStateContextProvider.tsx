@@ -61,9 +61,14 @@ import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { createPortal } from "react-dom";
-import { LayerTemplate } from "../../formElements/FilterLayerManager";
+import {
+  colorScaleForResolution,
+  filterLayerColorScale,
+  LayerTemplate,
+} from "../../formElements/FilterLayerManager";
 import { LegendItem } from "../../dataLayers/Legend";
 import { compileLegendFromGLStyleLayers } from "../../dataLayers/legends/compileLegend";
+import { LegendForGLLayers } from "../../dataLayers/legends/LegendDataModel";
 
 type ReportState = {
   sketchId: number;
@@ -257,14 +262,49 @@ export default function SketchUIStateContextProvider({
         }
         const glStyles = styles[sketchClass.id];
         if (sketchClass.id in styles) {
+          let legend: LegendForGLLayers;
+          if (sketchClass.filterApiServerLocation) {
+            const scale = filterLayerColorScale;
+            legend = {
+              type: "MultipleSymbolGLLegend",
+              panels: [
+                {
+                  id: "filter",
+                  type: "GLLegendGradientPanel",
+                  label: t("Cells matching criteria"),
+                  stops: [0, 0.2, 0.4, 0.6, 0.8, 1].map((stop, i) => ({
+                    color: scale(stop),
+                    value: stop,
+                    label: stop === 0 ? t("few") : stop === 1 ? t("many") : "",
+                  })),
+                },
+              ],
+            };
+          } else {
+            legend = compileLegendFromGLStyleLayers(glStyles, "vector");
+          }
           const legendItem: LegendItem = {
-            legend: compileLegendFromGLStyleLayers(glStyles, "vector"),
+            legend: legend!,
             // eslint-disable-next-line i18next/no-literal-string
             id: `sketch-class-${sketchClass.id}`,
             label: sketchClass.name,
             type: "GLStyleLegendItem",
             isSketchClass: true,
           };
+          // Simplify legend items for Sketches. If better customization is
+          // added in the future this may be undesirable.
+          if (legendItem.legend?.type === "MultipleSymbolGLLegend") {
+            const panels = legendItem.legend.panels;
+            for (const panel of panels) {
+              if (panel.type === "GLLegendListPanel") {
+                panel.label = "";
+                panel.items = panel.items.filter(
+                  (item) =>
+                    item.label && item.label !== "" && item.label !== "default"
+                );
+              }
+            }
+          }
           layerConfig[sketchClass.id] = {
             styles: glStyles,
             legendItem,

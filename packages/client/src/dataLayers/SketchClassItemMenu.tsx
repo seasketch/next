@@ -61,7 +61,7 @@ export const SketchClassItemMenu = React.forwardRef<
           disabled={top}
           className={MenuBarItemClasses}
           onSelect={() => {
-            // mapContext?.manager?.moveLayerToTop(firstItem.id);
+            mapContext?.manager?.moveLayerToTop(item.id, true);
           }}
         >
           <span>
@@ -73,7 +73,7 @@ export const SketchClassItemMenu = React.forwardRef<
           disabled={bottom}
           className={MenuBarItemClasses}
           onSelect={() => {
-            // mapContext?.manager?.moveLayerToBottom(firstItem.id);
+            mapContext?.manager?.moveLayerToBottom(item.id, true);
           }}
         >
           <span>

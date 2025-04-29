@@ -4,16 +4,15 @@ import { FilterServiceMetadata } from "./FilterInputContext";
 import * as d3Colors from "d3-scale-chromatic";
 import debounce from "lodash.debounce";
 
-const colorScale = d3Colors.interpolateViridis;
+export const filterLayerColorScale = d3Colors.interpolateViridis;
 
 const colors = {
   highlight: "rgba(255, 125, 0, 0.8)",
   empty: "rgba(100, 100, 100, 0.2)",
   stale: "rgba(155, 125, 100, 0.5)",
 };
-function colorScaleForResolution(resolution: number) {
-  const scale = colorScale;
-  const maxValue = 7 ** (11 - resolution);
+export function colorScaleForResolution(resolution: number) {
+  const scale = filterLayerColorScale;
   return [
     "interpolate",
     ["linear"],
@@ -39,33 +38,32 @@ export const LayerTemplate = {
   source: "all-cells",
   "source-layer": "cells",
   paint: {
-    "fill-color": "red",
-    // [
-    //   "case",
-    //   ["has", "highlighted"],
-    //   [
-    //     "case",
-    //     ["to-boolean", ["get", "highlighted"]],
-    //     [
-    //       "case",
-    //       ["==", ["get", "resolution"], 6],
-    //       colorScaleForResolution(6),
-    //       ["==", ["get", "resolution"], 7],
-    //       colorScaleForResolution(7),
-    //       ["==", ["get", "resolution"], 8],
-    //       colorScaleForResolution(8),
-    //       ["==", ["get", "resolution"], 9],
-    //       colorScaleForResolution(9),
-    //       ["==", ["get", "resolution"], 10],
-    //       colorScaleForResolution(10),
-    //       ["==", ["get", "resolution"], 11],
-    //       colorScaleForResolution(11),
-    //       colorScale(1),
-    //     ],
-    //     colors.empty,
-    //   ],
-    //   colorScale(1),
-    // ],
+    "fill-color": [
+      "case",
+      ["has", "highlighted"],
+      [
+        "case",
+        ["to-boolean", ["get", "highlighted"]],
+        [
+          "case",
+          ["==", ["get", "resolution"], 6],
+          colorScaleForResolution(6),
+          ["==", ["get", "resolution"], 7],
+          colorScaleForResolution(7),
+          ["==", ["get", "resolution"], 8],
+          colorScaleForResolution(8),
+          ["==", ["get", "resolution"], 9],
+          colorScaleForResolution(9),
+          ["==", ["get", "resolution"], 10],
+          colorScaleForResolution(10),
+          ["==", ["get", "resolution"], 11],
+          colorScaleForResolution(11),
+          filterLayerColorScale(1),
+        ],
+        colors.empty,
+      ],
+      filterLayerColorScale(1),
+    ],
     "fill-outline-color": "black",
     "fill-opacity": 0.8,
   },

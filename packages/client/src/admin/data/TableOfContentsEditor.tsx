@@ -463,8 +463,11 @@ export default function TableOfContentsEditor() {
                     tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
                       (item) => item.stableId === treeItemId
                     );
-                  const sorted =
+                  let sorted =
                     mapContext.manager?.getVisibleLayersByZIndex() || [];
+                  sorted.filter(
+                    (l) => !l.sketchClassLayerState && l.dataLayer?.tocId
+                  );
                   if (item) {
                     const variables = {
                       id: item.id,
@@ -483,9 +486,10 @@ export default function TableOfContentsEditor() {
                           x: clickEvent.clientX,
                           y: clickEvent.clientY,
                         }}
-                        top={sorted[0]?.tocId === item.stableId}
+                        top={sorted[0]?.dataLayer?.tocId === item.stableId}
                         bottom={
-                          sorted[sorted.length - 1]?.tocId === item.stableId
+                          sorted[sorted.length - 1]?.dataLayer?.tocId ===
+                          item.stableId
                         }
                       />
                     );
