@@ -76,7 +76,6 @@ export const TableOfContentsItemMenu = React.forwardRef<
     const intersectsBottom = (transform?.y || 0) > window.innerHeight - 260;
     const metadataContext = useContext(TableOfContentsMetadataModalContext);
     const manager = mapContext.manager;
-    console.log("props", props, transform);
     return (
       <MenuType.Content
         // avoidCollisions={false}
