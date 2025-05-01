@@ -1,3 +1,4 @@
+import { deepStrictEqual } from "assert";
 import { gql, makeExtendSchemaPlugin } from "graphile-utils";
 import { PoolClient } from "pg";
 
@@ -161,7 +162,13 @@ const CreateGeographyPlugin = makeExtendSchemaPlugin((build) => {
               let layerId: number | null = null;
               if (templateId) {
                 // Clone the template layer into the project
-                layerId = await cloneTemplateLayer(pgClient, templateId, slug);
+                layerId = await getOrCloneTemplateLayer(
+                  pgClient,
+                  templateId,
+                  slug,
+                  cql2Query,
+                  name
+                );
               } else {
                 // ensure layer exists in project
                 const { rows: dataLayerRows } = await pgClient.query(
@@ -202,11 +209,65 @@ const CreateGeographyPlugin = makeExtendSchemaPlugin((build) => {
 /**
  * Clone a template layer into the project
  */
-async function cloneTemplateLayer(
+async function getOrCloneTemplateLayer(
   pgClient: PoolClient,
   templateId: string,
-  slug: string
+  slug: string,
+  cql2Query: string | null,
+  label: string | null = null
 ): Promise<number> {
+  console.log("getOrClone");
+  const filterExpression = cql2ToFilterExpression(cql2Query);
+  console.log(
+    "filterExpression",
+    filterExpression,
+    cql2Query,
+    typeof cql2Query
+  );
+  // First, check if a data layer exists in the project with the same template
+  // id and filter expression
+  const { rows: existingRows } = await pgClient.query(
+    `
+      SELECT 
+        id, 
+        mapbox_gl_styles 
+      FROM 
+        data_layers 
+      WHERE 
+        project_id = (SELECT id FROM projects WHERE slug = $1) AND data_source_id in (
+          SELECT id FROM data_sources WHERE data_library_template_id = $2
+        )
+    `,
+    [slug, templateId]
+  );
+  console.log("existing", existingRows);
+  const matches = existingRows.filter((row) => {
+    for (const layer of row.mapbox_gl_styles || []) {
+      if (JSON.stringify(layer.filter) === JSON.stringify(filterExpression)) {
+        return true;
+      }
+    }
+    return false;
+  });
+
+  if (matches.length) {
+    // return related, draft, table_of_contents_item
+    const { rows: tocRows } = await pgClient.query(
+      `
+      select
+        id,
+        data_layer_id
+      from
+        table_of_contents_items
+      where
+        data_layer_id = any($1) and is_draft = true
+    `,
+      [matches.map((match) => match.id)]
+    );
+    if (tocRows.length) {
+      return tocRows[0].data_layer_id;
+    }
+  }
   // Call the stored procedure to clone the template item
   const { rows: clonedRows } = await pgClient.query(
     "SELECT * FROM copy_data_library_template_item($1, $2)",
@@ -217,7 +278,82 @@ async function cloneTemplateLayer(
     throw new Error(`Failed to clone template layer with ID ${templateId}`);
   }
 
-  return clonedRows[0].data_layer_id;
+  const data_layer_id = clonedRows[0].data_layer_id;
+
+  if (filterExpression !== undefined) {
+    console.log("update style");
+    // Update the filter expression for the cloned layer
+    // first, get the mapbox_gl_styles for the cloned layer
+    const { rows: clonedLayerRows } = await pgClient.query(
+      "SELECT mapbox_gl_styles FROM data_layers WHERE id = $1",
+      [data_layer_id]
+    );
+    const clonedLayer = clonedLayerRows[0];
+    if (!clonedLayer) {
+      throw new Error(`Failed to find cloned layer with ID ${data_layer_id}`);
+    }
+    const mapboxGlStyles = clonedLayer.mapbox_gl_styles;
+    console.log("mapboxGlStyles", mapboxGlStyles);
+    if (!mapboxGlStyles) {
+      throw new Error(
+        `Failed to find mapbox_gl_styles for cloned layer with ID ${data_layer_id}`
+      );
+    }
+    // Update the filter expression for each layer
+    const updatedStyles = mapboxGlStyles.map((style: any) => {
+      return {
+        ...style,
+        filter: filterExpression,
+      };
+    });
+    console.log("updatedStyles", updatedStyles);
+    // Update the data layer with the new filter expression
+    await pgClient.query(
+      "UPDATE data_layers SET mapbox_gl_styles = $1::jsonb WHERE id = $2",
+      [JSON.stringify(updatedStyles), data_layer_id]
+    );
+  }
+
+  if (label !== null) {
+    // update the style with special metadata for labels
+    // first get the mapbox_gl_styles for the cloned layer
+    const { rows: clonedLayerRows } = await pgClient.query(
+      "SELECT mapbox_gl_styles FROM data_layers WHERE id = $1",
+      [data_layer_id]
+    );
+    const clonedLayer = clonedLayerRows[0];
+    if (!clonedLayer) {
+      throw new Error(`Failed to find cloned layer with ID ${data_layer_id}`);
+    }
+    const mapboxGlStyles = clonedLayer.mapbox_gl_styles;
+    if (!mapboxGlStyles) {
+      throw new Error(
+        `Failed to find mapbox_gl_styles for cloned layer with ID ${data_layer_id}`
+      );
+    }
+    // Update the label for each layer
+    const updatedStyles = mapboxGlStyles.map((style: any) => {
+      return {
+        ...style,
+        metadata: {
+          ...(style.metadata || {}),
+          label: " ",
+        },
+      };
+    });
+    // Update the data layer with the new label
+    await pgClient.query(
+      "UPDATE data_layers SET mapbox_gl_styles = $1::jsonb WHERE id = $2",
+      [JSON.stringify(updatedStyles), data_layer_id]
+    );
+    // update the table of contents item with the label
+    await pgClient.query(
+      "UPDATE table_of_contents_items SET title = $1 WHERE data_layer_id = $2 and is_draft = true",
+      [label, data_layer_id]
+    );
+  }
+
+  return data_layer_id;
 }
 
 export async function sessionIsAdmin(
@@ -254,6 +390,78 @@ export async function idForSlug(
     throw new Error(`Project with slug ${slug} not found`);
   }
   return rows[0].id;
+}
+
+/**
+ * Converts a cql2 query to a mapbox-gl-style expression that can be used to
+ * filter features by properties. For example:
+ * {"op": "=", "args": [{"property": "MRGID_EEZ", "value": 1}]}
+ * becomes ["==", ["get", "MRGID_EEZ"], 1]
+ * @param cql2Query
+ */
+function cql2ToFilterExpression(filter: any): any {
+  if (!filter) return undefined;
+  if (typeof filter === "string") {
+    try {
+      filter = JSON.parse(filter);
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  const opMap: Record<string, string> = {
+    "=": "==",
+    "!=": "!=",
+    "<": "<",
+    "<=": "<=",
+    ">": ">",
+    ">=": ">=",
+    and: "all",
+    or: "any",
+    not: "!",
+    in: "in",
+    like: "match",
+  };
+
+  function parseArg(arg: any): any {
+    if (arg && typeof arg === "object" && "property" in arg) {
+      return ["get", arg.property];
+    }
+    if (arg && typeof arg === "object" && "value" in arg) {
+      return arg.value;
+    }
+    return arg;
+  }
+
+  if (filter.op) {
+    const op = opMap[filter.op] || filter.op;
+    const args = filter.args || [];
+
+    if (op === "all" || op === "any") {
+      return [op, ...args.map(cql2ToFilterExpression)];
+    }
+    if (op === "!") {
+      return ["!", cql2ToFilterExpression(args[0])];
+    }
+    if (op === "in") {
+      // ["in", ["get", "prop"], v1, v2, ...]
+      const property = parseArg(args[0]);
+      const values = args.slice(1).map(parseArg);
+      return ["in", property, ["literal", ...values]];
+    }
+    if (op === "match") {
+      // ["match", ["get", "prop"], [pattern], true, false]
+      const property = parseArg(args[0]);
+      const pattern = args[1]?.value || args[1];
+      // Mapbox GL doesn't support SQL LIKE, so treat as equality or RegExp
+      return ["match", property, [pattern], true, false];
+    }
+    // Default binary op: ["==", ["get", "prop"], value]
+    if (args.length === 2) {
+      return [op, parseArg(args[0]), parseArg(args[1])];
+    }
+  }
+  return undefined;
 }
 
 export default CreateGeographyPlugin;

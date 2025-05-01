@@ -8,6 +8,7 @@ import {
 } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  DataSourceTypes,
   SketchGeometryType,
   useGeographyClippingSettingsQuery,
 } from "../../generated/graphql";
@@ -31,6 +32,7 @@ import CreateGeographyWizard, {
   CreateGeographyWizardState,
 } from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
+import { PlusCircleIcon } from "@heroicons/react/solid";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -41,6 +43,16 @@ export default function GeographyAdmin() {
   const { data, loading, error } = useGeographyClippingSettingsQuery({
     variables: { slug },
     skip: !slug,
+  });
+
+  const [state, setState] = useState<{
+    mapLoaded: boolean;
+    map: mapboxgl.Map | null;
+    hiddenGeographies: number[];
+  }>({
+    mapLoaded: false,
+    map: null,
+    hiddenGeographies: [],
   });
 
   const [geographyWizardState, setGeographyWizardState] = useState<
@@ -110,6 +122,16 @@ export default function GeographyAdmin() {
     }
   };
 
+  // Handle visibility checkbox toggle (now hides on check)
+  const handleGeographyVisibilityToggle = (geogId: number) => {
+    setState((prev) => {
+      const hiddenGeographies = prev.hiddenGeographies.includes(geogId)
+        ? prev.hiddenGeographies.filter((id) => id !== geogId)
+        : [...prev.hiddenGeographies, geogId];
+      return { ...prev, hiddenGeographies };
+    });
+  };
+
   useEffect(() => {
     if (
       !map &&
@@ -120,18 +142,6 @@ export default function GeographyAdmin() {
       !eezChoices.loading
     ) {
       let bbox: number[] | undefined;
-      // if (data.projectBySlug.eezSettings.mrgidEez.length > 0) {
-      //   const ids = data.projectBySlug.eezSettings.mrgidEez as number[];
-      //   // get bboxes for each eez
-      //   const eezs = eezChoices.data.filter((choice) =>
-      //     ids.includes(choice.value)
-      //   );
-      //   const bboxes = eezs.map((choice) => choice.data?.bbox);
-      //   // combine bboxes
-      //   if (bboxes.length > 0) {
-      //     bbox = combineBBoxes(bboxes);
-      //   }
-      // }
       const session = data.gmapssatellitesession.session;
       const newMap = new mapboxgl.Map({
         container: mapRef.current,
@@ -239,6 +249,7 @@ export default function GeographyAdmin() {
       });
       // @ts-ignore
       window.map = newMap;
+      setState((prev) => ({ ...prev, mapLoaded: true, map: newMap }));
     }
   }, [
     mapRef,
@@ -246,6 +257,160 @@ export default function GeographyAdmin() {
     eez?.dataSource?.url,
     coastline?.dataSource?.url,
     eezChoices.loading,
+    setState,
+  ]);
+
+  useEffect(() => {
+    if (
+      state.mapLoaded &&
+      data?.geographies &&
+      state.map &&
+      !eezPickerState.active // <-- Hide geography layers if EEZ picker is active
+    ) {
+      const map = state.map;
+      // add geography data sources and layers
+      const sources: { [id: string]: mapboxgl.AnySourceData } = {};
+      // Only add layers for visible geographies (not hidden)
+      const hiddenGeogIds = state.hiddenGeographies;
+      const layers: mapboxgl.AnyLayer[] = [];
+      for (const geography of data.projectBySlug?.geographies || []) {
+        if (hiddenGeogIds.includes(geography.id)) continue;
+        for (const layer of geography.clippingLayers || []) {
+          if (layer.dataLayer?.dataSource) {
+            // eslint-disable-next-line i18next/no-literal-string
+            const sourceId = `source-${layer.dataLayer.dataSource.id}`;
+            if (!(sourceId in sources)) {
+              if (
+                layer.dataLayer.dataSource.type === DataSourceTypes.SeasketchMvt
+              ) {
+                sources[sourceId] = {
+                  type: "vector",
+                  url: layer.dataLayer.dataSource.url! + ".json",
+                };
+              } else if (
+                layer.dataLayer.dataSource.type === DataSourceTypes.Geojson
+              ) {
+                sources[sourceId] = {
+                  type: "geojson",
+                  data: layer.dataLayer.dataSource.url!,
+                };
+              } else {
+                throw new Error(
+                  `Unsupported data source type: ${layer.dataLayer.dataSource.type}`
+                );
+              }
+            }
+            if (layer.dataLayer.mapboxGlStyles?.length) {
+              // check to make sure there aren't any existing layers with
+              // matching cql2Query and source metadata before adding
+              const hasMatches = layers.some(
+                (existingLayer: any) =>
+                  existingLayer.metadata?.layerId === layer.dataLayer?.id
+              );
+              if (hasMatches) {
+                continue;
+              }
+
+              for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+                // eslint-disable-next-line i18next/no-literal-string
+                const layerId = `layer-${
+                  layer.dataLayer.id
+                }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
+                const l = {
+                  ...glLayer,
+                  source: sourceId,
+                  "source-layer": layer.dataLayer.sourceLayer,
+                  id: layerId,
+                  metadata: {
+                    layerId: layer.dataLayer.id,
+                  },
+                };
+                layers.push(l);
+              }
+            } else {
+              throw new Error("Data layer does not have mapbox gl styles");
+            }
+          } else {
+            throw new Error("Data layer does not have a data source");
+          }
+        }
+      }
+
+      // Add sources if not present
+      for (const id in sources) {
+        if (!map.getSource(id)) {
+          map.addSource(id, sources[id]);
+        }
+      }
+      // Remove layers not in the visible set
+      const allLayerIds = new Set<string>();
+      for (const geography of data.projectBySlug?.geographies || []) {
+        for (const layer of geography.clippingLayers || []) {
+          if (layer.dataLayer?.mapboxGlStyles?.length) {
+            for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+              // eslint-disable-next-line i18next/no-literal-string
+              const layerId = `layer-${
+                layer.dataLayer.id
+              }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
+              allLayerIds.add(layerId);
+            }
+          }
+        }
+      }
+      // Remove all geography layers, then add only visible ones
+      for (const layerId of allLayerIds) {
+        if (map.getLayer(layerId)) {
+          map.removeLayer(layerId);
+        }
+      }
+      for (const layer of layers) {
+        if (!map.getLayer(layer.id)) {
+          map.addLayer(layer);
+        }
+      }
+      return () => {
+        // Remove all geography layers on cleanup
+        for (const layerId of allLayerIds) {
+          if (map.getLayer(layerId)) {
+            map.removeLayer(layerId);
+          }
+        }
+      };
+    }
+    // Remove all geography layers if EEZ picker is active
+    if (
+      state.mapLoaded &&
+      data?.geographies &&
+      state.map &&
+      eezPickerState.active
+    ) {
+      const map = state.map;
+      const allLayerIds = new Set<string>();
+      for (const geography of data.projectBySlug?.geographies || []) {
+        for (const layer of geography.clippingLayers || []) {
+          if (layer.dataLayer?.mapboxGlStyles?.length) {
+            for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+              // eslint-disable-next-line i18next/no-literal-string
+              const layerId = `layer-${
+                layer.dataLayer.id
+              }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
+              allLayerIds.add(layerId);
+            }
+          }
+        }
+      }
+      for (const layerId of allLayerIds) {
+        if (map.getLayer(layerId)) {
+          map.removeLayer(layerId);
+        }
+      }
+    }
+  }, [
+    data?.projectBySlug?.geographies,
+    state.mapLoaded,
+    state.map,
+    state.hiddenGeographies,
+    eezPickerState.active,
   ]);
 
   // Setup tooltip and hover effects for when eez picker is active
@@ -506,14 +671,18 @@ export default function GeographyAdmin() {
           )}
           {!hasBuiltInLayers && !loading && (
             <Warning level="error">
-              <Trans ns="admin:geography">
-                SeaSketch has not been configured correctly with {EEZ} and{" "}
-                {COASTLINE} layers. Contact{" "}
-                <a className="underline" href="mailto:support@seasketch.org">
-                  support@seasketch.org
-                </a>{" "}
-                for assistance.
-              </Trans>
+              {error ? (
+                error.toString()
+              ) : (
+                <Trans ns="admin:geography">
+                  SeaSketch has not been configured correctly with {EEZ} and{" "}
+                  {COASTLINE} layers. Contact{" "}
+                  <a className="underline" href="mailto:support@seasketch.org">
+                    support@seasketch.org
+                  </a>{" "}
+                  for assistance.
+                </Trans>
+              )}
             </Warning>
           )}
           {!loading && (
@@ -525,8 +694,10 @@ export default function GeographyAdmin() {
                 >
                   <VisibilityCheckbox
                     disabled={false}
-                    visibility={true}
-                    id={0}
+                    // Checkbox is checked if hidden, unchecked if visible
+                    visibility={!state.hiddenGeographies.includes(geog.id)}
+                    id={geog.id}
+                    onClick={() => handleGeographyVisibilityToggle(geog.id)}
                   />
                   <span className="flex-1">{geog.name}</span>
                   <span className="space-x-2 flex items-center">
@@ -547,10 +718,10 @@ export default function GeographyAdmin() {
                     step: "chooseTemplate",
                   }));
                 }}
-                className="border-2 border-black border-opacity-10 border-dashed rounded w-full text-left flex items-center space-x-2 p-4 text-gray-500"
+                className="border border-indigo-800/20 rounded w-full text-left flex flex-row-reverse items-center space-x-2 p-4 px-2 pr-4 text-blue-900/80 bg-blue-50/70 shadow-sm hover:bg-blue-50 hover:shadow-md hover:text-blue-900 transition-all"
               >
                 <PlusCircledIcon />
-                <span>
+                <span className="flex-1">
                   {(data?.projectBySlug?.geographies || []).length === 0
                     ? t("Create Your First Geography")
                     : t("Create a New Geography")}
@@ -740,14 +911,12 @@ export default function GeographyAdmin() {
             }));
           }}
           onRequestEEZPicker={() => {
-            console.log("onRequestEEZPicker");
             setEEZPickerState((prev) => ({
               ...prev,
               active: true,
               selectedEEZs: [],
             }));
             return new Promise<number[]>((resolve) => {
-              console.log("inside promise");
               setEEZPickerState((prev) => ({
                 ...prev,
                 resultResolver: resolve,

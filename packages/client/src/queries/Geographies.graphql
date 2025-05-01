@@ -58,6 +58,10 @@ query GeographyClippingSettings($slug: String!) {
         id
         cql2Query
         templateId
+        operationType
+        dataLayer {
+          ...ClippingLayerDetails
+        }
       }
     }
   }

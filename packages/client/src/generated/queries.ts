@@ -19539,7 +19539,11 @@ export type GeographyClippingSettingsQuery = (
       & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'clientTemplate'>
       & { clippingLayers?: Maybe<Array<(
         { __typename?: 'GeographyClippingLayer' }
-        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId'>
+        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId' | 'operationType'>
+        & { dataLayer?: Maybe<(
+          { __typename?: 'DataLayer' }
+          & ClippingLayerDetailsFragment
+        )> }
       )>> }
     )> }
   )>, geographies?: Maybe<Array<(
@@ -26045,6 +26049,10 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
         id
         cql2Query
         templateId
+        operationType
+        dataLayer {
+          ...ClippingLayerDetails
+        }
       }
     }
   }

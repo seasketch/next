@@ -331,7 +331,9 @@ export function compileLegendFromGLStyleLayers(
       }
     }
 
+    console.log("legendItems", legendItems);
     let panels = consolidatePanels(legendItems);
+    console.log("consolidated", panels);
 
     const culled: GLLegendPanel[] = [];
     for (const panel of panels) {
@@ -1311,7 +1313,16 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
             labels.add(prop);
           }
         );
-        const label = labels.size === 1 ? [...labels][0] : undefined;
+        let label = labels.size === 1 ? [...labels][0] : undefined;
+        const metadata: SeaSketchLayerMetadata = layer.metadata || {};
+        if (
+          label &&
+          metadata["s:legend-labels"] &&
+          label in metadata["s:legend-labels"]
+        ) {
+          label = metadata["s:legend-labels"][label];
+        }
+        console.log("label", label, metadata);
         // Special case to consider here when plucking line layers. If there are one
         // or more filtered fill layers remaining, there is a state where none of
         // those filters pass and the line will be rendered without fill. We need
@@ -1403,6 +1414,7 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
     }
   }
   context.layers = context.layers.filter((l) => !pluckedLayers.includes(l));
+  console.log("panels", panels);
   return panels;
 }
 
@@ -3565,7 +3577,7 @@ function consolidateNode(node: GroupByFilterNode) {
           listPanels[key] = {
             id: key,
             type: "GLLegendListPanel",
-            label: propName,
+            label: subNode.filters.length === 1 ? " " : propName,
             items: [],
           };
         }
