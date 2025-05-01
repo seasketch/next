@@ -33,6 +33,7 @@ import CreateGeographyWizard, {
 } from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import { PlusCircleIcon } from "@heroicons/react/solid";
+import EditGeographyModal from "./EditGeographyModal";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -49,6 +50,7 @@ export default function GeographyAdmin() {
     mapLoaded: boolean;
     map: mapboxgl.Map | null;
     hiddenGeographies: number[];
+    editGeographyId?: number;
   }>({
     mapLoaded: false,
     map: null,
@@ -142,6 +144,12 @@ export default function GeographyAdmin() {
       !eezChoices.loading
     ) {
       let bbox: number[] | undefined;
+      const bounds = (data?.projectBySlug?.geographies || [])
+        .map((geog) => geog.bounds)
+        .filter((b) => Boolean(b)) as [number, number, number, number][];
+      if (bounds.length > 0) {
+        bbox = combineBBoxes(bounds);
+      }
       const session = data.gmapssatellitesession.session;
       const newMap = new mapboxgl.Map({
         container: mapRef.current,
@@ -246,10 +254,10 @@ export default function GeographyAdmin() {
             },
           });
         }
+        setState((prev) => ({ ...prev, mapLoaded: true, map: newMap }));
       });
       // @ts-ignore
       window.map = newMap;
-      setState((prev) => ({ ...prev, mapLoaded: true, map: newMap }));
     }
   }, [
     mapRef,
@@ -701,12 +709,47 @@ export default function GeographyAdmin() {
                   />
                   <span className="flex-1">{geog.name}</span>
                   <span className="space-x-2 flex items-center">
-                    <EnterFullScreenIcon />
-                    <Pencil2Icon />
+                    <button
+                      onClick={() => {
+                        if (geog.bounds) {
+                          map?.fitBounds(
+                            geog.bounds as [number, number, number, number],
+                            {
+                              padding: 80,
+                              animate: true,
+                            }
+                          );
+                        }
+                      }}
+                    >
+                      <EnterFullScreenIcon />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setState((prev) => ({
+                          ...prev,
+                          editGeographyId: geog.id,
+                        }));
+                      }}
+                    >
+                      {" "}
+                      <Pencil2Icon />
+                    </button>
                   </span>
                 </li>
               ))}
             </ul>
+          )}
+          {state.editGeographyId && (
+            <EditGeographyModal
+              id={state.editGeographyId}
+              onRequestClose={() => {
+                setState((prev) => ({
+                  ...prev,
+                  editGeographyId: undefined,
+                }));
+              }}
+            />
           )}
           {!loading && (
             <div className="px-2 -mt-1">
@@ -936,40 +979,6 @@ export default function GeographyAdmin() {
         ></div>,
         document.body
       )}
-    </div>
-  );
-}
-
-function GeographyLayerItem({
-  name,
-  description,
-  enabled,
-  onEdit,
-  onToggle,
-}: {
-  name: ReactNode;
-  description?: ReactNode;
-  enabled: boolean;
-  onEdit?: () => void;
-  onToggle?: (enabled: boolean) => void;
-}) {
-  return (
-    <div className="m-2 rounded-md p-2 border-b border-gray-200 text-sm bg-white shadow-sm flex space-x-2 items-center">
-      <Switch
-        onClick={onToggle}
-        className="transform scale-75"
-        isToggled={enabled}
-      />
-      <div className="flex-1">
-        <h2 className="font-semibold">{name}</h2>
-        {description && <p className="text-xs">{description}</p>}
-      </div>
-      <button
-        onClick={onEdit}
-        className="rounded-full bg-gray-50 text-center w-8 h-8 flex items-center justify-center border border-black border-opacity-5"
-      >
-        <DotsHorizontalIcon className="inline" />
-      </button>
     </div>
   );
 }

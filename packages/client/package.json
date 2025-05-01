@@ -176,7 +176,7 @@
     "lodash.sortby": "^4.7.0",
     "lru-cache": "^6.0.0",
     "mapbox-expression": "^0.0.3",
-    "mapbox-gl": "^3.3.0",
+    "mapbox-gl": "3.4",
     "mapbox-gl-draw-rectangle-mode": "^1.0.4",
     "md5": "^2.3.0",
     "mnemonist": "^0.39.2",

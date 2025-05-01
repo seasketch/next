@@ -26,6 +26,7 @@ fragment GeographyDetails on Geography {
   name
   translatedProps
   clientTemplate
+  bounds
   clippingLayers {
     id
     operationType
@@ -49,20 +50,7 @@ query GeographyClippingSettings($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     geographies {
-      id
-      name
-      createdAt
-      hash
-      clientTemplate
-      clippingLayers {
-        id
-        cql2Query
-        templateId
-        operationType
-        dataLayer {
-          ...ClippingLayerDetails
-        }
-      }
+      ...GeographyDetails
     }
   }
   geographies {
@@ -88,31 +76,30 @@ query EEZLayer {
 mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
   createGeographies(input: $geographies) {
     geographies {
-      id
-      name
-      createdAt
-      hash
-      projectId
-      clippingLayers {
-        id
-        cql2Query
-        templateId
-        operationType
-        projectGeographyId
-        dataLayer {
-          id
-          dataSource {
-            id
-            type
-            url
-            dataLibraryTemplateId
-            createdAt
-            authorProfile {
-              ...UserProfileDetails
-            }
-          }
-        }
-      }
+      ...GeographyDetails
+    }
+  }
+}
+
+query GeographyById($id: Int!) {
+  geography(id: $id) {
+    ...GeographyDetails
+  }
+}
+
+mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
+  deleteGeographyAndTableOfContentsItems(
+    id: $id
+    deleteRelatedTableOfContentsItems: $deleteRelatedLayers
+  ) {
+    id
+  }
+}
+
+mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
+  updateProjectGeography(id: $id, input: $payload) {
+    geography {
+      ...GeographyDetails
     }
   }
 }

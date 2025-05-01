@@ -5874,6 +5874,7 @@ export enum GeographiesOrderBy {
 
 export type Geography = Node & {
   __typename?: 'Geography';
+  bounds?: Maybe<Array<Scalars['Float']>>;
   clientTemplate?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
   clippingLayers?: Maybe<Array<GeographyClippingLayer>>;
@@ -5910,6 +5911,7 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
 
 export type GeographyClippingLayer = Node & {
   __typename?: 'GeographyClippingLayer';
+  bounds?: Maybe<Array<Scalars['Float']>>;
   cql2Query?: Maybe<Scalars['JSON']>;
   /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
   dataLayer?: Maybe<DataLayer>;
@@ -6063,6 +6065,11 @@ export type GeographyPolygon = GeographyGeometry & GeographyInterface & {
   geojson?: Maybe<Scalars['GeoJSON']>;
   interiors?: Maybe<Array<Maybe<GeographyLineString>>>;
   srid: Scalars['Int'];
+};
+
+export type GeographyUpdatedPayload = {
+  __typename?: 'GeographyUpdatedPayload';
+  geography: Geography;
 };
 
 /** All geometry XY types implement this interface */
@@ -7262,6 +7269,7 @@ export type Mutation = {
   deleteForumByNodeId?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Geography` using a unique key. */
   deleteGeography?: Maybe<DeleteGeographyPayload>;
+  deleteGeographyAndTableOfContentsItems: Geography;
   /** Deletes a single `Geography` using its globally unique id. */
   deleteGeographyByNodeId?: Maybe<DeleteGeographyPayload>;
   /** Deletes a single `GeographyClippingLayer` using a unique key. */
@@ -7601,6 +7609,7 @@ export type Mutation = {
   updateProjectByNodeId?: Maybe<UpdateProjectPayload>;
   /** Updates a single `Project` using a unique key and a patch. */
   updateProjectBySlug?: Maybe<UpdateProjectPayload>;
+  updateProjectGeography: GeographyUpdatedPayload;
   updateProjectInvite?: Maybe<UpdateProjectInvitePayload>;
   /** Updates a single `ProjectInviteGroup` using a unique key and a patch. */
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
@@ -8185,6 +8194,13 @@ export type MutationDeleteForumByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGeographyArgs = {
   input: DeleteGeographyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteGeographyAndTableOfContentsItemsArgs = {
+  deleteRelatedTableOfContentsItems?: Maybe<Scalars['Boolean']>;
+  id: Scalars['Int'];
 };
 
 
@@ -9086,6 +9102,13 @@ export type MutationUpdateProjectByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectBySlugArgs = {
   input: UpdateProjectBySlugInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateProjectGeographyArgs = {
+  id: Scalars['Int'];
+  input: UpdateProjectGeographyPayload;
 };
 
 
@@ -14738,6 +14761,12 @@ export type UpdateBasemapPayloadBasemapEdgeArgs = {
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
+export type UpdateClippingLayerPayload = {
+  __typename?: 'UpdateClippingLayerPayload';
+  cql2Query?: Maybe<Scalars['JSON']>;
+  operationType?: Maybe<GeographyLayerOperation>;
+};
+
 /** All input for the `updateCommunityGuidelineByNodeId` mutation. */
 export type UpdateCommunityGuidelineByNodeIdInput = {
   /**
@@ -15638,6 +15667,12 @@ export type UpdateProjectBySlugInput = {
   patch: ProjectPatch;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
+};
+
+export type UpdateProjectGeographyPayload = {
+  clippingLayers?: Maybe<Array<Maybe<ClippingLayerInput>>>;
+  name?: Maybe<Scalars['String']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** All input for the `updateProject` mutation. */
@@ -19507,7 +19542,7 @@ export type ClippingLayerDetailsFragment = (
 
 export type GeographyDetailsFragment = (
   { __typename?: 'Geography' }
-  & Pick<Geography, 'id' | 'hash' | 'name' | 'translatedProps' | 'clientTemplate'>
+  & Pick<Geography, 'id' | 'hash' | 'name' | 'translatedProps' | 'clientTemplate' | 'bounds'>
   & { clippingLayers?: Maybe<Array<(
     { __typename?: 'GeographyClippingLayer' }
     & Pick<GeographyClippingLayer, 'id' | 'operationType' | 'templateId' | 'cql2Query'>
@@ -19536,15 +19571,7 @@ export type GeographyClippingSettingsQuery = (
     & Pick<Project, 'id'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
-      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'clientTemplate'>
-      & { clippingLayers?: Maybe<Array<(
-        { __typename?: 'GeographyClippingLayer' }
-        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId' | 'operationType'>
-        & { dataLayer?: Maybe<(
-          { __typename?: 'DataLayer' }
-          & ClippingLayerDetailsFragment
-        )> }
-      )>> }
+      & GeographyDetailsFragment
     )> }
   )>, geographies?: Maybe<Array<(
     { __typename?: 'Geography' }
@@ -19582,25 +19609,53 @@ export type CreateGeographiesMutation = (
     { __typename?: 'CreateGeographiesPayload' }
     & { geographies: Array<(
       { __typename?: 'Geography' }
-      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'projectId'>
-      & { clippingLayers?: Maybe<Array<(
-        { __typename?: 'GeographyClippingLayer' }
-        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId' | 'operationType' | 'projectGeographyId'>
-        & { dataLayer?: Maybe<(
-          { __typename?: 'DataLayer' }
-          & Pick<DataLayer, 'id'>
-          & { dataSource?: Maybe<(
-            { __typename?: 'DataSource' }
-            & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
-            & { authorProfile?: Maybe<(
-              { __typename?: 'Profile' }
-              & UserProfileDetailsFragment
-            )> }
-          )> }
-        )> }
-      )>> }
+      & GeographyDetailsFragment
     )> }
   )> }
+);
+
+export type GeographyByIdQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GeographyByIdQuery = (
+  { __typename?: 'Query' }
+  & { geography?: Maybe<(
+    { __typename?: 'Geography' }
+    & GeographyDetailsFragment
+  )> }
+);
+
+export type DeleteGeographyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  deleteRelatedLayers?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type DeleteGeographyMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteGeographyAndTableOfContentsItems: (
+    { __typename?: 'Geography' }
+    & Pick<Geography, 'id'>
+  ) }
+);
+
+export type UpdateGeographyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  payload: UpdateProjectGeographyPayload;
+}>;
+
+
+export type UpdateGeographyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectGeography: (
+    { __typename?: 'GeographyUpdatedPayload' }
+    & { geography: (
+      { __typename?: 'Geography' }
+      & GeographyDetailsFragment
+    ) }
+  ) }
 );
 
 export type JoinProjectMutationVariables = Exact<{
@@ -23449,6 +23504,7 @@ export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
   name
   translatedProps
   clientTemplate
+  bounds
   clippingLayers {
     id
     operationType
@@ -26040,20 +26096,7 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     geographies {
-      id
-      name
-      createdAt
-      hash
-      clientTemplate
-      clippingLayers {
-        id
-        cql2Query
-        templateId
-        operationType
-        dataLayer {
-          ...ClippingLayerDetails
-        }
-      }
+      ...GeographyDetails
     }
   }
   geographies {
@@ -26082,35 +26125,37 @@ export const CreateGeographiesDocument = /*#__PURE__*/ gql`
     mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
   createGeographies(input: $geographies) {
     geographies {
-      id
-      name
-      createdAt
-      hash
-      projectId
-      clippingLayers {
-        id
-        cql2Query
-        templateId
-        operationType
-        projectGeographyId
-        dataLayer {
-          id
-          dataSource {
-            id
-            type
-            url
-            dataLibraryTemplateId
-            createdAt
-            authorProfile {
-              ...UserProfileDetails
-            }
-          }
-        }
-      }
+      ...GeographyDetails
     }
   }
 }
-    ${UserProfileDetailsFragmentDoc}`;
+    ${GeographyDetailsFragmentDoc}`;
+export const GeographyByIdDocument = /*#__PURE__*/ gql`
+    query GeographyById($id: Int!) {
+  geography(id: $id) {
+    ...GeographyDetails
+  }
+}
+    ${GeographyDetailsFragmentDoc}`;
+export const DeleteGeographyDocument = /*#__PURE__*/ gql`
+    mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
+  deleteGeographyAndTableOfContentsItems(
+    id: $id
+    deleteRelatedTableOfContentsItems: $deleteRelatedLayers
+  ) {
+    id
+  }
+}
+    `;
+export const UpdateGeographyDocument = /*#__PURE__*/ gql`
+    mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
+  updateProjectGeography(id: $id, input: $payload) {
+    geography {
+      ...GeographyDetails
+    }
+  }
+}
+    ${GeographyDetailsFragmentDoc}`;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -28030,6 +28075,7 @@ export const namedOperations = {
     GetSprite: 'GetSprite',
     GeographyClippingSettings: 'GeographyClippingSettings',
     EEZLayer: 'EEZLayer',
+    GeographyById: 'GeographyById',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -28164,6 +28210,8 @@ export const namedOperations = {
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     CreateGeographies: 'CreateGeographies',
+    DeleteGeography: 'DeleteGeography',
+    UpdateGeography: 'UpdateGeography',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

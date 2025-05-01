@@ -6854,6 +6854,7 @@ enum GeographiesOrderBy {
 }
 
 type Geography implements Node {
+  bounds: [Float!]
   clientTemplate: String
 
   """
@@ -6914,6 +6915,7 @@ type Geography implements Node {
 }
 
 type GeographyClippingLayer implements Node {
+  bounds: [Float!]
   cql2Query: JSON
 
   """
@@ -7088,6 +7090,10 @@ type GeographyPolygon implements GeographyGeometry & GeographyInterface {
   geojson: GeoJSON
   interiors: [GeographyLineString]
   srid: Int!
+}
+
+type GeographyUpdatedPayload {
+  geography: Geography!
 }
 
 """
@@ -8846,6 +8852,7 @@ type Mutation {
     """
     input: DeleteGeographyInput!
   ): DeleteGeographyPayload
+  deleteGeographyAndTableOfContentsItems(deleteRelatedTableOfContentsItems: Boolean, id: Int!): Geography!
 
   """Deletes a single `Geography` using its globally unique id."""
   deleteGeographyByNodeId(
@@ -10071,6 +10078,14 @@ type Mutation {
     """
     input: UpdateProjectBySlugInput!
   ): UpdateProjectPayload
+  updateProjectGeography(
+    id: Int!
+
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectGeographyPayload!
+  ): GeographyUpdatedPayload!
   updateProjectInvite(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -16208,6 +16223,11 @@ type UpdateBasemapPayload {
   query: Query
 }
 
+type UpdateClippingLayerPayload {
+  cql2Query: JSON
+  operationType: GeographyLayerOperation
+}
+
 """All input for the `updateCommunityGuidelineByNodeId` mutation."""
 input UpdateCommunityGuidelineByNodeIdInput {
   """
@@ -17332,6 +17352,12 @@ input UpdateProjectBySlugInput {
   Short identifier for the project used in the url. This property cannot be changed after project creation.
   """
   slug: String!
+}
+
+input UpdateProjectGeographyPayload {
+  clippingLayers: [ClippingLayerInput]
+  name: String
+  translatedProps: JSON
 }
 
 """All input for the `updateProject` mutation."""

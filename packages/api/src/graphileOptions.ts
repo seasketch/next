@@ -46,7 +46,7 @@ import MetadataParserPlugin from "./plugins/metadataParserPlugin";
 import ApiKeyPlugin from "./plugins/apiKeyPlugin";
 import AboutPagePlugin from "./plugins/aboutPagePlugin";
 import ReplacePMTilesPlugin from "./plugins/replacePMTilesPlugin";
-import CreateGeographyPlugin from "./plugins/CreateGeographyPlugin";
+import GeographyPlugin from "./plugins/GeographyPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -103,7 +103,7 @@ export default function graphileOptions(): PostGraphileOptions {
       ApiKeyPlugin,
       AboutPagePlugin,
       ReplacePMTilesPlugin,
-      CreateGeographyPlugin,
+      GeographyPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

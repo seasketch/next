@@ -7,7 +7,7 @@ import {
   Layer,
   LineLayer,
 } from "mapbox-gl";
-import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
+import styleSpec from "@mapbox/mapbox-gl-style-spec/reference/v8.json";
 import { ExpressionEvaluator, RGBA } from "./ExpressionEvaluator";
 import {
   GLLegendBubblePanel,

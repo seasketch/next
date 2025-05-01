@@ -2,7 +2,7 @@
 import { CompletionContext, Completion } from "@codemirror/autocomplete";
 import { syntaxTree } from "@codemirror/language";
 import { SyntaxNode } from "@lezer/common";
-import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
+import styleSpec from "@mapbox/mapbox-gl-style-spec/reference/v8.json";
 import { GeoJsonGeometryTypes } from "geojson";
 import { formatJSONCommand } from "../formatCommand";
 import { SpriteDetailsFragment } from "../../../../generated/graphql";

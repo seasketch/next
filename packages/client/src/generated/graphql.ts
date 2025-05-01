@@ -5876,6 +5876,7 @@ export enum GeographiesOrderBy {
 
 export type Geography = Node & {
   __typename?: 'Geography';
+  bounds?: Maybe<Array<Scalars['Float']>>;
   clientTemplate?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
   clippingLayers?: Maybe<Array<GeographyClippingLayer>>;
@@ -5912,6 +5913,7 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
 
 export type GeographyClippingLayer = Node & {
   __typename?: 'GeographyClippingLayer';
+  bounds?: Maybe<Array<Scalars['Float']>>;
   cql2Query?: Maybe<Scalars['JSON']>;
   /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
   dataLayer?: Maybe<DataLayer>;
@@ -6065,6 +6067,11 @@ export type GeographyPolygon = GeographyGeometry & GeographyInterface & {
   geojson?: Maybe<Scalars['GeoJSON']>;
   interiors?: Maybe<Array<Maybe<GeographyLineString>>>;
   srid: Scalars['Int'];
+};
+
+export type GeographyUpdatedPayload = {
+  __typename?: 'GeographyUpdatedPayload';
+  geography: Geography;
 };
 
 /** All geometry XY types implement this interface */
@@ -7264,6 +7271,7 @@ export type Mutation = {
   deleteForumByNodeId?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Geography` using a unique key. */
   deleteGeography?: Maybe<DeleteGeographyPayload>;
+  deleteGeographyAndTableOfContentsItems: Geography;
   /** Deletes a single `Geography` using its globally unique id. */
   deleteGeographyByNodeId?: Maybe<DeleteGeographyPayload>;
   /** Deletes a single `GeographyClippingLayer` using a unique key. */
@@ -7603,6 +7611,7 @@ export type Mutation = {
   updateProjectByNodeId?: Maybe<UpdateProjectPayload>;
   /** Updates a single `Project` using a unique key and a patch. */
   updateProjectBySlug?: Maybe<UpdateProjectPayload>;
+  updateProjectGeography: GeographyUpdatedPayload;
   updateProjectInvite?: Maybe<UpdateProjectInvitePayload>;
   /** Updates a single `ProjectInviteGroup` using a unique key and a patch. */
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
@@ -8187,6 +8196,13 @@ export type MutationDeleteForumByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGeographyArgs = {
   input: DeleteGeographyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteGeographyAndTableOfContentsItemsArgs = {
+  deleteRelatedTableOfContentsItems?: Maybe<Scalars['Boolean']>;
+  id: Scalars['Int'];
 };
 
 
@@ -9088,6 +9104,13 @@ export type MutationUpdateProjectByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectBySlugArgs = {
   input: UpdateProjectBySlugInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateProjectGeographyArgs = {
+  id: Scalars['Int'];
+  input: UpdateProjectGeographyPayload;
 };
 
 
@@ -14740,6 +14763,12 @@ export type UpdateBasemapPayloadBasemapEdgeArgs = {
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
 };
 
+export type UpdateClippingLayerPayload = {
+  __typename?: 'UpdateClippingLayerPayload';
+  cql2Query?: Maybe<Scalars['JSON']>;
+  operationType?: Maybe<GeographyLayerOperation>;
+};
+
 /** All input for the `updateCommunityGuidelineByNodeId` mutation. */
 export type UpdateCommunityGuidelineByNodeIdInput = {
   /**
@@ -15640,6 +15669,12 @@ export type UpdateProjectBySlugInput = {
   patch: ProjectPatch;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
+};
+
+export type UpdateProjectGeographyPayload = {
+  clippingLayers?: Maybe<Array<Maybe<ClippingLayerInput>>>;
+  name?: Maybe<Scalars['String']>;
+  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 /** All input for the `updateProject` mutation. */
@@ -19509,7 +19544,7 @@ export type ClippingLayerDetailsFragment = (
 
 export type GeographyDetailsFragment = (
   { __typename?: 'Geography' }
-  & Pick<Geography, 'id' | 'hash' | 'name' | 'translatedProps' | 'clientTemplate'>
+  & Pick<Geography, 'id' | 'hash' | 'name' | 'translatedProps' | 'clientTemplate' | 'bounds'>
   & { clippingLayers?: Maybe<Array<(
     { __typename?: 'GeographyClippingLayer' }
     & Pick<GeographyClippingLayer, 'id' | 'operationType' | 'templateId' | 'cql2Query'>
@@ -19538,15 +19573,7 @@ export type GeographyClippingSettingsQuery = (
     & Pick<Project, 'id'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
-      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'clientTemplate'>
-      & { clippingLayers?: Maybe<Array<(
-        { __typename?: 'GeographyClippingLayer' }
-        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId' | 'operationType'>
-        & { dataLayer?: Maybe<(
-          { __typename?: 'DataLayer' }
-          & ClippingLayerDetailsFragment
-        )> }
-      )>> }
+      & GeographyDetailsFragment
     )> }
   )>, geographies?: Maybe<Array<(
     { __typename?: 'Geography' }
@@ -19584,25 +19611,53 @@ export type CreateGeographiesMutation = (
     { __typename?: 'CreateGeographiesPayload' }
     & { geographies: Array<(
       { __typename?: 'Geography' }
-      & Pick<Geography, 'id' | 'name' | 'createdAt' | 'hash' | 'projectId'>
-      & { clippingLayers?: Maybe<Array<(
-        { __typename?: 'GeographyClippingLayer' }
-        & Pick<GeographyClippingLayer, 'id' | 'cql2Query' | 'templateId' | 'operationType' | 'projectGeographyId'>
-        & { dataLayer?: Maybe<(
-          { __typename?: 'DataLayer' }
-          & Pick<DataLayer, 'id'>
-          & { dataSource?: Maybe<(
-            { __typename?: 'DataSource' }
-            & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
-            & { authorProfile?: Maybe<(
-              { __typename?: 'Profile' }
-              & UserProfileDetailsFragment
-            )> }
-          )> }
-        )> }
-      )>> }
+      & GeographyDetailsFragment
     )> }
   )> }
+);
+
+export type GeographyByIdQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type GeographyByIdQuery = (
+  { __typename?: 'Query' }
+  & { geography?: Maybe<(
+    { __typename?: 'Geography' }
+    & GeographyDetailsFragment
+  )> }
+);
+
+export type DeleteGeographyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  deleteRelatedLayers?: Maybe<Scalars['Boolean']>;
+}>;
+
+
+export type DeleteGeographyMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteGeographyAndTableOfContentsItems: (
+    { __typename?: 'Geography' }
+    & Pick<Geography, 'id'>
+  ) }
+);
+
+export type UpdateGeographyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  payload: UpdateProjectGeographyPayload;
+}>;
+
+
+export type UpdateGeographyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectGeography: (
+    { __typename?: 'GeographyUpdatedPayload' }
+    & { geography: (
+      { __typename?: 'Geography' }
+      & GeographyDetailsFragment
+    ) }
+  ) }
 );
 
 export type JoinProjectMutationVariables = Exact<{
@@ -23451,6 +23506,7 @@ export const GeographyDetailsFragmentDoc = gql`
   name
   translatedProps
   clientTemplate
+  bounds
   clippingLayers {
     id
     operationType
@@ -29764,20 +29820,7 @@ export const GeographyClippingSettingsDocument = gql`
   projectBySlug(slug: $slug) {
     id
     geographies {
-      id
-      name
-      createdAt
-      hash
-      clientTemplate
-      clippingLayers {
-        id
-        cql2Query
-        templateId
-        operationType
-        dataLayer {
-          ...ClippingLayerDetails
-        }
-      }
+      ...GeographyDetails
     }
   }
   geographies {
@@ -29861,35 +29904,11 @@ export const CreateGeographiesDocument = gql`
     mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
   createGeographies(input: $geographies) {
     geographies {
-      id
-      name
-      createdAt
-      hash
-      projectId
-      clippingLayers {
-        id
-        cql2Query
-        templateId
-        operationType
-        projectGeographyId
-        dataLayer {
-          id
-          dataSource {
-            id
-            type
-            url
-            dataLibraryTemplateId
-            createdAt
-            authorProfile {
-              ...UserProfileDetails
-            }
-          }
-        }
-      }
+      ...GeographyDetails
     }
   }
 }
-    ${UserProfileDetailsFragmentDoc}`;
+    ${GeographyDetailsFragmentDoc}`;
 export type CreateGeographiesMutationFn = Apollo.MutationFunction<CreateGeographiesMutation, CreateGeographiesMutationVariables>;
 
 /**
@@ -29916,6 +29935,114 @@ export function useCreateGeographiesMutation(baseOptions?: Apollo.MutationHookOp
 export type CreateGeographiesMutationHookResult = ReturnType<typeof useCreateGeographiesMutation>;
 export type CreateGeographiesMutationResult = Apollo.MutationResult<CreateGeographiesMutation>;
 export type CreateGeographiesMutationOptions = Apollo.BaseMutationOptions<CreateGeographiesMutation, CreateGeographiesMutationVariables>;
+export const GeographyByIdDocument = gql`
+    query GeographyById($id: Int!) {
+  geography(id: $id) {
+    ...GeographyDetails
+  }
+}
+    ${GeographyDetailsFragmentDoc}`;
+
+/**
+ * __useGeographyByIdQuery__
+ *
+ * To run a query within a React component, call `useGeographyByIdQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeographyByIdQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeographyByIdQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useGeographyByIdQuery(baseOptions: Apollo.QueryHookOptions<GeographyByIdQuery, GeographyByIdQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GeographyByIdQuery, GeographyByIdQueryVariables>(GeographyByIdDocument, options);
+      }
+export function useGeographyByIdLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeographyByIdQuery, GeographyByIdQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GeographyByIdQuery, GeographyByIdQueryVariables>(GeographyByIdDocument, options);
+        }
+export type GeographyByIdQueryHookResult = ReturnType<typeof useGeographyByIdQuery>;
+export type GeographyByIdLazyQueryHookResult = ReturnType<typeof useGeographyByIdLazyQuery>;
+export type GeographyByIdQueryResult = Apollo.QueryResult<GeographyByIdQuery, GeographyByIdQueryVariables>;
+export const DeleteGeographyDocument = gql`
+    mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
+  deleteGeographyAndTableOfContentsItems(
+    id: $id
+    deleteRelatedTableOfContentsItems: $deleteRelatedLayers
+  ) {
+    id
+  }
+}
+    `;
+export type DeleteGeographyMutationFn = Apollo.MutationFunction<DeleteGeographyMutation, DeleteGeographyMutationVariables>;
+
+/**
+ * __useDeleteGeographyMutation__
+ *
+ * To run a mutation, you first call `useDeleteGeographyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteGeographyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteGeographyMutation, { data, loading, error }] = useDeleteGeographyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      deleteRelatedLayers: // value for 'deleteRelatedLayers'
+ *   },
+ * });
+ */
+export function useDeleteGeographyMutation(baseOptions?: Apollo.MutationHookOptions<DeleteGeographyMutation, DeleteGeographyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteGeographyMutation, DeleteGeographyMutationVariables>(DeleteGeographyDocument, options);
+      }
+export type DeleteGeographyMutationHookResult = ReturnType<typeof useDeleteGeographyMutation>;
+export type DeleteGeographyMutationResult = Apollo.MutationResult<DeleteGeographyMutation>;
+export type DeleteGeographyMutationOptions = Apollo.BaseMutationOptions<DeleteGeographyMutation, DeleteGeographyMutationVariables>;
+export const UpdateGeographyDocument = gql`
+    mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
+  updateProjectGeography(id: $id, input: $payload) {
+    geography {
+      ...GeographyDetails
+    }
+  }
+}
+    ${GeographyDetailsFragmentDoc}`;
+export type UpdateGeographyMutationFn = Apollo.MutationFunction<UpdateGeographyMutation, UpdateGeographyMutationVariables>;
+
+/**
+ * __useUpdateGeographyMutation__
+ *
+ * To run a mutation, you first call `useUpdateGeographyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateGeographyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateGeographyMutation, { data, loading, error }] = useUpdateGeographyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      payload: // value for 'payload'
+ *   },
+ * });
+ */
+export function useUpdateGeographyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateGeographyMutation, UpdateGeographyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateGeographyMutation, UpdateGeographyMutationVariables>(UpdateGeographyDocument, options);
+      }
+export type UpdateGeographyMutationHookResult = ReturnType<typeof useUpdateGeographyMutation>;
+export type UpdateGeographyMutationResult = Apollo.MutationResult<UpdateGeographyMutation>;
+export type UpdateGeographyMutationOptions = Apollo.BaseMutationOptions<UpdateGeographyMutation, UpdateGeographyMutationVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -35355,6 +35482,7 @@ export const namedOperations = {
     GetSprite: 'GetSprite',
     GeographyClippingSettings: 'GeographyClippingSettings',
     EEZLayer: 'EEZLayer',
+    GeographyById: 'GeographyById',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -35489,6 +35617,8 @@ export const namedOperations = {
     ShareSprite: 'ShareSprite',
     DeleteSprite: 'DeleteSprite',
     CreateGeographies: 'CreateGeographies',
+    DeleteGeography: 'DeleteGeography',
+    UpdateGeography: 'UpdateGeography',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
