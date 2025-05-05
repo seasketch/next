@@ -39,6 +39,7 @@ interface ModalProps {
   initialFocus?: any;
   open?: boolean;
   dark?: boolean;
+  footerClassName?: string;
 }
 
 export default function Modal(props: ModalProps) {
@@ -186,7 +187,7 @@ export default function Modal(props: ModalProps) {
                           // props.icon && "sm:ml-10 sm:pl-4"
                         } sm:flex space-y-2 sm:space-y-0 sm:space-x-2 px-6 py-4 ${
                           props.scrollable && "sm:bg-gray-100"
-                        } ${props.icon && "pl-0"}`}
+                        } ${props.icon && "pl-0"} ${props.footerClassName}`}
                       >
                         {(props.footer || []).map((footerProps) => (
                           <FooterButton

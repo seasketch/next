@@ -19524,19 +19524,24 @@ export type DeleteSpriteMutation = (
   )> }
 );
 
+export type ClippingDataSourceDetailsFragment = (
+  { __typename?: 'DataSource' }
+  & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & UserProfileDetailsFragment
+  )>, outputs?: Maybe<Array<(
+    { __typename?: 'DataUploadOutput' }
+    & Pick<DataUploadOutput, 'id' | 'type' | 'url'>
+  )>> }
+);
+
 export type ClippingLayerDetailsFragment = (
   { __typename?: 'DataLayer' }
   & Pick<DataLayer, 'id' | 'version' | 'mapboxGlStyles' | 'sourceLayer'>
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
-    & Pick<DataSource, 'id' | 'type' | 'url' | 'dataLibraryTemplateId' | 'createdAt'>
-    & { authorProfile?: Maybe<(
-      { __typename?: 'Profile' }
-      & UserProfileDetailsFragment
-    )>, outputs?: Maybe<Array<(
-      { __typename?: 'DataUploadOutput' }
-      & Pick<DataUploadOutput, 'id' | 'type' | 'url'>
-    )>> }
+    & ClippingDataSourceDetailsFragment
   )> }
 );
 
@@ -19623,6 +19628,18 @@ export type GeographyByIdQuery = (
   { __typename?: 'Query' }
   & { geography?: Maybe<(
     { __typename?: 'Geography' }
+    & { clippingLayers?: Maybe<Array<(
+      { __typename?: 'GeographyClippingLayer' }
+      & Pick<GeographyClippingLayer, 'id' | 'operationType' | 'templateId' | 'cql2Query'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & { tableOfContentsItem?: Maybe<(
+          { __typename?: 'TableOfContentsItem' }
+          & Pick<TableOfContentsItem, 'title' | 'id'>
+        )> }
+        & ClippingLayerDetailsFragment
+      )> }
+    )>> }
     & GeographyDetailsFragment
   )> }
 );
@@ -23474,6 +23491,23 @@ export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
   picture
 }
     `;
+export const ClippingDataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ClippingDataSourceDetails on DataSource {
+  id
+  type
+  url
+  dataLibraryTemplateId
+  createdAt
+  authorProfile {
+    ...UserProfileDetails
+  }
+  outputs {
+    id
+    type
+    url
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
 export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ClippingLayerDetails on DataLayer {
   id
@@ -23481,22 +23515,10 @@ export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
   mapboxGlStyles
   sourceLayer
   dataSource {
-    id
-    type
-    url
-    dataLibraryTemplateId
-    createdAt
-    authorProfile {
-      ...UserProfileDetails
-    }
-    outputs {
-      id
-      type
-      url
-    }
+    ...ClippingDataSourceDetails
   }
 }
-    ${UserProfileDetailsFragmentDoc}`;
+    ${ClippingDataSourceDetailsFragmentDoc}`;
 export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment GeographyDetails on Geography {
   id
@@ -26134,9 +26156,23 @@ export const GeographyByIdDocument = /*#__PURE__*/ gql`
     query GeographyById($id: Int!) {
   geography(id: $id) {
     ...GeographyDetails
+    clippingLayers {
+      id
+      operationType
+      templateId
+      cql2Query
+      dataLayer {
+        ...ClippingLayerDetails
+        tableOfContentsItem {
+          title
+          id
+        }
+      }
+    }
   }
 }
-    ${GeographyDetailsFragmentDoc}`;
+    ${GeographyDetailsFragmentDoc}
+${ClippingLayerDetailsFragmentDoc}`;
 export const DeleteGeographyDocument = /*#__PURE__*/ gql`
     mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
   deleteGeographyAndTableOfContentsItems(
@@ -28350,6 +28386,7 @@ export const namedOperations = {
     SketchPresent: 'SketchPresent',
     FileUploadDetails: 'FileUploadDetails',
     SpriteDetails: 'SpriteDetails',
+    ClippingDataSourceDetails: 'ClippingDataSourceDetails',
     ClippingLayerDetails: 'ClippingLayerDetails',
     GeographyDetails: 'GeographyDetails',
     MapEssentials: 'MapEssentials',

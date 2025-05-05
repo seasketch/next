@@ -1,22 +1,26 @@
+fragment ClippingDataSourceDetails on DataSource {
+  id
+  type
+  url
+  dataLibraryTemplateId
+  createdAt
+  authorProfile {
+    ...UserProfileDetails
+  }
+  outputs {
+    id
+    type
+    url
+  }
+}
+
 fragment ClippingLayerDetails on DataLayer {
   id
   version
   mapboxGlStyles
   sourceLayer
   dataSource {
-    id
-    type
-    url
-    dataLibraryTemplateId
-    createdAt
-    authorProfile {
-      ...UserProfileDetails
-    }
-    outputs {
-      id
-      type
-      url
-    }
+    ...ClippingDataSourceDetails
   }
 }
 
@@ -84,6 +88,19 @@ mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
 query GeographyById($id: Int!) {
   geography(id: $id) {
     ...GeographyDetails
+    clippingLayers {
+      id
+      operationType
+      templateId
+      cql2Query
+      dataLayer {
+        ...ClippingLayerDetails
+        tableOfContentsItem {
+          title
+          id
+        }
+      }
+    }
   }
 }
 

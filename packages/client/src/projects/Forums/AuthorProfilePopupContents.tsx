@@ -35,7 +35,7 @@ export default function AuthorProfilePopupContents({
         <button
           autoFocus
           className="absolute"
-          style={{ left: -999 }}
+          style={{ left: -9999 }}
           onClick={onClose}
         >
           <Trans>close</Trans>
