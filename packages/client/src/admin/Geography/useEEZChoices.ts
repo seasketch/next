@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
-import { useEezLayerQuery } from "../../generated/graphql";
+import {
+  DataUploadOutputType,
+  useEezLayerQuery,
+} from "../../generated/graphql";
 
 type EEZProps = {
   MRGID_EEZ: number;
@@ -30,12 +33,23 @@ export default function useEEZChoices() {
 
   useEffect(() => {
     if (data?.eezlayer?.dataLayer?.dataSource?.url) {
-      const sourceUrl = data.eezlayer.dataLayer.dataSource.url;
+      const fgb = (data.eezlayer.dataLayer.dataSource.outputs || []).find(
+        (output) => output.type === DataUploadOutputType.FlatGeobuf
+      );
+      if (!fgb) {
+        setState({
+          loading: false,
+          error: new Error(
+            `No FlatGeobuf output found for EEZ layer ${data.eezlayer.dataLayer.id}`
+          ),
+          data: [],
+        });
+        return;
+      }
+      const Url = new URL(fgb.url);
+      const dataset = new URL(fgb.url).pathname;
       // eslint-disable-next-line i18next/no-literal-string
-      const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${sourceUrl
-        .split("/")
-        .slice(3)
-        .join("/")}.fgb&v=3`;
+      const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
       fetch(url)
         .then((response) => {
           if (!response.ok) {

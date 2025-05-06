@@ -72,6 +72,11 @@ query EEZLayer {
         url
         type
         geostats
+        outputs {
+          id
+          type
+          url
+        }
       }
     }
   }

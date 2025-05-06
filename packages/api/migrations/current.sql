@@ -165,3 +165,24 @@ grant execute on function compute_project_geography_hash(geog_id integer) to sea
 
 grant execute on function digest(bytea, text) to anon;
 grant execute on function digest(text, text) to anon;
+
+create or replace function geography_clipping_layers()
+  returns setof data_layers
+  language sql
+  stable
+  security definer
+  as $$
+    select * from data_layers where id in (
+      select 
+        data_layer_id 
+      from 
+        table_of_contents_items 
+      where project_id = (
+        select id from projects where slug = 'superuser'
+      ) and data_library_template_id in (
+        'DAYLIGHT_COASTLINE', 
+        'MARINE_REGIONS_EEZ_LAND_JOINED',
+        'MARINE_REGIONS_TERRITORIAL_SEA'
+      ) and is_draft = true
+    )
+  $$;

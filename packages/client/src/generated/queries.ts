@@ -19598,6 +19598,10 @@ export type EezLayerQuery = (
       & { dataSource?: Maybe<(
         { __typename?: 'DataSource' }
         & Pick<DataSource, 'id' | 'url' | 'type' | 'geostats'>
+        & { outputs?: Maybe<Array<(
+          { __typename?: 'DataUploadOutput' }
+          & Pick<DataUploadOutput, 'id' | 'type' | 'url'>
+        )>> }
       )> }
     )> }
   )> }
@@ -26138,6 +26142,11 @@ export const EezLayerDocument = /*#__PURE__*/ gql`
         url
         type
         geostats
+        outputs {
+          id
+          type
+          url
+        }
       }
     }
   }
