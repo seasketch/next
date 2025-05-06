@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
 import { ReactNode, useMemo } from "react";
 import { CircleIcon, Pencil1Icon } from "@radix-ui/react-icons";
@@ -24,7 +24,6 @@ export type CreateGeographyWizardState = {
     | "MARINE_REGIONS_EEZ_LAND_JOINED"
     | "DAYLIGHT_COASTLINE"
     | "MARINE_REGIONS_TERRITORIAL_SEA"
-    | "MARINE_REGIONS_CONTIGUOUS_ZONE"
     | "MARINE_REGIONS_HIGH_SEAS";
   selectedEEZs?: number[];
   multipleEEZHandling: "separate" | "combine";
@@ -143,26 +142,9 @@ export default function CreateGeographyWizard({
             disabled={mutationState.loading}
             checked={usedTemplates.includes("territorial_sea")}
             description={t(
-              "Include 12nm boundaries for one or more nations using data from MarineRegions.org"
+              "Include nearshore, 12nm boundaries for one or more nations based on data from MarineRegions.org"
             )}
             onClick={() => {}}
-          />
-          <GeographyTypeChoice
-            disabled={mutationState.loading}
-            label={t("Contiguous Zone")}
-            checked={usedTemplates.includes("contiguous_zone")}
-            description={t(
-              "Represent the 24nm contiguous zone using data from MarineRegions.org"
-            )}
-            onClick={() => {
-              setState((prev) => {
-                return {
-                  ...prev,
-                  step: "config",
-                  template: "MARINE_REGIONS_CONTIGUOUS_ZONE",
-                };
-              });
-            }}
           />
           <GeographyTypeChoice
             label={t("High Seas")}
@@ -220,6 +202,64 @@ export default function CreateGeographyWizard({
           />
         </div>
       )}
+      {state.step === "config" &&
+        state.template === "MARINE_REGIONS_HIGH_SEAS" && (
+          <div className="w-144 bg-white">
+            <div className="p-4">
+              <h3 className="text-sm text-gray-500">{t("High Seas")}</h3>
+              <p className="py-2">
+                <Trans ns="admin:geography">
+                  This geography can be used to clip sketches exclusively to
+                  areas beyond national jurisdiction and is based on data from{" "}
+                  <a
+                    target="_blank"
+                    className="text-primary-500 underline"
+                    href="https://marineregions.org"
+                  >
+                    MarineRegions.org
+                  </a>
+                  .
+                </Trans>
+              </p>
+            </div>
+            <div className="bg-gray-100 border-t p-2 px-4 space-x-2 mt-2">
+              <Button
+                disabled={mutationState.loading}
+                label={t("Cancel")}
+                onClick={onRequestClose}
+              />
+              <Button
+                disabled={mutationState.loading}
+                loading={mutationState.loading}
+                label={t("Create Geography")}
+                primary
+                autofocus
+                onClick={() => {
+                  const input: CreateGeographyArgs[] = [];
+                  input.push({
+                    slug: getSlug(),
+                    name: "High Seas",
+                    clientTemplate: "high_seas",
+                    clippingLayers: [
+                      {
+                        templateId: "MARINE_REGIONS_HIGH_SEAS",
+                        dataLayerId: eezLayerId,
+                        operationType: GeographyLayerOperation.Intersect,
+                      },
+                    ],
+                  });
+                  mutation({
+                    variables: {
+                      geographies: input,
+                    },
+                  }).then(() => {
+                    onRequestClose();
+                  });
+                }}
+              />
+            </div>
+          </div>
+        )}
       {state.step === "config" &&
         state.template === "MARINE_REGIONS_EEZ_LAND_JOINED" &&
         chosenEEZs?.length && (

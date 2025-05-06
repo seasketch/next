@@ -37,6 +37,8 @@ import EditGeographyModal from "./EditGeographyModal";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
+const HIGH_SEAS = "MARINE_REGIONS_HIGH_SEAS";
+const TERRITORIAL_SEA = "MARINE_REGIONS_TERRITORIAL_SEA";
 
 export default function GeographyAdmin() {
   const { t } = useTranslation("admin:geography");
@@ -88,6 +90,14 @@ export default function GeographyAdmin() {
 
   const eez = data?.geographyClippingLayers?.find(
     (l) => l.dataSource?.dataLibraryTemplateId === EEZ
+  );
+
+  const highSeas = data?.geographyClippingLayers?.find(
+    (l) => l.dataSource?.dataLibraryTemplateId === HIGH_SEAS
+  );
+
+  const territorialSea = data?.geographyClippingLayers?.find(
+    (l) => l.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
   );
 
   const hasBuiltInLayers = Boolean(coastline) && Boolean(eez);
@@ -710,6 +720,8 @@ export default function GeographyAdmin() {
                   <span className="flex-1">{geog.name}</span>
                   <span className="space-x-2 flex items-center">
                     <button
+                      disabled={!geog.bounds}
+                      className="disabled:opacity-20"
                       onClick={() => {
                         if (geog.bounds) {
                           map?.fitBounds(

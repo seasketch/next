@@ -271,6 +271,7 @@ export default function EditGeographyModal({
                 await deleteMutation({
                   variables: { id },
                 });
+                onRequestClose();
               },
             });
           },

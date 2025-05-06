@@ -134,7 +134,6 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
       },
       GeographyUpdatedPayload: {
         geography: async (_query, args, context, resolveInfo) => {
-          console.log("geog", context.geographyId);
           const rows = await resolveInfo.graphile.selectGraphQLResultFromTable(
             sql.fragment`project_geography`,
             (tableAlias, queryBuilder) => {
@@ -254,7 +253,10 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 url: string;
               }[]
             ).map(async ({ id, cql2_query, template_id, url }) => {
-              if (template_id === "DAYLIGHT_COASTLINE") {
+              if (
+                template_id === "DAYLIGHT_COASTLINE" ||
+                template_id === "MARINE_REGIONS_HIGH_SEAS"
+              ) {
                 // don't return a bounding box for the whole planet
                 return;
               }
