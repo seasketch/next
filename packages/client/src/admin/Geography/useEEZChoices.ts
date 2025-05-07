@@ -25,10 +25,10 @@ export default function useEEZChoices() {
     loading: boolean;
     error?: Error;
     dataLayerId?: number;
-    data: { label: string; value: number; data: EEZProps }[];
+    eezs: { label: string; value: number; data: EEZProps }[];
   }>({
     loading: true,
-    data: [],
+    eezs: [],
   });
 
   useEffect(() => {
@@ -42,12 +42,11 @@ export default function useEEZChoices() {
           error: new Error(
             `No FlatGeobuf output found for EEZ layer ${data.eezlayer.dataLayer.id}`
           ),
-          data: [],
+          eezs: [],
         });
         return;
       }
-      const Url = new URL(fgb.url);
-      const dataset = new URL(fgb.url).pathname;
+      const dataset = new URL(fgb.url).pathname.replace(/^\//, "");
       // eslint-disable-next-line i18next/no-literal-string
       const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
       fetch(url)
@@ -75,7 +74,7 @@ export default function useEEZChoices() {
               .filter((choice: any) => choice.label && choice.value); // filter out empty labels/values
             setState({
               loading: false,
-              data: choices,
+              eezs: choices,
               dataLayerId: data.eezlayer?.dataLayer?.id || undefined,
             });
           }
@@ -88,7 +87,7 @@ export default function useEEZChoices() {
             error: new Error(
               `Failed to fetch EEZ choices from ${data?.eezlayer?.dataLayer?.dataSource?.url}: ${error.message}`
             ),
-            data: [],
+            eezs: [],
           });
         });
     }

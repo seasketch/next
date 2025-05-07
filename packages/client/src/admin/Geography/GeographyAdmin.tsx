@@ -115,7 +115,7 @@ export default function GeographyAdmin() {
       ...prevState,
       selectedEEZs: selectedGroups.map((group) => group.value),
     }));
-    const eezs = eezChoices.data.filter((choice) =>
+    const eezs = eezChoices.eezs.filter((choice) =>
       selectedGroups.map((group) => group.value).includes(choice.value)
     );
     const bboxes = eezs.map((choice) => choice.data?.bbox);
@@ -877,10 +877,10 @@ export default function GeographyAdmin() {
                 description={t(
                   "Nations may have more than one polygon associated with their EEZ. You should select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
                 )}
-                groups={eezChoices.data}
+                groups={eezChoices.eezs}
                 value={eezPickerState.selectedEEZs
                   .map((id) => {
-                    const match = eezChoices.data.find(
+                    const match = eezChoices.eezs.find(
                       (choice) => choice.value === id
                     );
                     if (!match) {
@@ -925,7 +925,7 @@ export default function GeographyAdmin() {
                       selectedEEZs: eezPickerState.selectedEEZs,
                       resultResolver: undefined,
                     }));
-                    const eezs = eezChoices.data.filter((choice) =>
+                    const eezs = eezChoices.eezs.filter((choice) =>
                       eezPickerState.selectedEEZs.includes(choice.value)
                     );
                     const bboxes = eezs.map((choice) => choice.data?.bbox);

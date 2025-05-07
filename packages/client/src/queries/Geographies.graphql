@@ -36,6 +36,7 @@ fragment GeographyDetails on Geography {
     operationType
     templateId
     cql2Query
+    objectKey
     dataLayer {
       ...ClippingLayerDetails
     }

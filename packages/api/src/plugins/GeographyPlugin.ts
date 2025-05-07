@@ -203,6 +203,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 ".fgb",
             }).toString();
             const url = `https://overlay.seasketch.org/properties?${queryString}`;
+            console.log("url", url);
             const response = await fetch(url);
             if (!response.ok) {
               throw new Error(
@@ -232,7 +233,8 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               geography_clipping_layers.id,
               geography_clipping_layers.cql2_query,
               geography_clipping_layers.template_id,
-              data_sources.url
+              geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key,
+              data_sources.url as url
             from
               geography_clipping_layers
             inner join
@@ -251,8 +253,9 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 cql2_query?: string;
                 template_id?: string;
                 url: string;
+                object_key: string;
               }[]
-            ).map(async ({ id, cql2_query, template_id, url }) => {
+            ).map(async ({ id, cql2_query, template_id, url, object_key }) => {
               if (
                 template_id === "DAYLIGHT_COASTLINE" ||
                 template_id === "MARINE_REGIONS_HIGH_SEAS"
@@ -285,10 +288,10 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   includeProperties: "_",
                   bbox: "true",
                   cql2JSONQuery: JSON.stringify(cql2_query),
-                  dataset:
-                    url.replace("https://tiles.seasketch.org/", "") + ".fgb",
+                  dataset: new URL(object_key).pathname.replace(/^\//, ""),
                 }).toString();
                 const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
+                console.log("overlayUrl", overlayUrl);
                 const response = await fetch(overlayUrl);
                 if (!response.ok) {
                   throw new Error(

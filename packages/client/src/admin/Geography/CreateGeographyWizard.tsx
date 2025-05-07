@@ -59,7 +59,7 @@ export default function CreateGeographyWizard({
 
   const chosenEEZs = useMemo(() => {
     if (state.selectedEEZs && eezChoices) {
-      return eezChoices.data.filter((choice) =>
+      return eezChoices.eezs.filter((choice) =>
         state.selectedEEZs!.includes(choice.value)
       );
     }
@@ -358,7 +358,7 @@ export default function CreateGeographyWizard({
                   const input: CreateGeographyArgs[] = [];
                   if (state.multipleEEZHandling === "separate") {
                     for (const eez of state.selectedEEZs) {
-                      const label = eezChoices.data.find(
+                      const label = eezChoices.eezs.find(
                         (c) => c.value === eez
                       )?.label;
                       input.push(
@@ -378,14 +378,14 @@ export default function CreateGeographyWizard({
                         state.selectedEEZs!,
                         state.selectedEEZs.length > 1
                           ? "EEZ: " +
-                              eezChoices.data
+                              eezChoices.eezs
                                 .filter((c) =>
                                   state.selectedEEZs?.includes(c.value)
                                 )
                                 .map((c) => c.label)
                                 .join(", ")
                           : "EEZ: " +
-                              eezChoices.data.find(
+                              eezChoices.eezs.find(
                                 (c) => c.value === state.selectedEEZs![0]
                               )?.label!,
                         state.eraseLand,

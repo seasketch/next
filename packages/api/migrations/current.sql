@@ -186,3 +186,17 @@ create or replace function geography_clipping_layers()
       ) and is_draft = true
     )
   $$;
+
+
+create or replace function geography_clipping_layers_object_key(g geography_clipping_layers)
+  returns text
+  language sql
+  stable
+  security definer
+  as $$
+    select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
+      select data_source_id from data_layers where id = g.data_layer_id
+    );
+  $$;
+
+  grant execute on function geography_clipping_layers_object_key(g geography_clipping_layers) to anon;
