@@ -301,7 +301,9 @@ export default function EditGeographyModal({
               <Trans ns="admin:geography">
                 These layers define the bounds of this geography, performing
                 intersection or difference operations against user-drawn
-                sketches.
+                sketches. You will usually want one intersection layer to define
+                the geography bounds and one or more difference layers to remove
+                areas from that primary layer.
               </Trans>
             </p>
             <div className="border mt-2 rounded-sm">

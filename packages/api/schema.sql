@@ -503,6 +503,16 @@ COMMENT ON TYPE public.form_template_type IS 'Indicates which features should us
 
 
 --
+-- Name: geography_layer_operation; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.geography_layer_operation AS ENUM (
+    'intersect',
+    'difference'
+);
+
+
+--
 -- Name: interactivity_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -4903,6 +4913,38 @@ CREATE FUNCTION public.collection_as_geojson(id integer) RETURNS jsonb
 --
 
 COMMENT ON FUNCTION public.collection_as_geojson(id integer) IS '@omit';
+
+
+--
+-- Name: compute_project_geography_hash(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.compute_project_geography_hash(geog_id integer) RETURNS text
+    LANGUAGE plpgsql
+    AS $$
+declare
+  hash_input text;
+begin
+  select string_agg(
+    concat_ws(
+      ':',
+      data_layer_id::text,
+      operation_type::text,
+      cql2_query::text
+    ),
+    '|'
+    order by id
+  ) into hash_input
+  from geography_clipping_layers
+  where project_geography_id = geog_id;
+
+  if hash_input is null then
+    return null;
+  end if;
+
+  return encode(digest(hash_input, 'sha256'), 'hex');
+end;
+$$;
 
 
 --
@@ -9897,7 +9939,9 @@ CREATE FUNCTION public.geography_clipping_layers() RETURNS SETOF public.data_lay
         select id from projects where slug = 'superuser'
       ) and data_library_template_id in (
         'DAYLIGHT_COASTLINE', 
-        'MARINE_REGIONS_EEZ_LAND_JOINED'
+        'MARINE_REGIONS_EEZ_LAND_JOINED',
+        'MARINE_REGIONS_TERRITORIAL_SEA',
+        'MARINE_REGIONS_HIGH_SEAS'
       ) and is_draft = true
     )
   $$;
@@ -9908,6 +9952,34 @@ CREATE FUNCTION public.geography_clipping_layers() RETURNS SETOF public.data_lay
 --
 
 COMMENT ON FUNCTION public.geography_clipping_layers() IS '@simpleCollections only';
+
+
+--
+-- Name: geography_clipping_layers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.geography_clipping_layers (
+    id integer NOT NULL,
+    project_geography_id integer NOT NULL,
+    data_layer_id integer NOT NULL,
+    operation_type public.geography_layer_operation NOT NULL,
+    cql2_query jsonb,
+    template_id text,
+    CONSTRAINT geography_clipping_layers_cql2_query_check CHECK (((jsonb_typeof(cql2_query) = 'object'::text) AND (cql2_query ? 'op'::text) AND (cql2_query ? 'args'::text)))
+);
+
+
+--
+-- Name: geography_clipping_layers_object_key(public.geography_clipping_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
+      select data_source_id from data_layers where id = g.data_layer_id
+    );
+  $$;
 
 
 --
@@ -12106,6 +12178,48 @@ CREATE FUNCTION public.project_background_jobs_esri_feature_layer_conversion_tas
 
 
 --
+-- Name: project_geography; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.project_geography (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    hash text,
+    translated_props jsonb,
+    client_template text
+);
+
+
+--
+-- Name: TABLE project_geography; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.project_geography IS '@simpleCollections only';
+
+
+--
+-- Name: project_geography_clipping_layers(public.project_geography); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_geography_clipping_layers(geography public.project_geography) RETURNS SETOF public.geography_clipping_layers
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from geography_clipping_layers
+    where project_geography_id = geography.id;
+  $$;
+
+
+--
+-- Name: FUNCTION project_geography_clipping_layers(geography public.project_geography); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) IS '@simpleCollections only
+@description "Returns the clipping layers for a given geography."';
+
+
+--
 -- Name: project_groups_member_count(public.project_groups); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12813,31 +12927,6 @@ CREATE FUNCTION public.projects_estimate_deleted_data_for_retention_change(proje
         raise exception 'permission denied';
       end if;
     end;
-  $$;
-
-
---
--- Name: project_geography_settings; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.project_geography_settings (
-    id integer NOT NULL,
-    project_id integer,
-    enable_land_clipping boolean DEFAULT true,
-    eez_selections text[] DEFAULT '{}'::text[],
-    mrgid_eez integer[] DEFAULT '{}'::integer[],
-    enable_eez_clipping boolean DEFAULT false
-);
-
-
---
--- Name: projects_geography_settings(public.projects); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.projects_geography_settings(p public.projects) RETURNS public.project_geography_settings
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select * from project_geography_settings where project_id = p.id;
   $$;
 
 
@@ -17802,25 +17891,6 @@ CREATE FUNCTION public.update_data_hosting_quota(project_id integer, quota bigin
 
 
 --
--- Name: update_eez_clipping_settings(text, text[], integer[], boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean) RETURNS public.project_geography_settings
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    update project_geography_settings
-    set eez_selections = selections, mrgid_eez = ids, enable_eez_clipping = (
-      case
-        when array_length(selections, 1) is null or selections = '{}' or array_length(ids, 1) is null or ids = '{}' then false
-        else enable_clipping
-      end
-    )
-    where project_id = (select id from projects where projects.slug = update_eez_clipping_settings.slug and session_is_admin(projects.id))
-    returning *;
-  $$;
-
-
---
 -- Name: update_google_maps_tile_api_session(text, text, text, timestamp with time zone, text, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -17857,20 +17927,6 @@ CREATE FUNCTION public.update_google_maps_tile_api_session(p_map_type text, p_la
     end;
 
   $$;
-
-
---
--- Name: update_land_clipping_settings(text, boolean); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.update_land_clipping_settings(slug text, enable_clipping boolean) RETURNS public.project_geography_settings
-    LANGUAGE sql SECURITY DEFINER
-    AS $$
-    update project_geography_settings
-    set enable_land_clipping = enable_clipping
-    where project_id = (select id from projects where projects.slug = update_land_clipping_settings.slug and session_is_admin(projects.id))
-    returning *;
-    $$;
 
 
 --
@@ -17966,6 +18022,38 @@ CREATE FUNCTION public.update_post("postId" integer, message jsonb) RETURNS publ
 COMMENT ON FUNCTION public.update_post("postId" integer, message jsonb) IS '
 Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
 ';
+
+
+--
+-- Name: update_project_geography_hash(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_project_geography_hash() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  update project_geography
+    set hash = compute_project_geography_hash(NEW.project_geography_id)
+    where id = NEW.project_geography_id;
+  return null;
+end;
+$$;
+
+
+--
+-- Name: update_project_geography_hash_on_delete(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_project_geography_hash_on_delete() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  update project_geography
+    set hash = compute_project_geography_hash(OLD.project_geography_id)
+    where id = OLD.project_geography_id;
+  return null;
+end;
+$$;
 
 
 --
@@ -19121,6 +19209,20 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
+-- Name: geography_clipping_layers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.geography_clipping_layers ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.geography_clipping_layers_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: global_activity; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -19406,11 +19508,11 @@ ALTER TABLE public.posts ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
--- Name: project_geography_settings_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+-- Name: project_geography_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
-ALTER TABLE public.project_geography_settings ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.project_geography_settings_id_seq
+ALTER TABLE public.project_geography ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.project_geography_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -20177,6 +20279,14 @@ ALTER TABLE ONLY public.forums
 
 
 --
+-- Name: geography_clipping_layers geography_clipping_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geography_clipping_layers
+    ADD CONSTRAINT geography_clipping_layers_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: global_activity global_activity_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20297,11 +20407,11 @@ ALTER TABLE ONLY public.project_background_jobs
 
 
 --
--- Name: project_geography_settings project_geography_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+-- Name: project_geography project_geography_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.project_geography_settings
-    ADD CONSTRAINT project_geography_settings_pkey PRIMARY KEY (id);
+ALTER TABLE ONLY public.project_geography
+    ADD CONSTRAINT project_geography_pkey PRIMARY KEY (id);
 
 
 --
@@ -20941,6 +21051,20 @@ CREATE INDEX fts_sv_idx ON public.table_of_contents_items USING gin (fts_sv);
 
 
 --
+-- Name: geography_clipping_layers_data_layer_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX geography_clipping_layers_data_layer_id_idx ON public.geography_clipping_layers USING btree (data_layer_id);
+
+
+--
+-- Name: geography_clipping_layers_project_geography_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX geography_clipping_layers_project_geography_id_idx ON public.geography_clipping_layers USING btree (project_geography_id);
+
+
+--
 -- Name: idx_sprites_deleted; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -21071,6 +21195,13 @@ CREATE INDEX project_access_control ON public.projects USING btree (access_contr
 --
 
 CREATE INDEX project_background_jobs_project_id_state_idx ON public.project_background_jobs USING btree (project_id, state);
+
+
+--
+-- Name: project_geography_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX project_geography_project_id_idx ON public.project_geography USING btree (project_id);
 
 
 --
@@ -21774,13 +21905,6 @@ CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.pos
 
 
 --
--- Name: project_geography_settings prevent_eez_clipping_without_selections; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER prevent_eez_clipping_without_selections BEFORE INSERT OR UPDATE ON public.project_geography_settings FOR EACH ROW EXECUTE FUNCTION public.prevent_eez_clipping_without_selections();
-
-
---
 -- Name: project_background_jobs project_background_job_notify_subscriptions; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -21869,6 +21993,20 @@ CREATE TRIGGER survey_invites_before_update BEFORE UPDATE ON public.survey_invit
 --
 
 CREATE TRIGGER table_of_contents_items_project_update AFTER INSERT OR DELETE OR UPDATE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.table_of_contents_items_project_update();
+
+
+--
+-- Name: geography_clipping_layers trg_update_geog_hash_delete; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_update_geog_hash_delete AFTER DELETE ON public.geography_clipping_layers FOR EACH ROW EXECUTE FUNCTION public.update_project_geography_hash_on_delete();
+
+
+--
+-- Name: geography_clipping_layers trg_update_geog_hash_insert; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_update_geog_hash_insert AFTER INSERT OR UPDATE OF data_layer_id, operation_type, cql2_query ON public.geography_clipping_layers FOR EACH ROW EXECUTE FUNCTION public.update_project_geography_hash();
 
 
 --
@@ -22370,6 +22508,22 @@ COMMENT ON CONSTRAINT forums_project_id_fkey ON public.forums IS '@simpleCollect
 
 
 --
+-- Name: geography_clipping_layers geography_clipping_layers_data_layer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geography_clipping_layers
+    ADD CONSTRAINT geography_clipping_layers_data_layer_id_fkey FOREIGN KEY (data_layer_id) REFERENCES public.data_layers(id) ON DELETE CASCADE;
+
+
+--
+-- Name: geography_clipping_layers geography_clipping_layers_project_geography_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.geography_clipping_layers
+    ADD CONSTRAINT geography_clipping_layers_project_geography_id_fkey FOREIGN KEY (project_geography_id) REFERENCES public.project_geography(id) ON DELETE CASCADE;
+
+
+--
 -- Name: invite_emails invite_emails_project_invite_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -22529,11 +22683,11 @@ ALTER TABLE ONLY public.project_background_jobs
 
 
 --
--- Name: project_geography_settings project_geography_settings_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+-- Name: project_geography project_geography_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
-ALTER TABLE ONLY public.project_geography_settings
-    ADD CONSTRAINT project_geography_settings_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+ALTER TABLE ONLY public.project_geography
+    ADD CONSTRAINT project_geography_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -23108,6 +23262,38 @@ ALTER TABLE graphile_worker.jobs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE graphile_worker.known_crontabs ENABLE ROW LEVEL SECURITY;
 
 --
+-- Name: geography_clipping_layers Allow all users to read geography clipping layers; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow all users to read geography clipping layers" ON public.geography_clipping_layers FOR SELECT USING (true);
+
+
+--
+-- Name: project_geography Allow all users to read project geography; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow all users to read project geography" ON public.project_geography FOR SELECT USING (true);
+
+
+--
+-- Name: geography_clipping_layers Allow project owners to insert, update, and delete their own ge; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow project owners to insert, update, and delete their own ge" ON public.geography_clipping_layers TO seasketch_user USING (public.session_is_admin(( SELECT project_geography.project_id
+   FROM public.project_geography
+  WHERE (project_geography.id = geography_clipping_layers.project_geography_id)))) WITH CHECK (public.session_is_admin(( SELECT project_geography.project_id
+   FROM public.project_geography
+  WHERE (project_geography.id = geography_clipping_layers.project_geography_id))));
+
+
+--
+-- Name: project_geography Allow project owners to insert, update, and delete their own pr; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Allow project owners to insert, update, and delete their own pr" ON public.project_geography TO seasketch_user USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
 -- Name: access_control_lists; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -23416,6 +23602,12 @@ CREATE POLICY forums_select ON public.forums FOR SELECT USING ((public.session_h
 
 
 --
+-- Name: geography_clipping_layers; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.geography_clipping_layers ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: api_keys insert_api_keys; Type: POLICY; Schema: public; Owner: -
 --
 
@@ -23574,6 +23766,12 @@ ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
+
+--
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -26443,6 +26641,14 @@ GRANT ALL ON FUNCTION public.collection_as_geojson(id integer) TO anon;
 
 
 --
+-- Name: FUNCTION compute_project_geography_hash(geog_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.compute_project_geography_hash(geog_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.compute_project_geography_hash(geog_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION confirm_onboarded(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -27682,6 +27888,7 @@ GRANT ALL ON FUNCTION public.deny_participant("projectId" integer, "userId" inte
 --
 
 REVOKE ALL ON FUNCTION public.digest(bytea, text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.digest(bytea, text) TO anon;
 
 
 --
@@ -27689,6 +27896,7 @@ REVOKE ALL ON FUNCTION public.digest(bytea, text) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.digest(text, text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.digest(text, text) TO anon;
 
 
 --
@@ -28128,6 +28336,22 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
+
+
+--
+-- Name: TABLE geography_clipping_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.geography_clipping_layers TO seasketch_user;
+GRANT SELECT ON TABLE public.geography_clipping_layers TO anon;
+
+
+--
+-- Name: FUNCTION geography_clipping_layers_object_key(g public.geography_clipping_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) TO anon;
 
 
 --
@@ -30443,6 +30667,22 @@ GRANT ALL ON FUNCTION public.project_background_jobs_esri_feature_layer_conversi
 
 
 --
+-- Name: TABLE project_geography; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.project_geography TO anon;
+GRANT INSERT,DELETE,UPDATE ON TABLE public.project_geography TO seasketch_user;
+
+
+--
+-- Name: FUNCTION project_geography_clipping_layers(geography public.project_geography); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) TO anon;
+
+
+--
 -- Name: FUNCTION project_groups_member_count(g public.project_groups); Type: ACL; Schema: public; Owner: -
 --
 
@@ -30624,14 +30864,6 @@ GRANT ALL ON FUNCTION public.projects_eligable_downloadable_layers_count(p publi
 
 REVOKE ALL ON FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_estimate_deleted_data_for_retention_change(project public.projects, new_retention_period interval) TO seasketch_user;
-
-
---
--- Name: FUNCTION projects_geography_settings(p public.projects); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.projects_geography_settings(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_geography_settings(p public.projects) TO anon;
 
 
 --
@@ -34865,26 +35097,10 @@ GRANT ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota
 
 
 --
--- Name: FUNCTION update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_eez_clipping_settings(slug text, selections text[], ids integer[], enable_clipping boolean) TO seasketch_user;
-
-
---
 -- Name: FUNCTION update_google_maps_tile_api_session(p_map_type text, p_language text, p_region text, p_expires_at timestamp with time zone, p_session text, p_tile_width integer, p_tile_height integer, p_image_format text); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.update_google_maps_tile_api_session(p_map_type text, p_language text, p_region text, p_expires_at timestamp with time zone, p_session text, p_tile_width integer, p_tile_height integer, p_image_format text) FROM PUBLIC;
-
-
---
--- Name: FUNCTION update_land_clipping_settings(slug text, enable_clipping boolean); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.update_land_clipping_settings(slug text, enable_clipping boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_land_clipping_settings(slug text, enable_clipping boolean) TO seasketch_user;
 
 
 --
@@ -34901,6 +35117,20 @@ GRANT ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret
 
 REVOKE ALL ON FUNCTION public.update_post("postId" integer, message jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_post("postId" integer, message jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_project_geography_hash(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_project_geography_hash() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION update_project_geography_hash_on_delete(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_project_geography_hash_on_delete() FROM PUBLIC;
 
 
 --
