@@ -4,8 +4,11 @@ import { SpanJSONOutput } from "../../draw/preprocess";
 import { StopwatchIcon } from "@radix-ui/react-icons";
 import { Trans } from "react-i18next";
 // Fix d3 imports
-import { scaleLinear } from "d3-scale";
-import { ticks as d3Ticks } from "d3-array";
+import * as d3Scale from "d3-scale";
+import * as d3Array from "d3-array";
+
+const scaleLinear = d3Scale.scaleLinear;
+const d3Ticks = d3Array.ticks;
 
 const SIDEBAR_WIDTH = 160; // px, matches .w-40 min-w-40
 
