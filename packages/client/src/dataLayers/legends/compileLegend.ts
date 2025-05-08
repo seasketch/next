@@ -7,7 +7,7 @@ import {
   Layer,
   LineLayer,
 } from "mapbox-gl";
-import styleSpec from "mapbox-gl/src/style-spec/reference/v8.json";
+import styleSpec from "@mapbox/mapbox-gl-style-spec/reference/v8.json";
 import { ExpressionEvaluator, RGBA } from "./ExpressionEvaluator";
 import {
   GLLegendBubblePanel,
@@ -1311,7 +1311,15 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
             labels.add(prop);
           }
         );
-        const label = labels.size === 1 ? [...labels][0] : undefined;
+        let label = labels.size === 1 ? [...labels][0] : undefined;
+        const metadata: SeaSketchLayerMetadata = layer.metadata || {};
+        if (
+          label &&
+          metadata["s:legend-labels"] &&
+          label in metadata["s:legend-labels"]
+        ) {
+          label = metadata["s:legend-labels"][label];
+        }
         // Special case to consider here when plucking line layers. If there are one
         // or more filtered fill layers remaining, there is a state where none of
         // those filters pass and the line will be rendered without fill. We need
@@ -3565,6 +3573,7 @@ function consolidateNode(node: GroupByFilterNode) {
           listPanels[key] = {
             id: key,
             type: "GLLegendListPanel",
+            // label: subNode.filters.length === 1 ? " " : propName,
             label: propName,
             items: [],
           };

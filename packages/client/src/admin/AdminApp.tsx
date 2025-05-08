@@ -1,30 +1,13 @@
-import React, {
-  useState,
-  useEffect,
-  ReactNode,
-  useMemo,
-  useContext,
-} from "react";
-import {
-  useRouteMatch,
-  useParams,
-  NavLink,
-  Switch,
-  Route,
-  Redirect,
-  useHistory,
-} from "react-router-dom";
+import React, { useState, useEffect, useMemo, useContext } from "react";
+import { useParams, NavLink, Redirect, useHistory } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import { Trans } from "react-i18next";
-import UserSettingsSidebarSkeleton from "./users/UserSettingsSidebarSkeleton";
 import AdminMobileHeader, {
   AdminMobileHeaderState,
   AdminMobileHeaderContext,
 } from "./AdminMobileHeaderContext";
-import PhoneAccessGate from "./PhoneAccessGate";
 import { useAuth0 } from "@auth0/auth0-react";
-import Spinner from "../components/Spinner";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ParticipationStatus } from "../generated/graphql";
 import useDialog from "../components/useDialog";
@@ -33,48 +16,8 @@ import LanguageSelector from "../surveys/LanguageSelector";
 import TranslateIcon from "@heroicons/react/outline/TranslateIcon";
 import { useLocalStorage } from "beautiful-react-hooks";
 import { BookOpenIcon } from "@heroicons/react/outline";
-
-const LazyBasicSettings = React.lazy(
-  /* webpackChunkName: "AdminSettings" */ () => import("./Settings")
-);
-const LazyDataSettings = React.lazy(
-  () =>
-    import(/* webpackChunkName: "AdminDataSettings" */ "./data/DataSettings")
-);
-const LazyUserSettings = React.lazy(
-  () =>
-    import(/* webpackChunkName: "AdminUserSettings" */ "./users/UserSettings")
-);
-const LazySurveyAdmin = React.lazy(
-  () => import(/* webpackChunkName: "AdminSurveys" */ "./surveys/SurveyAdmin")
-);
-
-const LazyForumAdmin = React.lazy(
-  () => import(/* webpackChunkName: "AdminForums" */ "./forums/ForumsAdmin")
-);
-const LazyOfflineAdmin = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "AdminOffline" */ "../offline/AdminOfflineSettingsPage"
-    )
-);
-const LazyActivityAdmin = React.lazy(
-  () => import(/* webpackChunkName: "Activity" */ "./activity/ProjectDashboard")
-);
-
-const LazyBasemapTilingSettingsPage = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "AdminEditBasemapPage" */ "../offline/BasemapTilingSettingsPage"
-    )
-);
-
-const LazySketchingAdmin = React.lazy(
-  () =>
-    import(
-      /* webpackChunkName: "AdminSketching" */ "./sketchClasses/SketchClassAdmin"
-    )
-);
+import { GlobeIcon } from "@radix-ui/react-icons";
+import AdminRouter from "./AdminRouter";
 
 interface Section {
   breadcrumb: string;
@@ -218,6 +161,32 @@ export default function AdminApp() {
       ),
       path: "/admin/data",
     },
+    ...(data?.project?.enableReportBuilder === true
+      ? [
+          {
+            breadcrumb: "Geography",
+            icon: (
+              <svg
+                viewBox="0 0 24 24"
+                height="64"
+                width="64"
+                focusable="false"
+                role="img"
+                fill="currentColor"
+                xmlns="http://www.w3.org/2000/svg"
+                className={iconClassName}
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM6.262 6.072a8.25 8.25 0 1 0 10.562-.766 4.5 4.5 0 0 1-1.318 1.357L14.25 7.5l.165.33a.809.809 0 0 1-1.086 1.085l-.604-.302a1.125 1.125 0 0 0-1.298.21l-.132.131c-.439.44-.439 1.152 0 1.591l.296.296c.256.257.622.374.98.314l1.17-.195c.323-.054.654.036.905.245l1.33 1.108c.32.267.46.694.358 1.1a8.7 8.7 0 0 1-2.288 4.04l-.723.724a1.125 1.125 0 0 1-1.298.21l-.153-.076a1.125 1.125 0 0 1-.622-1.006v-1.089c0-.298-.119-.585-.33-.796l-1.347-1.347a1.125 1.125 0 0 1-.21-1.298L9.75 12l-1.64-1.64a6 6 0 0 1-1.676-3.257l-.172-1.03Z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            ),
+            path: "/admin/geography",
+          },
+        ]
+      : []),
     {
       breadcrumb: "Sketch Classes",
       icon: (
@@ -313,57 +282,11 @@ export default function AdminApp() {
   const [mobileHeaderState, setMobileHeaderState] =
     useState<AdminMobileHeaderState>({});
 
-  let { path, url } = useRouteMatch();
-
   const isFullscreenRoute = useMemo(
     () => /offline\/basemap/.test(window.location.pathname),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [window.location.pathname]
   );
-
-  const Container = useMemo(() => {
-    let Container = ({ children }: { children?: ReactNode }) => (
-      <>
-        <AdminMobileHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
-        <div className="pt-12 md:pt-0 flex bg-gray-100">
-          {/* <!-- Off-canvas menu for mobile --> */}
-          <MobileSidebar
-            sections={sections}
-            slug={slug}
-            projectName={data?.project?.name || "▌"}
-            open={mobileSidebarOpen}
-            onRequestClose={() => setMobileSidebarOpen(false)}
-            supportedLanguages={
-              (data?.project?.supportedLanguages as string[]) || []
-            }
-          />
-
-          {/* <!-- Static sidebar for desktop --> */}
-          <StaticSidebar
-            sections={sections}
-            slug={slug}
-            projectName={data?.project?.name || "▌"}
-            supportedLanguages={
-              (data?.project?.supportedLanguages as string[]) || []
-            }
-          />
-          <div className="flex w-0 flex-1 max-h-screen">
-            {/* Header (mobile-only) */}
-            <main
-              className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto"
-              tabIndex={0}
-            >
-              {children}
-            </main>
-          </div>
-        </div>
-      </>
-    );
-    if (isFullscreenRoute) {
-      Container = ({ children }: { children?: ReactNode }) => <>{children}</>;
-    }
-    return Container;
-  }, [isFullscreenRoute, data?.project?.slug, data?.project?.isOfflineEnabled]);
 
   if (data && data.project?.sessionIsAdmin === false) {
     return <Redirect to={`/${slug}`} />;
@@ -373,88 +296,48 @@ export default function AdminApp() {
     <AdminMobileHeaderContext.Provider
       value={{ ...mobileHeaderState, setState: setMobileHeaderState }}
     >
-      <Container>
-        <Switch>
-          <Route exact path={`${path}`}>
-            <React.Suspense fallback={<div></div>}>
-              <LazyBasicSettings />
-            </React.Suspense>
-          </Route>
-          <Route exact path={`${path}/activity`}>
-            <React.Suspense fallback={<Spinner />}>
-              <LazyActivityAdmin />
-            </React.Suspense>
-          </Route>
-          <Route
-            path={[
-              `${path}/users`,
-              `${path}/users`,
-              `${path}/users/participants`,
-              `${path}/users/invited`,
-              `${path}/users/admins`,
-              `${path}/users/invites/unsent`,
-              `${path}/users/invites/sent`,
-              `${path}/users/invites/bounced`,
-              `${path}/users/invites/requests`,
-              `${path}/users/groups/:group`,
-            ]}
-          >
-            <React.Suspense fallback={<UserSettingsSidebarSkeleton />}>
-              <LazyUserSettings />
-            </React.Suspense>
-          </Route>
-          <Route path={`${path}/data`}>
-            {/* <div className="h-screen"> */}
-            <PhoneAccessGate
-              heading={t("Data Layers")}
-              message={t(
-                "Data layer administration requires at least a tablet-sized screen."
-              )}
-            >
-              <React.Suspense fallback={<div></div>}>
-                <LazyDataSettings />
-              </React.Suspense>
-            </PhoneAccessGate>
-            {/* </div> */}
-          </Route>
-          <Route path={`${path}/sketching`}>
-            <React.Suspense fallback={<Spinner />}>
-              <LazySketchingAdmin />
-            </React.Suspense>
-          </Route>
-          <Route exact path={`${path}/forums/:id?`}>
-            <React.Suspense fallback={<Spinner />}>
-              <LazyForumAdmin />
-            </React.Suspense>
-          </Route>
-          <Route path={`${path}/surveys/:surveyId?`}>
-            <React.Suspense fallback={<Spinner />}>
-              <LazySurveyAdmin />
-            </React.Suspense>
-          </Route>
-          <Route
-            exact
-            path={`${path}/offline/basemap/:id`}
-            render={(history) => {
-              const { id } = history.match.params;
-              const search = new URLSearchParams(history.location.search || "");
-              return (
-                <LazyBasemapTilingSettingsPage
-                  id={parseInt(id)}
-                  returnToUrl={search.get("returnToUrl")}
-                />
-              );
-            }}
-          ></Route>
-          <Route path={`${path}/offline/:subpath?`}>
-            <React.Suspense fallback={<Spinner />}>
-              <LazyOfflineAdmin />
-            </React.Suspense>
-          </Route>
-        </Switch>
-        {/* <!-- Replace with your content --> */}
-        {/* <!-- /End replace --> */}
-      </Container>
+      {isFullscreenRoute ? (
+        <AdminRouter />
+      ) : (
+        <>
+          <AdminMobileHeader onOpenSidebar={() => setMobileSidebarOpen(true)} />
+          <div className="pt-12 md:pt-0 flex bg-gray-100">
+            {/* <!-- Off-canvas menu for mobile --> */}
+            <MobileSidebar
+              sections={sections}
+              slug={slug}
+              projectName={data?.project?.name || "▌"}
+              open={mobileSidebarOpen}
+              onRequestClose={() => setMobileSidebarOpen(false)}
+              supportedLanguages={
+                (data?.project?.supportedLanguages as string[]) || []
+              }
+            />
+
+            {/* <!-- Static sidebar for desktop --> */}
+            <StaticSidebar
+              sections={sections}
+              slug={slug}
+              projectName={data?.project?.name || "▌"}
+              supportedLanguages={
+                (data?.project?.supportedLanguages as string[]) || []
+              }
+            />
+            <div key="main-container" className="flex w-0 flex-1 max-h-screen">
+              {/* Header (mobile-only) */}
+              <main
+                key="main"
+                className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto"
+                tabIndex={0}
+              >
+                <AdminRouter />
+              </main>
+            </div>
+          </div>
+        </>
+      )}
+      {/* <!-- Replace with your content --> */}
+      {/* <!-- /End replace --> */}
     </AdminMobileHeaderContext.Provider>
   );
 }

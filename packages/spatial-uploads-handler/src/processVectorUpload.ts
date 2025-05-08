@@ -60,17 +60,26 @@ export async function processVectorUpload(options: {
   let type: SupportedTypes;
   let { ext } = parsePath(path);
   const isZip = ext === ".zip";
+  const isRar = ext === ".rar";
   let metadata: GeostatsMetadata | null = null;
 
   // Step 1) Unzip if necessary, and assume it is a shapefile
-  if (isZip) {
+  if (isZip || isRar) {
     await updateProgress("running", "unzipping");
     // // Unzip the file
-    await logger.exec(
-      ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
-      "Problem unzipping file",
-      1 / 30
-    );
+    if (isZip) {
+      await logger.exec(
+        ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
+        "Problem unzipping file",
+        1 / 30
+      );
+    } else {
+      await logger.exec(
+        ["unrar", ["x", "-op" + workingDirectory, workingFilePath]],
+        "Problem extracting .rar file",
+        1 / 30
+      );
+    }
 
     await updateProgress("running", "looking for .shp");
     // Find the first shapefile (.shp) in the working Dir
@@ -121,7 +130,13 @@ export async function processVectorUpload(options: {
       throw new Error("No projection file found (.prj) in zip archive");
     }
     if (!shapefile) {
-      throw new Error("No shape-file (.shp) found in zip archive");
+      if (isZip) {
+        throw new Error("No shape-file (.shp) found in zip archive");
+      } else if (isRar) {
+        throw new Error("No shape-file (.shp) found in rar archive");
+      } else {
+        throw new Error("No shape-file (.shp) found in archive");
+      }
     }
 
     // Consider that there may be multiple shapefiles in the zip archive
@@ -204,55 +219,65 @@ export async function processVectorUpload(options: {
     throw new Error("Not a recognized file type");
   }
 
+  let isCorrectProjection = false;
+  if (/World Geodetic System 1984/.test(ogrInfo)) {
+    isCorrectProjection = true;
+  }
+
   // Save original file to the list of outputs, with its determined type
   const originalOutput = {
-    type: type,
+    type,
     filename: jobId + ext,
     remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
     local: originalFilePath,
     size: statSync(originalFilePath).size,
     url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}${ext}`,
     isOriginal: true,
+    isNormalizedOutput: isCorrectProjection && type === "FlatGeobuf",
   };
   outputs.push(originalOutput);
 
-  // Convert vector to a normalized FlatGeobuf file for long-term archiving
-  // and for tiling.
-  const normalizedVectorPath = pathJoin(workingDirectory, jobId + ".fgb");
-  await updateProgress("running", "converting format");
-  await logger.exec(
-    [
-      "ogr2ogr",
+  let normalizedVectorPath = workingFilePath;
+  let normalizedVectorFileSize = statSync(workingFilePath).size;
+  if (!isCorrectProjection || type !== "FlatGeobuf") {
+    // Convert vector to a normalized FlatGeobuf file for long-term archiving
+    // and for tiling.
+    normalizedVectorPath = pathJoin(workingDirectory, jobId + ".fgb");
+    await updateProgress("running", "converting format");
+    await logger.exec(
       [
-        "-skipfailures",
-        "-t_srs",
-        "EPSG:4326",
-        "-nlt",
-        "PROMOTE_TO_MULTI",
-        "-oo",
-        "FLATTEN_NESTED_ATTRIBUTES=yes",
-        "-splitlistfields",
-        normalizedVectorPath,
-        workingFilePath,
-        "-nln",
-        originalName,
+        "ogr2ogr",
+        [
+          "-skipfailures",
+          "-t_srs",
+          "EPSG:4326",
+          "-nlt",
+          "PROMOTE_TO_MULTI",
+          "-oo",
+          "FLATTEN_NESTED_ATTRIBUTES=yes",
+          "-splitlistfields",
+          normalizedVectorPath,
+          workingFilePath,
+          "-nln",
+          originalName,
+        ],
       ],
-    ],
-    "Problem converting to FlatGeobuf",
-    2 / 30
-  );
+      "Problem converting to FlatGeobuf",
+      2 / 30
+    );
 
-  // Save normalized vector to the list of outputs
-  const normalizedVectorFileSize = statSync(normalizedVectorPath).size;
-  outputs.push({
-    type: "FlatGeobuf",
-    filename: `${jobId}.fgb`,
-    remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}.fgb`,
-    local: normalizedVectorPath,
-    size: normalizedVectorFileSize,
-    url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.fgb`,
-    isNormalizedOutput: true,
-  });
+    // Save normalized vector to the list of outputs
+    normalizedVectorFileSize = statSync(normalizedVectorPath).size;
+    outputs.push({
+      type: "FlatGeobuf",
+      filename: `${jobId}.fgb`,
+      remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}.fgb`,
+      local: normalizedVectorPath,
+      size: normalizedVectorFileSize,
+      url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}.fgb`,
+      isNormalizedOutput: true,
+    });
+  }
 
   // Compute metadata useful for cartography and data handling
   const stats = await geostatsForVectorLayers(normalizedVectorPath);

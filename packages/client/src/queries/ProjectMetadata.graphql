@@ -31,7 +31,9 @@ fragment ProjectMetadata on Project {
     lang
     html
   }
+  enableReportBuilder
   customDocLink
+  enableReportBuilder
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

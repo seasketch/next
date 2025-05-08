@@ -16,7 +16,7 @@ RUN npm install -g typescript@5.5
 RUN dnf install -y jq
 COPY tsconfig.json  ./
 COPY package.json ./package.json.original
-RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"])' package.json.original > package.json
+RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"]) | del(.dependences["@seasketch/metadata-parser"])' package.json.original > package.json
 # Not using lerna, so need to copy this manually
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
@@ -39,7 +39,7 @@ RUN dnf install -y git autoconf libtool flex bison cmake make \
       libxml2-devel readline-devel openssl-devel curl-devel \
       cmake3 && dnf clean all
 
-ENV PREFIX /usr
+ENV PREFIX=/usr
 # pkg-config
 ENV PKGCONFIG_VERSION=0.29.2
 RUN mkdir /tmp/pkg-config \
@@ -206,7 +206,7 @@ RUN dnf install -y openssl python-pip python3 swig python-devel
 RUN LD_LIBRARY_PATH="" pip install cython numpy==1.25 wheel --no-binary numpy
 
 # GDAL
-ENV GDAL_VERSION 3.9.2
+ENV GDAL_VERSION=3.9.2
 RUN mkdir /tmp/gdal \
   && curl -sfL https://github.com/OSGeo/gdal/archive/refs/tags/v${GDAL_VERSION}.tar.gz | tar zxf - -C /tmp/gdal --strip-components=1 \
   && cd /tmp/gdal \
@@ -229,7 +229,14 @@ RUN mkdir /tmp/gdal \
     -DPNG_LIBRARY_RELEASE=$PREFIX/lib64/libpng.so \
     -DBUILD_PYTHON_BINDINGS=ON \
   && make -j $(nproc) --silent && make install \
-  && rm -rf /tmp/gdal  
+  && rm -rf /tmp/gdal
+
+# unar
+RUN curl -O https://www.rarlab.com/rar/unrarsrc-6.0.7.tar.gz && \
+  tar -xzf unrarsrc-6.0.7.tar.gz && \
+  cd unrar && \
+  make -f makefile && \
+  cp unrar /usr/local/bin/
 
 FROM amazon/aws-lambda-nodejs:20
 WORKDIR ${LAMBDA_TASK_ROOT}
@@ -255,6 +262,7 @@ COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
 COPY .rclone.conf /var/task/rclone.conf
+COPY --from=gdal /usr/local/bin/unrar /usr/bin/unrar
 # RUN dnf install -y openssl python-pip python3
 # LD_LIBRARY_PATH flag is necessary to avoid ssl errors
 RUN dnf install -y openssl python-pip python3 swig python-devel

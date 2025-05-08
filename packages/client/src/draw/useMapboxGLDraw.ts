@@ -1,5 +1,5 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
-import { LngLatLike } from "mapbox-gl";
+import { LngLatLike, Map } from "mapbox-gl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
@@ -19,6 +19,7 @@ import {
   DigitizingLockState,
   MapContextInterface,
 } from "../dataLayers/MapContextManager";
+import { SpanJSONOutput } from "./preprocess";
 
 function hasKinks(feature?: Feature<any>) {
   if (feature && feature.geometry.type === "Polygon") {
@@ -90,13 +91,25 @@ export const EMPTY_FEATURE_COLLECTION = {
  * @returns
  */
 export default function useMapboxGLDraw(
-  mapContext: MapContextInterface,
+  mapContext: {
+    digitizingLockState?: DigitizingLockState | null;
+    digitizingLockedBy?: string | null;
+    manager?: {
+      map?: Map;
+      requestDigitizingLock: Function;
+      releaseDigitizingLock: Function;
+    };
+  },
   geometryType: SketchGeometryType,
   initialValue: FeatureCollection<any> | null,
   onChange: (value: Feature<any> | null, hasKinks: boolean) => void,
   onCancelNewShape?: () => void,
   preprocessingEndpoint?: string,
-  onPreprocessedGeometry?: (geom: Geometry) => void
+  onPreprocessedGeometry?: (
+    geom: Geometry,
+    performance?: SpanJSONOutput
+  ) => void,
+  extraRequestParams: { [key: string]: any } = {}
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
@@ -126,6 +139,20 @@ export default function useMapboxGLDraw(
   handlerState.current.preprocessingError = preprocessingError;
 
   const [selfIntersects, setSelfIntersects] = useState<boolean>(false);
+  const [performance, setPerformance] = useState<SpanJSONOutput | null>(null);
+  const handlePreprocessedResult = useCallback(
+    (geom: Geometry, performance?: SpanJSONOutput) => {
+      if (performance) {
+        setPerformance(performance);
+      } else {
+        setPerformance(null);
+      }
+      if (onPreprocessedGeometry) {
+        onPreprocessedGeometry(geom, performance);
+      }
+    },
+    [onPreprocessedGeometry, setPerformance]
+  );
 
   const [preprocessingResults] = useState<{
     [id: string]: Feature<any>;
@@ -166,7 +193,8 @@ export default function useMapboxGLDraw(
             setPreprocessingError,
             preprocessingEndpoint,
             preprocessingResults,
-            onPreprocessedGeometry
+            handlePreprocessedResult,
+            extraRequestParams
           ),
         },
         styles,
@@ -327,7 +355,6 @@ export default function useMapboxGLDraw(
           setSelfIntersects(e.hasKinks);
         },
       };
-
       map.on("draw.create", handlers.create);
       map.on("draw.update", handlers.update);
       map.on("seasketch.drawing_started", handlers.drawingStarted);
@@ -366,6 +393,7 @@ export default function useMapboxGLDraw(
     disabled,
     preprocessingEndpoint,
     preprocessingResults,
+    extraRequestParams,
     // mapContext.manager?.map?.loaded(),
   ]);
 
@@ -677,7 +705,7 @@ export default function useMapboxGLDraw(
         mapContext.manager?.requestDigitizingLock(
           SketchDigitizingLockId,
           DigitizingLockState.CursorActive,
-          async (requester, state) => {
+          async () => {
             // TODO: base response on current state
             return false;
           }
@@ -702,6 +730,7 @@ export default function useMapboxGLDraw(
     selfIntersects,
     resetFeature,
     preprocessingError,
+    performance,
   };
 }
 

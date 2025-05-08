@@ -182,7 +182,7 @@ app.use(verifyEmailMiddleware);
 app.use(
   graphqlUploadExpress({
     maxFiles: 2,
-    maxFileSize: bytes("25mb"),
+    maxFileSize: bytes("5GB"),
   })
 );
 
@@ -264,6 +264,7 @@ run({
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
   * * * * * deleteExpiredArchivedDataSources
+  * 1 * * * refreshGmapsApiSession
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

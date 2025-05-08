@@ -13,6 +13,7 @@ export async function notifySlackChannel(
 
   await slack.chat.postMessage({
     channel: process.env.SLACK_CHANNEL!,
+    text: "Upload failed",
     blocks: [
       {
         type: "header",
@@ -64,10 +65,10 @@ export async function notifySlackChannel(
     ],
   });
 
-  await slack.files.upload({
+  await slack.files.uploadV2({
     channels: process.env.SLACK_CHANNEL!,
-    filename: `${filename}.logs.txt`,
     content: logs,
+    filename: `${filename}.logs.txt`,
     title: `${filename} processing logs`,
   });
 }

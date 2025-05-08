@@ -1,0 +1,128 @@
+fragment ClippingDataSourceDetails on DataSource {
+  id
+  type
+  url
+  dataLibraryTemplateId
+  createdAt
+  authorProfile {
+    ...UserProfileDetails
+  }
+  outputs {
+    id
+    type
+    url
+  }
+}
+
+fragment ClippingLayerDetails on DataLayer {
+  id
+  version
+  mapboxGlStyles
+  sourceLayer
+  dataSource {
+    ...ClippingDataSourceDetails
+  }
+}
+
+fragment GeographyDetails on Geography {
+  id
+  hash
+  name
+  translatedProps
+  clientTemplate
+  bounds
+  clippingLayers {
+    id
+    operationType
+    templateId
+    cql2Query
+    objectKey
+    dataLayer {
+      ...ClippingLayerDetails
+    }
+  }
+}
+
+query GeographyClippingSettings($slug: String!) {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+  }
+  projectBySlug(slug: $slug) {
+    id
+    geographies {
+      ...GeographyDetails
+    }
+  }
+  geographies {
+    ...GeographyDetails
+  }
+}
+
+query EEZLayer {
+  eezlayer {
+    id
+    dataLayer {
+      id
+      dataSource {
+        id
+        url
+        type
+        geostats
+        outputs {
+          id
+          type
+          url
+        }
+      }
+    }
+  }
+}
+
+mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
+  createGeographies(input: $geographies) {
+    geographies {
+      ...GeographyDetails
+    }
+  }
+}
+
+query GeographyById($id: Int!) {
+  geography(id: $id) {
+    ...GeographyDetails
+    clippingLayers {
+      id
+      operationType
+      templateId
+      cql2Query
+      dataLayer {
+        ...ClippingLayerDetails
+        tableOfContentsItem {
+          title
+          id
+        }
+      }
+    }
+  }
+}
+
+mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
+  deleteGeographyAndTableOfContentsItems(
+    id: $id
+    deleteRelatedTableOfContentsItems: $deleteRelatedLayers
+  ) {
+    id
+  }
+}
+
+mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
+  updateProjectGeography(id: $id, input: $payload) {
+    geography {
+      ...GeographyDetails
+    }
+  }
+}

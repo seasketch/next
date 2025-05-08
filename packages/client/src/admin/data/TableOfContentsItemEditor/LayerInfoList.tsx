@@ -12,7 +12,7 @@ import {
 import InlineAuthor from "../../../components/InlineAuthor";
 import HostedLayerInfo from "./HostedLayerInfo";
 import ArcGISDynamicMapServiceLayerInfo from "./ArcGISDynamicMapServiceLayerInfo";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { InfoCircledIcon, TableIcon } from "@radix-ui/react-icons";
 import GeostatsModal from "../GLStyleEditor/GeostatsModal";
 import ArcGISTiledRasterSettings from "../ArcGISTiledRasterSettings";
@@ -26,12 +26,15 @@ import {
   isRasterInfo,
 } from "@seasketch/geostats-types";
 import RasterInfoModal, { RasterInfoHistogram } from "../RasterInfoModal";
+import Spinner from "../../../components/Spinner";
+import CustomizeTilesModal from "../CustomizeTilesModal";
 
 export default function LayerInfoList({
   source,
   readonly,
   layer,
   children,
+  isLatestVersion,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -58,6 +61,7 @@ export default function LayerInfoList({
   >;
   readonly?: boolean;
   children?: ReactNode;
+  isLatestVersion: boolean;
 }) {
   const { t } = useTranslation("admin:data");
   let profile = source.authorProfile;
@@ -96,6 +100,7 @@ export default function LayerInfoList({
 
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showRasterModal, setShowRasterModal] = useState(false);
+  const [showCustomizeTilesModal, setShowCustomizeTilesModal] = useState(false);
 
   return (
     <>
@@ -192,19 +197,48 @@ export default function LayerInfoList({
             }
           />
         )}
+        {(source.type === DataSourceTypes.SeasketchMvt ||
+          source.type === DataSourceTypes.SeasketchRaster) && (
+          <>
+            <SettingsDLListItem
+              term={t("Tileset")}
+              description={
+                <div className="flex space-x-1">
+                  <TilesetDetails url={source.url! + ".json"} />
+                  {isLatestVersion && (
+                    <div className="flex-1 text-center">
+                      <button
+                        onClick={() => setShowCustomizeTilesModal(true)}
+                        className="text-primary-500"
+                      >
+                        {t("Replace tiles")}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              }
+            />
+            {showCustomizeTilesModal && (
+              <CustomizeTilesModal
+                onRequestClose={() => setShowCustomizeTilesModal(false)}
+                source={source}
+              />
+            )}
+          </>
+        )}
         {geostatsLayer && (
           <SettingsDLListItem
             term={t("Geometry")}
             description={
               <div className="w-full truncate flex">
-                <span>
+                <span className="flex-1 truncate">
                   {geostatsLayer.count.toLocaleString()}{" "}
-                  {geostatsLayer.geometry.toLocaleLowerCase()} {t("features")}
+                  {pluralizeGeometryType(geostatsLayer.geometry)}
                 </span>
-                <div className="text-right flex-1 px-1">
+                <div className="text-right px-1">
                   <button
                     onClick={() => setShowColumnModal(true)}
-                    className="hover:shadow-sm right-7 text-primary-500 items-center inline-flex border px-2 rounded-full text-xs py-0.5 "
+                    className="hover:shadow-sm text-primary-500 items-center inline-flex border px-2 rounded-full text-xs py-0.5 "
                   >
                     <TableIcon className="inline mr-1" />
                     <span>{t("column detail")}</span>
@@ -370,4 +404,85 @@ export function isRemoteSource(type: DataSourceTypes) {
     type !== DataSourceTypes.SeasketchRaster &&
     type !== DataSourceTypes.SeasketchVector
   );
+}
+
+function pluralizeGeometryType(type: GeostatsLayer["geometry"]) {
+  switch (type) {
+    case "Point":
+      return "points";
+    case "LineString":
+      return "lines";
+    case "Polygon":
+      return "polygons";
+    case "MultiLineString":
+      return "multilines";
+    case "MultiPolygon":
+      return "multipolygons";
+    case "MultiPoint":
+      return "multipoints";
+    case "GeometryCollection":
+      return "geometry collections";
+    case "Unknown":
+      return "features";
+    default:
+      return type;
+  }
+}
+
+function TilesetDetails({ url }: { url: string }) {
+  const { t } = useTranslation("admin:data");
+  const [state, setState] = useState<{
+    loading: boolean;
+    error: string | null;
+    tilejson: null | {
+      vector_layers: {
+        id: string;
+        description: string;
+        fields: {
+          name: string;
+          type: string;
+          description: string;
+        }[];
+        minzoom: number;
+        maxzoom: number;
+      }[];
+      tiles: string[];
+      attribution: string;
+      scheme: string;
+      bounds: number[];
+      center?: number[];
+    };
+  }>({ loading: true, error: null, tilejson: null });
+
+  useEffect(() => {
+    fetch(url)
+      .then((res) => res.json())
+      .then((tilejson) => {
+        setState({ loading: false, error: null, tilejson });
+      })
+      .catch((error) => {
+        setState({ loading: false, error: error.message, tilejson: null });
+      });
+  }, [url]);
+  if (state.loading) {
+    return <Spinner />;
+  } else if (state.error) {
+    return <div>Error: {state.error}</div>;
+  } else if (!state.tilejson) {
+    return <div>{t("No tilejson found")}</div>;
+  } else {
+    return (
+      <div>
+        {state.tilejson.vector_layers.length}{" "}
+        {state.tilejson.vector_layers.length === 1
+          ? t("layer. ")
+          : t("layers. ")}
+        {t("Zoom levels ")}
+        {
+          // eslint-disable-next-line i18next/no-literal-string
+          `${state.tilejson.vector_layers[0].minzoom} - ${state.tilejson.vector_layers[0].maxzoom}.`
+        }
+      </div>
+    );
+  }
 }

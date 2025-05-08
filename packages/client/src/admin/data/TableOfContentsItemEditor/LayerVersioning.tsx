@@ -543,7 +543,7 @@ function VersionDetails({
     }
   }, [rollbackGLStyle, setDialogState]);
   return (
-    <div className="flex-2 p-4 border-t">
+    <div className="flex-2 p-4 border-t overflow-y-auto">
       <h2 className="text-base font-medium leading-6 text-gray-900">
         <Trans ns="admin:data">
           Version {{ version }} details and settings
@@ -551,6 +551,7 @@ function VersionDetails({
       </h2>
       <div className="border rounded mt-4 overflow-hidden bg-white">
         <LayerInfoList
+          isLatestVersion={version === layer.version}
           source={source}
           layer={{
             ...layer,

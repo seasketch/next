@@ -13,6 +13,8 @@ import {
   stdDevBuckets,
 } from "./stats";
 
+const ATTRIBUTE_VALUES_LIMIT = 500;
+
 function isNumericGeostatsAttribute(
   attr: GeostatsAttribute | NumericGeostatsAttribute
 ): attr is NumericGeostatsAttribute {
@@ -58,20 +60,20 @@ export async function geostatsForVectorLayers(
   filepath: string
 ): Promise<GeostatsLayer[]> {
   const layers: GeostatsLayer[] = [];
-  const layer = {
-    layer: "",
-    count: 0,
-    geometry: "Unknown",
-    attributeCount: 0,
-    attributes: [],
-    bounds: [],
-    hasZ: false,
-  } as GeostatsLayer;
   const dataset = await gdal.openAsync(filepath);
   // if (dataset.srs === null) {
   //   throw new Error("No spatial reference system found in dataset.");
   // }
   dataset.layers.forEach((lyr, lidx) => {
+    const layer = {
+      layer: "",
+      count: 0,
+      geometry: "Unknown",
+      attributeCount: 0,
+      attributes: [],
+      bounds: [],
+      hasZ: false,
+    } as GeostatsLayer;
     const extent = lyr.getExtent();
     if (extent) {
       layer.bounds = [extent.minX, extent.minY, extent.maxX, extent.maxY];
@@ -206,13 +208,12 @@ export async function geostatsForVectorLayers(
         const stdev = Math.sqrt(variance);
         attribute.count = details.count;
         attribute.countDistinct = Object.keys(details.uniqueValues).length;
-        attribute.values = Object.keys(details.uniqueValues).reduce(
-          (acc, v) => {
+        attribute.values = Object.keys(details.uniqueValues)
+          .slice(0, ATTRIBUTE_VALUES_LIMIT)
+          .reduce((acc, v) => {
             acc[v] = details.uniqueValues[v];
             return acc;
-          },
-          {} as { [key: string]: number }
-        ) as { [key: string]: number };
+          }, {} as { [key: string]: number }) as { [key: string]: number };
         const sortedValues = Object.keys(details.uniqueValues)
           .sort()
           .reduce((acc, v) => {

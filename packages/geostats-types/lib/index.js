@@ -1,10 +1,14 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isGeostatsLayer = exports.isRasterInfo = exports.SuggestedRasterPresentation = exports.isLegacyGeostatsAttribute = exports.isLegacyGeostatsLayer = exports.isNumericGeostatsAttribute = void 0;
+exports.SuggestedRasterPresentation = void 0;
+exports.isNumericGeostatsAttribute = isNumericGeostatsAttribute;
+exports.isLegacyGeostatsLayer = isLegacyGeostatsLayer;
+exports.isLegacyGeostatsAttribute = isLegacyGeostatsAttribute;
+exports.isRasterInfo = isRasterInfo;
+exports.isGeostatsLayer = isGeostatsLayer;
 function isNumericGeostatsAttribute(attr) {
     return attr.type === "number";
 }
-exports.isNumericGeostatsAttribute = isNumericGeostatsAttribute;
 function isLegacyGeostatsLayer(layer) {
     if ("attributesCount" in layer && layer.attributesCount) {
         return layer.attributes[0].countDistinct === undefined;
@@ -13,11 +17,9 @@ function isLegacyGeostatsLayer(layer) {
         return !("bounds" in layer);
     }
 }
-exports.isLegacyGeostatsLayer = isLegacyGeostatsLayer;
 function isLegacyGeostatsAttribute(attr) {
     return Array.isArray(attr.values);
 }
-exports.isLegacyGeostatsAttribute = isLegacyGeostatsAttribute;
 /**
  * SuggestedRasterPresentation is a hint to the client on how to present the
  * raster data. This can be used to determine the default visualization type for
@@ -33,12 +35,10 @@ var SuggestedRasterPresentation;
     SuggestedRasterPresentation[SuggestedRasterPresentation["categorical"] = 0] = "categorical";
     SuggestedRasterPresentation[SuggestedRasterPresentation["continuous"] = 1] = "continuous";
     SuggestedRasterPresentation[SuggestedRasterPresentation["rgb"] = 2] = "rgb";
-})(SuggestedRasterPresentation = exports.SuggestedRasterPresentation || (exports.SuggestedRasterPresentation = {}));
+})(SuggestedRasterPresentation || (exports.SuggestedRasterPresentation = SuggestedRasterPresentation = {}));
 function isRasterInfo(info) {
     return info.bands !== undefined;
 }
-exports.isRasterInfo = isRasterInfo;
 function isGeostatsLayer(data) {
     return (!Array.isArray(data) && data.attributes !== undefined);
 }
-exports.isGeostatsLayer = isGeostatsLayer;

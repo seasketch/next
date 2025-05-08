@@ -15,7 +15,7 @@ import {
   ProjectInviteEmailStatusSubscriptionDocument,
   ParticipationStatus,
 } from "../../generated/graphql";
-import GroupMultiSelect from "./GroupMultiSelect";
+import MultiSelect from "./GroupMultiSelect";
 import InviteIcon from "./InviteIcon";
 import gql from "graphql-tag";
 import { useSubscription } from "@apollo/client";
@@ -300,7 +300,7 @@ export default function EditInviteModal({
             />
           </div>
           <div className="mb-4">
-            <GroupMultiSelect
+            <MultiSelect
               title={t("Assign Group Membership")}
               groups={(data?.projectBySlug?.groups || []).map((g) => ({
                 value: g.id,

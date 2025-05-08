@@ -156,3 +156,28 @@ subscription ProjectBackgroundJob($slug: String!) {
     ...BackgroundJobSubscriptionEvent
   }
 }
+
+mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
+  replacePMTiles(dataSourceId: $dataSourceId, pmtilesKey: $pmtilesKey) {
+    id
+    dataSourceId
+    dataSource {
+      url
+      outputs {
+        id
+        url
+        type
+        size
+        createdAt
+        isCustomUpload
+      }
+    }
+  }
+}
+
+mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
+  getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
+    url
+    key
+  }
+}

@@ -73,7 +73,7 @@ export interface ProcessedUploadResponse {
 // Create a tileset if flatgeobuf is > 100kb (~1mb geojson)
 export const MVT_THRESHOLD = 100_000;
 // Outputs should not exceed 1 GB
-export const MAX_OUTPUT_SIZE = 1_000_000_000;
+export const MAX_OUTPUT_SIZE = bytes("6 GB") as number;
 
 export type ProgressUpdater = (
   state: "running" | "complete" | "failed",
@@ -218,7 +218,11 @@ export default async function handleUpload(
     await updateProgress("running", "uploading products");
     if (outputs.find((o) => o.size > MAX_OUTPUT_SIZE)) {
       throw new Error(
-        `One or more outputs exceed ${bytes(MAX_OUTPUT_SIZE)} limit.`
+        `One or more outputs exceed ${bytes(
+          MAX_OUTPUT_SIZE
+        )} limit. Was ${bytes(
+          outputs.find((o) => o.size > MAX_OUTPUT_SIZE)!.size
+        )}`
       );
     }
     // Upload outputs to cloud storage
@@ -284,6 +288,7 @@ export default async function handleUpload(
     );
     return response;
   } catch (e) {
+    console.error(e);
     const error = e as Error;
     if (!skipLoggingProgress) {
       const q = await pgClient.query(
