@@ -8,7 +8,7 @@ type EEZProps = {
   MRGID_EEZ: number;
   SOVEREIGN1?: string;
   UNION: string;
-  bbox: number[];
+  __bbox: number[];
 };
 
 export default function useEEZChoices() {
@@ -48,7 +48,7 @@ export default function useEEZChoices() {
       }
       const dataset = new URL(fgb.url).pathname.replace(/^\//, "");
       // eslint-disable-next-line i18next/no-literal-string
-      const url = `https://overlay.seasketch.org/properties?include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
+      const url = `https://overlay.seasketch.org/properties?v=4&include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
       fetch(url)
         .then((response) => {
           if (!response.ok) {

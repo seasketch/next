@@ -118,7 +118,7 @@ export default function GeographyAdmin() {
     const eezs = eezChoices.eezs.filter((choice) =>
       selectedGroups.map((group) => group.value).includes(choice.value)
     );
-    const bboxes = eezs.map((choice) => choice.data?.bbox);
+    const bboxes = eezs.map((choice) => choice.data?.__bbox);
     const bbox = combineBBoxes(bboxes);
     if (bbox) {
       map?.fitBounds(
@@ -727,7 +727,7 @@ export default function GeographyAdmin() {
                           map?.fitBounds(
                             geog.bounds as [number, number, number, number],
                             {
-                              padding: 80,
+                              padding: 10,
                               animate: true,
                             }
                           );
@@ -928,7 +928,7 @@ export default function GeographyAdmin() {
                     const eezs = eezChoices.eezs.filter((choice) =>
                       eezPickerState.selectedEEZs.includes(choice.value)
                     );
-                    const bboxes = eezs.map((choice) => choice.data?.bbox);
+                    const bboxes = eezs.map((choice) => choice.data?.__bbox);
                     const bbox = combineBBoxes(bboxes);
                     if (bbox) {
                       map?.fitBounds(

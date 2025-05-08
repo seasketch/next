@@ -1,5 +1,3 @@
-import bbox from "@turf/bbox";
-import { deepStrictEqual } from "assert";
 import { gql, makeExtendSchemaPlugin } from "graphile-utils";
 import { PoolClient } from "pg";
 
@@ -153,7 +151,8 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           // get the data source url for this clipping layer
           const { rows: dataLayerRows } = await pgClient.query(
             `SELECT
-              data_sources.url as url
+              data_sources.url as url,
+              geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key
             FROM
               geography_clipping_layers
             INNER JOIN
@@ -168,56 +167,19 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             return null;
           }
           const dataSourceUrl = dataLayerRows[0].url;
+          const objectKey = dataLayerRows[0].object_key;
           const { cql2Query, templateId } = clippingLayer;
           // Don't return a bounding box for the whole planet
           if (templateId === "DAYLIGHT_COASTLINE") {
             return null;
           }
-          if (!/tiles.seasketch.org/.test(dataSourceUrl)) {
-            throw new Error(
-              `Data source URL ${dataSourceUrl} is not supported for clipping layers`
-            );
-          }
-          if (cql2Query === null) {
-            // just grab the tilejson from the data server
-            const response = await fetch(`${dataSourceUrl}.json`);
-            if (!response.ok) {
-              throw new Error(
-                `Failed to fetch tilejson from ${dataSourceUrl}: ${response.statusText}`
-              );
-            }
-            const tilejson = await response.json();
-            if (!tilejson.bounds) {
-              throw new Error(
-                `TileJSON from ${dataSourceUrl} does not contain bounds`
-              );
-            }
-            return tilejson.bounds;
-          } else {
-            const queryString = new URLSearchParams({
-              includeProperties: "_",
-              bbox: "true",
-              cql2JSONQuery: JSON.stringify(cql2Query),
-              dataset:
-                dataSourceUrl.replace("https://tiles.seasketch.org/", "") +
-                ".fgb",
-            }).toString();
-            const url = `https://overlay.seasketch.org/properties?${queryString}`;
-            console.log("url", url);
-            const response = await fetch(url);
-            if (!response.ok) {
-              throw new Error(
-                `Failed to fetch properties from overlay service: ${response.statusText}`
-              );
-            }
-            const features = await response.json();
-            if (!features.length) {
-              throw new Error(
-                `No features found for CQL2 query ${JSON.stringify(cql2Query)}`
-              );
-            }
-            return features[0].bbox;
-          }
+          const bounds = await getBoundsForClippingLayer(
+            dataSourceUrl,
+            objectKey,
+            cql2Query,
+            clippingLayer.templateId
+          );
+          return bounds;
         },
       },
 
@@ -255,7 +217,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 url: string;
                 object_key: string;
               }[]
-            ).map(async ({ id, cql2_query, template_id, url, object_key }) => {
+            ).map(async ({ cql2_query, template_id, url, object_key }) => {
               if (
                 template_id === "DAYLIGHT_COASTLINE" ||
                 template_id === "MARINE_REGIONS_HIGH_SEAS"
@@ -263,53 +225,13 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 // don't return a bounding box for the whole planet
                 return;
               }
-              if (!/tiles.seasketch.org/.test(url)) {
-                throw new Error(
-                  `Data source URL ${url} is not supported for clipping layers`
-                );
-              }
-              if (cql2_query === null) {
-                // just grab the tilejson from the data server
-                const response = await fetch(`${url}.json`);
-                if (!response.ok) {
-                  throw new Error(
-                    `Failed to fetch tilejson from ${url}: ${response.statusText}`
-                  );
-                }
-                const tilejson = await response.json();
-                if (!tilejson.bounds) {
-                  throw new Error(
-                    `TileJSON from ${url} does not contain bounds`
-                  );
-                }
-                bounds.push(tilejson.bounds);
-              } else {
-                const queryString = new URLSearchParams({
-                  includeProperties: "_",
-                  bbox: "true",
-                  cql2JSONQuery: JSON.stringify(cql2_query),
-                  dataset: new URL(object_key).pathname.replace(/^\//, ""),
-                }).toString();
-                const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
-                console.log("overlayUrl", overlayUrl);
-                const response = await fetch(overlayUrl);
-                if (!response.ok) {
-                  throw new Error(
-                    `Failed to fetch properties from overlay service: ${response.statusText}`
-                  );
-                }
-                const features = await response.json();
-                if (!features.length) {
-                  throw new Error(
-                    `No features found for CQL2 query ${JSON.stringify(
-                      cql2_query
-                    )}`
-                  );
-                }
-                for (const feature of features) {
-                  if ("bbox" in feature) bounds.push(feature.bbox);
-                }
-              }
+              const bbox = await getBoundsForClippingLayer(
+                url,
+                object_key,
+                cql2_query,
+                template_id
+              );
+              bounds.push(bbox);
             })
           );
           if (bounds.length === 0) {
@@ -951,4 +873,58 @@ function combineBBoxes(bboxes: number[][]) {
   }
 
   return [minX, minY, maxX, maxY];
+}
+
+async function getBoundsForClippingLayer(
+  url: string,
+  object_key: string,
+  cql2_query?: any,
+  template_id?: string
+) {
+  // get the data source url for this clipping layer
+  // get the data source url for this clipping layer
+  if (template_id === "DAYLIGHT_COASTLINE") {
+    return null;
+  }
+  if (!/tiles.seasketch.org/.test(url)) {
+    throw new Error(
+      `Data source URL ${url} is not supported for clipping layers`
+    );
+  }
+  if (cql2_query === null) {
+    // just grab the tilejson from the data server
+    const response = await fetch(`${url}.json`);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch tilejson from ${url}: ${response.statusText}`
+      );
+    }
+    const tilejson = await response.json();
+    if (!tilejson.bounds) {
+      throw new Error(`TileJSON from ${url} does not contain bounds`);
+    }
+    return tilejson.bounds;
+  } else {
+    const queryString = new URLSearchParams({
+      includeProperties: "_",
+      bbox: "true",
+      cql2JSONQuery: JSON.stringify(cql2_query),
+      dataset: url.replace("https://tiles.seasketch.org/", "") + ".fgb",
+      v: "5",
+    }).toString();
+    const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
+    const response = await fetch(overlayUrl);
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch properties from overlay service: ${response.statusText}`
+      );
+    }
+    const features = await response.json();
+    if (!features.length) {
+      throw new Error(
+        `No features found for CQL2 query ${JSON.stringify(cql2_query)}`
+      );
+    }
+    return features[0].__bbox;
+  }
 }
