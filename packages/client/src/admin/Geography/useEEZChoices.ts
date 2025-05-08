@@ -32,21 +32,10 @@ export default function useEEZChoices() {
   });
 
   useEffect(() => {
-    if (data?.eezlayer?.dataLayer?.dataSource?.url) {
-      const fgb = (data.eezlayer.dataLayer.dataSource.outputs || []).find(
-        (output) => output.type === DataUploadOutputType.FlatGeobuf
-      );
-      if (!fgb) {
-        setState({
-          loading: false,
-          error: new Error(
-            `No FlatGeobuf output found for EEZ layer ${data.eezlayer.dataLayer.id}`
-          ),
-          eezs: [],
-        });
-        return;
-      }
-      const dataset = new URL(fgb.url).pathname.replace(/^\//, "");
+    if (data?.eezlayer?.dataLayer?.vectorObjectKey) {
+      const dataset = new URL(
+        data.eezlayer.dataLayer.vectorObjectKey
+      ).pathname.replace(/$\//, "");
       // eslint-disable-next-line i18next/no-literal-string
       const url = `https://overlay.seasketch.org/properties?v=5&include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
       fetch(url)

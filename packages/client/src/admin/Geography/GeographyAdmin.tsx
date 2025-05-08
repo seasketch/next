@@ -100,7 +100,8 @@ export default function GeographyAdmin() {
     (l) => l.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
   );
 
-  const hasBuiltInLayers = Boolean(coastline) && Boolean(eez);
+  const hasBuiltInLayers =
+    Boolean(coastline) && Boolean(eez) && Boolean(territorialSea);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
@@ -151,7 +152,8 @@ export default function GeographyAdmin() {
       data?.gmapssatellitesession?.session &&
       eez?.dataSource?.url &&
       coastline?.dataSource?.url &&
-      !eezChoices.loading
+      !eezChoices.loading &&
+      territorialSea?.dataSource?.url
     ) {
       let bbox: number[] | undefined;
       const bounds = (data?.projectBySlug?.geographies || [])
@@ -183,6 +185,10 @@ export default function GeographyAdmin() {
             coastline: {
               type: "vector",
               url: coastline.dataSource.url + ".json",
+            },
+            territorialSea: {
+              type: "vector",
+              url: territorialSea.dataSource.url + ".json",
             },
           },
           layers: [
@@ -255,6 +261,39 @@ export default function GeographyAdmin() {
                 0,
               ],
               "line-color": "grey",
+              "line-width": [
+                "case",
+                ["boolean", ["feature-state", "hover"], false],
+                2, // Thicker line width when hovered
+                1, // Default line width
+              ],
+            },
+          });
+        }
+
+        if (territorialSea && territorialSea.dataSource) {
+          newMap.addLayer({
+            id: "territorial-sea-layer",
+            type: "fill",
+            source: "territorialSea",
+            "source-layer": territorialSea.sourceLayer!,
+            paint: {
+              "fill-opacity": 0.02,
+              "fill-color": "#aaaaaa",
+            },
+          });
+          newMap.addLayer({
+            id: "territorial-sea-line",
+            type: "line",
+            source: "territorialSea",
+            "source-layer": territorialSea.sourceLayer!,
+            layout: {
+              "line-cap": "round",
+              "line-join": "round",
+            },
+            paint: {
+              "line-opacity": 0.6,
+              "line-color": "rgba(200, 100, 100, 1)",
               "line-width": [
                 "case",
                 ["boolean", ["feature-state", "hover"], false],
@@ -693,8 +732,8 @@ export default function GeographyAdmin() {
                 error.toString()
               ) : (
                 <Trans ns="admin:geography">
-                  SeaSketch has not been configured correctly with {EEZ} and{" "}
-                  {COASTLINE} layers. Contact{" "}
+                  SeaSketch has not been configured correctly with {EEZ},{" "}
+                  {TERRITORIAL_SEA} and {COASTLINE} layers. Contact{" "}
                   <a className="underline" href="mailto:support@seasketch.org">
                     support@seasketch.org
                   </a>{" "}
