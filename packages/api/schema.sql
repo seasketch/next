@@ -21653,13 +21653,6 @@ CREATE TRIGGER after_post_insert_trigger AFTER INSERT ON public.posts FOR EACH R
 
 
 --
--- Name: projects after_project_insert; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER after_project_insert AFTER INSERT ON public.projects FOR EACH ROW EXECUTE FUNCTION public.create_project_geography_settings();
-
-
---
 -- Name: project_group_members after_remove_user_from_group_update_survey_invites; Type: TRIGGER; Schema: public; Owner: -
 --
 

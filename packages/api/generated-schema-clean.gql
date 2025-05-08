@@ -932,6 +932,31 @@ type ClearFormElementStylePayload {
   query: Query
 }
 
+input ClippingLayerInput {
+  """
+  If provided, features used for clipping will be filtered based on this
+  JSON-encoded OGC Common Query Language (CQL2) query
+  """
+  cql2Query: JSON
+
+  """
+  If provided, this layer will be associated with this geography. Either
+  templateId or dataLayerId must be provided
+  """
+  dataLayerId: Int
+
+  """
+  Type of operation to perform on the clipping layer (e.g. intersect, difference).
+  """
+  operationType: GeographyLayerOperation!
+
+  """
+  If provided, this template layer will be cloned into the project. Either
+  templateId or dataLayerId must be provided
+  """
+  templateId: String
+}
+
 """
 Community guidelines can be set by project admins with standards for using the 
 discussion forums. Users will be shown this content before making their first
@@ -1607,6 +1632,31 @@ type CreateForumPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type CreateGeographiesPayload {
+  """The newly created geography"""
+  geographies: [Geography!]!
+}
+
+input CreateGeographyArgs {
+  """
+  Used to identify Geographies that are created using a particular wizard
+  flow like "Pick an EEZ" or "Terrestrial Areas".
+  """
+  clientTemplate: String
+
+  """Clipping layers to associate with this geography"""
+  clippingLayers: [ClippingLayerInput]!
+
+  """Name of the geography"""
+  name: String!
+
+  """Slug of the project to create the geography in"""
+  slug: String!
+
+  """Translated strings"""
+  translatedProps: JSON
 }
 
 """All input for the create `GeographyClippingLayer` mutation."""
@@ -6804,6 +6854,7 @@ enum GeographiesOrderBy {
 }
 
 type Geography implements Node {
+  bounds: [Float!]
   clientTemplate: String
 
   """
@@ -6864,6 +6915,7 @@ type Geography implements Node {
 }
 
 type GeographyClippingLayer implements Node {
+  bounds: [Float!]
   cql2Query: JSON
 
   """
@@ -7039,6 +7091,10 @@ type GeographyPolygon implements GeographyGeometry & GeographyInterface {
   geojson: GeoJSON
   interiors: [GeographyLineString]
   srid: Int!
+}
+
+type GeographyUpdatedPayload {
+  geography: Geography!
 }
 
 """
@@ -8403,6 +8459,14 @@ type Mutation {
     input: CreateForumInput!
   ): CreateForumPayload
 
+  """Create a new geography with associated clipping layers"""
+  createGeographies(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: [CreateGeographyArgs!]!
+  ): CreateGeographiesPayload
+
   """Creates a single `Geography`."""
   createGeography(
     """
@@ -8789,6 +8853,7 @@ type Mutation {
     """
     input: DeleteGeographyInput!
   ): DeleteGeographyPayload
+  deleteGeographyAndTableOfContentsItems(deleteRelatedTableOfContentsItems: Boolean, id: Int!): Geography!
 
   """Deletes a single `Geography` using its globally unique id."""
   deleteGeographyByNodeId(
@@ -10014,6 +10079,14 @@ type Mutation {
     """
     input: UpdateProjectBySlugInput!
   ): UpdateProjectPayload
+  updateProjectGeography(
+    id: Int!
+
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateProjectGeographyPayload!
+  ): GeographyUpdatedPayload!
   updateProjectInvite(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -16151,6 +16224,11 @@ type UpdateBasemapPayload {
   query: Query
 }
 
+type UpdateClippingLayerPayload {
+  cql2Query: JSON
+  operationType: GeographyLayerOperation
+}
+
 """All input for the `updateCommunityGuidelineByNodeId` mutation."""
 input UpdateCommunityGuidelineByNodeIdInput {
   """
@@ -17275,6 +17353,12 @@ input UpdateProjectBySlugInput {
   Short identifier for the project used in the url. This property cannot be changed after project creation.
   """
   slug: String!
+}
+
+input UpdateProjectGeographyPayload {
+  clippingLayers: [ClippingLayerInput]
+  name: String
+  translatedProps: JSON
 }
 
 """All input for the `updateProject` mutation."""
