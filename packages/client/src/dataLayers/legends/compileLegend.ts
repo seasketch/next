@@ -3573,7 +3573,8 @@ function consolidateNode(node: GroupByFilterNode) {
           listPanels[key] = {
             id: key,
             type: "GLLegendListPanel",
-            label: subNode.filters.length === 1 ? " " : propName,
+            // label: subNode.filters.length === 1 ? " " : propName,
+            label: propName,
             items: [],
           };
         }
