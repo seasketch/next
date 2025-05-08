@@ -458,7 +458,6 @@ function TilesetDetails({ url }: { url: string }) {
     fetch(url)
       .then((res) => res.json())
       .then((tilejson) => {
-        console.log("got tilejson", url, tilejson);
         setState({ loading: false, error: null, tilejson });
       })
       .catch((error) => {

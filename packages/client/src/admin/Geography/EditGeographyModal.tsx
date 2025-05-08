@@ -163,7 +163,6 @@ export default function EditGeographyModal({
 
   const dialog = useDialog();
 
-  console.log({ operationTypes });
   const clippingLayers = data?.geography?.clippingLayers || [];
   // Collect templateIds of existing clipping layers for disabling options
   const existingTemplateIds = useMemo(

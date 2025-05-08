@@ -393,7 +393,6 @@ export default function CreateGeographyWizard({
                       )
                     );
                   }
-                  console.log(input);
                   mutation({
                     variables: {
                       geographies: input,
