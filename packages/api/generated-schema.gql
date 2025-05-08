@@ -2605,6 +2605,7 @@ type DataLayer implements Node {
     orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TableOfContentsItemsConnection! @deprecated(reason: "Please use tableOfContentsItem instead")
   totalQuotaUsed: BigInt
+  vectorObjectKey: String
   version: Int
   zIndex: Int!
 }

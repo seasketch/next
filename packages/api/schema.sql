@@ -2023,8 +2023,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -8187,6 +8187,19 @@ CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RE
       union all
       select data_source_id from archived_data_sources where data_layer_id = layer.id
     )
+  $$;
+
+
+--
+-- Name: data_layers_vector_object_key(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_vector_object_key(g public.data_layers) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
+      select data_source_id from data_layers where id = g.id
+    );
   $$;
 
 
@@ -25479,17 +25492,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -27487,6 +27500,14 @@ GRANT ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_laye
 
 
 --
+-- Name: FUNCTION data_layers_vector_object_key(g public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_vector_object_key(g public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_vector_object_key(g public.data_layers) TO anon;
+
+
+--
 -- Name: FUNCTION data_layers_version(data_layer public.data_layers); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28328,6 +28349,7 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 

@@ -2247,6 +2247,7 @@ export type DataLayer = Node & {
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
   totalQuotaUsed?: Maybe<Scalars['BigInt']>;
+  vectorObjectKey?: Maybe<Scalars['String']>;
   version?: Maybe<Scalars['Int']>;
   zIndex: Scalars['Int'];
 };
@@ -19541,7 +19542,7 @@ export type ClippingDataSourceDetailsFragment = (
 
 export type ClippingLayerDetailsFragment = (
   { __typename?: 'DataLayer' }
-  & Pick<DataLayer, 'id' | 'version' | 'mapboxGlStyles' | 'sourceLayer'>
+  & Pick<DataLayer, 'id' | 'version' | 'mapboxGlStyles' | 'sourceLayer' | 'vectorObjectKey'>
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
     & ClippingDataSourceDetailsFragment
@@ -19597,7 +19598,7 @@ export type EezLayerQuery = (
     & Pick<TableOfContentsItem, 'id'>
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id'>
+      & Pick<DataLayer, 'vectorObjectKey' | 'id'>
       & { dataSource?: Maybe<(
         { __typename?: 'DataSource' }
         & Pick<DataSource, 'id' | 'url' | 'type' | 'geostats'>
@@ -23521,6 +23522,7 @@ export const ClippingLayerDetailsFragmentDoc = gql`
   version
   mapboxGlStyles
   sourceLayer
+  vectorObjectKey
   dataSource {
     ...ClippingDataSourceDetails
   }
@@ -29890,6 +29892,7 @@ export const EezLayerDocument = gql`
   eezlayer {
     id
     dataLayer {
+      vectorObjectKey
       id
       dataSource {
         id

@@ -19,6 +19,7 @@ fragment ClippingLayerDetails on DataLayer {
   version
   mapboxGlStyles
   sourceLayer
+  vectorObjectKey
   dataSource {
     ...ClippingDataSourceDetails
   }
@@ -67,6 +68,7 @@ query EEZLayer {
   eezlayer {
     id
     dataLayer {
+      vectorObjectKey
       id
       dataSource {
         id
