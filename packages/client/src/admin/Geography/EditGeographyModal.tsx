@@ -202,7 +202,7 @@ export default function EditGeographyModal({
       title={t("Edit Geography")}
       onRequestClose={onRequestClose}
       autoWidth={true}
-      panelClassName="w-[780px] !max-w-none"
+      panelClassName="!w-[780px] !max-w-none"
       footerClassName="border-t bg-gray-50"
       footer={[
         {

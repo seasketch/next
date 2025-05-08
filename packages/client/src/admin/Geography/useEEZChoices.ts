@@ -48,7 +48,7 @@ export default function useEEZChoices() {
       }
       const dataset = new URL(fgb.url).pathname.replace(/^\//, "");
       // eslint-disable-next-line i18next/no-literal-string
-      const url = `https://overlay.seasketch.org/properties?v=4&include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
+      const url = `https://overlay.seasketch.org/properties?v=5&include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
       fetch(url)
         .then((response) => {
           if (!response.ok) {
