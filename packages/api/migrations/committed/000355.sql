@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:80c2c819ee7a506b3f64ea2f7e77bfe258b0a74c
 --! Hash: sha1:2c256926b12b06ed9f08ef5abfcda3d15ff15a4e
 
