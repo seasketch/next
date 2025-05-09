@@ -103,6 +103,9 @@ export class GraphQLStack extends cdk.Stack {
     if (!process.env.PMTILES_SERVER_ZONE) {
       throw new Error(`PMTILES_SERVER_ZONE must be set in environment`);
     }
+    if (!process.env.GOOGLE_MAPS_2D_TILE_API_KEY) {
+      throw new Error(`GOOGLE_MAPS_2D_TILE_API_KEY must be set in environment`);
+    }
     // The code that defines your stack goes here
     const service = new ecsPatterns.ApplicationLoadBalancedFargateService(
       this,
@@ -165,6 +168,8 @@ export class GraphQLStack extends cdk.Stack {
             CLOUDFLARE_SITE_TAG: process.env.CLOUDFLARE_SITE_TAG,
             CLOUDFLARE_GRAPHQL_TOKEN: process.env.CLOUDFLARE_GRAPHQL_TOKEN,
             PMTILES_SERVER_ZONE: process.env.PMTILES_SERVER_ZONE,
+            GOOGLE_MAPS_2D_TILE_API_KEY:
+              process.env.GOOGLE_MAPS_2D_TILE_API_KEY,
           },
           containerPort: 3857,
         },
