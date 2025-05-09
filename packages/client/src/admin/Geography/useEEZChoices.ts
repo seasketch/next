@@ -33,11 +33,8 @@ export default function useEEZChoices() {
 
   useEffect(() => {
     if (data?.eezlayer?.dataLayer?.vectorObjectKey) {
-      const dataset = new URL(
-        data.eezlayer.dataLayer.vectorObjectKey
-      ).pathname.replace(/$\//, "");
       // eslint-disable-next-line i18next/no-literal-string
-      const url = `https://overlay.seasketch.org/properties?v=5&include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${dataset}`;
+      const url = `https://overlay.seasketch.org/properties?v=5&include=MRGID_EEZ,UNION,POL_TYPE,SOVEREIGN1&bbox=true&dataset=${data.eezlayer.dataLayer.vectorObjectKey}`;
       fetch(url)
         .then((response) => {
           if (!response.ok) {
