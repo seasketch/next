@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
-import { labelForEEZ } from "../useEEZChoices";
 import useFeatureChoices from "./useFeatureChoices";
 
 export type FeaturePickerOptions = {
@@ -18,7 +17,7 @@ export type FeaturePickerOptions = {
 
 export type FeaturePickerState = {
   active: boolean;
-  selectedFeatures: number[];
+  selection: number[];
   saving: boolean;
   error?: Error;
   loading: boolean;
@@ -28,7 +27,7 @@ export type FeaturePickerState = {
 export default function useFeaturePicker(options: FeaturePickerOptions) {
   const [state, setState] = useState<FeaturePickerState>({
     active: false,
-    selectedFeatures: options.initialSelection || [],
+    selection: options.initialSelection || [],
     saving: false,
     loading: true,
     choices: [],
@@ -75,11 +74,7 @@ export default function useFeaturePicker(options: FeaturePickerOptions) {
           "fill-opacity": 0.2,
           "fill-color": [
             "case",
-            [
-              "in",
-              ["get", options.idProperty],
-              ["literal", state.selectedFeatures],
-            ],
+            ["in", ["get", options.idProperty], ["literal", state.selection]],
             "yellow",
             "#007cbf",
           ],
@@ -104,11 +99,7 @@ export default function useFeaturePicker(options: FeaturePickerOptions) {
           "line-opacity": 0.5,
           "line-color": [
             "case",
-            [
-              "in",
-              ["get", options.idProperty],
-              ["literal", state.selectedFeatures],
-            ],
+            ["in", ["get", options.idProperty], ["literal", state.selection]],
             "#ffc107",
             "grey",
           ],
@@ -196,12 +187,12 @@ export default function useFeaturePicker(options: FeaturePickerOptions) {
       if (feature && feature.properties) {
         const featureId = feature.properties[options.idProperty];
         setState((prev) => {
-          const isSelected = prev.selectedFeatures.includes(featureId);
+          const isSelected = prev.selection.includes(featureId);
           return {
             ...prev,
-            selectedFeatures: isSelected
-              ? prev.selectedFeatures.filter((id) => id !== featureId)
-              : [...prev.selectedFeatures, featureId],
+            selection: isSelected
+              ? prev.selection.filter((id) => id !== featureId)
+              : [...prev.selection, featureId],
           };
         });
       }
@@ -228,7 +219,7 @@ export default function useFeaturePicker(options: FeaturePickerOptions) {
   }, [
     options.map,
     state.active,
-    state.selectedFeatures,
+    state.selection,
     options.sourceId,
     options.sourceLayer,
     options.idProperty,
@@ -243,11 +234,17 @@ export default function useFeaturePicker(options: FeaturePickerOptions) {
   };
 
   const updateSelection = (selectedIds: number[]) => {
-    setState((prev) => ({ ...prev, selectedFeatures: selectedIds }));
+    setState((prev) => ({ ...prev, selection: selectedIds }));
   };
 
   const getSelectedFeatures = () => {
-    return state.selectedFeatures;
+    return state.selection.map((id) => {
+      return {
+        label: state.choices.find((c) => c.value === id)?.label,
+        value: id,
+        data: state.choices.find((c) => c.value === id)?.data,
+      };
+    });
   };
 
   return {

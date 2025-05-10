@@ -24,9 +24,7 @@ import useMapboxGLDraw, {
 } from "../../draw/useMapboxGLDraw";
 import { Feature } from "geojson";
 import DigitizingTools from "../../formElements/DigitizingTools";
-import CreateGeographyWizard, {
-  CreateGeographyWizardState,
-} from "./CreateGeographyWizard";
+import CreateGeographyWizard from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import EditGeographyModal from "./EditGeographyModal";
 
@@ -41,6 +39,14 @@ const JSON_EXTENSION = ".json";
 const GOOGLE_MAPS_TILE_URL =
   "https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}";
 
+type AdminState = {
+  mapLoaded: boolean;
+  map: mapboxgl.Map | null;
+  hiddenGeographies: number[];
+  editGeographyId?: number;
+  wizardActive: boolean;
+};
+
 export default function GeographyAdmin() {
   const { t } = useTranslation("admin:geography");
   const slug = getSlug();
@@ -49,28 +55,11 @@ export default function GeographyAdmin() {
     skip: !slug,
   });
 
-  const [state, setState] = useState<{
-    mapLoaded: boolean;
-    map: mapboxgl.Map | null;
-    hiddenGeographies: number[];
-    editGeographyId?: number;
-  }>({
+  const [state, setState] = useState<AdminState>({
     mapLoaded: false,
     map: null,
     hiddenGeographies: [],
-  });
-
-  const [geographyWizardState, setGeographyWizardState] = useState<
-    {
-      active: boolean;
-      usedTemplates: string[];
-    } & CreateGeographyWizardState
-  >({
-    active: false,
-    step: "chooseTemplate",
-    multipleEEZHandling: "separate",
-    eraseLand: true,
-    usedTemplates: [],
+    wizardActive: false,
   });
 
   const coastline = data?.geographyClippingLayers?.find(
@@ -191,7 +180,7 @@ export default function GeographyAdmin() {
       state.mapLoaded &&
       data?.geographies &&
       state.map &&
-      !geographyWizardState.active
+      !state.wizardActive
     ) {
       const map = state.map;
       // add geography data sources and layers
@@ -306,23 +295,18 @@ export default function GeographyAdmin() {
     state.mapLoaded,
     state.map,
     state.hiddenGeographies,
-    geographyWizardState.active,
+    state.wizardActive,
   ]);
 
-  useEffect(() => {
-    if (!data?.projectBySlug?.geographies) {
-      return;
-    }
-    const usedTemplates = [] as string[];
-    for (const geography of data.projectBySlug.geographies) {
-      if (geography.clientTemplate) {
-        usedTemplates.push(geography.clientTemplate);
-      }
-    }
-    setGeographyWizardState((prev) => ({
-      ...prev,
-      usedTemplates: Array.from(new Set(usedTemplates)),
-    }));
+  const usedTemplates = useMemo(() => {
+    if (!data?.projectBySlug?.geographies) return [];
+    return Array.from(
+      new Set(
+        data.projectBySlug.geographies
+          .map((geog) => geog.clientTemplate)
+          .filter(Boolean) as string[]
+      )
+    );
   }, [data?.projectBySlug?.geographies]);
 
   const mapContext = useMemo(() => {
@@ -478,10 +462,9 @@ export default function GeographyAdmin() {
             <div className="px-2 -mt-1">
               <button
                 onClick={() => {
-                  setGeographyWizardState((prev) => ({
+                  setState((prev) => ({
                     ...prev,
-                    active: true,
-                    step: "chooseTemplate",
+                    wizardActive: true,
                   }));
                 }}
                 className="border border-indigo-800/20 rounded w-full text-left flex flex-row-reverse items-center space-x-2 p-4 px-2 pr-4 text-blue-900/80 bg-blue-50/70 shadow-sm hover:bg-blue-50 hover:shadow-md hover:text-blue-900 transition-all"
@@ -499,7 +482,7 @@ export default function GeographyAdmin() {
       </nav>
       <div ref={mapRef} className="flex-1 relative">
         {map &&
-          !geographyWizardState.active &&
+          !state.wizardActive &&
           data?.projectBySlug?.geographies?.length && (
             <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
               <Button
@@ -570,20 +553,19 @@ export default function GeographyAdmin() {
         )}
         <Spinner large className="absolute left-1/2 top-1/2" />
       </div>
-      {geographyWizardState.active && coastline && eez && (
+      {state.wizardActive && coastline && eez && territorialSea && (
         <CreateGeographyWizard
-          state={geographyWizardState}
-          setState={setGeographyWizardState}
-          usedTemplates={geographyWizardState.usedTemplates}
+          active={state.wizardActive}
           onRequestClose={() => {
-            setGeographyWizardState((prev) => ({
+            setState((prev: AdminState) => ({
               ...prev,
-              active: false,
+              wizardActive: false,
             }));
           }}
+          usedTemplates={usedTemplates}
           landLayerId={coastline.id}
-          eezLayerId={eez.id}
           eezLayer={eez}
+          territorialSeaLayer={territorialSea}
           map={map}
         />
       )}
