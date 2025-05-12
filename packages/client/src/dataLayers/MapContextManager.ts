@@ -74,7 +74,7 @@ import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 import { createBoundsRecursive } from "../projects/OverlayLayers";
 import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
 import { isExpression } from "./legends/utils";
-import { layer } from "@uiw/react-codemirror";
+import CoordinatesControl from "./CoordinatesControl";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -200,6 +200,7 @@ class MapContextManager extends EventEmitter {
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
   private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
+  private coordinatesControl = new CoordinatesControl();
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
   private editableSketchId?: number;
@@ -455,6 +456,10 @@ class MapContextManager extends EventEmitter {
       this.map.addControl(this.scaleControl, "bottom-right");
     }
 
+    if (this.internalState.showCoordinates) {
+      this.map.addControl(this.coordinatesControl, "bottom-right");
+    }
+
     this.map.on("error", this.onMapError);
     this.map.on("data", this.onMapDataEvent);
     this.map.on("dataloading", this.onMapDataEvent);
@@ -613,8 +618,26 @@ class MapContextManager extends EventEmitter {
     }
   }
 
+  toggleCoordinates(show: boolean) {
+    this.setState((prev) => ({
+      ...prev,
+      showCoordinates: show,
+    }));
+    if (this.map) {
+      if (this.internalState.showCoordinates) {
+        this.map.addControl(this.coordinatesControl, "bottom-right");
+      } else {
+        this.map.removeControl(this.coordinatesControl);
+      }
+    }
+  }
+
   get scaleVisible() {
     return !!this.internalState.showScale;
+  }
+
+  get coordinatesVisible() {
+    return !!this.internalState.showCoordinates;
   }
 
   /**
@@ -3724,6 +3747,7 @@ export interface MapContextInterface {
   measureControlState?: MeasureControlState;
   digitizingLockState: DigitizingLockState;
   digitizingLockedBy?: string;
+  showCoordinates?: boolean;
 }
 interface MapContextOptions {
   /** If provided, map state will be restored upon return to the map by storing state in localStorage */

@@ -32,6 +32,7 @@ import MapboxMap from "../../components/MapboxMap";
 import {
   Measure,
   ResetView,
+  ShowCoordinates,
   ShowScaleBar,
   ZoomToFeature,
 } from "../../draw/MapSettingsPopup";
@@ -585,6 +586,7 @@ const SpatialAccessPriority: FormElementComponent<
       ) : null}
       <Measure />
       <ShowScaleBar mapContext={mapContext} />
+      <ShowCoordinates mapContext={mapContext} />
     </>
   );
 

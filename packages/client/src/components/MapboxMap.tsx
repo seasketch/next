@@ -14,7 +14,6 @@ import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
-import MapSettingsPopup from "../draw/MapSettingsPopup";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
@@ -49,7 +48,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const mapContainer = useRef<HTMLDivElement>(null);
   const mapContext = useContext(MapContext);
   const [showSpinner, setShowSpinner] = useState(true);
-  const [mapSettingsPopupOpen, setMapSettingsPopupOpen] = useState(false);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
   >(null);
@@ -127,8 +125,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
     }
   }, [map, mapContext.manager, mapContext.selectedBasemap, mapContainer.current, mapContext.ready, props.lazyLoadReady]);
 
-  const mapSettingsPopupAnchor = useRef<HTMLButtonElement>(null);
-  const surveys = /surveys/.test(window.location.pathname);
   let measurementToolsPlacement: string =
     props.navigationControlsLocation || "top-right";
   if (
@@ -206,6 +202,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             <Popover.Content
               className="w-[260px] rounded bg-white p-2 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity] focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
               sideOffset={5}
+              style={{ zIndex: 99999999 }}
             >
               <div className="flex flex-col gap-2.5">
                 {props.mapSettingsPopupActions}
