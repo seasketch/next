@@ -25,6 +25,7 @@ import SketchUIStateContextProvider from "./Sketches/SketchUIStateContextProvide
 import {
   Measure,
   ResetToProjectBounds,
+  ShowCoordinates,
   ShowScaleBar,
 } from "../draw/MapSettingsPopup";
 import { MeasureControlContextProvider } from "../MeasureControl";
@@ -278,6 +279,7 @@ export default function ProjectApp() {
                             mapContextManager={mapContext.manager}
                           />
                           <ShowScaleBar mapContext={mapContext} />
+                          <ShowCoordinates mapContext={mapContext} />
                           <Measure />
                         </>
                       }

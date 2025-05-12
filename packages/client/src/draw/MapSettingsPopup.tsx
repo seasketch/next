@@ -463,6 +463,57 @@ export function ShowScaleBar(
   );
 }
 
+export function ShowCoordinates(
+  props: MapSettingsActionItem<{
+    mapContext?: MapContextInterface;
+  }>
+) {
+  const { t } = useTranslation("surveys");
+  const show = !!props.mapContext?.manager?.coordinatesVisible;
+
+  return (
+    <Item
+      {...props}
+      Icon={(childProps) => (
+        <Switch
+          tabIndex={-1}
+          {...childProps}
+          className="scale-75"
+          isToggled={show}
+          onClick={(value, e) => {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+            if (props.mapContext?.manager) {
+              props.mapContext.manager.toggleCoordinates(value);
+            }
+          }}
+        />
+      )}
+      onClick={
+        (e) => {
+          if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+          }
+          if (props.mapContext?.manager) {
+            props.mapContext.manager.toggleCoordinates(
+              !props.mapContext.manager.coordinatesVisible
+            );
+          }
+        }
+        // props.map.fitBounds(bbox(props.feature) as LngLatBoundsLike, {
+        //   animate: true,
+        //   padding: props.isSmall ? 50 : 100,
+        //   maxZoom: 17,
+        // })
+      }
+      title={t("Show coordinates", { ns: "homepage" })}
+    />
+  );
+}
+
 export function BasemapControl({
   basemaps,
   afterChange,

@@ -24,6 +24,7 @@ import SketchGeometryTypeSelector, {
 import {
   Measure,
   ResetView,
+  ShowCoordinates,
   ShowScaleBar,
   ZoomToFeature,
 } from "../draw/MapSettingsPopup";
@@ -468,6 +469,8 @@ const MultiSpatialInput: FormElementComponent<
         />
       ) : null}
       <ShowScaleBar mapContext={mapContext} />
+      <ShowCoordinates mapContext={mapContext} />
+
       <Measure />
     </>
   );
