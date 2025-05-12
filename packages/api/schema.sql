@@ -15048,14 +15048,20 @@ CREATE FUNCTION public.search_overlays(lang text, query text, "projectId" intege
     declare
       supported_languages jsonb := get_supported_languages();
       config regconfig;
-      q tsquery := websearch_to_tsquery(config, query);
+      q tsquery;
     begin
       select key::regconfig into config from jsonb_each_text(get_supported_languages()) where value = lower(lang);
+      
+      -- Handle single word searches with prefix matching
       IF position(' ' in query) <= 0 THEN
         q := to_tsquery(config, query || ':*');
+      ELSE
+        -- For multi-word searches, use plainto_tsquery to match any of the words
+        q := plainto_tsquery(config, query);
       end if;
+
       if config is null then
-        q = plainto_tsquery('simple', query);
+        q := plainto_tsquery('simple', query);
         IF position(' ' in query) <= 0 THEN
           q := to_tsquery('simple', query || ':*');
         end if;
