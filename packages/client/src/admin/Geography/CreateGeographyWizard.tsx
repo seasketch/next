@@ -129,6 +129,7 @@ export default function CreateGeographyWizard({
   territorialSeaLayer,
   usedTemplates,
   map,
+  usedEEZs,
 }: {
   active: boolean;
   onRequestClose: () => void;
@@ -136,6 +137,7 @@ export default function CreateGeographyWizard({
   eezLayer: ClippingLayerDetailsFragment;
   territorialSeaLayer: ClippingLayerDetailsFragment;
   usedTemplates: string[];
+  usedEEZs: number[];
   map: mapboxgl.Map | null;
 }) {
   const { t } = useTranslation("admin:geography");
@@ -262,6 +264,7 @@ export default function CreateGeographyWizard({
       template: "MARINE_REGIONS_TERRITORIAL_SEA",
       checked: usedTemplates.includes("territorial_sea"),
       onClick: () => {
+        territorialSeaPicker.updateSelection(usedEEZs);
         setState((prev) => ({
           ...prev,
           step: "featurePicker",
@@ -386,37 +389,21 @@ export default function CreateGeographyWizard({
                 title={t("Exclusive Economic Zone")}
                 subtitle={t("EEZ")}
                 featurePicker={featurePicker}
-                multipleFeatureHandling={state.multipleEEZHandling}
-                onMultipleFeatureHandlingChange={(value) =>
-                  setState((prev) => ({
-                    ...prev,
-                    multipleEEZHandling: value,
-                  }))
-                }
-                eraseLand={state.eraseLand}
-                onEraseLandChange={(value) =>
-                  setState((prev) => ({
-                    ...prev,
-                    eraseLand: value,
-                  }))
-                }
-                loading={mutationState.loading}
-                onCancel={onRequestClose}
-                onCreateClick={() => {
+                onCreateClick={(config) => {
                   if (featurePicker.state.selection.length === 0) {
                     throw new Error(
                       "No EEZs selected. Please select at least one EEZ."
                     );
                   }
                   const input: CreateGeographyArgs[] = [];
-                  if (state.multipleEEZHandling === "separate") {
+                  if (config.multipleFeatureHandling === "separate") {
                     for (const eez of featurePicker.getSelectedFeatures()) {
                       input.push(
                         buildCreateGeographyInputForEEZ(
                           eezLayer.id,
                           [eez.value],
                           "EEZ: " + eez.label || eez.value.toString(),
-                          state.eraseLand,
+                          config.eraseLand,
                           landLayerId
                         )
                       );
@@ -434,7 +421,7 @@ export default function CreateGeographyWizard({
                                 .join(", ")
                           : "EEZ: " +
                               featurePicker.getSelectedFeatures()[0].label!,
-                        state.eraseLand,
+                        config.eraseLand,
                         landLayerId
                       )
                     );
@@ -447,6 +434,8 @@ export default function CreateGeographyWizard({
                     onRequestClose();
                   });
                 }}
+                loading={mutationState.loading}
+                onCancel={onRequestClose}
               />
             )}
           {state.step === "config" &&
@@ -454,42 +443,37 @@ export default function CreateGeographyWizard({
             featurePicker.state.selection.length > 0 && (
               <FeatureConfig
                 title={t("Territorial Sea")}
+                showOffshoreNearshoreChoice
                 subtitle={t("Territorial Sea")}
                 featurePicker={featurePicker}
-                multipleFeatureHandling={state.multipleEEZHandling}
-                onMultipleFeatureHandlingChange={(value) =>
-                  setState((prev) => ({
-                    ...prev,
-                    multipleEEZHandling: value,
-                  }))
-                }
-                eraseLand={state.eraseLand}
-                onEraseLandChange={(value) =>
-                  setState((prev) => ({
-                    ...prev,
-                    eraseLand: value,
-                  }))
-                }
-                loading={mutationState.loading}
-                onCancel={onRequestClose}
-                onCreateClick={() => {
+                onCreateClick={(config) => {
                   if (featurePicker.state.selection.length === 0) {
                     throw new Error(
                       "No Territorial Seas selected. Please select at least one Territorial Sea."
                     );
                   }
                   const input: CreateGeographyArgs[] = [];
-                  if (state.multipleEEZHandling === "separate") {
+                  if (config.multipleFeatureHandling === "separate") {
                     for (const ts of featurePicker.getSelectedFeatures()) {
                       input.push(
                         buildCreateGeographyInputForTerritorialSeas(
                           territorialSeaLayer.id,
                           [ts.value],
                           "Territorial Sea: " + ts.label || ts.value.toString(),
-                          state.eraseLand,
+                          config.eraseLand,
                           landLayerId
                         )
                       );
+                      if (config.buildOffshoreAndNearshoreComponents) {
+                        input.push(
+                          buildCreateGeographyInputForOffshore(
+                            territorialSeaLayer.id,
+                            eezLayer.id,
+                            [ts.value],
+                            "Offshore: " + ts.label || ts.value.toString()
+                          )
+                        );
+                      }
                     }
                   } else {
                     input.push(
@@ -504,10 +488,24 @@ export default function CreateGeographyWizard({
                                 .join(", ")
                           : "Territorial Sea: " +
                               featurePicker.getSelectedFeatures()[0].label!,
-                        state.eraseLand,
+                        config.eraseLand,
                         landLayerId
                       )
                     );
+                    if (config.buildOffshoreAndNearshoreComponents) {
+                      input.push(
+                        buildCreateGeographyInputForOffshore(
+                          territorialSeaLayer.id,
+                          eezLayer.id,
+                          featurePicker.state.selection,
+                          "Offshore: " +
+                            featurePicker
+                              .getSelectedFeatures()
+                              .map((c) => c.label)
+                              .join(", ")
+                        )
+                      );
+                    }
                   }
                   mutation({
                     variables: {
@@ -517,6 +515,8 @@ export default function CreateGeographyWizard({
                     onRequestClose();
                   });
                 }}
+                loading={mutationState.loading}
+                onCancel={onRequestClose}
               />
             )}
         </Modal>
@@ -585,28 +585,43 @@ type FeatureConfigProps = {
   title: string;
   subtitle: string;
   featurePicker: ReturnType<typeof useFeaturePicker>;
-  multipleFeatureHandling: "separate" | "combine";
-  onMultipleFeatureHandlingChange: (value: "separate" | "combine") => void;
-  eraseLand: boolean;
-  onEraseLandChange: (value: boolean) => void;
-  onCreateClick: () => void;
+  onCreateClick: (config: {
+    eraseLand: boolean;
+    multipleFeatureHandling: "separate" | "combine";
+    buildOffshoreAndNearshoreComponents?: boolean;
+  }) => void;
   loading: boolean;
   onCancel: () => void;
+  showOffshoreNearshoreChoice?: boolean;
+};
+
+type FeatureConfigState = {
+  eraseLand: boolean;
+  multipleFeatureHandling: "separate" | "combine";
+  buildOffshoreAndNearshoreComponents: boolean;
 };
 
 function FeatureConfig({
   title,
   subtitle,
   featurePicker,
-  multipleFeatureHandling,
-  onMultipleFeatureHandlingChange,
-  eraseLand,
-  onEraseLandChange,
   onCreateClick,
   loading,
   onCancel,
-}: FeatureConfigProps) {
+  showOffshoreNearshoreChoice,
+}: FeatureConfigProps): JSX.Element {
   const { t } = useTranslation("admin:geography");
+  const [config, setConfig] = useState<FeatureConfigState>({
+    eraseLand: true,
+    multipleFeatureHandling: "separate",
+    buildOffshoreAndNearshoreComponents: showOffshoreNearshoreChoice
+      ? true
+      : false,
+  });
+
+  const updateConfig = (updates: Partial<FeatureConfigState>) => {
+    setConfig((prev) => ({ ...prev, ...updates }));
+  };
 
   return (
     <div className="w-144 bg-white">
@@ -635,7 +650,7 @@ function FeatureConfig({
                     }),
                     value: "separate",
                     description: t(
-                      "Use this option if Sketches will be confined to a single {{type}}, or if you need to summarize reporting metrics by individual zones. You may still aggregate metrics for all {{type}}s in reports.",
+                      "Recommended. Use this option if Sketches will be confined to a single {{type}}, or if you need to summarize reporting metrics by individual zones. You may still aggregate metrics for all {{type}}s in reports.",
                       { type: subtitle }
                     ),
                   },
@@ -649,19 +664,47 @@ function FeatureConfig({
                     ),
                   },
                 ]}
-                value={multipleFeatureHandling}
-                onChange={onMultipleFeatureHandlingChange}
+                value={config.multipleFeatureHandling}
+                onChange={(value: "separate" | "combine") =>
+                  updateConfig({ multipleFeatureHandling: value })
+                }
               />
             </>
           )}
         </div>
-        <InputBlock
-          input={<Switch isToggled={eraseLand} onClick={onEraseLandChange} />}
-          title={t("Erase Land")}
-          description={t(
-            "If enabled, OpenStreetMap coastline data will be used to remove land from sketches drawn within this geography."
+        <div className="space-y-4">
+          <InputBlock
+            input={
+              <Switch
+                isToggled={config.eraseLand}
+                onClick={() => updateConfig({ eraseLand: !config.eraseLand })}
+              />
+            }
+            title={t("Erase Land")}
+            description={t(
+              "If enabled, OpenStreetMap coastline data will be used to remove land from sketches drawn within this geography."
+            )}
+          />
+          {showOffshoreNearshoreChoice && (
+            <InputBlock
+              input={
+                <Switch
+                  isToggled={config.buildOffshoreAndNearshoreComponents}
+                  onClick={() =>
+                    updateConfig({
+                      buildOffshoreAndNearshoreComponents:
+                        !config.buildOffshoreAndNearshoreComponents,
+                    })
+                  }
+                />
+              }
+              title={t("Create Offshore and Nearshore Geographies")}
+              description={t(
+                "If enabled, paired Geographies will be created for both nearshore (12nm) and offshore (12-200nm) areas of the selected EEZs."
+              )}
+            />
           )}
-        />
+        </div>
       </div>
       <div className="bg-gray-100 border-t p-2 px-4 space-x-2 mt-2">
         <Button disabled={loading} label={t("Cancel")} onClick={onCancel} />
@@ -669,14 +712,21 @@ function FeatureConfig({
           disabled={loading}
           loading={loading}
           label={
-            multipleFeatureHandling === "separate" &&
+            config.multipleFeatureHandling === "separate" &&
             featurePicker.state.selection.length > 1
               ? t("Create Geographies")
               : t("Create Geography")
           }
           primary
           autofocus
-          onClick={onCreateClick}
+          onClick={() =>
+            onCreateClick({
+              ...config,
+              ...(showOffshoreNearshoreChoice
+                ? {}
+                : { buildOffshoreAndNearshoreComponents: undefined }),
+            })
+          }
         />
       </div>
     </div>
@@ -772,6 +822,64 @@ function buildCreateGeographyInputForTerritorialSeas(
             },
           ]
         : []),
+    ],
+  };
+  return payload;
+}
+
+function buildCreateGeographyInputForOffshore(
+  territorialSeaDataLayerId: number,
+  eezDataLayerId: number,
+  choices: number[],
+  name: string
+) {
+  const payload: CreateGeographyArgs = {
+    slug: getSlug(),
+    name,
+    clientTemplate: "eez",
+    clippingLayers: [
+      {
+        dataLayerId: eezDataLayerId,
+        templateId: "MARINE_REGIONS_EEZ_LAND_JOINED",
+        operationType: GeographyLayerOperation.Intersect,
+        cql2Query: JSON.stringify(
+          choices.length === 1
+            ? {
+                op: "=",
+                args: [
+                  {
+                    property: "MRGID_EEZ",
+                  },
+                  choices[0],
+                ],
+              }
+            : {
+                op: "in",
+                args: [{ property: "MRGID_EEZ" }, choices],
+              }
+        ),
+      },
+      {
+        dataLayerId: territorialSeaDataLayerId,
+        templateId: "MARINE_REGIONS_TERRITORIAL_SEA",
+        operationType: GeographyLayerOperation.Difference,
+        cql2Query: JSON.stringify(
+          choices.length === 1
+            ? {
+                op: "=",
+                args: [
+                  {
+                    property: "MRGID_EEZ",
+                  },
+                  choices[0],
+                ],
+              }
+            : {
+                op: "in",
+                args: [{ property: "MRGID_EEZ" }, choices],
+              }
+        ),
+      },
     ],
   };
   return payload;

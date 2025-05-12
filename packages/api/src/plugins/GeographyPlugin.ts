@@ -913,6 +913,7 @@ async function getBoundsForClippingLayer(
       v: "5",
     }).toString();
     const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
+    console.log("overlay url", overlayUrl);
     const response = await fetch(overlayUrl);
     if (!response.ok) {
       throw new Error(
@@ -925,6 +926,11 @@ async function getBoundsForClippingLayer(
         `No features found for CQL2 query ${JSON.stringify(cql2_query)}`
       );
     }
-    return features[0].__bbox;
+    if (features.length > 1) {
+      const boxes = features.map((f: any) => f.__bbox).filter(Boolean);
+      return combineBBoxes(boxes);
+    } else {
+      return features[0].__bbox;
+    }
   }
 }

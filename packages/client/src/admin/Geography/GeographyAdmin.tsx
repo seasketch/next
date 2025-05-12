@@ -27,6 +27,7 @@ import DigitizingTools from "../../formElements/DigitizingTools";
 import CreateGeographyWizard from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import EditGeographyModal from "./EditGeographyModal";
+import deepEqual from "fast-deep-equal";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -70,10 +71,6 @@ export default function GeographyAdmin() {
     (l) => l.dataSource?.dataLibraryTemplateId === EEZ
   );
 
-  const highSeas = data?.geographyClippingLayers?.find(
-    (l) => l.dataSource?.dataLibraryTemplateId === HIGH_SEAS
-  );
-
   const territorialSea = data?.geographyClippingLayers?.find(
     (l) => l.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
   );
@@ -83,8 +80,6 @@ export default function GeographyAdmin() {
 
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
-
-  const eezChoices = useEEZChoices();
 
   // Handle visibility checkbox toggle
   const handleGeographyVisibilityToggle = (geogId: number) => {
@@ -353,6 +348,51 @@ export default function GeographyAdmin() {
     extraRequestParams
   );
 
+  const unrepresentedTerritorialSeas = useMemo(() => {
+    const mrgidEEZs: Set<number> = new Set();
+    for (const geog of data?.projectBySlug?.geographies || []) {
+      const eezLayer = geog.clippingLayers?.find(
+        (l) => l.dataLayer?.dataSource?.dataLibraryTemplateId === EEZ
+      );
+      const cql = eezLayer?.cql2Query;
+      if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+        mrgidEEZs.add(getArg(cql, 1));
+      } else if (isOp(cql, "in") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+        const ids = getArg(cql, 1);
+        if (Array.isArray(ids)) {
+          for (const id of ids) {
+            mrgidEEZs.add(id);
+          }
+        }
+      }
+    }
+    // then, remove EEZs that already have a territorial sea geography
+    for (const geog of data?.projectBySlug?.geographies || []) {
+      const territorialSeaLayer = geog.clippingLayers?.find(
+        (l) =>
+          l.dataLayer?.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
+      );
+      if (territorialSeaLayer) {
+        const cql = territorialSeaLayer.cql2Query;
+        if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+          mrgidEEZs.delete(getArg(cql, 1));
+        } else if (
+          isOp(cql, "in") &&
+          hasArg(cql, 0, { property: "MRGID_EEZ" })
+        ) {
+          const ids = getArg(cql, 1);
+          if (Array.isArray(ids)) {
+            for (const id of ids) {
+              mrgidEEZs.delete(id);
+            }
+          }
+        }
+      }
+    }
+
+    return [...mrgidEEZs];
+  }, [data?.projectBySlug?.geographies]);
+
   return (
     <div className="w-full h-full flex">
       <nav className="w-96 bg-white h-full overflow-y-auto border-r border-black border-opacity-10 flex flex-col">
@@ -555,6 +595,7 @@ export default function GeographyAdmin() {
       </div>
       {state.wizardActive && coastline && eez && territorialSea && (
         <CreateGeographyWizard
+          usedEEZs={unrepresentedTerritorialSeas}
           active={state.wizardActive}
           onRequestClose={() => {
             setState((prev: AdminState) => ({
@@ -658,4 +699,27 @@ function combineBBoxes(bboxes: number[][]) {
   }
 
   return [minX, minY, maxX, maxY];
+}
+
+function isOp(cql: any, op: string) {
+  if (typeof cql === "object" && cql !== null && "op" in cql && cql.op === op) {
+    return true;
+  }
+  return false;
+}
+
+function hasArg(cql: any, position: number, arg: any) {
+  return deepEqual(getArg(cql, position), arg);
+}
+
+function getArg(cql: any, position: number) {
+  if (
+    typeof cql !== "object" ||
+    cql === null ||
+    !("args" in cql) ||
+    !Array.isArray(cql.args)
+  ) {
+    return undefined;
+  }
+  return cql.args[position];
 }
