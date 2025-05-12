@@ -109,7 +109,7 @@ export default function useMapboxGLDraw(
     geom: Geometry,
     performance?: SpanJSONOutput
   ) => void,
-  extraRequestParams: { [key: string]: any } = {}
+  extraRequestParams?: { [key: string]: any }
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
