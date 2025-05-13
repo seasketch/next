@@ -16,6 +16,7 @@ export type FeaturePickerProps = {
   loading?: boolean;
   error?: Error;
   saving?: boolean;
+  onRequestToggleSidebar: (show: boolean) => void;
 };
 
 export default function FeaturePicker({
@@ -29,11 +30,12 @@ export default function FeaturePicker({
   loading,
   error,
   saving,
+  onRequestToggleSidebar,
 }: FeaturePickerProps) {
   const { t } = useTranslation("admin:geography");
 
   return (
-    <div className="w-screen absolute flex justify-center items-center">
+    <div className="absolute flex justify-center items-center w-full">
       <div className="w-144 bg-white p-4 rounded-b-md shadow-md">
         <MultiSelect
           filterOption={(option, rawInput) => {
@@ -63,7 +65,10 @@ export default function FeaturePicker({
           <Button
             label={t("Cancel")}
             disabled={saving}
-            onClick={onRequestClose}
+            onClick={() => {
+              console.log("onRequestClose");
+              onRequestClose();
+            }}
           />
           <Button
             label={t("Continue")}

@@ -128,3 +128,35 @@ mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
     }
   }
 }
+
+fragment OverlayForGeography on TableOfContentsItem {
+  id
+  title
+  bounds
+  dataLayer {
+    id
+    vectorGeometryType
+    sourceLayer
+    mapboxGlStyles
+    dataSource {
+      createdAt
+      id
+      geostats
+      type
+      url
+      outputs {
+        type
+        size
+      }
+    }
+  }
+}
+
+query OverlaysForGeography($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...OverlayForGeography
+    }
+  }
+}

@@ -2605,6 +2605,13 @@ type DataLayer implements Node {
     orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TableOfContentsItemsConnection! @deprecated(reason: "Please use tableOfContentsItem instead")
   totalQuotaUsed: BigInt
+
+  """
+  Returns the ogc geometry type of the layer if it is a vector layer, otherwise
+  returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint",
+  "MultiLineString", "MultiPolygon".
+  """
+  vectorGeometryType: String
   vectorObjectKey: String
   version: Int
   zIndex: Int!

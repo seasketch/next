@@ -2247,6 +2247,12 @@ export type DataLayer = Node & {
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
   totalQuotaUsed?: Maybe<Scalars['BigInt']>;
+  /**
+   * Returns the ogc geometry type of the layer if it is a vector layer, otherwise
+   * returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint",
+   * "MultiLineString", "MultiPolygon".
+   */
+  vectorGeometryType?: Maybe<Scalars['String']>;
   vectorObjectKey?: Maybe<Scalars['String']>;
   version?: Maybe<Scalars['Int']>;
   zIndex: Scalars['Int'];
@@ -19683,6 +19689,40 @@ export type UpdateGeographyMutation = (
   ) }
 );
 
+export type OverlayForGeographyFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
+  & { dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'vectorGeometryType' | 'sourceLayer' | 'mapboxGlStyles'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'createdAt' | 'id' | 'geostats' | 'type' | 'url'>
+      & { outputs?: Maybe<Array<(
+        { __typename?: 'DataUploadOutput' }
+        & Pick<DataUploadOutput, 'type' | 'size'>
+      )>> }
+    )> }
+  )> }
+);
+
+export type OverlaysForGeographyQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OverlaysForGeographyQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & OverlayForGeographyFragment
+    )>> }
+  )> }
+);
+
 export type JoinProjectMutationVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
@@ -23548,6 +23588,30 @@ export const GeographyDetailsFragmentDoc = gql`
   }
 }
     ${ClippingLayerDetailsFragmentDoc}`;
+export const OverlayForGeographyFragmentDoc = gql`
+    fragment OverlayForGeography on TableOfContentsItem {
+  id
+  title
+  bounds
+  dataLayer {
+    id
+    vectorGeometryType
+    sourceLayer
+    mapboxGlStyles
+    dataSource {
+      createdAt
+      id
+      geostats
+      type
+      url
+      outputs {
+        type
+        size
+      }
+    }
+  }
+}
+    `;
 export const MapEssentialsFragmentDoc = gql`
     fragment MapEssentials on Project {
   id
@@ -30093,6 +30157,44 @@ export function useUpdateGeographyMutation(baseOptions?: Apollo.MutationHookOpti
 export type UpdateGeographyMutationHookResult = ReturnType<typeof useUpdateGeographyMutation>;
 export type UpdateGeographyMutationResult = Apollo.MutationResult<UpdateGeographyMutation>;
 export type UpdateGeographyMutationOptions = Apollo.BaseMutationOptions<UpdateGeographyMutation, UpdateGeographyMutationVariables>;
+export const OverlaysForGeographyDocument = gql`
+    query OverlaysForGeography($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...OverlayForGeography
+    }
+  }
+}
+    ${OverlayForGeographyFragmentDoc}`;
+
+/**
+ * __useOverlaysForGeographyQuery__
+ *
+ * To run a query within a React component, call `useOverlaysForGeographyQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlaysForGeographyQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlaysForGeographyQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useOverlaysForGeographyQuery(baseOptions: Apollo.QueryHookOptions<OverlaysForGeographyQuery, OverlaysForGeographyQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlaysForGeographyQuery, OverlaysForGeographyQueryVariables>(OverlaysForGeographyDocument, options);
+      }
+export function useOverlaysForGeographyLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlaysForGeographyQuery, OverlaysForGeographyQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlaysForGeographyQuery, OverlaysForGeographyQueryVariables>(OverlaysForGeographyDocument, options);
+        }
+export type OverlaysForGeographyQueryHookResult = ReturnType<typeof useOverlaysForGeographyQuery>;
+export type OverlaysForGeographyLazyQueryHookResult = ReturnType<typeof useOverlaysForGeographyLazyQuery>;
+export type OverlaysForGeographyQueryResult = Apollo.QueryResult<OverlaysForGeographyQuery, OverlaysForGeographyQueryVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -35533,6 +35635,7 @@ export const namedOperations = {
     GeographyClippingSettings: 'GeographyClippingSettings',
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
+    OverlaysForGeography: 'OverlaysForGeography',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -35810,6 +35913,7 @@ export const namedOperations = {
     ClippingDataSourceDetails: 'ClippingDataSourceDetails',
     ClippingLayerDetails: 'ClippingLayerDetails',
     GeographyDetails: 'GeographyDetails',
+    OverlayForGeography: 'OverlayForGeography',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',

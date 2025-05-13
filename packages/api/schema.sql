@@ -8191,6 +8191,33 @@ CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RE
 
 
 --
+-- Name: data_layers_vector_geometry_type(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+-- selects "geometry" property from first layer in "geostats" jsonb column
+-- of the related data_source, if it exists. Otherwise returns null
+select (
+  select jsonb_array_elements(geostats->'layers')->>'geometry'
+  from data_sources
+  where id = d.data_source_id
+  limit 1
+)
+from data_layers d
+where d.id = d.id;
+$$;
+
+
+--
+-- Name: FUNCTION data_layers_vector_geometry_type(d public.data_layers); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) IS 'Returns the ogc geometry type of the layer if it is a vector layer, otherwise returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon".';
+
+
+--
 -- Name: data_layers_vector_object_key(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -27510,6 +27537,14 @@ GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
 
 REVOKE ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_layers) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_layers) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_layers_vector_geometry_type(d public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) TO anon;
 
 
 --

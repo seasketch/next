@@ -46,6 +46,7 @@ type AdminState = {
   hiddenGeographies: number[];
   editGeographyId?: number;
   wizardActive: boolean;
+  sidebarVisible: boolean;
 };
 
 export default function GeographyAdmin() {
@@ -61,6 +62,7 @@ export default function GeographyAdmin() {
     map: null,
     hiddenGeographies: [],
     wizardActive: false,
+    sidebarVisible: true,
   });
 
   const coastline = data?.geographyClippingLayers?.find(
@@ -90,6 +92,26 @@ export default function GeographyAdmin() {
       return { ...prev, hiddenGeographies };
     });
   };
+
+  const handleToggleSidebar = (show: boolean) => {
+    setState((prev) => {
+      // Only update if the value is actually changing
+      if (prev.sidebarVisible === show) {
+        return prev;
+      }
+      return { ...prev, sidebarVisible: show };
+    });
+  };
+
+  // Handle map resize when sidebar visibility changes
+  useEffect(() => {
+    if (state.map) {
+      // Small delay to allow DOM to update
+      setTimeout(() => {
+        state.map?.resize();
+      }, 100);
+    }
+  }, [state.sidebarVisible, state.map]);
 
   useEffect(() => {
     if (
@@ -395,132 +417,140 @@ export default function GeographyAdmin() {
 
   return (
     <div className="w-full h-full flex">
-      <nav className="w-96 bg-white h-full overflow-y-auto border-r border-black border-opacity-10 flex flex-col">
-        <h1 className="p-4 font-semibold">
-          <Trans ns="admin:geograpy">Geography</Trans>
-        </h1>
-        <p className="px-4 text-sm">
-          <Trans ns="admin:geography">
-            Geographies represent spatial areas where sketches can be drawn and
-            define regions where you would like to aggregate metrics for
-            reporting. Your project can use built-in land and eez layers to
-            start with, and add custom boundary layers if needed.
-          </Trans>
-        </p>
-        <p className="text-sm p-4">
-          <a href="" className="flex items-center space-x-1 text-primary-500">
-            <FileTextIcon />
-            <span>
-              <Trans ns="admin:geography">
-                Read the geography documentation
-              </Trans>
-            </span>
-          </a>
-        </p>
-        <div className="flex flex-col overflow-y-auto bg-gray-200 h-full shadow-inner">
-          {loading && (
-            <div className="w-full text-center p-5">
-              <Spinner />
-            </div>
-          )}
-          {!hasBuiltInLayers && !loading && (
-            <Warning level="error">
-              {error ? (
-                error.toString()
-              ) : (
+      {state.sidebarVisible && (
+        <nav className="w-96 bg-white h-full overflow-y-auto border-r border-black border-opacity-10 flex flex-col">
+          <h1 className="p-4 font-semibold">
+            <Trans ns="admin:geograpy">Geography</Trans>
+          </h1>
+          <p className="px-4 text-sm">
+            <Trans ns="admin:geography">
+              Geographies represent spatial areas where sketches can be drawn
+              and define regions where you would like to aggregate metrics for
+              reporting. Your project can use built-in land and eez layers to
+              start with, and add custom boundary layers if needed.
+            </Trans>
+          </p>
+          <p className="text-sm p-4">
+            <a href="" className="flex items-center space-x-1 text-primary-500">
+              <FileTextIcon />
+              <span>
                 <Trans ns="admin:geography">
-                  SeaSketch has not been configured correctly with {EEZ},{" "}
-                  {TERRITORIAL_SEA} and {COASTLINE} layers. Contact{" "}
-                  <a className="underline" href="mailto:support@seasketch.org">
-                    support@seasketch.org
-                  </a>{" "}
-                  for assistance.
+                  Read the geography documentation
                 </Trans>
-              )}
-            </Warning>
-          )}
-          {!loading && (
-            <ul className="w-full p-2 py-4 space-y-2">
-              {data?.projectBySlug?.geographies?.map((geog) => (
-                <li
-                  className="bg-white rounded p-4 shadow-sm flex items-center space-x-2"
-                  key={geog.id}
-                >
-                  <VisibilityCheckbox
-                    disabled={false}
-                    visibility={!state.hiddenGeographies.includes(geog.id)}
-                    id={geog.id}
-                    onClick={() => handleGeographyVisibilityToggle(geog.id)}
-                  />
-                  <span className="flex-1">{geog.name}</span>
-                  <span className="space-x-2 flex items-center">
-                    <button
-                      disabled={!geog.bounds}
-                      className="disabled:opacity-20"
-                      onClick={() => {
-                        if (geog.bounds) {
-                          map?.fitBounds(
-                            geog.bounds as [number, number, number, number],
-                            {
-                              padding: 10,
-                              animate: true,
-                            }
-                          );
-                        }
-                      }}
+              </span>
+            </a>
+          </p>
+          <div className="flex flex-col overflow-y-auto bg-gray-200 h-full shadow-inner">
+            {loading && (
+              <div className="w-full text-center p-5">
+                <Spinner />
+              </div>
+            )}
+            {!hasBuiltInLayers && !loading && (
+              <Warning level="error">
+                {error ? (
+                  error.toString()
+                ) : (
+                  <Trans ns="admin:geography">
+                    SeaSketch has not been configured correctly with {EEZ},{" "}
+                    {TERRITORIAL_SEA} and {COASTLINE} layers. Contact{" "}
+                    <a
+                      className="underline"
+                      href="mailto:support@seasketch.org"
                     >
-                      <EnterFullScreenIcon />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setState((prev) => ({
-                          ...prev,
-                          editGeographyId: geog.id,
-                        }));
-                      }}
-                    >
-                      {" "}
-                      <Pencil2Icon />
-                    </button>
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {state.editGeographyId && (
-            <EditGeographyModal
-              id={state.editGeographyId}
-              onRequestClose={() => {
-                setState((prev) => ({
-                  ...prev,
-                  editGeographyId: undefined,
-                }));
-              }}
-            />
-          )}
-          {!loading && (
-            <div className="px-2 -mt-1">
-              <button
-                onClick={() => {
+                      support@seasketch.org
+                    </a>{" "}
+                    for assistance.
+                  </Trans>
+                )}
+              </Warning>
+            )}
+            {!loading && (
+              <ul className="w-full p-2 py-4 space-y-2">
+                {data?.projectBySlug?.geographies?.map((geog) => (
+                  <li
+                    className="bg-white rounded p-4 shadow-sm flex items-center space-x-2"
+                    key={geog.id}
+                  >
+                    <VisibilityCheckbox
+                      disabled={false}
+                      visibility={!state.hiddenGeographies.includes(geog.id)}
+                      id={geog.id}
+                      onClick={() => handleGeographyVisibilityToggle(geog.id)}
+                    />
+                    <span className="flex-1">{geog.name}</span>
+                    <span className="space-x-2 flex items-center">
+                      <button
+                        disabled={!geog.bounds}
+                        className="disabled:opacity-20"
+                        onClick={() => {
+                          if (geog.bounds) {
+                            map?.fitBounds(
+                              geog.bounds as [number, number, number, number],
+                              {
+                                padding: 10,
+                                animate: true,
+                              }
+                            );
+                          }
+                        }}
+                      >
+                        <EnterFullScreenIcon />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setState((prev) => ({
+                            ...prev,
+                            editGeographyId: geog.id,
+                          }));
+                        }}
+                      >
+                        {" "}
+                        <Pencil2Icon />
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {state.editGeographyId && (
+              <EditGeographyModal
+                id={state.editGeographyId}
+                onRequestClose={() => {
                   setState((prev) => ({
                     ...prev,
-                    wizardActive: true,
+                    editGeographyId: undefined,
                   }));
                 }}
-                className="border border-indigo-800/20 rounded w-full text-left flex flex-row-reverse items-center space-x-2 p-4 px-2 pr-4 text-blue-900/80 bg-blue-50/70 shadow-sm hover:bg-blue-50 hover:shadow-md hover:text-blue-900 transition-all"
-              >
-                <PlusCircledIcon />
-                <span className="flex-1">
-                  {(data?.projectBySlug?.geographies || []).length === 0
-                    ? t("Create Your First Geography")
-                    : t("Create a New Geography")}
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-      </nav>
-      <div ref={mapRef} className="flex-1 relative">
+              />
+            )}
+            {!loading && (
+              <div className="px-2 -mt-1">
+                <button
+                  onClick={() => {
+                    setState((prev) => ({
+                      ...prev,
+                      wizardActive: true,
+                    }));
+                  }}
+                  className="border border-indigo-800/20 rounded w-full text-left flex flex-row-reverse items-center space-x-2 p-4 px-2 pr-4 text-blue-900/80 bg-blue-50/70 shadow-sm hover:bg-blue-50 hover:shadow-md hover:text-blue-900 transition-all"
+                >
+                  <PlusCircledIcon />
+                  <span className="flex-1">
+                    {(data?.projectBySlug?.geographies || []).length === 0
+                      ? t("Create Your First Geography")
+                      : t("Create a New Geography")}
+                  </span>
+                </button>
+              </div>
+            )}
+          </div>
+        </nav>
+      )}
+      <div
+        ref={mapRef}
+        className={`flex-1 relative ${!state.sidebarVisible ? "w-full" : ""}`}
+      >
         {map &&
           !state.wizardActive &&
           data?.projectBySlug?.geographies?.length && (
@@ -608,6 +638,7 @@ export default function GeographyAdmin() {
           eezLayer={eez}
           territorialSeaLayer={territorialSea}
           map={map}
+          onRequestToggleSidebar={handleToggleSidebar}
         />
       )}
     </div>

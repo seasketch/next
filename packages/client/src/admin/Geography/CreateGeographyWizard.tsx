@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState, useRef } from "react";
 import { CircleIcon, Pencil1Icon } from "@radix-ui/react-icons";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import Button from "../../components/Button";
@@ -20,7 +20,8 @@ import useFeaturePicker from "./hooks/useFeaturePicker";
 import FeaturePicker from "./components/FeaturePicker";
 import { labelForEEZ } from "./useEEZChoices";
 import Spinner from "../../components/Spinner";
-
+import { createPortal } from "react-dom";
+import LayerChoice from "./components/LayerChoice";
 type WizardStep = "chooseTemplate" | "featurePicker" | "layerPicker" | "config";
 type TemplateType =
   | "MARINE_REGIONS_EEZ_LAND_JOINED"
@@ -130,6 +131,7 @@ export default function CreateGeographyWizard({
   usedTemplates,
   map,
   usedEEZs,
+  onRequestToggleSidebar,
 }: {
   active: boolean;
   onRequestClose: () => void;
@@ -139,6 +141,7 @@ export default function CreateGeographyWizard({
   usedTemplates: string[];
   usedEEZs: number[];
   map: mapboxgl.Map | null;
+  onRequestToggleSidebar: (show: boolean) => void;
 }) {
   const { t } = useTranslation("admin:geography");
   const onError = useGlobalErrorHandler();
@@ -148,6 +151,18 @@ export default function CreateGeographyWizard({
     multipleEEZHandling: "separate",
     eraseLand: true,
   });
+
+  // Handle sidebar visibility based on step
+  useEffect(() => {
+    if (state.step === "featurePicker" || state.step === "layerPicker") {
+      onRequestToggleSidebar(false);
+    } else {
+      onRequestToggleSidebar(true);
+    }
+    return () => {
+      onRequestToggleSidebar(true);
+    };
+  }, [state.step]); // Only depend on state.step
 
   const [mutation, mutationState] = useCreateGeographiesMutation({
     onError,
@@ -300,60 +315,96 @@ export default function CreateGeographyWizard({
     },
   ];
 
-  return (
-    <>
-      {state.step === "featurePicker" ? (
-        <FeaturePicker
-          title={
-            state.picker === "eez"
-              ? t("Select one or more Exclusive Economic Zones")
-              : t("Select one or more Territorial Seas")
-          }
-          description={
-            state.picker === "eez"
-              ? t(
-                  "Nations may have more than one polygon associated with their EEZ. You should select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
-                )
-              : t(
-                  "Select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
-                )
-          }
-          choices={featurePicker.state.choices}
-          selectedFeatures={featurePicker.state.selection}
-          onSelectionChange={(selectedIds) => {
-            featurePicker.updateSelection(selectedIds);
-            if (selectedIds.length > 0) {
-              const lastSelected = featurePicker.state.choices.find(
-                (choice) => choice.value === selectedIds[selectedIds.length - 1]
+  switch (state.step) {
+    case "layerPicker":
+      return (
+        <>
+          <SidebarMask />
+          <LayerChoice
+            onCancel={onRequestClose}
+            onSubmit={async (params) => {
+              const inputs = buildGeographyInputForCustomLayer(
+                params.dataLayerId,
+                params.selectedAttribute,
+                params.attributeValues,
+                params.eraseLand,
+                landLayerId,
+                params.layerTitle,
+                t
               );
-              if (lastSelected?.data.__bbox && map) {
-                map.fitBounds(
-                  [
-                    [lastSelected.data.__bbox[0], lastSelected.data.__bbox[1]],
-                    [lastSelected.data.__bbox[2], lastSelected.data.__bbox[3]],
-                  ],
-                  { padding: 50 }
-                );
-              }
+
+              await mutation({
+                variables: {
+                  geographies: inputs,
+                },
+              });
+              onRequestClose();
+            }}
+            map={map}
+          />
+        </>
+      );
+    case "featurePicker":
+      return (
+        <>
+          <SidebarMask />
+          <FeaturePicker
+            title={
+              state.picker === "eez"
+                ? t("Select one or more Exclusive Economic Zones")
+                : t("Select one or more Territorial Seas")
             }
-          }}
-          onRequestClose={() => {
-            setState((prev) => ({
-              ...prev,
-              step: "chooseTemplate",
-            }));
-          }}
-          onRequestSubmit={() => {
-            setState((prev) => ({
-              ...prev,
-              step: "config",
-            }));
-          }}
-          loading={featurePicker.state.loading}
-          error={featurePicker.state.error}
-          saving={featurePicker.state.saving}
-        />
-      ) : (
+            description={
+              state.picker === "eez"
+                ? t(
+                    "Nations may have more than one polygon associated with their EEZ. You should select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
+                  )
+                : t(
+                    "Select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
+                  )
+            }
+            choices={featurePicker.state.choices}
+            selectedFeatures={featurePicker.state.selection}
+            onSelectionChange={(selectedIds) => {
+              featurePicker.updateSelection(selectedIds);
+              if (selectedIds.length > 0) {
+                const lastSelected = featurePicker.state.choices.find(
+                  (choice) =>
+                    choice.value === selectedIds[selectedIds.length - 1]
+                );
+                if (lastSelected?.data.__bbox && map) {
+                  map.fitBounds(
+                    [
+                      [
+                        lastSelected.data.__bbox[0],
+                        lastSelected.data.__bbox[1],
+                      ],
+                      [
+                        lastSelected.data.__bbox[2],
+                        lastSelected.data.__bbox[3],
+                      ],
+                    ],
+                    { padding: 50 }
+                  );
+                }
+              }
+            }}
+            onRequestClose={onRequestClose}
+            onRequestSubmit={() => {
+              setState((prev) => ({
+                ...prev,
+                step: "config",
+              }));
+            }}
+            loading={featurePicker.state.loading}
+            error={featurePicker.state.error}
+            saving={featurePicker.state.saving}
+            onRequestToggleSidebar={onRequestToggleSidebar}
+          />
+        </>
+      );
+    default:
+      return (
         <Modal
           title={t("")}
           autoWidth={true}
@@ -520,9 +571,8 @@ export default function CreateGeographyWizard({
               />
             )}
         </Modal>
-      )}
-    </>
-  );
+      );
+  }
 }
 
 function GeographyTypeChoice({
@@ -883,4 +933,80 @@ function buildCreateGeographyInputForOffshore(
     ],
   };
   return payload;
+}
+
+function SidebarMask() {
+  return createPortal(
+    <div
+      className="absolute left-0 top-0 h-screen w-56 pointer-events-none bg-blue-800/20"
+      style={{
+        backdropFilter: "blur(8px)",
+      }}
+    />,
+    document.body
+  );
+}
+
+function buildGeographyInputForCustomLayer(
+  dataLayerId: number,
+  selectedAttribute: string | undefined,
+  attributeValues: (string | number | boolean)[] | undefined,
+  eraseLand: boolean,
+  landLayerId: number,
+  layerTitle: string,
+  t: (key: string, options?: any) => string
+): CreateGeographyArgs[] {
+  // For single-feature layers or when no attribute is selected
+  if (!selectedAttribute || !attributeValues) {
+    return [
+      {
+        slug: getSlug(),
+        name: layerTitle,
+        clippingLayers: [
+          {
+            dataLayerId,
+            operationType: GeographyLayerOperation.Intersect,
+          },
+          ...(eraseLand
+            ? [
+                {
+                  dataLayerId: landLayerId,
+                  templateId: "DAYLIGHT_COASTLINE",
+                  operationType: GeographyLayerOperation.Difference,
+                },
+              ]
+            : []),
+        ],
+      },
+    ];
+  }
+
+  // For multi-feature layers with attribute selection
+  return attributeValues.map((value) => {
+    const cql2Query = JSON.stringify({
+      op: "=",
+      args: [{ property: selectedAttribute }, value],
+    });
+
+    return {
+      slug: getSlug(),
+      name: value.toString(),
+      clippingLayers: [
+        {
+          dataLayerId,
+          operationType: GeographyLayerOperation.Intersect,
+          cql2Query,
+        },
+        ...(eraseLand
+          ? [
+              {
+                dataLayerId: landLayerId,
+                templateId: "DAYLIGHT_COASTLINE",
+                operationType: GeographyLayerOperation.Difference,
+              },
+            ]
+          : []),
+      ],
+    };
+  });
 }
