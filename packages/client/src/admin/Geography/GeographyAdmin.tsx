@@ -86,10 +86,28 @@ export default function GeographyAdmin() {
   // Handle visibility checkbox toggle
   const handleGeographyVisibilityToggle = (geogId: number) => {
     setState((prev) => {
-      const hiddenGeographies = prev.hiddenGeographies.includes(geogId)
+      const newHiddenGeographies = prev.hiddenGeographies.includes(geogId)
         ? prev.hiddenGeographies.filter((id) => id !== geogId)
         : [...prev.hiddenGeographies, geogId];
-      return { ...prev, hiddenGeographies };
+
+      // Update layer visibility directly if map is available
+      if (prev.map) {
+        const isVisible = !newHiddenGeographies.includes(geogId);
+        // Find all layers associated with this geography
+        const layers = prev.map.getStyle().layers || [];
+        for (const layer of layers) {
+          const metadata = (layer as any).metadata;
+          if (metadata?.geographyId === geogId) {
+            prev.map.setLayoutProperty(
+              layer.id,
+              "visibility",
+              isVisible ? "visible" : "none"
+            );
+          }
+        }
+      }
+
+      return { ...prev, hiddenGeographies: newHiddenGeographies };
     });
   };
 
@@ -204,6 +222,8 @@ export default function GeographyAdmin() {
       const sources: { [id: string]: mapboxgl.AnySourceData } = {};
       const hiddenGeogIds = state.hiddenGeographies;
       const layers: mapboxgl.AnyLayer[] = [];
+      const customLayerGeographies: { [key: string]: any[] } = {};
+
       for (const geography of data.projectBySlug?.geographies || []) {
         if (hiddenGeogIds.includes(geography.id)) continue;
         for (const layer of geography.clippingLayers || []) {
@@ -230,34 +250,48 @@ export default function GeographyAdmin() {
                 );
               }
             }
-            if (layer.dataLayer.mapboxGlStyles?.length) {
-              const hasMatches = layers.some(
-                (existingLayer: any) =>
-                  existingLayer.metadata?.layerId === layer.dataLayer?.id
-              );
-              if (hasMatches) {
-                continue;
-              }
 
-              for (const glLayer of layer.dataLayer.mapboxGlStyles) {
-                const layerId =
-                  LAYER_ID_PREFIX +
-                  layer.dataLayer.id +
-                  "-" +
-                  layer.dataLayer.mapboxGlStyles.indexOf(glLayer);
-                const l = {
-                  ...glLayer,
-                  source: sourceId,
-                  "source-layer": layer.dataLayer.sourceLayer,
-                  id: layerId,
-                  metadata: {
-                    layerId: layer.dataLayer.id,
-                  },
-                };
-                layers.push(l);
+            // Check if this is a custom layer (no templateId)
+            if (!layer.templateId) {
+              // Group custom layers by source ID for later processing
+              if (!customLayerGeographies[sourceId]) {
+                customLayerGeographies[sourceId] = [];
               }
+              customLayerGeographies[sourceId].push({
+                geography,
+                layer,
+              });
             } else {
-              throw new Error("Data layer does not have mapbox gl styles");
+              // Handle non-custom layers with existing deduplication logic
+              if (layer.dataLayer.mapboxGlStyles?.length) {
+                const hasMatches = layers.some(
+                  (existingLayer: any) =>
+                    existingLayer.metadata?.layerId === layer.dataLayer?.id
+                );
+                if (hasMatches) {
+                  continue;
+                }
+
+                for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+                  const layerId =
+                    LAYER_ID_PREFIX +
+                    layer.dataLayer.id +
+                    "-" +
+                    layer.dataLayer.mapboxGlStyles.indexOf(glLayer);
+                  const l = {
+                    ...glLayer,
+                    source: sourceId,
+                    "source-layer": layer.dataLayer.sourceLayer,
+                    id: layerId,
+                    metadata: {
+                      layerId: layer.dataLayer.id,
+                    },
+                  };
+                  layers.push(l);
+                }
+              } else {
+                throw new Error("Data layer does not have mapbox gl styles");
+              }
             }
           } else {
             throw new Error("Data layer does not have a data source");
@@ -271,7 +305,8 @@ export default function GeographyAdmin() {
           map.addSource(id, sources[id]);
         }
       }
-      // Remove layers not in the visible set
+
+      // Remove all existing geography layers
       const allLayerIds = new Set<string>();
       for (const geography of data.projectBySlug?.geographies || []) {
         for (const layer of geography.clippingLayers || []) {
@@ -287,17 +322,81 @@ export default function GeographyAdmin() {
           }
         }
       }
-      // Remove all geography layers, then add only visible ones
+
+      // Remove all geography layers
       for (const layerId of allLayerIds) {
         if (map.getLayer(layerId)) {
           map.removeLayer(layerId);
         }
       }
+
+      // Add non-custom layers
       for (const layer of layers) {
         if (!map.getLayer(layer.id)) {
           map.addLayer(layer);
         }
       }
+
+      // Add custom layers with filters
+      for (const [sourceId, geographies] of Object.entries(
+        customLayerGeographies
+      )) {
+        for (const { geography, layer } of geographies) {
+          if (layer.dataLayer?.mapboxGlStyles?.length) {
+            for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+              const layerId = `${LAYER_ID_PREFIX}${layer.dataLayer.id}-${
+                geography.id
+              }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
+
+              // Convert CQL2 query to Mapbox GL filter
+              let filter: any[] | undefined;
+              if (layer.cql2Query) {
+                try {
+                  const cql2 = layer.cql2Query;
+                  if (cql2.op === "=") {
+                    filter = [
+                      "==",
+                      ["get", cql2.args[0].property],
+                      cql2.args[1],
+                    ];
+                  } else if (cql2.op === "in") {
+                    filter = [
+                      "in",
+                      ["get", cql2.args[0].property],
+                      ["literal", cql2.args[1]],
+                    ];
+                  }
+                } catch (e) {
+                  console.error("Error parsing CQL2 query:", e);
+                }
+              }
+
+              const l = {
+                ...glLayer,
+                source: sourceId,
+                "source-layer": layer.dataLayer.sourceLayer,
+                id: layerId,
+                filter,
+                layout: {
+                  ...glLayer.layout,
+                  visibility: hiddenGeogIds.includes(geography.id)
+                    ? "none"
+                    : "visible",
+                },
+                metadata: {
+                  layerId: layer.dataLayer.id,
+                  geographyId: geography.id,
+                },
+              };
+
+              if (!map.getLayer(layerId)) {
+                map.addLayer(l);
+              }
+            }
+          }
+        }
+      }
+
       return () => {
         // Remove all geography layers on cleanup
         for (const layerId of allLayerIds) {
