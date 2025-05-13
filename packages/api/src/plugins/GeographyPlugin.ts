@@ -905,6 +905,7 @@ async function getBoundsForClippingLayer(
     }
     return tilejson.bounds;
   } else {
+    console.log("get bounds", JSON.stringify(cql2_query));
     const queryString = new URLSearchParams({
       includeProperties: "_",
       bbox: "true",
@@ -912,6 +913,10 @@ async function getBoundsForClippingLayer(
       dataset: url.replace("https://tiles.seasketch.org/", "") + ".fgb",
       v: "5",
     }).toString();
+    console.log(
+      "url",
+      `https://overlay.seasketch.org/properties?${queryString}`
+    );
     const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
     console.log("overlay url", overlayUrl);
     const response = await fetch(overlayUrl);
