@@ -8197,16 +8197,10 @@ CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RE
 CREATE FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
--- selects "geometry" property from first layer in "geostats" jsonb column
--- of the related data_source, if it exists. Otherwise returns null
-select (
   select jsonb_array_elements(geostats->'layers')->>'geometry'
   from data_sources
   where id = d.data_source_id
   limit 1
-)
-from data_layers d
-where d.id = d.id;
 $$;
 
 
