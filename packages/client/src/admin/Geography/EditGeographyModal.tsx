@@ -361,9 +361,7 @@ export default function EditGeographyModal({
                           <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {t("Last Updated By")}
                           </th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t("Actions")}
-                          </th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"></th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-200">
@@ -556,7 +554,7 @@ export default function EditGeographyModal({
                             </td>
                             <td className="px-4 py-0 text-sm">
                               <button
-                                className="text-red-500 hover:text-red-700"
+                                className="text-gray-400 hover:text-red-500 transition-colors duration-150 p-1 rounded-full hover:bg-red-50"
                                 onClick={() => {
                                   setState((prev) => ({
                                     ...prev,
