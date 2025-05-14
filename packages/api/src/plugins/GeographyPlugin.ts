@@ -326,13 +326,21 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 );
               }
               if (dataLayerId in existingLayerMap) {
-                // This clipping layer exists, so update it
+                // This clipping layer exists, so check if it needs updating
                 const existingLayer = existingLayerMap[dataLayerId];
-                clippingLayersToUpdate.push({
-                  id: existingLayer.id,
-                  operationType: operationType || existingLayer.operation_type,
-                  cql2Query: cql2Query,
-                });
+                const hasChanges =
+                  operationType !== existingLayer.operation_type ||
+                  JSON.stringify(cql2Query) !==
+                    JSON.stringify(existingLayer.cql2_query);
+
+                if (hasChanges) {
+                  clippingLayersToUpdate.push({
+                    id: existingLayer.id,
+                    operationType:
+                      operationType || existingLayer.operation_type,
+                    cql2Query: cql2Query,
+                  });
+                }
               } else {
                 // This clipping layer does not exist, so create it
                 clippingLayersToCreate.push({
@@ -922,7 +930,6 @@ async function getBoundsForClippingLayer(
     }
     return tilejson.bounds;
   } else {
-    console.log("get bounds", JSON.stringify(cql2_query));
     const queryString = new URLSearchParams({
       includeProperties: "_",
       bbox: "true",
@@ -930,12 +937,7 @@ async function getBoundsForClippingLayer(
       dataset: url.replace("https://tiles.seasketch.org/", "") + ".fgb",
       v: "5",
     }).toString();
-    console.log(
-      "url",
-      `https://overlay.seasketch.org/properties?${queryString}`
-    );
     const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
-    console.log("overlay url", overlayUrl);
     const response = await fetch(overlayUrl);
     if (!response.ok) {
       throw new Error(
