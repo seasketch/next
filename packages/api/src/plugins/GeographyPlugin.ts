@@ -355,22 +355,19 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 clippingLayerIdsToDelete.push(existingLayer.id);
               }
             }
-            // Perform deletions
-            if (clippingLayerIdsToDelete.length > 0) {
-              await pgClient.query(
-                `DELETE FROM geography_clipping_layers WHERE id = ANY($1)`,
-                [clippingLayerIdsToDelete]
-              );
-            }
-            // Perform updates
-            for (const layer of clippingLayersToUpdate) {
+            // First update any layers to intersect operation
+            const intersectUpdates = clippingLayersToUpdate.filter(
+              (layer) => layer.operationType === "intersect"
+            );
+            for (const layer of intersectUpdates) {
               const { id, operationType, cql2Query } = layer;
               await pgClient.query(
                 `UPDATE geography_clipping_layers SET operation_type = $1, cql2_query = $2 WHERE id = $3`,
                 [operationType, cql2Query, id]
               );
             }
-            // Perform creations
+
+            // Then create new layers
             for (const layer of clippingLayersToCreate) {
               const { dataLayerId, operationType, cql2Query, templateId } =
                 layer;
@@ -383,6 +380,26 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   cql2Query ? JSON.stringify(cql2Query) : null,
                   templateId || null,
                 ]
+              );
+            }
+
+            // Then update any layers to difference operation
+            const differenceUpdates = clippingLayersToUpdate.filter(
+              (layer) => layer.operationType === "difference"
+            );
+            for (const layer of differenceUpdates) {
+              const { id, operationType, cql2Query } = layer;
+              await pgClient.query(
+                `UPDATE geography_clipping_layers SET operation_type = $1, cql2_query = $2 WHERE id = $3`,
+                [operationType, cql2Query, id]
+              );
+            }
+
+            // Finally perform deletions
+            if (clippingLayerIdsToDelete.length > 0) {
+              await pgClient.query(
+                `DELETE FROM geography_clipping_layers WHERE id = ANY($1)`,
+                [clippingLayerIdsToDelete]
               );
             }
           }

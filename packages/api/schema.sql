@@ -4570,6 +4570,28 @@ $$;
 
 
 --
+-- Name: check_geography_has_intersect_layer(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_geography_has_intersect_layer() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- Check if there are any clipping layers with intersect operation
+  IF NOT EXISTS (
+    SELECT 1 
+    FROM geography_clipping_layers 
+    WHERE project_geography_id = NEW.project_geography_id 
+    AND operation_type = 'intersect'
+  ) THEN
+    RAISE EXCEPTION 'Project geography must have at least one clipping layer with intersect operation';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: check_optional_basemap_layers_columns(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21889,6 +21911,13 @@ CREATE TRIGGER draft_table_of_contents_has_changes_trigger AFTER UPDATE OF draft
 
 
 --
+-- Name: geography_clipping_layers ensure_geography_has_intersect_layer; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ensure_geography_has_intersect_layer AFTER INSERT OR DELETE OR UPDATE ON public.geography_clipping_layers FOR EACH ROW EXECUTE FUNCTION public.check_geography_has_intersect_layer();
+
+
+--
 -- Name: form_elements form_element_associated_sketch_class; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -26417,6 +26446,13 @@ REVOKE ALL ON FUNCTION public.check_allowed_layouts() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.check_element_type() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION check_geography_has_intersect_layer(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_geography_has_intersect_layer() FROM PUBLIC;
 
 
 --

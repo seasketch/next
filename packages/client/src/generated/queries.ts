@@ -19638,7 +19638,10 @@ export type GeographyByIdQueryVariables = Exact<{
 
 export type GeographyByIdQuery = (
   { __typename?: 'Query' }
-  & { geography?: Maybe<(
+  & { geographyClippingLayers?: Maybe<Array<(
+    { __typename?: 'DataLayer' }
+    & ClippingLayerDetailsFragment
+  )>>, geography?: Maybe<(
     { __typename?: 'Geography' }
     & { clippingLayers?: Maybe<Array<(
       { __typename?: 'GeographyClippingLayer' }
@@ -19699,7 +19702,10 @@ export type OverlayForGeographyFragment = (
       & { outputs?: Maybe<Array<(
         { __typename?: 'DataUploadOutput' }
         & Pick<DataUploadOutput, 'type' | 'size'>
-      )>> }
+      )>>, authorProfile?: Maybe<(
+        { __typename: 'Profile' }
+        & Pick<Profile, 'picture' | 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname'>
+      )> }
     )> }
   )> }
 );
@@ -23606,6 +23612,15 @@ export const OverlayForGeographyFragmentDoc = /*#__PURE__*/ gql`
         type
         size
       }
+      authorProfile {
+        __typename
+        picture
+        userId
+        fullname
+        affiliations
+        email
+        nickname
+      }
     }
   }
 }
@@ -26232,6 +26247,9 @@ export const CreateGeographiesDocument = /*#__PURE__*/ gql`
     ${GeographyDetailsFragmentDoc}`;
 export const GeographyByIdDocument = /*#__PURE__*/ gql`
     query GeographyById($id: Int!) {
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+  }
   geography(id: $id) {
     ...GeographyDetails
     clippingLayers {
@@ -26249,8 +26267,8 @@ export const GeographyByIdDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${GeographyDetailsFragmentDoc}
-${ClippingLayerDetailsFragmentDoc}`;
+    ${ClippingLayerDetailsFragmentDoc}
+${GeographyDetailsFragmentDoc}`;
 export const DeleteGeographyDocument = /*#__PURE__*/ gql`
     mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
   deleteGeographyAndTableOfContentsItems(

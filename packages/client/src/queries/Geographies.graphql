@@ -94,6 +94,9 @@ mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
 }
 
 query GeographyById($id: Int!) {
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+  }
   geography(id: $id) {
     ...GeographyDetails
     clippingLayers {
@@ -147,6 +150,15 @@ fragment OverlayForGeography on TableOfContentsItem {
       outputs {
         type
         size
+      }
+      authorProfile {
+        __typename
+        picture
+        userId
+        fullname
+        affiliations
+        email
+        nickname
       }
     }
   }

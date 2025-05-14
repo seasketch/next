@@ -47,6 +47,7 @@ type AdminState = {
   editGeographyId?: number;
   wizardActive: boolean;
   sidebarVisible: boolean;
+  showLayerChoice: boolean;
 };
 
 export default function GeographyAdmin() {
@@ -63,6 +64,7 @@ export default function GeographyAdmin() {
     hiddenGeographies: [],
     wizardActive: false,
     sidebarVisible: true,
+    showLayerChoice: false,
   });
 
   const coastline = data?.geographyClippingLayers?.find(
@@ -130,6 +132,11 @@ export default function GeographyAdmin() {
       }, 100);
     }
   }, [state.sidebarVisible, state.map]);
+
+  // Handle sidebar visibility based on layer choice state
+  useEffect(() => {
+    handleToggleSidebar(!state.showLayerChoice);
+  }, [state.showLayerChoice]);
 
   useEffect(() => {
     if (
@@ -218,12 +225,42 @@ export default function GeographyAdmin() {
       !state.wizardActive
     ) {
       const map = state.map;
-      // add geography data sources and layers
+
+      // Reset all layers except basemap
+      const resetLayers = () => {
+        const styleLayers = map.getStyle().layers || [];
+        const sources = new Set<string>();
+
+        // Remove all layers except satellite layer
+        for (const layer of styleLayers) {
+          if (layer.id !== "satellite-layer") {
+            map.removeLayer(layer.id);
+            // Track sources to potentially remove
+            const sourceId = (layer as any).source;
+            if (sourceId) {
+              sources.add(sourceId);
+            }
+          }
+        }
+
+        // Remove unused sources
+        for (const sourceId of sources) {
+          if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
+          }
+        }
+      };
+
+      // Reset layers
+      resetLayers();
+
+      // Add geography data sources and layers
       const sources: { [id: string]: mapboxgl.AnySourceData } = {};
       const hiddenGeogIds = state.hiddenGeographies;
       const layers: mapboxgl.AnyLayer[] = [];
       const customLayerGeographies: { [key: string]: any[] } = {};
 
+      // Collect all sources and layers
       for (const geography of data.projectBySlug?.geographies || []) {
         if (hiddenGeogIds.includes(geography.id)) continue;
         for (const layer of geography.clippingLayers || []) {
@@ -253,88 +290,49 @@ export default function GeographyAdmin() {
 
             // Check if this is a custom layer (no templateId)
             if (!layer.templateId) {
-              // Group custom layers by source ID for later processing
               if (!customLayerGeographies[sourceId]) {
                 customLayerGeographies[sourceId] = [];
               }
-              customLayerGeographies[sourceId].push({
-                geography,
-                layer,
-              });
+              customLayerGeographies[sourceId].push({ geography, layer });
             } else {
-              // Handle non-custom layers with existing deduplication logic
               if (layer.dataLayer.mapboxGlStyles?.length) {
                 const hasMatches = layers.some(
                   (existingLayer: any) =>
                     existingLayer.metadata?.layerId === layer.dataLayer?.id
                 );
-                if (hasMatches) {
-                  continue;
+                if (!hasMatches) {
+                  for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+                    const layerId =
+                      LAYER_ID_PREFIX +
+                      layer.dataLayer.id +
+                      "-" +
+                      layer.dataLayer.mapboxGlStyles.indexOf(glLayer);
+                    layers.push({
+                      ...glLayer,
+                      source: sourceId,
+                      "source-layer": layer.dataLayer.sourceLayer,
+                      id: layerId,
+                      metadata: {
+                        layerId: layer.dataLayer.id,
+                        isGeographyLayer: true,
+                      },
+                    } as any);
+                  }
                 }
-
-                for (const glLayer of layer.dataLayer.mapboxGlStyles) {
-                  const layerId =
-                    LAYER_ID_PREFIX +
-                    layer.dataLayer.id +
-                    "-" +
-                    layer.dataLayer.mapboxGlStyles.indexOf(glLayer);
-                  const l = {
-                    ...glLayer,
-                    source: sourceId,
-                    "source-layer": layer.dataLayer.sourceLayer,
-                    id: layerId,
-                    metadata: {
-                      layerId: layer.dataLayer.id,
-                    },
-                  };
-                  layers.push(l);
-                }
-              } else {
-                throw new Error("Data layer does not have mapbox gl styles");
               }
             }
-          } else {
-            throw new Error("Data layer does not have a data source");
           }
         }
       }
 
-      // Add sources if not present
-      for (const id in sources) {
-        if (!map.getSource(id)) {
-          map.addSource(id, sources[id]);
-        }
+      // Add all sources
+      for (const [id, source] of Object.entries(sources)) {
+        map.addSource(id, source);
       }
 
-      // Remove all existing geography layers
-      const allLayerIds = new Set<string>();
-      for (const geography of data.projectBySlug?.geographies || []) {
-        for (const layer of geography.clippingLayers || []) {
-          if (layer.dataLayer?.mapboxGlStyles?.length) {
-            for (const glLayer of layer.dataLayer.mapboxGlStyles) {
-              const layerId =
-                LAYER_ID_PREFIX +
-                layer.dataLayer.id +
-                "-" +
-                layer.dataLayer.mapboxGlStyles.indexOf(glLayer);
-              allLayerIds.add(layerId);
-            }
-          }
-        }
-      }
-
-      // Remove all geography layers
-      for (const layerId of allLayerIds) {
-        if (map.getLayer(layerId)) {
-          map.removeLayer(layerId);
-        }
-      }
-
-      // Add non-custom layers
+      // Add all non-custom layers
       for (const layer of layers) {
-        if (!map.getLayer(layer.id)) {
-          map.addLayer(layer);
-        }
+        map.addLayer(layer as any);
       }
 
       // Add custom layers with filters
@@ -371,12 +369,12 @@ export default function GeographyAdmin() {
                 }
               }
 
-              const l = {
+              map.addLayer({
                 ...glLayer,
                 source: sourceId,
                 "source-layer": layer.dataLayer.sourceLayer,
                 id: layerId,
-                filter,
+                ...(filter ? { filter } : {}),
                 layout: {
                   ...glLayer.layout,
                   visibility: hiddenGeogIds.includes(geography.id)
@@ -384,27 +382,15 @@ export default function GeographyAdmin() {
                     : "visible",
                 },
                 metadata: {
+                  isGeographyLayer: true,
                   layerId: layer.dataLayer.id,
                   geographyId: geography.id,
                 },
-              };
-
-              if (!map.getLayer(layerId)) {
-                map.addLayer(l);
-              }
+              } as any);
             }
           }
         }
       }
-
-      return () => {
-        // Remove all geography layers on cleanup
-        for (const layerId of allLayerIds) {
-          if (map.getLayer(layerId)) {
-            map.removeLayer(layerId);
-          }
-        }
-      };
     }
   }, [
     data?.projectBySlug?.geographies,
@@ -612,17 +598,6 @@ export default function GeographyAdmin() {
                 ))}
               </ul>
             )}
-            {state.editGeographyId && (
-              <EditGeographyModal
-                id={state.editGeographyId}
-                onRequestClose={() => {
-                  setState((prev) => ({
-                    ...prev,
-                    editGeographyId: undefined,
-                  }));
-                }}
-              />
-            )}
             {!loading && (
               <div className="px-2 -mt-1">
                 <button
@@ -738,6 +713,26 @@ export default function GeographyAdmin() {
           territorialSeaLayer={territorialSea}
           map={map}
           onRequestToggleSidebar={handleToggleSidebar}
+        />
+      )}
+      {state.editGeographyId && (
+        <EditGeographyModal
+          map={map}
+          id={state.editGeographyId}
+          onRequestClose={() => {
+            setState((prev) => ({
+              ...prev,
+              editGeographyId: undefined,
+              showLayerChoice: false,
+            }));
+          }}
+          showLayerChoice={state.showLayerChoice}
+          onShowLayerChoiceChange={(show) => {
+            setState((prev) => ({
+              ...prev,
+              showLayerChoice: show,
+            }));
+          }}
         />
       )}
     </div>

@@ -1,9 +1,8 @@
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import MultiSelect from "../../users/GroupMultiSelect";
 import Button from "../../../components/Button";
 import Warning from "../../../components/Warning";
 import { FeatureChoice } from "../hooks/useFeatureChoices";
-import { createPortal } from "react-dom";
 
 export type FeaturePickerProps = {
   title: string;
@@ -66,7 +65,6 @@ export default function FeaturePicker({
             label={t("Cancel")}
             disabled={saving}
             onClick={() => {
-              console.log("onRequestClose");
               onRequestClose();
             }}
           />

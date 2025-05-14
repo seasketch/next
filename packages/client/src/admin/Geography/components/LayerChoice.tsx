@@ -1,3 +1,4 @@
+/* eslint-disable jsx-a11y/anchor-is-valid */
 import { Trans, useTranslation } from "react-i18next";
 import Button from "../../../components/Button";
 import {
@@ -5,6 +6,7 @@ import {
   DataUploadOutputType,
   OverlayForGeographyFragment,
   useOverlaysForGeographyQuery,
+  AuthorProfileFragment,
 } from "../../../generated/graphql";
 import getSlug from "../../../getSlug";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
@@ -43,8 +45,12 @@ interface LayerChoiceProps {
     attributeValues?: (string | number | boolean)[];
     eraseLand: boolean;
     layerTitle: string;
+    authorProfile?: AuthorProfileFragment;
+    createdAt: string;
   }) => Promise<void>;
   map: MapboxMap | null;
+  mode?: "geographyCreation" | "clippingLayerAddition";
+  excludeDataLayerIds?: number[];
 }
 
 const SOURCE_PREFIX = "layer-choice";
@@ -147,6 +153,8 @@ export default function LayerChoice({
   onCancel,
   onSubmit,
   map,
+  mode = "geographyCreation",
+  excludeDataLayerIds,
 }: LayerChoiceProps) {
   const { t } = useTranslation("admin:geography");
   const onError = useGlobalErrorHandler();
@@ -160,6 +168,7 @@ export default function LayerChoice({
   >();
   const [selectedAttribute, setSelectedAttribute] = useState<string>();
   const [eraseLand, setEraseLand] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const addedLayersRef = useRef<Set<string>>(new Set());
   const addedSourcesRef = useRef<Set<string>>(new Set());
 
@@ -167,6 +176,7 @@ export default function LayerChoice({
     if (!data?.projectBySlug?.draftTableOfContentsItems) {
       return [];
     } else {
+      const excludeIds = excludeDataLayerIds || [];
       const choices = data.projectBySlug.draftTableOfContentsItems
         .filter(
           (item: OverlayForGeographyFragment) =>
@@ -186,10 +196,11 @@ export default function LayerChoice({
           value: item.id,
           label: item.title + " (" + item.dataLayer?.vectorGeometryType + ")",
           data: item,
+          disabled: excludeIds.includes(item.dataLayer?.id ?? -1),
         }));
       return choices;
     }
-  }, [data?.projectBySlug?.draftTableOfContentsItems]);
+  }, [data?.projectBySlug?.draftTableOfContentsItems, excludeDataLayerIds]);
 
   // Cleanup function to remove all added layers and sources
   const cleanupLayersAndSources = useCallback(() => {
@@ -274,6 +285,7 @@ export default function LayerChoice({
     if (!value) {
       setSelectedLayer(undefined);
       setSelectedAttribute(undefined);
+      setValidationError(null);
       return;
     }
     const fullLayer = validChoices.find(
@@ -290,6 +302,21 @@ export default function LayerChoice({
       fullLayer?.data.dataLayer?.mapboxGlStyles
     );
     setSelectedAttribute(bestAttribute);
+
+    // Check if the selected layer is disabled (i.e., its dataLayerId is in excludeDataLayerIds)
+    if (
+      fullLayer &&
+      excludeDataLayerIds &&
+      excludeDataLayerIds.includes(fullLayer.data.dataLayer?.id ?? -1)
+    ) {
+      setValidationError(
+        t(
+          "This layer is already used in this geography and cannot be selected."
+        )
+      );
+    } else {
+      setValidationError(null);
+    }
   };
 
   const geostatsLayer: GeostatsLayer =
@@ -332,131 +359,151 @@ export default function LayerChoice({
   }, [geostatsLayer, selectedLayer?.data.dataLayer?.mapboxGlStyles]);
 
   return (
-    <div className="w-full absolute flex justify-center items-center">
-      <div className="w-144 bg-white p-4 rounded-b-md shadow-md">
-        <h2 className="text-lg">{t("Choose a Polygon Layer")}</h2>
-        <p className="text-sm text-gray-500">
-          <Trans ns="admin:geography">
-            Choose a layer as a base for your Geography. Layers with multiple
-            features will produce multiple Geographies. You may select from the
-            list of existing Overlays, or upload a new vector layer.
-          </Trans>
-        </p>
-        {loading && (
-          <div className="flex justify-center items-center h-32">
-            <Spinner />
-          </div>
-        )}
-        {!loading && validChoices.length === 0 && (
-          <div className="text-sm text-gray-500 py-4">
-            {t("No valid polygon layers found")}
-          </div>
-        )}
-        {!loading && validChoices.length > 0 && (
-          <div className="mt-4">
-            <SingleSelect
-              groups={validChoices}
-              value={selectedLayer}
-              onChange={handleLayerChange}
-              title={t("Select a layer")}
-              loading={loading}
-            />
-          </div>
-        )}
-
-        {featureCount !== undefined && (
-          <div className="text-sm text-gray-500 mt-2">
-            {t(
-              "This layer contains {{count}} {{featureText}}{{size}}{{isLarge}}",
-              {
-                count: featureCount,
-                featureText: featureCount === 1 ? "feature" : "features",
-                size: size ? ` and is ${bytes(parseInt(size))} in size` : "",
-                isLarge: isLargeLayer
-                  ? ". Clipping operations against large layers may be slower"
-                  : "",
-              }
+    <div className="w-full absolute flex justify-center items-center z-20 top-0">
+      <div className="w-144 bg-white rounded-b-md shadow-md">
+        <div className="p-4">
+          <h2 className="text-lg">{t("Choose a Polygon Layer")}</h2>
+          <p className="text-sm text-gray-500 mt-2">
+            {mode === "geographyCreation" ? (
+              <Trans ns="admin:geography">
+                Choose a layer as a base for your Geography. Layers with
+                multiple features will produce multiple Geographies. You may
+                select from the list of existing Overlays, or upload a new
+                vector layer.
+              </Trans>
+            ) : (
+              <Trans ns="admin:geography">
+                Choose an overlay layer to use as a clipping boundary for this
+                geography.
+              </Trans>
             )}
-          </div>
-        )}
-
-        {selectedLayer &&
-          featureCount !== undefined &&
-          featureCount > 1 &&
-          featureCount <= 10 &&
-          !hasSuitableAttributes && (
-            <div className="text-sm text-red-500 mt-2">
-              {t(
-                "Warning: No attributes found with unique values for each feature. Each Geography requires a unique identifier."
-              )}
+          </p>
+          {loading && (
+            <div className="flex justify-center items-center h-32">
+              <Spinner />
             </div>
           )}
-
-        {selectedLayer &&
-          featureCount !== undefined &&
-          featureCount <= 10 &&
-          (featureCount === 1 ||
-            (featureCount > 1 &&
-              hasSuitableAttributes &&
-              getAttributeOptions.length > 0)) && (
-            <div className="mt-4 space-y-4">
-              {featureCount > 1 && (
-                <InputBlock
-                  title={t("Identify Features By")}
-                  description={t(
-                    "Choose an attribute to use as a unique identifier for your Geographies"
-                  )}
-                  input={
-                    <select
-                      className="w-64 px-2 py-0.5 pr-8 border rounded truncate"
-                      value={selectedAttribute}
-                      onChange={(e) => setSelectedAttribute(e.target.value)}
-                    >
-                      {getAttributeOptions.map((option) => (
-                        <option
-                          key={option.value}
-                          value={option.value}
-                          disabled={option.disabled}
-                        >
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  }
-                />
-              )}
-
-              <InputBlock
-                title={t("Remove Land")}
-                description={t(
-                  "If enabled, OpenStreetMap coastline data will be used to remove land from sketches drawn within this geography. Only enable if your features are not already clipped to land."
-                )}
-                input={
-                  <Switch
-                    isToggled={eraseLand}
-                    onClick={() => setEraseLand(!eraseLand)}
-                  />
-                }
+          {!loading && validChoices.length === 0 && (
+            <div className="text-sm text-gray-500 py-4">
+              {t("No valid polygon layers found")}
+            </div>
+          )}
+          {!loading && validChoices.length > 0 && (
+            <div className="mt-2">
+              <SingleSelect
+                groups={validChoices}
+                value={selectedLayer}
+                onChange={handleLayerChange}
+                title={""}
+                loading={loading}
               />
             </div>
           )}
 
-        {featureCount !== undefined && featureCount > 10 && (
-          <div className="text-sm text-red-500 mt-2">
-            <Trans ns="admin:geography">
-              Geography creation for this layer is disabled because it has &gt;
-              10 individual features and would create too many Geographies. If
-              you need to create a Geography that has more than one polygon, use
-              desktop GIS to create a MultiPolygon layer. Contact{" "}
-              <a target="_blank" className="underline">
-                support@seasketch.org
-              </a>{" "}
-              if you need help.
-            </Trans>
-          </div>
-        )}
+          {validationError && (
+            <div className="text-sm text-red-500 mt-2">{validationError}</div>
+          )}
 
-        <div className="space-x-2 mt-4">
+          {featureCount !== undefined && (
+            <div className="text-sm text-gray-500 mt-2">
+              {t(
+                "This layer contains {{count}} {{featureText}}{{size}}{{isLarge}}",
+                {
+                  count: featureCount,
+                  featureText: featureCount === 1 ? "feature" : "features",
+                  size: size ? ` and is ${bytes(parseInt(size))} in size` : "",
+                  isLarge: isLargeLayer
+                    ? ". Clipping operations against large layers may be slower"
+                    : "",
+                }
+              )}
+            </div>
+          )}
+
+          {mode === "geographyCreation" && (
+            <>
+              {selectedLayer &&
+                featureCount !== undefined &&
+                featureCount > 1 &&
+                featureCount <= 10 &&
+                !hasSuitableAttributes && (
+                  <div className="text-sm text-red-500 mt-2">
+                    {t(
+                      "Warning: No attributes found with unique values for each feature. Each Geography requires a unique identifier."
+                    )}
+                  </div>
+                )}
+
+              {selectedLayer &&
+                featureCount !== undefined &&
+                featureCount <= 10 &&
+                (featureCount === 1 ||
+                  (featureCount > 1 &&
+                    hasSuitableAttributes &&
+                    getAttributeOptions.length > 0)) && (
+                  <div className="mt-4 space-y-4">
+                    {featureCount > 1 && (
+                      <InputBlock
+                        title={t("Identify Features By")}
+                        description={t(
+                          "Choose an attribute to use as a unique identifier for your Geographies"
+                        )}
+                        input={
+                          <select
+                            className="w-64 px-2 py-0.5 pr-8 border rounded truncate"
+                            value={selectedAttribute}
+                            onChange={(e) =>
+                              setSelectedAttribute(e.target.value)
+                            }
+                          >
+                            {getAttributeOptions.map((option) => (
+                              <option
+                                key={option.value}
+                                value={option.value}
+                                disabled={option.disabled}
+                              >
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        }
+                      />
+                    )}
+
+                    <InputBlock
+                      title={t("Remove Land")}
+                      description={t(
+                        "If enabled, OpenStreetMap coastline data will be used to remove land from sketches drawn within this geography. Only enable if your features are not already clipped to land."
+                      )}
+                      input={
+                        <Switch
+                          isToggled={eraseLand}
+                          onClick={() => setEraseLand(!eraseLand)}
+                        />
+                      }
+                    />
+                  </div>
+                )}
+
+              {featureCount !== undefined && featureCount > 10 && (
+                <div className="text-sm text-red-500 mt-2">
+                  <Trans ns="admin:geography">
+                    Geography creation for this layer is disabled because it has
+                    &gt; 10 individual features and would create too many
+                    Geographies. If you need to create a Geography that has more
+                    than one polygon, use desktop GIS to create a MultiPolygon
+                    layer. Contact{" "}
+                    <a target="_blank" className="underline">
+                      support@seasketch.org
+                    </a>{" "}
+                    if you need help.
+                  </Trans>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        <div className="space-x-2 bg-gray-50 border-t p-4 py-3 rounded-b">
           <Button label={t("Cancel")} disabled={saving} onClick={onCancel} />
           <Button
             label={t("Continue")}
@@ -469,9 +516,9 @@ export default function LayerChoice({
               try {
                 // For single-feature layers, we don't need attribute values
                 const attributeValues =
-                  featureCount === 1
-                    ? undefined
-                    : selectedAttribute
+                  mode === "geographyCreation" &&
+                  featureCount !== 1 &&
+                  selectedAttribute
                     ? (() => {
                         const attr = geostatsLayer?.attributes?.find(
                           (attr) => attr.attribute === selectedAttribute
@@ -500,10 +547,17 @@ export default function LayerChoice({
                 await onSubmit({
                   dataLayerId: selectedLayer.data.dataLayer.id,
                   selectedAttribute:
-                    featureCount === 1 ? undefined : selectedAttribute,
+                    mode === "geographyCreation" && featureCount !== 1
+                      ? selectedAttribute
+                      : undefined,
                   attributeValues,
-                  eraseLand,
+                  eraseLand: mode === "geographyCreation" ? eraseLand : false,
                   layerTitle: selectedLayer.data.title,
+                  authorProfile: selectedLayer.data.dataLayer.dataSource
+                    ?.authorProfile as AuthorProfileFragment | undefined,
+                  createdAt:
+                    selectedLayer.data.dataLayer.dataSource?.createdAt ||
+                    new Date().toISOString(),
                 });
               } finally {
                 setSaving(false);
@@ -512,10 +566,12 @@ export default function LayerChoice({
             disabled={
               !selectedLayer ||
               saving ||
-              (featureCount !== undefined && featureCount > 10) ||
-              (featureCount !== undefined &&
-                featureCount > 1 &&
-                !hasSuitableAttributes)
+              !!validationError ||
+              (mode === "geographyCreation" &&
+                ((featureCount !== undefined && featureCount > 10) ||
+                  (featureCount !== undefined &&
+                    featureCount > 1 &&
+                    !hasSuitableAttributes)))
             }
           />
         </div>
