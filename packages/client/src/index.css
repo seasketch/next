@@ -6982,6 +6982,10 @@ select {
   fill: #fff;
 }
 
+.fill-gray-500 {
+  fill: #6b7280;
+}
+
 .object-cover {
   object-fit: cover;
 }
@@ -7857,6 +7861,14 @@ select {
 .text-yellow-800 {
   --tw-text-opacity: 1;
   color: rgb(146 64 14 / var(--tw-text-opacity, 1));
+}
+
+.text-black\/50 {
+  color: rgb(0 0 0 / 0.5);
+}
+
+.text-black\/80 {
+  color: rgb(0 0 0 / 0.8);
 }
 
 .text-opacity-80 {

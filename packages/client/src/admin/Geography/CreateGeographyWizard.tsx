@@ -22,6 +22,7 @@ import { labelForEEZ } from "./useEEZChoices";
 import Spinner from "../../components/Spinner";
 import { createPortal } from "react-dom";
 import LayerChoice from "./components/LayerChoice";
+import { LayerIcon } from "../../projects/ToolbarButtons";
 type WizardStep = "chooseTemplate" | "featurePicker" | "layerPicker" | "config";
 type TemplateType =
   | "MARINE_REGIONS_EEZ_LAND_JOINED"
@@ -50,6 +51,73 @@ type TemplateOption = {
   onClick: () => void;
 };
 
+function GeographyTypeChoice({
+  label,
+  description,
+  onClick,
+  checked,
+  autoFocus,
+  saving,
+  disabled,
+  customIcon,
+}: {
+  label: string | ReactNode;
+  description?: string;
+  onClick?: () => void;
+  checked?: boolean;
+  autoFocus?: boolean;
+  saving?: boolean;
+  disabled?: boolean;
+  customIcon?: ReactNode;
+}) {
+  let statusIcon = <CircleIcon className="w-[16px] h-[16px]" />;
+  if (saving) {
+    statusIcon = <Spinner />;
+  } else if (checked) {
+    statusIcon = <CheckCircleIcon className="w-[19px] h-[19px]" />;
+  }
+
+  return (
+    <button
+      disabled={disabled || saving}
+      autoFocus={autoFocus}
+      className={`p-4 border hover:bg-indigo-300/5 ${
+        saving ? "bg-indigo-300/10" : ""
+      } w-full text-left border-b-0 flex space-x-3 ${
+        disabled && !saving ? "opacity-50" : ""
+      }`}
+      onClick={(e) => {
+        if (onClick && !disabled) {
+          onClick();
+        }
+      }}
+    >
+      {checked !== undefined && (
+        <div
+          className={`w-5 flex items-center justify-center ${
+            checked || saving ? "text-gray-400" : "opacity-20"
+          }`}
+        >
+          {statusIcon}
+        </div>
+      )}
+      {customIcon && (
+        <div className="flex items-center justify-center w-5">
+          {/* <div className="w-8 h-8 text-gray-500 flex items-center justify-center"> */}
+          {typeof customIcon === "function"
+            ? customIcon({ className: "w-5 h-5 text-black/50" })
+            : customIcon}
+          {/* </div> */}
+        </div>
+      )}
+      <div className="flex-1">
+        <h4 className="font-semibold">{label}</h4>
+        {description && <p className="text-sm text-gray-500">{description}</p>}
+      </div>
+    </button>
+  );
+}
+
 function TemplateSelection({
   options,
   onCustomLayerClick,
@@ -61,12 +129,14 @@ function TemplateSelection({
 
   return (
     <div className="bg-white w-128 border-collapse pb-1 z-50">
+      <h4 className="text-lg p-4 ">{t("Create a New Geography")}</h4>
       <GeographyTypeChoice
         label={t("Use a Custom Layer")}
         description={t(
           "Choose from an existing overlay or upload a new polygon layer that represents a geography"
         )}
         onClick={onCustomLayerClick}
+        customIcon={LayerIcon}
       />
       <p className="text-sm font-light px-4 py-2 bg-gray-50 border-t">
         {t("Or, create a Geography using authoritative data sources")}
@@ -569,62 +639,6 @@ export default function CreateGeographyWizard({
         </Modal>
       );
   }
-}
-
-function GeographyTypeChoice({
-  label,
-  description,
-  onClick,
-  checked,
-  autoFocus,
-  saving,
-  disabled,
-}: {
-  label: string | ReactNode;
-  description?: string;
-  onClick?: () => void;
-  checked?: boolean;
-  autoFocus?: boolean;
-  saving?: boolean;
-  disabled?: boolean;
-}) {
-  let icon = <CircleIcon className="w-[16px] h-[16px]" />;
-  if (saving) {
-    icon = <Spinner />;
-  } else if (checked) {
-    icon = <CheckCircleIcon className="w-[19px] h-[19px]" />;
-  }
-
-  return (
-    <button
-      disabled={disabled || saving}
-      autoFocus={autoFocus}
-      className={`p-4 border hover:bg-indigo-300/5 ${
-        saving ? "bg-indigo-300/10" : ""
-      } w-full text-left border-b-0 flex space-x-3 ${
-        disabled && !saving ? "opacity-50" : ""
-      }`}
-      onClick={(e) => {
-        if (onClick && !disabled) {
-          onClick();
-        }
-      }}
-    >
-      {checked !== undefined && (
-        <div
-          className={`w-5 flex items-center justify-center ${
-            checked || saving ? "text-gray-400" : "opacity-20"
-          }`}
-        >
-          {icon}
-        </div>
-      )}
-      <div className="flex-1">
-        <h4 className="font-semibold">{label}</h4>
-        {description && <p className="text-sm text-gray-500">{description}</p>}
-      </div>
-    </button>
-  );
 }
 
 type FeatureConfigProps = {

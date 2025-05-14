@@ -21,7 +21,6 @@ import {
 } from "@radix-ui/react-icons";
 import InlineAuthor from "../../components/InlineAuthor";
 import { ReactNode } from "react";
-import { FilterIcon } from "@heroicons/react/outline";
 
 // Attribution metadata for known templateIds
 const LAYER_ATTRIBUTIONS: Record<
