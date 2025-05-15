@@ -16,26 +16,33 @@ export default function TableOfContentsMetadataModal({
   id,
   onRequestClose,
   title,
+  stableId,
 }: {
-  id: number;
+  id?: number;
   onRequestClose: () => void;
   title?: string;
+  stableId?: string;
 }) {
+  if (!id && !stableId) {
+    throw new Error("id or stableId is required");
+  }
+
   const { data, loading, error } = useGetMetadataQuery({
     variables: {
       itemId: id,
+      stableId,
     },
-    skip: !id,
+    skip: !id && !stableId,
   });
 
   return (
     <MetadataModal
-      document={data?.tableOfContentsItem?.computedMetadata}
+      document={data?.tableOfContentsItemByIdentifier?.computedMetadata}
       xml={
-        data?.tableOfContentsItem?.metadataXml
+        data?.tableOfContentsItemByIdentifier?.metadataXml
           ? {
-              ...data.tableOfContentsItem.metadataXml,
-              format: data?.tableOfContentsItem?.metadataFormat!,
+              ...data.tableOfContentsItemByIdentifier.metadataXml,
+              format: data?.tableOfContentsItemByIdentifier?.metadataFormat!,
             }
           : undefined
       }
@@ -44,7 +51,7 @@ export default function TableOfContentsMetadataModal({
       onRequestClose={onRequestClose}
       title={title}
       hostedSourceLastUpdated={
-        data?.tableOfContentsItem?.hostedSourceLastUpdated
+        data?.tableOfContentsItemByIdentifier?.hostedSourceLastUpdated
       }
     />
   );

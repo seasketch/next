@@ -630,8 +630,8 @@ fragment MetadataXmlFile on DataUploadOutput {
   isCustomUpload
 }
 
-query GetMetadata($itemId: Int!) {
-  tableOfContentsItem(id: $itemId) {
+query GetMetadata($itemId: Int, $stableId: String) {
+  tableOfContentsItemByIdentifier(id: $itemId, stableId: $stableId) {
     id
     computedMetadata
     usesDynamicMetadata
@@ -993,6 +993,18 @@ mutation DuplicateTableOfContentsItem($id: Int!) {
   duplicateTableOfContentsItem(input: { itemId: $id }) {
     tableOfContentsItem {
       ...FullAdminOverlay
+    }
+  }
+}
+
+query DraftTableOfContentsItemsForPicker($slug: String!) {
+  projectBySlug(slug: $slug) {
+    draftTableOfContentsItems {
+      id
+      stableId
+      title
+      isFolder
+      hasMetadata
     }
   }
 }

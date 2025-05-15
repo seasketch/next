@@ -344,24 +344,23 @@ export default function SketchClassAttributesAdmin({
                                     >
                                       <TrashIcon className="w-5 h-5 text-gray-500 hover:text-black" />
                                     </button>
-                                    {element.isInput &&
-                                      element.typeId !== "FilterInput" && (
-                                        <button
-                                          ref={setReferenceElement}
-                                          className={`py-1 flex-1 ${
-                                            element.id === editableElementId
-                                              ? "text-black"
-                                              : ""
-                                          }`}
-                                          onClick={(e) => {
-                                            setEditableElementId(element.id);
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                          }}
-                                        >
-                                          <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
-                                        </button>
-                                      )}
+                                    {element.isInput && (
+                                      <button
+                                        ref={setReferenceElement}
+                                        className={`py-1 flex-1 ${
+                                          element.id === editableElementId
+                                            ? "text-black"
+                                            : ""
+                                        }`}
+                                        onClick={(e) => {
+                                          setEditableElementId(element.id);
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                        }}
+                                      >
+                                        <PencilIcon className="w-5 h-5 text-gray-500 hover:text-black" />
+                                      </button>
+                                    )}
                                     {element.typeId !== "FilterInput" && (
                                       <button
                                         className="py-1 flex-1 relative"
@@ -441,69 +440,72 @@ export default function SketchClassAttributesAdmin({
                 return (
                   <>
                     <h1 className="p-3 border-b font-semibold">
-                      {t("Edit")}
-                      {editableElement?.typeId}
+                      {editableElement.generatedLabel ||
+                        editableElement?.typeId}
                     </h1>
                     <div className="pt-3 px-3 text-sm pb-1 font-medium">
                       <div className="w-72 h-0"></div>
-                      {editableElement.isInput && (
-                        <InputBlock
-                          title={t("Required", { ns: "admin:surveys" })}
-                          input={
-                            <Switch
-                              isToggled={editableElement?.isRequired}
-                              onClick={(isRequired) => {
-                                updateElement({
-                                  variables: {
-                                    id: editableElement.id,
-                                    isRequired,
-                                  },
-                                  optimisticResponse: (data) => ({
-                                    __typename: "Mutation",
-                                    updateFormElement: {
-                                      __typename: "UpdateFormElementPayload",
-                                      formElement: {
-                                        __typename: "FormElement",
-                                        ...editableElement,
-                                        isRequired,
-                                      },
+                      {editableElement.isInput &&
+                        editableElement.typeId !== "FilterInput" && (
+                          <InputBlock
+                            title={t("Required", { ns: "admin:surveys" })}
+                            input={
+                              <Switch
+                                isToggled={editableElement?.isRequired}
+                                onClick={(isRequired) => {
+                                  updateElement({
+                                    variables: {
+                                      id: editableElement.id,
+                                      isRequired,
                                     },
-                                  }),
-                                });
-                              }}
-                            />
-                          }
-                        />
-                      )}
-                      <div className="pt-2">
-                        <TextInput
-                          label={t("Export ID")}
-                          name="exportid"
-                          description={t(
-                            "Setting an export id will give a stable column name when exporting data and is used in reporting."
-                          )}
-                          value={editableElement.exportId || ""}
-                          onChange={(exportId) => {
-                            updateElement({
-                              variables: {
-                                id: editableElement.id,
-                                exportId,
-                              },
-                              optimisticResponse: (data) => ({
-                                __typename: "Mutation",
-                                updateFormElement: {
-                                  __typename: "UpdateFormElementPayload",
-                                  formElement: {
-                                    __typename: "FormElement",
-                                    ...editableElement,
-                                    exportId,
-                                  },
+                                    optimisticResponse: (data) => ({
+                                      __typename: "Mutation",
+                                      updateFormElement: {
+                                        __typename: "UpdateFormElementPayload",
+                                        formElement: {
+                                          __typename: "FormElement",
+                                          ...editableElement,
+                                          isRequired,
+                                        },
+                                      },
+                                    }),
+                                  });
+                                }}
+                              />
+                            }
+                          />
+                        )}
+                      {editableElement.typeId !== "FilterInput" && (
+                        <div className="pt-2">
+                          <TextInput
+                            label={t("Export ID")}
+                            name="exportid"
+                            description={t(
+                              "Setting an export id will give a stable column name when exporting data and is used in reporting."
+                            )}
+                            value={editableElement.exportId || ""}
+                            onChange={(exportId) => {
+                              updateElement({
+                                variables: {
+                                  id: editableElement.id,
+                                  exportId,
                                 },
-                              }),
-                            });
-                          }}
-                        />
-                      </div>
+                                optimisticResponse: (data) => ({
+                                  __typename: "Mutation",
+                                  updateFormElement: {
+                                    __typename: "UpdateFormElementPayload",
+                                    formElement: {
+                                      __typename: "FormElement",
+                                      ...editableElement,
+                                      exportId,
+                                    },
+                                  },
+                                }),
+                              });
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </>
                 );

@@ -11237,8 +11237,10 @@ export type Query = Node & {
   surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByIdentifier?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByStableId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
   /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
@@ -12253,8 +12255,21 @@ export type QueryTableOfContentsItemByDataLayerIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryTableOfContentsItemByIdentifierArgs = {
+  id?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryTableOfContentsItemByStableIdArgs = {
+  stableId?: Maybe<Scalars['String']>;
 };
 
 
@@ -18557,13 +18572,14 @@ export type MetadataXmlFileFragment = (
 );
 
 export type GetMetadataQueryVariables = Exact<{
-  itemId: Scalars['Int'];
+  itemId?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
 }>;
 
 
 export type GetMetadataQuery = (
   { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
+  & { tableOfContentsItemByIdentifier?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'metadataFormat' | 'hostedSourceLastUpdated'>
     & { metadataXml?: Maybe<(
@@ -19027,6 +19043,22 @@ export type DuplicateTableOfContentsItemMutation = (
       { __typename?: 'TableOfContentsItem' }
       & FullAdminOverlayFragment
     )> }
+  )> }
+);
+
+export type DraftTableOfContentsItemsForPickerQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DraftTableOfContentsItemsForPickerQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'hasMetadata'>
+    )>> }
   )> }
 );
 
@@ -25621,8 +25653,8 @@ export const UpdateEnableHighDpiRequestsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const GetMetadataDocument = /*#__PURE__*/ gql`
-    query GetMetadata($itemId: Int!) {
-  tableOfContentsItem(id: $itemId) {
+    query GetMetadata($itemId: Int, $stableId: String) {
+  tableOfContentsItemByIdentifier(id: $itemId, stableId: $stableId) {
     id
     computedMetadata
     usesDynamicMetadata
@@ -25961,6 +25993,19 @@ export const DuplicateTableOfContentsItemDocument = /*#__PURE__*/ gql`
   }
 }
     ${FullAdminOverlayFragmentDoc}`;
+export const DraftTableOfContentsItemsForPickerDocument = /*#__PURE__*/ gql`
+    query DraftTableOfContentsItemsForPicker($slug: String!) {
+  projectBySlug(slug: $slug) {
+    draftTableOfContentsItems {
+      id
+      stableId
+      title
+      isFolder
+      hasMetadata
+    }
+  }
+}
+    `;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -28267,6 +28312,7 @@ export const namedOperations = {
     LayerTotalQuotaUsed: 'LayerTotalQuotaUsed',
     ProjectHostingRetentionPeriod: 'ProjectHostingRetentionPeriod',
     EstimatedDataHostingQuotaUsage: 'EstimatedDataHostingQuotaUsage',
+    DraftTableOfContentsItemsForPicker: 'DraftTableOfContentsItemsForPicker',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',

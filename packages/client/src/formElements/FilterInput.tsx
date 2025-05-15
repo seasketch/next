@@ -1,5 +1,5 @@
-import { FilterIcon } from "@heroicons/react/outline";
-import { ChangeEventHandler, useCallback, useMemo } from "react";
+import { DocumentIcon, FilterIcon } from "@heroicons/react/outline";
+import { ChangeEventHandler, useCallback, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Switch from "../components/Switch";
 import {
@@ -16,9 +16,16 @@ import {
 } from "./FilterInputContext";
 import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import InputBlock from "../components/InputBlock";
+import OverlayStableIdSelect from "./OverlayStableIdPicker";
+import TableOfContentsMetadataModal from "../dataLayers/TableOfContentsMetadataModal";
 
 export type FilterInputProps = {
   attribute: string;
+  relatedOverlay?: {
+    stableId: string;
+    title: string;
+  };
 };
 
 const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
@@ -28,6 +35,7 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
   const { error, loading, metadata } = useFilterContext(
     props.componentSettings.attribute
   );
+  const [showMetadataModal, setShowMetadataModal] = useState(false);
 
   const handleChange = useCallback(
     (value: Partial<FilterInputValue>) => {
@@ -76,6 +84,36 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
           >
             <h1 data-question="yes">{props.body.content[0].content[0].text}</h1>
           </div>
+        )}
+        {props.componentSettings.relatedOverlay && (
+          <Tooltip.Provider>
+            <Tooltip.Root delayDuration={100}>
+              <Tooltip.Trigger asChild>
+                <button
+                  className="pointer-events-auto px-1 text-gray-500 hover:text-black"
+                  onClick={() => {
+                    setShowMetadataModal(true);
+                  }}
+                >
+                  <QuestionMarkCircledIcon />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Content
+                side="left"
+                align="center"
+                className="bg-gray-800 text-white text-center p-2 rounded text-xs z-50 max-w-32"
+              >
+                {t("View associated layer metadata", { ns: "admin:data" })}
+                <Tooltip.Arrow className="fill-current text-gray-800" />
+              </Tooltip.Content>
+            </Tooltip.Root>
+          </Tooltip.Provider>
+        )}
+        {props.componentSettings.relatedOverlay && showMetadataModal && (
+          <TableOfContentsMetadataModal
+            stableId={props.componentSettings.relatedOverlay.stableId}
+            onRequestClose={() => setShowMetadataModal(false)}
+          />
         )}
         <Switch
           disabled={loading || props.editable}
@@ -213,7 +251,54 @@ const FilterInput: FormElementComponent<FilterInputProps, FilterInputValue> = (
 
       <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {
-          return <></>;
+          return (
+            <>
+              <InputBlock
+                labelType="small"
+                title={t("Associated Overlay", { ns: "admin:surveys" })}
+                description={
+                  <div className="flex items-center space-x-1">
+                    <span>
+                      <Trans ns="admin:data">
+                        Select the overlay that this filter input is associated
+                        with and the user will be presented with the option to
+                        view its metadata.
+                      </Trans>{" "}
+                      {props.componentSettings.relatedOverlay && (
+                        <>
+                          <button
+                            type="button"
+                            className="text-sm text-black hover:text-red-800 underline"
+                            onClick={() => {
+                              updateComponentSetting(
+                                "relatedOverlay",
+                                props.componentSettings
+                              )(undefined);
+                            }}
+                          >
+                            {t("Clear layer association", {
+                              ns: "admin:surveys",
+                            })}
+                          </button>
+                        </>
+                      )}
+                    </span>
+                  </div>
+                }
+                input={
+                  <OverlayStableIdSelect
+                    value={props.componentSettings.relatedOverlay?.stableId}
+                    onChange={(value) => {
+                      updateComponentSetting(
+                        "relatedOverlay",
+                        props.componentSettings
+                      )(value);
+                    }}
+                  />
+                }
+              />
+            </>
+          );
         }}
       />
     </>
@@ -229,6 +314,7 @@ FilterInput.defaultBody = questionBodyFromMarkdown(`
 `);
 FilterInput.defaultComponentSettings = {
   attribute: "",
+  relatedOverlay: undefined,
 };
 FilterInput.advanceAutomatically = false;
 

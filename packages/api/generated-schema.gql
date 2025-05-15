@@ -13260,6 +13260,7 @@ type Query implements Node {
   ): SurveyResponsesConnection
   tableOfContentsItem(id: Int!): TableOfContentsItem
   tableOfContentsItemByDataLayerId(dataLayerId: Int!): TableOfContentsItem
+  tableOfContentsItemByIdentifier(id: Int, stableId: String): TableOfContentsItem
 
   """Reads a single `TableOfContentsItem` using its globally unique `ID`."""
   tableOfContentsItemByNodeId(
@@ -13268,6 +13269,7 @@ type Query implements Node {
     """
     nodeId: ID!
   ): TableOfContentsItem
+  tableOfContentsItemByStableId(stableId: String): TableOfContentsItem
 
   """Reads and enables pagination through a set of `Form`."""
   templateForms(
