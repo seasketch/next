@@ -9,7 +9,10 @@ import {
   MapContext,
   useMapContext,
 } from "../dataLayers/MapContextManager";
-import { TableOfContentsItem } from "../generated/graphql";
+import {
+  TableOfContentsItem,
+  useProjectMetadataQuery,
+} from "../generated/graphql";
 import FullSidebar from "./FullSidebar";
 import Toolbar from "./Toolbar";
 import { Trans, useTranslation } from "react-i18next";
@@ -33,6 +36,7 @@ import ProjectMapLegend from "./ProjectMapLegend";
 import { TableOfContentsMetadataModalProvider } from "../dataLayers/TableOfContentsMetadataModal";
 import { DataDownloadModalProvider } from "../dataLayers/DataDownloadModal";
 import AboutPage from "./AboutPage";
+import getSlug from "../getSlug";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -54,10 +58,18 @@ export default function ProjectApp() {
   const [mapContainerPortal, setMapContainerPortal] =
     useState<null | HTMLDivElement>(null);
 
+  const { data, loading, error } = useProjectMetadataQuery({
+    variables: {
+      slug: getSlug(),
+    },
+    skip: !getSlug(),
+  });
+
   const mapContext = useMapContext({
     preferencesKey: "homepage",
     cacheSize: bytes("200mb"),
     containerPortal: mapContainerPortal,
+    defaultShowScale: data?.project?.showScalebarByDefault || false,
   });
 
   const contextValue = useMemo(() => {
@@ -267,7 +279,11 @@ export default function ProjectApp() {
                     </ProjectAppSidebar>
                   </AnimatePresence>
                   <div className="flex flex-grow w-full h-full">
-                    <ProjectMapLegend />
+                    <ProjectMapLegend
+                      showByDefault={
+                        data?.project?.showLegendByDefault || false
+                      }
+                    />
                     <MapboxMap
                       className="ml-2"
                       showNavigationControls={true}

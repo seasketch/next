@@ -20372,7 +20372,7 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -22325,6 +22325,40 @@ export type UpdateHideOverlaysMutation = (
   )> }
 );
 
+export type UpdateShowScalebarByDefaultMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  show: Scalars['Boolean'];
+}>;
+
+
+export type UpdateShowScalebarByDefaultMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'showScalebarByDefault'>
+    )> }
+  )> }
+);
+
+export type UpdateShowLegendByDefaultMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  show: Scalars['Boolean'];
+}>;
+
+
+export type UpdateShowLegendByDefaultMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'showLegendByDefault'>
+    )> }
+  )> }
+);
+
 export type UserAdminCountsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -23906,6 +23940,8 @@ export const ProjectMetadataFragmentDoc = gql`
   enableReportBuilder
   customDocLink
   enableReportBuilder
+  showScalebarByDefault
+  showLegendByDefault
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -34876,6 +34912,80 @@ export function useUpdateHideOverlaysMutation(baseOptions?: Apollo.MutationHookO
 export type UpdateHideOverlaysMutationHookResult = ReturnType<typeof useUpdateHideOverlaysMutation>;
 export type UpdateHideOverlaysMutationResult = Apollo.MutationResult<UpdateHideOverlaysMutation>;
 export type UpdateHideOverlaysMutationOptions = Apollo.BaseMutationOptions<UpdateHideOverlaysMutation, UpdateHideOverlaysMutationVariables>;
+export const UpdateShowScalebarByDefaultDocument = gql`
+    mutation UpdateShowScalebarByDefault($projectId: Int!, $show: Boolean!) {
+  updateProject(input: {id: $projectId, patch: {showScalebarByDefault: $show}}) {
+    project {
+      id
+      showScalebarByDefault
+    }
+  }
+}
+    `;
+export type UpdateShowScalebarByDefaultMutationFn = Apollo.MutationFunction<UpdateShowScalebarByDefaultMutation, UpdateShowScalebarByDefaultMutationVariables>;
+
+/**
+ * __useUpdateShowScalebarByDefaultMutation__
+ *
+ * To run a mutation, you first call `useUpdateShowScalebarByDefaultMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateShowScalebarByDefaultMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateShowScalebarByDefaultMutation, { data, loading, error }] = useUpdateShowScalebarByDefaultMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      show: // value for 'show'
+ *   },
+ * });
+ */
+export function useUpdateShowScalebarByDefaultMutation(baseOptions?: Apollo.MutationHookOptions<UpdateShowScalebarByDefaultMutation, UpdateShowScalebarByDefaultMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateShowScalebarByDefaultMutation, UpdateShowScalebarByDefaultMutationVariables>(UpdateShowScalebarByDefaultDocument, options);
+      }
+export type UpdateShowScalebarByDefaultMutationHookResult = ReturnType<typeof useUpdateShowScalebarByDefaultMutation>;
+export type UpdateShowScalebarByDefaultMutationResult = Apollo.MutationResult<UpdateShowScalebarByDefaultMutation>;
+export type UpdateShowScalebarByDefaultMutationOptions = Apollo.BaseMutationOptions<UpdateShowScalebarByDefaultMutation, UpdateShowScalebarByDefaultMutationVariables>;
+export const UpdateShowLegendByDefaultDocument = gql`
+    mutation UpdateShowLegendByDefault($projectId: Int!, $show: Boolean!) {
+  updateProject(input: {id: $projectId, patch: {showLegendByDefault: $show}}) {
+    project {
+      id
+      showLegendByDefault
+    }
+  }
+}
+    `;
+export type UpdateShowLegendByDefaultMutationFn = Apollo.MutationFunction<UpdateShowLegendByDefaultMutation, UpdateShowLegendByDefaultMutationVariables>;
+
+/**
+ * __useUpdateShowLegendByDefaultMutation__
+ *
+ * To run a mutation, you first call `useUpdateShowLegendByDefaultMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateShowLegendByDefaultMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateShowLegendByDefaultMutation, { data, loading, error }] = useUpdateShowLegendByDefaultMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      show: // value for 'show'
+ *   },
+ * });
+ */
+export function useUpdateShowLegendByDefaultMutation(baseOptions?: Apollo.MutationHookOptions<UpdateShowLegendByDefaultMutation, UpdateShowLegendByDefaultMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateShowLegendByDefaultMutation, UpdateShowLegendByDefaultMutationVariables>(UpdateShowLegendByDefaultDocument, options);
+      }
+export type UpdateShowLegendByDefaultMutationHookResult = ReturnType<typeof useUpdateShowLegendByDefaultMutation>;
+export type UpdateShowLegendByDefaultMutationResult = Apollo.MutationResult<UpdateShowLegendByDefaultMutation>;
+export type UpdateShowLegendByDefaultMutationOptions = Apollo.BaseMutationOptions<UpdateShowLegendByDefaultMutation, UpdateShowLegendByDefaultMutationVariables>;
 export const UserAdminCountsDocument = gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -36205,6 +36315,8 @@ export const namedOperations = {
     UpdateHideSketches: 'UpdateHideSketches',
     UpdateHideForums: 'UpdateHideForums',
     UpdateHideOverlays: 'UpdateHideOverlays',
+    UpdateShowScalebarByDefault: 'UpdateShowScalebarByDefault',
+    UpdateShowLegendByDefault: 'UpdateShowLegendByDefault',
     CreateGroup: 'CreateGroup',
     toggleAdminAccess: 'toggleAdminAccess',
     setUserGroups: 'setUserGroups',

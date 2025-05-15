@@ -65,3 +65,25 @@ mutation UpdateHideOverlays($hidden: Boolean!, $projectId: Int!) {
     }
   }
 }
+
+mutation UpdateShowScalebarByDefault($projectId: Int!, $show: Boolean!) {
+  updateProject(
+    input: { id: $projectId, patch: { showScalebarByDefault: $show } }
+  ) {
+    project {
+      id
+      showScalebarByDefault
+    }
+  }
+}
+
+mutation UpdateShowLegendByDefault($projectId: Int!, $show: Boolean!) {
+  updateProject(
+    input: { id: $projectId, patch: { showLegendByDefault: $show } }
+  ) {
+    project {
+      id
+      showLegendByDefault
+    }
+  }
+}

@@ -79,6 +79,7 @@ export default function Legend({
   backdropBlur: blur,
   persistedStateKey,
   editable,
+  defaultToHidden = true,
 }: {
   backdropBlur?: boolean;
   items: LegendItem[];
@@ -92,13 +93,17 @@ export default function Legend({
   maxHeight?: number;
   persistedStateKey?: string;
   editable?: boolean;
+  /** Default visibility state of the legend. Only used if no persisted state exists. Defaults to true (hidden) */
+  defaultToHidden?: boolean;
 }) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
   const [hidden, setHidden] = useLocalForage<boolean>(
     persistedStateKey || "legend",
+    defaultToHidden,
     true
   );
+
   const layerEditingContext = useContext(LayerEditingContext);
   return (
     <div

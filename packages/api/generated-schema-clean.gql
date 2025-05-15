@@ -11459,6 +11459,8 @@ type Project implements Node {
     offset: Int
   ): [SurveyTokenInfo!]
   sessionParticipationStatus: ParticipationStatus
+  showLegendByDefault: Boolean
+  showScalebarByDefault: Boolean
 
   """Reads and enables pagination through a set of `SketchClass`."""
   sketchClasses(
@@ -12072,6 +12074,8 @@ input ProjectPatch {
   mapboxPublicKey: String
   name: String
   region: GeoJSON
+  showLegendByDefault: Boolean
+  showScalebarByDefault: Boolean
   translatedProps: JSON
 }
 

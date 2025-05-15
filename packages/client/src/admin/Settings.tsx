@@ -23,6 +23,8 @@ import {
   useUpdateHideForumsMutation,
   useUpdateHideOverlaysMutation,
   useUpdateEnableReportBuilderMutation,
+  useUpdateShowScalebarByDefaultMutation,
+  useUpdateShowLegendByDefaultMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -35,7 +37,6 @@ import bbox from "@turf/bbox";
 import { useAuth0 } from "@auth0/auth0-react";
 import Button from "../components/Button";
 import { useTranslation, Trans } from "react-i18next";
-import DataBucketSettings from "./data/DataBucketSettings";
 import { AdminMobileHeaderContext } from "./AdminMobileHeaderContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
@@ -50,7 +51,6 @@ import InputBlock from "../components/InputBlock";
 import useDialog from "../components/useDialog";
 import SupportedLanguagesSettings from "./SupportedLanguagesSettings";
 import getSlug from "../getSlug";
-import { TranslateIcon } from "@heroicons/react/outline";
 import TranslatedPropControl from "../components/TranslatedPropControl";
 import bytes from "bytes";
 import ProjectAPIKeys from "./ProjectAPIKeys";
@@ -58,7 +58,6 @@ import AboutPageSettings from "./AboutPageSettings";
 
 export default function Settings() {
   const { data } = useCurrentProjectMetadata();
-  const { user } = useAuth0();
   const { setState: setHeaderState } = useContext(AdminMobileHeaderContext);
   const superuser = useIsSuperuser();
   useEffect(() => {
@@ -77,6 +76,15 @@ export default function Settings() {
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           <AccessControlSettings />
+        </div>
+        <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
+          {data && data.project && (
+            <DefaultMapSettings
+              projectId={data.project.id}
+              showScalebarByDefault={data.project.showScalebarByDefault}
+              showLegendByDefault={data.project.showLegendByDefault}
+            />
+          )}
         </div>
         <div className="mx-auto max-w-3xl px-4 sm:px-6 md:px-8">
           {data && data.project && (
@@ -403,6 +411,92 @@ function HiddenContentSettings(props: {
               />
             }
             title={t("Hide Overlay Layers")}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DefaultMapSettings(props: {
+  showScalebarByDefault: boolean | null | undefined;
+  showLegendByDefault: boolean | null | undefined;
+  projectId: number;
+}) {
+  const [updateShowScalebar] = useUpdateShowScalebarByDefaultMutation({
+    optimisticResponse: (data: { projectId: number; show: boolean }) => {
+      return {
+        __typename: "Mutation",
+        updateProject: {
+          __typename: "UpdateProjectPayload",
+          project: {
+            __typename: "Project",
+            id: data.projectId,
+            showScalebarByDefault: data.show,
+          },
+        },
+      };
+    },
+  });
+  const [updateShowLegend] = useUpdateShowLegendByDefaultMutation({
+    optimisticResponse: (data: { projectId: number; show: boolean }) => {
+      return {
+        __typename: "Mutation",
+        updateProject: {
+          __typename: "UpdateProjectPayload",
+          project: {
+            __typename: "Project",
+            id: data.projectId,
+            showLegendByDefault: data.show,
+          },
+        },
+      };
+    },
+  });
+  const { t } = useTranslation("admin");
+  return (
+    <div className="shadow sm:rounded-md sm:overflow-hidden">
+      <div className="px-4 py-5 bg-white sm:p-6">
+        <h3 className="text-lg font-medium leading-6 text-gray-900">
+          {t("Default Map Settings")}
+        </h3>
+        <p className="mt-2 text-sm text-gray-500">
+          {t(
+            "Control the default visibility of map elements when users first load the project. These will only impact new users of the project. If a user changes the visibility of these components, their browser will remember their settings."
+          )}
+        </p>
+        <div className="text-base pt-4">
+          <InputBlock
+            input={
+              <Switch
+                isToggled={props.showScalebarByDefault ?? false}
+                onClick={() => {
+                  updateShowScalebar({
+                    variables: {
+                      projectId: props.projectId,
+                      show: !(props.showScalebarByDefault ?? false),
+                    },
+                  });
+                }}
+              />
+            }
+            title={t("Show Scale Bar")}
+          />
+          <InputBlock
+            input={
+              <Switch
+                isToggled={props.showLegendByDefault ?? false}
+                onClick={() => {
+                  updateShowLegend({
+                    variables: {
+                      projectId: props.projectId,
+                      show: !(props.showLegendByDefault ?? false),
+                    },
+                  });
+                }}
+              />
+            }
+            title={t("Expand the Legend by Default")}
           />
         </div>
       </div>

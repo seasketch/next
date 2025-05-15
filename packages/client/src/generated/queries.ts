@@ -20370,7 +20370,7 @@ export type ProjectDashboardQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
@@ -22323,6 +22323,40 @@ export type UpdateHideOverlaysMutation = (
   )> }
 );
 
+export type UpdateShowScalebarByDefaultMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  show: Scalars['Boolean'];
+}>;
+
+
+export type UpdateShowScalebarByDefaultMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'showScalebarByDefault'>
+    )> }
+  )> }
+);
+
+export type UpdateShowLegendByDefaultMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  show: Scalars['Boolean'];
+}>;
+
+
+export type UpdateShowLegendByDefaultMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProject?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'showLegendByDefault'>
+    )> }
+  )> }
+);
+
 export type UserAdminCountsQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -23904,6 +23938,8 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   enableReportBuilder
   customDocLink
   enableReportBuilder
+  showScalebarByDefault
+  showLegendByDefault
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = /*#__PURE__*/ gql`
@@ -28060,6 +28096,26 @@ export const UpdateHideOverlaysDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateShowScalebarByDefaultDocument = /*#__PURE__*/ gql`
+    mutation UpdateShowScalebarByDefault($projectId: Int!, $show: Boolean!) {
+  updateProject(input: {id: $projectId, patch: {showScalebarByDefault: $show}}) {
+    project {
+      id
+      showScalebarByDefault
+    }
+  }
+}
+    `;
+export const UpdateShowLegendByDefaultDocument = /*#__PURE__*/ gql`
+    mutation UpdateShowLegendByDefault($projectId: Int!, $show: Boolean!) {
+  updateProject(input: {id: $projectId, patch: {showLegendByDefault: $show}}) {
+    project {
+      id
+      showLegendByDefault
+    }
+  }
+}
+    `;
 export const UserAdminCountsDocument = /*#__PURE__*/ gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -28688,6 +28744,8 @@ export const namedOperations = {
     UpdateHideSketches: 'UpdateHideSketches',
     UpdateHideForums: 'UpdateHideForums',
     UpdateHideOverlays: 'UpdateHideOverlays',
+    UpdateShowScalebarByDefault: 'UpdateShowScalebarByDefault',
+    UpdateShowLegendByDefault: 'UpdateShowLegendByDefault',
     CreateGroup: 'CreateGroup',
     toggleAdminAccess: 'toggleAdminAccess',
     setUserGroups: 'setUserGroups',
