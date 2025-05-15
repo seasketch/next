@@ -465,7 +465,7 @@ class MapContextManager extends EventEmitter {
     this.map.on("dataloading", this.onMapDataEvent);
     this.map.on("moveend", this.onMapMove);
     this.map.on("styleimagemissing", this.onStyleImageMissing);
-    this.map.on("load", () => {
+    this.map.on("load", (e) => {
       this.mapIsLoaded = true;
       // Use to trigger changes to mapContextManager.map
       this.setState((prev) => ({ ...prev }));
@@ -608,6 +608,7 @@ class MapContextManager extends EventEmitter {
     if (this.map) {
       if (show) {
         if (!this.map.hasControl(this.scaleControl)) {
+          this.map.hasControl(this.scaleControl);
           this.map.addControl(this.scaleControl, "bottom-right");
         }
       } else {
@@ -616,6 +617,7 @@ class MapContextManager extends EventEmitter {
         }
       }
     }
+    this.debouncedUpdatePreferences();
   }
 
   toggleCoordinates(show: boolean) {
@@ -625,11 +627,16 @@ class MapContextManager extends EventEmitter {
     }));
     if (this.map) {
       if (this.internalState.showCoordinates) {
-        this.map.addControl(this.coordinatesControl, "bottom-right");
+        if (!this.map.hasControl(this.coordinatesControl)) {
+          this.map.addControl(this.coordinatesControl, "bottom-right");
+        }
       } else {
-        this.map.removeControl(this.coordinatesControl);
+        if (this.map.hasControl(this.coordinatesControl)) {
+          this.map.removeControl(this.coordinatesControl);
+        }
       }
     }
+    this.debouncedUpdatePreferences();
   }
 
   get scaleVisible() {
@@ -920,6 +927,8 @@ class MapContextManager extends EventEmitter {
         basemapOptionalLayerStatePreferences:
           this.internalState.basemapOptionalLayerStatePreferences,
         sketchClassLayerStates: sketchClassLayerStates,
+        showScale: this.internalState.showScale,
+        showCoordinates: this.internalState.showCoordinates,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
@@ -3061,7 +3070,6 @@ class MapContextManager extends EventEmitter {
     const newLegendState: { [layerId: string]: LegendItem | null } = {};
     let changes = false;
     const layers = this.getVisibleLayersByZIndex();
-    // console.log("layers", layers);
     for (const layer of layers) {
       if (layer.sketchClassLayerState) {
         // add visible sketchClass layer legends
@@ -3217,8 +3225,6 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    // console.log("newlegendstate", newLegendState);
-
     if (changes) {
       this.setState((prev) => ({
         ...prev,
@@ -3339,8 +3345,6 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    // console.log({ sublayerZIndexLookup });
-
     const getZIndexOverride = (
       layer: (typeof visibleLayers)[0] | (typeof visibleSketchClassLayers)[0]
     ) => {
@@ -3456,10 +3460,8 @@ class MapContextManager extends EventEmitter {
 
   moveLayerToTop(stableId: string, isSketchClassLayer?: boolean) {
     const currentOrder = this.getCurrentZOrder();
-    // console.log(stableId, { currentOrder });
     if (currentOrder.length > 1) {
       const top = currentOrder[0];
-      // console.log(top.zIndex, top.zIndex - 1);
       if (top.id !== stableId) {
         this.setZOrderOverride(stableId, top.zIndex - 1, isSketchClassLayer);
       }
@@ -3819,6 +3821,12 @@ export function useMapContext(options?: MapContextOptions) {
       }
       if ("prefersTerrainEnabled" in prefs) {
         initialState.prefersTerrainEnabled = prefs.prefersTerrainEnabled;
+      }
+      if ("showScale" in prefs) {
+        initialState.showScale = Boolean(prefs.showScale);
+      }
+      if ("showCoordinates" in prefs) {
+        initialState.showCoordinates = Boolean(prefs.showCoordinates);
       }
     }
   }
