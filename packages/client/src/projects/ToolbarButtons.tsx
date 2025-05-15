@@ -190,7 +190,7 @@ export const LayerIcon = ({ className }: { className?: string }) => (
     </g>
   </svg>
 );
-export const LayersButton = curry(LayerIcon);
+export const LayersButton = curry(<LayerIcon />);
 
 export const MyProfileIcon = (
   <div className="w-7 h-7 flex items-center justify-center">
