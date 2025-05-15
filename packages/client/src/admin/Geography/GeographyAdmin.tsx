@@ -1,5 +1,4 @@
 import {
-  DotsHorizontalIcon,
   EnterFullScreenIcon,
   FileTextIcon,
   Pencil1Icon,
@@ -14,13 +13,10 @@ import {
 } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
-import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
-import Switch from "../../components/Switch";
+import { useEffect, useMemo, useRef, useState } from "react";
 import getSlug from "../../getSlug";
 import mapboxgl from "mapbox-gl";
-import useEEZChoices, { labelForEEZ } from "./useEEZChoices";
-import { createPortal } from "react-dom";
-import MultiSelect from "../users/GroupMultiSelect";
+import useEEZChoices from "./useEEZChoices";
 import Button from "../../components/Button";
 import useMapboxGLDraw, {
   DigitizingState,
@@ -28,17 +24,31 @@ import useMapboxGLDraw, {
 } from "../../draw/useMapboxGLDraw";
 import { Feature } from "geojson";
 import DigitizingTools from "../../formElements/DigitizingTools";
-import CreateGeographyWizard, {
-  CreateGeographyWizardState,
-} from "./CreateGeographyWizard";
+import CreateGeographyWizard from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
-import { PlusCircleIcon } from "@heroicons/react/solid";
 import EditGeographyModal from "./EditGeographyModal";
+import deepEqual from "fast-deep-equal";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
 const HIGH_SEAS = "MARINE_REGIONS_HIGH_SEAS";
 const TERRITORIAL_SEA = "MARINE_REGIONS_TERRITORIAL_SEA";
+
+const SOURCE_ID_PREFIX = "source-";
+const LAYER_ID_PREFIX = "layer-";
+const JSON_EXTENSION = ".json";
+const GOOGLE_MAPS_TILE_URL =
+  "https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}";
+
+type AdminState = {
+  mapLoaded: boolean;
+  map: mapboxgl.Map | null;
+  hiddenGeographies: number[];
+  editGeographyId?: number;
+  wizardActive: boolean;
+  sidebarVisible: boolean;
+  showLayerChoice: boolean;
+};
 
 export default function GeographyAdmin() {
   const { t } = useTranslation("admin:geography");
@@ -48,40 +58,13 @@ export default function GeographyAdmin() {
     skip: !slug,
   });
 
-  const [state, setState] = useState<{
-    mapLoaded: boolean;
-    map: mapboxgl.Map | null;
-    hiddenGeographies: number[];
-    editGeographyId?: number;
-  }>({
+  const [state, setState] = useState<AdminState>({
     mapLoaded: false,
     map: null,
     hiddenGeographies: [],
-  });
-
-  const [geographyWizardState, setGeographyWizardState] = useState<
-    {
-      active: boolean;
-      usedTemplates: string[];
-    } & CreateGeographyWizardState
-  >({
-    active: false,
-    step: "chooseTemplate",
-    multipleEEZHandling: "separate",
-    eraseLand: true,
-    usedTemplates: [],
-  });
-
-  const [eezPickerState, setEEZPickerState] = useState<{
-    active: boolean;
-    selectedEEZs: number[];
-    saving: boolean;
-    error?: Error;
-    resultResolver?: (selectedEEZs: number[]) => void;
-  }>({
-    active: false,
-    selectedEEZs: [],
-    saving: false,
+    wizardActive: false,
+    sidebarVisible: true,
+    showLayerChoice: false,
   });
 
   const coastline = data?.geographyClippingLayers?.find(
@@ -90,10 +73,6 @@ export default function GeographyAdmin() {
 
   const eez = data?.geographyClippingLayers?.find(
     (l) => l.dataSource?.dataLibraryTemplateId === EEZ
-  );
-
-  const highSeas = data?.geographyClippingLayers?.find(
-    (l) => l.dataSource?.dataLibraryTemplateId === HIGH_SEAS
   );
 
   const territorialSea = data?.geographyClippingLayers?.find(
@@ -106,44 +85,58 @@ export default function GeographyAdmin() {
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
 
-  const eezChoices = useEEZChoices();
-
-  // Handle changes in the multi-select input
-  const handleMultiSelectChange = (
-    selectedGroups: { value: number; label: string }[]
-  ) => {
-    setEEZPickerState((prevState) => ({
-      ...prevState,
-      selectedEEZs: selectedGroups.map((group) => group.value),
-    }));
-    const eezs = eezChoices.eezs.filter((choice) =>
-      selectedGroups.map((group) => group.value).includes(choice.value)
-    );
-    const bboxes = eezs.map((choice) => choice.data?.__bbox);
-    const bbox = combineBBoxes(bboxes);
-    if (bbox) {
-      map?.fitBounds(
-        [
-          [bbox[0], bbox[1]],
-          [bbox[2], bbox[3]],
-        ],
-        {
-          padding: 80,
-          animate: true,
-        }
-      );
-    }
-  };
-
-  // Handle visibility checkbox toggle (now hides on check)
+  // Handle visibility checkbox toggle
   const handleGeographyVisibilityToggle = (geogId: number) => {
     setState((prev) => {
-      const hiddenGeographies = prev.hiddenGeographies.includes(geogId)
+      const newHiddenGeographies = prev.hiddenGeographies.includes(geogId)
         ? prev.hiddenGeographies.filter((id) => id !== geogId)
         : [...prev.hiddenGeographies, geogId];
-      return { ...prev, hiddenGeographies };
+
+      // Update layer visibility directly if map is available
+      if (prev.map) {
+        const isVisible = !newHiddenGeographies.includes(geogId);
+        // Find all layers associated with this geography
+        const layers = prev.map.getStyle().layers || [];
+        for (const layer of layers) {
+          const metadata = (layer as any).metadata;
+          if (metadata?.geographyId === geogId) {
+            prev.map.setLayoutProperty(
+              layer.id,
+              "visibility",
+              isVisible ? "visible" : "none"
+            );
+          }
+        }
+      }
+
+      return { ...prev, hiddenGeographies: newHiddenGeographies };
     });
   };
+
+  const handleToggleSidebar = (show: boolean) => {
+    setState((prev) => {
+      // Only update if the value is actually changing
+      if (prev.sidebarVisible === show) {
+        return prev;
+      }
+      return { ...prev, sidebarVisible: show };
+    });
+  };
+
+  // Handle map resize when sidebar visibility changes
+  useEffect(() => {
+    if (state.map) {
+      // Small delay to allow DOM to update
+      setTimeout(() => {
+        state.map?.resize();
+      }, 100);
+    }
+  }, [state.sidebarVisible, state.map]);
+
+  // Handle sidebar visibility based on layer choice state
+  useEffect(() => {
+    handleToggleSidebar(!state.showLayerChoice);
+  }, [state.showLayerChoice]);
 
   useEffect(() => {
     if (
@@ -152,7 +145,6 @@ export default function GeographyAdmin() {
       data?.gmapssatellitesession?.session &&
       eez?.dataSource?.url &&
       coastline?.dataSource?.url &&
-      !eezChoices.loading &&
       territorialSea?.dataSource?.url
     ) {
       let bbox: number[] | undefined;
@@ -172,23 +164,11 @@ export default function GeographyAdmin() {
               type: "raster",
               tiles: [
                 // eslint-disable-next-line i18next/no-literal-string
-                `https://tile.googleapis.com/v1/2dtiles/{z}/{x}/{y}?session=${session}&key=${process.env.REACT_APP_GOOGLE_MAPS_2D_TILE_API_KEY}`,
+                `${GOOGLE_MAPS_TILE_URL}?session=${session}&key=${process.env.REACT_APP_GOOGLE_MAPS_2D_TILE_API_KEY}`,
               ],
               format: "jpeg",
               attribution: "Google",
               tileSize: 512,
-            },
-            eez: {
-              type: "vector",
-              url: eez.dataSource.url + ".json",
-            },
-            coastline: {
-              type: "vector",
-              url: coastline.dataSource.url + ".json",
-            },
-            territorialSea: {
-              type: "vector",
-              url: territorialSea.dataSource.url + ".json",
             },
           },
           layers: [
@@ -214,8 +194,6 @@ export default function GeographyAdmin() {
         projection: "globe",
       });
 
-      const activeEEZIds: number[] = [];
-      // data?.projectBySlug?.eezSettings?.mrgidEez || [];
       newMap.on("load", () => {
         setMap(newMap);
         newMap.setFog({
@@ -227,93 +205,15 @@ export default function GeographyAdmin() {
           "star-intensity": 0.5,
         });
 
-        if (eez && eez.dataSource) {
-          newMap.addLayer({
-            id: "eez-layer",
-            type: "fill",
-            source: "eez",
-            "source-layer": eez.sourceLayer!,
-            paint: {
-              "fill-opacity": [
-                "case",
-                ["in", ["get", "MRGID_EEZ"], ["literal", activeEEZIds]],
-                0.1,
-                0,
-              ],
-              "fill-color": "#007cbf",
-            },
-          });
-
-          newMap.addLayer({
-            id: "eez-line",
-            type: "line",
-            source: "eez",
-            "source-layer": eez.sourceLayer!,
-            layout: {
-              "line-cap": "round",
-              "line-join": "round",
-            },
-            paint: {
-              "line-opacity": [
-                "case",
-                ["in", ["get", "MRGID_EEZ"], ["literal", activeEEZIds]],
-                0.6,
-                0,
-              ],
-              "line-color": "grey",
-              "line-width": [
-                "case",
-                ["boolean", ["feature-state", "hover"], false],
-                2, // Thicker line width when hovered
-                1, // Default line width
-              ],
-            },
-          });
-        }
-
-        if (territorialSea && territorialSea.dataSource) {
-          newMap.addLayer({
-            id: "territorial-sea-layer",
-            type: "fill",
-            source: "territorialSea",
-            "source-layer": territorialSea.sourceLayer!,
-            paint: {
-              "fill-opacity": 0.02,
-              "fill-color": "#aaaaaa",
-            },
-          });
-          newMap.addLayer({
-            id: "territorial-sea-line",
-            type: "line",
-            source: "territorialSea",
-            "source-layer": territorialSea.sourceLayer!,
-            layout: {
-              "line-cap": "round",
-              "line-join": "round",
-            },
-            paint: {
-              "line-opacity": 0.6,
-              "line-color": "rgba(200, 100, 100, 1)",
-              "line-width": [
-                "case",
-                ["boolean", ["feature-state", "hover"], false],
-                2, // Thicker line width when hovered
-                1, // Default line width
-              ],
-            },
-          });
-        }
         setState((prev) => ({ ...prev, mapLoaded: true, map: newMap }));
       });
-      // @ts-ignore
-      window.map = newMap;
     }
   }, [
     mapRef,
     data?.gmapssatellitesession?.session,
     eez?.dataSource?.url,
     coastline?.dataSource?.url,
-    eezChoices.loading,
+    territorialSea?.dataSource?.url,
     setState,
   ]);
 
@@ -322,27 +222,57 @@ export default function GeographyAdmin() {
       state.mapLoaded &&
       data?.geographies &&
       state.map &&
-      !eezPickerState.active // <-- Hide geography layers if EEZ picker is active
+      !state.wizardActive
     ) {
       const map = state.map;
-      // add geography data sources and layers
+
+      // Reset all layers except basemap
+      const resetLayers = () => {
+        const styleLayers = map.getStyle().layers || [];
+        const sources = new Set<string>();
+
+        // Remove all layers except satellite layer
+        for (const layer of styleLayers) {
+          if (layer.id !== "satellite-layer") {
+            map.removeLayer(layer.id);
+            // Track sources to potentially remove
+            const sourceId = (layer as any).source;
+            if (sourceId) {
+              sources.add(sourceId);
+            }
+          }
+        }
+
+        // Remove unused sources
+        for (const sourceId of sources) {
+          if (map.getSource(sourceId)) {
+            map.removeSource(sourceId);
+          }
+        }
+      };
+
+      // Reset layers
+      resetLayers();
+
+      // Add geography data sources and layers
       const sources: { [id: string]: mapboxgl.AnySourceData } = {};
-      // Only add layers for visible geographies (not hidden)
       const hiddenGeogIds = state.hiddenGeographies;
       const layers: mapboxgl.AnyLayer[] = [];
+      const customLayerGeographies: { [key: string]: any[] } = {};
+
+      // Collect all sources and layers
       for (const geography of data.projectBySlug?.geographies || []) {
         if (hiddenGeogIds.includes(geography.id)) continue;
         for (const layer of geography.clippingLayers || []) {
           if (layer.dataLayer?.dataSource) {
-            // eslint-disable-next-line i18next/no-literal-string
-            const sourceId = `source-${layer.dataLayer.dataSource.id}`;
+            const sourceId = SOURCE_ID_PREFIX + layer.dataLayer.dataSource.id;
             if (!(sourceId in sources)) {
               if (
                 layer.dataLayer.dataSource.type === DataSourceTypes.SeasketchMvt
               ) {
                 sources[sourceId] = {
                   type: "vector",
-                  url: layer.dataLayer.dataSource.url! + ".json",
+                  url: layer.dataLayer.dataSource.url! + JSON_EXTENSION,
                 };
               } else if (
                 layer.dataLayer.dataSource.type === DataSourceTypes.Geojson
@@ -357,108 +287,108 @@ export default function GeographyAdmin() {
                 );
               }
             }
-            if (layer.dataLayer.mapboxGlStyles?.length) {
-              // check to make sure there aren't any existing layers with
-              // matching cql2Query and source metadata before adding
-              const hasMatches = layers.some(
-                (existingLayer: any) =>
-                  existingLayer.metadata?.layerId === layer.dataLayer?.id
-              );
-              if (hasMatches) {
-                continue;
-              }
 
-              for (const glLayer of layer.dataLayer.mapboxGlStyles) {
-                // eslint-disable-next-line i18next/no-literal-string
-                const layerId = `layer-${
-                  layer.dataLayer.id
-                }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
-                const l = {
-                  ...glLayer,
-                  source: sourceId,
-                  "source-layer": layer.dataLayer.sourceLayer,
-                  id: layerId,
-                  metadata: {
-                    layerId: layer.dataLayer.id,
-                  },
-                };
-                layers.push(l);
+            // Check if this is a custom layer (no templateId)
+            if (!layer.templateId) {
+              if (!customLayerGeographies[sourceId]) {
+                customLayerGeographies[sourceId] = [];
               }
+              customLayerGeographies[sourceId].push({ geography, layer });
             } else {
-              throw new Error("Data layer does not have mapbox gl styles");
+              if (layer.dataLayer.mapboxGlStyles?.length) {
+                const hasMatches = layers.some(
+                  (existingLayer: any) =>
+                    existingLayer.metadata?.layerId === layer.dataLayer?.id
+                );
+                if (!hasMatches) {
+                  for (const glLayer of layer.dataLayer.mapboxGlStyles) {
+                    const layerId =
+                      LAYER_ID_PREFIX +
+                      layer.dataLayer.id +
+                      "-" +
+                      layer.dataLayer.mapboxGlStyles.indexOf(glLayer);
+                    layers.push({
+                      ...glLayer,
+                      source: sourceId,
+                      "source-layer": layer.dataLayer.sourceLayer,
+                      id: layerId,
+                      metadata: {
+                        layerId: layer.dataLayer.id,
+                        isGeographyLayer: true,
+                      },
+                    } as any);
+                  }
+                }
+              }
             }
-          } else {
-            throw new Error("Data layer does not have a data source");
           }
         }
       }
 
-      // Add sources if not present
-      for (const id in sources) {
-        if (!map.getSource(id)) {
-          map.addSource(id, sources[id]);
-        }
+      // Add all sources
+      for (const [id, source] of Object.entries(sources)) {
+        map.addSource(id, source);
       }
-      // Remove layers not in the visible set
-      const allLayerIds = new Set<string>();
-      for (const geography of data.projectBySlug?.geographies || []) {
-        for (const layer of geography.clippingLayers || []) {
-          if (layer.dataLayer?.mapboxGlStyles?.length) {
-            for (const glLayer of layer.dataLayer.mapboxGlStyles) {
-              // eslint-disable-next-line i18next/no-literal-string
-              const layerId = `layer-${
-                layer.dataLayer.id
-              }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
-              allLayerIds.add(layerId);
-            }
-          }
-        }
-      }
-      // Remove all geography layers, then add only visible ones
-      for (const layerId of allLayerIds) {
-        if (map.getLayer(layerId)) {
-          map.removeLayer(layerId);
-        }
-      }
+
+      // Add all non-custom layers
       for (const layer of layers) {
-        if (!map.getLayer(layer.id)) {
-          map.addLayer(layer);
-        }
+        map.addLayer(layer as any);
       }
-      return () => {
-        // Remove all geography layers on cleanup
-        for (const layerId of allLayerIds) {
-          if (map.getLayer(layerId)) {
-            map.removeLayer(layerId);
-          }
-        }
-      };
-    }
-    // Remove all geography layers if EEZ picker is active
-    if (
-      state.mapLoaded &&
-      data?.geographies &&
-      state.map &&
-      eezPickerState.active
-    ) {
-      const map = state.map;
-      const allLayerIds = new Set<string>();
-      for (const geography of data.projectBySlug?.geographies || []) {
-        for (const layer of geography.clippingLayers || []) {
+
+      // Add custom layers with filters
+      for (const [sourceId, geographies] of Object.entries(
+        customLayerGeographies
+      )) {
+        for (const { geography, layer } of geographies) {
           if (layer.dataLayer?.mapboxGlStyles?.length) {
             for (const glLayer of layer.dataLayer.mapboxGlStyles) {
-              // eslint-disable-next-line i18next/no-literal-string
-              const layerId = `layer-${
-                layer.dataLayer.id
+              const layerId = `${LAYER_ID_PREFIX}${layer.dataLayer.id}-${
+                geography.id
               }-${layer.dataLayer.mapboxGlStyles.indexOf(glLayer)}`;
-              allLayerIds.add(layerId);
+
+              // Convert CQL2 query to Mapbox GL filter
+              let filter: any[] | undefined;
+              if (layer.cql2Query) {
+                try {
+                  const cql2 = layer.cql2Query;
+                  if (cql2.op === "=") {
+                    filter = [
+                      "==",
+                      ["get", cql2.args[0].property],
+                      cql2.args[1],
+                    ];
+                  } else if (cql2.op === "in") {
+                    filter = [
+                      "in",
+                      ["get", cql2.args[0].property],
+                      ["literal", cql2.args[1]],
+                    ];
+                  }
+                } catch (e) {
+                  console.error("Error parsing CQL2 query:", e);
+                }
+              }
+
+              map.addLayer({
+                ...glLayer,
+                source: sourceId,
+                "source-layer": layer.dataLayer.sourceLayer,
+                id: layerId,
+                ...(filter ? { filter } : {}),
+                layout: {
+                  ...glLayer.layout,
+                  visibility: hiddenGeogIds.includes(geography.id)
+                    ? "none"
+                    : "visible",
+                },
+                metadata: {
+                  isGeographyLayer: true,
+                  layerId: layer.dataLayer.id,
+                  geographyId: geography.id,
+                },
+              } as any);
             }
           }
-        }
-      }
-      for (const layerId of allLayerIds) {
-        if (map.getLayer(layerId)) {
-          map.removeLayer(layerId);
         }
       }
     }
@@ -467,172 +397,19 @@ export default function GeographyAdmin() {
     state.mapLoaded,
     state.map,
     state.hiddenGeographies,
-    eezPickerState.active,
+    state.wizardActive,
   ]);
 
-  // Setup tooltip and hover effects for when eez picker is active
-  useEffect(() => {
-    if (map && eezPickerState.active !== undefined && eez) {
-      const tooltip = document.createElement("div");
-      // eslint-disable-next-line i18next/no-literal-string
-      tooltip.className = `absolute bg-white border border-gray-300 rounded-md p-1 text-sm bg-opacity-80 shadow-lg -left-12 -top-12`;
-      document.body.appendChild(tooltip);
-
-      let hoveredFeatureId: number | null = null;
-
-      const handleMouseMove = (
-        e: mapboxgl.MapMouseEvent & mapboxgl.EventData
-      ) => {
-        if (!eezPickerState.active) {
-          tooltip.style.display = "none";
-          return;
-        }
-
-        const feature = e.features?.[0];
-        if (feature && feature.properties) {
-          const label = labelForEEZ(feature.properties as any);
-          tooltip.innerHTML = label;
-
-          const mapContainer = map.getContainer();
-          const rect = mapContainer.getBoundingClientRect();
-
-          // eslint-disable-next-line i18next/no-literal-string
-          tooltip.style.left = `${rect.left + e.point.x + 16}px`;
-          // eslint-disable-next-line i18next/no-literal-string
-          tooltip.style.top = `${rect.top + e.point.y + 16}px`;
-          tooltip.style.display = "block";
-
-          map.getCanvas().style.cursor = "pointer";
-
-          // Update hover styling
-          if (hoveredFeatureId !== null) {
-            map.setFeatureState(
-              {
-                source: "eez",
-                sourceLayer: eez.sourceLayer!,
-                id: hoveredFeatureId,
-              },
-              { hover: false }
-            );
-          }
-          hoveredFeatureId = feature.id as number;
-          map.setFeatureState(
-            {
-              source: "eez",
-              sourceLayer: eez.sourceLayer!,
-              id: hoveredFeatureId,
-            },
-            { hover: true }
-          );
-        }
-      };
-
-      const handleMouseLeave = () => {
-        tooltip.style.display = "none";
-        map.getCanvas().style.cursor = "";
-
-        // Reset hover styling
-        if (hoveredFeatureId !== null) {
-          map.setFeatureState(
-            {
-              source: "eez",
-              sourceLayer: eez.sourceLayer!,
-              id: hoveredFeatureId,
-            },
-            { hover: false }
-          );
-          hoveredFeatureId = null;
-        }
-      };
-
-      map.on("mousemove", "eez-layer", handleMouseMove);
-      map.on("mouseleave", "eez-layer", handleMouseLeave);
-
-      const handleClick = (e: mapboxgl.MapMouseEvent & mapboxgl.EventData) => {
-        const feature = e.features?.[0];
-        if (feature && feature.properties) {
-          const eezId = feature.properties.MRGID_EEZ;
-
-          setEEZPickerState((prevState) => {
-            const isSelected = prevState.selectedEEZs.includes(eezId);
-            const updatedSelectedEEZs = isSelected
-              ? prevState.selectedEEZs.filter((id) => id !== eezId) // Remove if already selected
-              : [...prevState.selectedEEZs, eezId]; // Add if not selected
-
-            return {
-              ...prevState,
-              selectedEEZs: updatedSelectedEEZs,
-            };
-          });
-        }
-      };
-
-      map.on("click", "eez-layer", handleClick);
-
-      return () => {
-        map.off("mousemove", "eez-layer", handleMouseMove);
-        map.off("mouseleave", "eez-layer", handleMouseLeave);
-        map.off("click", "eez-layer", handleClick);
-        tooltip.remove();
-      };
-    }
-  }, [map, eezPickerState.active]);
-
-  // Update EEZ layers whenever eez geography settings change
-  useEffect(() => {
-    if (map && eez) {
-      const selectedEEZs = eezPickerState.active
-        ? eezPickerState.selectedEEZs
-        : [];
-      // Update the fill-opacity for the EEZ layer based on eezPickerState
-      if (
-        // data?.projectBySlug?.eezSettings?.enableEezClipping ||
-        eezPickerState.active
-      ) {
-        map.setPaintProperty("eez-layer", "fill-opacity", [
-          "case",
-          // If the picker is active, show all EEZs with appropriate opacity
-          ["boolean", eezPickerState.active, false],
-          0.2, // Higher opacity when in EEZ picker mode
-          // If the picker is not active, hide non-selected EEZs
-          ["in", ["get", "MRGID_EEZ"], ["literal", selectedEEZs]],
-          0.1, // Default opacity for selected EEZs
-          0, // Hide non-selected EEZs
-        ]);
-        map.setPaintProperty("eez-line", "line-opacity", [
-          "case",
-          // If the picker is active, show all EEZs with appropriate opacity
-          ["boolean", eezPickerState.active, false],
-          0.5, // Higher opacity when in EEZ picker mode
-          // If the picker is not active, hide non-selected EEZs
-          ["in", ["get", "MRGID_EEZ"], ["literal", selectedEEZs]],
-          0.6, // Default opacity for selected EEZs
-          0, // Hide non-selected EEZs
-        ]);
-      } else {
-        map.setPaintProperty("eez-layer", "fill-opacity", 0);
-        map.setPaintProperty("eez-line", "line-opacity", 0);
-      }
-
-      if (eezPickerState.active) {
-        map.setPaintProperty("eez-layer", "fill-color", [
-          "case",
-          ["boolean", ["in", ["get", "MRGID_EEZ"], ["literal", selectedEEZs]]],
-          "yellow",
-          "#007cbf",
-        ]);
-        map.setPaintProperty("eez-line", "line-color", [
-          "case",
-          ["boolean", ["in", ["get", "MRGID_EEZ"], ["literal", selectedEEZs]]],
-          "#ffc107",
-          "grey",
-        ]);
-      } else {
-        map.setPaintProperty("eez-layer", "fill-color", "#007cbf");
-        map.setPaintProperty("eez-line", "line-color", "grey");
-      }
-    }
-  }, [map, eez, eezPickerState.active, eezPickerState.selectedEEZs]);
+  const usedTemplates = useMemo(() => {
+    if (!data?.projectBySlug?.geographies) return [];
+    return Array.from(
+      new Set(
+        data.projectBySlug.geographies
+          .map((geog) => geog.clientTemplate)
+          .filter(Boolean) as string[]
+      )
+    );
+  }, [data?.projectBySlug?.geographies]);
 
   const mapContext = useMemo(() => {
     return {
@@ -672,162 +449,184 @@ export default function GeographyAdmin() {
     },
     undefined,
     "https://overlay.seasketch.org/clip",
-    // "http://localhost:8787/clip",
-    // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand", // preprocessing function
     (geom, performance) => {
       // console.log("geom", geom, performance);
     },
     extraRequestParams
   );
 
-  useEffect(() => {
-    if (!data?.projectBySlug?.geographies) {
-      return;
-    }
-    const usedTemplates = [] as string[];
-    for (const geography of data.projectBySlug.geographies) {
-      if (geography.clientTemplate) {
-        usedTemplates.push(geography.clientTemplate);
+  const unrepresentedTerritorialSeas = useMemo(() => {
+    const mrgidEEZs: Set<number> = new Set();
+    for (const geog of data?.projectBySlug?.geographies || []) {
+      const eezLayer = geog.clippingLayers?.find(
+        (l) => l.dataLayer?.dataSource?.dataLibraryTemplateId === EEZ
+      );
+      const cql = eezLayer?.cql2Query;
+      if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+        mrgidEEZs.add(getArg(cql, 1));
+      } else if (isOp(cql, "in") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+        const ids = getArg(cql, 1);
+        if (Array.isArray(ids)) {
+          for (const id of ids) {
+            mrgidEEZs.add(id);
+          }
+        }
       }
     }
-    setGeographyWizardState((prev) => ({
-      ...prev,
-      usedTemplates: Array.from(new Set(usedTemplates)),
-    }));
+    // then, remove EEZs that already have a territorial sea geography
+    for (const geog of data?.projectBySlug?.geographies || []) {
+      const territorialSeaLayer = geog.clippingLayers?.find(
+        (l) =>
+          l.dataLayer?.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
+      );
+      if (territorialSeaLayer) {
+        const cql = territorialSeaLayer.cql2Query;
+        if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+          mrgidEEZs.delete(getArg(cql, 1));
+        } else if (
+          isOp(cql, "in") &&
+          hasArg(cql, 0, { property: "MRGID_EEZ" })
+        ) {
+          const ids = getArg(cql, 1);
+          if (Array.isArray(ids)) {
+            for (const id of ids) {
+              mrgidEEZs.delete(id);
+            }
+          }
+        }
+      }
+    }
+
+    return [...mrgidEEZs];
   }, [data?.projectBySlug?.geographies]);
 
   return (
     <div className="w-full h-full flex">
-      <nav className="w-96 bg-white h-full overflow-y-auto border-r border-black border-opacity-10 flex flex-col">
-        <h1 className="p-4 font-semibold">
-          <Trans ns="admin:geograpy">Geography</Trans>
-        </h1>
-        <p className="px-4 text-sm">
-          <Trans ns="admin:geography">
-            Geographies represent spatial areas where sketches can be drawn and
-            define regions where you would like to aggregate metrics for
-            reporting. Your project can use built-in land and eez layers to
-            start with, and add custom boundary layers if needed.
-          </Trans>
-        </p>
-        <p className="text-sm p-4">
-          <a href="" className="flex items-center space-x-1 text-primary-500">
-            <FileTextIcon />
-            <span>
-              <Trans ns="admin:geography">
-                Read the geography documentation
-              </Trans>
-            </span>
-          </a>
-        </p>
-        <div className="flex flex-col overflow-y-auto bg-gray-200 h-full shadow-inner">
-          {loading && (
-            <div className="w-full text-center p-5">
-              <Spinner />
-            </div>
-          )}
-          {!hasBuiltInLayers && !loading && (
-            <Warning level="error">
-              {error ? (
-                error.toString()
-              ) : (
+      {state.sidebarVisible && (
+        <nav className="w-96 bg-white h-full overflow-y-auto border-r border-black border-opacity-10 flex flex-col">
+          <h1 className="p-4 font-semibold">
+            <Trans ns="admin:geograpy">Geography</Trans>
+          </h1>
+          <p className="px-4 text-sm">
+            <Trans ns="admin:geography">
+              Geographies represent spatial areas where sketches can be drawn
+              and define regions where you would like to aggregate metrics for
+              reporting. Your project can use built-in land and eez layers to
+              start with, and add custom boundary layers if needed.
+            </Trans>
+          </p>
+          <p className="text-sm p-4">
+            <a href="" className="flex items-center space-x-1 text-primary-500">
+              <FileTextIcon />
+              <span>
                 <Trans ns="admin:geography">
-                  SeaSketch has not been configured correctly with {EEZ},{" "}
-                  {TERRITORIAL_SEA} and {COASTLINE} layers. Contact{" "}
-                  <a className="underline" href="mailto:support@seasketch.org">
-                    support@seasketch.org
-                  </a>{" "}
-                  for assistance.
+                  Read the geography documentation
                 </Trans>
-              )}
-            </Warning>
-          )}
-          {!loading && (
-            <ul className="w-full p-2 py-4 space-y-2">
-              {data?.projectBySlug?.geographies?.map((geog) => (
-                <li
-                  className="bg-white rounded p-4 shadow-sm flex items-center space-x-2"
-                  key={geog.id}
+              </span>
+            </a>
+          </p>
+          <div className="flex flex-col overflow-y-auto bg-gray-200 h-full shadow-inner">
+            {loading && (
+              <div className="w-full text-center p-5">
+                <Spinner />
+              </div>
+            )}
+            {!hasBuiltInLayers && !loading && (
+              <Warning level="error">
+                {error ? (
+                  error.toString()
+                ) : (
+                  <Trans ns="admin:geography">
+                    SeaSketch has not been configured correctly with {EEZ},{" "}
+                    {TERRITORIAL_SEA} and {COASTLINE} layers. Contact{" "}
+                    <a
+                      className="underline"
+                      href="mailto:support@seasketch.org"
+                    >
+                      support@seasketch.org
+                    </a>{" "}
+                    for assistance.
+                  </Trans>
+                )}
+              </Warning>
+            )}
+            {!loading && (
+              <ul className="w-full p-2 py-4 space-y-2">
+                {data?.projectBySlug?.geographies?.map((geog) => (
+                  <li
+                    className="bg-white rounded p-4 shadow-sm flex items-center space-x-2"
+                    key={geog.id}
+                  >
+                    <VisibilityCheckbox
+                      disabled={false}
+                      visibility={!state.hiddenGeographies.includes(geog.id)}
+                      id={geog.id}
+                      onClick={() => handleGeographyVisibilityToggle(geog.id)}
+                    />
+                    <span className="flex-1">{geog.name}</span>
+                    <span className="space-x-2 flex items-center">
+                      <button
+                        disabled={!geog.bounds}
+                        className="disabled:opacity-20"
+                        onClick={() => {
+                          if (geog.bounds) {
+                            map?.fitBounds(
+                              geog.bounds as [number, number, number, number],
+                              {
+                                padding: 10,
+                                animate: true,
+                              }
+                            );
+                          }
+                        }}
+                      >
+                        <EnterFullScreenIcon />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setState((prev) => ({
+                            ...prev,
+                            editGeographyId: geog.id,
+                          }));
+                        }}
+                      >
+                        {" "}
+                        <Pencil2Icon />
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {!loading && (
+              <div className="px-2 -mt-1">
+                <button
+                  onClick={() => {
+                    setState((prev) => ({
+                      ...prev,
+                      wizardActive: true,
+                    }));
+                  }}
+                  className="border border-indigo-800/20 rounded w-full text-left flex flex-row-reverse items-center space-x-2 p-4 px-2 pr-4 text-blue-900/80 bg-blue-50/70 shadow-sm hover:bg-blue-50 hover:shadow-md hover:text-blue-900 transition-all"
                 >
-                  <VisibilityCheckbox
-                    disabled={false}
-                    // Checkbox is checked if hidden, unchecked if visible
-                    visibility={!state.hiddenGeographies.includes(geog.id)}
-                    id={geog.id}
-                    onClick={() => handleGeographyVisibilityToggle(geog.id)}
-                  />
-                  <span className="flex-1">{geog.name}</span>
-                  <span className="space-x-2 flex items-center">
-                    <button
-                      disabled={!geog.bounds}
-                      className="disabled:opacity-20"
-                      onClick={() => {
-                        if (geog.bounds) {
-                          map?.fitBounds(
-                            geog.bounds as [number, number, number, number],
-                            {
-                              padding: 10,
-                              animate: true,
-                            }
-                          );
-                        }
-                      }}
-                    >
-                      <EnterFullScreenIcon />
-                    </button>
-                    <button
-                      onClick={() => {
-                        setState((prev) => ({
-                          ...prev,
-                          editGeographyId: geog.id,
-                        }));
-                      }}
-                    >
-                      {" "}
-                      <Pencil2Icon />
-                    </button>
+                  <PlusCircledIcon />
+                  <span className="flex-1">
+                    {(data?.projectBySlug?.geographies || []).length === 0
+                      ? t("Create Your First Geography")
+                      : t("Create a New Geography")}
                   </span>
-                </li>
-              ))}
-            </ul>
-          )}
-          {state.editGeographyId && (
-            <EditGeographyModal
-              id={state.editGeographyId}
-              onRequestClose={() => {
-                setState((prev) => ({
-                  ...prev,
-                  editGeographyId: undefined,
-                }));
-              }}
-            />
-          )}
-          {!loading && (
-            <div className="px-2 -mt-1">
-              <button
-                onClick={() => {
-                  setGeographyWizardState((prev) => ({
-                    ...prev,
-                    active: true,
-                    step: "chooseTemplate",
-                  }));
-                }}
-                className="border border-indigo-800/20 rounded w-full text-left flex flex-row-reverse items-center space-x-2 p-4 px-2 pr-4 text-blue-900/80 bg-blue-50/70 shadow-sm hover:bg-blue-50 hover:shadow-md hover:text-blue-900 transition-all"
-              >
-                <PlusCircledIcon />
-                <span className="flex-1">
-                  {(data?.projectBySlug?.geographies || []).length === 0
-                    ? t("Create Your First Geography")
-                    : t("Create a New Geography")}
-                </span>
-              </button>
-            </div>
-          )}
-        </div>
-      </nav>
-      <div ref={mapRef} className="flex-1 relative">
+                </button>
+              </div>
+            )}
+          </div>
+        </nav>
+      )}
+      <div
+        ref={mapRef}
+        className={`flex-1 relative ${!state.sidebarVisible ? "w-full" : ""}`}
+      >
         {map &&
-          !eezPickerState.active &&
+          !state.wizardActive &&
           data?.projectBySlug?.geographies?.length && (
             <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
               <Button
@@ -897,138 +696,44 @@ export default function GeographyAdmin() {
           </div>
         )}
         <Spinner large className="absolute left-1/2 top-1/2" />
-        {eezPickerState.active && (
-          <div className="absolute w-full h-32 z-50 text-base">
-            <div
-              className="mx-auto p-4 bg-white border-b border-gray-200"
-              style={{ maxWidth: "50%" }}
-            >
-              <MultiSelect
-                filterOption={(option, rawInput) => {
-                  const input = rawInput.toLowerCase();
-                  return (
-                    option.label.toLowerCase().includes(input) ||
-                    option.value.toString().includes(input) ||
-                    option.data?.data?.SOVEREIGN1?.toLowerCase().includes(input)
-                  );
-                }}
-                title={t("Select one or more Exclusive Economic Zones")}
-                description={t(
-                  "Nations may have more than one polygon associated with their EEZ. You should select all those where users will be doing planning within this project. Use the list below to select areas, or click polygons on the map."
-                )}
-                groups={eezChoices.eezs}
-                value={eezPickerState.selectedEEZs
-                  .map((id) => {
-                    const match = eezChoices.eezs.find(
-                      (choice) => choice.value === id
-                    );
-                    if (!match) {
-                      throw new Error("EEZ not found");
-                    }
-                    return { value: match.value, label: match.label };
-                  })
-                  .filter(Boolean)}
-                onChange={handleMultiSelectChange}
-                loading={eezChoices.loading}
-              />
-              {eezPickerState.error && (
-                <Warning level="error">{eezPickerState.error.message}</Warning>
-              )}
-              <div className="space-x-2">
-                <Button
-                  label={t("Cancel")}
-                  disabled={eezPickerState.saving}
-                  onClick={() =>
-                    setEEZPickerState({
-                      ...eezPickerState,
-                      active: false,
-                      selectedEEZs: [] as number[],
-                    })
-                  }
-                />
-                <Button
-                  label={t("Continue")}
-                  primary
-                  loading={eezPickerState.saving}
-                  onClick={async () => {
-                    if (eezPickerState.resultResolver) {
-                      // If we have a result promise, resolve it with the selected EEZs
-                      eezPickerState.resultResolver(
-                        eezPickerState.selectedEEZs
-                      );
-                    }
-                    setEEZPickerState((prev) => ({
-                      ...prev,
-                      active: false,
-                      saving: false,
-                      selectedEEZs: eezPickerState.selectedEEZs,
-                      resultResolver: undefined,
-                    }));
-                    const eezs = eezChoices.eezs.filter((choice) =>
-                      eezPickerState.selectedEEZs.includes(choice.value)
-                    );
-                    const bboxes = eezs.map((choice) => choice.data?.__bbox);
-                    const bbox = combineBBoxes(bboxes);
-                    if (bbox) {
-                      map?.fitBounds(
-                        [
-                          [bbox[0], bbox[1]],
-                          [bbox[2], bbox[3]],
-                        ],
-                        {
-                          padding: 80,
-                          animate: true,
-                        }
-                      );
-                    }
-                  }}
-                  disabled={
-                    eezPickerState.selectedEEZs.length === 0 ||
-                    eezPickerState.saving
-                  }
-                />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
-      {geographyWizardState.active && coastline && eez && (
+      {state.wizardActive && coastline && eez && territorialSea && (
         <CreateGeographyWizard
-          state={geographyWizardState}
-          // @ts-ignore
-          setState={setGeographyWizardState}
-          usedTemplates={geographyWizardState.usedTemplates}
+          usedEEZs={unrepresentedTerritorialSeas}
+          active={state.wizardActive}
           onRequestClose={() => {
-            setGeographyWizardState((prev) => ({
+            setState((prev: AdminState) => ({
               ...prev,
-              active: false,
+              wizardActive: false,
             }));
           }}
-          onRequestEEZPicker={() => {
-            setEEZPickerState((prev) => ({
-              ...prev,
-              active: true,
-              selectedEEZs: [],
-            }));
-            return new Promise<number[]>((resolve) => {
-              setEEZPickerState((prev) => ({
-                ...prev,
-                resultResolver: resolve,
-              }));
-            });
-          }}
+          usedTemplates={usedTemplates}
           landLayerId={coastline.id}
-          eezLayerId={eez.id}
+          eezLayer={eez}
+          territorialSeaLayer={territorialSea}
+          map={map}
+          onRequestToggleSidebar={handleToggleSidebar}
         />
       )}
-      {createPortal(
-        <div
-          className={`${
-            eezPickerState.active ? "opacity-100" : "opacity-0"
-          } absolute left-0 top-0 h-full bg-black bg-opacity-10 z-50 transition-opacity pointer-events-none backdrop-blur-sm`}
-          style={{ width: 608 }}
-        ></div>,
-        document.body
+      {state.editGeographyId && (
+        <EditGeographyModal
+          map={map}
+          id={state.editGeographyId}
+          onRequestClose={() => {
+            setState((prev) => ({
+              ...prev,
+              editGeographyId: undefined,
+              showLayerChoice: false,
+            }));
+          }}
+          showLayerChoice={state.showLayerChoice}
+          onShowLayerChoiceChange={(show) => {
+            setState((prev) => ({
+              ...prev,
+              showLayerChoice: show,
+            }));
+          }}
+        />
       )}
     </div>
   );
@@ -1119,4 +824,27 @@ function combineBBoxes(bboxes: number[][]) {
   }
 
   return [minX, minY, maxX, maxY];
+}
+
+function isOp(cql: any, op: string) {
+  if (typeof cql === "object" && cql !== null && "op" in cql && cql.op === op) {
+    return true;
+  }
+  return false;
+}
+
+function hasArg(cql: any, position: number, arg: any) {
+  return deepEqual(getArg(cql, position), arg);
+}
+
+function getArg(cql: any, position: number) {
+  if (
+    typeof cql !== "object" ||
+    cql === null ||
+    !("args" in cql) ||
+    !Array.isArray(cql.args)
+  ) {
+    return undefined;
+  }
+  return cql.args[position];
 }

@@ -2245,6 +2245,12 @@ export type DataLayer = Node & {
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
   totalQuotaUsed?: Maybe<Scalars['BigInt']>;
+  /**
+   * Returns the ogc geometry type of the layer if it is a vector layer, otherwise
+   * returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint",
+   * "MultiLineString", "MultiPolygon".
+   */
+  vectorGeometryType?: Maybe<Scalars['String']>;
   vectorObjectKey?: Maybe<Scalars['String']>;
   version?: Maybe<Scalars['Int']>;
   zIndex: Scalars['Int'];
@@ -19632,7 +19638,10 @@ export type GeographyByIdQueryVariables = Exact<{
 
 export type GeographyByIdQuery = (
   { __typename?: 'Query' }
-  & { geography?: Maybe<(
+  & { geographyClippingLayers?: Maybe<Array<(
+    { __typename?: 'DataLayer' }
+    & ClippingLayerDetailsFragment
+  )>>, geography?: Maybe<(
     { __typename?: 'Geography' }
     & { clippingLayers?: Maybe<Array<(
       { __typename?: 'GeographyClippingLayer' }
@@ -19679,6 +19688,43 @@ export type UpdateGeographyMutation = (
       & GeographyDetailsFragment
     ) }
   ) }
+);
+
+export type OverlayForGeographyFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
+  & { dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id' | 'vectorGeometryType' | 'sourceLayer' | 'mapboxGlStyles'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'createdAt' | 'id' | 'geostats' | 'type' | 'url'>
+      & { outputs?: Maybe<Array<(
+        { __typename?: 'DataUploadOutput' }
+        & Pick<DataUploadOutput, 'type' | 'size'>
+      )>>, authorProfile?: Maybe<(
+        { __typename: 'Profile' }
+        & Pick<Profile, 'picture' | 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname'>
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlaysForGeographyQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OverlaysForGeographyQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & OverlayForGeographyFragment
+    )>> }
+  )> }
 );
 
 export type JoinProjectMutationVariables = Exact<{
@@ -23546,6 +23592,39 @@ export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${ClippingLayerDetailsFragmentDoc}`;
+export const OverlayForGeographyFragmentDoc = /*#__PURE__*/ gql`
+    fragment OverlayForGeography on TableOfContentsItem {
+  id
+  title
+  bounds
+  dataLayer {
+    id
+    vectorGeometryType
+    sourceLayer
+    mapboxGlStyles
+    dataSource {
+      createdAt
+      id
+      geostats
+      type
+      url
+      outputs {
+        type
+        size
+      }
+      authorProfile {
+        __typename
+        picture
+        userId
+        fullname
+        affiliations
+        email
+        nickname
+      }
+    }
+  }
+}
+    `;
 export const MapEssentialsFragmentDoc = /*#__PURE__*/ gql`
     fragment MapEssentials on Project {
   id
@@ -26168,6 +26247,9 @@ export const CreateGeographiesDocument = /*#__PURE__*/ gql`
     ${GeographyDetailsFragmentDoc}`;
 export const GeographyByIdDocument = /*#__PURE__*/ gql`
     query GeographyById($id: Int!) {
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+  }
   geography(id: $id) {
     ...GeographyDetails
     clippingLayers {
@@ -26185,8 +26267,8 @@ export const GeographyByIdDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${GeographyDetailsFragmentDoc}
-${ClippingLayerDetailsFragmentDoc}`;
+    ${ClippingLayerDetailsFragmentDoc}
+${GeographyDetailsFragmentDoc}`;
 export const DeleteGeographyDocument = /*#__PURE__*/ gql`
     mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {
   deleteGeographyAndTableOfContentsItems(
@@ -26206,6 +26288,16 @@ export const UpdateGeographyDocument = /*#__PURE__*/ gql`
   }
 }
     ${GeographyDetailsFragmentDoc}`;
+export const OverlaysForGeographyDocument = /*#__PURE__*/ gql`
+    query OverlaysForGeography($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...OverlayForGeography
+    }
+  }
+}
+    ${OverlayForGeographyFragmentDoc}`;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -28126,6 +28218,7 @@ export const namedOperations = {
     GeographyClippingSettings: 'GeographyClippingSettings',
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
+    OverlaysForGeography: 'OverlaysForGeography',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -28403,6 +28496,7 @@ export const namedOperations = {
     ClippingDataSourceDetails: 'ClippingDataSourceDetails',
     ClippingLayerDetails: 'ClippingLayerDetails',
     GeographyDetails: 'GeographyDetails',
+    OverlayForGeography: 'OverlayForGeography',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',

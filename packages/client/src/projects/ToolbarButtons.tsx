@@ -173,13 +173,14 @@ export const CacheIcon = (
 
 export const CacheButton = curry(CacheIcon);
 
-export const LayerIcon = (
+export const LayerIcon = ({ className }: { className?: string }) => (
   <svg
     viewBox="1.5 1 21 21"
     focusable="false"
     role="img"
     fill="currentColor"
     xmlns="http://www.w3.org/2000/svg"
+    className={className}
   >
     <g data-name="Layer 2">
       <path

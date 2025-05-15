@@ -4570,6 +4570,52 @@ $$;
 
 
 --
+-- Name: check_geography_has_intersect_layer(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.check_geography_has_intersect_layer() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  -- Skip checks if the parent geography is being deleted
+  IF EXISTS (
+    SELECT 1 FROM project_geography WHERE id = COALESCE(NEW.project_geography_id, OLD.project_geography_id)
+  ) THEN
+    -- For DELETE operations, only check if we're removing an intersect layer
+    IF (TG_OP = 'DELETE') THEN
+      IF OLD.operation_type = 'intersect' AND NOT EXISTS (
+        SELECT 1 
+        FROM geography_clipping_layers 
+        WHERE project_geography_id = OLD.project_geography_id 
+        AND id != OLD.id
+        AND operation_type = 'intersect'
+      ) THEN
+        RAISE EXCEPTION 'Cannot remove the last intersect layer from a project geography';
+      END IF;
+    -- For INSERT/UPDATE operations, check if we have at least one intersect layer
+    ELSIF (TG_OP = 'INSERT' OR TG_OP = 'UPDATE') THEN
+      IF NOT EXISTS (
+        SELECT 1 
+        FROM geography_clipping_layers 
+        WHERE project_geography_id = NEW.project_geography_id 
+        AND (
+          -- Either this is the current row being inserted/updated with intersect operation
+          (id = NEW.id AND NEW.operation_type = 'intersect')
+          OR
+          -- Or there's another row with intersect operation
+          (id != NEW.id AND operation_type = 'intersect')
+        )
+      ) THEN
+        RAISE EXCEPTION 'Project geography must have at least one clipping layer with intersect operation';
+      END IF;
+    END IF;
+  END IF;
+  RETURN NEW;
+END;
+$$;
+
+
+--
 -- Name: check_optional_basemap_layers_columns(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8188,6 +8234,27 @@ CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RE
       select data_source_id from archived_data_sources where data_layer_id = layer.id
     )
   $$;
+
+
+--
+-- Name: data_layers_vector_geometry_type(public.data_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select jsonb_array_elements(geostats->'layers')->>'geometry'
+  from data_sources
+  where id = d.data_source_id
+  limit 1
+$$;
+
+
+--
+-- Name: FUNCTION data_layers_vector_geometry_type(d public.data_layers); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) IS 'Returns the ogc geometry type of the layer if it is a vector layer, otherwise returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon".';
 
 
 --
@@ -15048,14 +15115,20 @@ CREATE FUNCTION public.search_overlays(lang text, query text, "projectId" intege
     declare
       supported_languages jsonb := get_supported_languages();
       config regconfig;
-      q tsquery := websearch_to_tsquery(config, query);
+      q tsquery;
     begin
       select key::regconfig into config from jsonb_each_text(get_supported_languages()) where value = lower(lang);
+      
+      -- Handle single word searches with prefix matching
       IF position(' ' in query) <= 0 THEN
         q := to_tsquery(config, query || ':*');
+      ELSE
+        -- For multi-word searches, use plainto_tsquery to match any of the words
+        q := plainto_tsquery(config, query);
       end if;
+
       if config is null then
-        q = plainto_tsquery('simple', query);
+        q := plainto_tsquery('simple', query);
         IF position(' ' in query) <= 0 THEN
           q := to_tsquery('simple', query || ':*');
         end if;
@@ -21862,6 +21935,13 @@ CREATE TRIGGER draft_table_of_contents_has_changes_trigger AFTER UPDATE OF draft
 
 
 --
+-- Name: geography_clipping_layers ensure_geography_has_intersect_layer; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER ensure_geography_has_intersect_layer AFTER INSERT OR DELETE OR UPDATE ON public.geography_clipping_layers FOR EACH ROW EXECUTE FUNCTION public.check_geography_has_intersect_layer();
+
+
+--
 -- Name: form_elements form_element_associated_sketch_class; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -26393,6 +26473,13 @@ REVOKE ALL ON FUNCTION public.check_element_type() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION check_geography_has_intersect_layer(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.check_geography_has_intersect_layer() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION check_optional_basemap_layers_columns(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -27504,6 +27591,14 @@ GRANT ALL ON FUNCTION public.data_layers_sprites(l public.data_layers) TO anon;
 
 REVOKE ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_layers) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_layers_total_quota_used(layer public.data_layers) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_layers_vector_geometry_type(d public.data_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_layers_vector_geometry_type(d public.data_layers) TO anon;
 
 
 --
