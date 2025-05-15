@@ -22,12 +22,6 @@ if (process.env.NODE_ENV !== "test") {
     keyPrefix: "searchOverlays",
   });
 }
-
-/**
- * Rate limits createMapBookmark mutations to 3 per 5 seconds per user.
- * The screenshot creation process is computationally intensive and should be
- * protected from abuse.
- */
 const SearchOverlaysRateLimiterPlugin = makeWrapResolversPlugin({
   Query: {
     searchOverlays: (resolve, source, args, context, resolveInfo) => {

@@ -94,6 +94,9 @@ mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
 }
 
 query GeographyById($id: Int!) {
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+  }
   geography(id: $id) {
     ...GeographyDetails
     clippingLayers {
@@ -125,6 +128,47 @@ mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
   updateProjectGeography(id: $id, input: $payload) {
     geography {
       ...GeographyDetails
+    }
+  }
+}
+
+fragment OverlayForGeography on TableOfContentsItem {
+  id
+  title
+  bounds
+  dataLayer {
+    id
+    vectorGeometryType
+    sourceLayer
+    mapboxGlStyles
+    dataSource {
+      createdAt
+      id
+      geostats
+      type
+      url
+      outputs {
+        type
+        size
+      }
+      authorProfile {
+        __typename
+        picture
+        userId
+        fullname
+        affiliations
+        email
+        nickname
+      }
+    }
+  }
+}
+
+query OverlaysForGeography($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...OverlayForGeography
     }
   }
 }

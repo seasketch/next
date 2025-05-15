@@ -7,17 +7,25 @@ interface Group {
   label: string;
 }
 
-interface Props {
+interface BaseProps {
   groups: Group[];
-  value: Group[];
   description?: string;
   title: string;
   loading?: boolean;
-  onChange: (values: Group[]) => void;
   filterOption?:
     | ((option: any, rawInput: string) => boolean)
     | null
     | undefined;
+}
+
+interface MultiSelectProps extends BaseProps {
+  value: Group[];
+  onChange: (values: Group[]) => void;
+}
+
+interface SingleSelectProps extends BaseProps {
+  value?: Group;
+  onChange: (value?: Group) => void;
 }
 
 export default function MultiSelect({
@@ -28,7 +36,7 @@ export default function MultiSelect({
   description,
   title,
   filterOption,
-}: Props) {
+}: MultiSelectProps) {
   return (
     <InputBlock
       flexDirection="column"
@@ -44,6 +52,40 @@ export default function MultiSelect({
             onChange(
               v.map(({ value }) => groups.find((g) => g.value === value)!)
             );
+          }}
+          styles={styles}
+          isLoading={loading}
+          value={value}
+          className="w-full z-50 mt-2 react-select"
+          options={groups}
+        />
+      }
+      title={title}
+    />
+  );
+}
+
+export function SingleSelect({
+  onChange,
+  loading,
+  groups,
+  value,
+  description,
+  title,
+  filterOption,
+}: SingleSelectProps) {
+  return (
+    <InputBlock
+      flexDirection="column"
+      children={description ? <p>{description}</p> : undefined}
+      input={
+        <Select
+          filterOption={filterOption}
+          menuPortalTarget={document.body}
+          menuPosition="absolute"
+          menuPlacement="auto"
+          onChange={(v, e) => {
+            onChange(groups.find(({ value }) => v?.value === value));
           }}
           styles={styles}
           isLoading={loading}

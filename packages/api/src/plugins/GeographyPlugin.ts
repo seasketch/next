@@ -326,13 +326,21 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 );
               }
               if (dataLayerId in existingLayerMap) {
-                // This clipping layer exists, so update it
+                // This clipping layer exists, so check if it needs updating
                 const existingLayer = existingLayerMap[dataLayerId];
-                clippingLayersToUpdate.push({
-                  id: existingLayer.id,
-                  operationType: operationType || existingLayer.operation_type,
-                  cql2Query: cql2Query,
-                });
+                const hasChanges =
+                  operationType !== existingLayer.operation_type ||
+                  JSON.stringify(cql2Query) !==
+                    JSON.stringify(existingLayer.cql2_query);
+
+                if (hasChanges) {
+                  clippingLayersToUpdate.push({
+                    id: existingLayer.id,
+                    operationType:
+                      operationType || existingLayer.operation_type,
+                    cql2Query: cql2Query,
+                  });
+                }
               } else {
                 // This clipping layer does not exist, so create it
                 clippingLayersToCreate.push({
@@ -355,22 +363,19 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 clippingLayerIdsToDelete.push(existingLayer.id);
               }
             }
-            // Perform deletions
-            if (clippingLayerIdsToDelete.length > 0) {
-              await pgClient.query(
-                `DELETE FROM geography_clipping_layers WHERE id = ANY($1)`,
-                [clippingLayerIdsToDelete]
-              );
-            }
-            // Perform updates
-            for (const layer of clippingLayersToUpdate) {
+            // First update any layers to intersect operation
+            const intersectUpdates = clippingLayersToUpdate.filter(
+              (layer) => layer.operationType === "intersect"
+            );
+            for (const layer of intersectUpdates) {
               const { id, operationType, cql2Query } = layer;
               await pgClient.query(
                 `UPDATE geography_clipping_layers SET operation_type = $1, cql2_query = $2 WHERE id = $3`,
                 [operationType, cql2Query, id]
               );
             }
-            // Perform creations
+
+            // Then create new layers
             for (const layer of clippingLayersToCreate) {
               const { dataLayerId, operationType, cql2Query, templateId } =
                 layer;
@@ -383,6 +388,26 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   cql2Query ? JSON.stringify(cql2Query) : null,
                   templateId || null,
                 ]
+              );
+            }
+
+            // Then update any layers to difference operation
+            const differenceUpdates = clippingLayersToUpdate.filter(
+              (layer) => layer.operationType === "difference"
+            );
+            for (const layer of differenceUpdates) {
+              const { id, operationType, cql2Query } = layer;
+              await pgClient.query(
+                `UPDATE geography_clipping_layers SET operation_type = $1, cql2_query = $2 WHERE id = $3`,
+                [operationType, cql2Query, id]
+              );
+            }
+
+            // Finally perform deletions
+            if (clippingLayerIdsToDelete.length > 0) {
+              await pgClient.query(
+                `DELETE FROM geography_clipping_layers WHERE id = ANY($1)`,
+                [clippingLayerIdsToDelete]
               );
             }
           }
@@ -925,6 +950,11 @@ async function getBoundsForClippingLayer(
         `No features found for CQL2 query ${JSON.stringify(cql2_query)}`
       );
     }
-    return features[0].__bbox;
+    if (features.length > 1) {
+      const boxes = features.map((f: any) => f.__bbox).filter(Boolean);
+      return combineBBoxes(boxes);
+    } else {
+      return features[0].__bbox;
+    }
   }
 }
