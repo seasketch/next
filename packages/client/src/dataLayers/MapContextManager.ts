@@ -3761,6 +3761,8 @@ interface MapContextOptions {
   /** Starting camera of map. Will override bounds if both are provided */
   camera?: CameraOptions;
   containerPortal?: HTMLDivElement | null;
+  /** Default visibility of the scale bar. Only used if no user preferences are available. Defaults to false */
+  defaultShowScale?: boolean;
 }
 
 /**
@@ -3772,8 +3774,14 @@ interface MapContextOptions {
  * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
  */
 export function useMapContext(options?: MapContextOptions) {
-  const { preferencesKey, cacheSize, bounds, camera, containerPortal } =
-    options || {};
+  const {
+    preferencesKey,
+    cacheSize,
+    bounds,
+    camera,
+    containerPortal,
+    defaultShowScale = false,
+  } = options || {};
   let initialState: MapContextInterface = {
     sketchLayerStates: {},
     layerStatesByTocStaticId: {},
@@ -3787,6 +3795,7 @@ export function useMapContext(options?: MapContextOptions) {
     legends: {},
     digitizingLockState: DigitizingLockState.Free,
     sketchClassLayerStates: {},
+    showScale: defaultShowScale,
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;

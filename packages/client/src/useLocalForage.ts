@@ -1,15 +1,21 @@
 import { useState, useEffect } from "react";
 import localForage from "localforage";
 
-export function useLocalForage<T>(key: string, initialValue: T) {
-  const [storedValue, setStoredValue] = useState<T>(initialValue);
+export function useLocalForage<T>(
+  key: string,
+  defaultValue: T,
+  loadingValue?: T
+) {
+  const [storedValue, setStoredValue] = useState<T>(
+    loadingValue ?? defaultValue
+  );
   const [hasRestoredState, setHasRestoredState] = useState(false);
 
   useEffect(() => {
     (async function () {
       try {
         const value: T | null = await localForage.getItem(key);
-        setStoredValue(value === null ? initialValue : value);
+        setStoredValue(value === null ? defaultValue : value);
         setHasRestoredState(true);
       } catch (e) {
         console.error(e);

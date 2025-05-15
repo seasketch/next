@@ -3,7 +3,11 @@ import { MapContext } from "../dataLayers/MapContextManager";
 import Legend from "../dataLayers/Legend";
 import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
 
-export default function ProjectMapLegend() {
+export default function ProjectMapLegend({
+  showByDefault = false,
+}: {
+  showByDefault?: boolean;
+}) {
   const mapContext = useContext(MapContext);
   const loading = useMemo(() => {
     for (const key in mapContext.layerStatesByTocStaticId) {
@@ -31,6 +35,7 @@ export default function ProjectMapLegend() {
         loading={loading}
         persistedStateKey="project-map-legend"
         {...legendProps}
+        defaultToHidden={!showByDefault}
       />
     );
   } else {

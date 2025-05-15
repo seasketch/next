@@ -2025,6 +2025,8 @@ CREATE TABLE public.projects (
     about_page_enabled boolean DEFAULT false NOT NULL,
     custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    show_scalebar_by_default boolean DEFAULT false,
+    show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -25590,6 +25592,20 @@ GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.show_scalebar_by_default; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.show_legend_by_default; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
 
 
 --
