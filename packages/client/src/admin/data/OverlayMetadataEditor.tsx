@@ -32,23 +32,23 @@ export default function OverlayMetataEditor({
   const [mutation, mutationState] = useUpdateMetadataMutation();
 
   const usingDynamicMetadata = Boolean(
-    data?.tableOfContentsItem?.usesDynamicMetadata
+    data?.tableOfContentsItemByIdentifier?.usesDynamicMetadata
   );
   const dynamicMetadataAvailable =
-    data?.tableOfContentsItem?.isCustomGlSource || false;
+    data?.tableOfContentsItemByIdentifier?.isCustomGlSource || false;
 
   const { state, hasChanges, viewRef, onChange, schema, reset } =
     useMetadataEditor({
-      startingDocument: data?.tableOfContentsItem?.computedMetadata,
+      startingDocument: data?.tableOfContentsItemByIdentifier?.computedMetadata,
       loading,
     });
 
   const { confirm, loadingMessage } = useDialog();
 
-  const xml = data?.tableOfContentsItem?.metadataXml
+  const xml = data?.tableOfContentsItemByIdentifier?.metadataXml
     ? {
-        ...data.tableOfContentsItem.metadataXml,
-        format: data.tableOfContentsItem.metadataFormat!,
+        ...data.tableOfContentsItemByIdentifier.metadataXml,
+        format: data.tableOfContentsItemByIdentifier.metadataFormat!,
       }
     : undefined;
 

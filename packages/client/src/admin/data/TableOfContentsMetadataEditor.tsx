@@ -25,10 +25,10 @@ export default function TableOfContentsMetadataEditor({
     <MetadataEditor
       onRequestClose={onRequestClose}
       usingDynamicMetadata={Boolean(
-        data?.tableOfContentsItem?.usesDynamicMetadata
-    )}
+        data?.tableOfContentsItemByIdentifier?.usesDynamicMetadata
+      )}
       dynamicMetadataAvailable={
-        data?.tableOfContentsItem?.isCustomGlSource || false
+        data?.tableOfContentsItemByIdentifier?.isCustomGlSource || false
       }
       mutation={(value) =>
         mutation({
@@ -41,12 +41,12 @@ export default function TableOfContentsMetadataEditor({
       mutationState={mutationState}
       loading={loading}
       error={error}
-      startingDocument={data?.tableOfContentsItem?.computedMetadata}
+      startingDocument={data?.tableOfContentsItemByIdentifier?.computedMetadata}
       xml={
-        data?.tableOfContentsItem?.metadataXml
+        data?.tableOfContentsItemByIdentifier?.metadataXml
           ? {
-              ...data.tableOfContentsItem.metadataXml,
-              format: data.tableOfContentsItem.metadataFormat!,
+              ...data.tableOfContentsItemByIdentifier.metadataXml,
+              format: data.tableOfContentsItemByIdentifier.metadataFormat!,
             }
           : undefined
       }
