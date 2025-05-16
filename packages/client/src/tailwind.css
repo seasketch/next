@@ -1,3 +1,4 @@
+@import "mapbox-gl/dist/mapbox-gl.css";
 @import "./formElements/prosemirror-body.css";
 @import "./formElements/Number.css";
 @import "./formElements/unreset.css";

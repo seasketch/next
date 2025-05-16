@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
-import "mapbox-gl/dist/mapbox-gl.css";
 import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
