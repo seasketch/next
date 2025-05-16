@@ -187,7 +187,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           <Popover.Trigger asChild>
             <button
               className={clsx(
-                "absolute bg-white ring-2 ring-black/10 rounded top-28 z-10 p-[5px]",
+                "absolute bg-white ring-2 ring-black/10 rounded top-28 z-[1] p-[5px]",
                 props.navigationControlsLocation === "top-right"
                   ? "right-2.5"
                   : "left-2.5"

@@ -31,6 +31,9 @@ const ProjectAppSidebar: React.FunctionComponent<{
 }> = (props) => {
   const [toolbarDiv, setToolbarDiv] = useState<HTMLDivElement | null>(null);
   const isSmall = useMediaQuery("(max-width: 1535px)");
+  const isMobile = useMediaQuery(
+    "only screen and (max-width: 768px) and (orientation: portrait)"
+  );
   const { t } = useTranslation("homepage");
   return (
     <motion.section
@@ -59,6 +62,7 @@ const ProjectAppSidebar: React.FunctionComponent<{
       style={{
         boxShadow:
           "0 1px 3px 0 rgba(0, 0, 0, 0.2), 0 1px 2px 0 rgba(0, 0, 0, 0.06)",
+        ...(isMobile ? { width: "calc(100vw - 64px)" } : {}),
       }}
     >
       <div className="flex w-full bg-primary-800 bg-gradient-to-bl from-gray-700 to-primary-800 p-4 text-white shadow-lg">
@@ -98,7 +102,7 @@ const ProjectAppSidebar: React.FunctionComponent<{
         <div
           className={`childin ${
             props.noPadding ? "" : "p-4 pt-2"
-          } flex-1 overflow-y-auto`}
+          } flex-1 overflow-y-auto overflow-x-hidden`}
         >
           {props.children}
         </div>

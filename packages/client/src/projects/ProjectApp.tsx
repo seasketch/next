@@ -283,6 +283,8 @@ export default function ProjectApp() {
                       showByDefault={
                         data?.project?.showLegendByDefault || false
                       }
+                      toolbarExpanded={expandSidebar}
+                      sidebarOpen={Boolean(showSidebar)}
                     />
                     <MapboxMap
                       className="ml-2"

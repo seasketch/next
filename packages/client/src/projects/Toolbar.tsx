@@ -33,6 +33,7 @@ import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphq
 import * as Tooltip from "@radix-ui/react-tooltip";
 import clsx from "clsx";
 import { Helmet } from "react-helmet";
+import { useMediaQuery } from "beautiful-react-hooks";
 
 export default function Toolbar({
   onExpand,
@@ -106,20 +107,25 @@ export default function Toolbar({
 
   const [animating, setAnimating] = useState(false);
 
+  // query whether the screen is a mobile phone in portrait orientation
+  const isSmall = useMediaQuery(
+    "only screen and (max-width: 768px) and (orientation: portrait)"
+  );
+
   return (
     <motion.nav
       onAnimationStart={() => setAnimating(true)}
       onAnimationComplete={() => setAnimating(false)}
       role="navigation"
       style={{ boxShadow: "0px -2px 5px rgba(0,0,0,0.5)" }}
-      className={`absolute left-0 h-screen overflow-y-auto ${
+      className={`absolute left-0 h-screen overflow-hidden ${
         expanded
           ? "text-gray-300 bg-gradient-to-r from-cool-gray-800 via-cool-gray-800 to-cool-gray-800 filter backdrop-blur-sm"
           : "text-gray-400 bg-gradient-to-r from-cool-gray-900 to-cool-gray-800 via-cool-gray-800"
       } text-gray-700"
       }  z-20 p-0 flex flex-col`}
       variants={{
-        expanded: { width: 384 },
+        expanded: { width: isSmall ? "100vw" : 384 },
         collapsed: { width: 64 },
       }}
       initial={false}
@@ -142,7 +148,7 @@ export default function Toolbar({
         <header
           className={clsx(
             expanded && "p-3 pt-0 pb-2 mid-height:min-h-20 min-h-[64px]",
-            `flex w-full space-x-2  items-center`,
+            `flex w-full space-x-2  items-center flex-none`,
             !expanded && "justify-center pt-4 mb-3"
           )}
         >
@@ -374,7 +380,7 @@ export default function Toolbar({
             />
           )}
         </div>
-        <div className="flex flex-col items-center w-full p-4">
+        <div className="flex flex-col items-center w-full p-4 flex-none overflow-hidden">
           {!expanded && (
             <a className={`w-8`} href="/">
               <motion.img src={logo} alt="SeaSketch Logo" />

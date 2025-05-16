@@ -451,12 +451,12 @@ export default function TreeItemComponent({
                 opacity: 1,
               }
         }
-        className={`${classNames.container} rounded relative group`}
+        className={`${classNames.container} rounded relative group max-w-full`}
       >
         {sortable && canDrop && isOverCurrent && sortPlaceholder}
 
         <div
-          className={`label-container flex items-center text-sm space-x-0.5 group  ${classNames.label}`}
+          className={`label-container flex items-center text-sm space-x-0.5 group   ${classNames.label}`}
           style={{
             paddingTop: 5,
             paddingBottom: 5,

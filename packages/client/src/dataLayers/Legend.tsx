@@ -114,8 +114,10 @@ export default function Legend({
             }
           : {}
       }
-      className={`${className || ""} shadow rounded bg-white bg-opacity-90 ${
-        hidden ? "w-auto" : "w-64"
+      className={`${className || ""} rounded ${
+        hidden ? "bg-white" : "bg-white/90"
+      } ${
+        hidden ? "w-auto ring-2 ring-black/10" : "w-64 shadow"
       } text-sm flex flex-col overflow-hidden`}
     >
       <Accordion.Root type="single" value={hidden ? "" : "legend"}>
@@ -134,7 +136,9 @@ export default function Legend({
                 )}
               </span>
               <CaretDownIcon
-                className="w-5 h-5 AccordionChevron text-gray-500"
+                className={`w-5 h-5 AccordionChevron ${
+                  hidden ? "text-black" : "text-gray-500"
+                }`}
                 aria-hidden
               />
             </Accordion.Trigger>

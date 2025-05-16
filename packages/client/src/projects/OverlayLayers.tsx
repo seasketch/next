@@ -14,6 +14,7 @@ import useOverlaySearchState from "../dataLayers/useOverlaySearchState";
 import SearchResultsMessages from "../dataLayers/SearchResultsMessages";
 import OverlaySearchInput from "../dataLayers/OverlaySearchInput";
 import getSlug from "../getSlug";
+import { useMediaQuery } from "beautiful-react-hooks";
 
 export default function OverlayLayers({
   items,
@@ -27,6 +28,9 @@ export default function OverlayLayers({
   const { t } = useTranslation("homepage");
   const slug = getSlug();
   const metadata = useProjectMetadataQuery({ variables: { slug } });
+  const isSmall = useMediaQuery(
+    "only screen and (max-width: 768px) and (orientation: portrait)"
+  );
 
   const {
     expandedIds,
@@ -76,7 +80,7 @@ export default function OverlayLayers({
             !hasLocalState ? "opacity-50 pointer-events-none" : ""
           }`}
         >
-          {t("Reset layers")}
+          {isSmall ? t("Reset") : t("Reset layers")}
         </button>
       </ProjectAppSidebarToolbar>
       <SearchResultsMessages
