@@ -84,6 +84,9 @@ DrawPolygon.clickAnywhere = function (state: any, e: any) {
   if (state.currentVertexPosition && state.currentVertexPosition > 1) {
     this.checkForKinks(state);
   }
+  // if (state.polygon.coordinates[0].length > 3) {
+  //   console.log("click anywhere", state.polygon);
+  // }
 };
 
 DrawPolygon.checkForKinks = function (state: any) {

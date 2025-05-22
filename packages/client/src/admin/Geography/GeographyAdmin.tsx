@@ -424,21 +424,36 @@ export default function GeographyAdmin() {
   const [drawFeature, setDrawFeature] = useState<Feature | null>(null);
 
   const extraRequestParams = useMemo(() => {
+    const geographies = [];
+    for (const geog of data?.projectBySlug?.geographies || []) {
+      if (state.hiddenGeographies.includes(geog.id)) continue;
+      const clippingLayers = [];
+      if (geog.clippingLayers) {
+        for (const layer of geog.clippingLayers) {
+          if (!layer.dataLayer?.vectorObjectKey) {
+            throw new Error("Vector object key is required");
+          }
+          if (layer.objectKey) {
+            clippingLayers.push({
+              id: layer.id,
+              cql2Query: layer.cql2Query,
+              op: layer.operationType,
+              dataset: layer.dataLayer.vectorObjectKey,
+              templateId: layer.templateId,
+            });
+          }
+        }
+      }
+      geographies.push({
+        name: geog.name,
+        id: geog.id,
+        clippingLayers,
+      });
+    }
     return {
-      removeLand: true,
-      landDataset:
-        (coastline?.dataSource?.url || "").replace(
-          "https://tiles.seasketch.org/",
-          ""
-        ) + ".fgb",
-      clipToEEZIds: [],
-      eezDataset:
-        (eez?.dataSource?.url || "").replace(
-          "https://tiles.seasketch.org/",
-          ""
-        ) + ".fgb",
+      geographies,
     };
-  }, [coastline?.dataSource?.url, eez?.dataSource?.url]);
+  }, [data?.projectBySlug?.geographies, state.hiddenGeographies]);
 
   const draw = useMapboxGLDraw(
     mapContext,
@@ -446,9 +461,30 @@ export default function GeographyAdmin() {
     EMPTY_FEATURE_COLLECTION,
     (feature) => {
       setDrawFeature(feature);
+      if (feature) {
+        window
+          .fetch("https://overlay.seasketch.org/geographies/warm-cache", {
+            method: "POST",
+            body: JSON.stringify({
+              ...extraRequestParams,
+              feature,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          })
+          .then((res) => res.json())
+          .then((data) => {
+            // console.log("data", data);
+          })
+          .catch((err) => {
+            console.error("err", err);
+          });
+      }
     },
     undefined,
-    "https://overlay.seasketch.org/clip",
+    "https://overlay.seasketch.org/geographies/clip",
+    // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand",
     (geom, performance) => {
       // console.log("geom", geom, performance);
     },
