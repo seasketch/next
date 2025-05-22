@@ -4,6 +4,7 @@ import {
   Pencil1Icon,
   Pencil2Icon,
   PlusCircledIcon,
+  CaretDownIcon,
 } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -48,6 +49,8 @@ type AdminState = {
   wizardActive: boolean;
   sidebarVisible: boolean;
   showLayerChoice: boolean;
+  selectedGeographyId?: number;
+  showGeographyDropdown: boolean;
 };
 
 export default function GeographyAdmin() {
@@ -65,6 +68,7 @@ export default function GeographyAdmin() {
     wizardActive: false,
     sidebarVisible: true,
     showLayerChoice: false,
+    showGeographyDropdown: false,
   });
 
   const coastline = data?.geographyClippingLayers?.find(
@@ -425,11 +429,14 @@ export default function GeographyAdmin() {
 
   const extraRequestParams = useMemo(() => {
     const geographies = [];
-    for (const geog of data?.projectBySlug?.geographies || []) {
-      if (state.hiddenGeographies.includes(geog.id)) continue;
+    // Only include the selected geography for clipping
+    const selectedGeography = data?.projectBySlug?.geographies?.find(
+      (geog) => geog.id === state.selectedGeographyId
+    );
+    if (selectedGeography) {
       const clippingLayers = [];
-      if (geog.clippingLayers) {
-        for (const layer of geog.clippingLayers) {
+      if (selectedGeography.clippingLayers) {
+        for (const layer of selectedGeography.clippingLayers) {
           if (!layer.dataLayer?.vectorObjectKey) {
             throw new Error("Vector object key is required");
           }
@@ -445,15 +452,15 @@ export default function GeographyAdmin() {
         }
       }
       geographies.push({
-        name: geog.name,
-        id: geog.id,
+        name: selectedGeography.name,
+        id: selectedGeography.id,
         clippingLayers,
       });
     }
     return {
       geographies,
     };
-  }, [data?.projectBySlug?.geographies, state.hiddenGeographies]);
+  }, [data?.projectBySlug?.geographies, state.selectedGeographyId]);
 
   const draw = useMapboxGLDraw(
     mapContext,
@@ -661,37 +668,118 @@ export default function GeographyAdmin() {
           !state.wizardActive &&
           data?.projectBySlug?.geographies?.length && (
             <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
-              <Button
-                className=""
-                small
-                label={t("Draw polygon")}
-                onClick={() => {
-                  draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                  draw.create(false, true);
-                }}
-              >
-                <span className="flex items-center space-x-1">
-                  <Pencil1Icon />
-                  <span>{t("Draw polygon")}</span>
-                </span>
-              </Button>
+              {!state.selectedGeographyId ? (
+                <select
+                  className="form-select rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  value={state.selectedGeographyId || ""}
+                  onChange={(e) => {
+                    const id = parseInt(e.target.value);
+                    if (id) {
+                      setState((prev) => ({
+                        ...prev,
+                        selectedGeographyId: id,
+                      }));
+                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                      setTimeout(() => {
+                        draw.create(false, true);
+                      }, 0);
+                    }
+                  }}
+                >
+                  <option value="">
+                    {t("Select a geography to clip against...")}
+                  </option>
+                  {data.projectBySlug.geographies.map((geog) => (
+                    <option key={geog.id} value={geog.id}>
+                      {geog.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="relative inline-flex rounded-md shadow-sm">
+                  <Button
+                    small
+                    label={t("Draw polygon")}
+                    onClick={() => {
+                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                      setTimeout(() => {
+                        draw.create(false, true);
+                      }, 0);
+                    }}
+                    className="!rounded-r-none border-r-0"
+                  >
+                    <span className="flex items-center space-x-1">
+                      <Pencil1Icon />
+                      <span>
+                        {t("Draw in")}{" "}
+                        {
+                          data.projectBySlug.geographies.find(
+                            (g) => g.id === state.selectedGeographyId
+                          )?.name
+                        }
+                      </span>
+                    </span>
+                  </Button>
+                  <div className="relative -ml-px">
+                    <Button
+                      small
+                      label={t("Change geography")}
+                      onClick={() =>
+                        setState((prev) => ({
+                          ...prev,
+                          showGeographyDropdown: !prev.showGeographyDropdown,
+                        }))
+                      }
+                      className="!rounded-l-none !px-2 relative"
+                    >
+                      <CaretDownIcon />
+                    </Button>
+                    {state.showGeographyDropdown && (
+                      <div
+                        className="absolute right-0 mt-1 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
+                        style={{ minWidth: "200px" }}
+                      >
+                        <div className="py-1" role="menu">
+                          {data.projectBySlug.geographies.map((geog) => (
+                            <button
+                              key={geog.id}
+                              className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
+                                geog.id === state.selectedGeographyId
+                                  ? "bg-gray-50"
+                                  : ""
+                              }`}
+                              onClick={() => {
+                                setState((prev) => ({
+                                  ...prev,
+                                  selectedGeographyId: geog.id,
+                                  showGeographyDropdown: false,
+                                }));
+                              }}
+                            >
+                              {geog.name}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
               {(drawFeature ||
                 (draw.digitizingState !== DigitizingState.DISABLED &&
                   draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
-                <>
-                  <Button
-                    small
-                    label={t("Clear")}
-                    onClick={() => {
-                      setDrawFeature(null);
-                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                    }}
-                  >
-                    <span className="flex items-center space-x-1">
-                      <span>{t("Clear")}</span>
-                    </span>
-                  </Button>
-                </>
+                <Button
+                  small
+                  label={t("Clear")}
+                  onClick={() => {
+                    setDrawFeature(null);
+                    draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                  }}
+                >
+                  <span className="flex items-center space-x-1">
+                    <span>{t("Clear")}</span>
+                  </span>
+                </Button>
               )}
             </div>
           )}
