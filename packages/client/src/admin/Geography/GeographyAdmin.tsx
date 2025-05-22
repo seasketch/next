@@ -461,26 +461,6 @@ export default function GeographyAdmin() {
     EMPTY_FEATURE_COLLECTION,
     (feature) => {
       setDrawFeature(feature);
-      if (feature) {
-        window
-          .fetch("https://overlay.seasketch.org/geographies/warm-cache", {
-            method: "POST",
-            body: JSON.stringify({
-              ...extraRequestParams,
-              feature,
-            }),
-            headers: {
-              "Content-Type": "application/json",
-            },
-          })
-          .then((res) => res.json())
-          .then((data) => {
-            // console.log("data", data);
-          })
-          .catch((err) => {
-            console.error("err", err);
-          });
-      }
     },
     undefined,
     "https://overlay.seasketch.org/geographies/clip",
@@ -488,7 +468,23 @@ export default function GeographyAdmin() {
     (geom, performance) => {
       // console.log("geom", geom, performance);
     },
-    extraRequestParams
+    extraRequestParams,
+    (feature) => {
+      if (feature.geometry.coordinates[0].length > 3) {
+        fetch("https://overlay.seasketch.org/geographies/warm-cache", {
+          method: "POST",
+          body: JSON.stringify({
+            ...extraRequestParams,
+            feature,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).catch((err) => {
+          console.error("err", err);
+        });
+      }
+    }
   );
 
   const unrepresentedTerritorialSeas = useMemo(() => {
