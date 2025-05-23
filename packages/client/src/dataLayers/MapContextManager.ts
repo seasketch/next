@@ -3225,7 +3225,11 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    if (changes) {
+    if (
+      changes ||
+      Object.keys(newLegendState).length !==
+        Object.keys(this.internalState.legends).length
+    ) {
       this.setState((prev) => ({
         ...prev,
         legends: newLegendState,
