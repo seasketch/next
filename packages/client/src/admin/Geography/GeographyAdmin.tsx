@@ -53,6 +53,50 @@ type AdminState = {
   showGeographyDropdown: boolean;
 };
 
+const ensureGeographyVisibleAndInView = (
+  geographyId: number,
+  map: mapboxgl.Map | null,
+  hiddenGeographies: number[],
+  onToggleVisibility: (id: number) => void,
+  geographies: any[]
+) => {
+  // Make sure geography is visible
+  if (hiddenGeographies.includes(geographyId)) {
+    onToggleVisibility(geographyId);
+  }
+
+  // Check if we need to adjust the map view
+  if (map) {
+    const geography = geographies.find((g) => g.id === geographyId);
+    if (geography?.bounds) {
+      const currentBounds = map.getBounds();
+      const geographyBounds = new mapboxgl.LngLatBounds(
+        [geography.bounds[0], geography.bounds[1]],
+        [geography.bounds[2], geography.bounds[3]]
+      );
+
+      // Check if the geography bounds are completely outside the current view
+      const currentNE = currentBounds.getNorthEast();
+      const currentSW = currentBounds.getSouthWest();
+      const geographyNE = geographyBounds.getNorthEast();
+      const geographySW = geographyBounds.getSouthWest();
+
+      // Check if the bounding boxes don't overlap at all
+      if (
+        currentNE.lng < geographySW.lng ||
+        currentSW.lng > geographyNE.lng ||
+        currentNE.lat < geographySW.lat ||
+        currentSW.lat > geographyNE.lat
+      ) {
+        map.fitBounds(geography.bounds as [number, number, number, number], {
+          padding: 50,
+          animate: true,
+        });
+      }
+    }
+  }
+};
+
 export default function GeographyAdmin() {
   const { t } = useTranslation("admin:geography");
   const slug = getSlug();
@@ -670,7 +714,7 @@ export default function GeographyAdmin() {
             <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
               {!state.selectedGeographyId ? (
                 <select
-                  className="form-select rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className="form-select rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm"
                   value={state.selectedGeographyId || ""}
                   onChange={(e) => {
                     const id = parseInt(e.target.value);
@@ -679,6 +723,13 @@ export default function GeographyAdmin() {
                         ...prev,
                         selectedGeographyId: id,
                       }));
+                      ensureGeographyVisibleAndInView(
+                        id,
+                        state.map,
+                        state.hiddenGeographies,
+                        handleGeographyVisibilityToggle,
+                        data?.projectBySlug?.geographies || []
+                      );
                       draw.setCollection(EMPTY_FEATURE_COLLECTION);
                       setTimeout(() => {
                         draw.create(false, true);
@@ -686,9 +737,7 @@ export default function GeographyAdmin() {
                     }
                   }}
                 >
-                  <option value="">
-                    {t("Select a geography to clip against...")}
-                  </option>
+                  <option value="">{t("Draw within a Geography...")}</option>
                   {data.projectBySlug.geographies.map((geog) => (
                     <option key={geog.id} value={geog.id}>
                       {geog.name}
@@ -696,73 +745,80 @@ export default function GeographyAdmin() {
                   ))}
                 </select>
               ) : (
-                <div className="relative inline-flex rounded-md shadow-sm">
-                  <Button
-                    small
-                    label={t("Draw polygon")}
-                    onClick={() => {
-                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                      setTimeout(() => {
-                        draw.create(false, true);
-                      }, 0);
-                    }}
-                    className="!rounded-r-none border-r-0"
-                  >
-                    <span className="flex items-center space-x-1">
-                      <Pencil1Icon />
+                <div className="relative inline-flex">
+                  <div className="group relative inline-flex items-center rounded-md bg-white text-sm font-medium shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      className="flex items-center space-x-2 px-1.5 py-1"
+                      onClick={() => {
+                        draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                        setTimeout(() => {
+                          draw.create(false, true);
+                        }, 0);
+                      }}
+                    >
+                      <Pencil1Icon className="h-4 w-4" />
                       <span>
-                        {t("Draw in")}{" "}
+                        {t("Draw Polygon - ")}
                         {
                           data.projectBySlug.geographies.find(
                             (g) => g.id === state.selectedGeographyId
                           )?.name
                         }
                       </span>
-                    </span>
-                  </Button>
-                  <div className="relative -ml-px">
-                    <Button
-                      small
-                      label={t("Change geography")}
+                    </button>
+                    <div className="relative">
+                      <div className="h-full w-px bg-gray-300" />
+                    </div>
+                    <button
+                      type="button"
+                      className="px-2 hover:bg-gray-100 rounded-r-md h-full border-l border-black/90"
                       onClick={() =>
                         setState((prev) => ({
                           ...prev,
                           showGeographyDropdown: !prev.showGeographyDropdown,
                         }))
                       }
-                      className="!rounded-l-none !px-2 relative"
                     >
-                      <CaretDownIcon />
-                    </Button>
-                    {state.showGeographyDropdown && (
-                      <div
-                        className="absolute right-0 mt-1 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 z-50"
-                        style={{ minWidth: "200px" }}
-                      >
-                        <div className="py-1" role="menu">
-                          {data.projectBySlug.geographies.map((geog) => (
-                            <button
-                              key={geog.id}
-                              className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
-                                geog.id === state.selectedGeographyId
-                                  ? "bg-gray-50"
-                                  : ""
-                              }`}
-                              onClick={() => {
-                                setState((prev) => ({
-                                  ...prev,
-                                  selectedGeographyId: geog.id,
-                                  showGeographyDropdown: false,
-                                }));
-                              }}
-                            >
-                              {geog.name}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      <CaretDownIcon className="h-4 w-4" />
+                    </button>
                   </div>
+                  {state.showGeographyDropdown && (
+                    <div className="absolute right-0 top-full mt-1 w-56 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50 focus:outline-none">
+                      <div className="py-1" role="menu">
+                        {data.projectBySlug.geographies.map((geog) => (
+                          <button
+                            key={geog.id}
+                            className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
+                              geog.id === state.selectedGeographyId
+                                ? "bg-gray-50 text-blue-600"
+                                : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              setState((prev) => ({
+                                ...prev,
+                                selectedGeographyId: geog.id,
+                                showGeographyDropdown: false,
+                              }));
+                              ensureGeographyVisibleAndInView(
+                                geog.id,
+                                state.map,
+                                state.hiddenGeographies,
+                                handleGeographyVisibilityToggle,
+                                data?.projectBySlug?.geographies || []
+                              );
+                              draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                              setTimeout(() => {
+                                draw.create(false, true);
+                              }, 0);
+                            }}
+                          >
+                            {geog.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               {(drawFeature ||
@@ -770,6 +826,7 @@ export default function GeographyAdmin() {
                   draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
                 <Button
                   small
+                  buttonClassName=""
                   label={t("Clear")}
                   onClick={() => {
                     setDrawFeature(null);
