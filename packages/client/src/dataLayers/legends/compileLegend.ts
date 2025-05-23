@@ -1429,7 +1429,23 @@ export function pluckListPanelsFromMatchExpressions(context: {
       featureProps,
       sortedLayers
     ) => {
-      const prop = expression[1][1];
+      let prop = expression[1][1];
+      let matchArgumentContainsArrayAtExpression = false;
+      const matchArgumentExpression = expression[1];
+      if (!isExpression(matchArgumentExpression)) {
+        throw new Error("Cannot interpret first argument of match expression.");
+      } else if (matchArgumentExpression[0] === "get") {
+        prop = matchArgumentExpression[1];
+      } else if (matchArgumentExpression[0] === "at") {
+        const getExpression = matchArgumentExpression[2];
+        if (getExpression[0] !== "get") {
+          throw new Error(
+            "Cannot interpret match expression with embedded at expression. Expected get expression within [at]"
+          );
+        }
+        prop = getExpression[1];
+        matchArgumentContainsArrayAtExpression = true;
+      }
       const defaultValue = expression[expression.length - 1];
       const inputOutputPairs = expression.slice(2, -1);
       const metadata: SeaSketchLayerMetadata = layer.metadata || {};
@@ -1470,7 +1486,9 @@ export function pluckListPanelsFromMatchExpressions(context: {
                 sortedLayers,
                 {
                   ...featureProps,
-                  [prop]: input,
+                  [prop]: matchArgumentContainsArrayAtExpression
+                    ? [input]
+                    : input,
                 },
                 representedProperties
               ),
