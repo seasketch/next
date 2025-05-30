@@ -17003,37 +17003,6 @@ $$;
 
 
 --
--- Name: table_of_contents_item_by_identifier(integer, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.table_of_contents_item_by_identifier(id integer, stable_id text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    select * from table_of_contents_items
-    where id = table_of_contents_item_by_identifier.id
-    or stable_id = table_of_contents_item_by_identifier.stable_id
-    limit 1;
-  $$;
-
-
---
--- Name: table_of_contents_item_by_stable_id(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = table_of_contents_item_by_stable_id.stable_id
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: table_of_contents_items_breadcrumbs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -34956,22 +34925,6 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 
 --
--- Name: FUNCTION table_of_contents_item_by_identifier(id integer, stable_id text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.table_of_contents_item_by_identifier(id integer, stable_id text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.table_of_contents_item_by_identifier(id integer, stable_id text) TO anon;
-
-
---
--- Name: FUNCTION table_of_contents_item_by_stable_id(stable_id text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) TO anon;
-
-
---
 -- Name: FUNCTION table_of_contents_items_breadcrumbs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -35973,6 +35926,13 @@ GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 
 GRANT SELECT ON TABLE public.projects_shared_basemaps TO anon;
 GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
+
+
+--
+-- Name: TABLE sketch_class_geographies; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.sketch_class_geographies TO anon;
 
 
 --

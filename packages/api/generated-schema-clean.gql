@@ -10170,12 +10170,6 @@ type Mutation {
     """
     input: UpdateSketchClassByNodeIdInput!
   ): UpdateSketchClassPayload
-  updateSketchClassGeographies(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateSketchClassGeographiesInput!
-  ): UpdateSketchClassGeographiesPayload
 
   """Admin mutation for updating the mapbox gl style for a sketch class"""
   updateSketchClassMapboxGLStyle(sketchClassId: Int!, style: JSON): SketchClass!
@@ -14140,15 +14134,6 @@ type SketchClass implements Node {
   """
   formElementId: Int
 
-  """Reads and enables pagination through a set of `Geography`."""
-  geographies(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-  ): [Geography!]
-
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.
   
@@ -14183,7 +14168,6 @@ type SketchClass implements Node {
   
   """
   isArchived: Boolean!
-  isGeographyClippingEnabled: Boolean!
   isTemplate: Boolean!
 
   """
@@ -14315,7 +14299,6 @@ input SketchClassPatch {
   
   """
   isArchived: Boolean
-  isGeographyClippingEnabled: Boolean
 
   """Label chosen by project admins that is shown to users."""
   name: String
@@ -17589,44 +17572,6 @@ input UpdateSketchClassByNodeIdInput {
   An object where the defined keys will be set on the `SketchClass` being updated.
   """
   patch: SketchClassPatch!
-}
-
-"""All input for the `updateSketchClassGeographies` mutation."""
-input UpdateSketchClassGeographiesInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  geographyIds: [Int]
-  sketchClassId: Int
-}
-
-"""The output of our `updateSketchClassGeographies` mutation."""
-type UpdateSketchClassGeographiesPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `FormElement` that is related to this `SketchClass`."""
-  formElement: FormElement
-
-  """Reads a single `Project` that is related to this `SketchClass`."""
-  project: Project
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  sketchClass: SketchClass
-
-  """An edge for our `SketchClass`. May be used by Relay 1."""
-  sketchClassEdge(
-    """The method to use when ordering `SketchClass`."""
-    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchClassesEdge
 }
 
 """All input for the `updateSketchClass` mutation."""

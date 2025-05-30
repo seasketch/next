@@ -5896,6 +5896,8 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SketchClassGeography`. */
+  sketchClassGeographiesByGeographyId: Array<SketchClassGeography>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -5914,6 +5916,14 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+
+export type GeographySketchClassGeographiesByGeographyIdArgs = {
+  condition?: Maybe<SketchClassGeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
 };
 
 export type GeographyClippingLayer = Node & {
@@ -11213,6 +11223,11 @@ export type Query = Node & {
   sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
+  /** Reads a set of `SketchClassGeography`. */
+  sketchClassGeographies?: Maybe<Array<SketchClassGeography>>;
+  sketchClassGeography?: Maybe<SketchClassGeography>;
+  /** Reads a single `SketchClassGeography` using its globally unique `ID`. */
+  sketchClassGeographyByNodeId?: Maybe<SketchClassGeography>;
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
@@ -11244,10 +11259,8 @@ export type Query = Node & {
   surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
-  tableOfContentsItemByIdentifier?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
-  tableOfContentsItemByStableId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
   /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
@@ -12108,6 +12121,28 @@ export type QuerySketchClassByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QuerySketchClassGeographiesArgs = {
+  condition?: Maybe<SketchClassGeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchClassGeographyArgs = {
+  geographyId: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchClassGeographyByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderArgs = {
   id: Scalars['Int'];
 };
@@ -12262,21 +12297,8 @@ export type QueryTableOfContentsItemByDataLayerIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
-export type QueryTableOfContentsItemByIdentifierArgs = {
-  id?: Maybe<Scalars['Int']>;
-  stableId?: Maybe<Scalars['String']>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryTableOfContentsItemByStableIdArgs = {
-  stableId?: Maybe<Scalars['String']>;
 };
 
 
@@ -13079,6 +13101,8 @@ export type SketchClass = Node & {
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SketchClassGeography`. */
+  sketchClassGeographies: Array<SketchClassGeography>;
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
@@ -13092,6 +13116,15 @@ export type SketchClass = Node & {
 export type SketchClassGeographiesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** Sketch Classes act as a schema for sketches drawn by users. */
+export type SketchClassSketchClassGeographiesArgs = {
+  condition?: Maybe<SketchClassGeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
 };
 
 
@@ -13112,6 +13145,40 @@ export type SketchClassCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
+};
+
+/** Methods to use when ordering `SketchClassGeography`. */
+export enum SketchClassGeographiesOrderBy {
+  GeographyIdAsc = 'GEOGRAPHY_ID_ASC',
+  GeographyIdDesc = 'GEOGRAPHY_ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  SketchClassIdAsc = 'SKETCH_CLASS_ID_ASC',
+  SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC'
+}
+
+export type SketchClassGeography = Node & {
+  __typename?: 'SketchClassGeography';
+  /** Reads a single `Geography` that is related to this `SketchClassGeography`. */
+  geography?: Maybe<Geography>;
+  geographyId: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `SketchClass` that is related to this `SketchClassGeography`. */
+  sketchClass?: Maybe<SketchClass>;
+  sketchClassId: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `SketchClassGeography` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type SketchClassGeographyCondition = {
+  /** Checks for equality with the object’s `geographyId` field. */
+  geographyId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `sketchClassId` field. */
+  sketchClassId?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
