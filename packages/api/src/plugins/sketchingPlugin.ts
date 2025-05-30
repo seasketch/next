@@ -44,6 +44,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         timestamp: String! @requires(columns: ["created_at", "updated_at"])
       }
 
+      extend type SketchClass {
+        clippingGeographies: [Geography]! @requires(columns: ["id"])
+      }
+
       extend type Project {
         """
         This token can be used to access this user's sketches from the geojson endpoint.
@@ -274,6 +278,25 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             date = new Date(sketch.updatedAt);
           }
           return date.getTime().toString();
+        },
+      },
+      SketchClass: {
+        clippingGeographies: async (
+          sketchClass,
+          args,
+          context,
+          resolveInfo
+        ) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`project_geography`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(select geography_id from sketch_class_geographies where sketch_class_id = ${sql.value(
+                  sketchClass.id
+                )})`
+              );
+            }
+          );
         },
       },
       Project: {

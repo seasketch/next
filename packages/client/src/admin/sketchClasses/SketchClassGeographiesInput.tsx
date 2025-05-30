@@ -33,37 +33,6 @@ export default function SketchClassGeographiesInput({
   const [updateGeographies, { loading: isUpdating }] =
     useUpdateSketchClassGeographiesMutation({
       onError,
-      optimisticResponse: (vars) => {
-        const selectedGeography = projectGeographies.find(
-          (g) =>
-            g.id ===
-            (Array.isArray(vars.geographyIds)
-              ? vars.geographyIds[0]
-              : vars.geographyIds)
-        );
-        return {
-          __typename: "Mutation",
-          updateSketchClassGeographies: {
-            __typename: "UpdateSketchClassGeographiesPayload",
-            sketchClass: {
-              __typename: "SketchClass",
-              id: vars.id,
-              sketchClassGeographies: selectedGeography
-                ? [
-                    {
-                      __typename: "SketchClassGeography",
-                      geography: {
-                        __typename: "Geography",
-                        id: selectedGeography.id,
-                        name: selectedGeography.name,
-                      },
-                    },
-                  ]
-                : [],
-            },
-          },
-        };
-      },
     });
 
   const { data, loading } = useSketchClassGeographyEditorDetailsQuery({
@@ -74,7 +43,7 @@ export default function SketchClassGeographiesInput({
     (sc) => sc.id === sketchClassId
   );
 
-  const selectedGeographyId = sketchClass?.geographies?.[0]?.id;
+  const selectedGeographyId = sketchClass?.clippingGeographies?.[0]?.id;
 
   const handleGeographyChange = useCallback(
     (newGeographyId: number | null) => {

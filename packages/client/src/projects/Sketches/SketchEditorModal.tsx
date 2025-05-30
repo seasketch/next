@@ -187,10 +187,10 @@ function SketchEditorModal({
   const extraRequestParams = useMemo(() => {
     if (
       sketchClass.isGeographyClippingEnabled &&
-      Array.isArray(sketchClass.geographies)
+      Array.isArray(sketchClass.clippingGeographies)
     ) {
       const geographies = [];
-      for (const geography of sketchClass.geographies!) {
+      for (const geography of sketchClass.clippingGeographies!) {
         if (!geography) {
           continue;
         }
@@ -222,7 +222,7 @@ function SketchEditorModal({
       };
     }
     return undefined;
-  }, [sketchClass.isGeographyClippingEnabled, sketchClass.geographies]);
+  }, [sketchClass.isGeographyClippingEnabled, sketchClass.clippingGeographies]);
 
   const draw = useMapboxGLDraw(
     mapContext,

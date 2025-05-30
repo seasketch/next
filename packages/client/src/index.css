@@ -5265,6 +5265,10 @@ select {
   width: max-content;
 }
 
+.w-px {
+  width: 1px;
+}
+
 .w-screen {
   width: 100vw;
 }
@@ -6231,6 +6235,10 @@ select {
 
 .border-black\/15 {
   border-color: rgb(0 0 0 / 0.15);
+}
+
+.border-black\/90 {
+  border-color: rgb(0 0 0 / 0.9);
 }
 
 .border-blue-200 {
@@ -8949,6 +8957,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color: rgb(59 130 246 / 0.6);
 }
 
+.focus\:border-indigo-300:focus {
+  --tw-border-opacity: 1;
+  border-color: rgb(165 180 252 / var(--tw-border-opacity, 1));
+}
+
 .focus\:border-indigo-500:focus {
   --tw-border-opacity: 1;
   border-color: rgb(99 102 241 / var(--tw-border-opacity, 1));
@@ -9101,6 +9114,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus\:ring-gray-600:focus {
   --tw-ring-opacity: 1;
   --tw-ring-color: rgb(75 85 99 / var(--tw-ring-opacity, 1));
+}
+
+.focus\:ring-indigo-200:focus {
+  --tw-ring-opacity: 1;
+  --tw-ring-color: rgb(199 210 254 / var(--tw-ring-opacity, 1));
 }
 
 .focus\:ring-indigo-500:focus {
@@ -9294,6 +9312,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:opacity-20:disabled {
   opacity: 0.2;
+}
+
+.disabled\:opacity-50:disabled {
+  opacity: 0.5;
 }
 
 .group:hover .group-hover\:border-blue-300 {

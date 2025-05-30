@@ -14129,6 +14129,7 @@ type SketchClass implements Node {
   sketch classes can only be digitized by admins.
   """
   canDigitize: Boolean
+  clippingGeographies: [Geography]!
   filterApiServerLocation: String
   filterApiVersion: Int!
 
@@ -14143,15 +14144,6 @@ type SketchClass implements Node {
   
   """
   formElementId: Int
-
-  """Reads and enables pagination through a set of `Geography`."""
-  geographies(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-  ): [Geography!]
 
   """
   Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry.

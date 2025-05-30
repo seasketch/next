@@ -13017,6 +13017,7 @@ export type SketchClass = Node & {
    * sketch classes can only be digitized by admins.
    */
   canDigitize?: Maybe<Scalars['Boolean']>;
+  clippingGeographies: Array<Maybe<Geography>>;
   filterApiServerLocation?: Maybe<Scalars['String']>;
   filterApiVersion: Scalars['Int'];
   /** Reads a single `Form` that is related to this `SketchClass`. */
@@ -13025,8 +13026,6 @@ export type SketchClass = Node & {
   formElement?: Maybe<FormElement>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
   formElementId?: Maybe<Scalars['Int']>;
-  /** Reads and enables pagination through a set of `Geography`. */
-  geographies?: Maybe<Array<Geography>>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType: SketchGeometryType;
   /** Name of the report to be displayed. */
@@ -13070,13 +13069,6 @@ export type SketchClass = Node & {
   translatedProps: Scalars['JSON'];
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
-};
-
-
-/** Sketch Classes act as a schema for sketches drawn by users. */
-export type SketchClassGeographiesArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -20570,7 +20562,7 @@ export type SketchingDetailsFragment = (
       { __typename?: 'FormLogicRule' }
       & LogicRuleDetailsFragment
     )>> }
-  )>, geographies?: Maybe<Array<(
+  )>, clippingGeographies: Array<Maybe<(
     { __typename?: 'Geography' }
     & GeographyDetailsFragment
   )>> }
@@ -20578,7 +20570,7 @@ export type SketchingDetailsFragment = (
 
 export type SketchingGeographyDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & { geographies?: Maybe<Array<(
+  & { clippingGeographies: Array<Maybe<(
     { __typename?: 'Geography' }
     & GeographyDetailsFragment
   )>> }
@@ -20945,7 +20937,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
     & Pick<Project, 'id' | 'enableReportBuilder'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
-      & { geographies?: Maybe<Array<(
+      & { clippingGeographies: Array<Maybe<(
         { __typename?: 'Geography' }
         & GeographyDetailsFragment
       )>> }
@@ -24029,7 +24021,7 @@ export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     ${ClippingLayerDetailsFragmentDoc}`;
 export const SketchingGeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingGeographyDetails on SketchClass {
-  geographies {
+  clippingGeographies {
     ...GeographyDetails
   }
 }
@@ -24116,7 +24108,7 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   canDigitize
   translatedProps
   isGeographyClippingEnabled
-  geographies {
+  clippingGeographies {
     ...GeographyDetails
   }
 }
@@ -27172,7 +27164,7 @@ export const SketchClassGeographyEditorDetailsDocument = /*#__PURE__*/ gql`
     enableReportBuilder
     sketchClasses {
       ...SketchingDetails
-      geographies {
+      clippingGeographies {
         ...GeographyDetails
       }
     }

@@ -56,13 +56,13 @@ fragment SketchingDetails on SketchClass {
   canDigitize
   translatedProps
   isGeographyClippingEnabled
-  geographies {
+  clippingGeographies {
     ...GeographyDetails
   }
 }
 
 fragment SketchingGeographyDetails on SketchClass {
-  geographies {
+  clippingGeographies {
     ...GeographyDetails
   }
 }
@@ -365,7 +365,7 @@ query SketchClassGeographyEditorDetails($slug: String!) {
     enableReportBuilder
     sketchClasses {
       ...SketchingDetails
-      geographies {
+      clippingGeographies {
         ...GeographyDetails
       }
     }
