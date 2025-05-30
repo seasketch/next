@@ -55,6 +55,31 @@ fragment SketchingDetails on SketchClass {
   preprocessingProjectUrl
   canDigitize
   translatedProps
+  isGeographyClippingEnabled
+  sketchClassGeographies {
+    geography {
+      ...GeographyDetails
+    }
+  }
+}
+
+fragment SketchingGeographyDetails on SketchClass {
+  sketchClassGeographies {
+    geography {
+      ...GeographyDetails
+    }
+  }
+}
+
+mutation UpdateSketchClassGeographies($id: Int!, $geographyIds: [Int!]!) {
+  updateSketchClassGeographies(
+    input: { sketchClassId: $id, geographyIds: $geographyIds }
+  ) {
+    sketchClass {
+      id
+      ...SketchingGeographyDetails
+    }
+  }
 }
 
 fragment AdminSketchingDetails on SketchClass {
@@ -318,5 +343,40 @@ mutation UpdateSketchClassStyle($id: Int!, $style: JSON) {
   updateSketchClassMapboxGLStyle(sketchClassId: $id, style: $style) {
     id
     mapboxGlStyle
+  }
+}
+
+mutation ToggleSketchClassGeographyClipping(
+  $id: Int!
+  $isGeographyClippingEnabled: Boolean!
+) {
+  updateSketchClass(
+    input: {
+      id: $id
+      patch: { isGeographyClippingEnabled: $isGeographyClippingEnabled }
+    }
+  ) {
+    sketchClass {
+      id
+      isGeographyClippingEnabled
+    }
+  }
+}
+
+query SketchClassGeographyEditorDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    enableReportBuilder
+    sketchClasses {
+      ...SketchingDetails
+      sketchClassGeographies {
+        geography {
+          ...GeographyDetails
+        }
+      }
+    }
+    geographies {
+      ...GeographyDetails
+    }
   }
 }

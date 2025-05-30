@@ -1489,6 +1489,7 @@ CREATE TABLE public.sketch_classes (
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
+    is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
@@ -2025,6 +2026,8 @@ CREATE TABLE public.projects (
     about_page_enabled boolean DEFAULT false NOT NULL,
     custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    show_scalebar_by_default boolean DEFAULT false,
+    show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -16982,6 +16985,37 @@ $$;
 
 
 --
+-- Name: table_of_contents_item_by_identifier(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_item_by_identifier(id integer, stable_id text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    select * from table_of_contents_items
+    where id = table_of_contents_item_by_identifier.id
+    or stable_id = table_of_contents_item_by_identifier.stable_id
+    limit 1;
+  $$;
+
+
+--
+-- Name: table_of_contents_item_by_stable_id(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = table_of_contents_item_by_stable_id.stable_id
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$;
+
+
+--
 -- Name: table_of_contents_items_breadcrumbs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -17491,6 +17525,23 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
       select type = 'arcgis-dynamic-mapserver' or type = 'arcgis-vector' or type = 'arcgis-raster-tiles' into uses_dynamic_metadata from data_sources where id = (select data_source_id from data_layers where id = t.data_layer_id);
       return uses_dynamic_metadata;
     end;
+  $$;
+
+
+--
+-- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = stableId
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
   $$;
 
 
@@ -18185,6 +18236,28 @@ CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin bool
       else
         raise exception 'Must be a project admin';
       end if;
+    end;
+  $$;
+
+
+--
+-- Name: update_sketch_class_geographies(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      sketch_class sketch_classes;
+    begin
+    if session_is_admin((select project_id from sketch_classes where id = sketch_class_id)) then
+      delete from sketch_class_geographies where sketch_class_geographies.sketch_class_id = update_sketch_class_geographies.sketch_class_id;
+      insert into sketch_class_geographies (sketch_class_id, geography_id) values (sketch_class_id, unnest(geography_ids));
+      select * into sketch_class from sketch_classes where id = update_sketch_class_geographies.sketch_class_id;
+      return sketch_class;
+    else
+      raise exception 'You are not authorized to update the geographies for this sketch class.';
+    end if;
     end;
   $$;
 
@@ -19745,6 +19818,23 @@ CREATE TABLE public.projects_shared_basemaps (
 
 
 --
+-- Name: sketch_class_geographies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_class_geographies (
+    sketch_class_id integer NOT NULL,
+    geography_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE sketch_class_geographies; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_class_geographies IS '@simpleCollections only';
+
+
+--
 -- Name: sketch_classes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -20620,6 +20710,14 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: sketch_class_geographies sketch_class_geographies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_geographies
+    ADD CONSTRAINT sketch_class_geographies_pkey PRIMARY KEY (sketch_class_id, geography_id);
+
+
+--
 -- Name: sketch_classes sketch_classes_form_element_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -21407,6 +21505,20 @@ CREATE INDEX projects_data_sources_bucket_id_idx ON public.projects USING btree 
 --
 
 CREATE INDEX projects_name_idx ON public.projects USING btree (name);
+
+
+--
+-- Name: sketch_class_geographies_geography_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_class_geographies_geography_id_idx ON public.sketch_class_geographies USING btree (geography_id);
+
+
+--
+-- Name: sketch_class_geographies_sketch_class_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_class_geographies_sketch_class_id_idx ON public.sketch_class_geographies USING btree (sketch_class_id);
 
 
 --
@@ -22939,6 +23051,22 @@ ALTER TABLE ONLY public.projects_shared_basemaps
 
 ALTER TABLE ONLY public.projects_shared_basemaps
     ADD CONSTRAINT projects_shared_basemaps_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sketch_class_geographies sketch_class_geographies_geography_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_geographies
+    ADD CONSTRAINT sketch_class_geographies_geography_id_fkey FOREIGN KEY (geography_id) REFERENCES public.project_geography(id);
+
+
+--
+-- Name: sketch_class_geographies sketch_class_geographies_sketch_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_geographies
+    ADD CONSTRAINT sketch_class_geographies_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id);
 
 
 --
@@ -24812,6 +24940,13 @@ GRANT UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seask
 
 
 --
+-- Name: COLUMN sketch_classes.is_geography_clipping_enabled; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25590,6 +25725,20 @@ GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.show_scalebar_by_default; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.show_legend_by_default; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -34781,6 +34930,22 @@ GRANT ALL ON FUNCTION public.surveys_submitted_response_count(survey public.surv
 
 
 --
+-- Name: FUNCTION table_of_contents_item_by_identifier(id integer, stable_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_item_by_identifier(id integer, stable_id text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_item_by_identifier(id integer, stable_id text) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_item_by_stable_id(stable_id text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_item_by_stable_id(stable_id text) TO anon;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_breadcrumbs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34921,6 +35086,13 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
 
 
 --
@@ -35255,6 +35427,14 @@ REVOKE ALL ON FUNCTION public.update_project_geography_hash_on_delete() FROM PUB
 
 REVOKE ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]) TO seasketch_user;
 
 
 --
@@ -35767,6 +35947,13 @@ GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 
 GRANT SELECT ON TABLE public.projects_shared_basemaps TO anon;
 GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
+
+
+--
+-- Name: TABLE sketch_class_geographies; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.sketch_class_geographies TO anon;
 
 
 --

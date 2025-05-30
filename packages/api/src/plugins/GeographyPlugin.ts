@@ -1,5 +1,6 @@
 import { gql, makeExtendSchemaPlugin } from "graphile-utils";
 import { PoolClient } from "pg";
+import * as cache from "../cache";
 
 /**
  * Plugin that implements the CreateGeography mutation
@@ -904,9 +905,9 @@ async function getBoundsForClippingLayer(
   url: string,
   object_key: string,
   cql2_query?: any,
-  template_id?: string
+  template_id?: string,
+  skipCache?: boolean
 ) {
-  // get the data source url for this clipping layer
   // get the data source url for this clipping layer
   if (template_id === "DAYLIGHT_COASTLINE") {
     return null;
@@ -916,6 +917,21 @@ async function getBoundsForClippingLayer(
       `Data source URL ${url} is not supported for clipping layers`
     );
   }
+
+  // Create a cache key based on all function arguments
+  const cacheKey = `clipping-layer-bounds:${url}:${object_key}:${JSON.stringify(
+    cql2_query
+  )}:${template_id}`;
+
+  // Try to get from cache first, unless skipCache is true
+  if (!skipCache) {
+    const cachedBounds = await cache.get(cacheKey);
+    if (cachedBounds) {
+      return JSON.parse(cachedBounds);
+    }
+  }
+
+  let bounds;
   if (cql2_query === null) {
     // just grab the tilejson from the data server
     const response = await fetch(`${url}.json`);
@@ -928,7 +944,7 @@ async function getBoundsForClippingLayer(
     if (!tilejson.bounds) {
       throw new Error(`TileJSON from ${url} does not contain bounds`);
     }
-    return tilejson.bounds;
+    bounds = tilejson.bounds;
   } else {
     const queryString = new URLSearchParams({
       includeProperties: "_",
@@ -952,9 +968,20 @@ async function getBoundsForClippingLayer(
     }
     if (features.length > 1) {
       const boxes = features.map((f: any) => f.__bbox).filter(Boolean);
-      return combineBBoxes(boxes);
+      bounds = combineBBoxes(boxes);
     } else {
-      return features[0].__bbox;
+      bounds = features[0].__bbox;
     }
   }
+
+  // Cache the bounds for 1 year (in milliseconds), unless skipCache is true
+  if (!skipCache) {
+    await cache.setWithTTL(
+      cacheKey,
+      JSON.stringify(bounds),
+      365 * 24 * 60 * 60 * 1000
+    );
+  }
+
+  return bounds;
 }

@@ -5896,6 +5896,8 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SketchClassGeography`. */
+  sketchClassGeographiesByGeographyId: Array<SketchClassGeography>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -5914,6 +5916,14 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+
+export type GeographySketchClassGeographiesByGeographyIdArgs = {
+  condition?: Maybe<SketchClassGeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
 };
 
 export type GeographyClippingLayer = Node & {
@@ -7642,6 +7652,7 @@ export type Mutation = {
   updateSketchClassByFormElementId?: Maybe<UpdateSketchClassPayload>;
   /** Updates a single `SketchClass` using its globally unique id and a patch. */
   updateSketchClassByNodeId?: Maybe<UpdateSketchClassPayload>;
+  updateSketchClassGeographies?: Maybe<UpdateSketchClassGeographiesPayload>;
   /** Admin mutation for updating the mapbox gl style for a sketch class */
   updateSketchClassMapboxGLStyle: SketchClass;
   /** Updates a single `SketchFolder` using a unique key and a patch. */
@@ -9166,6 +9177,12 @@ export type MutationUpdateSketchClassByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateSketchClassGeographiesArgs = {
+  input: UpdateSketchClassGeographiesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchClassMapboxGlStyleArgs = {
   sketchClassId: Scalars['Int'];
   style?: Maybe<Scalars['JSON']>;
@@ -9977,6 +9994,8 @@ export type Project = Node & {
    */
   sessionOutstandingSurveyInvites?: Maybe<Array<SurveyTokenInfo>>;
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
+  showLegendByDefault?: Maybe<Scalars['Boolean']>;
+  showScalebarByDefault?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
   /**
@@ -10847,6 +10866,8 @@ export type ProjectPatch = {
   mapboxPublicKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
   region?: Maybe<Scalars['GeoJSON']>;
+  showLegendByDefault?: Maybe<Scalars['Boolean']>;
+  showScalebarByDefault?: Maybe<Scalars['Boolean']>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -11202,6 +11223,11 @@ export type Query = Node & {
   sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
+  /** Reads a set of `SketchClassGeography`. */
+  sketchClassGeographies?: Maybe<Array<SketchClassGeography>>;
+  sketchClassGeography?: Maybe<SketchClassGeography>;
+  /** Reads a single `SketchClassGeography` using its globally unique `ID`. */
+  sketchClassGeographyByNodeId?: Maybe<SketchClassGeography>;
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
@@ -11233,8 +11259,10 @@ export type Query = Node & {
   surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByIdentifier?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByStableId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
   /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
@@ -12095,6 +12123,28 @@ export type QuerySketchClassByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QuerySketchClassGeographiesArgs = {
+  condition?: Maybe<SketchClassGeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchClassGeographyArgs = {
+  geographyId: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchClassGeographyByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderArgs = {
   id: Scalars['Int'];
 };
@@ -12249,8 +12299,21 @@ export type QueryTableOfContentsItemByDataLayerIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryTableOfContentsItemByIdentifierArgs = {
+  id?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryTableOfContentsItemByStableIdArgs = {
+  stableId?: Maybe<Scalars['String']>;
 };
 
 
@@ -13033,6 +13096,7 @@ export type SketchClass = Node & {
    * class in order to render existing sketches of this type.
    */
   isArchived: Scalars['Boolean'];
+  isGeographyClippingEnabled: Scalars['Boolean'];
   isTemplate: Scalars['Boolean'];
   /**
    * [Mapbox GL Style](https://docs.mapbox.com/mapbox-gl-js/style-spec/) used to
@@ -13050,12 +13114,23 @@ export type SketchClass = Node & {
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SketchClassGeography`. */
+  sketchClassGeographies: Array<SketchClassGeography>;
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
   translatedProps: Scalars['JSON'];
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
+};
+
+
+/** Sketch Classes act as a schema for sketches drawn by users. */
+export type SketchClassSketchClassGeographiesArgs = {
+  condition?: Maybe<SketchClassGeographyCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
 };
 
 
@@ -13076,6 +13151,40 @@ export type SketchClassCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
+};
+
+/** Methods to use when ordering `SketchClassGeography`. */
+export enum SketchClassGeographiesOrderBy {
+  GeographyIdAsc = 'GEOGRAPHY_ID_ASC',
+  GeographyIdDesc = 'GEOGRAPHY_ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  SketchClassIdAsc = 'SKETCH_CLASS_ID_ASC',
+  SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC'
+}
+
+export type SketchClassGeography = Node & {
+  __typename?: 'SketchClassGeography';
+  /** Reads a single `Geography` that is related to this `SketchClassGeography`. */
+  geography?: Maybe<Geography>;
+  geographyId: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `SketchClass` that is related to this `SketchClassGeography`. */
+  sketchClass?: Maybe<SketchClass>;
+  sketchClassId: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `SketchClassGeography` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type SketchClassGeographyCondition = {
+  /** Checks for equality with the object’s `geographyId` field. */
+  geographyId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `sketchClassId` field. */
+  sketchClassId?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
@@ -13112,6 +13221,7 @@ export type SketchClassPatch = {
    * class in order to render existing sketches of this type.
    */
   isArchived?: Maybe<Scalars['Boolean']>;
+  isGeographyClippingEnabled?: Maybe<Scalars['Boolean']>;
   /** Label chosen by project admins that is shown to users. */
   name?: Maybe<Scalars['String']>;
   preprocessingEndpoint?: Maybe<Scalars['String']>;
@@ -15846,6 +15956,42 @@ export type UpdateSketchClassByNodeIdInput = {
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `SketchClass` being updated. */
   patch: SketchClassPatch;
+};
+
+/** All input for the `updateSketchClassGeographies` mutation. */
+export type UpdateSketchClassGeographiesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  geographyIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `updateSketchClassGeographies` mutation. */
+export type UpdateSketchClassGeographiesPayload = {
+  __typename?: 'UpdateSketchClassGeographiesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `updateSketchClassGeographies` mutation. */
+export type UpdateSketchClassGeographiesPayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
 };
 
 /** All input for the `updateSketchClass` mutation. */
@@ -20498,7 +20644,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -20512,6 +20658,41 @@ export type SketchingDetailsFragment = (
       { __typename?: 'FormLogicRule' }
       & LogicRuleDetailsFragment
     )>> }
+  )>, sketchClassGeographies: Array<(
+    { __typename?: 'SketchClassGeography' }
+    & { geography?: Maybe<(
+      { __typename?: 'Geography' }
+      & GeographyDetailsFragment
+    )> }
+  )> }
+);
+
+export type SketchingGeographyDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & { sketchClassGeographies: Array<(
+    { __typename?: 'SketchClassGeography' }
+    & { geography?: Maybe<(
+      { __typename?: 'Geography' }
+      & GeographyDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateSketchClassGeographiesMutationVariables = Exact<{
+  id: Scalars['Int'];
+  geographyIds: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type UpdateSketchClassGeographiesMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClassGeographies?: Maybe<(
+    { __typename?: 'UpdateSketchClassGeographiesPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id'>
+      & SketchingGeographyDetailsFragment
+    )> }
   )> }
 );
 
@@ -20827,6 +21008,50 @@ export type UpdateSketchClassStyleMutation = (
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'mapboxGlStyle'>
   ) }
+);
+
+export type ToggleSketchClassGeographyClippingMutationVariables = Exact<{
+  id: Scalars['Int'];
+  isGeographyClippingEnabled: Scalars['Boolean'];
+}>;
+
+
+export type ToggleSketchClassGeographyClippingMutation = (
+  { __typename?: 'Mutation' }
+  & { updateSketchClass?: Maybe<(
+    { __typename?: 'UpdateSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'isGeographyClippingEnabled'>
+    )> }
+  )> }
+);
+
+export type SketchClassGeographyEditorDetailsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchClassGeographyEditorDetailsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'enableReportBuilder'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & { sketchClassGeographies: Array<(
+        { __typename?: 'SketchClassGeography' }
+        & { geography?: Maybe<(
+          { __typename?: 'Geography' }
+          & GeographyDetailsFragment
+        )> }
+      )> }
+      & SketchingDetailsFragment
+    )>, geographies: Array<(
+      { __typename?: 'Geography' }
+      & GeographyDetailsFragment
+    )> }
+  )> }
 );
 
 export type SketchTocDetailsFragment = (
@@ -23533,65 +23758,6 @@ export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
-export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment UserProfileDetails on Profile {
-  userId
-  fullname
-  affiliations
-  email
-  nickname
-  picture
-}
-    `;
-export const ClippingDataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment ClippingDataSourceDetails on DataSource {
-  id
-  type
-  url
-  dataLibraryTemplateId
-  createdAt
-  authorProfile {
-    ...UserProfileDetails
-  }
-  outputs {
-    id
-    type
-    url
-  }
-}
-    ${UserProfileDetailsFragmentDoc}`;
-export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment ClippingLayerDetails on DataLayer {
-  id
-  version
-  mapboxGlStyles
-  sourceLayer
-  vectorObjectKey
-  dataSource {
-    ...ClippingDataSourceDetails
-  }
-}
-    ${ClippingDataSourceDetailsFragmentDoc}`;
-export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment GeographyDetails on Geography {
-  id
-  hash
-  name
-  translatedProps
-  clientTemplate
-  bounds
-  clippingLayers {
-    id
-    operationType
-    templateId
-    cql2Query
-    objectKey
-    dataLayer {
-      ...ClippingLayerDetails
-    }
-  }
-}
-    ${ClippingLayerDetailsFragmentDoc}`;
 export const OverlayForGeographyFragmentDoc = /*#__PURE__*/ gql`
     fragment OverlayForGeography on TableOfContentsItem {
   id
@@ -23863,6 +24029,74 @@ export const ProjectListItemFragmentDoc = /*#__PURE__*/ gql`
   translatedProps
 }
     `;
+export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment UserProfileDetails on Profile {
+  userId
+  fullname
+  affiliations
+  email
+  nickname
+  picture
+}
+    `;
+export const ClippingDataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ClippingDataSourceDetails on DataSource {
+  id
+  type
+  url
+  dataLibraryTemplateId
+  createdAt
+  authorProfile {
+    ...UserProfileDetails
+  }
+  outputs {
+    id
+    type
+    url
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
+export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ClippingLayerDetails on DataLayer {
+  id
+  version
+  mapboxGlStyles
+  sourceLayer
+  vectorObjectKey
+  dataSource {
+    ...ClippingDataSourceDetails
+  }
+}
+    ${ClippingDataSourceDetailsFragmentDoc}`;
+export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment GeographyDetails on Geography {
+  id
+  hash
+  name
+  translatedProps
+  clientTemplate
+  bounds
+  clippingLayers {
+    id
+    operationType
+    templateId
+    cql2Query
+    objectKey
+    dataLayer {
+      ...ClippingLayerDetails
+    }
+  }
+}
+    ${ClippingLayerDetailsFragmentDoc}`;
+export const SketchingGeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SketchingGeographyDetails on SketchClass {
+  sketchClassGeographies {
+    geography {
+      ...GeographyDetails
+    }
+  }
+}
+    ${GeographyDetailsFragmentDoc}`;
 export const SketchFormElementFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchFormElement on FormElement {
   id
@@ -23944,9 +24178,16 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   preprocessingProjectUrl
   canDigitize
   translatedProps
+  isGeographyClippingEnabled
+  sketchClassGeographies {
+    geography {
+      ...GeographyDetails
+    }
+  }
 }
     ${SketchFormElementFragmentDoc}
-${LogicRuleDetailsFragmentDoc}`;
+${LogicRuleDetailsFragmentDoc}
+${GeographyDetailsFragmentDoc}`;
 export const AdminSketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment AdminSketchingDetails on SketchClass {
   ...SketchingDetails
@@ -26786,6 +27027,18 @@ export const ProjectListingDocument = /*#__PURE__*/ gql`
   }
 }
     ${ProjectListItemFragmentDoc}`;
+export const UpdateSketchClassGeographiesDocument = /*#__PURE__*/ gql`
+    mutation UpdateSketchClassGeographies($id: Int!, $geographyIds: [Int!]!) {
+  updateSketchClassGeographies(
+    input: {sketchClassId: $id, geographyIds: $geographyIds}
+  ) {
+    sketchClass {
+      id
+      ...SketchingGeographyDetails
+    }
+  }
+}
+    ${SketchingGeographyDetailsFragmentDoc}`;
 export const SketchClassFormDocument = /*#__PURE__*/ gql`
     query SketchClassForm($id: Int!) {
   form(id: $id) {
@@ -26965,6 +27218,38 @@ export const UpdateSketchClassStyleDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ToggleSketchClassGeographyClippingDocument = /*#__PURE__*/ gql`
+    mutation ToggleSketchClassGeographyClipping($id: Int!, $isGeographyClippingEnabled: Boolean!) {
+  updateSketchClass(
+    input: {id: $id, patch: {isGeographyClippingEnabled: $isGeographyClippingEnabled}}
+  ) {
+    sketchClass {
+      id
+      isGeographyClippingEnabled
+    }
+  }
+}
+    `;
+export const SketchClassGeographyEditorDetailsDocument = /*#__PURE__*/ gql`
+    query SketchClassGeographyEditorDetails($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    enableReportBuilder
+    sketchClasses {
+      ...SketchingDetails
+      sketchClassGeographies {
+        geography {
+          ...GeographyDetails
+        }
+      }
+    }
+    geographies {
+      ...GeographyDetails
+    }
+  }
+}
+    ${SketchingDetailsFragmentDoc}
+${GeographyDetailsFragmentDoc}`;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -28240,6 +28525,7 @@ export const namedOperations = {
     TemplateSketchClasses: 'TemplateSketchClasses',
     SketchClasses: 'SketchClasses',
     SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
+    SketchClassGeographyEditorDetails: 'SketchClassGeographyEditorDetails',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -28367,6 +28653,7 @@ export const namedOperations = {
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     updateEnableReportBuilder: 'updateEnableReportBuilder',
     UpdateProjectRegion: 'UpdateProjectRegion',
+    UpdateSketchClassGeographies: 'UpdateSketchClassGeographies',
     CreateSketchClass: 'CreateSketchClass',
     UpdateSketchClass: 'UpdateSketchClass',
     DeleteSketchClass: 'DeleteSketchClass',
@@ -28379,6 +28666,7 @@ export const namedOperations = {
     AddVisibilityCondition: 'AddVisibilityCondition',
     DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
     UpdateSketchClassStyle: 'UpdateSketchClassStyle',
+    ToggleSketchClassGeographyClipping: 'ToggleSketchClassGeographyClipping',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -28513,6 +28801,7 @@ export const namedOperations = {
     ProjectListItem: 'ProjectListItem',
     SketchFormElement: 'SketchFormElement',
     SketchingDetails: 'SketchingDetails',
+    SketchingGeographyDetails: 'SketchingGeographyDetails',
     AdminSketchingDetails: 'AdminSketchingDetails',
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
