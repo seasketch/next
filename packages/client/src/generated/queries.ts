@@ -5896,8 +5896,6 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
-  /** Reads and enables pagination through a set of `SketchClassGeography`. */
-  sketchClassGeographiesByGeographyId: Array<SketchClassGeography>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -5916,14 +5914,6 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
-};
-
-
-export type GeographySketchClassGeographiesByGeographyIdArgs = {
-  condition?: Maybe<SketchClassGeographyCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
 };
 
 export type GeographyClippingLayer = Node & {
@@ -11223,11 +11213,6 @@ export type Query = Node & {
   sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
-  /** Reads a set of `SketchClassGeography`. */
-  sketchClassGeographies?: Maybe<Array<SketchClassGeography>>;
-  sketchClassGeography?: Maybe<SketchClassGeography>;
-  /** Reads a single `SketchClassGeography` using its globally unique `ID`. */
-  sketchClassGeographyByNodeId?: Maybe<SketchClassGeography>;
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
@@ -12118,28 +12103,6 @@ export type QuerySketchClassByFormElementIdArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByNodeIdArgs = {
-  nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySketchClassGeographiesArgs = {
-  condition?: Maybe<SketchClassGeographyCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySketchClassGeographyArgs = {
-  geographyId: Scalars['Int'];
-  sketchClassId: Scalars['Int'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QuerySketchClassGeographyByNodeIdArgs = {
   nodeId: Scalars['ID'];
 };
 
@@ -13077,6 +13040,8 @@ export type SketchClass = Node & {
   formElement?: Maybe<FormElement>;
   /** If set, this sketch class is only for use in a survey indicated by the form_element. */
   formElementId?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `Geography`. */
+  geographies?: Maybe<Array<Geography>>;
   /** Geometry type users digitize. COLLECTION types act as a feature collection and have no drawn geometry. */
   geometryType: SketchGeometryType;
   /** Name of the report to be displayed. */
@@ -13114,8 +13079,6 @@ export type SketchClass = Node & {
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
   projectId: Scalars['Int'];
-  /** Reads and enables pagination through a set of `SketchClassGeography`. */
-  sketchClassGeographies: Array<SketchClassGeography>;
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
@@ -13126,11 +13089,9 @@ export type SketchClass = Node & {
 
 
 /** Sketch Classes act as a schema for sketches drawn by users. */
-export type SketchClassSketchClassGeographiesArgs = {
-  condition?: Maybe<SketchClassGeographyCondition>;
+export type SketchClassGeographiesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<SketchClassGeographiesOrderBy>>;
 };
 
 
@@ -13151,40 +13112,6 @@ export type SketchClassCondition = {
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `projectId` field. */
   projectId?: Maybe<Scalars['Int']>;
-};
-
-/** Methods to use when ordering `SketchClassGeography`. */
-export enum SketchClassGeographiesOrderBy {
-  GeographyIdAsc = 'GEOGRAPHY_ID_ASC',
-  GeographyIdDesc = 'GEOGRAPHY_ID_DESC',
-  Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
-  SketchClassIdAsc = 'SKETCH_CLASS_ID_ASC',
-  SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC'
-}
-
-export type SketchClassGeography = Node & {
-  __typename?: 'SketchClassGeography';
-  /** Reads a single `Geography` that is related to this `SketchClassGeography`. */
-  geography?: Maybe<Geography>;
-  geographyId: Scalars['Int'];
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  /** Reads a single `SketchClass` that is related to this `SketchClassGeography`. */
-  sketchClass?: Maybe<SketchClass>;
-  sketchClassId: Scalars['Int'];
-};
-
-/**
- * A condition to be used against `SketchClassGeography` object types. All fields
- * are tested for equality and combined with a logical ‘and.’
- */
-export type SketchClassGeographyCondition = {
-  /** Checks for equality with the object’s `geographyId` field. */
-  geographyId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `sketchClassId` field. */
-  sketchClassId?: Maybe<Scalars['Int']>;
 };
 
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
@@ -20658,24 +20585,18 @@ export type SketchingDetailsFragment = (
       { __typename?: 'FormLogicRule' }
       & LogicRuleDetailsFragment
     )>> }
-  )>, sketchClassGeographies: Array<(
-    { __typename?: 'SketchClassGeography' }
-    & { geography?: Maybe<(
-      { __typename?: 'Geography' }
-      & GeographyDetailsFragment
-    )> }
-  )> }
+  )>, geographies?: Maybe<Array<(
+    { __typename?: 'Geography' }
+    & GeographyDetailsFragment
+  )>> }
 );
 
 export type SketchingGeographyDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & { sketchClassGeographies: Array<(
-    { __typename?: 'SketchClassGeography' }
-    & { geography?: Maybe<(
-      { __typename?: 'Geography' }
-      & GeographyDetailsFragment
-    )> }
-  )> }
+  & { geographies?: Maybe<Array<(
+    { __typename?: 'Geography' }
+    & GeographyDetailsFragment
+  )>> }
 );
 
 export type UpdateSketchClassGeographiesMutationVariables = Exact<{
@@ -21039,13 +20960,10 @@ export type SketchClassGeographyEditorDetailsQuery = (
     & Pick<Project, 'id' | 'enableReportBuilder'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
-      & { sketchClassGeographies: Array<(
-        { __typename?: 'SketchClassGeography' }
-        & { geography?: Maybe<(
-          { __typename?: 'Geography' }
-          & GeographyDetailsFragment
-        )> }
-      )> }
+      & { geographies?: Maybe<Array<(
+        { __typename?: 'Geography' }
+        & GeographyDetailsFragment
+      )>> }
       & SketchingDetailsFragment
     )>, geographies: Array<(
       { __typename?: 'Geography' }
@@ -24090,10 +24008,8 @@ export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     ${ClippingLayerDetailsFragmentDoc}`;
 export const SketchingGeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingGeographyDetails on SketchClass {
-  sketchClassGeographies {
-    geography {
-      ...GeographyDetails
-    }
+  geographies {
+    ...GeographyDetails
   }
 }
     ${GeographyDetailsFragmentDoc}`;
@@ -24179,10 +24095,8 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   canDigitize
   translatedProps
   isGeographyClippingEnabled
-  sketchClassGeographies {
-    geography {
-      ...GeographyDetails
-    }
+  geographies {
+    ...GeographyDetails
   }
 }
     ${SketchFormElementFragmentDoc}
@@ -27237,10 +27151,8 @@ export const SketchClassGeographyEditorDetailsDocument = /*#__PURE__*/ gql`
     enableReportBuilder
     sketchClasses {
       ...SketchingDetails
-      sketchClassGeographies {
-        geography {
-          ...GeographyDetails
-        }
+      geographies {
+        ...GeographyDetails
       }
     }
     geographies {

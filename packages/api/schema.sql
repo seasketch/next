@@ -16303,6 +16303,24 @@ COMMENT ON FUNCTION public.sketch_classes_can_digitize(sketch_class public.sketc
 
 
 --
+-- Name: sketch_classes_geographies(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_classes_geographies(s public.sketch_classes) RETURNS SETOF public.project_geography
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select * from project_geography where id in (select geography_id from sketch_class_geographies where sketch_class_id = s.id);
+  $$;
+
+
+--
+-- Name: FUNCTION sketch_classes_geographies(s public.sketch_classes); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketch_classes_geographies(s public.sketch_classes) IS '@simpleCollections only';
+
+
+--
 -- Name: sketch_classes_prohibit_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -31843,6 +31861,14 @@ GRANT ALL ON FUNCTION public.sketch_classes_can_digitize(sketch_class public.ske
 
 
 --
+-- Name: FUNCTION sketch_classes_geographies(s public.sketch_classes); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_classes_geographies(s public.sketch_classes) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_classes_geographies(s public.sketch_classes) TO anon;
+
+
+--
 -- Name: FUNCTION sketch_classes_prohibit_delete(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -35947,13 +35973,6 @@ GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 
 GRANT SELECT ON TABLE public.projects_shared_basemaps TO anon;
 GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
-
-
---
--- Name: TABLE sketch_class_geographies; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.sketch_class_geographies TO anon;
 
 
 --
