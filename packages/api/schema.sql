@@ -35929,13 +35929,6 @@ GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
 
 
 --
--- Name: TABLE sketch_class_geographies; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.sketch_class_geographies TO anon;
-
-
---
 -- Name: TABLE sprite_images; Type: ACL; Schema: public; Owner: -
 --
 

@@ -74,8 +74,7 @@ export default function SketchClassGeographiesInput({
     (sc) => sc.id === sketchClassId
   );
 
-  const selectedGeographyId =
-    sketchClass?.sketchClassGeographies?.[0]?.geography?.id;
+  const selectedGeographyId = sketchClass?.geographies?.[0]?.id;
 
   const handleGeographyChange = useCallback(
     (newGeographyId: number | null) => {
