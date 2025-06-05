@@ -1,0 +1,46 @@
+{
+  "name": "fgb-source",
+  "version": "1.0.0",
+  "description": "FlatGeobuf client with a focus on exposing flexibility in usage patterns to improve workload-specific performance",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next",
+  "license": "BSD-3-Clause",
+  "type": "module",
+  "main": "dist/index.ts",
+  "directories": {
+    "lib": "dist",
+    "test": "__tests__"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.2",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "@turf/bbox": "^7.2.0",
+    "@turf/helpers": "^7.2.0",
+    "@turf/invariant": "^7.2.0",
+    "@turf/union": "^7.2.0",
+    "@types/bytes": "^3.1.5",
+    "@types/geojson": "^7946.0.16",
+    "bytes": "^3.1.2",
+    "flatbuffers": "^24.12.23",
+    "flatgeobuf": "^3.37.1",
+    "lru-cache": "^11.1.0"
+  }
+}

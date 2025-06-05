@@ -92,6 +92,7 @@
     "cors": "^2.8.5",
     "d3-scale-chromatic": "2.0.0",
     "dataloader": "^2.1.0",
+    "fgb-source": "^1.0.0",
     "global-mercator": "^3.1.0",
     "graphile-worker": "^0.13.0",
     "graphql-request": "^6.1.0",
