@@ -259,7 +259,7 @@ CREATE OR REPLACE FUNCTION geostats_feature_count(geostats jsonb)
 RETURNS integer
 LANGUAGE sql
 AS $$
-  SELECT COALESCE(SUM((layer->>'count')::int), 0)
+  SELECT COALESCE(SUM((layer->>'count')::int), 0)::integer
   FROM jsonb_array_elements(geostats->'layers') AS layer
 $$;
 
@@ -318,7 +318,7 @@ AS $$
     CASE 
       WHEN has_fgb_output(ds) 
       THEN approximate_fgb_index_size(geostats_feature_count(ds.geostats))
-      ELSE NULL
+      ELSE 0
     END
 $$;
 
