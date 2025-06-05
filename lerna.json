@@ -13,7 +13,8 @@
     "packages/uploads-server",
     "packages/vector-data-source",
     "packages/geostats-types",
-    "packages/fgb-source"
+    "packages/fgb-source",
+    "packages/overlay-engine"
   ],
   "version": "independent"
 }
