@@ -337,10 +337,15 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select * from public.sketch_classes where id = $1`,
+            `select geometry_type, is_geography_clipping_enabled, preprocessing_endpoint, id from public.sketch_classes where id = $1`,
             [sketchClassId]
           );
-          const sketchClass = rows[0];
+          const sketchClass = rows[0] as {
+            geometry_type: string;
+            is_geography_clipping_enabled: boolean;
+            preprocessing_endpoint: string;
+            id: number;
+          };
           if (
             sketchClass.geometry_type === "COLLECTION" ||
             sketchClass.geometry_type === "FILTERED_PLANNING_UNITS"
@@ -369,6 +374,14 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 }
               )) as any;
             return row;
+          } else if (sketchClass.is_geography_clipping_enabled) {
+            // TODO: Implement geography clipping
+            // 1. Get (all) geographies for the sketch class
+            // 2. Determine which geographies are used for clipping
+            // 3. Clip the user geom to the geographies, while also gathering the fragments and associated geography ids
+            // 4. Insert the sketch with the clipped geometry
+            // 5. Use the update_sketch_fragments function to update the sketch with the fragments and associated geography ids
+            // 6. Return the sketch
           } else {
             delete userGeom.id;
             // Check to see if preprocessing is required. If so, do it

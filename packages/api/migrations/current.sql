@@ -254,3 +254,73 @@ comment on function update_sketch_fragments is E'@omit';
 comment on type fragment_input is E'@omit';
 
 comment on table fragments is E'@omit';
+
+CREATE OR REPLACE FUNCTION geostats_feature_count(geostats jsonb)
+RETURNS integer
+LANGUAGE sql
+AS $$
+  SELECT COALESCE(SUM((layer->>'count')::int), 0)
+  FROM jsonb_array_elements(geostats->'layers') AS layer
+$$;
+
+grant execute on function geostats_feature_count to anon;
+comment on function geostats_feature_count is E'@omit';
+
+drop function if exists approximate_fgb_index_size cascade;
+CREATE OR REPLACE FUNCTION approximate_fgb_index_size(feature_count integer)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  index_node_size CONSTANT int := 16;
+  node_item_byte_length CONSTANT int := 40;
+  n int;
+  num_nodes int := 0;
+BEGIN
+  IF feature_count = 0 THEN
+    RETURN 0;
+  END IF;
+
+  n := feature_count;
+  WHILE n > 1 LOOP
+    num_nodes := num_nodes + n;
+    n := CEIL(n::numeric / index_node_size)::int;
+  END LOOP;
+
+  num_nodes := num_nodes + 1;  -- root node
+
+  RETURN num_nodes * node_item_byte_length;
+END;
+$$;
+
+grant execute on function approximate_fgb_index_size to anon;
+comment on function approximate_fgb_index_size is E'@omit';
+
+create or replace function has_fgb_output(ds data_sources)
+RETURNS boolean
+LANGUAGE sql
+stable
+AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM data_upload_outputs 
+    WHERE data_source_id = ds.id 
+    AND type = 'FlatGeobuf'
+  )
+$$;
+
+create or replace function data_sources_approximate_fgb_index_size(ds data_sources)
+RETURNS integer
+LANGUAGE sql
+stable
+AS $$
+  select
+    CASE 
+      WHEN has_fgb_output(ds) 
+      THEN approximate_fgb_index_size(geostats_feature_count(ds.geostats))
+      ELSE NULL
+    END
+$$;
+
+grant execute on function has_fgb_output to anon;
+grant execute on function data_sources_approximate_fgb_index_size to anon;

@@ -2444,6 +2444,7 @@ export enum DataLayersOrderBy {
  */
 export type DataSource = Node & {
   __typename?: 'DataSource';
+  approximateFgbIndexSize?: Maybe<Scalars['Int']>;
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy;
   /** Reads and enables pagination through a set of `ArchivedDataSource`. */
   archivedDataSources: Array<ArchivedDataSource>;

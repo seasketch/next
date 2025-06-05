@@ -2760,6 +2760,7 @@ When documentation is lacking for any of these properties, consult the [MapBox G
 
 """
 type DataSource implements Node {
+  approximateFgbIndexSize: Int
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy!
 
   """Reads and enables pagination through a set of `ArchivedDataSource`."""
