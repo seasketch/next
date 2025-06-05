@@ -11276,8 +11276,10 @@ export type Query = Node & {
   surveyResponsesConnection?: Maybe<SurveyResponsesConnection>;
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
   tableOfContentsItemByDataLayerId?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByIdentifier?: Maybe<TableOfContentsItem>;
   /** Reads a single `TableOfContentsItem` using its globally unique `ID`. */
   tableOfContentsItemByNodeId?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemByStableId?: Maybe<TableOfContentsItem>;
   /** Reads and enables pagination through a set of `Form`. */
   templateForms?: Maybe<Array<Form>>;
   /** List of template sketch classes such as "Marine Protected Area", "MPA Network", etc. */
@@ -12292,8 +12294,21 @@ export type QueryTableOfContentsItemByDataLayerIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryTableOfContentsItemByIdentifierArgs = {
+  id?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryTableOfContentsItemByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryTableOfContentsItemByStableIdArgs = {
+  stableId?: Maybe<Scalars['String']>;
 };
 
 

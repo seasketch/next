@@ -1,60 +1,26 @@
 --! Previous: sha1:91c219d767330553e05f9ab60c993432116155f2
---! Hash: sha1:40903e02c06538ab9d0ecdfe4c7da9648b475017
+--! Hash: sha1:a4dfe0c8b3e916dcd11e60980df8f7e19b66a7bd
 
 -- Enter migration here
-alter table sketch_classes add column if not exists is_geography_clipping_enabled boolean not null default false;
+create or replace function table_of_contents_item_by_stable_id(stable_id text)
+  returns table_of_contents_items as $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = table_of_contents_item_by_stable_id.stable_id
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$ language sql stable;
 
--- add a many to many table for relating sketch classes to geographies
-create table if not exists sketch_class_geographies (
-    sketch_class_id integer not null references sketch_classes(id),
-    geography_id integer not null references project_geography(id),
-    primary key (sketch_class_id, geography_id)
-);
+grant execute on function table_of_contents_item_by_stable_id to anon;
 
-create index if not exists sketch_class_geographies_sketch_class_id_idx on sketch_class_geographies (sketch_class_id);
-create index if not exists sketch_class_geographies_geography_id_idx on sketch_class_geographies (geography_id);
+create or replace function table_of_contents_item_by_identifier(id int, stable_id text)
+  returns table_of_contents_items as $$
+    select * from table_of_contents_items
+    where id = table_of_contents_item_by_identifier.id
+    or stable_id = table_of_contents_item_by_identifier.stable_id
+    limit 1;
+  $$ language sql stable;
 
-revoke select on sketch_class_geographies from anon;
-
-grant select on project_geography to anon;
-
-
--- add a mutation function
-create or replace function update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[])
-  returns sketch_classes
-  language plpgsql
-  security definer
-  as $$
-    declare
-      sketch_class sketch_classes;
-    begin
-    if session_is_admin((select project_id from sketch_classes where id = sketch_class_id)) then
-      delete from sketch_class_geographies where sketch_class_geographies.sketch_class_id = update_sketch_class_geographies.sketch_class_id;
-      insert into sketch_class_geographies (sketch_class_id, geography_id) values (sketch_class_id, unnest(geography_ids));
-      select * into sketch_class from sketch_classes where id = update_sketch_class_geographies.sketch_class_id;
-      return sketch_class;
-    else
-      raise exception 'You are not authorized to update the geographies for this sketch class.';
-    end if;
-    end;
-  $$;
-
-
-grant execute on function update_sketch_class_geographies to seasketch_user;
-
-grant update(is_geography_clipping_enabled) on sketch_classes to seasketch_user;
-
-create index if not exists geography_clipping_layers_project_geography_id_idx on geography_clipping_layers (project_geography_id);
-
-
-revoke select on table sketch_class_geographies from anon;
-revoke select on table sketch_class_geographies from seasketch_user;
-
-create or replace function sketch_classes_geographies(s sketch_classes)
-  returns setof project_geography as $$
-  select * from project_geography where id in (select geography_id from sketch_class_geographies where sketch_class_id = s.id);
-  $$ language sql stable security definer;
-
-grant execute on function sketch_classes_geographies(sketch_classes) to anon;
-
-comment on function sketch_classes_geographies(sketch_classes) is '@simpleCollections only';
+grant execute on function table_of_contents_item_by_identifier to anon;
