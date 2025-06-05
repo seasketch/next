@@ -1,6 +1,11 @@
 import { Feature, MultiLineString, MultiPolygon, Point } from "geojson";
 import { FlatGeobufSource } from "fgb-source";
 
+export type Cql2Query = {
+  op: string;
+  args: (string | number | boolean | { property: string })[];
+};
+
 export interface ClipToGeographyOptions {
   createFragments?: boolean;
 }
@@ -8,7 +13,7 @@ export interface ClipToGeographyOptions {
 export interface ClippingLayerOption {
   source: FlatGeobufSource;
   op: "INTERSECT" | "DIFFERENCE";
-  cql2Query?: any;
+  cql2Query?: Cql2Query;
 }
 
 export interface GeographyOption {
