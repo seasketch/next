@@ -1,6 +1,6 @@
 import { Feature } from "geojson";
 import { MultiPolygon, Polygon } from "geojson";
-import polygonClipping from "polygon-clipping";
+import * as polygonClipping from "polygon-clipping";
 
 /**
  * Accepts a Polygon or MultiPolygon geojson feature and returns a unioned

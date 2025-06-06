@@ -1,3 +1,19 @@
+import { GeoJsonProperties } from "geojson";
+
+/**
+ * Type definition for CQL2 queries. A query can be either:
+ * - A comparison operator with args: { op: string, args: [{ property: string }, value] }
+ * - A logical operator: { and: query[] } | { or: query[] } | { not: query }
+ * - A logical operator in op/args format: { op: "and"|"or"|"not", args: query[] }
+ */
+export type Cql2Query = {
+  op?: string;
+  args?: (string | number | boolean | { property: string } | Cql2Query)[];
+  and?: Cql2Query[];
+  or?: Cql2Query[];
+  not?: Cql2Query;
+};
+
 /**
  * Evaluates a JSON-encoded OGC CQL2 query against a set of properties.
  *
@@ -37,7 +53,7 @@
  */
 export function evaluateCql2JSONQuery(
   query: any,
-  properties: { [key: string]: any }
+  properties: GeoJsonProperties
 ): boolean {
   if (query === null || query === undefined) {
     throw new Error("Query cannot be null or undefined");
@@ -45,6 +61,7 @@ export function evaluateCql2JSONQuery(
   if (typeof query !== "object") {
     throw new Error(`Invalid query format: ${query}`);
   }
+  properties = properties || {};
 
   // Handle logical operators
   if (query.and && Array.isArray(query.and)) {
@@ -60,13 +77,49 @@ export function evaluateCql2JSONQuery(
   }
 
   // Handle comparison operators
-  const ops = ["=", "!=", "<", "<=", ">", ">=", "like", "ilike", "in"];
+  const ops = [
+    "=",
+    "!=",
+    "<",
+    "<=",
+    ">",
+    ">=",
+    "like",
+    "ilike",
+    "in",
+    "and",
+    "or",
+    "not",
+  ];
   if (!ops.includes(query["op"])) {
     throw new Error(`Unsupported operator: ${query["op"]}`);
   }
   const op = query["op"];
   const args = query["args"];
-  if (!Array.isArray(args) || args.length !== 2) {
+  if (!Array.isArray(args)) {
+    throw new Error(
+      `Invalid arguments for operator ${op}: ${JSON.stringify(args)}`
+    );
+  }
+
+  // Handle logical operators in op/args format
+  if (op === "and") {
+    return args.every((sub: any) => evaluateCql2JSONQuery(sub, properties));
+  }
+  if (op === "or") {
+    return args.some((sub: any) => evaluateCql2JSONQuery(sub, properties));
+  }
+  if (op === "not") {
+    if (args.length !== 1) {
+      throw new Error(
+        `Invalid arguments for operator not: ${JSON.stringify(args)}`
+      );
+    }
+    return !evaluateCql2JSONQuery(args[0], properties);
+  }
+
+  // Handle comparison operators
+  if (args.length !== 2) {
     throw new Error(
       `Invalid arguments for operator ${op}: ${JSON.stringify(args)}`
     );
@@ -118,4 +171,38 @@ export function evaluateCql2JSONQuery(
 
   // Unknown or unsupported query
   return false;
+}
+
+/**
+ * Consolidates two CQL2 queries into a single query using OR operator.
+ * If either query is undefined, returns the other query.
+ * If both queries are present, combines them using OR operator in the op/args format.
+ *
+ * @param a - First CQL2 query
+ * @param b - Second CQL2 query
+ * @returns A consolidated CQL2 query that matches either input query
+ *
+ * @example
+ * // Combine two simple queries
+ * consolidateCql2Queries(
+ *   { op: "=", args: [{ property: "name" }, "test"] },
+ *   { op: "=", args: [{ property: "age" }, 25] }
+ * )
+ * // Returns: { op: "or", args: [
+ * //   { op: "=", args: [{ property: "name" }, "test"] },
+ * //   { op: "=", args: [{ property: "age" }, 25] }
+ * // ]}
+ */
+export function consolidateCql2Queries(
+  a: Cql2Query | undefined,
+  b: Cql2Query | undefined
+): Cql2Query | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  // if the queries are both present, they need to be combined into an OR query
+  // that will match either query.
+  return {
+    op: "or",
+    args: [a, b],
+  };
 }

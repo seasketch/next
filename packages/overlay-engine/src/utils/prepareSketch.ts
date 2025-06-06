@@ -5,11 +5,12 @@ import { Feature } from "geojson";
 import { makeMultipolygon } from "./utils";
 import turfBBox from "@turf/bbox";
 import splitGeojson from "geojson-antimeridian-cut";
+const splitGeoJSON = require("geojson-antimeridian-cut");
 
-interface PreparedSketch {
-  sketch: Feature<MultiPolygon>;
+export type PreparedSketch = {
+  feature: Feature<MultiPolygon>;
   envelopes: ReturnType<typeof bboxToEnvelope>[];
-}
+};
 
 /**
  * Prepares a sketch for processing by:
@@ -36,9 +37,9 @@ export function prepareSketch(feature: Feature<any>): PreparedSketch {
   const bbox = cleanBBox(turfBBox(sketch));
   const split = splitBBoxAntimeridian(bbox as BBox);
   const envelopes = split.map((box) => bboxToEnvelope(box));
-  sketch = cleanCoords(sketch);
+  sketch = splitGeoJSON(cleanCoords(sketch));
   if (envelopes.length > 1) {
     sketch = splitGeojson(sketch);
   }
-  return { sketch, envelopes };
+  return { feature: sketch, envelopes };
 }

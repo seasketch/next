@@ -88,7 +88,7 @@ export class SourceCache {
    */
   async get<T = GeoJSONFeature<Geometry, GeoJsonProperties>>(
     key: string,
-    options: CreateSourceOptions
+    options?: CreateSourceOptions
   ): Promise<FlatGeobufSource<T>> {
     if (this.cache.has(key)) {
       return this.cache.get(key)!;
