@@ -514,7 +514,8 @@ export default function GeographyAdmin() {
       setDrawFeature(feature);
     },
     undefined,
-    "https://overlay.seasketch.org/geographies/clip",
+    // "https://overlay.seasketch.org/geographies/clip",
+    "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip",
     // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand",
     (geom, performance) => {
       // console.log("geom", geom, performance);
@@ -522,16 +523,19 @@ export default function GeographyAdmin() {
     extraRequestParams,
     (feature) => {
       if (feature.geometry.coordinates[0].length > 3) {
-        fetch("https://overlay.seasketch.org/geographies/warm-cache", {
-          method: "POST",
-          body: JSON.stringify({
-            ...extraRequestParams,
-            feature,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }).catch((err) => {
+        fetch(
+          "https://sketch-preprocessing-worker.underbluewaters.workers.dev/warm-cache",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              ...extraRequestParams,
+              feature,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        ).catch((err) => {
           console.error("err", err);
         });
       }

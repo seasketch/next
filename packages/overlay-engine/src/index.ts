@@ -7,3 +7,4 @@ export {
   ClippingLayerOption,
   clipSketchToPolygons,
 } from "./geographies";
+export { Cql2Query } from "./cql2";

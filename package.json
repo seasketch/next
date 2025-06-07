@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {},
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250607.0",
     "@types/jest": "^29.5.14",
     "@typescript-eslint/eslint-plugin": "^4.17.0",
     "@typescript-eslint/parser": "^4.17.0",
