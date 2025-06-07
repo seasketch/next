@@ -34,7 +34,6 @@ const hawaiiOffshore: ClippingLayerOption[] = [
   },
 ];
 
-// Test data from the provided GeoJSON
 const testFeatures = {
   insideTerritorialSea: {
     type: "Feature",

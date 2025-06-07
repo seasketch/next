@@ -6,7 +6,8 @@
   "homepage": "https://github.com/seasketch/next",
   "license": "BSD-3-Clause",
   "type": "module",
-  "main": "dist/index.ts",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
   "directories": {
     "lib": "dist",
     "test": "__tests__"
