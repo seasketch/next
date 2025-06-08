@@ -7,10 +7,6 @@
   "name": "sketch-preprocessing-worker",
   "main": "src/index.ts",
   "compatibility_date": "2025-06-07",
-  "assets": {
-    "binding": "ASSETS",
-    "directory": "./public"
-  },
   "r2_buckets": [
     {
       "binding": "SSN_TILES",
