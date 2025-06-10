@@ -35,12 +35,11 @@ export async function createFragments(
   clippingFn: ClippingFn
 ): Promise<FragmentResult[]> {
   if (idCounter > 1_000_000) {
-    console.log("resetting idCounter");
+    console.warn("resetting idCounter");
     idCounter = 0;
   }
   const fragments: PendingFragmentResult[] = [];
 
-  console.time("clipToGeography");
   await Promise.all(
     geographies.map(async (geography) => {
       const result = await clipToGeography(
@@ -74,9 +73,7 @@ export async function createFragments(
       }
     })
   );
-  console.timeEnd("clipToGeography");
 
-  console.time("unionFragments");
   // compute bounding box and assign one to each PendingFragmentResult
   for (const fragment of fragments) {
     fragment.bbox = calcBBox(fragment, { recompute: true });
@@ -100,7 +97,6 @@ export async function createFragments(
   //   type: "FeatureCollection",
   //   features: output,
   // });
-  console.timeEnd("unionFragments");
   return output;
 }
 
@@ -416,7 +412,7 @@ function throwErrorOnDuplicateIds(fragments: PendingFragmentResult[]) {
   const ids = new Set<number>();
   for (const fragment of fragments) {
     if (ids.has(fragment.properties.__id)) {
-      console.log(
+      console.warn(
         `Duplicate id: ${fragment.properties.__id} in ${fragments.length} fragments`
       );
     }

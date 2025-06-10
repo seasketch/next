@@ -24,12 +24,17 @@ import {
 export class SourceCache {
   private sizeLimitBytes: number;
   private cache: LRUCache<string, FlatGeobufSource<any>>;
+  /**
+   * Map of keys to in-flight requests. Used to avoid creating the same source
+   * multiple times when there are concurrent requests for the same source.
+   */
+  private inFlightRequests: Map<string, Promise<FlatGeobufSource<any>>>;
 
   /**
    * Create a new SourceCache instance.
    *
    * @param sizeLimit - Maximum size of the cache, parseable by the bytes library.
-   *                   Examples: '100mb', '1gb', '500kb'
+   *                   Examples: '100MB', '1GB', '500KB'
    * @throws Error if sizeLimit is invalid
    */
   constructor(sizeLimit: string) {
@@ -38,13 +43,19 @@ export class SourceCache {
       throw new Error(`Invalid size limit: ${sizeLimit}`);
     }
     this.sizeLimitBytes = size;
+    this.inFlightRequests = new Map();
     this.cache = new LRUCache({
       maxSize: this.sizeLimitBytes,
       sizeCalculation: (source) => {
         return source.indexSizeBytes + source.cacheStats.maxSize;
       },
       dispose: (value, key, reason) => {
-        console.warn(`source cache DISPOSE (${reason})`, key);
+        console.warn(
+          `source cache DISPOSE (${reason})`,
+          key,
+          bytes(value.indexSizeBytes + value.cacheStats.maxSize),
+          bytes(this.sizeLimitBytes)
+        );
       },
     });
   }
@@ -90,12 +101,31 @@ export class SourceCache {
     key: string,
     options?: CreateSourceOptions
   ): Promise<FlatGeobufSource<T>> {
+    // Check cache first
     if (this.cache.has(key)) {
       return this.cache.get(key)!;
-    } else {
-      const source = await createSource<T>(key, options);
-      this.cache.set(key, source);
-      return source;
     }
+
+    // Check for in-flight request
+    const inFlightRequest = this.inFlightRequests.get(key);
+    if (inFlightRequest) {
+      return inFlightRequest as Promise<FlatGeobufSource<T>>;
+    }
+
+    // Create new request
+    const request = (async () => {
+      try {
+        const source = await createSource<T>(key, options);
+        this.cache.set(key, source);
+        return source;
+      } finally {
+        // Clean up in-flight request map
+        this.inFlightRequests.delete(key);
+      }
+    })();
+
+    // Store request in in-flight map
+    this.inFlightRequests.set(key, request);
+    return request;
   }
 }

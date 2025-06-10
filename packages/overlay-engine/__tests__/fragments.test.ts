@@ -83,14 +83,12 @@ describe("createFragments", () => {
   // - 2 fragments associated with both EEZ and Offshore
   // - 2 fragments associated with both EEZ and Nearshore
   it("should create fragments for Fiji sketch crossing antimeridian", async () => {
-    console.time("createFragments");
     const preparedSketch = prepareSketch(fijiSketchAntimeridianCrossing);
     const fragments = await createFragments(
       preparedSketch,
       fijiGeographies,
       clippingFn
     );
-    console.timeEnd("createFragments");
     // Should create 4 fragments total
     expect(fragments).toHaveLength(4);
 
