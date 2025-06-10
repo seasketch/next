@@ -138,7 +138,7 @@ describe("Fragment functionality", () => {
           // Verify geography associations through fragment
           const fragment = fragments[0];
           const geographies = await conn.many(
-            sql`select * from fragment_geographies where fragment_id = ${fragment.id}`
+            sql`select * from fragment_geographies where fragment_hash = ${fragment.hash}`
           );
           expect(geographies.length).toBe(2);
           expect(geographies.map((g) => g.geography_id).sort()).toEqual(
@@ -197,7 +197,6 @@ describe("Fragment functionality", () => {
           );
           expect(fragments1.length).toBe(1);
           expect(fragments2.length).toBe(1);
-          expect(fragments1[0].id).toBe(fragments2[0].id);
           expect(fragments1[0].hash).toBe(fragments2[0].hash);
         }
       );
@@ -309,12 +308,12 @@ describe("Fragment functionality", () => {
             sql`select update_sketch_fragments(${sketchId}, ${fragmentInput})`
           );
 
-          // Get fragment ID before deletion
+          // Get fragment hash before deletion
           const fragments = await conn.many(
             sql`select (sketches_fragments(sketches.*)).* from sketches where id = ${sketchId}`
           );
           expect(fragments.length).toBe(1);
-          const fragmentId = fragments[0].id;
+          const fragmentHash = fragments[0].hash;
 
           // Delete sketch
           await conn.any(sql`delete from sketches where id = ${sketchId}`);
@@ -366,11 +365,11 @@ describe("Fragment functionality", () => {
             sql`select update_sketch_fragments(${sketch2Id}, ${fragmentInput})`
           );
 
-          // Get fragment ID before deletion
+          // Get fragment hash before deletion
           const fragments1 = await conn.many(
             sql`select (sketches_fragments(sketches.*)).* from sketches where id = ${sketch1Id}`
           );
-          const fragmentId = fragments1[0].id;
+          const fragmentHash = fragments1[0].hash;
 
           // Delete first sketch
           await conn.any(sql`delete from sketches where id = ${sketch1Id}`);
@@ -380,7 +379,7 @@ describe("Fragment functionality", () => {
             sql`select (sketches_fragments(sketches.*)).* from sketches where id = ${sketch2Id}`
           );
           expect(fragments2.length).toBe(1);
-          expect(fragments2[0].id).toBe(fragmentId);
+          expect(fragments2[0].hash).toBe(fragmentHash);
         }
       );
     });
@@ -409,11 +408,12 @@ describe("Fragment functionality", () => {
             sql`select update_sketch_fragments(${sketchId}, ${fragmentInput})`
           );
 
-          // Get fragment ID before deletion
+          // Get fragment hash before deletion
           const fragments = await conn.many(
             sql`select (sketches_fragments(sketches.*)).* from sketches where id = ${sketchId}`
           );
-          const fragmentId = fragments[0].id;
+          expect(fragments.length).toBe(1);
+          const fragmentHash = fragments[0].hash;
 
           // Delete the sketch
           await conn.any(sql`delete from sketches where id = ${sketchId}`);
@@ -556,14 +556,14 @@ describe("Fragment functionality", () => {
           expect(copiedFragments.length).toBe(originalFragments.length);
           expect(copiedFragments[0].hash).toBe(originalFragments[0].hash);
 
-          // Verify fragments are shared (same fragment_id)
-          const fragmentIds = await conn.manyFirst(
-            sql`select fragment_id from sketch_fragments where sketch_id = ${sketchIds[0]}`
+          // Verify fragments are shared (same fragment_hash)
+          const fragmentHashes = await conn.manyFirst(
+            sql`select fragment_hash from sketch_fragments where sketch_id = ${sketchIds[0]}`
           );
-          const originalFragmentIds = await conn.manyFirst(
-            sql`select fragment_id from sketch_fragments where sketch_id = ${shapeA}`
+          const originalFragmentHashes = await conn.manyFirst(
+            sql`select fragment_hash from sketch_fragments where sketch_id = ${shapeA}`
           );
-          expect(fragmentIds).toEqual(originalFragmentIds);
+          expect(fragmentHashes).toEqual(originalFragmentHashes);
         }
       );
     });
@@ -613,10 +613,10 @@ describe("Fragment functionality", () => {
             sql`select (sketches_fragments(sketches.*)).* from sketches where id = ${copyId}`
           );
           expect(copiedFragments.length).toBe(1);
-          expect(copiedFragments[0].id).toBe(originalFragments[0].id);
+          expect(copiedFragments[0].hash).toBe(originalFragments[0].hash);
 
           const copiedGeographies = await conn.manyFirst(
-            sql`select geography_id from fragment_geographies where fragment_id = ${copiedFragments[0].id}`
+            sql`select geography_id from fragment_geographies where fragment_hash = ${copiedFragments[0].hash}`
           );
           expect(copiedGeographies).toEqual([geographyId]);
         }

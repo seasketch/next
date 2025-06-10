@@ -120,3 +120,18 @@ export function bboxToEnvelope(bbox: BBox | number[]) {
     maxY,
   };
 }
+
+/**
+ * Checks if two bounding boxes intersect
+ * @param bbox1 the first bounding box
+ * @param bbox2 the second bounding box
+ * @returns true if the bounding boxes intersect, false otherwise
+ */
+export function bboxIntersects(bbox1: BBox, bbox2: BBox) {
+  return (
+    bbox1[0] <= bbox2[2] &&
+    bbox1[2] >= bbox2[0] &&
+    bbox1[1] <= bbox2[3] &&
+    bbox1[3] >= bbox2[1]
+  );
+}

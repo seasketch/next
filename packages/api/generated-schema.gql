@@ -6815,7 +6815,6 @@ enum ForumsOrderBy {
 type Fragment implements Node {
   geometry: GeometryMultiPolygon!
   hash: String!
-  id: Int!
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.

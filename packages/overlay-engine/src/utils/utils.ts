@@ -1,4 +1,4 @@
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, GeoJsonProperties, MultiPolygon, Polygon } from "geojson";
 import { isPolygon } from "./unionAtAntimeridian";
 
 /**
@@ -31,4 +31,17 @@ export function makeMultipolygon(
     };
   }
   return feature as Feature<MultiPolygon>;
+}
+
+export function multiPartToSinglePart<T extends GeoJsonProperties>(
+  feature: Feature<MultiPolygon, T>
+): Feature<Polygon, T>[] {
+  return feature.geometry.coordinates.map((polygon) => ({
+    type: "Feature",
+    geometry: {
+      type: "Polygon",
+      coordinates: polygon,
+    },
+    properties: feature.properties,
+  })) as Feature<Polygon, T>[];
 }

@@ -2,7 +2,7 @@
 
 Fragments are a concept being introduced with the new graphical report building tools and associated overlay system. They provide a way to create a static representation of the components of a sketch geometry in the database, where a user-drawn polygon is split into pieces that belong to one or more Geographies. This results in a set of single-part polygons that can be fed into the overlay engine to generate metrics on overlap with key datasets, without ever calculating the same information twice.
 
-To better understand the use case, consider this example: We are planning to do nearshore planning in the Azores. The process intends to protect 30% of nearshore waters, but stakeholders also want to protect about 30% of the waters surrounding each island. Furthermore, we may combine the nearshore and offshore MPA plans into a network to evaluate whether 30% of the entire Azorean EEZ is protected. In SeaSketch, our reports will need to visualize whether MPA network designs protect key habitats in each of these different Geographies.
+To better understand the use case, consider this example: We are planning to do nearshore planning in the Azores. The process intends to protect 30% of nearshore waters, but stakeholders also want to protect about 30% of the waters surrounding each island. Furthermore, we may combine the nearshore and offshore MPA plans into a network to evaluate whether 30% of the entire Azorean EEZ is protected. In SeaSketch, our reports will need to visualize whether MPA network candidates protect key habitats in each of these different Geographies.
 
 In the past, if we wanted to compute a metric like _Percent Rocky Reef_ protected within 9 different islands’ waters, the entire nearshore zone, and all Azorean waters, we would need to run 11 separate calculations. Each time, the user polygon would be clipped to each geography and overlaid with each dataset of interest. To save time, the MPA network as a whole was typically evaluated in aggregate, rather than calculating results for each geography individually. But this meant every change to an MPA network required recalculating everything—making updates slow and hard to parallelize. Even minor edits could result in multi-minute delays for new report results.
 
@@ -11,7 +11,7 @@ Fragments change this substantially. Upon submitting a new Sketch, the system im
 These Fragments (stored in Postgres) have the following useful properties:
 
 1. **Stable Identity**  
-   Each has a geometry hash that acts as a primary key (combined with Geography IDs), enabling reuse and deduplication.
+   Each has a geometry hash that acts as a primary key, enabling reuse and deduplication.
 
 2. **Many-to-Many Sketch Relationships**  
    The relationship between Fragments and Sketches is via a many-to-many table. Sketch copies with the same geometry refer to the same Fragments. Even independently created sketches with matching geometry in the same Geographies will point to the same Fragments. No redundant metric calculations are needed.
@@ -26,7 +26,7 @@ These Fragments (stored in Postgres) have the following useful properties:
    one less thing for downstream operations to worry about.
 
 5. **Organize Reporting**  
-   Fragments make a reporting "Query Planner" possible, which determines which
+   Fragments make a reporting "Query Planner" possible, to determine which
    metrics for which fragments need to be run (or have already been cached).
 
    - A habitat report would run overlay analysis per fragment, which can be processed in parallel (e.g. via Lambda).
@@ -53,7 +53,7 @@ A Geography is considered relevant if:
 
 The following are the important scenarios to unit test.
 
-- Fragments can be created an associated with a sketch using the
+- Fragments can be created and associated with a sketch using the
   update_sketch_fragments stored procedure.
   - verify that the appropriate records are created
 - update_sketch_fragments should limit access to only the owner of the given sketch.

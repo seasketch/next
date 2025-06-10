@@ -5,37 +5,31 @@ drop table if exists fragments cascade;
 drop type if exists fragment_input cascade;
 
 create table fragments (
-  id int primary key generated always as identity,
+  hash text primary key generated always as (md5(st_asbinary(st_normalize(geometry)))) stored,
   geometry geometry(MultiPolygon, 4326) not null,
-  -- calculated geometry hash. generated from normalized geometry in binary form
-  hash text not null generated always as (md5(st_asbinary(st_normalize(geometry)))) stored,
   -- ensure geometry doesn't span the antimeridian
   constraint no_antimeridian_span check (
     st_xmin(geometry) >= -180 and st_xmax(geometry) <= 180
-  ),
-  -- ensure no duplicate fragments
-  constraint unique_fragment_hash unique (hash)
+  )
 );
 
 create table sketch_fragments (
   sketch_id int not null references sketches(id) on delete cascade,
-  fragment_id int not null references fragments(id) on delete cascade,
-  primary key (sketch_id, fragment_id)
+  fragment_hash text not null references fragments(hash) on delete cascade,
+  primary key (sketch_id, fragment_hash)
 );
 
 create table fragment_geographies (
-  fragment_id int not null references fragments(id) on delete cascade,
+  fragment_hash text not null references fragments(hash) on delete cascade,
   geography_id int not null references project_geography(id) on delete cascade,
-  primary key (fragment_id, geography_id)
+  primary key (fragment_hash, geography_id)
 );
 
 create index if not exists sketch_fragments_sketch_id_idx on sketch_fragments (sketch_id);
-create index if not exists sketch_fragments_fragment_id_idx on sketch_fragments (fragment_id);
+create index if not exists sketch_fragments_fragment_hash_idx on sketch_fragments (fragment_hash);
 
-create index if not exists fragment_geographies_fragment_id_idx on fragment_geographies (fragment_id);
+create index if not exists fragment_geographies_fragment_hash_idx on fragment_geographies (fragment_hash);
 create index if not exists fragment_geographies_geography_id_idx on fragment_geographies (geography_id);
-
-create index if not exists fragments_hash_idx on fragments (hash);
 
 -- Type for input geometry with associated geographies
 create type fragment_input as (
@@ -51,10 +45,9 @@ create or replace function update_sketch_fragments(
 declare
   v_fragment fragment_input;
   v_hash text;
-  v_fragment_id int;
-  v_geography_id int;
-  v_existing_fragment_ids int[];
+  v_existing_fragment_hashes text[];
   v_user_id int;
+  v_geography_id int;
 begin
   -- Get current user ID from session
   v_user_id := nullif(current_setting('session.user_id', TRUE), '')::int;
@@ -70,8 +63,8 @@ begin
 
   -- Start transaction
   begin
-    -- Get existing fragment IDs for this sketch
-    select array_agg(fragment_id) into v_existing_fragment_ids
+    -- Get existing fragment hashes for this sketch
+    select array_agg(fragment_hash) into v_existing_fragment_hashes
     from sketch_fragments
     where sketch_id = p_sketch_id;
 
@@ -82,52 +75,45 @@ begin
       v_hash := md5(st_asbinary(st_normalize(v_fragment.geometry)));
 
       -- Try to find existing fragment with this hash
-      select id into v_fragment_id
-      from fragments
-      where hash = v_hash;
-
-      -- If no existing fragment found, create new one
-      if v_fragment_id is null then
+      if not exists (select 1 from fragments where hash = v_hash) then
+        -- If no existing fragment found, create new one
         insert into fragments (geometry)
-        values (v_fragment.geometry)
-        returning id into v_fragment_id;
+        values (v_fragment.geometry);
       end if;
 
       -- Ensure sketch-fragment relationship exists
-      insert into sketch_fragments (sketch_id, fragment_id)
-      values (p_sketch_id, v_fragment_id)
-      on conflict (sketch_id, fragment_id) do nothing;
+      insert into sketch_fragments (sketch_id, fragment_hash)
+      values (p_sketch_id, v_hash)
+      on conflict (sketch_id, fragment_hash) do nothing;
 
       -- Update geography associations
       -- First remove all existing geography associations for this fragment
       delete from fragment_geographies
-      where fragment_id = v_fragment_id;
+      where fragment_hash = v_hash;
 
       -- Then add new geography associations
       foreach v_geography_id in array v_fragment.geography_ids
       loop
-        insert into fragment_geographies (fragment_id, geography_id)
-        values (v_fragment_id, v_geography_id);
+        insert into fragment_geographies (fragment_hash, geography_id)
+        values (v_hash, v_geography_id);
       end loop;
     end loop;
 
     -- Remove sketch-fragment relationships for fragments that are no longer used
     delete from sketch_fragments
     where sketch_id = p_sketch_id
-    and fragment_id = any(v_existing_fragment_ids)
-    and fragment_id not in (
-      select id from fragments where hash in (
-        select md5(st_asbinary(st_normalize((unnest(p_fragments)).geometry)))
-      )
+    and fragment_hash = any(v_existing_fragment_hashes)
+    and fragment_hash not in (
+      select md5(st_asbinary(st_normalize((unnest(p_fragments)).geometry)))
     );
 
     -- Delete orphaned fragments (those not associated with any sketch)
     delete from fragments
-    where id in (
-      select f.id
+    where hash in (
+      select f.hash
       from fragments f
-      left join sketch_fragments sf on f.id = sf.fragment_id
-      where sf.fragment_id is null
+      left join sketch_fragments sf on f.hash = sf.fragment_hash
+      where sf.fragment_hash is null
     );
 
   exception
@@ -149,7 +135,7 @@ create or replace function sketches_fragments(s sketches)
   as $$
     select fragments.*
     from fragments
-    join sketch_fragments on fragments.id = sketch_fragments.fragment_id
+    join sketch_fragments on fragments.hash = sketch_fragments.fragment_hash
     where sketch_fragments.sketch_id = s.id;
   $$;
 
@@ -187,8 +173,8 @@ begin
   end if;
 
   -- Copy fragment associations
-  insert into sketch_fragments (sketch_id, fragment_id)
-  select to_sketch_id, fragment_id
+  insert into sketch_fragments (sketch_id, fragment_hash)
+  select to_sketch_id, fragment_hash
   from sketch_fragments
   where sketch_fragments.sketch_id = from_sketch_id;
 end;

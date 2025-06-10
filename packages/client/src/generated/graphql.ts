@@ -5836,7 +5836,6 @@ export type Fragment = Node & {
   __typename?: 'Fragment';
   geometry: GeometryMultiPolygon;
   hash: Scalars['String'];
-  id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
 };
