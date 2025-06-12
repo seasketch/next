@@ -149,15 +149,15 @@ export async function* executeQueryPlan(
     pendingFetches.delete(completedFetch.i);
 
     // Process the completed fetch
-    const { data, offsets } = await completedFetch;
-    const view = new globalThis.DataView(data);
+    const { data, offsets } = completedFetch;
+    const view = new DataView(data);
 
     for (let [offset, length] of offsets) {
       if (length === null) {
         length = view.buffer.byteLength - offset;
       }
 
-      const featureView = new globalThis.DataView(data, offset, length);
+      const featureView = new DataView(data, offset, length);
       if (VALIDATE_FEATURE_DATA) {
         const size = featureView.getUint32(0, true);
         if (size !== length - SIZE_PREFIX_LEN) {
