@@ -17,7 +17,11 @@ import {
  *
  * @example
  * ```typescript
- * const sourceCache = new SourceCache('64mb');
+ * const sourceCache = new SourceCache('64mb', {
+ *   onEvict: (key, source, reason) => {
+ *     console.log(`Evicted ${key} for reason: ${reason}`);
+ *   }
+ * });
  * const source = await sourceCache.get('https://example.com/data.fgb');
  * ```
  */
@@ -29,33 +33,48 @@ export class SourceCache {
    * multiple times when there are concurrent requests for the same source.
    */
   private inFlightRequests: Map<string, Promise<FlatGeobufSource<any>>>;
+  private onEvict?: (
+    key: string,
+    source: FlatGeobufSource<any>,
+    reason: string
+  ) => void;
 
   /**
    * Create a new SourceCache instance.
    *
    * @param sizeLimit - Maximum size of the cache, parseable by the bytes library.
    *                   Examples: '100MB', '1GB', '500KB'
+   * @param options - Optional configuration object
+   *   - onEvict: Callback called when a source is evicted from the cache. Receives (key, source, reason).
    * @throws Error if sizeLimit is invalid
    */
-  constructor(sizeLimit: string) {
+  constructor(
+    sizeLimit: string,
+    options?: {
+      onEvict?: (
+        key: string,
+        source: FlatGeobufSource<any>,
+        reason: string
+      ) => void;
+    }
+  ) {
     const size = bytes(sizeLimit);
     if (size === null) {
       throw new Error(`Invalid size limit: ${sizeLimit}`);
     }
     this.sizeLimitBytes = size;
     this.inFlightRequests = new Map();
+    this.onEvict = options?.onEvict;
     this.cache = new LRUCache({
       maxSize: this.sizeLimitBytes,
-      sizeCalculation: (source) => {
-        return source.indexSizeBytes + source.cacheStats.maxSize;
+      sizeCalculation: (source, key) => {
+        const size = source.indexSizeBytes + source.cacheStats.maxSize;
+        return size;
       },
       dispose: (value, key, reason) => {
-        console.warn(
-          `source cache DISPOSE (${reason})`,
-          key,
-          bytes(value.indexSizeBytes + value.cacheStats.maxSize),
-          bytes(this.sizeLimitBytes)
-        );
+        if (this.onEvict) {
+          this.onEvict(key, value, reason);
+        }
       },
     });
   }

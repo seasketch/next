@@ -1,4 +1,4 @@
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
 
 export const fijiSketchAntimeridianCrossing: Feature<MultiPolygon> = {
   type: "Feature",
@@ -451,3 +451,90 @@ export const hawaiiTestFeatures = {
     },
   } as Feature<Polygon>,
 };
+
+export const fsmTestFeatures = {
+  type: "FeatureCollection",
+  features: [
+    {
+      type: "Feature",
+      properties: {
+        name: "Kosrae",
+      },
+      geometry: {
+        coordinates: [
+          [
+            [162.9522925320818, 5.284821213608254],
+            [162.9522925320818, 5.029075211757288],
+            [163.2524833997108, 5.029075211757288],
+            [163.2524833997108, 5.284821213608254],
+            [162.9522925320818, 5.284821213608254],
+          ],
+        ],
+        type: "Polygon",
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        name: "Pohnpei",
+      },
+      geometry: {
+        coordinates: [
+          [
+            [158.24908198314364, 6.848044139644671],
+            [157.435215062152, 6.848044139644671],
+            [157.435215062152, 6.0979002400497535],
+            [158.24908198314364, 6.0979002400497535],
+            [158.24908198314364, 6.848044139644671],
+          ],
+        ],
+        type: "Polygon",
+      },
+    },
+    {
+      type: "Feature",
+      properties: {
+        NAME: "Chuuk",
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [151.8398637, 7.3624271],
+            [151.8398895, 7.3623779],
+            [151.8400589, 7.3623599],
+            [151.8400765, 7.3623845],
+            [151.8400971, 7.3623961],
+            [151.8401211, 7.3623893],
+            [151.8401394, 7.3623724],
+            [151.840161, 7.3623921],
+            [151.8401444, 7.3624422],
+            [151.8401278, 7.3624752],
+            [151.840128931938, 7.3624963025584975],
+            [151.83987895782636, 7.3624963025584975],
+            [151.8398637, 7.3624271],
+          ],
+        ],
+      },
+      bbox: [151.8398637, 7.3623599, 151.840161, 7.3624963025584975],
+    },
+    {
+      type: "Feature",
+      properties: {
+        name: "Chuuk",
+      },
+      geometry: {
+        coordinates: [
+          [
+            [151.5522458690358, 7.349704083955174],
+            [151.5522458690358, 7.072648399642773],
+            [151.90590139701806, 7.072648399642773],
+            [151.90590139701806, 7.349704083955174],
+            [151.5522458690358, 7.349704083955174],
+          ],
+        ],
+        type: "Polygon",
+      },
+    },
+  ],
+} as FeatureCollection<Polygon>;
