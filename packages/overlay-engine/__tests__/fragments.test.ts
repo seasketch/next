@@ -7,8 +7,14 @@ import {
 import { SourceCache } from "fgb-source";
 import { prepareSketch } from "../src/utils/prepareSketch";
 import { createFragments, GeographySettings } from "../src/fragments";
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import { fijiSketchAntimeridianCrossing } from "./test-features";
+import {
+  saveOutput,
+  readOutput,
+  compareFragments,
+  normalizeGeometry,
+} from "./test-helpers";
 
 const eezUrl = "https://uploads.seasketch.org/eez-land-joined.fgb";
 const territorialSeaUrl =
@@ -89,6 +95,15 @@ describe("createFragments", () => {
       fijiGeographies,
       clippingFn
     );
+
+    // Uncomment to save new reference output
+    // saveOutput("fiji-antimeridian-fragments", fragments);
+
+    // Load reference output and compare geometries
+    const referenceFragments = readOutput("fiji-antimeridian-fragments");
+
+    expect(compareFragments(fragments, referenceFragments)).toBe(true);
+
     // Should create 4 fragments total
     expect(fragments).toHaveLength(4);
 

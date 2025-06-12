@@ -57,8 +57,12 @@ describe("clipToGeography", () => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source
       );
-      const overlappingFeatures = fgbSource.getFeaturesAsync(sketch.envelopes);
-      return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
+      return clipSketchToPolygons(
+        sketch,
+        op,
+        query,
+        fgbSource.getFeaturesAsync(sketch.envelopes)
+      );
     };
   });
 

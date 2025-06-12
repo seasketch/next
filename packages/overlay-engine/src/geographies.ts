@@ -175,6 +175,8 @@ export async function clipToGeography(
   // if all intersect results are null, the sketch is completely outside
   // the geography
   if (!results.find((r) => r.output !== null)) {
+    // Fire and forget, but handle errors to avoid unhandled promise rejections
+    differenceResults.catch(() => {});
     return null;
   }
 
@@ -326,14 +328,13 @@ export async function clipSketchToPolygons(
   polygonSource: AsyncIterable<Feature<MultiPolygon | Polygon>>
 ): Promise<PolygonClipResult> {
   const polygons = [] as polygonClipping.Geom[];
-  for (const envelope of preparedSketch.envelopes) {
-    for await (const feature of polygonSource) {
-      if (cql2Query && !evaluateCql2JSONQuery(cql2Query, feature.properties)) {
-        continue;
-      }
-      polygons.push(feature.geometry.coordinates as any);
+  for await (const feature of polygonSource) {
+    if (cql2Query && !evaluateCql2JSONQuery(cql2Query, feature.properties)) {
+      continue;
     }
+    polygons.push(feature.geometry.coordinates as any);
   }
+
   if (polygons.length === 0 && op === "INTERSECT") {
     return { changed: true, output: null, op };
   } else if (polygons.length === 0 && op === "DIFFERENCE") {
