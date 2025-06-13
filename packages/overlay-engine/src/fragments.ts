@@ -412,8 +412,6 @@ export function eliminateOverlap(
     "__geographyIds",
   ]);
 
-  debugSaveFragments("decomposedFragments", decomposedFragments);
-
   // merge fragments with matching geometry
   const mergedFragments = mergeFragmentsWithMatchingGeometry(
     decomposedFragments,
@@ -428,15 +426,4 @@ export function eliminateOverlap(
       __sketchIds: f.properties.__sketchIds,
     },
   }));
-}
-
-function debugSaveFragments(name: string, fragments: any[]) {
-  const outputDir = path.join(process.cwd(), "debug-output");
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir);
-  }
-  fs.writeFileSync(
-    path.join(outputDir, `${name}.json`),
-    JSON.stringify(fragments, null, 2)
-  );
 }
