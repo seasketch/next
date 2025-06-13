@@ -5,13 +5,15 @@ import {
   clipToGeography,
 } from "./geographies";
 import { PreparedSketch } from "./utils/prepareSketch";
-import polygonClipping from "polygon-clipping";
+import * as polygonClipping from "polygon-clipping";
 import { cleanCoords } from "./utils/cleanCoords";
 import { multiPartToSinglePart } from "./utils/utils";
 import calcBBox from "@turf/bbox";
 import booleanEqual from "@turf/boolean-equal";
 import booleanIntersects from "@turf/boolean-intersects";
 import { bboxIntersects } from "./utils/bboxUtils";
+import * as fs from "fs";
+import * as path from "path";
 
 export type GeographySettings = {
   id: number;
@@ -24,7 +26,7 @@ export type FragmentResult = Feature<
 >;
 
 export type PendingFragmentResult = FragmentResult & {
-  properties: { __id: number; __overlappingFragments: number[] };
+  properties: { __id: number };
 };
 
 let idCounter = 0;
@@ -56,7 +58,6 @@ export async function createFragments(
             properties: {
               __geographyIds: [geography.id],
               __id: idCounter++,
-              __overlappingFragments: [],
               ...result.properties,
             },
             geometry: result.geometry,
@@ -79,11 +80,6 @@ export async function createFragments(
     fragment.bbox = calcBBox(fragment, { recompute: true });
   }
 
-  // writeDebugOutput("createFragmentsGeographyClippingResults", {
-  //   type: "FeatureCollection",
-  //   features: fragments,
-  // });
-
   // decompose fragments, assigning them to geographies, until there is no
   // overlap between any two fragments.
   const output = buildFragments(fragments).map((f) => ({
@@ -93,93 +89,24 @@ export async function createFragments(
       __id: f.properties.__id,
     },
   }));
-  // writeDebugOutput("createFragmentsOutput", {
-  //   type: "FeatureCollection",
-  //   features: output,
-  // });
   return output;
 }
 
 function buildFragments(fragments: PendingFragmentResult[], loopCount = 0) {
-  if (loopCount > 10) {
-    throw new Error("Loop count exceeded");
-    // return fragments;
-  }
-  // first, computer __overlappingFragments for each fragment based on bbox
-  for (const fragment of fragments) {
-    fragment.properties.__overlappingFragments = fragments
-      .filter(
-        (f) =>
-          fragment !== f &&
-          bboxIntersects(fragment.bbox!, f.bbox!) &&
-          booleanIntersects(fragment, f) &&
-          polygonClipping.intersection(
-            [fragment.geometry.coordinates] as polygonClipping.Geom,
-            [f.geometry.coordinates] as polygonClipping.Geom
-          )?.[0]?.length > 0
-      )
-      .map((f) => f.properties.__id);
-  }
-  // check if there's any overlap between any two fragments. if not, return the
-  // fragments.
-  const anyOverlap = fragments.find(
-    (f) => f.properties.__overlappingFragments.length > 0
-  );
-  if (!anyOverlap) {
-    return fragments;
-  } else {
-    // console.log("found overlap", {
-    //   id: anyOverlap.properties.__id,
-    //   overlappingFragments: anyOverlap.properties.__overlappingFragments,
-    //   geographyIds: anyOverlap.properties.__geographyIds,
-    // });
-  }
-
-  // if (loopCount === 0) {
-  //   writeDebugOutput("build-0", {
-  //     type: "FeatureCollection",
-  //     features: fragments,
-  //   });
-  // }
+  // find any fragments that overlap with other fragments, and split them into
+  // new fragments that will later be merged.
+  fragments = decomposeFragments(fragments, ["__geographyIds"]);
 
   // merge any fragments that have the exact same geometry, associating them
   // with all applicable geographies.
-  fragments = mergeFragmentsWithMatchingGeometry(fragments);
-  throwErrorOnDuplicateIds(fragments);
+  fragments = mergeFragmentsWithMatchingGeometry(fragments, ["__geographyIds"]);
 
-  // if (loopCount === 0) {
-  //   writeDebugOutput("build-1-merged", {
-  //     type: "FeatureCollection",
-  //     features: fragments,
-  //   });
-  // }
-
-  // find any fragments that overlap with other fragments, and split them into
-  // new fragments that will later be merged.
-  fragments = decomposeFragments(fragments);
-  throwErrorOnDuplicateIds(fragments);
-
-  // if (loopCount === 0) {
-  //   writeDebugOutput("build-2-decomposed", {
-  //     type: "FeatureCollection",
-  //     features: fragments,
-  //   });
-  // }
-
-  // console.log("########################");
-  // console.log({
-  //   loop: loopCount,
-  //   fragments: fragments.length,
-  //   fragmentIds: fragments.map((f) => f.properties.__id),
-  //   fragmentGeographyIds: fragments.map((f) => f.properties.__geographyIds),
-  // });
-
-  // run the loop recursively, until there's no overlap or the loop count is exceeded.
-  return buildFragments(fragments, loopCount + 1);
+  return fragments;
 }
 
 function mergeFragmentsWithMatchingGeometry(
-  fragments: PendingFragmentResult[]
+  fragments: PendingFragmentResult[],
+  numericPropertiesToMerge: string[]
 ) {
   const removedFragments = new Set<number>();
   const mergedFragments: PendingFragmentResult[] = [];
@@ -202,17 +129,14 @@ function mergeFragmentsWithMatchingGeometry(
         bboxIntersects(fragment.bbox!, other.bbox!) &&
         booleanEqual(fragment.geometry, other.geometry)
       ) {
-        // console.log(
-        //   "merge!",
-        //   [fragment, other].map((f) => ({
-        //     id: f.properties.__id,
-        //     geographyIds: f.properties.__geographyIds,
-        //   }))
-        // );
-        fragment.properties.__geographyIds = mergeGeographyIds([
-          fragment,
-          other,
-        ]);
+        fragment.properties = {
+          ...fragment.properties,
+          ...mergeNumericProperties(
+            fragment.properties,
+            other.properties,
+            numericPropertiesToMerge
+          ),
+        };
         removedFragments.add(other.properties.__id);
         mergedIds.add(other.properties.__id);
       }
@@ -222,17 +146,8 @@ function mergeFragmentsWithMatchingGeometry(
         ...fragment,
         properties: {
           ...fragment.properties,
-          __geographyIds: fragment.properties.__geographyIds,
-          __overlappingFragments:
-            fragment.properties.__overlappingFragments.filter(
-              (id) => !mergedIds.has(id)
-            ),
         },
       };
-      // console.log("merge output", {
-      //   id: mergeOutput.properties.__id,
-      //   geographyIds: mergeOutput.properties.__geographyIds,
-      // });
       mergedFragments.push(mergeOutput);
     } else {
       mergedFragments.push(fragment);
@@ -241,59 +156,88 @@ function mergeFragmentsWithMatchingGeometry(
   return mergedFragments;
 }
 
+// Eliminates overlap between fragments by splitting them into new fragments.
+// Will run recursively until there is no overlap between any two fragments.
 function decomposeFragments(
-  fragments: PendingFragmentResult[]
+  fragments: PendingFragmentResult[],
+  numericPropertiesToMerge: string[],
+  loopCount = 0
 ): PendingFragmentResult[] {
+  const startingLength = fragments.length;
+  if (loopCount > 100) {
+    throw new Error("Loop count exceeded");
+  }
+
+  let anyOverlap = false;
+
   const outputFragments: PendingFragmentResult[] = [];
   const processedFragments = new Set<number>();
 
   for (const fragment of fragments) {
+    if (processedFragments.has(fragment.properties.__id)) {
+      continue;
+    }
+
     let foundOverlap = false;
-    // find a pair that overlaps
     for (const f of fragments) {
       if (f === fragment || processedFragments.has(f.properties.__id)) {
-        if (processedFragments.has(f.properties.__id)) {
-          foundOverlap = true;
-        }
         continue;
       }
+
       if (
         bboxIntersects(fragment.bbox!, f.bbox!) &&
         booleanIntersects(fragment, f)
       ) {
-        // split the fragments
-        const newFragments = splitFragments(fragment, f);
-        processedFragments.add(fragment.properties.__id);
-        processedFragments.add(f.properties.__id);
-        outputFragments.push(...newFragments);
-        // console.log(
-        //   `Split fragments ${fragment.properties.__id} and ${f.properties.__id} into ${newFragments.length} new fragments`
-        // );
-        // console.log(
-        //   newFragments.map((f) => ({
-        //     id: f.properties.__id,
-        //     geographyIds: f.properties.__geographyIds,
-        //   }))
-        // );
-        foundOverlap = true;
-        break;
+        const newFragments = splitFragments(
+          fragment,
+          f,
+          numericPropertiesToMerge
+        );
+        if (newFragments) {
+          anyOverlap = true;
+          processedFragments.add(fragment.properties.__id);
+          processedFragments.add(f.properties.__id);
+          outputFragments.push(...newFragments);
+          foundOverlap = true;
+          break;
+        }
       }
     }
+
     if (!foundOverlap) {
+      processedFragments.add(fragment.properties.__id);
       outputFragments.push(fragment);
     }
   }
 
-  return outputFragments;
+  // TODO: This can be removed once we're sure the algorithm is working
+  // correctly. Otherwise it's just going to make the calculation slower.
+  // ensure that there are no duplicate ids
+  const ids = new Set<number>();
+  for (const fragment of outputFragments) {
+    if (ids.has(fragment.properties.__id)) {
+      throw new Error(`Duplicate id: ${fragment.properties.__id}`);
+    }
+    ids.add(fragment.properties.__id);
+  }
+
+  // const anyOverlap = startingLength !== outputFragments.length;
+  if (anyOverlap) {
+    return decomposeFragments(
+      outputFragments,
+      numericPropertiesToMerge,
+      loopCount + 1
+    );
+  } else {
+    return outputFragments;
+  }
 }
 
-function splitFragments(a: PendingFragmentResult, b: PendingFragmentResult) {
-  // if (idCounter < 13) {
-  //   writeDebugOutput(`split-${idCounter}-input`, {
-  //     type: "FeatureCollection",
-  //     features: [a, b],
-  //   });
-  // }
+function splitFragments(
+  a: PendingFragmentResult,
+  b: PendingFragmentResult,
+  numericPropertiesToMerge: string[]
+) {
   // calculates the intersection and difference of the two fragments, and returns
   // the new fragments.
   const intersection = polygonClipping.intersection(
@@ -317,8 +261,11 @@ function splitFragments(a: PendingFragmentResult, b: PendingFragmentResult) {
         ...a,
         properties: {
           ...a.properties,
-          __geographyIds: mergeGeographyIds([a, b]),
-          __overlappingFragments: [],
+          ...mergeNumericProperties(
+            a.properties,
+            b.properties,
+            numericPropertiesToMerge
+          ),
           __id: idCounter++,
         },
         geometry,
@@ -331,8 +278,6 @@ function splitFragments(a: PendingFragmentResult, b: PendingFragmentResult) {
           ...a,
           properties: {
             ...a.properties,
-            __geographyIds: a.properties.__geographyIds,
-            __overlappingFragments: [],
             __id: idCounter++,
           },
           geometry,
@@ -345,8 +290,6 @@ function splitFragments(a: PendingFragmentResult, b: PendingFragmentResult) {
           ...b,
           properties: {
             ...b.properties,
-            __geographyIds: b.properties.__geographyIds,
-            __overlappingFragments: [],
             __id: idCounter++,
           },
           geometry,
@@ -354,68 +297,146 @@ function splitFragments(a: PendingFragmentResult, b: PendingFragmentResult) {
       }
     }
   } else {
-    // console.log("no intersection, returning original fragments");
-    // remove __ids from a and b from a & b's __overlappingFragments
-    newFragments.push({
-      ...a,
-      properties: {
-        ...a.properties,
-        __overlappingFragments: a.properties.__overlappingFragments.filter(
-          (id) => id !== b.properties.__id
-        ),
-      },
-    });
-    newFragments.push({
-      ...b,
-      properties: {
-        ...b.properties,
-        __overlappingFragments: b.properties.__overlappingFragments.filter(
-          (id) => id !== a.properties.__id
-        ),
-      },
-    });
+    return null;
   }
   return newFragments;
 }
 
-function mergeGeographyIds(fragments: PendingFragmentResult[]) {
-  return Array.from(
-    new Set(fragments.flatMap((f) => f.properties.__geographyIds))
-  );
+function mergeNumericProperties(
+  a: GeoJsonProperties,
+  b: GeoJsonProperties,
+  propNames: string[]
+) {
+  const mergedProps: GeoJsonProperties = {};
+  for (const propName of propNames) {
+    if ((a && propName in a) || (b && propName in b)) {
+      const merged = [] as number[];
+      if (a && propName in a) {
+        if (Array.isArray(a[propName])) {
+          merged.push(...a[propName]);
+        } else {
+          merged.push(a[propName]);
+        }
+      }
+      if (b && propName in b) {
+        if (Array.isArray(b[propName])) {
+          merged.push(...b[propName]);
+        } else {
+          merged.push(b[propName]);
+        }
+      }
+      const s = new Set(merged);
+      // @ts-ignore
+      mergedProps[propName] = [...s];
+    }
+  }
+  return mergedProps;
 }
 
 function geometryFromCoords(coords: polygonClipping.Geom): Polygon[] {
   return coords.map((polygon) => ({
-    type: "Polygon",
+    type: "Polygon" as const,
     coordinates: polygon as number[][][],
   }));
 }
 
-function writeDebugOutput(filename: string, data: any) {
-  if (process.env.NODE_ENV === "test") {
-    const fs = require("fs");
-    const path = require("path");
-    const outputPath = path.join(
-      __dirname,
-      "../__tests__/outputs",
-      `${filename}.geojson.json`
-    );
+// function throwErrorOnDuplicateIds(fragments: PendingFragmentResult[]) {
+//   const ids = new Set<number>();
+//   for (const fragment of fragments) {
+//     if (ids.has(fragment.properties.__id)) {
+//       console.warn(
+//         `Duplicate id: ${fragment.properties.__id} in ${fragments.length} fragments`
+//       );
+//     }
+//     ids.add(fragment.properties.__id);
+//   }
+// }
 
-    // Ensure output directory exists
-    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+type SketchFragment = FragmentResult & {
+  properties: { __sketchIds: number[] } & GeoJsonProperties;
+};
 
-    fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
+type PendingSketchFragmentResult = SketchFragment & {
+  properties: { __id: number; __sketchIds: number[] };
+};
+
+/**
+ * Sketch Collections may not have overlapping fragments. It is assumed that any
+ * overlap between sketches produces additional fragments, similar to how new
+ * fragments are created when a sketch overlaps multiple geographies.
+ *
+ * This function accepts new fragments for a sketch, and merges them with
+ * existing fragments in a collection, returning a new collection of fragments
+ * that do not overlap.
+ *
+ * This function can be called with all the existing fragments in a collection,
+ * or just the subset of fragments that overlap the bounding box of the new
+ * sketch. It will operate correctly in either case, but with better performance
+ * on large collections if the spatial index of postgres is used to limit the
+ * number of fragments that need to be processed.
+ *
+ * @param newFragments - The new fragments to add to the collection.
+ * @param existingFragments - The existing fragments in the collection.
+ * @returns A new collection of fragments that do not overlap.
+ */
+export function eliminateOverlap(
+  newFragments: SketchFragment[],
+  existingFragments: SketchFragment[]
+): SketchFragment[] {
+  let idCounter = 0;
+  const pendingFragments: PendingSketchFragmentResult[] = [
+    ...newFragments.map((f) => ({
+      ...f,
+      properties: {
+        ...f.properties,
+        __id: idCounter++,
+      },
+    })),
+    ...existingFragments.map((f) => ({
+      ...f,
+      properties: {
+        ...f.properties,
+        __id: idCounter++,
+      },
+    })),
+  ];
+
+  // compute bounding box for each fragment
+  for (const fragment of pendingFragments) {
+    fragment.bbox = calcBBox(fragment, { recompute: true });
   }
+
+  // decompose fragments until there is no overlap
+  const decomposedFragments = decomposeFragments(pendingFragments, [
+    "__sketchIds",
+    "__geographyIds",
+  ]);
+
+  debugSaveFragments("decomposedFragments", decomposedFragments);
+
+  // merge fragments with matching geometry
+  const mergedFragments = mergeFragmentsWithMatchingGeometry(
+    decomposedFragments,
+    ["__geographyIds", "__sketchIds"]
+  );
+
+  // convert back to SketchFragment type
+  return mergedFragments.map((f) => ({
+    ...f,
+    properties: {
+      __geographyIds: f.properties.__geographyIds,
+      __sketchIds: f.properties.__sketchIds,
+    },
+  }));
 }
 
-function throwErrorOnDuplicateIds(fragments: PendingFragmentResult[]) {
-  const ids = new Set<number>();
-  for (const fragment of fragments) {
-    if (ids.has(fragment.properties.__id)) {
-      console.warn(
-        `Duplicate id: ${fragment.properties.__id} in ${fragments.length} fragments`
-      );
-    }
-    ids.add(fragment.properties.__id);
+function debugSaveFragments(name: string, fragments: any[]) {
+  const outputDir = path.join(process.cwd(), "debug-output");
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir);
   }
+  fs.writeFileSync(
+    path.join(outputDir, `${name}.json`),
+    JSON.stringify(fragments, null, 2)
+  );
 }

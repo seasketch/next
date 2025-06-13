@@ -6,10 +6,16 @@ import {
 } from "../src/geographies";
 import { SourceCache } from "fgb-source";
 import { prepareSketch } from "../src/utils/prepareSketch";
-import { createFragments, GeographySettings } from "../src/fragments";
+import {
+  createFragments,
+  eliminateOverlap,
+  FragmentResult,
+  GeographySettings,
+} from "../src/fragments";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
   caPescaderoFeature,
+  fijiShape2,
   fijiSketchAntimeridianCrossing,
   fsmTestFeatures,
 } from "./test-features";
@@ -128,6 +134,18 @@ describe("createFragments", () => {
       expect(fragment.properties.__geographyIds).toBeDefined();
       expect(Array.isArray(fragment.properties.__geographyIds)).toBe(true);
     });
+  });
+
+  test("Fiji test with 3 fragments", async () => {
+    const preparedSketch = prepareSketch(fijiShape2);
+    // saveOutput("fiji-shape2-prepared", preparedSketch.feature);
+    const fragments = await createFragments(
+      preparedSketch,
+      fijiGeographies,
+      clippingFn
+    );
+    // saveOutput("fiji-shape2-fragments", fragments);
+    expect(fragments).toHaveLength(3);
   });
 });
 
@@ -252,7 +270,7 @@ describe("FSM test features", () => {
       fsmGeographies,
       clippingFn
     );
-    saveOutput("fsm-chuuk-fragments", fragments);
+    // saveOutput("fsm-chuuk-fragments", fragments);
     expect(fragments).toHaveLength(1);
     expect(fragments[0].properties.__geographyIds).toHaveLength(1);
     expect(fragments[0].properties.__geographyIds).toContain(3);
@@ -394,7 +412,7 @@ describe("CA use case", () => {
       caGeographies,
       clippingFn
     );
-    saveOutput("ca-pescadero-fragments", fragments);
+    // saveOutput("ca-pescadero-fragments", fragments);
     expect(fragments).toHaveLength(2);
     expect(
       compareFragments(fragments, readOutput("ca-pescadero-fragments"))
@@ -422,5 +440,64 @@ describe("CA use case", () => {
     expect(centralCoastStudyRegion?.properties.__geographyIds).toHaveLength(2);
     expect(centralCoastStudyRegion?.properties.__geographyIds).toContain(2);
     expect(centralCoastStudyRegion?.properties.__geographyIds).toContain(7);
+  });
+});
+
+describe("eliminateOverlap", () => {
+  let sourceCache: SourceCache;
+  let clippingFn: ClippingFn;
+
+  beforeAll(() => {
+    sourceCache = new SourceCache("128mb");
+    clippingFn = async (sketch, source, op, query) => {
+      const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+        source
+      );
+      return clipSketchToPolygons(
+        sketch,
+        op,
+        query,
+        fgbSource.getFeaturesAsync(sketch.envelopes)
+      );
+    };
+  });
+
+  test("Merging fragments with an existing collection", async () => {
+    const fijiAntimeridianFragments = readOutput("fiji-antimeridian-fragments");
+    expect(fijiAntimeridianFragments).toHaveLength(4);
+    const preparedSketch = prepareSketch(fijiShape2);
+    // saveOutput("fiji-shape2-prepared", preparedSketch.feature);
+    const fragments = await createFragments(
+      preparedSketch,
+      fijiGeographies,
+      clippingFn
+    );
+    // saveOutput("fiji-shape2-fragments", fragments);
+    expect(fragments).toHaveLength(3);
+    // now, merge the fragments with the existing fragments
+    const sketchFragments = fragments.map((f) => ({
+      ...f,
+      properties: {
+        ...f.properties,
+        __sketchIds: [1],
+      },
+      geometry: f.geometry,
+    }));
+    const existingFragments = (
+      fijiAntimeridianFragments as FragmentResult[]
+    ).map((f) => ({
+      ...f,
+      properties: {
+        ...f.properties,
+        __sketchIds: [2],
+      },
+      geometry: f.geometry,
+    }));
+    const merged = eliminateOverlap(sketchFragments, existingFragments);
+    // saveOutput("fiji-shape2-merged", merged);
+    expect(merged).toHaveLength(10);
+    expect(compareFragments(merged, readOutput("fiji-shape2-merged"))).toBe(
+      true
+    );
   });
 });

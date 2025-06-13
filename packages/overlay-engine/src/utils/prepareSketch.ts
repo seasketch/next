@@ -38,8 +38,11 @@ export function prepareSketch(feature: Feature<any>): PreparedSketch {
   const split = splitBBoxAntimeridian(bbox as BBox);
   const envelopes = split.map((box) => bboxToEnvelope(box));
   sketch = splitGeoJSON(cleanCoords(sketch));
-  if (envelopes.length > 1) {
-    sketch = splitGeojson(sketch);
+  if (sketch.geometry.coordinates.length > 1) {
+    sketch = cleanCoords(sketch);
+  }
+  if ((sketch as any).type === "FeatureCollection") {
+    throw new Error("sketch is a FeatureCollection");
   }
   return { feature: sketch, envelopes };
 }

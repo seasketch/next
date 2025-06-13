@@ -361,6 +361,24 @@ export const fijiSketchAntimeridianCrossing: Feature<MultiPolygon> = {
   properties: {},
 };
 
+export const fijiShape2 = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    coordinates: [
+      [
+        [180.1484774823948, -15.571272864066685],
+        [180.17653699548373, -15.621271634764199],
+        [180.31683456092367, -15.603705887126182],
+        [180.22564114338826, -15.417146291398083],
+        [179.92540435334462, -15.455012580718204],
+        [180.1484774823948, -15.571272864066685],
+      ],
+    ],
+    type: "Polygon",
+  },
+} as Feature<Polygon>;
+
 export const hawaiiTestFeatures = {
   insideTerritorialSea: {
     type: "Feature",
