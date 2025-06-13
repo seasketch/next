@@ -538,3 +538,20 @@ export const fsmTestFeatures = {
     },
   ],
 } as FeatureCollection<Polygon>;
+
+export const caPescaderoFeature = {
+  type: "Feature",
+  properties: {},
+  geometry: {
+    coordinates: [
+      [
+        [-122.31894800584004, 37.37334448349591],
+        [-122.54626335602626, 37.37334448349591],
+        [-122.54626335602626, 37.068464928836434],
+        [-122.31894800584004, 37.068464928836434],
+        [-122.31894800584004, 37.37334448349591],
+      ],
+    ],
+    type: "Polygon",
+  },
+} as Feature<Polygon>;

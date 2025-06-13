@@ -9,6 +9,7 @@ import { prepareSketch } from "../src/utils/prepareSketch";
 import { createFragments, GeographySettings } from "../src/fragments";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
+  caPescaderoFeature,
   fijiSketchAntimeridianCrossing,
   fsmTestFeatures,
 } from "./test-features";
@@ -286,9 +287,140 @@ const caGeographies: GeographySettings[] = [
     ],
   },
   // North Central Coast
+  {
+    id: 3,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-study-regions.fgb",
+        op: "INTERSECT",
+        cql2Query: {
+          op: "=",
+          args: [{ property: "NAME" }, "North Central Coast"],
+        },
+      },
+    ],
+  },
   // North Coast
+  {
+    id: 4,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-study-regions.fgb",
+        op: "INTERSECT",
+        cql2Query: { op: "=", args: [{ property: "NAME" }, "North Coast"] },
+      },
+    ],
+  },
   // San Francisco Bay
+  {
+    id: 5,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-study-regions.fgb",
+        op: "INTERSECT",
+        cql2Query: {
+          op: "=",
+          args: [{ property: "NAME" }, "San Francisco Bay"],
+        },
+      },
+    ],
+  },
   // South Coast
+  {
+    id: 6,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-study-regions.fgb",
+        op: "INTERSECT",
+        cql2Query: { op: "=", args: [{ property: "NAME" }, "South Coast"] },
+      },
+    ],
+  },
+  // Bioregions
+  // Central Coast
+  {
+    id: 7,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-bioregions.fgb",
+        op: "INTERSECT",
+        cql2Query: { op: "=", args: [{ property: "NAME" }, "Central Coast"] },
+      },
+    ],
+  },
+  // North Coast
+  {
+    id: 8,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-bioregions.fgb",
+        op: "INTERSECT",
+        cql2Query: { op: "=", args: [{ property: "NAME" }, "North Coast"] },
+      },
+    ],
+  },
+  // South Coast
+  {
+    id: 9,
+    clippingLayers: [
+      {
+        source: "https://uploads.seasketch.org/ca-bioregions.fgb",
+        op: "INTERSECT",
+        cql2Query: { op: "=", args: [{ property: "NAME" }, "South Coast"] },
+      },
+    ],
+  },
 ];
 
-describe("CA use case", () => {});
+describe("CA use case", () => {
+  let sourceCache: SourceCache;
+  let clippingFn: ClippingFn;
+
+  beforeAll(() => {
+    sourceCache = new SourceCache("256mb");
+    clippingFn = async (sketch, source, op, query) => {
+      const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+        source
+      );
+      const overlappingFeatures = fgbSource.getFeaturesAsync(sketch.envelopes);
+      return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
+    };
+  });
+
+  it("Clipping to Pescadero geography", async () => {
+    const preparedSketch = prepareSketch(caPescaderoFeature);
+    const fragments = await createFragments(
+      preparedSketch,
+      caGeographies,
+      clippingFn
+    );
+    saveOutput("ca-pescadero-fragments", fragments);
+    expect(fragments).toHaveLength(2);
+    expect(
+      compareFragments(fragments, readOutput("ca-pescadero-fragments"))
+    ).toBe(true);
+
+    // Expect one polygon's geographyIds to be associated with the North Central Coast Study Region, and Central Coast Bioregion. Could be the first or second polygon, so will need to find the one that has the correct geographyIds
+    const northCentralCoastStudyRegion = fragments.find((f) =>
+      f.properties.__geographyIds.includes(3)
+    );
+    expect(northCentralCoastStudyRegion).toBeDefined();
+    expect(
+      northCentralCoastStudyRegion?.properties.__geographyIds
+    ).toHaveLength(2);
+    expect(northCentralCoastStudyRegion?.properties.__geographyIds).toContain(
+      3
+    );
+    expect(northCentralCoastStudyRegion?.properties.__geographyIds).toContain(
+      7
+    );
+    // The other polygon should be associated with the Central Coast Study Region, and Central Coast Bioregion
+    const centralCoastStudyRegion = fragments.find((f) =>
+      f.properties.__geographyIds.includes(2)
+    );
+    expect(centralCoastStudyRegion).toBeDefined();
+    expect(centralCoastStudyRegion?.properties.__geographyIds).toHaveLength(2);
+    expect(centralCoastStudyRegion?.properties.__geographyIds).toContain(2);
+    expect(centralCoastStudyRegion?.properties.__geographyIds).toContain(7);
+  });
+});
