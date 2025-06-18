@@ -816,6 +816,10 @@ async function preprocessGeography(
   projectId: number
 ) {
   const preparedSketch = prepareSketch(userGeom);
+  console.log(
+    `[CLIPPING] Starting geography preprocessing for sketch class ${sketchClassId}, project ${projectId}`
+  );
+
   let { rows: clippingLayers } = await pgClient.query(
     `select 
                 gcl.id,
@@ -835,6 +839,11 @@ async function preprocessGeography(
               where pg.project_id = $2`,
     [sketchClassId, projectId]
   );
+
+  console.log(
+    `[CLIPPING] Found ${clippingLayers.length} total clipping layers`
+  );
+
   // normalize clipping layers to what the clipToGeography function expects
   clippingLayers = clippingLayers.map((l: any) => ({
     template: l.template_id,
@@ -843,15 +852,24 @@ async function preprocessGeography(
     cql2Query: l.cql2_query,
     forClipping: l.for_clipping,
   }));
+
   const clippingGeographyLayers = clippingLayers.filter(
     (l: any) => l.forClipping
   );
+
+  console.log(
+    `[CLIPPING] Using ${clippingGeographyLayers.length} layers for clipping:`,
+    clippingGeographyLayers.map((l) => `${l.op} ${l.source}`)
+  );
+
   const clipped = await clipToGeography(
     preparedSketch,
     clippingGeographyLayers,
     async (feature, objectKey, op, cql2Query) => {
       const source = await getSource(objectKey);
-      console.time(`clip ${objectKey}`);
+      console.time(`clip ${objectKey} ${op}`);
+      console.log(`[CLIPPING] Processing ${op} operation on ${objectKey}`);
+
       const clipped =
         await clippingWorkerManager.clipSketchToPolygonsWithWorker(
           feature,
@@ -859,13 +877,26 @@ async function preprocessGeography(
           cql2Query,
           source.getFeaturesAsync(feature.envelopes)
         );
-      console.timeEnd(`clip ${objectKey}`);
+
+      console.timeEnd(`clip ${objectKey} ${op}`);
+      console.log(`[CLIPPING] ${op} operation on ${objectKey} result:`, {
+        changed: clipped.changed,
+        hasOutput: clipped.output !== null,
+        outputType: clipped.output?.geometry?.type,
+      });
+
       return clipped;
     }
   );
+
   if (!clipped) {
+    console.log(`[CLIPPING] Clipping failed - no result returned`);
     throw new Error("Clipping failed");
   }
+
+  console.log(
+    `[CLIPPING] Final clipped geometry type: ${clipped.geometry.type}`
+  );
   const fragments: SketchFragment[] = [];
   return {
     clipped,

@@ -8,6 +8,7 @@ import {
 import { Feature, MultiPolygon, Polygon } from "geojson";
 
 interface ClippingWorkerData {
+  requestId: string;
   preparedSketch: any; // Using any to avoid complex type imports
   op: ClippingOperation;
   cql2Query?: Cql2Query;
@@ -15,6 +16,7 @@ interface ClippingWorkerData {
 }
 
 interface ClippingWorkerResult {
+  requestId: string;
   success: boolean;
   result?: any;
   error?: string;
@@ -39,11 +41,13 @@ async function performClipping(
     );
 
     return {
+      requestId: data.requestId,
       success: true,
       result,
     };
   } catch (error) {
     return {
+      requestId: data.requestId,
       success: false,
       error: error instanceof Error ? error.message : String(error),
     };
