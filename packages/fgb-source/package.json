@@ -5,7 +5,7 @@
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next",
   "license": "BSD-3-Clause",
-  "type": "module",
+  "type": "commonjs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "directories": {
@@ -22,15 +22,16 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "build": "tsc",
-    "watch": "tsc --watch"
+    "build": "tsup",
+    "watch": "tsup --watch"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
   },
   "devDependencies": {
     "typescript": "^5.5.2",
-    "vitest": "^1.6.1"
+    "vitest": "^1.6.1",
+    "tsup": "^8.0.0"
   },
   "dependencies": {
     "@turf/bbox": "^7.2.0",

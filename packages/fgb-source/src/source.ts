@@ -3,14 +3,14 @@ import RTreeIndex, {
   OffsetAndLength,
 } from "./rtree";
 import { ByteBuffer } from "flatbuffers";
-import { GeometryType } from "flatgeobuf/lib/mjs/generic";
+import { GeometryType } from "flatgeobuf/lib/mjs/generic.js";
 import {
   Feature as GeoJSONFeature,
   GeoJsonProperties,
   Geometry,
 } from "geojson";
 import { HeaderMeta } from "flatgeobuf";
-import { fromByteBuffer } from "flatgeobuf/lib/mjs/header-meta";
+import { fromByteBuffer } from "flatgeobuf/lib/mjs/header-meta.js";
 import { FetchManager, FetchRangeFn } from "./fetch-manager";
 import {
   createQueryPlan,

@@ -27,7 +27,9 @@ export function makeMultipolygon(
         type: "MultiPolygon",
         coordinates: [feature.geometry.coordinates],
       },
-      properties: feature.properties,
+      properties: feature.properties
+        ? { ...feature.properties }
+        : feature.properties,
     };
   }
   return feature as Feature<MultiPolygon>;

@@ -152,4 +152,90 @@ describe("prepareSketch", () => {
     expect(result.feature.properties).toEqual(multiPolygon.properties);
     expect(result.envelopes).toHaveLength(1);
   });
+
+  it("should not mutate the original feature in-place", () => {
+    const originalFeature: Feature<Polygon> = {
+      type: "Feature",
+      properties: {
+        name: "original",
+        area: 100,
+        metadata: { type: "test" },
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0],
+          ],
+        ],
+      },
+    };
+
+    // Create a deep copy to compare against
+    const originalFeatureCopy = JSON.parse(JSON.stringify(originalFeature));
+
+    const result = prepareSketch(originalFeature);
+
+    // Verify the original feature is unchanged
+    expect(originalFeature).toEqual(originalFeatureCopy);
+    expect(originalFeature.geometry.type).toBe("Polygon");
+    expect(originalFeature.properties.name).toBe("original");
+
+    // Verify the result is a modified copy
+    expect(result.feature.geometry.type).toBe("MultiPolygon");
+    expect(result.feature).not.toBe(originalFeature);
+    expect(result.feature.geometry).not.toBe(originalFeature.geometry);
+    expect(result.feature.properties).not.toBe(originalFeature.properties);
+
+    // Verify properties are preserved but in a new object (shallow copy)
+    expect(result.feature.properties).toEqual(originalFeature.properties);
+
+    // Verify the original feature's geometry coordinates are unchanged
+    expect(originalFeature.geometry.coordinates).toEqual(
+      originalFeatureCopy.geometry.coordinates
+    );
+  });
+
+  it("should create shallow copy of properties (nested objects still reference original)", () => {
+    const nestedObject = { type: "test", value: 42 };
+    const originalFeature: Feature<Polygon> = {
+      type: "Feature",
+      properties: {
+        name: "original",
+        nested: nestedObject,
+      },
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [0, 0],
+            [0, 1],
+            [1, 1],
+            [1, 0],
+            [0, 0],
+          ],
+        ],
+      },
+    };
+
+    const result = prepareSketch(originalFeature);
+
+    // Verify the top-level properties object is copied
+    expect(result.feature.properties).not.toBe(originalFeature.properties);
+
+    // Verify nested objects still reference the original (shallow copy behavior)
+    expect(result.feature.properties.nested).toBe(
+      originalFeature.properties.nested
+    );
+    expect(result.feature.properties.nested).toBe(nestedObject);
+
+    // Verify we can modify the nested object and it affects both
+    result.feature.properties.nested.value = 100;
+    expect(originalFeature.properties.nested.value).toBe(100);
+    expect(nestedObject.value).toBe(100);
+  });
 });

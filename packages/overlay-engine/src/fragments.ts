@@ -12,8 +12,6 @@ import calcBBox from "@turf/bbox";
 import booleanEqual from "@turf/boolean-equal";
 import booleanIntersects from "@turf/boolean-intersects";
 import { bboxIntersects } from "./utils/bboxUtils";
-import * as fs from "fs";
-import * as path from "path";
 
 export type GeographySettings = {
   id: number;
@@ -352,7 +350,7 @@ function geometryFromCoords(coords: polygonClipping.Geom): Polygon[] {
 //   }
 // }
 
-type SketchFragment = FragmentResult & {
+export type SketchFragment = FragmentResult & {
   properties: { __sketchIds: number[] } & GeoJsonProperties;
 };
 

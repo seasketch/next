@@ -310,3 +310,192 @@ $$;
 
 grant execute on function has_fgb_output to anon;
 grant execute on function data_sources_approximate_fgb_index_size to anon;
+
+ALTER TABLE table_of_contents_items
+ADD COLUMN if not exists has_metadata boolean GENERATED ALWAYS AS (metadata IS NOT NULL) STORED;
+
+drop function if exists table_of_contents_items_has_metadata;
+
+
+CREATE INDEX IF NOT EXISTS data_upload_outputs_source_original_idx
+  ON data_upload_outputs (data_source_id)
+  WHERE is_original = true;
+
+
+CREATE OR REPLACE FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    WITH layer AS (
+      SELECT * FROM data_layers WHERE id = item.data_layer_id
+    )
+    select
+      case
+        when item.enable_download = false then null
+        when item.data_layer_id is null then null
+        when item.is_folder = true then null
+        when not table_of_contents_items_is_downloadable_source_type(item) then null 
+        when item.data_source_type = 'seasketch-mvt' or 
+          item.data_source_type = 'seasketch-vector' then
+          (
+            select 
+                data_upload_outputs.url || '?download=' || data_upload_outputs.original_filename
+            from 
+              data_upload_outputs
+            where 
+              data_upload_outputs.data_source_id = (SELECT data_source_id FROM layer)
+            and 
+              data_upload_outputs.is_original = true
+              limit 1
+          )
+        when item.data_source_type = 'geojson' then
+          (
+            select 
+              url 
+            from 
+              data_sources 
+            where id = (SELECT data_source_id FROM layer)
+          ) 
+        else (
+          select 
+            'https://arcgis-export.seasketch.org/?download=' || 
+            item.title || 
+            '&location=' || 
+            data_sources.url || 
+            '/' || 
+            coalesce(data_layers.sublayer, '')
+          from
+            data_layers
+          inner join
+            data_sources
+          on
+            data_sources.id = data_layers.data_source_id
+          where
+            data_layers.id = item.data_layer_id
+          limit 1
+        )
+      end;
+  $$;
+
+CREATE INDEX if not exists table_of_contents_items_acl_lookup_idx 
+ON table_of_contents_items (project_id, is_draft, path) 
+WHERE is_draft = false;
+
+CREATE OR REPLACE FUNCTION public._session_on_toc_item_acl(lpath public.ltree) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    with test (on_acl) as (select 
+      bool_and(session_on_acl(access_control_lists.id)) as bool_and
+    from
+      access_control_lists
+    where
+      table_of_contents_item_id in (
+        select id from table_of_contents_items where is_draft = false and table_of_contents_items.path @> lpath
+      ) and
+      type != 'public') select on_acl = true or (on_acl is null and lpath is not null) from test;
+  $$;
+
+
+CREATE OR REPLACE FUNCTION _session_has_toc_access(item_id INT) RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER
+AS $$
+WITH toc AS (
+  SELECT id, path
+  FROM table_of_contents_items
+  WHERE id = item_id AND NOT is_draft
+),
+parents AS (
+  SELECT parent.id
+  FROM table_of_contents_items parent, toc
+  WHERE parent.path @> toc.path AND NOT parent.is_draft
+),
+acls AS (
+  SELECT acl.id
+  FROM access_control_lists acl
+  JOIN parents p ON p.id = acl.table_of_contents_item_id
+  WHERE acl.type != 'public'
+)
+SELECT
+  COALESCE(bool_and(session_on_acl(id)), EXISTS (SELECT 1 FROM toc))
+FROM acls;
+$$;
+
+
+CREATE INDEX IF NOT EXISTS toc_path_idx
+ON table_of_contents_items USING gist (path);
+
+grant execute on function _session_has_toc_access to anon;
+comment on function _session_has_toc_access is E'@omit';
+
+drop policy if exists table_of_contents_items_select on table_of_contents_items;
+
+CREATE POLICY table_of_contents_items_select ON table_of_contents_items
+FOR SELECT
+TO anon
+USING (
+  (
+    session_has_project_access(project_id)
+    AND NOT is_draft
+    AND _session_has_toc_access(id)
+  )
+  OR data_library_template_id IS NOT NULL
+);
+
+CREATE OR REPLACE FUNCTION public.session_on_acl(acl_id integer) RETURNS boolean
+LANGUAGE sql STABLE SECURITY DEFINER
+AS $$
+WITH acl AS (
+  SELECT id, type, project_id
+  FROM access_control_lists
+  WHERE id = $1
+),
+sess_user AS (
+  SELECT nullif(current_setting('session.user_id', true), '')::int AS user_id
+)
+SELECT
+  -- Public access allowed
+  EXISTS (SELECT 1 FROM acl WHERE type = 'public')
+
+  -- OR user is an admin
+  OR EXISTS (
+    SELECT 1 FROM acl
+    WHERE session_is_admin(acl.project_id)
+  )
+
+  -- OR user is in a group with access
+  OR EXISTS (
+    SELECT 1
+    FROM acl, sess_user
+    WHERE acl.type = 'group'
+      AND sess_user.user_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM access_control_list_groups aclg
+        JOIN project_group_members pgm ON pgm.group_id = aclg.group_id
+        WHERE aclg.access_control_list_id = acl.id
+          AND pgm.user_id = sess_user.user_id
+      )
+  );
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.projects_table_of_contents_items(p public.projects)
+RETURNS SETOF public.table_of_contents_items
+LANGUAGE sql STABLE SECURITY DEFINER
+AS $$
+  WITH toc_items AS (
+    SELECT *
+    FROM table_of_contents_items
+    WHERE project_id = p.id AND is_draft = false
+  ),
+  blocked_items AS (
+    SELECT DISTINCT t.id
+    FROM toc_items t
+    JOIN table_of_contents_items ancestor ON ancestor.path @> t.path
+    JOIN access_control_lists acl ON acl.table_of_contents_item_id = ancestor.id
+    WHERE acl.type != 'public' AND NOT session_on_acl(acl.id)
+  )
+  SELECT *
+  FROM toc_items
+  WHERE id NOT IN (SELECT id FROM blocked_items)
+$$;
+
