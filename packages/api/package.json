@@ -112,6 +112,7 @@
     "pg-format": "^1.0.4",
     "pg-mem": "^1.9.9",
     "pgmock2": "^2.0.6",
+    "piscina": "^5.1.1",
     "pluralize": "^8.0.0",
     "pmtiles": "^4.3.0",
     "pngjs": "^7.0.0",
@@ -134,6 +135,7 @@
     "typescript": "^5.5.3",
     "unsplash-js": "^7.0.15",
     "uuid": "^8.3.0",
+    "vitest": "^3.2.4",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

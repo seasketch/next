@@ -1,6 +1,6 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import { Feature } from "geojson";
-import { SourceCache } from "fgb-source";
+import { Feature, MultiPolygon, Polygon } from "geojson";
+import { SourceCache, SourceCacheOptions } from "fgb-source";
 import {
   clipToGeography,
   prepareSketch,
@@ -11,7 +11,7 @@ import {
   SketchFragment,
 } from "overlay-engine";
 import { S3 } from "aws-sdk";
-import { clippingWorkerManager } from "../workers/clippingWorkerManager";
+import { clippingWorkerManager } from "../workers/clipping/clippingWorkerManager";
 import { Context } from "postgraphile";
 import { Pool, PoolClient } from "pg";
 
@@ -23,24 +23,19 @@ const r2 = new S3({
   secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
 });
 
-const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB");
-
-async function getSource<T extends Feature<any>>(objectKey: string) {
-  const source = await sourceCache.get<T>(objectKey, {
-    fetchRangeFn: async (key, range) => {
-      const response = await fetch(`https://uploads.seasketch.org/${key}`, {
-        headers: range
-          ? new Headers({
-              Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-            })
-          : undefined,
-      });
-      const arrayBuffer = await response.arrayBuffer();
-      return arrayBuffer;
-    },
-  });
-  return source;
-}
+const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
+  fetchRangeFn: async (key: string, range: [number, number | null]) => {
+    const response = await fetch(`https://uploads.seasketch.org/${key}`, {
+      headers: range
+        ? new Headers({
+            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+          })
+        : undefined,
+    });
+    const arrayBuffer = await response.arrayBuffer();
+    return arrayBuffer;
+  },
+});
 
 const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -424,7 +419,6 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               sketchClassId,
               sketchClass.project_id
             );
-            console.log(clipped);
             const {
               rows: [sketch],
             } = await pgClient.query(
@@ -515,7 +509,6 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
 
           if (!userGeom) {
-            console.log("no user geom, updating sketch");
             const {
               rows: [sketch],
             } = await pgClient.query(
@@ -554,7 +547,6 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             );
             geometry = response;
           } else if (sketchClass.is_geography_clipping_enabled) {
-            console.log("geography clipping enabled");
             const { clipped, fragments } = await preprocessGeography(
               pgClient,
               userGeom,
@@ -564,7 +556,6 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             if (!clipped) {
               throw new Error("Clipping failed");
             }
-            console.log("clipped", clipped);
             const {
               rows: [sketch],
             } = await pgClient.query(
@@ -815,33 +806,32 @@ async function preprocessGeography(
   sketchClassId: number,
   projectId: number
 ) {
+  // First, prepare the sketch for clipping (e.g. convert to multipolygon,
+  // split at antimeridian, and normalize coordinates)
   const preparedSketch = prepareSketch(userGeom);
-  console.log(
-    `[CLIPPING] Starting geography preprocessing for sketch class ${sketchClassId}, project ${projectId}`
-  );
 
+  // Get all the clipping layers for geographies in this project, including
+  // those used for clipping this sketch class.
   let { rows: clippingLayers } = await pgClient.query(
-    `select 
-                gcl.id,
-                gcl.project_geography_id,
-                data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
-                gcl.operation_type,
-                gcl.cql2_query,
-                gcl.template_id,
-                exists(
-                  select 1 
-                  from sketch_class_geographies scg 
-                  where scg.geography_id = gcl.project_geography_id 
-                  and scg.sketch_class_id = $1
-                ) as for_clipping
-              from geography_clipping_layers gcl
-              join project_geography pg on gcl.project_geography_id = pg.id
-              where pg.project_id = $2`,
+    `
+    select 
+      gcl.id,
+      gcl.project_geography_id,
+      data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
+      gcl.operation_type,
+      gcl.cql2_query,
+      gcl.template_id,
+      exists(
+        select 1 
+        from sketch_class_geographies scg 
+        where scg.geography_id = gcl.project_geography_id 
+        and scg.sketch_class_id = $1
+      ) as for_clipping
+    from geography_clipping_layers gcl
+    join project_geography pg on gcl.project_geography_id = pg.id
+    where pg.project_id = $2
+    `,
     [sketchClassId, projectId]
-  );
-
-  console.log(
-    `[CLIPPING] Found ${clippingLayers.length} total clipping layers`
   );
 
   // normalize clipping layers to what the clipToGeography function expects
@@ -853,50 +843,36 @@ async function preprocessGeography(
     forClipping: l.for_clipping,
   }));
 
+  // Filter out layers that are not used for clipping this sketch class.
   const clippingGeographyLayers = clippingLayers.filter(
     (l: any) => l.forClipping
   );
 
-  console.log(
-    `[CLIPPING] Using ${clippingGeographyLayers.length} layers for clipping:`,
-    clippingGeographyLayers.map((l) => `${l.op} ${l.source}`)
-  );
-
+  // Clip the sketch to the geographies.
   const clipped = await clipToGeography(
     preparedSketch,
     clippingGeographyLayers,
     async (feature, objectKey, op, cql2Query) => {
-      const source = await getSource(objectKey);
-      console.time(`clip ${objectKey} ${op}`);
-      console.log(`[CLIPPING] Processing ${op} operation on ${objectKey}`);
-
-      const clipped =
-        await clippingWorkerManager.clipSketchToPolygonsWithWorker(
-          feature,
-          op,
-          cql2Query,
-          source.getFeaturesAsync(feature.envelopes)
-        );
-
-      console.timeEnd(`clip ${objectKey} ${op}`);
-      console.log(`[CLIPPING] ${op} operation on ${objectKey} result:`, {
-        changed: clipped.changed,
-        hasOutput: clipped.output !== null,
-        outputType: clipped.output?.geometry?.type,
-      });
-
-      return clipped;
+      // ClippingFn is provided to clipToGeography to handle the actual
+      // clipping. This is done to accomadate different architectures. For
+      // example, on this API server we don't want to block the event-loop, so
+      // we use a worker (via clippingWorkerManager) to handle the clipping.
+      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
+        objectKey
+      );
+      return clippingWorkerManager.clipSketchToPolygonsWithWorker(
+        feature,
+        op,
+        cql2Query,
+        source.getFeaturesAsync(feature.envelopes)
+      );
     }
   );
 
   if (!clipped) {
-    console.log(`[CLIPPING] Clipping failed - no result returned`);
-    throw new Error("Clipping failed");
+    throw new Error("Clipping failed. No geometry returned.");
   }
 
-  console.log(
-    `[CLIPPING] Final clipped geometry type: ${clipped.geometry.type}`
-  );
   const fragments: SketchFragment[] = [];
   return {
     clipped,

@@ -1,4 +1,4 @@
-export { prepareSketch } from "./utils/prepareSketch";
+export { prepareSketch, PreparedSketch } from "./utils/prepareSketch";
 export { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
 export {
   clipToGeography,

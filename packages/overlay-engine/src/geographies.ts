@@ -206,10 +206,6 @@ export async function clipToGeography(
   } else if (filteredFeatures.length === 0) {
     return null;
   } else {
-    console.log(
-      "intersecting",
-      filteredFeatures.map((f) => f.geometry.coordinates)
-    );
     const intersection = polygonClipping.intersection(
       features[0].geometry.coordinates as polygonClipping.Geom,
       ...filteredFeatures
@@ -350,7 +346,6 @@ export async function clipSketchToPolygons(
     return { changed: false, output: preparedSketch.feature, op };
   }
 
-  console.time("clip");
   let output: typeof preparedSketch.feature.geometry.coordinates;
   if (op === "INTERSECT") {
     output = polygonClipping.intersection(
@@ -365,7 +360,6 @@ export async function clipSketchToPolygons(
   } else {
     throw new Error(`Unknown operation: ${op}`);
   }
-  console.timeEnd("clip");
 
   if (output.length === 0) {
     return { changed: true, output: null, op };

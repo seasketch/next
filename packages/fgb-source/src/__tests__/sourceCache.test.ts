@@ -86,6 +86,168 @@ describe("SourceCache", () => {
     });
   });
 
+  describe("Default Options", () => {
+    it("should use default fetchRangeFn when no options are provided to get()", async () => {
+      let defaultFetchCalled = false;
+      const defaultFetchRangeFn = async (
+        key: string,
+        range: [number, number | null]
+      ) => {
+        defaultFetchCalled = true;
+        return fetch(key, {
+          headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
+        }).then((response) => response.arrayBuffer());
+      };
+
+      const cacheWithDefaults = new SourceCache("64mb", {
+        fetchRangeFn: defaultFetchRangeFn,
+      });
+
+      const source = await cacheWithDefaults.get(TEST_URL1);
+      expect(source).toBeDefined();
+      expect(defaultFetchCalled).toBe(true);
+
+      // Verify the source works
+      const bbox = {
+        minX: -124.5,
+        minY: 32.5,
+        maxX: -114.1,
+        maxY: 42.0,
+      };
+
+      const features: Feature[] = [];
+      for await (const feature of source.getFeaturesAsync(bbox)) {
+        features.push(feature);
+      }
+
+      expect(features.length).toBeGreaterThan(0);
+    });
+
+    it("should merge default options with provided options, with provided options taking precedence", async () => {
+      let defaultFetchCalled = false;
+      let providedFetchCalled = false;
+
+      const defaultFetchRangeFn = async (
+        key: string,
+        range: [number, number | null]
+      ) => {
+        defaultFetchCalled = true;
+        return fetch(key, {
+          headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
+        }).then((response) => response.arrayBuffer());
+      };
+
+      const providedFetchRangeFn = async (
+        key: string,
+        range: [number, number | null]
+      ) => {
+        providedFetchCalled = true;
+        return fetch(key, {
+          headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
+        }).then((response) => response.arrayBuffer());
+      };
+
+      const cacheWithDefaults = new SourceCache("64mb", {
+        fetchRangeFn: defaultFetchRangeFn,
+        maxCacheSize: "1MB",
+      });
+
+      // Should use provided fetchRangeFn, not default
+      const source = await cacheWithDefaults.get(TEST_URL1, {
+        fetchRangeFn: providedFetchRangeFn,
+        maxCacheSize: "2MB", // Should override default
+      });
+
+      expect(source).toBeDefined();
+      expect(defaultFetchCalled).toBe(false);
+      expect(providedFetchCalled).toBe(true);
+
+      // Verify the source works
+      const bbox = {
+        minX: -124.5,
+        minY: 32.5,
+        maxX: -114.1,
+        maxY: 42.0,
+      };
+
+      const features: Feature[] = [];
+      for await (const feature of source.getFeaturesAsync(bbox)) {
+        features.push(feature);
+      }
+
+      expect(features.length).toBeGreaterThan(0);
+    });
+
+    it("should use default options when no options are provided to get()", async () => {
+      const cacheWithDefaults = new SourceCache("64mb", {
+        maxCacheSize: "1MB",
+        initialHeaderRequestLength: "100KB",
+        overfetchBytes: "50KB",
+      });
+
+      const source = await cacheWithDefaults.get(TEST_URL1);
+      expect(source).toBeDefined();
+
+      // Verify the source works
+      const bbox = {
+        minX: -124.5,
+        minY: 32.5,
+        maxX: -114.1,
+        maxY: 42.0,
+      };
+
+      const features: Feature[] = [];
+      for await (const feature of source.getFeaturesAsync(bbox)) {
+        features.push(feature);
+      }
+
+      expect(features.length).toBeGreaterThan(0);
+    });
+
+    it("should work with custom default fetchRangeFn for R2-like scenarios", async () => {
+      let customFetchCalled = false;
+      const customFetchRangeFn = async (
+        key: string,
+        range: [number, number | null]
+      ) => {
+        customFetchCalled = true;
+        // Simulate R2 bucket access by using the test URL but with custom headers
+        const response = await fetch(key, {
+          headers: range
+            ? new Headers({
+                Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+                "X-Custom-Source": "r2-bucket", // Add custom header to simulate R2
+              })
+            : undefined,
+        });
+        return response.arrayBuffer();
+      };
+
+      const cacheWithDefaults = new SourceCache("64mb", {
+        fetchRangeFn: customFetchRangeFn,
+      });
+
+      const source = await cacheWithDefaults.get(TEST_URL1);
+      expect(source).toBeDefined();
+      expect(customFetchCalled).toBe(true);
+
+      // Verify the source works
+      const bbox = {
+        minX: -124.5,
+        minY: 32.5,
+        maxX: -114.1,
+        maxY: 42.0,
+      };
+
+      const features: Feature[] = [];
+      for await (const feature of source.getFeaturesAsync(bbox)) {
+        features.push(feature);
+      }
+
+      expect(features.length).toBeGreaterThan(0);
+    });
+  });
+
   describe("Cache Size Limiting", () => {
     it("should evict sources when cache size limit is exceeded", async () => {
       const evictions: { key: string; reason: string }[] = [];
