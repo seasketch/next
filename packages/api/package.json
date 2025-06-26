@@ -58,6 +58,7 @@
     "@seasketch/metadata-parser": "^1.0.0",
     "@sentry/browser": "^7.44.2",
     "@sentry/node": "^7.111.0",
+    "@turf/area": "^7.2.0",
     "@turf/bbox": "^6.5.0",
     "@turf/center-of-mass": "^6.5.0",
     "@types/bytes": "^3.1.0",

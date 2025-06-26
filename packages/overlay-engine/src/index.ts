@@ -14,4 +14,5 @@ export {
   eliminateOverlap,
   FragmentResult,
   SketchFragment,
+  GeographySettings,
 } from "./fragments";

@@ -13,6 +13,16 @@ import {
   evaluateCql2JSONQuery,
 } from "./cql2";
 import * as polygonClipping from "polygon-clipping";
+import {
+  createFragments,
+  eliminateOverlap,
+  FragmentResult,
+  GeographySettings,
+  SketchFragment,
+} from "./fragments";
+import area from "@turf/area";
+import { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
+import { union } from "./utils/polygonClipping";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 
@@ -374,5 +384,140 @@ export async function clipSketchToPolygons(
       geometry: { ...preparedSketch.feature.geometry, coordinates: output },
     },
     op,
+  };
+}
+
+/**
+ * Clips a prepared sketch to a set of geographies, and returns the clipped
+ * sketch and the fragments that were generated.
+ *
+ * @param preparedSketch - The sketch to clip, wrapped in a PreparedSketch
+ * object that includes both the feature and its bounding envelopes. Use
+ * prepareSketch() to create this.
+ * @param geographies - All the geographies that will be used for clipping and
+ * fragment generation.
+ * @param geographiesForClipping - The IDs of the geographies that will be
+ * used for clipping. Throws an error if no geographies are specified. If more
+ * that one geography is specified, the geography with the most overlap will be
+ * the one clipped to.
+ * @param existingSketchFragments - Any sketch fragments from sketches in the
+ * same collection. For performance reasons, it's best to pass only the
+ * fragments which overlap the sketch of interest, using psql's spatial index.
+ * @param clippingFn - The function to use for clipping.
+ * @returns
+ */
+export async function clipToGeographies(
+  preparedSketch: PreparedSketch,
+  geographies: GeographySettings[],
+  geographiesForClipping: number[],
+  existingSketchFragments: SketchFragment[],
+  clippingFn: ClippingFn
+): Promise<{
+  clipped: PreparedSketch["feature"] | null;
+  fragments: FragmentResult[];
+}> {
+  // Create fragments for all overlapping geographies
+  let fragments: SketchFragment[] = (
+    await createFragments(preparedSketch, geographies, clippingFn)
+  ).map((f) => ({
+    ...f,
+    properties: {
+      ...f.properties,
+      __sketchIds: [0],
+    },
+  }));
+
+  // Now, we need to figure out if there are any fragments that are within the
+  // clipping geographies, and count how many overlapping clipping geographies
+  // there are.
+  const fragmentsInClippingGeographies: SketchFragment[] = [];
+  const matchingGeographyIds = new Set<number>();
+  for (const fragment of fragments) {
+    for (const geographyId of fragment.properties.__geographyIds || []) {
+      if (geographiesForClipping.includes(geographyId)) {
+        fragmentsInClippingGeographies.push(fragment);
+        matchingGeographyIds.add(geographyId);
+      }
+    }
+  }
+
+  // Early return if no overlap
+  if (fragmentsInClippingGeographies.length === 0) {
+    return {
+      clipped: null,
+      fragments,
+    };
+  }
+
+  // clippedFragments will need to end up being all the fragments belonging to
+  // the biggest geography.
+  let clippedFragments: SketchFragment[];
+  let primaryGeographyId: number = Array.from(matchingGeographyIds)[0];
+  if (matchingGeographyIds.size === 1) {
+    // If there's only one overlap, we can use the fragments as is.
+    clippedFragments = fragmentsInClippingGeographies;
+  } else {
+    // If there is overlap with more than one clipping geography, we need to
+    // choose the one with the most overlap. We'll do that by first calculating
+    // the area of each fragment, then summing the areas of the fragments by
+    // geography, and picking the biggest one. We'll replace clippedFragments with
+    // the fragments that belong to the biggest geography.
+    const areaByGeographyId: { [geographyId: number]: number } = {};
+    // prepopulate with 0
+    for (const geographyId of Array.from(matchingGeographyIds)) {
+      areaByGeographyId[geographyId] = 0;
+    }
+    // calculate areas first
+    for (const fragment of fragmentsInClippingGeographies) {
+      const val = area(fragment);
+      for (const geographyId of fragment.properties.__geographyIds) {
+        areaByGeographyId[geographyId] += val;
+      }
+    }
+    // find the geography with the most area
+    let biggest = 0;
+    let biggestGeographyId: number | null = null;
+    for (const geographyId in areaByGeographyId) {
+      if (areaByGeographyId[geographyId] > biggest) {
+        biggest = areaByGeographyId[geographyId];
+        biggestGeographyId = Number(geographyId);
+      }
+    }
+    if (!biggestGeographyId) {
+      throw new Error("No biggest geography id");
+    }
+    primaryGeographyId = biggestGeographyId;
+    clippedFragments = fragmentsInClippingGeographies.filter((f) =>
+      f.properties.__geographyIds.includes(biggestGeographyId)
+    );
+  }
+
+  // filter the fragments to only include the primary geography
+  fragments = fragments.filter((f) =>
+    f.properties.__geographyIds.includes(primaryGeographyId)
+  );
+
+  // union the fragments to get the final clipped geometry using polygon-clipping
+  const geometry = union(
+    clippedFragments.map((f) => f.geometry.coordinates as polygonClipping.Geom)
+  );
+
+  const clipped = {
+    ...preparedSketch.feature,
+    geometry: {
+      ...preparedSketch.feature.geometry,
+      coordinates: geometry,
+    },
+  } as PreparedSketch["feature"];
+
+  // Finally, deal with overlap between generated fragments, and those already
+  // in the existingSketchFragments argument (sketches in the same collection)
+  if (existingSketchFragments.length > 0) {
+    fragments = eliminateOverlap(fragments, existingSketchFragments);
+  }
+
+  return {
+    clipped: unionAtAntimeridian(clipped) as PreparedSketch["feature"],
+    fragments,
   };
 }

@@ -90,7 +90,7 @@ export async function createFragments(
   return output;
 }
 
-function buildFragments(fragments: PendingFragmentResult[], loopCount = 0) {
+function buildFragments(fragments: PendingFragmentResult[]) {
   // find any fragments that overlap with other fragments, and split them into
   // new fragments that will later be merged.
   fragments = decomposeFragments(fragments, ["__geographyIds"]);

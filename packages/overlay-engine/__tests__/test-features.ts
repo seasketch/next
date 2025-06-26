@@ -468,6 +468,22 @@ export const hawaiiTestFeatures = {
       type: "Polygon",
     },
   } as Feature<Polygon>,
+  overlappingSketch: {
+    type: "Feature",
+    properties: {},
+    geometry: {
+      coordinates: [
+        [
+          [-155.9452660358665, 18.914819886980723],
+          [-155.9452660358665, 18.758605394603677],
+          [-155.8556243984467, 18.758605394603677],
+          [-155.8556243984467, 18.914819886980723],
+          [-155.9452660358665, 18.914819886980723],
+        ],
+      ],
+      type: "Polygon",
+    },
+  } as Feature<Polygon>,
 };
 
 export const fsmTestFeatures = {

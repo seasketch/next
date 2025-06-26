@@ -1,19 +1,12 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { SourceCache, SourceCacheOptions } from "fgb-source";
-import {
-  clipToGeography,
-  prepareSketch,
-  createFragments,
-  eliminateOverlap,
-  ClippingFn,
-  clipSketchToPolygons,
-  SketchFragment,
-} from "overlay-engine";
+import { prepareSketch, GeographySettings } from "overlay-engine";
 import { S3 } from "aws-sdk";
 import { clippingWorkerManager } from "../workers/clipping/clippingWorkerManager";
 import { Context } from "postgraphile";
 import { Pool, PoolClient } from "pg";
+import { clipToGeographies } from "overlay-engine/dist/src/geographies";
 
 const r2 = new S3({
   region: "auto",
@@ -816,7 +809,7 @@ async function preprocessGeography(
     `
     select 
       gcl.id,
-      gcl.project_geography_id,
+      gcl.project_geography_id as geography_id,
       data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
       gcl.operation_type,
       gcl.cql2_query,
@@ -834,24 +827,40 @@ async function preprocessGeography(
     [sketchClassId, projectId]
   );
 
-  // normalize clipping layers to what the clipToGeography function expects
-  clippingLayers = clippingLayers.map((l: any) => ({
-    template: l.template_id,
-    op: l.operation_type.toUpperCase(),
-    source: l.object_key,
-    cql2Query: l.cql2_query,
-    forClipping: l.for_clipping,
-  }));
-
-  // Filter out layers that are not used for clipping this sketch class.
-  const clippingGeographyLayers = clippingLayers.filter(
-    (l: any) => l.forClipping
+  // group by geography_id
+  const geographies = clippingLayers.reduce(
+    (acc: GeographySettings[], l: any) => {
+      let geography: GeographySettings | undefined = acc.find(
+        (g) => g.id === l.geography_id
+      );
+      if (!geography) {
+        geography = {
+          id: l.geography_id,
+          clippingLayers: [],
+        };
+        acc.push(geography);
+      }
+      geography.clippingLayers.push({
+        op: l.operation_type.toUpperCase(),
+        source: l.object_key,
+        cql2Query: l.cql2_query,
+      });
+      return acc;
+    },
+    [] as GeographySettings[]
   );
 
+  // Filter out layers that are not used for clipping this sketch class.
+  const clippingGeographyLayers = clippingLayers
+    .filter((l: any) => l.for_clipping)
+    .map((l: any) => l.geography_id);
+
   // Clip the sketch to the geographies.
-  const clipped = await clipToGeography(
+  const { clipped, fragments } = await clipToGeographies(
     preparedSketch,
+    geographies,
     clippingGeographyLayers,
+    [],
     async (feature, objectKey, op, cql2Query) => {
       // ClippingFn is provided to clipToGeography to handle the actual
       // clipping. This is done to accomadate different architectures. For
@@ -873,7 +882,8 @@ async function preprocessGeography(
     throw new Error("Clipping failed. No geometry returned.");
   }
 
-  const fragments: SketchFragment[] = [];
+  console.log("fragments", fragments);
+
   return {
     clipped,
     fragments,
