@@ -7,6 +7,13 @@ import {
   clearSession,
   projectTransaction,
 } from "./helpers";
+import {
+  createFragments,
+  eliminateOverlap,
+  prepareSketch,
+  SketchFragment,
+} from "overlay-engine";
+import { Feature, Polygon } from "geojson";
 
 const pool = createPool("test");
 
@@ -116,9 +123,9 @@ describe("Fragment functionality", () => {
             sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom) values (${userIds[0]}, ${polygonClassId}, 'my shape', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon})) returning id`
           );
 
-          // Create a fragment input using MultiPolygon and actual geography IDs
+          // Create a fragment input using Polygon and actual geography IDs
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geography1Id}, ${geography2Id}]
           )::fragment_input]`;
 
@@ -176,7 +183,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -223,7 +230,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${antimeridianMultiPolygon}),
+            st_geomfromgeojson(${antimeridianPolygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -260,7 +267,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -300,7 +307,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -353,7 +360,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -400,7 +407,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[]::int[]
           )::fragment_input]`;
 
@@ -450,7 +457,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -516,7 +523,7 @@ describe("Fragment functionality", () => {
 
           // Add fragments to each sketch
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[]::int[]
           )::fragment_input]`;
 
@@ -592,7 +599,7 @@ describe("Fragment functionality", () => {
 
           // Create fragment with geography
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -646,7 +653,7 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[${geographyId}]
           )::fragment_input]`;
 
@@ -687,11 +694,11 @@ describe("Fragment functionality", () => {
           );
 
           const fragmentInput = sql`array[(
-            st_geomfromgeojson(${multiPolygon}),
+            st_geomfromgeojson(${polygon}),
             array[]::int[]
           )::fragment_input]`;
 
-          // This should succeed since multiPolygon doesn't span antimeridian
+          // This should succeed since polygon doesn't span antimeridian
           await conn.any(
             sql`select update_sketch_fragments(${sketchId}, ${fragmentInput})`
           );
@@ -705,3 +712,266 @@ describe("Fragment functionality", () => {
     });
   });
 });
+
+describe("overlapping_fragments_for_collection", () => {
+  test("overlapping_fragments_for_collection returns correct fragments", async () => {
+    const polygonA = {
+      type: "Feature",
+      properties: {
+        __geographyIds: [],
+        __sketchIds: [1],
+      },
+      geometry: {
+        coordinates: [
+          [
+            [-156.1735185066244, 18.775952813480913],
+            [-156.1735185066244, 18.5252978761161],
+            [-155.5835539973488, 18.5252978761161],
+            [-155.5835539973488, 18.775952813480913],
+            [-156.1735185066244, 18.775952813480913],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as SketchFragment;
+
+    const polygonB = {
+      type: "Feature",
+      properties: {
+        __geographyIds: [],
+        __sketchIds: [2],
+      },
+      geometry: {
+        coordinates: [
+          [
+            [-155.67652041076562, 18.19183988837578],
+            [-155.9059510532617, 18.63830908545114],
+            [-156.05344218058067, 18.187391609152385],
+            [-155.67652041076562, 18.19183988837578],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as SketchFragment;
+
+    const revisedPolygonB = {
+      type: "Feature",
+      properties: {
+        __geographyIds: [],
+        __sketchIds: [2],
+      },
+      geometry: {
+        coordinates: [
+          [
+            [-155.67652041076562, 18.19183988837578],
+            [-155.88880840947195, 18.418873372021764],
+            [-156.05344218058067, 18.187391609152385],
+            [-155.67652041076562, 18.19183988837578],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as SketchFragment;
+
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, userIds) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const polygonClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Poly', 'POLYGON') returning id`
+        );
+
+        // Create geography
+        const geographyId = await conn.oneFirst(
+          sql`insert into project_geography (project_id, name) values (${projectId}, 'Geography 1') returning id`
+        );
+
+        await createSession(conn, userIds[0], true, false, projectId);
+        const sketchA = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom) values (${
+            userIds[0]
+          }, ${polygonClassId}, 'my shape', st_geomfromgeojson(${JSON.stringify(
+            polygonA.geometry
+          )}), st_geomfromgeojson(${JSON.stringify(
+            polygonA.geometry
+          )})) returning id`
+        );
+
+        const sketchB = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom) values (${
+            userIds[0]
+          }, ${polygonClassId}, 'my shape', st_geomfromgeojson(${JSON.stringify(
+            polygonB.geometry
+          )}), st_geomfromgeojson(${JSON.stringify(
+            polygonB.geometry
+          )})) returning id`
+        );
+
+        // Update polygon objects with actual geography ID
+        polygonA.properties.__geographyIds = [geographyId as number];
+        polygonB.properties.__geographyIds = [geographyId as number];
+
+        const fragments = eliminateOverlap([polygonA], [polygonB]);
+        expect(fragments.length).toBe(3);
+        // should be one fragment related to both sketches
+        const overlapping = fragments.filter(
+          (f) => f.properties.__sketchIds.length === 2
+        );
+        expect(overlapping.length).toBe(1);
+        const overlap = overlapping[0];
+        expect(overlap.properties.__sketchIds).toEqual([1, 2]);
+        expect(overlap.properties.__geographyIds).toEqual([
+          geographyId as number,
+        ]);
+
+        // add fragments to sketchA
+        const fragmentsForA = fragments.filter((f) =>
+          f.properties.__sketchIds.includes(1)
+        );
+
+        const fragmentInputsA = fragmentsForA.map(
+          (f) =>
+            sql`(st_geomfromgeojson(${JSON.stringify(
+              f.geometry
+            )}), array[${f.properties.__geographyIds.join(
+              ","
+            )}])::fragment_input`
+        );
+        const fragmentInputA = sql`array[${sql.join(
+          fragmentInputsA,
+          sql`, `
+        )}]`;
+
+        await conn.any(
+          sql`select update_sketch_fragments(${sketchA}, ${fragmentInputA})`
+        );
+
+        // add fragments to sketchB
+        const fragmentsForB = fragments.filter((f) =>
+          f.properties.__sketchIds.includes(2)
+        );
+
+        const fragmentInputsB = fragmentsForB.map(
+          (f) =>
+            sql`(st_geomfromgeojson(${JSON.stringify(
+              f.geometry
+            )}), array[${f.properties.__geographyIds.join(
+              ","
+            )}])::fragment_input`
+        );
+        const fragmentInputB = sql`array[${sql.join(
+          fragmentInputsB,
+          sql`, `
+        )}]`;
+
+        await conn.any(
+          sql`select update_sketch_fragments(${sketchB}, ${fragmentInputB})`
+        );
+
+        // Create a collection and add both sketches to it
+        await createSession(conn, adminId, true, false, projectId);
+        const collectionClassId = await conn.oneFirst(
+          sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
+        );
+
+        // Switch to user session to create the collection
+        await createSession(conn, userIds[0], true, false, projectId);
+        const collectionId = await conn.oneFirst(
+          sql`insert into sketches (user_id, sketch_class_id, name) values (${userIds[0]}, ${collectionClassId}, 'my collection') returning id`
+        );
+
+        // Update sketches to be in the collection
+        await conn.any(
+          sql`update sketches set collection_id = ${collectionId} where id in (${sketchA}, ${sketchB})`
+        );
+
+        const preparedSketchA = prepareSketch(polygonA);
+
+        const envelopeGeometries = preparedSketchA.envelopes.map(
+          (e) =>
+            sql`ST_MakeEnvelope(${e.minX}, ${e.minY}, ${e.maxX}, ${e.maxY}, 4326)`
+        );
+        const { rows: overlappingFragments } =
+          await conn.query<ReturnedFragment>(
+            sql`SELECT * FROM overlapping_fragments_for_collection(
+            ${collectionId}, 
+            ARRAY[${sql.join(envelopeGeometries, sql`, `)}],
+            ${sketchA}
+          )`
+          );
+
+        const hashes = hashesFromFragments(overlappingFragments);
+
+        expect(sketchIdsFromFragments(overlappingFragments)).toEqual([
+          sketchA!,
+          sketchB!,
+        ]);
+        // Should return fragments from both sketches since they overlap
+        expect(overlappingFragments.length).toBe(3);
+
+        // Check that we have fragments from both sketches
+        const sketchIds = overlappingFragments.flatMap((f) => f.sketch_ids);
+        expect(sketchIds).toContain(sketchA);
+        expect(sketchIds).toContain(sketchB);
+
+        // Revised polygonB should still return all the same fragments
+        const preparedRevisedPolygonB = prepareSketch(revisedPolygonB);
+        const revisedEnvelopeGeometries = preparedRevisedPolygonB.envelopes.map(
+          (e) =>
+            sql`ST_MakeEnvelope(${e.minX}, ${e.minY}, ${e.maxX}, ${e.maxY}, 4326)`
+        );
+        const { rows: revisedOverlappingFragments } =
+          await conn.query<ReturnedFragment>(
+            sql`SELECT * FROM overlapping_fragments_for_collection(
+            ${collectionId}, 
+            ARRAY[${sql.join(revisedEnvelopeGeometries, sql`, `)}],
+            ${sketchB}
+          )`
+          );
+        const revisedHashes = hashesFromFragments(revisedOverlappingFragments);
+        expect(revisedHashes).toEqual(hashes);
+        expect(revisedOverlappingFragments.length).toBe(3);
+        expect(sketchIdsFromFragments(revisedOverlappingFragments)).toEqual([
+          sketchA!,
+          sketchB!,
+        ]);
+      }
+    );
+  });
+});
+
+type ReturnedFragment = {
+  sketch_ids: number[];
+  geography_ids: number[];
+  hash: string;
+  geometry: string;
+};
+
+function sketchIdsFromFragments(fragments: readonly ReturnedFragment[]) {
+  const sketchIds = new Set<number>();
+  for (const f of fragments) {
+    for (const sketchId of f.sketch_ids) {
+      sketchIds.add(sketchId);
+    }
+  }
+  return [...sketchIds];
+}
+
+function geographyIdsFromFragments(fragments: readonly ReturnedFragment[]) {
+  const geographyIds = new Set<number>();
+  for (const f of fragments) {
+    for (const geographyId of f.geography_ids) {
+      geographyIds.add(geographyId);
+    }
+  }
+  return [...geographyIds];
+}
+
+function hashesFromFragments(fragments: readonly ReturnedFragment[]) {
+  const hashes = new Set<string>();
+  for (const f of fragments) {
+    hashes.add(f.hash);
+  }
+  return [...hashes];
+}

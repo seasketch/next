@@ -40,7 +40,8 @@ create type fragment_input as (
 -- Function to update fragments for a sketch
 create or replace function update_sketch_fragments(
   p_sketch_id int,
-  p_fragments fragment_input[]
+  p_fragments fragment_input[],
+  p_fragment_deletion_scope text[] default null
 ) returns void as $$
 declare
   v_fragment fragment_input;
@@ -105,6 +106,13 @@ begin
     and fragment_hash = any(v_existing_fragment_hashes)
     and fragment_hash not in (
       select md5(st_asbinary(st_normalize((unnest(p_fragments)).geometry)))
+    )
+    and (
+      -- If p_fragment_deletion_scope is null, allow deletion of all fragments (original behavior)
+      p_fragment_deletion_scope is null
+      or
+      -- If p_fragment_deletion_scope is provided, only delete fragments in that scope
+      fragment_hash = any(p_fragment_deletion_scope)
     );
 
     -- Delete orphaned fragments (those not associated with any sketch)
@@ -503,7 +511,8 @@ DROP FUNCTION IF EXISTS overlapping_fragments_for_collection;
 -- TODO: Make unit tests for this function
 CREATE OR REPLACE FUNCTION overlapping_fragments_for_collection(
   input_collection_id int,
-  input_envelopes geometry[]
+  input_envelopes geometry[],
+  edited_sketch_id int
 )
 RETURNS TABLE (
   hash text,
@@ -514,6 +523,30 @@ RETURNS TABLE (
 LANGUAGE sql
 SECURITY DEFINER
 AS $$
+  WITH sketches_in_collection AS (
+    SELECT id
+    FROM get_children_of_collection(input_collection_id)
+    WHERE type = 'sketch'
+  ),
+  fragments_in_envelopes AS (
+    SELECT f.*
+    FROM fragments f
+    JOIN unnest(input_envelopes) AS env ON f.geometry && env
+  ),
+  fragments_in_sketch as (
+    select fragment_hash from sketch_fragments where sketch_id = edited_sketch_id
+  ),
+  overlapping_sketches AS (
+    SELECT sketch_fragments.sketch_id
+    FROM sketch_fragments
+    WHERE sketch_fragments.fragment_hash = any(
+      SELECT hash
+      FROM fragments_in_envelopes
+    ) or fragment_hash = any(
+      select fragment_hash from fragments_in_sketch
+    )
+  )
+  -- construct output table
   SELECT
     fragments.hash,
     fragments.geometry,
@@ -521,11 +554,6 @@ AS $$
       SELECT sketch_fragments.sketch_id
       FROM sketch_fragments
       WHERE sketch_fragments.fragment_hash = fragments.hash
-        AND sketch_fragments.sketch_id IN (
-          SELECT id
-          FROM get_children_of_collection(input_collection_id)
-          WHERE type = 'sketch'
-        )
     ) AS sketch_ids,
     ARRAY(
       SELECT fragment_geographies.geography_id
@@ -533,27 +561,22 @@ AS $$
       WHERE fragment_geographies.fragment_hash = fragments.hash
     ) AS geography_ids
   FROM fragments
-  WHERE EXISTS (
-    SELECT 1
-    FROM unnest(input_envelopes) AS env
-    WHERE fragments.geometry && env
-  )
-  AND EXISTS (
-    SELECT 1
-    FROM sketches
-    WHERE id = input_collection_id
-    AND user_id = nullif(current_setting('session.user_id', TRUE), '')::int
-  )
-  AND EXISTS (
+  WHERE
+    -- Include ALL fragments from sketches that have any overlapping fragments
+  EXISTS (
     SELECT 1
     FROM sketch_fragments
     WHERE sketch_fragments.fragment_hash = fragments.hash
-      AND sketch_fragments.sketch_id IN (
-        SELECT id
-        FROM get_children_of_collection(input_collection_id)
-        WHERE type = 'sketch'
-      )
-  );
+      AND sketch_fragments.sketch_id IN (SELECT sketch_id FROM overlapping_sketches)
+  )
+  OR
+  -- Include fragments that belong to the edited sketch
+  EXISTS (
+    SELECT 1
+    FROM sketch_fragments
+    WHERE sketch_fragments.fragment_hash = fragments.hash
+      AND sketch_fragments.sketch_id = edited_sketch_id
+  )
 $$;
 
 

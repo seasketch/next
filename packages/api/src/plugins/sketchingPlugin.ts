@@ -896,10 +896,12 @@ export async function createOrUpdateSketch({
         geography_ids 
       FROM overlapping_fragments_for_collection(
         $1::int, 
-        ARRAY[${geometryArray}]
+        ARRAY[${geometryArray}],
+        $2::int
       )`,
-      [collectionId]
+      [collectionId, sketchId]
     );
+
     for (const fragment of overlappingFragments) {
       // for now, just console.log them out for debugging
       const f: SketchFragment = {
@@ -914,6 +916,10 @@ export async function createOrUpdateSketch({
       existingOverlappingFragments.push(f);
     }
   }
+
+  const fragmentDeletionScope = existingOverlappingFragments.map(
+    (f) => f.properties.__hash
+  );
 
   // Clip the sketch to the geographies.
   const { clipped, fragments } = await clipToGeographies(
@@ -1024,10 +1030,18 @@ export async function createOrUpdateSketch({
       })
       .join(",");
 
+    const deletionScopeSql =
+      fragmentDeletionScope.length > 0
+        ? `ARRAY[${fragmentDeletionScope.map((hash) => `'${hash}'`).join(",")}]`
+        : "NULL";
+
+    console.log("updating sketch", idForSketch, fragmentDeletionScope);
+
     const sql = `
       SELECT update_sketch_fragments(
         $1::int, 
-        ARRAY[${fragmentInputs}]
+        ARRAY[${fragmentInputs}],
+        ${deletionScopeSql}
       )
     `;
 
