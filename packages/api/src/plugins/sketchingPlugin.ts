@@ -869,11 +869,10 @@ export async function createOrUpdateSketch({
     // already in a collection
     const {
       rows: [sketch],
-    } = await pgClient.query(
-      `SELECT collection_id FROM sketches WHERE id = $1`,
-      [sketchId]
-    );
-    collectionId = sketch.collection_id;
+    } = await pgClient.query(`SELECT get_parent_collection_id('sketch', $1)`, [
+      sketchId,
+    ]);
+    collectionId = sketch.get_parent_collection_id;
   }
   if (collectionId) {
     const geometryArray = preparedSketch.envelopes
