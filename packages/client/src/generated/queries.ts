@@ -5832,7 +5832,7 @@ export enum ForumsOrderBy {
 
 export type Fragment = Node & {
   __typename?: 'Fragment';
-  geometry: GeometryMultiPolygon;
+  geometry: GeometryPolygon;
   hash: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];

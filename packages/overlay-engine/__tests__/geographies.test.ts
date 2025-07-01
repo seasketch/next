@@ -224,6 +224,7 @@ describe("clipToGeographies", () => {
       geographies,
       geographiesForClipping,
       existingSketchFragments,
+      null,
       clippingFn
     );
 
@@ -263,6 +264,7 @@ describe("clipToGeographies", () => {
       hawaiiGeographies,
       geographiesForClipping,
       existingSketchFragments,
+      null,
       clippingFn
     );
 
@@ -293,6 +295,7 @@ describe("clipToGeographies", () => {
       hawaiiGeographies,
       geographiesForClipping,
       [],
+      null,
       clippingFn
     );
 
@@ -341,6 +344,7 @@ describe("clipToGeographies", () => {
         hawaiiGeographies,
         geographiesForClipping,
         [],
+        null,
         clippingFn
       );
 
@@ -359,6 +363,7 @@ describe("clipToGeographies", () => {
           __sketchIds: [1],
         },
       })),
+      1,
       clippingFn
     );
 

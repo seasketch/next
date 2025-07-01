@@ -1,7 +1,12 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { SourceCache, SourceCacheOptions } from "fgb-source";
-import { prepareSketch, GeographySettings } from "overlay-engine";
+import {
+  prepareSketch,
+  GeographySettings,
+  SketchFragment,
+  FragmentResult,
+} from "overlay-engine";
 import { S3 } from "aws-sdk";
 import { clippingWorkerManager } from "../workers/clipping/clippingWorkerManager";
 import { Context } from "postgraphile";
@@ -406,35 +411,29 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               )) as any;
             return row;
           } else if (sketchClass.is_geography_clipping_enabled) {
-            const { clipped, fragments } = await preprocessGeography(
+            const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,
               sketchClassId,
-              sketchClass.project_id
+              projectId: sketchClass.project_id,
+              name,
+              collectionId,
+              folderId,
+              properties,
+              userId: context.user.id,
+            });
+
+            console.log(
+              "Sketch created successfully. Return sketch with id =",
+              sketchId
             );
-            const {
-              rows: [sketch],
-            } = await pgClient.query(
-              `INSERT INTO sketches(name, sketch_class_id, user_id, collection_id, user_geom, geom, folder_id, properties) VALUES ($1, $2, $3, $4, ST_GeomFromGeoJSON($5), ST_GeomFromGeoJSON($6), $7, $8) RETURNING id`,
-              [
-                name,
-                sketchClassId,
-                context.user.id,
-                collectionId,
-                JSON.stringify(userGeom.geometry),
-                JSON.stringify(clipped?.geometry),
-                folderId,
-                properties,
-              ]
-            );
-            // TODO: update fragments
 
             const [row] =
               await resolveInfo.graphile.selectGraphQLResultFromTable(
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`
                   );
                 }
               );
@@ -540,34 +539,22 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             );
             geometry = response;
           } else if (sketchClass.is_geography_clipping_enabled) {
-            const { clipped, fragments } = await preprocessGeography(
+            const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,
-              sketchClass.id,
-              sketchClass.project_id
-            );
-            if (!clipped) {
-              throw new Error("Clipping failed");
-            }
-            const {
-              rows: [sketch],
-            } = await pgClient.query(
-              `update sketches set name = $1, user_geom = ST_GeomFromGeoJSON($2), geom = ST_GeomFromGeoJSON($3), properties = $4 where id = $5 RETURNING id`,
-              [
-                name,
-                JSON.stringify(userGeom.geometry),
-                JSON.stringify(clipped.geometry),
-                properties,
-                id,
-              ]
-            );
-            // TODO: update fragments
+              sketchClassId: sketchClass.id,
+              projectId: sketchClass.project_id,
+              name,
+              properties,
+              userId: context.user.id,
+              sketchId: id,
+            });
             const [row] =
               await resolveInfo.graphile.selectGraphQLResultFromTable(
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`
                   );
                 }
               );
@@ -793,12 +780,33 @@ async function preprocess(endpoint: string, feature: Feature<any>) {
   });
 }
 
-async function preprocessGeography(
-  pgClient: PoolClient,
-  userGeom: Feature<any>,
-  sketchClassId: number,
-  projectId: number
-) {
+export async function createOrUpdateSketch({
+  pgClient,
+  userGeom,
+  sketchClassId,
+  projectId,
+  name,
+  collectionId,
+  folderId,
+  properties,
+  userId,
+  sketchId,
+}: {
+  pgClient: PoolClient;
+  userGeom: Feature<any>;
+  sketchClassId: number;
+  projectId: number;
+  name: string;
+  collectionId?: number;
+  folderId?: number;
+  properties: any;
+  userId: number;
+  sketchId?: number;
+}): Promise<number> {
+  if (!name || name.length < 1) {
+    throw new Error("Sketch name is required");
+  }
+
   // First, prepare the sketch for clipping (e.g. convert to multipolygon,
   // split at antimeridian, and normalize coordinates)
   const preparedSketch = prepareSketch(userGeom);
@@ -855,12 +863,65 @@ async function preprocessGeography(
     .filter((l: any) => l.for_clipping)
     .map((l: any) => l.geography_id);
 
+  const existingOverlappingFragments: SketchFragment[] = [];
+  if (sketchId) {
+    // collection_id is not updatable, so we need to check if the sketch is
+    // already in a collection
+    const {
+      rows: [sketch],
+    } = await pgClient.query(
+      `SELECT collection_id FROM sketches WHERE id = $1`,
+      [sketchId]
+    );
+    collectionId = sketch.collection_id;
+  }
+  if (collectionId) {
+    const geometryArray = preparedSketch.envelopes
+      .map(
+        (e) =>
+          `ST_MakeEnvelope(${e.minX}, ${e.minY}, ${e.maxX}, ${e.maxY}, 4326)`
+      )
+      .join(",");
+
+    const { rows: overlappingFragments } = await pgClient.query<{
+      hash: string;
+      geometry: string;
+      sketch_ids: number[];
+      geography_ids: number[];
+    }>(
+      `SELECT 
+        hash,
+        ST_AsGeoJSON(geometry) as geometry,
+        sketch_ids,
+        geography_ids 
+      FROM overlapping_fragments_for_collection(
+        $1::int, 
+        ARRAY[${geometryArray}]
+      )`,
+      [collectionId]
+    );
+    for (const fragment of overlappingFragments) {
+      // for now, just console.log them out for debugging
+      const f: SketchFragment = {
+        type: "Feature",
+        properties: {
+          __hash: fragment.hash,
+          __geographyIds: fragment.geography_ids,
+          __sketchIds: fragment.sketch_ids,
+        },
+        geometry: JSON.parse(fragment.geometry),
+      };
+      existingOverlappingFragments.push(f);
+    }
+  }
+
   // Clip the sketch to the geographies.
   const { clipped, fragments } = await clipToGeographies(
     preparedSketch,
     geographies,
     clippingGeographyLayers,
-    [],
+    existingOverlappingFragments,
+    sketchId || null,
     async (feature, objectKey, op, cql2Query) => {
       // ClippingFn is provided to clipToGeography to handle the actual
       // clipping. This is done to accomadate different architectures. For
@@ -878,14 +939,101 @@ async function preprocessGeography(
     }
   );
 
+  console.log(`Created ${fragments.length} fragments`);
+
   if (!clipped) {
     throw new Error("Clipping failed. No geometry returned.");
   }
 
-  console.log("fragments", fragments);
+  if (sketchId) {
+    // TODO: note in docs that folder_id and collection_id are not updatable
+    const {
+      rows: [sketch],
+    } = await pgClient.query(
+      `UPDATE sketches SET
+        name = $1,
+        user_geom = ST_GeomFromGeoJSON($2),
+        geom = ST_GeomFromGeoJSON($3),
+        properties = $4
+      WHERE id = $5
+      RETURNING id`,
+      [
+        name,
+        JSON.stringify(userGeom.geometry),
+        JSON.stringify(clipped?.geometry),
+        properties,
+        sketchId,
+      ]
+    );
+  } else {
+    const {
+      rows: [sketch],
+    } = await pgClient.query(
+      `INSERT INTO sketches(
+        name,
+        sketch_class_id,
+        user_id,
+        collection_id,
+        user_geom,
+        geom,
+        folder_id,
+        properties
+      ) VALUES (
+        $1, $2, $3, $4,
+        ST_GeomFromGeoJSON($5),
+        ST_GeomFromGeoJSON($6),
+        $7, $8
+      ) RETURNING id`,
+      [
+        name,
+        sketchClassId,
+        userId,
+        collectionId,
+        JSON.stringify(userGeom.geometry),
+        JSON.stringify(clipped?.geometry),
+        folderId,
+        properties,
+      ]
+    );
+    sketchId = sketch.id;
+  }
 
-  return {
-    clipped,
-    fragments,
-  };
+  // group fragments by sketchId
+  const fragmentGroups: { [sketchId: number]: FragmentResult[] } = {};
+  for (const fragment of fragments) {
+    for (let id of fragment.properties.__sketchIds) {
+      if (id === 0) {
+        id = sketchId!;
+      }
+      if (!fragmentGroups[id]) {
+        fragmentGroups[id] = [];
+      }
+      fragmentGroups[id].push(fragment);
+    }
+  }
+
+  for (const [idForSketch, fragments] of Object.entries(fragmentGroups)) {
+    console.log(
+      `Updating sketch ${idForSketch} with ${fragments.length} fragments`
+    );
+    const fragmentInputs = fragments
+      .map((f) => {
+        const geomJson = JSON.stringify(f.geometry);
+        const geographyIds = f.properties.__geographyIds.join(",");
+        return `ROW(ST_GeomFromGeoJSON('${geomJson}'), ARRAY[${geographyIds}])::fragment_input`;
+      })
+      .join(",");
+
+    const sql = `
+      SELECT update_sketch_fragments(
+        $1::int, 
+        ARRAY[${fragmentInputs}]
+      )
+    `;
+
+    await pgClient.query(sql, [idForSketch]);
+  }
+
+  console.log("Sketch updated successfully", sketchId);
+  return sketchId!;
 }

@@ -6,7 +6,7 @@ drop type if exists fragment_input cascade;
 
 create table fragments (
   hash text primary key generated always as (md5(st_asbinary(st_normalize(geometry)))) stored,
-  geometry geometry(MultiPolygon, 4326) not null,
+  geometry geometry(Polygon, 4326) not null,
   -- ensure geometry doesn't span the antimeridian
   constraint no_antimeridian_span check (
     st_xmin(geometry) >= -180 and st_xmax(geometry) <= 180
@@ -33,7 +33,7 @@ create index if not exists fragment_geographies_geography_id_idx on fragment_geo
 
 -- Type for input geometry with associated geographies
 create type fragment_input as (
-  geometry geometry(MultiPolygon, 4326),
+  geometry geometry(Polygon, 4326),
   geography_ids int[]
 );
 
@@ -499,3 +499,63 @@ AS $$
   WHERE id NOT IN (SELECT id FROM blocked_items)
 $$;
 
+DROP FUNCTION IF EXISTS overlapping_fragments_for_collection;
+-- TODO: Make unit tests for this function
+CREATE OR REPLACE FUNCTION overlapping_fragments_for_collection(
+  input_collection_id int,
+  input_envelopes geometry[]
+)
+RETURNS TABLE (
+  hash text,
+  geometry geometry(Polygon, 4326),
+  sketch_ids int[],
+  geography_ids int[]
+)
+LANGUAGE sql
+SECURITY DEFINER
+AS $$
+  SELECT
+    fragments.hash,
+    fragments.geometry,
+    ARRAY(
+      SELECT sketch_fragments.sketch_id
+      FROM sketch_fragments
+      WHERE sketch_fragments.fragment_hash = fragments.hash
+        AND sketch_fragments.sketch_id IN (
+          SELECT id
+          FROM get_children_of_collection(input_collection_id)
+          WHERE type = 'sketch'
+        )
+    ) AS sketch_ids,
+    ARRAY(
+      SELECT fragment_geographies.geography_id
+      FROM fragment_geographies
+      WHERE fragment_geographies.fragment_hash = fragments.hash
+    ) AS geography_ids
+  FROM fragments
+  WHERE EXISTS (
+    SELECT 1
+    FROM unnest(input_envelopes) AS env
+    WHERE fragments.geometry && env
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM sketches
+    WHERE id = input_collection_id
+    AND user_id = nullif(current_setting('session.user_id', TRUE), '')::int
+  )
+  AND EXISTS (
+    SELECT 1
+    FROM sketch_fragments
+    WHERE sketch_fragments.fragment_hash = fragments.hash
+      AND sketch_fragments.sketch_id IN (
+        SELECT id
+        FROM get_children_of_collection(input_collection_id)
+        WHERE type = 'sketch'
+      )
+  );
+$$;
+
+
+grant execute on function overlapping_fragments_for_collection to seasketch_user;
+comment on function overlapping_fragments_for_collection is E'@omit';

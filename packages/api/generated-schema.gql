@@ -6813,7 +6813,7 @@ enum ForumsOrderBy {
 }
 
 type Fragment implements Node {
-  geometry: GeometryMultiPolygon!
+  geometry: GeometryPolygon!
   hash: String!
 
   """
