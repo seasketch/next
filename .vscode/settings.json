@@ -43,5 +43,6 @@
   },
   "testing.openTesting": "neverOpen",
   "testing.automaticallyOpenTestResults": "neverOpen",
-  "jest.monitorLongRun": 120000
+  "jest.monitorLongRun": 120000,
+  "jest.runMode": "on-demand"
 }
