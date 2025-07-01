@@ -1018,9 +1018,6 @@ export async function createOrUpdateSketch({
   }
 
   for (const [idForSketch, fragments] of Object.entries(fragmentGroups)) {
-    console.log(
-      `Updating sketch ${idForSketch} with ${fragments.length} fragments`
-    );
     const fragmentInputs = fragments
       .map((f) => {
         const geomJson = JSON.stringify(f.geometry);
@@ -1034,8 +1031,6 @@ export async function createOrUpdateSketch({
         ? `ARRAY[${fragmentDeletionScope.map((hash) => `'${hash}'`).join(",")}]`
         : "NULL";
 
-    console.log("updating sketch", idForSketch, fragmentDeletionScope);
-
     const sql = `
       SELECT update_sketch_fragments(
         $1::int, 
@@ -1046,7 +1041,5 @@ export async function createOrUpdateSketch({
 
     await pgClient.query(sql, [idForSketch]);
   }
-
-  console.log("Sketch updated successfully", sketchId);
   return sketchId!;
 }
