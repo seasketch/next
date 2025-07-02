@@ -1,21 +1,60 @@
-import { sql } from "slonik";
+import { DatabaseTransactionConnectionType, sql } from "slonik";
 import { createPool } from "./pool";
+import { createSession, projectTransaction, asPg } from "./helpers";
 import {
-  createUser,
-  createProject,
-  createSession,
-  clearSession,
-  projectTransaction,
-} from "./helpers";
-import {
-  createFragments,
+  ClippingFn,
+  clipSketchToPolygons,
   eliminateOverlap,
+  FragmentResult,
+  GeographySettings,
   prepareSketch,
   SketchFragment,
 } from "overlay-engine";
-import { Feature, Polygon } from "geojson";
+import { SourceCache } from "fgb-source";
+import { Feature, MultiPolygon, Polygon } from "geojson";
+import { createOrUpdateSketch } from "../src/plugins/sketchingPlugin";
+import { PoolClient } from "pg";
+// @ts-ignore
+import fetch, { Headers, Request, Response } from "node-fetch";
+import * as fs from "fs";
+import * as path from "path";
+
+if (!global.fetch) {
+  // @ts-ignore
+  global.fetch = fetch;
+  // @ts-ignore
+  global.Headers = Headers;
+  // @ts-ignore
+  global.Request = Request;
+  // @ts-ignore
+  global.Response = Response;
+}
 
 const pool = createPool("test");
+
+// Helper function to write output files for debugging
+async function writeOutput(
+  testName: string,
+  outputType: string,
+  data: any
+): Promise<void> {
+  if (Array.isArray(data) && data[0]?.type === "Feature") {
+    data = {
+      type: "FeatureCollection",
+      features: data.map((f) => f),
+    };
+  }
+  const outputDir = path.join(__dirname, "outputs", testName);
+  const outputPath = path.join(outputDir, `${outputType}.json`);
+
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  // Write the data as formatted JSON
+  fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
+}
 
 // Test geometries
 const polygon = JSON.stringify(
@@ -37,27 +76,6 @@ const polygon = JSON.stringify(
   }.geometry
 );
 
-const multiPolygon = JSON.stringify(
-  {
-    type: "Feature",
-    properties: {},
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: [
-        [
-          [
-            [-119.68574523925781, 34.39246231021496],
-            [-119.73896026611328, 34.37772911466851],
-            [-119.69158172607422, 34.345987273972916],
-            [-119.6586227416992, 34.36781108107208],
-            [-119.68574523925781, 34.39246231021496],
-          ],
-        ],
-      ],
-    },
-  }.geometry
-);
-
 const antimeridianPolygon = JSON.stringify(
   {
     type: "Feature",
@@ -71,27 +89,6 @@ const antimeridianPolygon = JSON.stringify(
           [179.8, 34.345987273972916],
           [179.9, 34.36781108107208],
           [179.9, 34.39246231021496],
-        ],
-      ],
-    },
-  }.geometry
-);
-
-const antimeridianMultiPolygon = JSON.stringify(
-  {
-    type: "Feature",
-    properties: {},
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: [
-        [
-          [
-            [179.9, 34.39246231021496],
-            [180.1, 34.37772911466851],
-            [179.8, 34.345987273972916],
-            [179.9, 34.36781108107208],
-            [179.9, 34.39246231021496],
-          ],
         ],
       ],
     },
@@ -940,6 +937,310 @@ describe("overlapping_fragments_for_collection", () => {
     );
   });
 });
+
+const eezUrl = "https://uploads.seasketch.org/eez-land-joined.fgb";
+const territorialSeaUrl =
+  "https://uploads.seasketch.org/territorial-sea-land-joined.fgb";
+const landUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+
+const sourceCache = new SourceCache("256mb");
+const clippingFn: ClippingFn = async (sketch, source, op, query) => {
+  const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+    source
+  );
+  const overlappingFeatures = fgbSource.getFeaturesAsync(sketch.envelopes);
+  return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
+};
+
+const hawaiiGeographies: (GeographySettings & { name: string })[] = [
+  {
+    id: 1,
+    name: "Territorial Sea",
+    clippingLayers: [
+      {
+        source: territorialSeaUrl,
+        op: "INTERSECT",
+      },
+      {
+        source: landUrl,
+        op: "DIFFERENCE",
+      },
+    ],
+  },
+  {
+    id: 2,
+    name: "EEZ",
+    clippingLayers: [
+      {
+        source: eezUrl,
+        op: "INTERSECT",
+      },
+      {
+        source: landUrl,
+        op: "DIFFERENCE",
+      },
+    ],
+  },
+];
+
+describe("Integration tests", () => {
+  beforeAll(async () => {
+    jest.setTimeout(5000);
+  });
+  describe("createOrUpdateSketch", () => {
+    test("Fragments are created for new sketches", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds } = await setupIntegrationTestEnv(
+            conn,
+            projectId,
+            adminId,
+            userIds,
+            hawaiiGeographies,
+            2
+          );
+          await createSession(conn, userIds[0], true, false, projectId);
+          // await createSession(conn, userIds[0], true, false, projectId);
+          const inputGeom = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-155.96373458694404, 19.05002169396613],
+                  [-155.96373458694404, 18.77426385112655],
+                  [-155.6532455881057, 18.77426385112655],
+                  [-155.6532455881057, 19.05002169396613],
+                  [-155.96373458694404, 19.05002169396613],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            inputGeom,
+            projectId,
+            sketchClassId
+          );
+
+          await writeOutput(
+            "createOrUpdateSketch - Fragments are created for new sketches",
+            "input",
+            inputGeom
+          );
+          await writeOutput(
+            "createOrUpdateSketch - Fragments are created for new sketches",
+            "sketch",
+            sketch
+          );
+          await writeOutput(
+            "createOrUpdateSketch - Fragments are created for new sketches",
+            "fragments",
+            fragments
+          );
+
+          // ensure all fragment coordinates are between -180 and 180 longitude,
+          // and -90 and 90 latitude
+          for (const fragment of fragments) {
+            for (const coordinate of fragment.geometry.coordinates[0]) {
+              expect(coordinate[0]).toBeGreaterThan(-180);
+              expect(coordinate[0]).toBeLessThan(180);
+              expect(coordinate[1]).toBeGreaterThan(-90);
+              expect(coordinate[1]).toBeLessThan(90);
+            }
+          }
+          expect(sketch.id).toBeGreaterThan(0);
+          expect(fragments.length).toBe(2);
+        }
+      );
+    });
+  });
+});
+
+async function createSketch(
+  conn: DatabaseTransactionConnectionType,
+  userId: number,
+  inputGeom: Feature<Polygon>,
+  projectId: number,
+  sketchClassId: number,
+  sketchId?: number,
+  collectionId?: number,
+  folderId?: number
+) {
+  // Use the existing asPg helper and cast it to PoolClient
+  const pgClient = asPg(conn) as unknown as PoolClient;
+
+  const newSketchId = await createOrUpdateSketch({
+    pgClient,
+    userGeom: inputGeom,
+    projectId,
+    sketchClassId,
+    name: "test",
+    collectionId,
+    folderId,
+    properties: {},
+    userId,
+    sketchId,
+  });
+
+  const sketchGeometry = await conn.oneFirst(sql`
+    select ST_AsGeoJSON(geom) from sketches where id = ${newSketchId}
+  `);
+
+  const sketch = {
+    type: "Feature",
+    id: newSketchId,
+    properties: {},
+    geometry: JSON.parse(sketchGeometry as string),
+  } as Feature<Polygon | MultiPolygon>;
+
+  await conn.any(sql`set role = postgres`);
+
+  const fragments = (
+    await conn.query<{
+      hash: string;
+      geometry: string;
+      sketch_ids: number[];
+      geography_ids: number[];
+    }>(sql`
+    select 
+      f.hash, 
+      ST_AsGeoJSON(f.geometry) as geometry,
+      coalesce(array_agg(distinct sf.sketch_id) filter (where sf.sketch_id is not null), array[]::int[]) as sketch_ids,
+      coalesce(array_agg(distinct fg.geography_id) filter (where fg.geography_id is not null), array[]::int[]) as geography_ids
+    from fragments f
+    left join sketch_fragments sf on f.hash = sf.fragment_hash
+    left join fragment_geographies fg on f.hash = fg.fragment_hash
+    where f.hash = any(
+      select fragment_hash from sketch_fragments where sketch_id = ${newSketchId}
+    )
+    group by f.hash, f.geometry
+  `)
+  ).rows.map((f) => ({
+    type: "Feature",
+    properties: {
+      __hash: f.hash,
+      __geographyIds: f.geography_ids,
+      __sketchIds: f.sketch_ids,
+    },
+    geometry: JSON.parse(f.geometry as string),
+  })) as SketchFragment[];
+
+  await conn.any(sql`set role = seasketch_user`);
+
+  return { sketch, fragments };
+}
+
+async function setupIntegrationTestEnv(
+  conn: DatabaseTransactionConnectionType,
+  projectId: number,
+  adminId: number,
+  userIds: number[],
+  geographies: (GeographySettings & { name: string })[],
+  clipToGeographyId: number
+) {
+  await createSession(conn, adminId, true, false, projectId);
+  const sketchClass = await conn.one<{ id: number }>(
+    sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Poly', 'POLYGON') returning *`
+  );
+
+  const geographyIds: { [name: string]: number } = {};
+  for (const geography of geographies) {
+    const geographyId = await createGeography(
+      conn,
+      projectId,
+      adminId,
+      geography
+    );
+    geographyIds[geography.name] = geographyId;
+  }
+
+  await conn.any(
+    sql`update sketch_classes set is_geography_clipping_enabled = true where id = ${sketchClass.id}`
+  );
+  await conn.any(sql`set role = postgres`);
+
+  await conn.any(sql`
+    insert into sketch_class_geographies (
+      sketch_class_id, geography_id
+    ) values (${sketchClass.id}, ${clipToGeographyId})
+  `);
+  await createSession(conn, adminId, true, false, projectId);
+  return { sketchClassId: sketchClass.id, geographyIds };
+}
+
+async function createGeography(
+  conn: DatabaseTransactionConnectionType,
+  projectId: number,
+  adminId: number,
+  settings: GeographySettings & { name: string }
+) {
+  const geography = await conn.one<{ id: number }>(
+    sql`insert into project_geography (project_id, name) values (${projectId}, ${settings.name}) returning *`
+  );
+  for (const layer of settings.clippingLayers) {
+    // create a data_source
+    const dataSource = await conn.one<{ id: number }>(
+      sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, 'seasketch-mvt', ${layer.source}, 'upload') returning *`
+    );
+    // data_upload_output
+    const remoteUrl = `r2://tiles/${layer.source.replace(
+      "https://uploads.seasketch.org/",
+      ""
+    )}`;
+    const filename = layer.source.replace("https://uploads.seasketch.org/", "");
+
+    // Switch to postgres role to bypass permission checks
+    await conn.any(sql`set role = postgres`);
+    const dataUploadOutput = await conn.one(
+      sql`insert into data_upload_outputs (
+        data_source_id, 
+        project_id,
+        type, 
+        url,
+        remote, 
+        is_original, 
+        size,
+        filename
+      ) values (
+        ${dataSource.id}, 
+        ${projectId},
+        ${sql`'FlatGeobuf'::data_upload_output_type`}, 
+        ${layer.source},
+        ${remoteUrl}, 
+        true, 
+        0,
+        ${filename}
+      ) returning *`
+    );
+    // Switch back to admin role
+    await createSession(conn, adminId, true, false, projectId);
+
+    // and finally, a data_layer
+    const dataLayer = await conn.one<{ id: number }>(
+      sql`insert into data_layers (data_source_id, project_id, mapbox_gl_styles) values (${dataSource.id}, ${projectId}, '[]'::jsonb) returning *`
+    );
+    const object_key = await conn.oneFirst(sql`
+      select data_layers_vector_object_key(data_layers.*) from data_layers where id = ${dataLayer.id}
+    `);
+    if (!object_key) {
+      throw new Error("No object key found for newly created clipping layer");
+    }
+
+    await conn.any(
+      sql`insert into geography_clipping_layers (project_geography_id, data_layer_id, operation_type) values (${
+        geography.id
+      }, ${
+        dataLayer.id
+      }, ${sql`${layer.op.toLowerCase()}::geography_layer_operation`})`
+    );
+  }
+  return geography.id;
+}
 
 type ReturnedFragment = {
   sketch_ids: number[];

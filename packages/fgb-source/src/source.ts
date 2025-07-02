@@ -414,7 +414,9 @@ export async function createSource<
   // Verify magic bytes
   for (let i = 0; i < MAGIC_BYTES.length; i++) {
     if (view.getUint8(i) !== MAGIC_BYTES[i] && i < MAGIC_BYTES.length - 1) {
-      throw new Error("Invalid FlatGeobuf file (magic bytes mismatch)");
+      throw new Error(
+        "Invalid FlatGeobuf file (magic bytes mismatch). " + urlOrKey
+      );
     }
   }
 

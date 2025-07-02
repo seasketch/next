@@ -8,10 +8,12 @@ import {
   FragmentResult,
 } from "overlay-engine";
 import { S3 } from "aws-sdk";
-import { clippingWorkerManager } from "../workers/clipping/clippingWorkerManager";
 import { Context } from "postgraphile";
 import { Pool, PoolClient } from "pg";
-import { clipToGeographies } from "overlay-engine/dist/src/geographies";
+import {
+  clipSketchToPolygons,
+  clipToGeographies,
+} from "overlay-engine/dist/src/geographies";
 
 const r2 = new S3({
   region: "auto",
@@ -423,11 +425,6 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               userId: context.user.id,
             });
 
-            console.log(
-              "Sketch created successfully. Return sketch with id =",
-              sketchId
-            );
-
             const [row] =
               await resolveInfo.graphile.selectGraphQLResultFromTable(
                 sql.fragment`sketches`,
@@ -780,6 +777,8 @@ async function preprocess(endpoint: string, feature: Feature<any>) {
   });
 }
 
+let clippingWorkerManager: any;
+
 export async function createOrUpdateSketch({
   pgClient,
   userGeom,
@@ -807,12 +806,25 @@ export async function createOrUpdateSketch({
     throw new Error("Sketch name is required");
   }
 
+  if (sketchId) {
+    // Do a permission check
+    const { rows } = await pgClient.query(
+      `select * from sketches where id = $1 and user_id = $2`,
+      [sketchId, userId]
+    );
+    if (rows.length === 0) {
+      throw new Error("Sketch not found");
+    }
+  }
+
   // First, prepare the sketch for clipping (e.g. convert to multipolygon,
   // split at antimeridian, and normalize coordinates)
   const preparedSketch = prepareSketch(userGeom);
 
   // Get all the clipping layers for geographies in this project, including
   // those used for clipping this sketch class.
+  await pgClient.query(`set role = postgres`);
+
   let { rows: clippingLayers } = await pgClient.query(
     `
     select 
@@ -835,6 +847,8 @@ export async function createOrUpdateSketch({
     [sketchClassId, projectId]
   );
 
+  await pgClient.query(`set role = seasketch_user`);
+
   // group by geography_id
   const geographies = clippingLayers.reduce(
     (acc: GeographySettings[], l: any) => {
@@ -847,6 +861,11 @@ export async function createOrUpdateSketch({
           clippingLayers: [],
         };
         acc.push(geography);
+      }
+      if (l.object_key === null) {
+        throw new Error(
+          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`
+        );
       }
       geography.clippingLayers.push({
         op: l.operation_type.toUpperCase(),
@@ -935,16 +954,29 @@ export async function createOrUpdateSketch({
       const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
         objectKey
       );
-      return clippingWorkerManager.clipSketchToPolygonsWithWorker(
-        feature,
-        op,
-        cql2Query,
-        source.getFeaturesAsync(feature.envelopes)
-      );
+      if (process.env.NODE_ENV === "test") {
+        return clipSketchToPolygons(
+          feature,
+          op,
+          cql2Query,
+          source.getFeaturesAsync(feature.envelopes)
+        );
+      } else {
+        if (!clippingWorkerManager) {
+          const manager = await import(
+            "../workers/clipping/clippingWorkerManager"
+          );
+          clippingWorkerManager = manager.clippingWorkerManager;
+        }
+        return clippingWorkerManager.clipSketchToPolygonsWithWorker(
+          feature,
+          op,
+          cql2Query,
+          source.getFeaturesAsync(feature.envelopes)
+        );
+      }
     }
   );
-
-  console.log(`Created ${fragments.length} fragments`);
 
   if (!clipped) {
     throw new Error("Clipping failed. No geometry returned.");
