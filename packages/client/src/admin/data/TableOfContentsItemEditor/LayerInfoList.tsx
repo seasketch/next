@@ -470,7 +470,10 @@ function TilesetDetails({ url }: { url: string }) {
     return <div>Error: {state.error}</div>;
   } else if (!state.tilejson) {
     return <div>{t("No tilejson found")}</div>;
-  } else {
+  } else if (
+    "vector_layers" in state.tilejson &&
+    state.tilejson.vector_layers.length > 0
+  ) {
     return (
       <div>
         {state.tilejson.vector_layers.length}{" "}
@@ -478,11 +481,17 @@ function TilesetDetails({ url }: { url: string }) {
           ? t("layer. ")
           : t("layers. ")}
         {t("Zoom levels ")}
-        {
-          // eslint-disable-next-line i18next/no-literal-string
-          `${state.tilejson.vector_layers[0].minzoom} - ${state.tilejson.vector_layers[0].maxzoom}.`
-        }
+        {`${state.tilejson.vector_layers[0].minzoom} - ${state.tilejson.vector_layers[0].maxzoom}.`}
       </div>
     );
+  } else if ("minzoom" in state.tilejson && "maxzoom" in state.tilejson) {
+    return (
+      <div>
+        {t("Zoom levels ")}
+        {`${state.tilejson.minzoom} - ${state.tilejson.maxzoom}.`}
+      </div>
+    );
+  } else {
+    return <div>{t("No tilejson found")}</div>;
   }
 }
