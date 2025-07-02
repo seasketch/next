@@ -258,7 +258,7 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{secrets.CLOUDFLARE_ACCOUNT_ID}}
           CLOUDFLARE_API_TOKEN: ${{secrets.CLOUDFLARE_API_TOKEN}}
         run: |
-          npx wrangler pages publish build --project-name=seasketch-next-client --commit-dirty=true --branch=main
+          npx wrangler@3.114.10 pages publish build --project-name=seasketch-next-client --commit-dirty=true --branch=main
       - name: Create Sentry release
         uses: getsentry/action-release@v1
         env:
