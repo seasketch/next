@@ -12,6 +12,7 @@ import calcBBox from "@turf/bbox";
 import booleanEqual from "@turf/boolean-equal";
 import booleanIntersects from "@turf/boolean-intersects";
 import { bboxIntersects } from "./utils/bboxUtils";
+import calcArea from "@turf/area";
 
 export type GeographySettings = {
   id: number;
@@ -38,7 +39,7 @@ export async function createFragments(
     console.warn("resetting idCounter");
     idCounter = 0;
   }
-  const fragments: PendingFragmentResult[] = [];
+  let fragments: PendingFragmentResult[] = [];
 
   await Promise.all(
     geographies.map(async (geography) => {
@@ -87,7 +88,7 @@ export async function createFragments(
       __id: f.properties.__id,
     },
   }));
-  return output;
+  return output.filter((f) => calcArea(f) > 0.001);
 }
 
 function buildFragments(fragments: PendingFragmentResult[]) {
@@ -417,11 +418,13 @@ export function eliminateOverlap(
   );
 
   // convert back to SketchFragment type
-  return mergedFragments.map((f) => ({
-    ...f,
-    properties: {
-      __geographyIds: f.properties.__geographyIds,
-      __sketchIds: f.properties.__sketchIds,
-    },
-  }));
+  return mergedFragments
+    .map((f) => ({
+      ...f,
+      properties: {
+        __geographyIds: f.properties.__geographyIds,
+        __sketchIds: f.properties.__sketchIds,
+      },
+    }))
+    .filter((f) => calcArea(f) > 0.001);
 }

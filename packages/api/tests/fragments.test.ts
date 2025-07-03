@@ -14,6 +14,7 @@ import { SourceCache } from "fgb-source";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { createOrUpdateSketch } from "../src/plugins/sketchingPlugin";
 import { PoolClient } from "pg";
+import calcArea from "@turf/area";
 // @ts-ignore
 import fetch, { Headers, Request, Response } from "node-fetch";
 import * as fs from "fs";
@@ -1260,6 +1261,712 @@ describe("Integration tests", () => {
             "all fragments",
             collectionFragments
           );
+        }
+      );
+    });
+
+    test("Creating a sketch with multiple overlaps with neighbor sketches in a collection produces multiple fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 2),
+              2
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const existingInput = [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-179.69376748065613, -19.733487992663996],
+                    [-179.69376748065613, -20.242961918244646],
+                    [-178.9252499159708, -20.242961918244646],
+                    [-178.9252499159708, -19.733487992663996],
+                    [-179.69376748065613, -19.733487992663996],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-181.397612624067, -19.699838631580946],
+                    [-181.397612624067, -20.421723623763782],
+                    [-180.44441254383713, -20.421723623763782],
+                    [-180.44441254383713, -19.699838631580946],
+                    [-181.397612624067, -19.699838631580946],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+          ] as Feature<Polygon>[];
+          const input = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-180.55760505336443, -19.879219862636106],
+                  [-180.55760505336443, -20.0863764576697],
+                  [-179.5924899721317, -20.0863764576697],
+                  [-179.5924899721317, -19.879219862636106],
+                  [-180.55760505336443, -19.879219862636106],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          for (const feature of existingInput) {
+            await createSketch(
+              conn,
+              userIds[0],
+              feature,
+              projectId,
+              sketchClassId,
+              undefined,
+              collection.id
+            );
+          }
+          const newSketch = await createSketch(
+            conn,
+            userIds[0],
+            input,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const collectionFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          await writeOutput(
+            "Creating a sketch with multiple overlaps with neighbor sketches in a collection produces multiple fragments",
+            "inputs",
+            {
+              type: "FeatureCollection",
+              features: [...existingInput, input],
+            }
+          );
+          await writeOutput(
+            "Creating a sketch with multiple overlaps with neighbor sketches in a collection produces multiple fragments",
+            "all fragments",
+            collectionFragments
+          );
+          expect(collectionFragments.length).toBe(6);
+        }
+      );
+    });
+
+    test("Updating a sketch to overlap with neighbor creates new fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 2),
+              2
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const neighborInput = {
+            type: "Feature",
+            properties: {
+              name: "neighbor",
+            },
+            geometry: {
+              coordinates: [
+                [
+                  [177.72302930394233, -19.520030766472928],
+                  [177.6293966930524, -19.712964327097993],
+                  [177.93955471662377, -19.787319527080697],
+                  [178.2731208929165, -19.62203878551813],
+                  [178.08292965204765, -19.467623216692942],
+                  [177.72302930394233, -19.520030766472928],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const input = {
+            type: "Feature",
+            properties: {
+              name: "input",
+            },
+            geometry: {
+              coordinates: [
+                [
+                  [178.5862049355793, -19.508999008601165],
+                  [178.53938863013428, -19.61928266154696],
+                  [178.48086824832865, -19.790072757662557],
+                  [178.81736044371274, -19.812096888091304],
+                  [179.05144197093512, -19.66337497005965],
+                  [178.86125073006627, -19.453828937456137],
+                  [178.5862049355793, -19.508999008601165],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const neighborSketch = await createSketch(
+            conn,
+            userIds[0],
+            neighborInput,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const inputSketch = await createSketch(
+            conn,
+            userIds[0],
+            input,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const collectionFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          // await writeOutput(
+          //   "Updating a sketch to overlap with neighbor creates new fragments",
+          //   "inputs",
+          //   {
+          //     type: "FeatureCollection",
+          //     features: [neighborInput, input],
+          //   }
+          // );
+          expect(collectionFragments.length).toBe(2);
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: {
+              type: "Feature",
+              properties: {
+                name: "input",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [178.5862049355793, -19.508999008601165],
+                    [178.0529606573133, -19.616772083295743],
+                    [178.48086824832865, -19.790072757662557],
+                    [178.81736044371274, -19.812096888091304],
+                    [179.05144197093512, -19.66337497005965],
+                    [178.86125073006627, -19.453828937456137],
+                    [178.5862049355793, -19.508999008601165],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            } as Feature<Polygon>,
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: collection.id,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[0],
+            sketchId: inputSketch.sketch.id as number,
+          });
+          const updatedCollectionFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          // await writeOutput(
+          //   "Updating a sketch to overlap with neighbor creates new fragments",
+          //   "updated fragments",
+          //   updatedCollectionFragments
+          // );
+          compareWithExpectedOutput(
+            "Updating a sketch to overlap with neighbor creates new fragments",
+            "updated fragments",
+            updatedCollectionFragments
+          );
+          expect(updatedCollectionFragments.length).toBe(3);
+        }
+      );
+    });
+
+    test("Updating a sketch to no longer overlap with a neighbor", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 2),
+              2
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const neighbors = [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.7953893680354, 34.20717598495169],
+                    [-119.7953893680354, 34.13793236148773],
+                    [-119.66547737524084, 34.13793236148773],
+                    [-119.66547737524084, 34.20717598495169],
+                    [-119.7953893680354, 34.20717598495169],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.8394220386703, 34.152405873228844],
+                    [-119.8394220386703, 34.08751418090428],
+                    [-119.67765662456543, 34.08751418090428],
+                    [-119.67765662456543, 34.152405873228844],
+                    [-119.8394220386703, 34.152405873228844],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+          ] as Feature<Polygon>[];
+          const input = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-119.57803661085974, 34.092428042893005],
+                  [-119.57834889930407, 34.117768695640024],
+                  [-119.68702527789176, 34.143618679674205],
+                  [-119.70326427699112, 34.143360218967445],
+                  [-119.65517185658148, 34.08880733013355],
+                  [-119.57803661085974, 34.092428042893005],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          for (const n of neighbors) {
+            await createSketch(
+              conn,
+              userIds[0],
+              n,
+              projectId,
+              sketchClassId,
+              undefined,
+              collection.id
+            );
+          }
+          const inputSketch = await createSketch(
+            conn,
+            userIds[0],
+            input,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          await writeOutput(
+            "Updating a sketch to no longer overlap with a neighbor",
+            "initial fragments",
+            initialFragments
+          );
+          expect(initialFragments.length).toBe(7);
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: {
+              type: "Feature",
+              properties: {
+                name: "input",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.57803661085974, 34.092428042893005],
+                    [-119.57834889930407, 34.117768695640024],
+                    [-119.6670388174617, 34.13172863249778],
+                    [-119.66578966368516, 34.10975362087467],
+                    [-119.65517185658148, 34.08880733013355],
+                    [-119.57803661085974, 34.092428042893005],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: collection.id,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[0],
+            sketchId: inputSketch.sketch.id as number,
+          });
+          const updatedFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          await writeOutput(
+            "Updating a sketch to no longer overlap with a neighbor",
+            "updated fragments",
+            updatedFragments
+          );
+          expect(updatedFragments.length).toBe(4);
+        }
+      );
+    });
+
+    test("Unrelated overlap within a collection is not impacted by fragment updates elsewhere", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 2),
+              2
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const neighbors = [
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.7953893680354, 34.20717598495169],
+                    [-119.7953893680354, 34.13793236148773],
+                    [-119.66547737524084, 34.13793236148773],
+                    [-119.66547737524084, 34.20717598495169],
+                    [-119.7953893680354, 34.20717598495169],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.8394220386703, 34.152405873228844],
+                    [-119.8394220386703, 34.08751418090428],
+                    [-119.67765662456543, 34.08751418090428],
+                    [-119.67765662456543, 34.152405873228844],
+                    [-119.8394220386703, 34.152405873228844],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            {
+              type: "Feature",
+              properties: {
+                name: "neighbor3",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.94849753229323, 34.14890904961294],
+                    [-119.94849753229323, 34.11852930649634],
+                    [-119.83227304717465, 34.11852930649634],
+                    [-119.83227304717465, 34.14890904961294],
+                    [-119.94849753229323, 34.14890904961294],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 3,
+            },
+          ] as Feature<Polygon>[];
+          const input = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-119.57803661085974, 34.092428042893005],
+                  [-119.57834889930407, 34.117768695640024],
+                  [-119.68702527789176, 34.143618679674205],
+                  [-119.70326427699112, 34.143360218967445],
+                  [-119.65517185658148, 34.08880733013355],
+                  [-119.57803661085974, 34.092428042893005],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          for (const n of neighbors) {
+            await createSketch(
+              conn,
+              userIds[0],
+              n,
+              projectId,
+              sketchClassId,
+              undefined,
+              collection.id
+            );
+          }
+          const inputSketch = await createSketch(
+            conn,
+            userIds[0],
+            input,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          // await writeOutput(
+          //   "Unrelated overlap within a collection is not impacted by fragment updates elsewhere",
+          //   "initial fragments",
+          //   initialFragments
+          // );
+          expect(initialFragments.length).toBe(9);
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: {
+              type: "Feature",
+              properties: {
+                name: "input",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.57803661085974, 34.092428042893005],
+                    [-119.57834889930407, 34.117768695640024],
+                    [-119.6670388174617, 34.13172863249778],
+                    [-119.66578966368516, 34.10975362087467],
+                    [-119.65517185658148, 34.08880733013355],
+                    [-119.57803661085974, 34.092428042893005],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: collection.id,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[0],
+            sketchId: inputSketch.sketch.id as number,
+          });
+          const updatedFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          // await writeOutput(
+          //   "Unrelated overlap within a collection is not impacted by fragment updates elsewhere",
+          //   "updated fragments",
+          //   updatedFragments
+          // );
+          compareWithExpectedOutput(
+            "Unrelated overlap within a collection is not impacted by fragment updates elsewhere",
+            "updated fragments",
+            updatedFragments
+          );
+          expect(updatedFragments.length).toBe(6);
+        }
+      );
+    });
+
+    test("High-protection MPA within Low-Protection NMS scenario", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const nms = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-119.99264132815875, 34.16694515002861],
+                  [-120.24515685327896, 34.17051572439864],
+                  [-120.57540935618125, 34.141187215613115],
+                  [-120.6289747011642, 34.055142680616285],
+                  [-120.46697389345498, 33.82710605620815],
+                  [-120.09572271243863, 33.78093145610964],
+                  [-119.8593607496702, 33.78862873880166],
+                  [-119.48367791940399, 33.85185372536827],
+                  [-119.3040911470111, 33.943430741863494],
+                  [-119.28597140540197, 34.04758838305804],
+                  [-119.33751200375681, 34.12828933333195],
+                  [-119.48931517234914, 34.19259484448145],
+                  [-119.81869180871101, 34.201920072596764],
+                  [-119.99264132815875, 34.16694515002861],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const mpa = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-119.5855575174486, 34.04967543466515],
+                  [-119.55754500513144, 34.04967543466515],
+                  [-119.55754500513144, 34.08003999982695],
+                  [-119.5855575174486, 34.08003999982695],
+                  [-119.5855575174486, 34.04967543466515],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          await createSketch(
+            conn,
+            userIds[0],
+            nms,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const mpaSketch = await createSketch(
+            conn,
+            userIds[0],
+            mpa,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const fragments = await fragmentsForCollection(conn, collection.id);
+          // await writeOutput(
+          //   "High-protection MPA within Low-Protection NMS scenario",
+          //   "fragments",
+          //   fragments
+          // );
+          compareWithExpectedOutput(
+            "High-protection MPA within Low-Protection NMS scenario",
+            "fragments",
+            fragments
+          );
+          expect(fragments.length).toBe(2);
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: {
+              type: "Feature",
+              properties: {
+                name: "updated",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.97468117299056, 34.30104723623559],
+                    [-119.97468117299056, 34.243377362251664],
+                    [-119.88847386563229, 34.243377362251664],
+                    [-119.88847386563229, 34.30104723623559],
+                    [-119.97468117299056, 34.30104723623559],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 2,
+            },
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: collection.id,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[0],
+            sketchId: mpaSketch.sketch.id as number,
+          });
+          const updatedFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          // await writeOutput(
+          //   "High-protection MPA within Low-Protection NMS scenario",
+          //   "updated fragments",
+          //   updatedFragments
+          // );
+          expect(updatedFragments.length).toBe(2);
         }
       );
     });
