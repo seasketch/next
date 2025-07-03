@@ -32,30 +32,6 @@ if (!global.fetch) {
 
 const pool = createPool("test");
 
-// Helper function to write output files for debugging
-async function writeOutput(
-  testName: string,
-  outputType: string,
-  data: any
-): Promise<void> {
-  if (Array.isArray(data) && data[0]?.type === "Feature") {
-    data = {
-      type: "FeatureCollection",
-      features: data.map((f) => f),
-    };
-  }
-  const outputDir = path.join(__dirname, "outputs", testName);
-  const outputPath = path.join(outputDir, `${outputType}.json`);
-
-  // Create directory if it doesn't exist
-  if (!fs.existsSync(outputDir)) {
-    fs.mkdirSync(outputDir, { recursive: true });
-  }
-
-  // Write the data as formatted JSON
-  fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
-}
-
 // Test geometries
 const polygon = JSON.stringify(
   {
@@ -952,7 +928,7 @@ const clippingFn: ClippingFn = async (sketch, source, op, query) => {
   return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
 };
 
-const hawaiiGeographies: (GeographySettings & { name: string })[] = [
+const nationalGeographies: (GeographySettings & { name: string })[] = [
   {
     id: 1,
     name: "Territorial Sea",
@@ -998,7 +974,7 @@ describe("Integration tests", () => {
             projectId,
             adminId,
             userIds,
-            hawaiiGeographies,
+            nationalGeographies,
             2
           );
           await createSession(conn, userIds[0], true, false, projectId);
@@ -1027,34 +1003,263 @@ describe("Integration tests", () => {
             sketchClassId
           );
 
-          await writeOutput(
-            "createOrUpdateSketch - Fragments are created for new sketches",
-            "input",
-            inputGeom
-          );
-          await writeOutput(
+          // Uncomment these lines to regenerate expected outputs:
+          // await writeOutput(
+          //   "createOrUpdateSketch - Fragments are created for new sketches",
+          //   "input",
+          //   inputGeom
+          // );
+          // await writeOutput(
+          //   "createOrUpdateSketch - Fragments are created for new sketches",
+          //   "sketch",
+          //   sketch
+          // );
+          // await writeOutput(
+          //   "createOrUpdateSketch - Fragments are created for new sketches",
+          //   "fragments",
+          //   fragments
+          // );
+
+          // ensure all fragment coordinates are between -180 and 180 longitude,
+          // and -90 and 90 latitude
+          validateFragmentCoordinates(fragments);
+
+          // Compare against expected outputs for regression testing
+          compareWithExpectedOutput(
             "createOrUpdateSketch - Fragments are created for new sketches",
             "sketch",
             sketch
           );
-          await writeOutput(
+          compareWithExpectedOutput(
             "createOrUpdateSketch - Fragments are created for new sketches",
             "fragments",
             fragments
           );
 
-          // ensure all fragment coordinates are between -180 and 180 longitude,
-          // and -90 and 90 latitude
-          for (const fragment of fragments) {
-            for (const coordinate of fragment.geometry.coordinates[0]) {
-              expect(coordinate[0]).toBeGreaterThan(-180);
-              expect(coordinate[0]).toBeLessThan(180);
-              expect(coordinate[1]).toBeGreaterThan(-90);
-              expect(coordinate[1]).toBeLessThan(90);
-            }
-          }
           expect(sketch.id).toBeGreaterThan(0);
           expect(fragments.length).toBe(2);
+        }
+      );
+    });
+
+    test("Antimeridian crossings produce a single sketch geometry and multiple fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds } = await setupIntegrationTestEnv(
+            conn,
+            projectId,
+            adminId,
+            userIds,
+            nationalGeographies,
+            2
+          );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const inputGeom = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [179.71910173034433, -19.555060759856303],
+                  [179.71910173034433, -20.39168462112778],
+                  [180.54382364947065, -20.39168462112778],
+                  [180.54382364947065, -19.555060759856303],
+                  [179.71910173034433, -19.555060759856303],
+                ],
+              ],
+              type: "Polygon",
+            },
+          } as Feature<Polygon>;
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            inputGeom,
+            projectId,
+            sketchClassId
+          );
+          // Uncomment these lines to regenerate expected outputs:
+          // await writeOutput(
+          //   "createOrUpdateSketch - Antimeridian crossings produce a single sketch geometry and multiple fragments",
+          //   "input",
+          //   inputGeom
+          // );
+          // await writeOutput(
+          //   "createOrUpdateSketch - Antimeridian crossings produce a single sketch geometry and multiple fragments",
+          //   "sketch",
+          //   sketch
+          // );
+          // await writeOutput(
+          //   "createOrUpdateSketch - Antimeridian crossings produce a single sketch geometry and multiple fragments",
+          //   "fragments",
+          //   fragments
+          // );
+
+          validateFragmentCoordinates(fragments);
+
+          // Compare against expected outputs for regression testing
+          compareWithExpectedOutput(
+            "createOrUpdateSketch - Antimeridian crossings produce a single sketch geometry and multiple fragments",
+            "sketch",
+            sketch
+          );
+          compareWithExpectedOutput(
+            "createOrUpdateSketch - Antimeridian crossings produce a single sketch geometry and multiple fragments",
+            "fragments",
+            fragments
+          );
+
+          expect(sketch.id).toBeGreaterThan(0);
+          expect(sketch.geometry.type).toBe("MultiPolygon");
+          expect(sketch.geometry.coordinates.length).toBe(1);
+          expect(fragments.length).toBe(4);
+        }
+      );
+    });
+
+    test("Two overlapping sketches in a collection produces multiple fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies,
+              2
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const inputs = [
+            {
+              type: "Feature",
+              properties: {
+                name: "a",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [177.46661991456375, -21.47749524198204],
+                    [177.46661991456375, -22.07146904222543],
+                    [178.40351778737318, -22.07146904222543],
+                    [178.40351778737318, -21.47749524198204],
+                    [177.46661991456375, -21.47749524198204],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 0,
+            },
+            {
+              type: "Feature",
+              properties: {
+                name: "b",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [179.59265739516695, -21.611562757901822],
+                    [179.59265739516695, -22.446647354141106],
+                    [180.85386607010219, -22.446647354141106],
+                    [180.85386607010219, -21.611562757901822],
+                    [179.59265739516695, -21.611562757901822],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 1,
+            },
+            {
+              type: "Feature",
+              properties: {
+                name: "c",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-178.554032432184, -21.17534377737954],
+                    [-179.18023709341125, -21.17534377737954],
+                    [-179.18023709341125, -21.665216264126798],
+                    [-178.554032432184, -21.665216264126798],
+                    [-178.554032432184, -21.17534377737954],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+          ] as Feature<Polygon>[];
+          const featureA = inputs[0];
+          const featureB = inputs[1];
+          const featureC = inputs[2];
+          // await writeOutput(
+          //   "Two overlapping sketches in a collection produces multiple fragments",
+          //   "input",
+          //   {
+          //     type: "FeatureCollection",
+          //     features: inputs,
+          //   }
+          // );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            featureC,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          // no intersection with any other sketch, or antimeridian
+          validateFragmentCoordinates(sketchA.fragments);
+          expect(sketchA.fragments.length).toBe(1);
+          // Crosses the antimeridian
+          validateFragmentCoordinates(sketchB.fragments);
+          expect(sketchB.fragments.length).toBe(2);
+          // Overlaps neighbor b, and territorial sea
+          expect(sketchC.fragments.length).toBe(3);
+          const collectionFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          expect(collectionFragments.length).toBe(6);
+          // await writeOutput(
+          //   "Two overlapping sketches in a collection produces multiple fragments",
+          //   "all fragments",
+          //   collectionFragments
+          // );
+          compareWithExpectedOutput(
+            "Two overlapping sketches in a collection produces multiple fragments",
+            "all fragments",
+            collectionFragments
+          );
         }
       );
     });
@@ -1147,6 +1352,9 @@ async function setupIntegrationTestEnv(
   const sketchClass = await conn.one<{ id: number }>(
     sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Poly', 'POLYGON') returning *`
   );
+  const collectionSketchClass = await conn.one<{ id: number }>(
+    sql`insert into sketch_classes (project_id, name, geometry_type) values (${projectId}, 'Collection', 'COLLECTION') returning *`
+  );
 
   const geographyIds: { [name: string]: number } = {};
   for (const geography of geographies) {
@@ -1158,19 +1366,23 @@ async function setupIntegrationTestEnv(
     );
     geographyIds[geography.name] = geographyId;
   }
-
   await conn.any(
     sql`update sketch_classes set is_geography_clipping_enabled = true where id = ${sketchClass.id}`
   );
   await conn.any(sql`set role = postgres`);
-
+  clipToGeographyId =
+    geographyIds[geographies.find((g) => g.id === clipToGeographyId)!.name!];
   await conn.any(sql`
     insert into sketch_class_geographies (
       sketch_class_id, geography_id
     ) values (${sketchClass.id}, ${clipToGeographyId})
   `);
   await createSession(conn, adminId, true, false, projectId);
-  return { sketchClassId: sketchClass.id, geographyIds };
+  return {
+    sketchClassId: sketchClass.id,
+    geographyIds,
+    collectionSketchClassId: collectionSketchClass.id,
+  };
 }
 
 async function createGeography(
@@ -1275,4 +1487,192 @@ function hashesFromFragments(fragments: readonly ReturnedFragment[]) {
     hashes.add(f.hash);
   }
   return [...hashes];
+}
+
+// Helper function to validate fragment coordinates
+function validateFragmentCoordinates(fragments: SketchFragment[]): void {
+  for (
+    let fragmentIndex = 0;
+    fragmentIndex < fragments.length;
+    fragmentIndex++
+  ) {
+    const fragment = fragments[fragmentIndex];
+    for (
+      let coordIndex = 0;
+      coordIndex < fragment.geometry.coordinates[0].length;
+      coordIndex++
+    ) {
+      const coordinate = fragment.geometry.coordinates[0][coordIndex];
+      const [lon, lat] = coordinate;
+
+      if (lon < -180 || lon > 180) {
+        throw new Error(
+          `Longitude coordinate at position ${coordIndex} in fragment ${fragmentIndex} is ${lon}, which is ${
+            lon < -180 ? "less than -180" : "greater than 180"
+          }. Valid range is [-180, 180].`
+        );
+      }
+
+      if (lat < -90 || lat > 90) {
+        throw new Error(
+          `Latitude coordinate at position ${coordIndex} in fragment ${fragmentIndex} is ${lat}, which is ${
+            lat < -90 ? "less than -90" : "greater than 90"
+          }. Valid range is [-90, 90].`
+        );
+      }
+    }
+  }
+}
+
+// Helper function to write output files for debugging
+async function writeOutput(
+  testName: string,
+  outputType: string,
+  data: any
+): Promise<void> {
+  if (Array.isArray(data) && data[0]?.type === "Feature") {
+    data = {
+      type: "FeatureCollection",
+      features: data.map((f) => f),
+    };
+  }
+  const outputDir = path.join(__dirname, "outputs", testName);
+  const outputPath = path.join(outputDir, `${outputType}.json`);
+
+  // Create directory if it doesn't exist
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
+
+  // Write the data as formatted JSON
+  fs.writeFileSync(outputPath, JSON.stringify(data, null, 2));
+}
+
+// Helper function to load expected output from saved files
+function loadExpectedOutput(testName: string, outputType: string): any {
+  const outputPath = path.join(
+    __dirname,
+    "outputs",
+    testName,
+    `${outputType}.json`
+  );
+  if (!fs.existsSync(outputPath)) {
+    throw new Error(`Expected output file not found: ${outputPath}`);
+  }
+  const content = fs.readFileSync(outputPath, "utf8");
+  return JSON.parse(content);
+}
+
+// Helper function to compare current results against expected outputs
+function compareWithExpectedOutput(
+  testName: string,
+  filename: string,
+  currentData: any
+): void {
+  try {
+    const expectedData = loadExpectedOutput(testName, filename);
+
+    if (
+      Array.isArray(currentData) &&
+      currentData.length > 0 &&
+      currentData[0].type === "Feature"
+    ) {
+      // Comparing fragments
+      const currentFragments = currentData as SketchFragment[];
+      // Handle both FeatureCollection and array formats for expected data
+      const expectedFragments =
+        expectedData.type === "FeatureCollection"
+          ? (expectedData.features as SketchFragment[])
+          : (expectedData as SketchFragment[]);
+
+      expect(currentFragments.length).toBe(expectedFragments.length);
+
+      // Sort fragments by hash for consistent comparison
+      const sortedCurrentFragments = [...currentFragments].sort((a, b) =>
+        a.properties.__hash.localeCompare(b.properties.__hash)
+      );
+      const sortedExpectedFragments = [...expectedFragments].sort((a, b) =>
+        a.properties.__hash.localeCompare(b.properties.__hash)
+      );
+
+      for (let i = 0; i < sortedCurrentFragments.length; i++) {
+        const current = sortedCurrentFragments[i];
+        const expected = sortedExpectedFragments[i];
+
+        expect(current.geometry).toEqual(expected.geometry);
+        expect(current.properties.__hash).toBe(expected.properties.__hash);
+        // Note: We don't compare geography IDs or sketch IDs since they depend on database state
+        // and are not meaningful for regression testing
+      }
+    } else {
+      // Comparing sketch
+      const currentSketch = currentData as Feature<Polygon | MultiPolygon>;
+      const expectedSketch = expectedData as Feature<Polygon | MultiPolygon>;
+
+      expect(currentSketch.geometry).toEqual(expectedSketch.geometry);
+      // Note: We don't compare IDs since they depend on database state and are not meaningful for regression testing
+    }
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      error.message.includes("Expected output file not found")
+    ) {
+      throw new Error(
+        `Expected output file "${filename}" not found for test "${testName}". Run the test with writeOutput enabled first to generate expected outputs.`
+      );
+    }
+    throw error;
+  }
+}
+
+async function createCollection(
+  conn: DatabaseTransactionConnectionType,
+  name: string,
+  sketchClassId: number,
+  userId: number
+) {
+  const collection = await conn.one<{ id: number }>(
+    sql`insert into sketches (sketch_class_id, name, user_id) values (${sketchClassId}, ${name}, ${userId}) returning *`
+  );
+  return collection;
+}
+
+async function fragmentsForCollection(
+  conn: DatabaseTransactionConnectionType,
+  collectionId: number
+): Promise<SketchFragment[]> {
+  await conn.any(sql`set role = postgres`);
+  const fragments = (
+    await conn.query<{
+      hash: string;
+      geometry: string;
+      sketch_ids: number[];
+      geography_ids: number[];
+    }>(sql`
+    select 
+      f.hash, 
+      ST_AsGeoJSON(f.geometry) as geometry,
+      coalesce(array_agg(distinct sf.sketch_id) filter (where sf.sketch_id is not null), array[]::int[]) as sketch_ids,
+      coalesce(array_agg(distinct fg.geography_id) filter (where fg.geography_id is not null), array[]::int[]) as geography_ids
+    from fragments f
+    left join sketch_fragments sf on f.hash = sf.fragment_hash
+    left join fragment_geographies fg on f.hash = fg.fragment_hash
+    where f.hash = any(
+      select fragment_hash from sketch_fragments where sketch_id in (
+        select id from get_children_of_collection(${collectionId}) where type = 'sketch'
+      )
+    )
+    group by f.hash, f.geometry
+  `)
+  ).rows.map((f) => ({
+    type: "Feature",
+    properties: {
+      __hash: f.hash,
+      __geographyIds: f.geography_ids,
+      __sketchIds: f.sketch_ids,
+    },
+    geometry: JSON.parse(f.geometry as string),
+  })) as SketchFragment[];
+  await conn.any(sql`set role = seasketch_user`);
+  return fragments;
 }

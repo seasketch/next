@@ -878,9 +878,13 @@ export async function createOrUpdateSketch({
   );
 
   // Filter out layers that are not used for clipping this sketch class.
-  const clippingGeographyLayers = clippingLayers
-    .filter((l: any) => l.for_clipping)
-    .map((l: any) => l.geography_id);
+  const clippingGeographyLayers = [
+    ...new Set(
+      clippingLayers
+        .filter((l: any) => l.for_clipping)
+        .map((l: any) => l.geography_id)
+    ),
+  ];
 
   const existingOverlappingFragments: SketchFragment[] = [];
   if (sketchId) {
@@ -939,6 +943,14 @@ export async function createOrUpdateSketch({
     (f) => f.properties.__hash
   );
 
+  // check that clippingGeographyLayers contains distinct values
+  const distinctGeographyIds = new Set(
+    clippingGeographyLayers.map((l: any) => l.geography_id)
+  );
+  if (distinctGeographyIds.size !== clippingGeographyLayers.length) {
+    throw new Error("Clipping geography layers contains duplicate values");
+  }
+
   // Clip the sketch to the geographies.
   const { clipped, fragments } = await clipToGeographies(
     preparedSketch,
@@ -955,6 +967,11 @@ export async function createOrUpdateSketch({
         objectKey
       );
       if (process.env.NODE_ENV === "test") {
+        let count = 0;
+        for await (const f of source.getFeaturesAsync(feature.envelopes)) {
+          count++;
+        }
+
         return clipSketchToPolygons(
           feature,
           op,

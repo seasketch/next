@@ -5,11 +5,11 @@
       "type": "Feature",
       "properties": {
         "__geographyIds": [
+          7,
           1,
-          2,
-          7
+          2
         ],
-        "__id": 12
+        "__id": 9
       },
       "geometry": {
         "type": "Polygon",
@@ -19641,11 +19641,11 @@
       "type": "Feature",
       "properties": {
         "__geographyIds": [
+          7,
           1,
-          3,
-          7
+          3
         ],
-        "__id": 13
+        "__id": 11
       },
       "geometry": {
         "type": "Polygon",

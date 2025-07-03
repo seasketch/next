@@ -425,19 +425,19 @@ describe("CA use case", () => {
     expect(northCentralCoastStudyRegion).toBeDefined();
     expect(
       northCentralCoastStudyRegion?.properties.__geographyIds
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(northCentralCoastStudyRegion?.properties.__geographyIds).toContain(
       3
     );
     expect(northCentralCoastStudyRegion?.properties.__geographyIds).toContain(
       7
     );
-    // The other polygon should be associated with the Central Coast Study Region, and Central Coast Bioregion
+    // The other polygon should be associated with the Central Coast Study Region, Central Coast Bioregion, and State Waters
     const centralCoastStudyRegion = fragments.find((f) =>
       f.properties.__geographyIds.includes(2)
     );
     expect(centralCoastStudyRegion).toBeDefined();
-    expect(centralCoastStudyRegion?.properties.__geographyIds).toHaveLength(2);
+    expect(centralCoastStudyRegion?.properties.__geographyIds).toHaveLength(3);
     expect(centralCoastStudyRegion?.properties.__geographyIds).toContain(2);
     expect(centralCoastStudyRegion?.properties.__geographyIds).toContain(7);
   });
@@ -462,7 +462,7 @@ describe("eliminateOverlap", () => {
     };
   });
 
-  test("Merging fragments with an existing collection", async () => {
+  it("Merging fragments with an existing collection", async () => {
     const fijiAntimeridianFragments = readOutput("fiji-antimeridian-fragments");
     expect(fijiAntimeridianFragments).toHaveLength(4);
     const preparedSketch = prepareSketch(fijiShape2);

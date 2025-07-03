@@ -342,12 +342,20 @@ export async function clipSketchToPolygons(
   cql2Query: Cql2Query | undefined,
   polygonSource: AsyncIterable<Feature<MultiPolygon | Polygon>>
 ): Promise<PolygonClipResult> {
-  const polygons = [] as polygonClipping.Geom[];
+  const polygons = [] as polygonClipping.Polygon[];
   for await (const feature of polygonSource) {
     if (cql2Query && !evaluateCql2JSONQuery(cql2Query, feature.properties)) {
       continue;
     }
-    polygons.push(feature.geometry.coordinates as any);
+    // // determine if the geometry is a polygon or a multipolygon, so that it can
+    // // be added to the polygons array
+    if (feature.geometry.type === "Polygon") {
+      polygons.push(feature.geometry.coordinates as polygonClipping.Polygon);
+    } else if (feature.geometry.type === "MultiPolygon") {
+      polygons.push(
+        ...feature.geometry.coordinates.map((p) => p as polygonClipping.Polygon)
+      );
+    }
   }
 
   if (polygons.length === 0 && op === "INTERSECT") {
@@ -360,12 +368,12 @@ export async function clipSketchToPolygons(
   if (op === "INTERSECT") {
     output = polygonClipping.intersection(
       preparedSketch.feature.geometry.coordinates as polygonClipping.Geom,
-      ...polygons
+      polygons
     );
   } else if (op === "DIFFERENCE") {
     output = polygonClipping.difference(
       preparedSketch.feature.geometry.coordinates as polygonClipping.Geom,
-      ...polygons
+      polygons
     );
   } else {
     throw new Error(`Unknown operation: ${op}`);

@@ -6,10 +6,10 @@
       "properties": {
         "__hash": "4a61dae20bd45fe20fb26f1988b837a0",
         "__geographyIds": [
-          2
+          13
         ],
         "__sketchIds": [
-          1
+          26
         ]
       },
       "geometry": {
@@ -193,11 +193,11 @@
       "properties": {
         "__hash": "837e0b952df62111eee0b8119834366e",
         "__geographyIds": [
-          1,
-          2
+          12,
+          13
         ],
         "__sketchIds": [
-          1
+          26
         ]
       },
       "geometry": {

@@ -363,7 +363,7 @@ describe("clipToGeographies", () => {
           __sketchIds: [1],
         },
       })),
-      1,
+      undefined,
       clippingFn
     );
 
@@ -412,5 +412,38 @@ describe("clipToGeographies", () => {
 
     const referenceClipped = readOutput("overlapping-sketches-clipped");
     expect(result.clipped).toEqual(referenceClipped[0]);
+  });
+
+  it("isolated bug #1", async () => {
+    const preparedSketch = prepareSketch({
+      type: "Feature",
+      geometry: {
+        type: "Polygon",
+        coordinates: [
+          [
+            [-178.554032432184, -21.17534377737954],
+            [-179.18023709341125, -21.17534377737954],
+            [-179.18023709341125, -21.665216264126798],
+            [-178.554032432184, -21.665216264126798],
+            [-178.554032432184, -21.17534377737954],
+          ],
+        ],
+      },
+      properties: {
+        name: "c",
+      },
+    });
+    const results = await clipToGeography(
+      preparedSketch,
+      [
+        {
+          op: "INTERSECT",
+          source: eezUrl,
+        },
+      ],
+      clippingFn
+    );
+    expect(results).not.toBeNull();
+    expect(results?.geometry.type).toBe("MultiPolygon");
   });
 });
