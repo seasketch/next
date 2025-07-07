@@ -88,7 +88,7 @@ export async function createFragments(
       __id: f.properties.__id,
     },
   }));
-  return output.filter((f) => calcArea(f) > 0.001);
+  return output.filter((f) => calcArea(f) > 1);
 }
 
 function buildFragments(fragments: PendingFragmentResult[]) {
@@ -426,5 +426,5 @@ export function eliminateOverlap(
         __sketchIds: f.properties.__sketchIds,
       },
     }))
-    .filter((f) => calcArea(f) > 0.001);
+    .filter((f) => calcArea(f) > 1);
 }

@@ -590,7 +590,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         ) => {
           const { pgClient } = context;
           if (!forForum) {
-            // check that the user owns this sketch
+            // Security sensitive:
+            // Check that the user owns this sketch. RLS will be enforced for
+            // this select query, but not for subsequent calls to copy_sketch*,
+            // so it's critical to check here.
             const { rows } = await pgClient.query(
               `select user_id from ${
                 type === "sketch" ? "sketches" : "sketch_folders"
@@ -897,7 +900,13 @@ export async function createOrUpdateSketch({
     ]);
     collectionId = sketch.get_parent_collection_id;
   }
+  let siblingSketchIds: number[] = [];
   if (collectionId) {
+    const { rows } = await pgClient.query(
+      `SELECT get_child_sketches_recursive($1, 'sketch')`,
+      [collectionId]
+    );
+    siblingSketchIds = rows[0].get_child_sketches_recursive;
     const geometryArray = preparedSketch.envelopes
       .map(
         (e) =>
@@ -923,9 +932,7 @@ export async function createOrUpdateSketch({
       )`,
       [collectionId, sketchId]
     );
-
     for (const fragment of overlappingFragments) {
-      // for now, just console.log them out for debugging
       const f: SketchFragment = {
         type: "Feature",
         properties: {
@@ -1067,6 +1074,13 @@ export async function createOrUpdateSketch({
   }
 
   for (const [idForSketch, fragments] of Object.entries(fragmentGroups)) {
+    if (
+      parseInt(idForSketch) !== sketchId &&
+      siblingSketchIds.indexOf(parseInt(idForSketch)) === -1
+    ) {
+      // Skip updating fragments if sketch is not a sibling or the target sketch
+      continue;
+    }
     const fragmentInputs = fragments
       .map((f) => {
         const geomJson = JSON.stringify(f.geometry);

@@ -962,7 +962,7 @@ const nationalGeographies: (GeographySettings & { name: string })[] = [
 
 describe("Integration tests", () => {
   beforeAll(async () => {
-    jest.setTimeout(5000);
+    jest.setTimeout(8000);
   });
   describe("createOrUpdateSketch", () => {
     test("Fragments are created for new sketches", async () => {
@@ -1971,6 +1971,399 @@ describe("Integration tests", () => {
       );
     });
   });
+
+  describe("copySketchTocItem", () => {
+    test("Copying an individual sketch create new references to the same fragment(s)", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.6586227416992, 34.36781108107208],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined
+          );
+          expect(fragments.length).toBe(1);
+          const copy = await copySketch(sketch.id as number, conn);
+          expect(copy.fragments.length).toBe(1);
+          expect(copy.fragments[0].properties.__sketchIds).toEqual([
+            sketch.id,
+            copy.sketch.id,
+          ]);
+          expect(copy.fragments[0].properties.__geographyIds).toEqual(
+            fragments[0].properties.__geographyIds
+          );
+        }
+      );
+    });
+
+    test("Copying a sketch within a collection", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.6586227416992, 34.36781108107208],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const copy = await copySketch(sketch.id as number, conn);
+          expect(copy.fragments.length).toBe(1);
+          expect(copy.fragments[0].properties.__sketchIds).toEqual([
+            sketch.id,
+            copy.sketch.id,
+          ]);
+          const collectionFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          expect(collectionFragments.length).toBe(1);
+          expect(collectionFragments[0].properties.__sketchIds).toEqual([
+            sketch.id,
+            copy.sketch.id,
+          ]);
+          // If one of the sketches is changed, the number of fragments should
+          // increase
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.94113964916716, 34.394290193603794],
+                    [-119.94113964916716, 34.35408297723009],
+                    [-119.8543220932051, 34.35408297723009],
+                    [-119.8543220932051, 34.394290193603794],
+                    [-119.94113964916716, 34.394290193603794],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: collection.id,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[0],
+            sketchId: sketch.id as number,
+          });
+          const updatedCollectionFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          expect(updatedCollectionFragments.length).toBe(2);
+          updatedCollectionFragments.sort((a, b) => {
+            return a.properties.__sketchIds[0] - b.properties.__sketchIds[0];
+          });
+          // should have 2 fragments referring to different sketch ids
+          expect(updatedCollectionFragments[0].properties.__sketchIds).toEqual([
+            sketch.id,
+          ]);
+          expect(updatedCollectionFragments[1].properties.__sketchIds).toEqual([
+            copy.sketch.id,
+          ]);
+        }
+      );
+    });
+
+    test("Copying a whole collection makes references to the same fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.6586227416992, 34.36781108107208],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const { sketch: collectionCopy } = await copySketch(
+            collection.id as number,
+            conn
+          );
+          expect(collectionCopy.id).not.toBe(collection.id);
+          const fragmentsForOriginalCollection = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          const fragmentsForCopyCollection = await fragmentsForCollection(
+            conn,
+            collectionCopy.id as number
+          );
+          expect(fragmentsForOriginalCollection.length).toBe(
+            fragmentsForCopyCollection.length
+          );
+          expect(
+            fragmentsForOriginalCollection[0].properties.__sketchIds
+          ).toEqual(fragmentsForCopyCollection[0].properties.__sketchIds);
+        }
+      );
+    });
+
+    test("Copied fragments are reconsciled properly across user accounts", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          /**
+           * Scenario description:
+           * - User 1 creates a collection with a single sketch
+           * - User 2 copies that collection
+           * - At this point, fragments are shared between the two users
+           * - User 2 updates their copy of the sketch to slightly move a
+           *   boundary
+           * - Now, there should be two distinct fragments, and only two. The
+           *   overlap between these two fragments should not be union'd
+           */
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.6586227416992, 34.36781108107208],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          await createSession(conn, userIds[1], true, false, projectId);
+          const { sketch: copiedCollection } = await copySketch(
+            collection.id as number,
+            conn
+          );
+          expect(copiedCollection.id).not.toBe(collection.id);
+          const userId = await conn.oneFirst(
+            sql`select user_id from sketches where id = ${
+              copiedCollection.id as number
+            }`
+          );
+          expect(userId).toBe(userIds[1]);
+          const originalFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          const copiedFragments = await fragmentsForCollection(
+            conn,
+            copiedCollection.id as number
+          );
+          // await writeOutput(
+          //   "Copied fragments are reconsciled properly across user accounts",
+          //   "originalFragments",
+          //   originalFragments
+          // );
+          // await writeOutput(
+          //   "Copied fragments are reconsciled properly across user accounts",
+          //   "copiedFragments",
+          //   copiedFragments
+          // );
+          expect(originalFragments.length).toBe(copiedFragments.length);
+          expect(originalFragments.map((f) => f.properties.__hash)).toEqual(
+            copiedFragments.map((f) => f.properties.__hash)
+          );
+          let copiedSketchId: number | undefined;
+          // look for new sketch id referenced in copied fragments
+          for (const f of copiedFragments) {
+            if (f.properties.__sketchIds.length === 2) {
+              for (const sketchId of f.properties.__sketchIds) {
+                if (sketchId !== sketch.id) {
+                  copiedSketchId = sketchId;
+                  break;
+                }
+              }
+              break;
+            }
+          }
+          if (!copiedSketchId) {
+            throw new Error("No copied sketch id found");
+          }
+          // User 2 updates their copy of the sketch to slightly move a
+          // boundary
+          await createSession(conn, userIds[1], true, false, projectId);
+
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: copiedCollection.id as number,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[1],
+            sketchId: copiedSketchId,
+          });
+          const updatedCopiedFragments = await fragmentsForCollection(
+            conn,
+            copiedCollection.id as number
+          );
+          // await writeOutput(
+          //   "Copied fragments are reconsciled properly across user accounts",
+          //   "updatedCopiedFragments",
+          //   updatedCopiedFragments
+          // );
+          expect(updatedCopiedFragments.length).toBe(1);
+          expect(updatedCopiedFragments[0].properties.__sketchIds).toEqual([
+            copiedSketchId,
+          ]);
+          const newOriginalFragments = await fragmentsForCollection(
+            conn,
+            collection.id
+          );
+          expect(newOriginalFragments.length).toBe(1);
+          expect(newOriginalFragments[0].properties.__sketchIds).toEqual([
+            sketch.id,
+          ]);
+          expect(newOriginalFragments[0].properties.__hash).toEqual(
+            originalFragments[0].properties.__hash
+          );
+        }
+      );
+    });
+  });
 });
 
 async function createSketch(
@@ -2029,6 +2422,67 @@ async function createSketch(
     left join fragment_geographies fg on f.hash = fg.fragment_hash
     where f.hash = any(
       select fragment_hash from sketch_fragments where sketch_id = ${newSketchId}
+    )
+    group by f.hash, f.geometry
+  `)
+  ).rows.map((f) => ({
+    type: "Feature",
+    properties: {
+      __hash: f.hash,
+      __geographyIds: f.geography_ids,
+      __sketchIds: f.sketch_ids,
+    },
+    geometry: JSON.parse(f.geometry as string),
+  })) as SketchFragment[];
+
+  await conn.any(sql`set role = seasketch_user`);
+
+  return { sketch, fragments };
+}
+
+async function copySketch(
+  sketchId: number,
+  conn: DatabaseTransactionConnectionType
+): Promise<{
+  sketch: Feature<Polygon | MultiPolygon>;
+  fragments: SketchFragment[];
+}> {
+  const pgClient = asPg(conn) as unknown as PoolClient;
+  const { rows } = await pgClient.query(
+    `select copy_sketch_toc_item_recursive($1, $2, true)`,
+    [sketchId, "sketch"]
+  );
+  const copyId: number = rows[0].copy_sketch_toc_item_recursive;
+  const sketchGeometry = await conn.oneFirst(sql`
+    select ST_AsGeoJSON(geom) from sketches where id = ${copyId}
+  `);
+
+  const sketch = {
+    type: "Feature",
+    id: copyId,
+    properties: {},
+    geometry: JSON.parse(sketchGeometry as string),
+  } as Feature<Polygon | MultiPolygon>;
+
+  await conn.any(sql`set role = postgres`);
+
+  const fragments = (
+    await conn.query<{
+      hash: string;
+      geometry: string;
+      sketch_ids: number[];
+      geography_ids: number[];
+    }>(sql`
+    select 
+      f.hash, 
+      ST_AsGeoJSON(f.geometry) as geometry,
+      coalesce(array_agg(distinct sf.sketch_id) filter (where sf.sketch_id is not null), array[]::int[]) as sketch_ids,
+      coalesce(array_agg(distinct fg.geography_id) filter (where fg.geography_id is not null), array[]::int[]) as geography_ids
+    from fragments f
+    left join sketch_fragments sf on f.hash = sf.fragment_hash
+    left join fragment_geographies fg on f.hash = fg.fragment_hash
+    where f.hash = any(
+      select fragment_hash from sketch_fragments where sketch_id = ${copyId}
     )
     group by f.hash, f.geometry
   `)
