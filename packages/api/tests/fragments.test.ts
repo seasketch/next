@@ -11,8 +11,13 @@ import {
   SketchFragment,
 } from "overlay-engine";
 import { SourceCache } from "fgb-source";
-import { Feature, MultiPolygon, Polygon } from "geojson";
-import { createOrUpdateSketch } from "../src/plugins/sketchingPlugin";
+import { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import {
+  createOrUpdateSketch,
+  deleteSketchTocItems,
+  getFragmentsForSketch,
+  updateSketchTocItemParent,
+} from "../src/sketches";
 import { PoolClient } from "pg";
 import calcArea from "@turf/area";
 // @ts-ignore
@@ -1251,11 +1256,11 @@ describe("Integration tests", () => {
             collection.id
           );
           expect(collectionFragments.length).toBe(6);
-          // await writeOutput(
-          //   "Two overlapping sketches in a collection produces multiple fragments",
-          //   "all fragments",
-          //   collectionFragments
-          // );
+          await writeOutput(
+            "Two overlapping sketches in a collection produces multiple fragments",
+            "all fragments",
+            collectionFragments
+          );
           compareWithExpectedOutput(
             "Two overlapping sketches in a collection produces multiple fragments",
             "all fragments",
@@ -2364,7 +2369,1542 @@ describe("Integration tests", () => {
       );
     });
   });
+
+  describe("deleteSketchTocItems", () => {
+    test("Deleting a sketch deletes related fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.6586227416992, 34.36781108107208],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined
+          );
+          expect(fragments.length).toBe(1);
+          expect(fragments[0].properties.__sketchIds).toEqual([sketch.id]);
+          const hashes = fragments.map((f) => f.properties.__hash);
+          await deleteSketchTocItems(
+            [{ type: "sketch", id: parseInt(sketch.id as string) }],
+            asPg(conn) as unknown as PoolClient
+          );
+          const remainingFragments = await getFragments(conn, hashes);
+          expect(remainingFragments.length).toBe(0);
+        }
+      );
+    });
+
+    test("Deleting a collection deletes related fragments", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const { sketch, fragments } = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {},
+              geometry: {
+                type: "Polygon",
+                coordinates: [
+                  [
+                    [-119.68574523925781, 34.39246231021496],
+                    [-119.73896026611328, 34.37772911466851],
+                    [-119.69158172607422, 34.345987273972916],
+                    [-119.6586227416992, 34.36781108107208],
+                    [-119.68574523925781, 34.39246231021496],
+                  ],
+                ],
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          expect(fragments.length).toBe(1);
+          expect(fragments[0].properties.__sketchIds).toEqual([sketch.id]);
+          const hashes = fragments.map((f) => f.properties.__hash);
+          await deleteSketchTocItems(
+            [{ type: "sketch", id: collection.id! }],
+            asPg(conn) as unknown as PoolClient
+          );
+          const remainingFragments = await getFragments(conn, hashes);
+          expect(remainingFragments.length).toBe(0);
+        }
+      );
+    });
+
+    test("Deleting a sketch that has overlap with a neighbor in a collection deletes only the non-overlapping fragment(s)", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "sketchA",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.97210491435324, 34.31860175394256],
+                    [-119.97210491435324, 34.24505627487936],
+                    [-119.84470091133778, 34.24505627487936],
+                    [-119.84470091133778, 34.31860175394256],
+                    [-119.97210491435324, 34.31860175394256],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: { name: "sketchB" },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.86331702136752, 34.25755873771136],
+                    [-119.86331702136752, 34.196471395783774],
+                    [-119.68762748296275, 34.196471395783774],
+                    [-119.68762748296275, 34.25755873771136],
+                    [-119.86331702136752, 34.25755873771136],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const fragments = await fragmentsForCollection(conn, collection.id!);
+          expect(fragments.length).toBe(3);
+          const overlappingFragments = fragments.filter(
+            (f) => f.properties.__sketchIds.length === 2
+          );
+          expect(overlappingFragments.length).toBe(1);
+          await deleteSketchTocItems(
+            [{ type: "sketch", id: parseInt(sketchA.sketch.id as string) }],
+            asPg(conn) as unknown as PoolClient
+          );
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          /**
+           * Note here that the overlapping fragment is not deleted at this
+           * point. This means that collections may contain "stale" fragments
+           * that wouldn't otherwise be generated if the deleted sketch hadn't
+           * ever existed. This is fine, and actually beneficial in that report
+           * results need not be re-generated for these sketches, as would be
+           * the case if every deletion triggered some sort of consolidation of
+           * fragments.
+           */
+          expect(remainingFragments.length).toBe(2);
+          const oldOverlap = remainingFragments.find(
+            (f) =>
+              f.properties.__hash === overlappingFragments[0].properties.__hash
+          );
+          expect(oldOverlap).not.toBeUndefined();
+          /**
+           * If sketchB is modified in the future, or new overlap is created
+           * with it, the old overlapping fragment will be reconciled.
+           */
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "sketchC",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.86270170653235, 34.29649624603775],
+                    [-119.86270170653235, 34.25303387664022],
+                    [-119.83021604972475, 34.25303387664022],
+                    [-119.83021604972475, 34.29649624603775],
+                    [-119.86270170653235, 34.29649624603775],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id
+          );
+          const remainingFragments2 = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Deleting a sketch that has overlap with a neighbor in a collection deletes only the non-overlapping fragment(s)",
+            "remainingFragments2",
+            remainingFragments2
+          );
+          expect(remainingFragments2.length).toBe(3);
+          const newOverlap = remainingFragments2.find(
+            (f) =>
+              f.properties.__hash === overlappingFragments[0].properties.__hash
+          );
+          expect(newOverlap).toBeUndefined();
+          // verify that remainingFragments2 matches expected output
+          compareWithExpectedOutput(
+            "Deleting a sketch that has overlap with a neighbor in a collection deletes only the non-overlapping fragment(s)",
+            "remainingFragments2",
+            remainingFragments2
+          );
+        }
+      );
+    });
+
+    test("Deleting a folder of sketches within a collection, which overlap with neighbors, deletes only the non-overlapping fragment(s)", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            collection.id!,
+            userIds[0],
+            projectId
+          );
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "sketch-a",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-120.07208496480516, 34.31278228669419],
+                    [-120.07208496480516, 34.23440415433534],
+                    [-119.94134895366315, 34.23440415433534],
+                    [-119.94134895366315, 34.31278228669419],
+                    [-120.07208496480516, 34.31278228669419],
+                  ],
+                ],
+                type: "Polygon",
+              },
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "sketch-b",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-120.22804525769584, 34.316579278744484],
+                    [-120.22804525769584, 34.26151287401366],
+                    [-120.05458505990643, 34.26151287401366],
+                    [-120.05458505990643, 34.316579278744484],
+                    [-120.22804525769584, 34.316579278744484],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 1,
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "sketch-c",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [-119.81362064721381, 34.32363646394519],
+                    [-119.96059184928183, 34.32363646394519],
+                    [-119.96059184928183, 34.26645620467768],
+                    [-119.81362064721381, 34.26645620467768],
+                    [-119.81362064721381, 34.32363646394519],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 2,
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const children = await conn.query(sql`
+            select get_child_sketches_recursive(${collection.id}, 'sketch')
+          `);
+          const fragments = await fragmentsForCollection(conn, collection.id!);
+          await writeOutput(
+            "Deleting a folder of sketches within a collection, which overlap with neighbors, deletes only the non-overlapping fragment(s)",
+            "fragments",
+            fragments
+          );
+          expect(fragments.length).toBe(5);
+          await deleteSketchTocItems(
+            [{ type: "sketch_folder", id: folder.id }],
+            asPg(conn) as unknown as PoolClient
+          );
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Deleting a folder of sketches within a collection, which overlap with neighbors, deletes only the non-overlapping fragment(s)",
+            "remainingFragments",
+            remainingFragments
+          );
+          // Remember, overlap-generated fragments won't be cleaned up until the
+          // sketch is edited or another sketch overlaps it, triggering new
+          // fragment generation.
+          expect(remainingFragments.length).toBe(3);
+          // update the sketch
+          const updatedFeature: Feature<Polygon> = {
+            type: "Feature",
+            properties: {},
+            geometry: {
+              coordinates: [
+                [
+                  [-120.08289575431301, 34.30900063176291],
+                  [-120.08289575431301, 34.22710427841557],
+                  [-119.9466350850291, 34.22710427841557],
+                  [-119.9466350850291, 34.30900063176291],
+                  [-120.08289575431301, 34.30900063176291],
+                ],
+              ],
+              type: "Polygon",
+            },
+          };
+          await createOrUpdateSketch({
+            pgClient: asPg(conn) as unknown as PoolClient,
+            userGeom: updatedFeature,
+            projectId,
+            sketchClassId,
+            name: "test",
+            collectionId: collection.id,
+            folderId: undefined,
+            properties: {},
+            userId: userIds[0],
+            // sketchId: sketchA.sketch.id as number,
+          });
+          const remainingFragments2 = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Deleting a folder of sketches within a collection, which overlap with neighbors, deletes only the non-overlapping fragment(s)",
+            "remainingFragments2",
+            remainingFragments2
+          );
+          expect(remainingFragments2.length).toBe(3);
+        }
+      );
+    });
+  });
+
+  describe("updateSketchTocItemParent", () => {
+    // Test data for the new test cases
+    const featureA = {
+      type: "Feature",
+      properties: {
+        name: "feature-a",
+      },
+      geometry: {
+        coordinates: [
+          [
+            [-120.19740752483946, 34.33799761602599],
+            [-120.19740752483946, 34.30087228990429],
+            [-120.11093404341582, 34.30087228990429],
+            [-120.11093404341582, 34.33799761602599],
+            [-120.19740752483946, 34.33799761602599],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as Feature<Polygon>;
+
+    const featureB = {
+      type: "Feature",
+      properties: {
+        name: "feature-b",
+      },
+      geometry: {
+        coordinates: [
+          [
+            [-120.29340451743317, 34.35938441202245],
+            [-120.29340451743317, 34.29206048013964],
+            [-120.18902683500993, 34.29206048013964],
+            [-120.18902683500993, 34.35938441202245],
+            [-120.29340451743317, 34.35938441202245],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as Feature<Polygon>;
+
+    const featureC = {
+      type: "Feature",
+      properties: {
+        name: "feature-c",
+      },
+      geometry: {
+        coordinates: [
+          [
+            [-119.9977947307161, 34.377307375504],
+            [-120.121981316373, 34.377307375504],
+            [-120.121981316373, 34.28733948755175],
+            [-119.9977947307161, 34.28733948755175],
+            [-119.9977947307161, 34.377307375504],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as Feature<Polygon>;
+
+    const existingFeatureA = {
+      type: "Feature",
+      properties: {},
+      geometry: {
+        coordinates: [
+          [
+            [-120.21977093949863, 34.3163493289872],
+            [-120.21977093949863, 34.24894022417101],
+            [-120.10353388216868, 34.24894022417101],
+            [-120.10353388216868, 34.3163493289872],
+            [-120.21977093949863, 34.3163493289872],
+          ],
+        ],
+        type: "Polygon",
+      },
+    } as Feature<Polygon>;
+    const existingCollectionFC = {
+      type: "FeatureCollection",
+      features: [existingFeatureA],
+    } as FeatureCollection<Polygon>;
+
+    test("Moving a sketch into a collection", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            existingFeatureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+          await writeOutput(
+            "Moving a sketch into a collection",
+            "sketchA",
+            sketchA.fragments
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            undefined
+          );
+          await writeOutput(
+            "Moving a sketch into a collection",
+            "sketchB",
+            sketchB.fragments
+          );
+          const fragments = await fragmentsForCollection(conn, collection.id!);
+          expect(fragments.length).toBe(1);
+          await writeOutput(
+            "Moving a sketch into a collection",
+            "original fragments",
+            fragments
+          );
+          await updateParent(
+            conn,
+            sketchB.sketch.id! as number,
+            collection.id!,
+            "sketch"
+          );
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a sketch into a collection",
+            "remainingFragments",
+            remainingFragments
+          );
+          expect(remainingFragments.length).toBe(3);
+        }
+      );
+    });
+
+    test("Moving a sketch into a folder, which is part of a collection", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            collection.id!,
+            userIds[0],
+            projectId
+          );
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            existingFeatureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            undefined
+          );
+          const fragments = await fragmentsForCollection(conn, collection.id!);
+          expect(fragments.length).toBe(1);
+          await updateParent(
+            conn,
+            sketchB.sketch.id! as number,
+            folder.id!,
+            "sketch_folder"
+          );
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(remainingFragments.length).toBe(3);
+        }
+      );
+    });
+
+    test("Moving a folder full of sketches into a collection", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a folder outside the collection
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            null, // Not in collection initially
+            userIds[0],
+            projectId
+          );
+
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id!,
+            undefined
+          );
+          // Create sketches in the folder
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            featureC,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+
+          // Initially, collection should have just one fragment for sketchA
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(initialFragments.length).toBe(1);
+
+          // Move the folder into the collection
+          await updateParent(
+            conn,
+            folder.id!,
+            collection.id!,
+            "sketch",
+            "sketch_folder"
+          );
+
+          // After moving folder, collection should have fragments from both sketches, combined
+          // with the overlap with sketchA
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a folder full of sketches into a collection",
+            "remainingFragments",
+            remainingFragments
+          );
+          await writeOutput(
+            "Moving a folder full of sketches into a collection",
+            "inputSketches",
+            {
+              type: "FeatureCollection",
+              features: [featureA, featureB, featureC],
+            }
+          );
+          expect(remainingFragments.length).toBe(5); // A + B + C should create 3 fragments
+        }
+      );
+    });
+
+    test("Moving a folder with one sketch into a collection. Unrelated sketches are not affected.", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a folder outside the collection
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            null, // Not in collection initially
+            userIds[0],
+            projectId
+          );
+
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id!,
+            undefined
+          );
+          // Create sketches in the folder
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            featureC,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            undefined
+          );
+
+          expect(sketchA.fragments.length).toBe(1);
+          expect(sketchB.fragments.length).toBe(1);
+          expect(sketchC.fragments.length).toBe(1);
+
+          const fragmentsForSketchC = await getFragmentsForSketch(
+            sketchC.sketch.id! as number,
+            asPg(conn) as PoolClient
+          );
+          expect(fragmentsForSketchC.length).toBe(1);
+
+          await writeOutput(
+            "Moving a folder with one sketch into a collection. Unrelated sketches are not affected.",
+            "inputSketches",
+            {
+              type: "FeatureCollection",
+              features: [featureA, featureB, featureC],
+            }
+          );
+
+          // Initially, collection should have just one fragment for sketchA
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(initialFragments.length).toBe(1);
+
+          await writeOutput(
+            "Moving a folder with one sketch into a collection. Unrelated sketches are not affected.",
+            "initialFragments",
+            initialFragments
+          );
+          // Move the folder into the collection
+          await updateParent(
+            conn,
+            folder.id!,
+            collection.id!,
+            "sketch",
+            "sketch_folder"
+          );
+
+          // After moving folder, collection should have fragments from both sketches, combined
+          // with the overlap with sketchA
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a folder with one sketch into a collection. Unrelated sketches are not affected.",
+            "remainingFragments",
+            remainingFragments
+          );
+          await writeOutput(
+            "Moving a folder with one sketch into a collection. Unrelated sketches are not affected.",
+            "inputSketches",
+            {
+              type: "FeatureCollection",
+              features: [featureA, featureB, featureC],
+            }
+          );
+          expect(remainingFragments.length).toBe(3); // A + B should create 3 fragments
+        }
+      );
+    });
+
+    test("Moving a sketch out of a collection", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create sketches in the collection
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+
+          // Initially, collection should have fragments from both sketches
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(initialFragments.length).toBe(3); // A + B should create 3 fragments
+
+          // Move sketchB out of the collection
+          await updateParent(conn, sketchB.sketch.id! as number, null, null);
+
+          // After moving sketchB out, collection should only have fragments from sketchA
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a sketch out of a collection",
+            "remainingFragments",
+            remainingFragments
+          );
+          expect(remainingFragments.length).toBeLessThan(3); // Only A should remain
+        }
+      );
+    });
+
+    test("Moving a folder full of sketches out of a collection", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a folder in the collection
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            collection.id,
+            userIds[0],
+            projectId
+          );
+
+          // Create sketches in the folder
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            featureC,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id!,
+            undefined
+          );
+
+          // Initially, collection should have fragments from both sketches
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(initialFragments.length).toBe(5); // A + B + C should create 5 fragments
+
+          // Move the folder out of the collection
+          await updateParent(conn, folder.id!, null, null, "sketch_folder");
+
+          // After moving folder out, collection should have 3 fragments
+          // (all C, but with some remaining unreconciled overlap)
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a folder full of sketches out of a collection",
+            "remainingFragments",
+            remainingFragments
+          );
+          expect(remainingFragments.length).toBeLessThan(3);
+        }
+      );
+    });
+
+    test("Moving a folder full of sketches out of a collection, then back into it", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a folder in the collection
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            collection.id,
+            userIds[0],
+            projectId
+          );
+
+          // Create sketches in the folder
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+
+          // Initially, collection should have fragments from both sketches
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(initialFragments.length).toBe(3); // A + B should create 3 fragments
+
+          // Move the folder out of the collection
+          await updateParent(conn, folder.id!, null, null, "sketch_folder");
+
+          // After moving folder out, collection should have no fragments
+          const fragmentsAfterMoveOut = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(fragmentsAfterMoveOut.length).toBe(0);
+
+          // Move the folder back into the collection
+          await updateParent(
+            conn,
+            folder.id!,
+            collection.id!,
+            "sketch",
+            "sketch_folder"
+          );
+
+          // After moving folder back, collection should have fragments from both sketches again
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a folder full of sketches out of a collection, then back into it",
+            "remainingFragments",
+            remainingFragments
+          );
+          expect(remainingFragments.length).toBe(3); // A + B should create 3 fragments again
+        }
+      );
+    });
+
+    test("Moving a sketch from a folder, to the root collection (still in the same collection)", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a folder in the collection
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            collection.id,
+            userIds[0],
+            projectId
+          );
+
+          // Create a sketch in the folder
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id!,
+            undefined
+          );
+
+          // Initially, collection should have fragments from the sketch
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          expect(initialFragments.length).toBe(3);
+
+          // Move the sketch from folder to root collection
+          await updateParent(
+            conn,
+            sketchA.sketch.id! as number,
+            collection.id!,
+            "sketch"
+          );
+
+          // After moving sketch to root, collection should still have the same fragments
+          const remainingFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          await writeOutput(
+            "Moving a sketch from a folder, to the root collection (still in the same collection)",
+            "remainingFragments",
+            remainingFragments
+          );
+          expect(remainingFragments.length).toBe(3); // Should still have 3 fragments
+        }
+      );
+    });
+
+    test("Moving a sketch from one collection to another", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create two collections
+          const collection1 = await createCollection(
+            conn,
+            "collection1",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const collection2 = await createCollection(
+            conn,
+            "collection2",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a sketch in collection1
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection1.id,
+            undefined
+          );
+
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection1.id,
+            undefined
+          );
+
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            featureC,
+            projectId,
+            sketchClassId,
+            undefined,
+            collection2.id,
+            undefined
+          );
+
+          await writeOutput(
+            "Moving a sketch from one collection to another",
+            "inputSketches",
+            {
+              type: "FeatureCollection",
+              features: [featureA, featureB, featureC],
+            }
+          );
+
+          // Initially, collection1 should have fragments from the overlap of A and B
+          const initialFragments1 = await fragmentsForCollection(
+            conn,
+            collection1.id!
+          );
+          expect(initialFragments1.length).toBe(3);
+          await writeOutput(
+            "Moving a sketch from one collection to another",
+            "initialFragments1",
+            initialFragments1
+          );
+
+          // Initially, collection2 should have a single fragment for C
+          const initialFragments2 = await fragmentsForCollection(
+            conn,
+            collection2.id!
+          );
+          await writeOutput(
+            "Moving a sketch from one collection to another",
+            "initialFragments2",
+            initialFragments2
+          );
+          expect(initialFragments2.length).toBe(1);
+
+          // Move the sketch from collection1 to collection2
+          await updateParent(
+            conn,
+            sketchA.sketch.id! as number,
+            collection2.id!,
+            "sketch"
+          );
+
+          // After moving sketch, collection1 should have 2 fragments
+          const remainingFragments1 = await fragmentsForCollection(
+            conn,
+            collection1.id!
+          );
+          expect(remainingFragments1.length).toBe(2);
+
+          // After moving sketch, collection2 should have fragments from A + C
+          const remainingFragments2 = await fragmentsForCollection(
+            conn,
+            collection2.id!
+          );
+          await writeOutput(
+            "Moving a sketch from one collection to another",
+            "remainingFragments2",
+            remainingFragments2
+          );
+          expect(remainingFragments2.length).toBe(3);
+        }
+      );
+    });
+
+    test("Moving a folder full of sketches from one collection to another", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies.filter((g) => g.id === 1),
+              1
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create two collections
+          const collection1 = await createCollection(
+            conn,
+            "collection1",
+            collectionSketchClassId,
+            userIds[0]
+          );
+          const collection2 = await createCollection(
+            conn,
+            "collection2",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a folder in collection1
+          const folder = await createFolder(
+            conn,
+            "test folder",
+            collection1.id,
+            userIds[0],
+            projectId
+          );
+
+          // Create sketches in the folder
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            featureA,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            featureB,
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            folder.id
+          );
+
+          // Initially, collection1 should have fragments from both sketches
+          const initialFragments1 = await fragmentsForCollection(
+            conn,
+            collection1.id!
+          );
+          expect(initialFragments1.length).toBe(3); // A + B should create 3 fragments
+
+          // Initially, collection2 should have no fragments
+          const initialFragments2 = await fragmentsForCollection(
+            conn,
+            collection2.id!
+          );
+          expect(initialFragments2.length).toBe(0);
+
+          // Move the folder from collection1 to collection2
+          await updateParent(
+            conn,
+            folder.id!,
+            collection2.id!,
+            "sketch",
+            "sketch_folder"
+          );
+
+          // After moving folder, collection1 should have no fragments
+          const remainingFragments1 = await fragmentsForCollection(
+            conn,
+            collection1.id!
+          );
+          expect(remainingFragments1.length).toBe(0);
+
+          // After moving folder, collection2 should have fragments from both sketches
+          const remainingFragments2 = await fragmentsForCollection(
+            conn,
+            collection2.id!
+          );
+          await writeOutput(
+            "Moving a folder full of sketches from one collection to another",
+            "remainingFragments2",
+            remainingFragments2
+          );
+          expect(remainingFragments2.length).toBe(3); // A + B should create 3 fragments
+        }
+      );
+    });
+  });
 });
+
+async function updateParent(
+  conn: DatabaseTransactionConnectionType,
+  sketchId: number,
+  parentId: number | null,
+  parentType: "sketch" | "sketch_folder" | null,
+  childType?: "sketch" | "sketch_folder" | null
+) {
+  childType = childType || "sketch";
+  await updateSketchTocItemParent(
+    parentType === "sketch_folder" ? parentId : null,
+    parentType === "sketch" ? parentId : null,
+    [{ type: childType, id: sketchId }],
+    asPg(conn) as unknown as PoolClient
+  );
+}
+
+async function getFragments(
+  conn: DatabaseTransactionConnectionType,
+  hashes: string[]
+) {
+  await conn.any(sql`set role = postgres`);
+  const { rows } = await conn.query<{
+    hash: string;
+  }>(
+    sql`select hash from fragments where hash = any(${sql.array(
+      hashes,
+      "text"
+    )})`
+  );
+  await conn.any(sql`set role = seasketch_user`);
+  return rows;
+}
+
+async function createFolder(
+  conn: DatabaseTransactionConnectionType,
+  name: string,
+  collectionId: number | null,
+  userId: number,
+  projectId: number
+) {
+  const folder = await conn.one<{
+    id: number;
+    name: string;
+    collection_id: number | null;
+    user_id: number;
+    project_id: number;
+  }>(
+    sql`insert into sketch_folders (name, collection_id, user_id, project_id) values (${name}, ${collectionId}, ${userId}, ${projectId}) returning *`
+  );
+  return folder;
+}
 
 async function createSketch(
   conn: DatabaseTransactionConnectionType,
@@ -2392,15 +3932,22 @@ async function createSketch(
     sketchId,
   });
 
-  const sketchGeometry = await conn.oneFirst(sql`
-    select ST_AsGeoJSON(geom) from sketches where id = ${newSketchId}
+  const sketchGeometry = await conn.one<{
+    folder_id: number;
+    collection_id: number;
+    geom: string;
+  }>(sql`
+    select ST_AsGeoJSON(geom) as geom, folder_id, collection_id from sketches where id = ${newSketchId}
   `);
 
   const sketch = {
     type: "Feature",
     id: newSketchId,
-    properties: {},
-    geometry: JSON.parse(sketchGeometry as string),
+    properties: {
+      folderId: sketchGeometry.folder_id,
+      collectionId: sketchGeometry.collection_id,
+    },
+    geometry: JSON.parse(sketchGeometry.geom),
   } as Feature<Polygon | MultiPolygon>;
 
   await conn.any(sql`set role = postgres`);
@@ -2818,9 +4365,9 @@ async function fragmentsForCollection(
     from fragments f
     left join sketch_fragments sf on f.hash = sf.fragment_hash
     left join fragment_geographies fg on f.hash = fg.fragment_hash
-    where f.hash = any(
+    where f.hash in (
       select fragment_hash from sketch_fragments where sketch_id in (
-        select id from get_children_of_collection(${collectionId}) where type = 'sketch'
+        select unnest(get_child_sketches_recursive(${collectionId}, 'sketch'))
       )
     )
     group by f.hash, f.geometry

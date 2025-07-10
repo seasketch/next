@@ -103,7 +103,6 @@ begin
     -- Remove sketch-fragment relationships for fragments that are no longer used
     delete from sketch_fragments
     where sketch_id = p_sketch_id
-    and fragment_hash = any(v_existing_fragment_hashes)
     and fragment_hash not in (
       select md5(st_asbinary(st_normalize((unnest(p_fragments)).geometry)))
     )
@@ -524,9 +523,7 @@ LANGUAGE sql
 SECURITY DEFINER
 AS $$
   WITH sketches_in_collection AS (
-    SELECT id
-    FROM get_children_of_collection(input_collection_id)
-    WHERE type = 'sketch'
+    SELECT unnest(get_child_sketches_recursive(input_collection_id, 'sketch')) as id
   ),
   fragments_in_envelopes AS (
     SELECT f.*
@@ -554,6 +551,7 @@ AS $$
       SELECT sketch_fragments.sketch_id
       FROM sketch_fragments
       WHERE sketch_fragments.fragment_hash = fragments.hash
+      AND sketch_fragments.sketch_id IN (SELECT id FROM sketches_in_collection)
     ) AS sketch_ids,
     ARRAY(
       SELECT fragment_geographies.geography_id
@@ -568,6 +566,7 @@ AS $$
     FROM sketch_fragments
     WHERE sketch_fragments.fragment_hash = fragments.hash
       AND sketch_fragments.sketch_id IN (SELECT sketch_id FROM overlapping_sketches)
+      AND sketch_fragments.sketch_id IN (SELECT id FROM sketches_in_collection)
   )
   OR
   -- Include fragments that belong to the edited sketch
@@ -582,3 +581,12 @@ $$;
 
 grant execute on function overlapping_fragments_for_collection to seasketch_user;
 comment on function overlapping_fragments_for_collection is E'@omit';
+
+create or replace function cleanup_orphaned_fragments()
+returns void
+language sql
+security definer
+as $$
+  delete from fragments
+  where hash not in (select fragment_hash from sketch_fragments)
+$$;

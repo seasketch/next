@@ -1,41 +1,14 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import { Feature, MultiPolygon, Polygon } from "geojson";
-import { SourceCache, SourceCacheOptions } from "fgb-source";
-import {
-  prepareSketch,
-  GeographySettings,
-  SketchFragment,
-  FragmentResult,
-} from "overlay-engine";
-import { S3 } from "aws-sdk";
+import { Feature } from "geojson";
 import { Context } from "postgraphile";
-import { Pool, PoolClient } from "pg";
+import { Pool } from "pg";
 import {
-  clipSketchToPolygons,
-  clipToGeographies,
-} from "overlay-engine/dist/src/geographies";
-
-const r2 = new S3({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  signatureVersion: "v4",
-  accessKeyId: process.env.R2_ACCESS_KEY_ID,
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-});
-
-const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
-  fetchRangeFn: async (key: string, range: [number, number | null]) => {
-    const response = await fetch(`https://uploads.seasketch.org/${key}`, {
-      headers: range
-        ? new Headers({
-            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-          })
-        : undefined,
-    });
-    const arrayBuffer = await response.arrayBuffer();
-    return arrayBuffer;
-  },
-});
+  createOrUpdateSketch,
+  deleteSketchTocItems,
+  copySketchTocItem,
+  updateSketchTocItemParent,
+  preprocess,
+} from "../sketches";
 
 const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -589,64 +562,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           resolveInfo
         ) => {
           const { pgClient } = context;
-          if (!forForum) {
-            // Security sensitive:
-            // Check that the user owns this sketch. RLS will be enforced for
-            // this select query, but not for subsequent calls to copy_sketch*,
-            // so it's critical to check here.
-            const { rows } = await pgClient.query(
-              `select user_id from ${
-                type === "sketch" ? "sketches" : "sketch_folders"
-              } where id = $1`,
-              [id]
-            );
-            if (rows.length === 0) {
-              throw new Error(`${type} not found or permission denied`);
-            }
-          }
-          const {
-            rows: [row],
-          } = await pgClient.query(
-            forForum
-              ? `select copy_sketch_toc_item_recursive_for_forum($1, $2, false)`
-              : `select copy_sketch_toc_item_recursive($1, $2, true)`,
-            [id, type]
-          );
-          const copyId: number = forForum
-            ? row.copy_sketch_toc_item_recursive_for_forum
-            : row.copy_sketch_toc_item_recursive;
-          let {
-            rows: [{ get_child_folders_recursive: folderIds }],
-          } = await pgClient.query(
-            `select get_child_folders_recursive($1, $2)`,
-            [copyId, type]
-          );
-          let {
-            rows: [{ get_child_sketches_and_collections_recursive: sketchIds }],
-          } = await pgClient.query(
-            `select get_child_sketches_and_collections_recursive($1, $2)`,
-            [copyId, type]
-          );
-          if (type === "sketch") {
-            sketchIds.push(copyId);
-          } else {
-            folderIds.push(copyId);
-          }
-          context.sketchIds = sketchIds;
-          context.folderIds = folderIds;
-          context.parentId = copyId;
+          const result = await copySketchTocItem(id, type, forForum, pgClient);
+
+          context.sketchIds = result.sketchIds;
+          context.folderIds = result.folderIds;
+          context.parentId = result.copyId;
           context.parentType = type;
-          let {
-            rows: [{ get_parent_collection_id }],
-          } = await pgClient.query(`select get_parent_collection_id($1, $2)`, [
-            type,
-            copyId,
-          ]);
-          context.parentCollectionId = get_parent_collection_id;
-          // will be finished by CopySketchTocItemResults functions at the top
-          // of the resolvers
+          context.parentCollectionId = result.parentCollectionId;
+
           return {
-            parentId: copyId,
+            parentId: result.copyId,
           };
         },
         updateSketchTocItemParent: async (
@@ -656,95 +581,25 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           resolveInfo
         ) => {
           const { pgClient } = context;
-          const { rows } = await pgClient.query(
-            `
-            select distinct(
-              get_parent_collection_id(type, id)
-            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(tocItems)]
+          const result = await updateSketchTocItemParent(
+            folderId,
+            collectionId,
+            tocItems,
+            pgClient
           );
-          context.previousCollectionIds = rows.map((r: any) => r.collection_id);
 
-          const folders: number[] = tocItems
-            .filter((f: any) => f.type === "sketch_folder")
-            .map((f: any) => f.id);
-          const sketches: number[] = tocItems
-            .filter((f: any) => f.type === "sketch")
-            .map((f: any) => f.id);
-          // update collection_id and folder_id on related sketches
-          await pgClient.query(
-            `update sketches set collection_id = $1, folder_id = $2 where id = any($3)`,
-            [collectionId, folderId, sketches]
-          );
-          // update collection_id and folder_id on related folders
-          await pgClient.query(
-            `update sketch_folders set collection_id = $1, folder_id = $2 where id = any($3)`,
-            [collectionId, folderId, folders]
-          );
-          context.sketchIds = sketches;
-          context.folderIds = folders;
+          context.sketchIds = result.sketchIds;
+          context.folderIds = result.folderIds;
+          context.previousCollectionIds = result.previousCollectionIds;
           context.tocItems = tocItems;
 
           return {};
         },
         deleteSketchTocItems: async (_query, { items }, context) => {
           const { pgClient } = context;
-          // Get IDs of collections these items belong to to be included in
-          // updatedCollections
-          const { rows } = await pgClient.query(
-            `
-            select distinct(
-              get_parent_collection_id(type, id)
-            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(items)]
-          );
-          context.previousCollectionIds = rows.map((r: any) => r.collection_id);
-          // Get IDs of all items to be deleted (including their children) to
-          // be added to deletedItems output
-          const childrenResult = await pgClient.query(
-            `
-            select distinct(
-              get_all_sketch_toc_children(id, type)
-            ) as children from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(items)]
-          );
-
-          const deletedItems: string[] = [
-            ...items.map(
-              (item: any) =>
-                `${/folder/i.test(item.type) ? "SketchFolder" : "Sketch"}:${
-                  item.id
-                }`
-            ),
-          ];
-          for (const row of childrenResult.rows) {
-            if (row.children && row.children.length) {
-              for (const id of row.children) {
-                if (deletedItems.indexOf(id) === -1) {
-                  deletedItems.push(id);
-                }
-              }
-            }
-          }
-
-          // Do the deleting
-          const folders: number[] = items
-            .filter((f: any) => f.type === "sketch_folder")
-            .map((f: any) => f.id);
-          const sketches: number[] = items
-            .filter((f: any) => f.type === "sketch")
-            .map((f: any) => f.id);
-
-          await pgClient.query(
-            `delete from sketch_folders where id = any($1)`,
-            [folders]
-          );
-
-          await pgClient.query(`delete from sketches where id = any($1)`, [
-            sketches,
-          ]);
-
-          // results will be populated by resolvers above
+          const { deletedItems, previousCollectionIds } =
+            await deleteSketchTocItems(items, pgClient);
+          context.previousCollectionIds = previousCollectionIds;
           return { deletedItems };
         },
       },
@@ -753,356 +608,3 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
 });
 
 export default SketchingPlugin;
-
-async function preprocess(endpoint: string, feature: Feature<any>) {
-  return fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ feature }),
-  }).then(async (response) => {
-    if (response.ok) {
-      const { data, error } = await response.json();
-      if (error) {
-        throw new Error(`Preprocessing Error: ${error}`);
-      }
-      return data;
-    } else {
-      const { data, error } = await response.json();
-      if (error) {
-        throw new Error(`Preprocessing Error: ${error}`);
-      } else {
-        throw new Error("Unrecognized response from preprocessor");
-      }
-    }
-  });
-}
-
-let clippingWorkerManager: any;
-
-export async function createOrUpdateSketch({
-  pgClient,
-  userGeom,
-  sketchClassId,
-  projectId,
-  name,
-  collectionId,
-  folderId,
-  properties,
-  userId,
-  sketchId,
-}: {
-  pgClient: PoolClient;
-  userGeom: Feature<any>;
-  sketchClassId: number;
-  projectId: number;
-  name: string;
-  collectionId?: number;
-  folderId?: number;
-  properties: any;
-  userId: number;
-  sketchId?: number;
-}): Promise<number> {
-  if (!name || name.length < 1) {
-    throw new Error("Sketch name is required");
-  }
-
-  if (sketchId) {
-    // Do a permission check
-    const { rows } = await pgClient.query(
-      `select * from sketches where id = $1 and user_id = $2`,
-      [sketchId, userId]
-    );
-    if (rows.length === 0) {
-      throw new Error("Sketch not found");
-    }
-  }
-
-  // First, prepare the sketch for clipping (e.g. convert to multipolygon,
-  // split at antimeridian, and normalize coordinates)
-  const preparedSketch = prepareSketch(userGeom);
-
-  // Get all the clipping layers for geographies in this project, including
-  // those used for clipping this sketch class.
-  await pgClient.query(`set role = postgres`);
-
-  let { rows: clippingLayers } = await pgClient.query(
-    `
-    select 
-      gcl.id,
-      gcl.project_geography_id as geography_id,
-      data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
-      gcl.operation_type,
-      gcl.cql2_query,
-      gcl.template_id,
-      exists(
-        select 1 
-        from sketch_class_geographies scg 
-        where scg.geography_id = gcl.project_geography_id 
-        and scg.sketch_class_id = $1
-      ) as for_clipping
-    from geography_clipping_layers gcl
-    join project_geography pg on gcl.project_geography_id = pg.id
-    where pg.project_id = $2
-    `,
-    [sketchClassId, projectId]
-  );
-
-  await pgClient.query(`set role = seasketch_user`);
-
-  // group by geography_id
-  const geographies = clippingLayers.reduce(
-    (acc: GeographySettings[], l: any) => {
-      let geography: GeographySettings | undefined = acc.find(
-        (g) => g.id === l.geography_id
-      );
-      if (!geography) {
-        geography = {
-          id: l.geography_id,
-          clippingLayers: [],
-        };
-        acc.push(geography);
-      }
-      if (l.object_key === null) {
-        throw new Error(
-          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`
-        );
-      }
-      geography.clippingLayers.push({
-        op: l.operation_type.toUpperCase(),
-        source: l.object_key,
-        cql2Query: l.cql2_query,
-      });
-      return acc;
-    },
-    [] as GeographySettings[]
-  );
-
-  // Filter out layers that are not used for clipping this sketch class.
-  const clippingGeographyLayers = [
-    ...new Set(
-      clippingLayers
-        .filter((l: any) => l.for_clipping)
-        .map((l: any) => l.geography_id)
-    ),
-  ];
-
-  const existingOverlappingFragments: SketchFragment[] = [];
-  if (sketchId) {
-    // collection_id is not updatable, so we need to check if the sketch is
-    // already in a collection
-    const {
-      rows: [sketch],
-    } = await pgClient.query(`SELECT get_parent_collection_id('sketch', $1)`, [
-      sketchId,
-    ]);
-    collectionId = sketch.get_parent_collection_id;
-  }
-  let siblingSketchIds: number[] = [];
-  if (collectionId) {
-    const { rows } = await pgClient.query(
-      `SELECT get_child_sketches_recursive($1, 'sketch')`,
-      [collectionId]
-    );
-    siblingSketchIds = rows[0].get_child_sketches_recursive;
-    const geometryArray = preparedSketch.envelopes
-      .map(
-        (e) =>
-          `ST_MakeEnvelope(${e.minX}, ${e.minY}, ${e.maxX}, ${e.maxY}, 4326)`
-      )
-      .join(",");
-
-    const { rows: overlappingFragments } = await pgClient.query<{
-      hash: string;
-      geometry: string;
-      sketch_ids: number[];
-      geography_ids: number[];
-    }>(
-      `SELECT 
-        hash,
-        ST_AsGeoJSON(geometry) as geometry,
-        sketch_ids,
-        geography_ids 
-      FROM overlapping_fragments_for_collection(
-        $1::int, 
-        ARRAY[${geometryArray}],
-        $2::int
-      )`,
-      [collectionId, sketchId]
-    );
-    for (const fragment of overlappingFragments) {
-      const f: SketchFragment = {
-        type: "Feature",
-        properties: {
-          __hash: fragment.hash,
-          __geographyIds: fragment.geography_ids,
-          __sketchIds: fragment.sketch_ids,
-        },
-        geometry: JSON.parse(fragment.geometry),
-      };
-      existingOverlappingFragments.push(f);
-    }
-  }
-
-  const fragmentDeletionScope = existingOverlappingFragments.map(
-    (f) => f.properties.__hash
-  );
-
-  // check that clippingGeographyLayers contains distinct values
-  const distinctGeographyIds = new Set(
-    clippingGeographyLayers.map((l: any) => l.geography_id)
-  );
-  if (distinctGeographyIds.size !== clippingGeographyLayers.length) {
-    throw new Error("Clipping geography layers contains duplicate values");
-  }
-
-  // Clip the sketch to the geographies.
-  const { clipped, fragments } = await clipToGeographies(
-    preparedSketch,
-    geographies,
-    clippingGeographyLayers,
-    existingOverlappingFragments,
-    sketchId || null,
-    async (feature, objectKey, op, cql2Query) => {
-      // ClippingFn is provided to clipToGeography to handle the actual
-      // clipping. This is done to accomadate different architectures. For
-      // example, on this API server we don't want to block the event-loop, so
-      // we use a worker (via clippingWorkerManager) to handle the clipping.
-      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
-        objectKey
-      );
-      if (process.env.NODE_ENV === "test") {
-        let count = 0;
-        for await (const f of source.getFeaturesAsync(feature.envelopes)) {
-          count++;
-        }
-
-        return clipSketchToPolygons(
-          feature,
-          op,
-          cql2Query,
-          source.getFeaturesAsync(feature.envelopes)
-        );
-      } else {
-        if (!clippingWorkerManager) {
-          const manager = await import(
-            "../workers/clipping/clippingWorkerManager"
-          );
-          clippingWorkerManager = manager.clippingWorkerManager;
-        }
-        return clippingWorkerManager.clipSketchToPolygonsWithWorker(
-          feature,
-          op,
-          cql2Query,
-          source.getFeaturesAsync(feature.envelopes)
-        );
-      }
-    }
-  );
-
-  if (!clipped) {
-    throw new Error("Clipping failed. No geometry returned.");
-  }
-
-  if (sketchId) {
-    // TODO: note in docs that folder_id and collection_id are not updatable
-    const {
-      rows: [sketch],
-    } = await pgClient.query(
-      `UPDATE sketches SET
-        name = $1,
-        user_geom = ST_GeomFromGeoJSON($2),
-        geom = ST_GeomFromGeoJSON($3),
-        properties = $4
-      WHERE id = $5
-      RETURNING id`,
-      [
-        name,
-        JSON.stringify(userGeom.geometry),
-        JSON.stringify(clipped?.geometry),
-        properties,
-        sketchId,
-      ]
-    );
-  } else {
-    const {
-      rows: [sketch],
-    } = await pgClient.query(
-      `INSERT INTO sketches(
-        name,
-        sketch_class_id,
-        user_id,
-        collection_id,
-        user_geom,
-        geom,
-        folder_id,
-        properties
-      ) VALUES (
-        $1, $2, $3, $4,
-        ST_GeomFromGeoJSON($5),
-        ST_GeomFromGeoJSON($6),
-        $7, $8
-      ) RETURNING id`,
-      [
-        name,
-        sketchClassId,
-        userId,
-        collectionId,
-        JSON.stringify(userGeom.geometry),
-        JSON.stringify(clipped?.geometry),
-        folderId,
-        properties,
-      ]
-    );
-    sketchId = sketch.id;
-  }
-
-  // group fragments by sketchId
-  const fragmentGroups: { [sketchId: number]: FragmentResult[] } = {};
-  for (const fragment of fragments) {
-    for (let id of fragment.properties.__sketchIds) {
-      if (id === 0) {
-        id = sketchId!;
-      }
-      if (!fragmentGroups[id]) {
-        fragmentGroups[id] = [];
-      }
-      fragmentGroups[id].push(fragment);
-    }
-  }
-
-  for (const [idForSketch, fragments] of Object.entries(fragmentGroups)) {
-    if (
-      parseInt(idForSketch) !== sketchId &&
-      siblingSketchIds.indexOf(parseInt(idForSketch)) === -1
-    ) {
-      // Skip updating fragments if sketch is not a sibling or the target sketch
-      continue;
-    }
-    const fragmentInputs = fragments
-      .map((f) => {
-        const geomJson = JSON.stringify(f.geometry);
-        const geographyIds = f.properties.__geographyIds.join(",");
-        return `ROW(ST_GeomFromGeoJSON('${geomJson}'), ARRAY[${geographyIds}])::fragment_input`;
-      })
-      .join(",");
-
-    const deletionScopeSql =
-      fragmentDeletionScope.length > 0
-        ? `ARRAY[${fragmentDeletionScope.map((hash) => `'${hash}'`).join(",")}]`
-        : "NULL";
-
-    const sql = `
-      SELECT update_sketch_fragments(
-        $1::int, 
-        ARRAY[${fragmentInputs}],
-        ${deletionScopeSql}
-      )
-    `;
-
-    await pgClient.query(sql, [idForSketch]);
-  }
-  return sketchId!;
-}

@@ -15,4 +15,5 @@ export {
   FragmentResult,
   SketchFragment,
   GeographySettings,
+  mergeTouchingFragments,
 } from "./fragments";

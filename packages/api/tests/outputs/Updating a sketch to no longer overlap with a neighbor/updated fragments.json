@@ -6,11 +6,11 @@
       "properties": {
         "__hash": "07acc57eb3201c8e5d34e078007c3d15",
         "__geographyIds": [
-          9
+          20
         ],
         "__sketchIds": [
-          15,
-          16
+          40,
+          41
         ]
       },
       "geometry": {
@@ -46,10 +46,10 @@
       "properties": {
         "__hash": "5b3bc897f823b49b6ffead96b21b6036",
         "__geographyIds": [
-          9
+          20
         ],
         "__sketchIds": [
-          15
+          40
         ]
       },
       "geometry": {
@@ -93,10 +93,10 @@
       "properties": {
         "__hash": "9bb227fb7d1fd97bd6a3dc23e734caf8",
         "__geographyIds": [
-          9
+          20
         ],
         "__sketchIds": [
-          17
+          42
         ]
       },
       "geometry": {
@@ -136,10 +136,10 @@
       "properties": {
         "__hash": "b31b9e3252c6d90fbad41ea1d43379ad",
         "__geographyIds": [
-          9
+          20
         ],
         "__sketchIds": [
-          16
+          41
         ]
       },
       "geometry": {

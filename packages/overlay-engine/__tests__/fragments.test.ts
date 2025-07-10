@@ -11,6 +11,8 @@ import {
   eliminateOverlap,
   FragmentResult,
   GeographySettings,
+  mergeTouchingFragments,
+  PendingFragmentResult,
 } from "../src/fragments";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import {
@@ -499,5 +501,439 @@ describe("eliminateOverlap", () => {
     expect(compareFragments(merged, readOutput("fiji-shape2-merged"))).toBe(
       true
     );
+  });
+});
+
+describe("mergeTouchingFragments", () => {
+  const testData = {
+    type: "FeatureCollection",
+    features: [
+      {
+        type: "Feature",
+        properties: {
+          name: "touching-fragment-a",
+        },
+        geometry: {
+          coordinates: [
+            [
+              [-120.05028595862674, 34.36809509937177],
+              [-120.05028595862674, 34.320942318694875],
+              [-119.96494301397664, 34.320942318694875],
+              [-119.96494301397664, 34.36809509937177],
+              [-120.05028595862674, 34.36809509937177],
+            ],
+          ],
+          type: "Polygon",
+        },
+        id: 0,
+      },
+      {
+        type: "Feature",
+        properties: {
+          name: "touching-fragment-b",
+        },
+        geometry: {
+          coordinates: [
+            [
+              [-119.86227480988632, 34.37021370276432],
+              [-119.86484151498871, 34.319882380980175],
+              [-119.96494301397664, 34.320942318694875],
+              [-119.96494301397664, 34.36809509937177],
+              [-119.86227480988632, 34.37021370276432],
+            ],
+          ],
+          type: "Polygon",
+        },
+        id: 1,
+      },
+      {
+        type: "Feature",
+        properties: {
+          name: "discontiguous-fragment",
+        },
+        geometry: {
+          coordinates: [
+            [
+              [-119.8186408231478, 34.28489761098619],
+              [-119.8186408231478, 34.224435023962485],
+              [-119.68517215783048, 34.224435023962485],
+              [-119.68517215783048, 34.28489761098619],
+              [-119.8186408231478, 34.28489761098619],
+            ],
+          ],
+          type: "Polygon",
+        },
+        id: 2,
+      },
+    ],
+  };
+
+  it("Touching fragments with the same key properties (__sketchIds, __geographyIds) are merged", () => {
+    // Create fragments with the same key properties that are touching
+    const fragments: PendingFragmentResult[] = [
+      {
+        type: "Feature",
+        properties: {
+          __id: 1,
+          __sketchIds: [1, 2],
+          __geographyIds: [1, 2],
+          name: "touching-fragment-a",
+        },
+        geometry: testData.features[0].geometry as Polygon,
+        bbox: [
+          -120.05028595862674, 34.320942318694875, -119.96494301397664,
+          34.36809509937177,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __id: 2,
+          __sketchIds: [1, 2],
+          __geographyIds: [1, 2],
+          name: "touching-fragment-b",
+        },
+        geometry: testData.features[1].geometry as Polygon,
+        bbox: [
+          -119.86227480988632, 34.319882380980175, -119.96494301397664,
+          34.37021370276432,
+        ],
+      },
+    ];
+
+    const result = mergeTouchingFragments(fragments, [
+      "__sketchIds",
+      "__geographyIds",
+    ]);
+
+    // Should merge into a single fragment
+    expect(result).toHaveLength(1);
+    expect(result[0].properties.__sketchIds).toEqual([1, 2]);
+    expect(result[0].properties.__geographyIds).toEqual([1, 2]);
+    expect(result[0].properties.__id).toBeDefined();
+  });
+
+  it("Touching fragments with different key properties (__sketchIds, __geographyIds) are not merged", () => {
+    // Create fragments with different key properties that are touching
+    const fragments: PendingFragmentResult[] = [
+      {
+        type: "Feature",
+        properties: {
+          __id: 1,
+          __sketchIds: [1],
+          __geographyIds: [1],
+          name: "touching-fragment-a",
+        },
+        geometry: testData.features[0].geometry as Polygon,
+        bbox: [
+          -120.05028595862674, 34.320942318694875, -119.96494301397664,
+          34.36809509937177,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __id: 2,
+          __sketchIds: [2],
+          __geographyIds: [2],
+          name: "touching-fragment-b",
+        },
+        geometry: testData.features[1].geometry as Polygon,
+        bbox: [
+          -119.86227480988632, 34.319882380980175, -119.96494301397664,
+          34.37021370276432,
+        ],
+      },
+    ];
+
+    const result = mergeTouchingFragments(fragments, [
+      "__sketchIds",
+      "__geographyIds",
+    ]);
+
+    // Should not merge - keep as separate fragments
+    expect(result).toHaveLength(2);
+    expect(result[0].properties.__sketchIds).toEqual([1]);
+    expect(result[0].properties.__geographyIds).toEqual([1]);
+    expect(result[1].properties.__sketchIds).toEqual([2]);
+    expect(result[1].properties.__geographyIds).toEqual([2]);
+  });
+
+  it("Discontiguous fragments with the same key properties are not merged", () => {
+    // Create fragments with the same key properties that are not touching
+    const fragments: PendingFragmentResult[] = [
+      {
+        type: "Feature",
+        properties: {
+          __id: 1,
+          __sketchIds: [1, 2],
+          __geographyIds: [1, 2],
+          name: "touching-fragment-a",
+        },
+        geometry: testData.features[0].geometry as Polygon,
+        bbox: [
+          -120.05028595862674, 34.320942318694875, -119.96494301397664,
+          34.36809509937177,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __id: 2,
+          __sketchIds: [1, 2],
+          __geographyIds: [1, 2],
+          name: "discontiguous-fragment",
+        },
+        geometry: testData.features[2].geometry as Polygon,
+        bbox: [
+          -119.8186408231478, 34.224435023962485, -119.68517215783048,
+          34.28489761098619,
+        ],
+      },
+    ];
+
+    const result = mergeTouchingFragments(fragments, [
+      "__sketchIds",
+      "__geographyIds",
+    ]);
+
+    // Should not merge - keep as separate fragments
+    expect(result).toHaveLength(2);
+    expect(result[0].properties.__sketchIds).toEqual([1, 2]);
+    expect(result[0].properties.__geographyIds).toEqual([1, 2]);
+    expect(result[1].properties.__sketchIds).toEqual([1, 2]);
+    expect(result[1].properties.__geographyIds).toEqual([1, 2]);
+  });
+
+  it("Handles property arrays with different orders correctly", () => {
+    // Create fragments with the same key properties but in different orders
+    const fragments: PendingFragmentResult[] = [
+      {
+        type: "Feature",
+        properties: {
+          __id: 1,
+          __sketchIds: [1, 2],
+          __geographyIds: [1, 2],
+          name: "touching-fragment-a",
+        },
+        geometry: testData.features[0].geometry as Polygon,
+        bbox: [
+          -120.05028595862674, 34.320942318694875, -119.96494301397664,
+          34.36809509937177,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __id: 2,
+          __sketchIds: [2, 1], // Different order
+          __geographyIds: [2, 1], // Different order
+          name: "touching-fragment-b",
+        },
+        geometry: testData.features[1].geometry as Polygon,
+        bbox: [
+          -119.86227480988632, 34.319882380980175, -119.96494301397664,
+          34.37021370276432,
+        ],
+      },
+    ];
+
+    const result = mergeTouchingFragments(fragments, [
+      "__sketchIds",
+      "__geographyIds",
+    ]);
+
+    // Should merge into a single fragment despite different order
+    expect(result).toHaveLength(1);
+    expect(result[0].properties.__sketchIds).toEqual([1, 2]);
+    expect(result[0].properties.__geographyIds).toEqual([1, 2]);
+  });
+
+  test("Handles multiple touching fragments by processing in multiple passes", async () => {
+    const fragments: PendingFragmentResult[] = [
+      {
+        type: "Feature",
+        properties: { __geographyIds: [1], __id: 14, __sketchIds: [0, 2] },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-119.960591849, 34.266456205],
+              [-119.9466350850291, 34.266456205],
+              [-119.9466350850291, 34.30900063176291],
+              [-119.960591849, 34.30900063176291],
+              [-119.960591849, 34.266456205],
+            ],
+          ],
+        },
+        bbox: [
+          -120.08289575431301, 34.22710427841557, -119.9466350850291,
+          34.30900063176291,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: { __geographyIds: [1], __id: 17, __sketchIds: [0, 2] },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-120.072084965, 34.234404154],
+              [-119.9466350850291, 34.234404154],
+              [-119.9466350850291, 34.266456205],
+              [-119.960591849, 34.266456205],
+              [-119.960591849, 34.30900063176291],
+              [-120.05458506, 34.30900063176291],
+              [-120.05458506, 34.261512874],
+              [-120.072084965, 34.261512874],
+              [-120.072084965, 34.234404154],
+            ],
+          ],
+        },
+        bbox: [
+          -120.08289575431301, 34.22710427841557, -119.9466350850291,
+          34.30900063176291,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: { __geographyIds: [1], __id: 21, __sketchIds: [0, 2] },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-120.072084965, 34.261512874],
+              [-120.05458506, 34.261512874],
+              [-120.05458506, 34.30900063176291],
+              [-120.072084965, 34.30900063176291],
+              [-120.072084965, 34.261512874],
+            ],
+          ],
+        },
+        bbox: [
+          -120.08289575431301, 34.22710427841557, -119.9466350850291,
+          34.30900063176291,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: { __geographyIds: [1], __id: 22, __sketchIds: [0] },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-120.08289575431301, 34.22710427841557],
+              [-119.9466350850291, 34.22710427841557],
+              [-119.9466350850291, 34.234404154],
+              [-120.072084965, 34.234404154],
+              [-120.072084965, 34.30900063176291],
+              [-120.08289575431301, 34.30900063176291],
+              [-120.08289575431301, 34.22710427841557],
+            ],
+          ],
+        },
+        bbox: [
+          -120.08289575431301, 34.22710427841557, -119.9466350850291,
+          34.30900063176291,
+        ],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __hash: "a4f3d6468b81755afea17504b628def8",
+          __geographyIds: [1],
+          __sketchIds: [2],
+          __id: 23,
+        },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-120.072084965, 34.30900063176291],
+              [-120.05458506, 34.30900063176291],
+              [-120.05458506, 34.312782287],
+              [-120.072084965, 34.312782287],
+              [-120.072084965, 34.30900063176291],
+            ],
+          ],
+        },
+        bbox: [-120.072084965, 34.261512874, -120.05458506, 34.312782287],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __hash: "5d17be330ce24a26ce8198039ec60427",
+          __geographyIds: [1],
+          __sketchIds: [2],
+          __id: 19,
+        },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-120.05458506, 34.30900063176291],
+              [-119.960591849, 34.30900063176291],
+              [-119.960591849, 34.312782287],
+              [-120.05458506, 34.312782287],
+              [-120.05458506, 34.30900063176291],
+            ],
+          ],
+        },
+        bbox: [-120.072084965, 34.234404154, -119.941348954, 34.312782287],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __hash: "5d17be330ce24a26ce8198039ec60427",
+          __geographyIds: [1],
+          __sketchIds: [2],
+          __id: 20,
+        },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-119.9466350850291, 34.234404154],
+              [-119.941348954, 34.234404154],
+              [-119.941348954, 34.266456205],
+              [-119.9466350850291, 34.266456205],
+              [-119.9466350850291, 34.234404154],
+            ],
+          ],
+        },
+        bbox: [-120.072084965, 34.234404154, -119.941348954, 34.312782287],
+      },
+      {
+        type: "Feature",
+        properties: {
+          __hash: "99e3e024ce2ee081cb42cece99547ab6",
+          __geographyIds: [1],
+          __sketchIds: [2],
+          __id: 16,
+        },
+        geometry: {
+          type: "Polygon",
+          coordinates: [
+            [
+              [-119.960591849, 34.30900063176291],
+              [-119.9466350850291, 34.30900063176291],
+              [-119.9466350850291, 34.266456205],
+              [-119.941348954, 34.266456205],
+              [-119.941348954, 34.312782287],
+              [-119.960591849, 34.312782287],
+              [-119.960591849, 34.30900063176291],
+            ],
+          ],
+        },
+        bbox: [-119.960591849, 34.266456205, -119.941348954, 34.312782287],
+      },
+    ];
+
+    const result = mergeTouchingFragments(fragments, [
+      "__sketchIds",
+      "__geographyIds",
+    ]);
+
+    expect(result).toHaveLength(3);
   });
 });

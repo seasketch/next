@@ -13,6 +13,8 @@ import booleanEqual from "@turf/boolean-equal";
 import booleanIntersects from "@turf/boolean-intersects";
 import { bboxIntersects } from "./utils/bboxUtils";
 import calcArea from "@turf/area";
+import booleanTouches from "@turf/boolean-touches";
+import bboxPolygon from "@turf/bbox-polygon";
 
 export type GeographySettings = {
   id: number;
@@ -26,6 +28,7 @@ export type FragmentResult = Feature<
 
 export type PendingFragmentResult = FragmentResult & {
   properties: { __id: number };
+  bbox: BBox;
 };
 
 let idCounter = 0;
@@ -357,6 +360,7 @@ export type SketchFragment = FragmentResult & {
 
 type PendingSketchFragmentResult = SketchFragment & {
   properties: { __id: number; __sketchIds: number[] };
+  bbox: BBox;
 };
 
 /**
@@ -390,6 +394,7 @@ export function eliminateOverlap(
         ...f.properties,
         __id: idCounter++,
       },
+      bbox: calcBBox(f),
     })),
     ...existingFragments.map((f) => ({
       ...f,
@@ -397,6 +402,7 @@ export function eliminateOverlap(
         ...f.properties,
         __id: idCounter++,
       },
+      bbox: calcBBox(f),
     })),
   ];
 
@@ -412,10 +418,16 @@ export function eliminateOverlap(
   ]);
 
   // merge fragments with matching geometry
-  const mergedFragments = mergeFragmentsWithMatchingGeometry(
+  let mergedFragments = mergeFragmentsWithMatchingGeometry(
     decomposedFragments,
     ["__geographyIds", "__sketchIds"]
   );
+
+  // merge touching fragments with the same key properties
+  mergedFragments = mergeTouchingFragments(mergedFragments, [
+    "__sketchIds",
+    "__geographyIds",
+  ]);
 
   // convert back to SketchFragment type
   return mergedFragments
@@ -427,4 +439,288 @@ export function eliminateOverlap(
       },
     }))
     .filter((f) => calcArea(f) > 1);
+}
+
+/**
+ * Finds fragments that have matching key properties and are touching, and
+ * attempts to merge them into a single fragment if their intersection results
+ * in a single polygon.
+ *
+ * Uses a connected components algorithm to find all fragments that can be
+ * merged through chains of touching fragments, not just direct neighbors.
+ * Makes multiple passes until no more merges are possible.
+ */
+export function mergeTouchingFragments(
+  fragments: PendingFragmentResult[],
+  keyNumericProperties: string[]
+) {
+  let currentFragments = [...fragments];
+  let hasChanges = true;
+  let passCount = 0;
+  const maxPasses = 10; // Prevent infinite loops
+
+  while (hasChanges && passCount < maxPasses) {
+    hasChanges = false;
+    passCount++;
+
+    const mergedFragments: PendingFragmentResult[] = [];
+
+    // Group fragments by their key properties
+    const fragmentsByKey = new Map<string, PendingFragmentResult[]>();
+
+    for (const fragment of currentFragments) {
+      const keyProps = getKeyProperties(
+        fragment.properties,
+        keyNumericProperties
+      );
+      const normalizedKeyProps = normalizeKeyProperties(keyProps);
+      const key = JSON.stringify(normalizedKeyProps);
+
+      if (!fragmentsByKey.has(key)) {
+        fragmentsByKey.set(key, []);
+      }
+      fragmentsByKey.get(key)!.push(fragment);
+    }
+
+    // Process each group of fragments with matching key properties
+    for (const [key, fragmentGroup] of fragmentsByKey) {
+      if (fragmentGroup.length < 2) {
+        // No merging possible for single fragments
+        mergedFragments.push(...fragmentGroup);
+        continue;
+      }
+
+      // Find connected components within this group
+      const connectedComponents = findConnectedComponents(fragmentGroup);
+
+      for (const component of connectedComponents) {
+        if (component.length > 1) {
+          // Try to merge the connected component
+          const mergedFragment = mergeTouchingFragmentGroup(
+            component,
+            keyNumericProperties
+          );
+          if (mergedFragment) {
+            mergedFragments.push(mergedFragment);
+            hasChanges = true; // Indicate that merging occurred
+          } else {
+            // If merging failed, add all fragments individually
+            mergedFragments.push(...component);
+          }
+        } else {
+          // Single fragment, no merging needed
+          mergedFragments.push(component[0]);
+        }
+      }
+    }
+
+    // Update current fragments for next pass
+    currentFragments = mergedFragments;
+  }
+
+  if (passCount >= maxPasses) {
+    console.warn(
+      `mergeTouchingFragments: Maximum passes (${maxPasses}) reached. Some fragments may not have been fully merged.`
+    );
+  }
+
+  return currentFragments;
+}
+
+/**
+ * Finds connected components in a group of fragments using a depth-first search.
+ * Two fragments are considered connected if they are touching.
+ */
+function findConnectedComponents(
+  fragments: PendingFragmentResult[]
+): PendingFragmentResult[][] {
+  const visited = new Set<number>();
+  const components: PendingFragmentResult[][] = [];
+
+  for (const fragment of fragments) {
+    if (visited.has(fragment.properties.__id)) {
+      continue;
+    }
+
+    // Start a new connected component
+    const component: PendingFragmentResult[] = [];
+    const stack: PendingFragmentResult[] = [fragment];
+
+    while (stack.length > 0) {
+      const current = stack.pop()!;
+
+      if (visited.has(current.properties.__id)) {
+        continue;
+      }
+
+      visited.add(current.properties.__id);
+      component.push(current);
+
+      // Find all unvisited fragments that are touching the current fragment
+      for (const other of fragments) {
+        if (visited.has(other.properties.__id)) {
+          continue;
+        }
+
+        // Check if fragments are touching
+        if (
+          booleanTouches(
+            bboxPolygon(current.bbox!),
+            bboxPolygon(other.bbox!)
+          ) &&
+          booleanTouches(current, other)
+        ) {
+          stack.push(other);
+        }
+      }
+    }
+
+    components.push(component);
+  }
+
+  return components;
+}
+
+/**
+ * Gets the key properties from a fragment's properties object
+ */
+function getKeyProperties(
+  properties: GeoJsonProperties,
+  keyNumericProperties: string[]
+) {
+  const keyProps: { [key: string]: any } = {};
+  for (const propName of keyNumericProperties) {
+    if (properties && propName in properties) {
+      keyProps[propName] = properties[propName];
+    }
+  }
+  return keyProps;
+}
+
+/**
+ * Normalizes key properties by sorting arrays to handle different orders
+ */
+function normalizeKeyProperties(keyProps: { [key: string]: any }): {
+  [key: string]: any;
+} {
+  const normalized: { [key: string]: any } = {};
+  for (const [key, value] of Object.entries(keyProps)) {
+    if (Array.isArray(value)) {
+      // Sort arrays to normalize order
+      normalized[key] = [...value].sort();
+    } else {
+      normalized[key] = value;
+    }
+  }
+  return normalized;
+}
+
+/**
+ * Checks if two property objects have matching key properties (regardless of order)
+ */
+function propertiesMatch(
+  props1: { [key: string]: any },
+  props2: { [key: string]: any }
+): boolean {
+  const keys1 = Object.keys(props1);
+  const keys2 = Object.keys(props2);
+
+  if (keys1.length !== keys2.length) {
+    return false;
+  }
+
+  for (const key of keys1) {
+    if (!(key in props2)) {
+      return false;
+    }
+
+    const val1 = props1[key];
+    const val2 = props2[key];
+
+    // Handle arrays (like __geographyIds, __sketchIds)
+    if (Array.isArray(val1) && Array.isArray(val2)) {
+      if (val1.length !== val2.length) {
+        return false;
+      }
+      // Sort arrays to handle different orders
+      const sortedVal1 = [...val1].sort();
+      const sortedVal2 = [...val2].sort();
+      for (let i = 0; i < sortedVal1.length; i++) {
+        if (sortedVal1[i] !== sortedVal2[i]) {
+          return false;
+        }
+      }
+    } else if (val1 !== val2) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Attempts to merge a group of touching fragments into a single fragment
+ */
+export function mergeTouchingFragmentGroup(
+  fragments: PendingFragmentResult[],
+  keyNumericProperties: string[]
+): PendingFragmentResult | null {
+  if (fragments.length < 2) {
+    return null;
+  }
+
+  try {
+    // Convert all fragments to polygon-clipping format
+    const geometries = fragments.map(
+      (f) => [f.geometry.coordinates] as polygonClipping.Geom
+    );
+
+    // Union all geometries
+    const union = polygonClipping.union(geometries[0], ...geometries.slice(1));
+
+    if (!union || union.length === 0) {
+      return null;
+    }
+
+    // Check if the union results in a single polygon
+    if (union.length === 1 && union[0].length === 1) {
+      // Successfully merged into a single polygon
+      const mergedGeometry = geometryFromCoords(union)[0];
+
+      // Merge properties from all fragments
+      let mergedProperties = { ...fragments[0].properties };
+      for (let i = 1; i < fragments.length; i++) {
+        mergedProperties = {
+          ...mergedProperties,
+          ...mergeNumericProperties(
+            mergedProperties,
+            fragments[i].properties,
+            keyNumericProperties
+          ),
+        };
+      }
+
+      return {
+        ...fragments[0],
+        geometry: mergedGeometry,
+        properties: {
+          ...mergedProperties,
+          __id: idCounter++,
+        },
+        bbox: calcBBox(
+          {
+            type: "Feature",
+            properties: mergedProperties,
+            geometry: mergedGeometry,
+          },
+          { recompute: true }
+        ),
+      };
+    }
+  } catch (error) {
+    // If union operation fails, return null to indicate merge failure
+    console.warn("Failed to merge touching fragments:", error);
+  }
+
+  return null;
 }
