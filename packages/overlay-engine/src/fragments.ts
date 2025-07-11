@@ -454,6 +454,9 @@ export function mergeTouchingFragments(
   fragments: PendingFragmentResult[],
   keyNumericProperties: string[]
 ) {
+  if (fragments.length < 2) {
+    return fragments;
+  }
   let currentFragments = [...fragments];
   let hasChanges = true;
   let passCount = 0;

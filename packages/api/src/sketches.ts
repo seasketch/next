@@ -279,6 +279,11 @@ export async function updateSketchTocItemParent(
           pgClient,
           { removeOverlap: true }
         );
+        if (fragments.length === 0) {
+          // no fragments to reconcile, nothing to do
+          // May be a legacy sketch class
+          continue;
+        }
         fragmentDeletionScope.push(
           ...fragments.map((f) => f.properties.__hash as string)
         );
