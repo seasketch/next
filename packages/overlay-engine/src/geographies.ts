@@ -23,7 +23,6 @@ import {
 import area from "@turf/area";
 import { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
 import { union } from "./utils/polygonClipping";
-import calcArea from "@turf/area";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 

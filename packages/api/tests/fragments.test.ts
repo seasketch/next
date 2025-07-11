@@ -3852,6 +3852,233 @@ describe("Integration tests", () => {
       );
     });
   });
+
+  describe("Ultra-mega integration tests", () => {
+    test("Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies", async () => {
+      await projectTransaction(
+        pool,
+        "public",
+        async (conn, projectId, adminId, userIds) => {
+          const { sketchClassId, geographyIds, collectionSketchClassId } =
+            await setupIntegrationTestEnv(
+              conn,
+              projectId,
+              adminId,
+              userIds,
+              nationalGeographies,
+              2
+            );
+          await createSession(conn, userIds[0], true, false, projectId);
+
+          // Create a collection
+          const collection = await createCollection(
+            conn,
+            "test",
+            collectionSketchClassId,
+            userIds[0]
+          );
+
+          // Create a sketch
+          const sketchA = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "Sketch A",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [177.9336038816299, -19.162810410693922],
+                    [177.9336038816299, -19.42672458990937],
+                    [178.09284534855914, -19.42672458990937],
+                    [178.09284534855914, -19.162810410693922],
+                    [177.9336038816299, -19.162810410693922],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 0,
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+
+          await writeOutput(
+            "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+            "sketchA",
+            sketchA.fragments
+          );
+
+          const sketchB = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "Sketch B",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [178.38668376968218, -19.177135296661348],
+                    [178.07957522631483, -19.177135296661348],
+                    [178.07957522631483, -19.47230717168189],
+                    [178.38668376968218, -19.47230717168189],
+                    [178.38668376968218, -19.177135296661348],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 1,
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+
+          const sketchC = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "Sketch C",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [177.633130462976, -18.981851969501847],
+                    [177.633130462976, -19.273795695112014],
+                    [177.94782193316593, -19.273795695112014],
+                    [177.94782193316593, -18.981851969501847],
+                    [177.633130462976, -18.981851969501847],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 2,
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            undefined,
+            undefined
+          );
+
+          const initialFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+
+          await writeOutput(
+            "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+            "initialFragments",
+            initialFragments
+          );
+
+          expect(initialFragments.length).toBe(6);
+
+          await updateParent(
+            conn,
+            sketchC.sketch.id! as number,
+            collection.id!,
+            "sketch",
+            "sketch"
+          );
+
+          const updatedFragments = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          // await writeOutput(
+          //   "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+          //   "updatedFragments",
+          //   updatedFragments
+          // );
+          expect(updatedFragments.length).toBe(9);
+          compareWithExpectedOutput(
+            "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+            "updatedFragments",
+            updatedFragments
+          );
+          await updateParent(
+            conn,
+            sketchA.sketch.id! as number,
+            null,
+            null,
+            null
+          );
+          const updatedFragments2 = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          // await writeOutput(
+          //   "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+          //   "updatedFragments2",
+          //   updatedFragments2
+          // );
+          // expect(updatedFragments2.length).toBe(7);
+          compareWithExpectedOutput(
+            "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+            "updatedFragments2",
+            updatedFragments2
+          );
+
+          const sketchD = await createSketch(
+            conn,
+            userIds[0],
+            {
+              type: "Feature",
+              properties: {
+                name: "Sketch D",
+              },
+              geometry: {
+                coordinates: [
+                  [
+                    [177.85357731747257, -19.20391072141028],
+                    [177.85357731747257, -19.554397836656833],
+                    [178.11542304162936, -19.554397836656833],
+                    [178.11542304162936, -19.20391072141028],
+                    [177.85357731747257, -19.20391072141028],
+                  ],
+                ],
+                type: "Polygon",
+              },
+              id: 7,
+            },
+            projectId,
+            sketchClassId,
+            undefined,
+            collection.id,
+            undefined
+          );
+
+          const updatedFragments3 = await fragmentsForCollection(
+            conn,
+            collection.id!
+          );
+          // await writeOutput(
+          //   "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+          //   "updatedFragments3",
+          //   updatedFragments3
+          // );
+          expect(updatedFragments3.length).toBe(9);
+          compareWithExpectedOutput(
+            "Moving a sketch into a collection, with multiple overlapping features, transitive overlap relationships, and multiple overlapping geographies",
+            "updatedFragments3",
+            updatedFragments3
+          );
+        }
+      );
+    });
+  });
 });
 
 async function updateParent(

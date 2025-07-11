@@ -421,7 +421,7 @@ export function eliminateOverlap(
   let mergedFragments = mergeFragmentsWithMatchingGeometry(
     decomposedFragments,
     ["__geographyIds", "__sketchIds"]
-  );
+  ).filter((f) => calcArea(f) > 1);
 
   // merge touching fragments with the same key properties
   mergedFragments = mergeTouchingFragments(mergedFragments, [
@@ -430,15 +430,13 @@ export function eliminateOverlap(
   ]);
 
   // convert back to SketchFragment type
-  return mergedFragments
-    .map((f) => ({
-      ...f,
-      properties: {
-        __geographyIds: f.properties.__geographyIds,
-        __sketchIds: f.properties.__sketchIds,
-      },
-    }))
-    .filter((f) => calcArea(f) > 1);
+  return mergedFragments.map((f) => ({
+    ...f,
+    properties: {
+      __geographyIds: f.properties.__geographyIds,
+      __sketchIds: f.properties.__sketchIds,
+    },
+  }));
 }
 
 /**
@@ -495,7 +493,6 @@ export function mergeTouchingFragments(
 
       // Find connected components within this group
       const connectedComponents = findConnectedComponents(fragmentGroup);
-
       for (const component of connectedComponents) {
         if (component.length > 1) {
           // Try to merge the connected component
@@ -673,6 +670,9 @@ export function mergeTouchingFragmentGroup(
   }
 
   try {
+    // filter out fragments that are too small
+    // fragments = fragments.filter((f) => calcArea(f) > 1);
+
     // Convert all fragments to polygon-clipping format
     const geometries = fragments.map(
       (f) => [f.geometry.coordinates] as polygonClipping.Geom
@@ -686,7 +686,7 @@ export function mergeTouchingFragmentGroup(
     }
 
     // Check if the union results in a single polygon
-    if (union.length === 1 && union[0].length === 1) {
+    if (union.length === 1) {
       // Successfully merged into a single polygon
       const mergedGeometry = geometryFromCoords(union)[0];
 
@@ -703,7 +703,7 @@ export function mergeTouchingFragmentGroup(
         };
       }
 
-      return {
+      const result = {
         ...fragments[0],
         geometry: mergedGeometry,
         properties: {
@@ -718,7 +718,8 @@ export function mergeTouchingFragmentGroup(
           },
           { recompute: true }
         ),
-      };
+      } as PendingFragmentResult;
+      return result;
     }
   } catch (error) {
     // If union operation fails, return null to indicate merge failure
