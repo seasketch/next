@@ -18,12 +18,11 @@ import useDialog from "../../components/useDialog";
 import getSlug from "../../getSlug";
 import { SketchClassTemplateIcon } from "./TemplateChooser";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
-import PreprocessorInput from "./PreprocessorInput";
 import SketchClassAttributesAdmin from "./SketchClassAttributesAdmin";
-import GeoprocessingClientInput from "./GeoprocessingClientInput";
 import TranslatedPropControl from "../../components/TranslatedPropControl";
 import SketchClassStyleAdmin from "./SketchClassStyleAdmin";
 import EvaluateFilterServiceModal from "./EvaluateFilterServiceModal";
+import GeoprocessingTab from "./GeoprocessingTab";
 
 export default function SketchClassForm({
   sketchClass,
@@ -265,16 +264,7 @@ export default function SketchClassForm({
           </div>
         )}
         {selectedTab === "geoprocessing" && (
-          <>
-            <div className="p-4 space-y-4">
-              {sketchClass.geometryType !== SketchGeometryType.Collection &&
-                sketchClass.geometryType !==
-                  SketchGeometryType.ChooseFeature && (
-                  <PreprocessorInput sketchClass={sketchClass} />
-                )}
-              <GeoprocessingClientInput sketchClass={sketchClass} />
-            </div>
-          </>
+          <GeoprocessingTab sketchClass={sketchClass} />
         )}
         {selectedTab === "attributes" && sketchClass.form && (
           <SketchClassAttributesAdmin

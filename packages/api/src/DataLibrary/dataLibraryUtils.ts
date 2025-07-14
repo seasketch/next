@@ -190,7 +190,7 @@ export async function updateSourceWithUrl(
   const tmpFileName = tmpFile.name;
   const tmpFileStream = fs.createWriteStream(tmpFileName);
   await new Promise((resolve, reject) => {
-    tmpFileStream.on("finish", resolve);
+    tmpFileStream.on("finish", () => resolve(undefined));
     tmpFileStream.on("error", reject);
     require("https").get(url, (res: any) => {
       res.pipe(tmpFileStream);

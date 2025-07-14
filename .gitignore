@@ -7,3 +7,5 @@ NOTES.md
 lerna-debug.log
 *.lerna_backup
 packages/api/coverage
+!packages/overlay-engine/dist/*
+!packages/fgb-source/dist/*

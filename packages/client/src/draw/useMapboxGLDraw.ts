@@ -5,7 +5,7 @@ import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
 import DrawPolygon from "../draw/DrawPolygon";
-import { Feature, FeatureCollection, Geometry, Point } from "geojson";
+import { Feature, FeatureCollection, Geometry, Point, Polygon } from "geojson";
 import { useMediaQuery } from "beautiful-react-hooks";
 import DrawPoint from "./DrawPoint";
 import DirectSelect from "./DirectSelect";
@@ -109,7 +109,8 @@ export default function useMapboxGLDraw(
     geom: Geometry,
     performance?: SpanJSONOutput
   ) => void,
-  extraRequestParams?: { [key: string]: any }
+  extraRequestParams?: { [key: string]: any },
+  onPolygonProgress?: (polygon: Feature<Polygon>) => void
 ) {
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
   const isSmall = useMediaQuery("(max-width: 767px)");
@@ -128,7 +129,8 @@ export default function useMapboxGLDraw(
     onChange: (value: Feature<any> | null, hasKinks: boolean) => void;
     state: DigitizingState;
     preprocessingError: string | null;
-  }>({ onChange, state, preprocessingError });
+    onPolygonProgress?: (polygon: Feature<Polygon>) => void;
+  }>({ onChange, state, preprocessingError, onPolygonProgress: () => {} });
 
   function setState(state: DigitizingState) {
     _setState(state);
@@ -136,6 +138,7 @@ export default function useMapboxGLDraw(
   }
 
   handlerState.current.onChange = onChange;
+  handlerState.current.onPolygonProgress = onPolygonProgress;
   handlerState.current.preprocessingError = preprocessingError;
 
   const [selfIntersects, setSelfIntersects] = useState<boolean>(false);
@@ -265,12 +268,31 @@ export default function useMapboxGLDraw(
             }
           }
           handlerState.current.onChange(e.features[0], selfIntersects);
+
+          if (
+            handlerState.current.onPolygonProgress &&
+            e.features[0].geometry.type === "Polygon"
+          ) {
+            const f = e.features[0];
+            f.geometry.type = "Polygon";
+            handlerState.current.onPolygonProgress(f);
+          }
         },
         drawingStarted: () => {
           setState(DigitizingState.STARTED);
         },
         canComplete: () => {
           setState(DigitizingState.CAN_COMPLETE);
+        },
+        polygonProgress: (polygon: any) => {
+          if (
+            handlerState.current.onPolygonProgress &&
+            polygon.coordinates[0].length > 2
+          ) {
+            const f = polygon.toGeoJSON();
+            f.geometry.type = "Polygon";
+            handlerState.current.onPolygonProgress(f);
+          }
         },
         // delete: function (id: string) {
         //   draw.changeMode(drawMode);
@@ -364,6 +386,7 @@ export default function useMapboxGLDraw(
       // map.on("draw.delete", handlers.delete);
       map.on("draw.modechange", handlers.modeChange);
       map.on("draw.selectionchange", handlers.selectionChange);
+      map.on("seasketch.polygon_progress", handlers.polygonProgress);
       return () => {
         if (map && draw) {
           try {
@@ -381,6 +404,7 @@ export default function useMapboxGLDraw(
           // map.off("draw.delete", handlers.delete);
           map.off("draw.modechange", handlers.modeChange);
           map.off("draw.selectionchange", handlers.selectionChange);
+          map.off("seasketch.polygon_progress", handlers.polygonProgress);
           mapContext.manager?.releaseDigitizingLock(SketchDigitizingLockId);
         }
       };

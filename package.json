@@ -3,8 +3,11 @@
   "private": true,
   "scripts": {},
   "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250607.0",
+    "@types/jest": "^29.5.14",
     "@typescript-eslint/eslint-plugin": "^4.17.0",
     "@typescript-eslint/parser": "^4.17.0",
+    "@vitest/coverage-v8": "^3.2.2",
     "cypress-localstorage-commands": "^1.6.1",
     "cypress-log-to-output": "^1.1.2",
     "eslint": "^7.21.0",

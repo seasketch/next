@@ -1,0 +1,49 @@
+{
+  "name": "overlay-engine",
+  "version": "1.0.0",
+  "description": "Engine for managing map overlays with support for various data sources and rendering techniques",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next",
+  "license": "BSD-3-Clause",
+  "type": "commonjs",
+  "main": "dist/src/index.js",
+  "types": "dist/src/index.d.ts",
+  "directories": {
+    "lib": "dist",
+    "test": "__tests__"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.2",
+    "vitest": "^1.6.1"
+  },
+  "dependencies": {
+    "@turf/area": "^7.2.0",
+    "@turf/bbox": "^7.2.0",
+    "@turf/bbox-polygon": "^7.2.0",
+    "@turf/boolean-equal": "^7.2.0",
+    "@turf/boolean-intersects": "^7.2.0",
+    "@turf/boolean-touches": "^7.2.0",
+    "@turf/invariant": "^7.2.0",
+    "@types/geojson": "^7946.0.16",
+    "fgb-source": "^1.0.0",
+    "geojson": "^0.5.0",
+    "geojson-antimeridian-cut": "^0.1.0",
+    "polygon-clipping": "^0.15.7"
+  }
+}

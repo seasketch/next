@@ -1,5 +1,14 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { Feature } from "geojson";
+import { Context } from "postgraphile";
+import { Pool } from "pg";
+import {
+  createOrUpdateSketch,
+  deleteSketchTocItems,
+  copySketchTocItem,
+  updateSketchTocItemParent,
+  preprocess,
+} from "../sketches";
 
 const SketchingPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -42,6 +51,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         Useful for requesting the latest geometry
         """
         timestamp: String! @requires(columns: ["created_at", "updated_at"])
+      }
+
+      extend type SketchClass {
+        clippingGeographies: [Geography]! @requires(columns: ["id"])
       }
 
       extend type Project {
@@ -276,6 +289,25 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           return date.getTime().toString();
         },
       },
+      SketchClass: {
+        clippingGeographies: async (
+          sketchClass,
+          args,
+          context: Context<{ pgClient: Pool }>,
+          resolveInfo
+        ) => {
+          return resolveInfo.graphile.selectGraphQLResultFromTable(
+            sql.fragment`project_geography`,
+            (tableAlias, queryBuilder) => {
+              queryBuilder.where(
+                sql.fragment`${tableAlias}.id = any(select geography_id from sketch_class_geographies where sketch_class_id = ${sql.value(
+                  sketchClass.id
+                )})`
+              );
+            }
+          );
+        },
+      },
       Project: {
         sketchGeometryToken: async (project, args, context, info) => {
           const projectId = project.id;
@@ -302,7 +334,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         createSketch: async (
           _query,
           { name, sketchClassId, userGeom, collectionId, folderId, properties },
-          context,
+          context: Context<{ pgClient: Pool }>,
           resolveInfo
         ) => {
           if (!context.user.id) {
@@ -314,10 +346,17 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select * from public.sketch_classes where id = $1`,
+            `select geometry_type, is_geography_clipping_enabled, preprocessing_endpoint, id, project_id from public.sketch_classes where id = $1`,
             [sketchClassId]
           );
-          const sketchClass = rows[0];
+          const sketchClass = rows[0] as {
+            geometry_type: string;
+            is_geography_clipping_enabled: boolean;
+            preprocessing_endpoint: string;
+            id: number;
+            project_id: number;
+          };
+          delete userGeom?.id;
           if (
             sketchClass.geometry_type === "COLLECTION" ||
             sketchClass.geometry_type === "FILTERED_PLANNING_UNITS"
@@ -346,8 +385,30 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 }
               )) as any;
             return row;
+          } else if (sketchClass.is_geography_clipping_enabled) {
+            const sketchId = await createOrUpdateSketch({
+              pgClient,
+              userGeom,
+              sketchClassId,
+              projectId: sketchClass.project_id,
+              name,
+              collectionId,
+              folderId,
+              properties,
+              userId: context.user.id,
+            });
+
+            const [row] =
+              await resolveInfo.graphile.selectGraphQLResultFromTable(
+                sql.fragment`sketches`,
+                (tableAlias, queryBuilder) => {
+                  queryBuilder.where(
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`
+                  );
+                }
+              );
+            return row;
           } else {
-            delete userGeom.id;
             // Check to see if preprocessing is required. If so, do it
             let geometry: Feature;
             if (sketchClass.preprocessing_endpoint) {
@@ -447,6 +508,27 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               userGeom
             );
             geometry = response;
+          } else if (sketchClass.is_geography_clipping_enabled) {
+            const sketchId = await createOrUpdateSketch({
+              pgClient,
+              userGeom,
+              sketchClassId: sketchClass.id,
+              projectId: sketchClass.project_id,
+              name,
+              properties,
+              userId: context.user.id,
+              sketchId: id,
+            });
+            const [row] =
+              await resolveInfo.graphile.selectGraphQLResultFromTable(
+                sql.fragment`sketches`,
+                (tableAlias, queryBuilder) => {
+                  queryBuilder.where(
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`
+                  );
+                }
+              );
+            return row;
           } else {
             geometry = userGeom;
           }
@@ -480,61 +562,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           resolveInfo
         ) => {
           const { pgClient } = context;
-          if (!forForum) {
-            // check that the user owns this sketch
-            const { rows } = await pgClient.query(
-              `select user_id from ${
-                type === "sketch" ? "sketches" : "sketch_folders"
-              } where id = $1`,
-              [id]
-            );
-            if (rows.length === 0) {
-              throw new Error(`${type} not found or permission denied`);
-            }
-          }
-          const {
-            rows: [row],
-          } = await pgClient.query(
-            forForum
-              ? `select copy_sketch_toc_item_recursive_for_forum($1, $2, false)`
-              : `select copy_sketch_toc_item_recursive($1, $2, true)`,
-            [id, type]
-          );
-          const copyId: number = forForum
-            ? row.copy_sketch_toc_item_recursive_for_forum
-            : row.copy_sketch_toc_item_recursive;
-          let {
-            rows: [{ get_child_folders_recursive: folderIds }],
-          } = await pgClient.query(
-            `select get_child_folders_recursive($1, $2)`,
-            [copyId, type]
-          );
-          let {
-            rows: [{ get_child_sketches_and_collections_recursive: sketchIds }],
-          } = await pgClient.query(
-            `select get_child_sketches_and_collections_recursive($1, $2)`,
-            [copyId, type]
-          );
-          if (type === "sketch") {
-            sketchIds.push(copyId);
-          } else {
-            folderIds.push(copyId);
-          }
-          context.sketchIds = sketchIds;
-          context.folderIds = folderIds;
-          context.parentId = copyId;
+          const result = await copySketchTocItem(id, type, forForum, pgClient);
+
+          context.sketchIds = result.sketchIds;
+          context.folderIds = result.folderIds;
+          context.parentId = result.copyId;
           context.parentType = type;
-          let {
-            rows: [{ get_parent_collection_id }],
-          } = await pgClient.query(`select get_parent_collection_id($1, $2)`, [
-            type,
-            copyId,
-          ]);
-          context.parentCollectionId = get_parent_collection_id;
-          // will be finished by CopySketchTocItemResults functions at the top
-          // of the resolvers
+          context.parentCollectionId = result.parentCollectionId;
+
           return {
-            parentId: copyId,
+            parentId: result.copyId,
           };
         },
         updateSketchTocItemParent: async (
@@ -544,95 +581,25 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           resolveInfo
         ) => {
           const { pgClient } = context;
-          const { rows } = await pgClient.query(
-            `
-            select distinct(
-              get_parent_collection_id(type, id)
-            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(tocItems)]
+          const result = await updateSketchTocItemParent(
+            folderId,
+            collectionId,
+            tocItems,
+            pgClient
           );
-          context.previousCollectionIds = rows.map((r: any) => r.collection_id);
 
-          const folders: number[] = tocItems
-            .filter((f: any) => f.type === "sketch_folder")
-            .map((f: any) => f.id);
-          const sketches: number[] = tocItems
-            .filter((f: any) => f.type === "sketch")
-            .map((f: any) => f.id);
-          // update collection_id and folder_id on related sketches
-          await pgClient.query(
-            `update sketches set collection_id = $1, folder_id = $2 where id = any($3)`,
-            [collectionId, folderId, sketches]
-          );
-          // update collection_id and folder_id on related folders
-          await pgClient.query(
-            `update sketch_folders set collection_id = $1, folder_id = $2 where id = any($3)`,
-            [collectionId, folderId, folders]
-          );
-          context.sketchIds = sketches;
-          context.folderIds = folders;
+          context.sketchIds = result.sketchIds;
+          context.folderIds = result.folderIds;
+          context.previousCollectionIds = result.previousCollectionIds;
           context.tocItems = tocItems;
 
           return {};
         },
         deleteSketchTocItems: async (_query, { items }, context) => {
           const { pgClient } = context;
-          // Get IDs of collections these items belong to to be included in
-          // updatedCollections
-          const { rows } = await pgClient.query(
-            `
-            select distinct(
-              get_parent_collection_id(type, id)
-            ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(items)]
-          );
-          context.previousCollectionIds = rows.map((r: any) => r.collection_id);
-          // Get IDs of all items to be deleted (including their children) to
-          // be added to deletedItems output
-          const childrenResult = await pgClient.query(
-            `
-            select distinct(
-              get_all_sketch_toc_children(id, type)
-            ) as children from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(items)]
-          );
-
-          const deletedItems: string[] = [
-            ...items.map(
-              (item: any) =>
-                `${/folder/i.test(item.type) ? "SketchFolder" : "Sketch"}:${
-                  item.id
-                }`
-            ),
-          ];
-          for (const row of childrenResult.rows) {
-            if (row.children && row.children.length) {
-              for (const id of row.children) {
-                if (deletedItems.indexOf(id) === -1) {
-                  deletedItems.push(id);
-                }
-              }
-            }
-          }
-
-          // Do the deleting
-          const folders: number[] = items
-            .filter((f: any) => f.type === "sketch_folder")
-            .map((f: any) => f.id);
-          const sketches: number[] = items
-            .filter((f: any) => f.type === "sketch")
-            .map((f: any) => f.id);
-
-          await pgClient.query(
-            `delete from sketch_folders where id = any($1)`,
-            [folders]
-          );
-
-          await pgClient.query(`delete from sketches where id = any($1)`, [
-            sketches,
-          ]);
-
-          // results will be populated by resolvers above
+          const { deletedItems, previousCollectionIds } =
+            await deleteSketchTocItems(items, pgClient);
+          context.previousCollectionIds = previousCollectionIds;
           return { deletedItems };
         },
       },
@@ -641,29 +608,3 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
 });
 
 export default SketchingPlugin;
-
-async function preprocess(endpoint: string, feature: Feature<any>) {
-  return fetch(endpoint, {
-    method: "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ feature }),
-  }).then(async (response) => {
-    if (response.ok) {
-      const { data, error } = await response.json();
-      if (error) {
-        throw new Error(`Preprocessing Error: ${error}`);
-      }
-      return data;
-    } else {
-      const { data, error } = await response.json();
-      if (error) {
-        throw new Error(`Preprocessing Error: ${error}`);
-      } else {
-        throw new Error("Unrecognized response from preprocessor");
-      }
-    }
-  });
-}

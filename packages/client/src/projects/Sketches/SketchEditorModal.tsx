@@ -184,6 +184,46 @@ function SketchEditorModal({
 
   const [updateSketch, updateSketchState] = useUpdateSketchMutation({});
 
+  const extraRequestParams = useMemo(() => {
+    if (
+      sketchClass.isGeographyClippingEnabled &&
+      Array.isArray(sketchClass.clippingGeographies)
+    ) {
+      const geographies = [];
+      for (const geography of sketchClass.clippingGeographies!) {
+        if (!geography) {
+          continue;
+        }
+        const clippingLayers = [];
+        if (geography.clippingLayers) {
+          for (const layer of geography.clippingLayers) {
+            if (!layer.dataLayer?.vectorObjectKey) {
+              throw new Error("Vector object key is required");
+            }
+            if (layer.objectKey) {
+              clippingLayers.push({
+                id: layer.id,
+                cql2Query: layer.cql2Query,
+                op: layer.operationType,
+                dataset: layer.dataLayer.vectorObjectKey,
+                templateId: layer.templateId,
+              });
+            }
+          }
+        }
+        geographies.push({
+          name: geography.name,
+          id: geography.id,
+          clippingLayers,
+        });
+      }
+      return {
+        geographies,
+      };
+    }
+    return undefined;
+  }, [sketchClass.isGeographyClippingEnabled, sketchClass.clippingGeographies]);
+
   const draw = useMapboxGLDraw(
     mapContext,
     sketchClass.geometryType,
@@ -192,8 +232,30 @@ function SketchEditorModal({
       setFeature(feature);
     },
     undefined,
-    sketchClass.preprocessingEndpoint || undefined,
-    setPreprocessedGeometry
+    sketchClass.isGeographyClippingEnabled
+      ? "https://overlay.seasketch.org/geographies/clip"
+      : sketchClass.preprocessingEndpoint || undefined,
+    setPreprocessedGeometry,
+    extraRequestParams,
+    (feature) => {
+      if (
+        feature.geometry.coordinates[0].length > 3 &&
+        sketchClass.isGeographyClippingEnabled
+      ) {
+        fetch("https://overlay.seasketch.org/geographies/warm-cache", {
+          method: "POST",
+          body: JSON.stringify({
+            ...extraRequestParams,
+            feature,
+          }),
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }).catch((err) => {
+          console.error("err", err);
+        });
+      }
+    }
   );
 
   useEffect(() => {
@@ -416,7 +478,13 @@ function SketchEditorModal({
         variables: geometryChanged
           ? {
               name,
-              userGeom: feature,
+              userGeom:
+                preprocessedGeometry && !sketchClass.isGeographyClippingEnabled
+                  ? {
+                      ...feature,
+                      geometry: preprocessedGeometry,
+                    }
+                  : feature,
               properties,
               id: sketch.id,
             }
@@ -432,7 +500,13 @@ function SketchEditorModal({
         variables: {
           name,
           sketchClassId: sketchClass.id,
-          userGeom: feature,
+          userGeom:
+            preprocessedGeometry && !sketchClass.isGeographyClippingEnabled
+              ? {
+                  ...feature,
+                  geometry: preprocessedGeometry,
+                }
+              : feature,
           folderId,
           collectionId,
           properties: properties,

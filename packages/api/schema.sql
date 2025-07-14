@@ -503,6 +503,23 @@ COMMENT ON TYPE public.form_template_type IS 'Indicates which features should us
 
 
 --
+-- Name: fragment_input; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.fragment_input AS (
+	geometry public.geometry(Polygon,4326),
+	geography_ids integer[]
+);
+
+
+--
+-- Name: TYPE fragment_input; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TYPE public.fragment_input IS '@omit';
+
+
+--
 -- Name: geography_layer_operation; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -1489,6 +1506,7 @@ CREATE TABLE public.sketch_classes (
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
+    is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
@@ -1794,6 +1812,42 @@ $$;
 --
 
 COMMENT ON FUNCTION public._delete_table_of_contents_item(tid integer) IS '@omit';
+
+
+--
+-- Name: _session_has_toc_access(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public._session_has_toc_access(item_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+WITH toc AS (
+  SELECT id, path
+  FROM table_of_contents_items
+  WHERE id = item_id AND NOT is_draft
+),
+parents AS (
+  SELECT parent.id
+  FROM table_of_contents_items parent, toc
+  WHERE parent.path @> toc.path AND NOT parent.is_draft
+),
+acls AS (
+  SELECT acl.id
+  FROM access_control_lists acl
+  JOIN parents p ON p.id = acl.table_of_contents_item_id
+  WHERE acl.type != 'public'
+)
+SELECT
+  COALESCE(bool_and(session_on_acl(id)), EXISTS (SELECT 1 FROM toc))
+FROM acls;
+$$;
+
+
+--
+-- Name: FUNCTION _session_has_toc_access(item_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public._session_has_toc_access(item_id integer) IS '@omit';
 
 
 --
@@ -2784,6 +2838,43 @@ CREATE FUNCTION public.approve_participant("projectId" integer, "userId" integer
       END IF;
     END
   $$;
+
+
+--
+-- Name: approximate_fgb_index_size(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.approximate_fgb_index_size(feature_count integer) RETURNS integer
+    LANGUAGE plpgsql
+    AS $$
+DECLARE
+  index_node_size CONSTANT int := 16;
+  node_item_byte_length CONSTANT int := 40;
+  n int;
+  num_nodes int := 0;
+BEGIN
+  IF feature_count = 0 THEN
+    RETURN 0;
+  END IF;
+
+  n := feature_count;
+  WHILE n > 1 LOOP
+    num_nodes := num_nodes + n;
+    n := CEIL(n::numeric / index_node_size)::int;
+  END LOOP;
+
+  num_nodes := num_nodes + 1;  -- root node
+
+  RETURN num_nodes * node_item_byte_length;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION approximate_fgb_index_size(feature_count integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.approximate_fgb_index_size(feature_count integer) IS '@omit';
 
 
 --
@@ -4670,6 +4761,42 @@ $$;
 
 
 --
+-- Name: cleanup_orphaned_fragments(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.cleanup_orphaned_fragments() RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    delete from fragments where not exists (select 1 from sketch_fragments where fragment_hash = fragments.hash)
+  $$;
+
+
+--
+-- Name: FUNCTION cleanup_orphaned_fragments(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.cleanup_orphaned_fragments() IS '@omit';
+
+
+--
+-- Name: cleanup_orphaned_fragments(text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.cleanup_orphaned_fragments(scope text[]) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    delete from fragments where hash = any(scope) and not exists (select 1 from sketch_fragments where fragment_hash = fragments.hash)
+  $$;
+
+
+--
+-- Name: FUNCTION cleanup_orphaned_fragments(scope text[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.cleanup_orphaned_fragments(scope text[]) IS '@omit';
+
+
+--
 -- Name: cleanup_tile_package(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -4690,6 +4817,39 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
     AS $$
     update form_elements set background_image = null, background_color = null, layout = null, background_palette = null, secondary_color = null, text_variant = 'DYNAMIC', unsplash_author_url = null, unsplash_author_name = null, background_width = null, background_height = null where form_elements.id = form_element_id returning *;
   $$;
+
+
+--
+-- Name: clipping_layers_for_sketch_class(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid integer) RETURNS TABLE(id integer, geography_id integer, object_key text, operation_type public.geography_layer_operation, cql2_query jsonb, template_id text, for_clipping boolean)
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+    select
+      gcl.id,
+      gcl.project_geography_id as geography_id,
+      data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
+      gcl.operation_type,
+      gcl.cql2_query,
+      gcl.template_id,
+      exists(
+        select 1 
+        from sketch_class_geographies scg 
+        where scg.geography_id = gcl.project_geography_id 
+        and scg.sketch_class_id = clipping_layers_for_sketch_class.scid
+      ) as for_clipping
+    from geography_clipping_layers gcl
+    join project_geography pg on gcl.project_geography_id = pg.id
+    where pg.project_id = clipping_layers_for_sketch_class.pid
+  $$;
+
+
+--
+-- Name: FUNCTION clipping_layers_for_sketch_class(pid integer, scid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid integer) IS '@omit';
 
 
 --
@@ -5399,6 +5559,7 @@ CREATE TABLE public.table_of_contents_items (
     original_source_upload_available boolean DEFAULT false NOT NULL,
     data_library_template_id text,
     copied_from_data_library_template_id text,
+    has_metadata boolean GENERATED ALWAYS AS ((metadata IS NOT NULL)) STORED,
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
 );
@@ -5724,7 +5885,7 @@ CREATE FUNCTION public.copy_sketch(sketch_id integer, clear_parent boolean) RETU
       output sketches;
     begin
       -- this will check RLS policy. DO NOT use security definer!
-      if (select exists (select id from sketches where id = sketch_id)) then
+      if (select exists (select id from sketches where id = copy_sketch.sketch_id)) then
         insert into sketches (
           user_id,
           copy_of,
@@ -5737,7 +5898,7 @@ CREATE FUNCTION public.copy_sketch(sketch_id integer, clear_parent boolean) RETU
           properties
         ) select
           nullif(current_setting('session.user_id', TRUE), '')::int,
-          sketch_id,
+          copy_sketch.sketch_id,
           name,
           sketch_class_id,
           CASE WHEN clear_parent THEN NULL ELSE collection_id END,
@@ -5745,7 +5906,11 @@ CREATE FUNCTION public.copy_sketch(sketch_id integer, clear_parent boolean) RETU
           user_geom,
           geom,
           properties
-        from sketches where id = sketch_id returning * into output;
+        from sketches where id = copy_sketch.sketch_id returning * into output;
+
+        -- Copy fragment associations using the new function
+        perform copy_sketch_fragments(copy_sketch.sketch_id, output.id);
+
         return output;
       else
         raise exception 'Permission denied';
@@ -5841,6 +6006,41 @@ CREATE FUNCTION public.copy_sketch_folder(folder_id integer, clear_parent boolea
       end if;
     end;
   $$;
+
+
+--
+-- Name: copy_sketch_fragments(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.copy_sketch_fragments(from_sketch_id integer, to_sketch_id integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  policy_passed BOOLEAN;
+begin
+  policy_passed := check_sketch_rls_policy(from_sketch_id);
+  if not policy_passed then
+    raise exception 'Source sketch not found';
+  end if;
+  policy_passed := check_sketch_rls_policy(to_sketch_id);
+  if not policy_passed then
+    raise exception 'Target sketch not found';
+  end if;
+
+  -- Copy fragment associations
+  insert into sketch_fragments (sketch_id, fragment_hash)
+  select to_sketch_id, fragment_hash
+  from sketch_fragments
+  where sketch_fragments.sketch_id = from_sketch_id;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION copy_sketch_fragments(from_sketch_id integer, to_sketch_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.copy_sketch_fragments(from_sketch_id integer, to_sketch_id integer) IS '@omit';
 
 
 --
@@ -8712,6 +8912,22 @@ COMMENT ON COLUMN public.data_sources.uploaded_by IS '@omit';
 
 
 --
+-- Name: data_sources_approximate_fgb_index_size(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.data_sources_approximate_fgb_index_size(ds public.data_sources) RETURNS integer
+    LANGUAGE sql STABLE
+    AS $$
+  select
+    CASE 
+      WHEN has_fgb_output(ds) 
+      THEN approximate_fgb_index_size(geostats_feature_count(ds.geostats))
+      ELSE 0
+    END
+$$;
+
+
+--
 -- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -10072,6 +10288,25 @@ CREATE FUNCTION public.geography_clipping_layers_object_key(g public.geography_c
 
 
 --
+-- Name: geostats_feature_count(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.geostats_feature_count(geostats jsonb) RETURNS integer
+    LANGUAGE sql
+    AS $$
+  SELECT COALESCE(SUM((layer->>'count')::int), 0)::integer
+  FROM jsonb_array_elements(geostats->'layers') AS layer
+$$;
+
+
+--
+-- Name: FUNCTION geostats_feature_count(geostats jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.geostats_feature_count(geostats jsonb) IS '@omit';
+
+
+--
 -- Name: get_all_sketch_toc_children(integer, public.sketch_child_type); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10318,6 +10553,55 @@ CREATE FUNCTION public.get_children_of_folder("folderId" integer) RETURNS TABLE(
 --
 
 COMMENT ON FUNCTION public.get_children_of_folder("folderId" integer) IS '@omit';
+
+
+--
+-- Name: get_fragments_for_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_fragments_for_sketch(sketch_id integer) RETURNS TABLE(hash text, geometry text, sketch_ids integer[], geography_ids integer[])
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    policy_passed boolean;
+  begin
+    -- Check that the session can access the given sketch using RLS policy
+    policy_passed := check_sketch_rls_policy(get_fragments_for_sketch.sketch_id);
+    if not policy_passed then
+      raise exception 'Permission denied';
+    end if;
+
+    return query
+    SELECT
+    fragments.hash,
+    ST_AsGeoJSON(fragments.geometry) as geometry,
+    ARRAY(
+      SELECT sketch_fragments.sketch_id
+      FROM sketch_fragments
+      WHERE sketch_fragments.fragment_hash = fragments.hash
+    ) AS sketch_ids,
+    ARRAY(
+      SELECT fragment_geographies.geography_id
+      FROM fragment_geographies
+      WHERE fragment_geographies.fragment_hash = fragments.hash
+    ) AS geography_ids
+    FROM fragments
+    WHERE
+    EXISTS (
+      SELECT 1
+      FROM sketch_fragments
+      WHERE sketch_fragments.fragment_hash = fragments.hash
+        AND sketch_fragments.sketch_id = get_fragments_for_sketch.sketch_id
+    );
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_fragments_for_sketch(sketch_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_fragments_for_sketch(sketch_id integer) IS '@omit';
 
 
 --
@@ -10676,6 +10960,22 @@ CREATE FUNCTION public.grant_admin_access("projectId" integer, "userId" integer)
 --
 
 COMMENT ON FUNCTION public.grant_admin_access("projectId" integer, "userId" integer) IS 'Give a user admin access to a project. User must have already joined the project and shared their user profile.';
+
+
+--
+-- Name: has_fgb_output(public.data_sources); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.has_fgb_output(ds public.data_sources) RETURNS boolean
+    LANGUAGE sql STABLE
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM data_upload_outputs 
+    WHERE data_source_id = ds.id 
+    AND type = 'FlatGeobuf'
+  )
+$$;
 
 
 --
@@ -11972,6 +12272,77 @@ $$;
 --
 
 COMMENT ON FUNCTION public.onboarded() IS '@omit';
+
+
+--
+-- Name: overlapping_fragments_for_collection(integer, public.geometry[], integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer) RETURNS TABLE(hash text, geometry public.geometry, sketch_ids integer[], geography_ids integer[])
+    LANGUAGE sql SECURITY DEFINER
+    AS $$
+  WITH sketches_in_collection AS (
+    SELECT unnest(get_child_sketches_recursive(input_collection_id, 'sketch')) as id
+  ),
+  fragments_in_envelopes AS (
+    SELECT f.*
+    FROM fragments f
+    JOIN unnest(input_envelopes) AS env ON f.geometry && env
+  ),
+  fragments_in_sketch as (
+    select fragment_hash from sketch_fragments where sketch_id = edited_sketch_id
+  ),
+  overlapping_sketches AS (
+    SELECT sketch_fragments.sketch_id
+    FROM sketch_fragments
+    WHERE sketch_fragments.fragment_hash = any(
+      SELECT hash
+      FROM fragments_in_envelopes
+    ) or fragment_hash = any(
+      select fragment_hash from fragments_in_sketch
+    )
+  )
+  -- construct output table
+  SELECT
+    fragments.hash,
+    fragments.geometry,
+    ARRAY(
+      SELECT sketch_fragments.sketch_id
+      FROM sketch_fragments
+      WHERE sketch_fragments.fragment_hash = fragments.hash
+      AND sketch_fragments.sketch_id IN (SELECT id FROM sketches_in_collection)
+    ) AS sketch_ids,
+    ARRAY(
+      SELECT fragment_geographies.geography_id
+      FROM fragment_geographies
+      WHERE fragment_geographies.fragment_hash = fragments.hash
+    ) AS geography_ids
+  FROM fragments
+  WHERE
+    -- Include ALL fragments from sketches that have any overlapping fragments
+  EXISTS (
+    SELECT 1
+    FROM sketch_fragments
+    WHERE sketch_fragments.fragment_hash = fragments.hash
+      AND sketch_fragments.sketch_id IN (SELECT sketch_id FROM overlapping_sketches)
+      AND sketch_fragments.sketch_id IN (SELECT id FROM sketches_in_collection)
+  )
+  OR
+  -- Include fragments that belong to the edited sketch
+  EXISTS (
+    SELECT 1
+    FROM sketch_fragments
+    WHERE sketch_fragments.fragment_hash = fragments.hash
+      AND sketch_fragments.sketch_id = edited_sketch_id
+  )
+$$;
+
+
+--
+-- Name: FUNCTION overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer) IS '@omit';
 
 
 --
@@ -13755,15 +14126,24 @@ COMMENT ON FUNCTION public.projects_survey_basemaps(project public.projects) IS 
 --
 
 CREATE FUNCTION public.projects_table_of_contents_items(p public.projects) RETURNS SETOF public.table_of_contents_items
-    LANGUAGE sql STABLE
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select
-      table_of_contents_items.*
-    from
-      table_of_contents_items
-    where
-      table_of_contents_items.project_id = p.id and table_of_contents_items.is_draft = false;
-  $$;
+  WITH toc_items AS (
+    SELECT *
+    FROM table_of_contents_items
+    WHERE project_id = p.id AND is_draft = false
+  ),
+  blocked_items AS (
+    SELECT DISTINCT t.id
+    FROM toc_items t
+    JOIN table_of_contents_items ancestor ON ancestor.path @> t.path
+    JOIN access_control_lists acl ON acl.table_of_contents_item_id = ancestor.id
+    WHERE acl.type != 'public' AND NOT session_on_acl(acl.id)
+  )
+  SELECT *
+  FROM toc_items
+  WHERE id NOT IN (SELECT id FROM blocked_items)
+$$;
 
 
 --
@@ -15813,24 +16193,40 @@ $$;
 
 CREATE FUNCTION public.session_on_acl(acl_id integer) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    with acl as (
-      select type, project_id from access_control_lists where id = acl_id
-    )
-    select exists(select 1 from acl where type = 'public') or
-    session_is_admin((select project_id from access_control_lists where id = acl_id)) or
-    (
-      exists(select 1 from acl where type = 'group') and 
-      current_setting('session.user_id', TRUE) != '' and 
-      -- current_setting('session.email_verified', true) = 'true' and
-      exists (
-        select 1 from access_control_list_groups 
-          where access_control_list_id = acl_id and group_id in (
-            select group_id from project_group_members where user_id = nullif(current_setting('session.user_id', TRUE), '')::integer
-          )
+    AS $_$
+WITH acl AS (
+  SELECT id, type, project_id
+  FROM access_control_lists
+  WHERE id = $1
+),
+sess_user AS (
+  SELECT nullif(current_setting('session.user_id', true), '')::int AS user_id
+)
+SELECT
+  -- Public access allowed
+  EXISTS (SELECT 1 FROM acl WHERE type = 'public')
+
+  -- OR user is an admin
+  OR EXISTS (
+    SELECT 1 FROM acl
+    WHERE session_is_admin(acl.project_id)
+  )
+
+  -- OR user is in a group with access
+  OR EXISTS (
+    SELECT 1
+    FROM acl, sess_user
+    WHERE acl.type = 'group'
+      AND sess_user.user_id IS NOT NULL
+      AND EXISTS (
+        SELECT 1
+        FROM access_control_list_groups aclg
+        JOIN project_group_members pgm ON pgm.group_id = aclg.group_id
+        WHERE aclg.access_control_list_id = acl.id
+          AND pgm.user_id = sess_user.user_id
       )
-    )
-  $$;
+  );
+$_$;
 
 
 --
@@ -16434,6 +16830,45 @@ CREATE FUNCTION public.sketches_filter_mvt_url(s public.sketches) RETURNS text
     AS $$
   select filter_state_to_search_string(s.properties, s.sketch_class_id);
   $$;
+
+
+--
+-- Name: fragments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fragments (
+    hash text GENERATED ALWAYS AS (md5(public.st_asbinary(public.st_normalize(geometry)))) STORED NOT NULL,
+    geometry public.geometry(Polygon,4326) NOT NULL,
+    CONSTRAINT no_antimeridian_span CHECK (((public.st_xmin((geometry)::public.box3d) >= ('-180'::integer)::double precision) AND (public.st_xmax((geometry)::public.box3d) <= (180)::double precision)))
+);
+
+
+--
+-- Name: TABLE fragments; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.fragments IS '@omit';
+
+
+--
+-- Name: sketches_fragments(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_fragments(s public.sketches) RETURNS SETOF public.fragments
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select fragments.*
+    from fragments
+    join sketch_fragments on fragments.hash = sketch_fragments.fragment_hash
+    where sketch_fragments.sketch_id = s.id;
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_fragments(s public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_fragments(s public.sketches) IS '@omit';
 
 
 --
@@ -17142,17 +17577,6 @@ CREATE FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item publ
 
 
 --
--- Name: table_of_contents_items_has_metadata(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select metadata is not null from table_of_contents_items where id = toc.id;
-  $$;
-
-
---
 -- Name: table_of_contents_items_has_original_source_upload(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -17306,6 +17730,9 @@ $$;
 CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.table_of_contents_items) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
+    WITH layer AS (
+      SELECT * FROM data_layers WHERE id = item.data_layer_id
+    )
     select
       case
         when item.enable_download = false then null
@@ -17320,14 +17747,7 @@ CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.
             from 
               data_upload_outputs
             where 
-              data_upload_outputs.data_source_id = (
-                select 
-                  data_layers.data_source_id
-                from 
-                  data_layers
-                where 
-                  data_layers.id = item.data_layer_id
-              )
+              data_upload_outputs.data_source_id = (SELECT data_source_id FROM layer)
             and 
               data_upload_outputs.is_original = true
               limit 1
@@ -17338,13 +17758,7 @@ CREATE FUNCTION public.table_of_contents_items_primary_download_url(item public.
               url 
             from 
               data_sources 
-            where id = (
-              select 
-                data_source_id 
-              from 
-                data_layers 
-              where data_layers.id = item.data_layer_id
-            )
+            where id = (SELECT data_source_id FROM layer)
           ) 
         else (
           select 
@@ -18237,6 +18651,130 @@ CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin bool
       end if;
     end;
   $$;
+
+
+--
+-- Name: update_sketch_class_geographies(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      sketch_class sketch_classes;
+    begin
+    if session_is_admin((select project_id from sketch_classes where id = sketch_class_id)) then
+      delete from sketch_class_geographies where sketch_class_geographies.sketch_class_id = update_sketch_class_geographies.sketch_class_id;
+      insert into sketch_class_geographies (sketch_class_id, geography_id) values (sketch_class_id, unnest(geography_ids));
+      select * into sketch_class from sketch_classes where id = update_sketch_class_geographies.sketch_class_id;
+      return sketch_class;
+    else
+      raise exception 'You are not authorized to update the geographies for this sketch class.';
+    end if;
+    end;
+  $$;
+
+
+--
+-- Name: update_sketch_fragments(integer, public.fragment_input[], text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_sketch_fragments(p_sketch_id integer, p_fragments public.fragment_input[], p_fragment_deletion_scope text[] DEFAULT NULL::text[]) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  v_fragment fragment_input;
+  v_hash text;
+  v_existing_fragment_hashes text[];
+  v_user_id int;
+  v_geography_id int;
+begin
+  -- Get current user ID from session
+  v_user_id := nullif(current_setting('session.user_id', TRUE), '')::int;
+  
+  -- Verify ownership
+  if not exists (
+    select 1 from sketches 
+    where id = p_sketch_id 
+    and user_id = v_user_id
+  ) then
+    raise exception 'Permission denied';
+  end if;
+
+  -- Start transaction
+  begin
+    -- Get existing fragment hashes for this sketch
+    select array_agg(fragment_hash) into v_existing_fragment_hashes
+    from sketch_fragments
+    where sketch_id = p_sketch_id;
+
+    -- Process each input fragment
+    foreach v_fragment in array p_fragments
+    loop
+      -- Calculate hash for the geometry
+      v_hash := md5(st_asbinary(st_normalize(v_fragment.geometry)));
+
+      -- Try to find existing fragment with this hash
+      if not exists (select 1 from fragments where hash = v_hash) then
+        -- If no existing fragment found, create new one
+        insert into fragments (geometry)
+        values (v_fragment.geometry);
+      end if;
+
+      -- Ensure sketch-fragment relationship exists
+      insert into sketch_fragments (sketch_id, fragment_hash)
+      values (p_sketch_id, v_hash)
+      on conflict (sketch_id, fragment_hash) do nothing;
+
+      -- Update geography associations
+      -- First remove all existing geography associations for this fragment
+      delete from fragment_geographies
+      where fragment_hash = v_hash;
+
+      -- Then add new geography associations
+      foreach v_geography_id in array v_fragment.geography_ids
+      loop
+        insert into fragment_geographies (fragment_hash, geography_id)
+        values (v_hash, v_geography_id);
+      end loop;
+    end loop;
+
+    -- Remove sketch-fragment relationships for fragments that are no longer used
+    delete from sketch_fragments
+    where sketch_id = p_sketch_id
+    and fragment_hash not in (
+      select md5(st_asbinary(st_normalize((unnest(p_fragments)).geometry)))
+    )
+    and (
+      -- If p_fragment_deletion_scope is null, allow deletion of all fragments (original behavior)
+      p_fragment_deletion_scope is null
+      or
+      -- If p_fragment_deletion_scope is provided, only delete fragments in that scope
+      fragment_hash = any(p_fragment_deletion_scope)
+    );
+
+    -- Delete orphaned fragments (those not associated with any sketch)
+    delete from fragments
+    where hash in (
+      select f.hash
+      from fragments f
+      left join sketch_fragments sf on f.hash = sf.fragment_hash
+      where sf.fragment_hash is null
+    );
+
+  exception
+    when others then
+      raise exception 'Error updating sketch fragments: %', sqlerrm;
+  end;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION update_sketch_fragments(p_sketch_id integer, p_fragments public.fragment_input[], p_fragment_deletion_scope text[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_sketch_fragments(p_sketch_id integer, p_fragments public.fragment_input[], p_fragment_deletion_scope text[]) IS '@omit';
 
 
 --
@@ -19352,6 +19890,24 @@ ALTER TABLE public.forums ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
 
 
 --
+-- Name: fragment_geographies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fragment_geographies (
+    fragment_hash text NOT NULL,
+    geography_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE fragment_geographies; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.fragment_geographies IS '@omit
+Associations between fragments and geographies';
+
+
+--
 -- Name: geography_clipping_layers_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -19795,6 +20351,23 @@ CREATE TABLE public.projects_shared_basemaps (
 
 
 --
+-- Name: sketch_class_geographies; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_class_geographies (
+    sketch_class_id integer NOT NULL,
+    geography_id integer NOT NULL
+);
+
+
+--
+-- Name: TABLE sketch_class_geographies; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_class_geographies IS '@omit';
+
+
+--
 -- Name: sketch_classes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -19837,6 +20410,24 @@ ALTER TABLE public.sketch_folders ALTER COLUMN id ADD GENERATED BY DEFAULT AS ID
     NO MAXVALUE
     CACHE 1
 );
+
+
+--
+-- Name: sketch_fragments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_fragments (
+    sketch_id integer NOT NULL,
+    fragment_hash text NOT NULL
+);
+
+
+--
+-- Name: TABLE sketch_fragments; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.sketch_fragments IS '@omit
+Associations between sketches and fragments';
 
 
 --
@@ -20422,6 +21013,22 @@ ALTER TABLE ONLY public.forums
 
 
 --
+-- Name: fragment_geographies fragment_geographies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fragment_geographies
+    ADD CONSTRAINT fragment_geographies_pkey PRIMARY KEY (fragment_hash, geography_id);
+
+
+--
+-- Name: fragments fragments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fragments
+    ADD CONSTRAINT fragments_pkey PRIMARY KEY (hash);
+
+
+--
 -- Name: geography_clipping_layers geography_clipping_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20670,6 +21277,14 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: sketch_class_geographies sketch_class_geographies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_geographies
+    ADD CONSTRAINT sketch_class_geographies_pkey PRIMARY KEY (sketch_class_id, geography_id);
+
+
+--
 -- Name: sketch_classes sketch_classes_form_element_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -20714,6 +21329,14 @@ ALTER TABLE ONLY public.sketch_classes_valid_children
 
 ALTER TABLE ONLY public.sketch_folders
     ADD CONSTRAINT sketch_folders_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: sketch_fragments sketch_fragments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_fragments
+    ADD CONSTRAINT sketch_fragments_pkey PRIMARY KEY (sketch_id, fragment_hash);
 
 
 --
@@ -21026,6 +21649,13 @@ CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (pro
 
 
 --
+-- Name: data_upload_outputs_source_original_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_upload_outputs_source_original_idx ON public.data_upload_outputs USING btree (data_source_id) WHERE (is_original = true);
+
+
+--
 -- Name: data_upload_tasks_project_background_job_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -21079,6 +21709,20 @@ CREATE INDEX forms_sketch_class_id_idx ON public.forms USING btree (sketch_class
 --
 
 CREATE INDEX forums_project_id_idx ON public.forums USING btree (project_id);
+
+
+--
+-- Name: fragment_geographies_fragment_hash_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fragment_geographies_fragment_hash_idx ON public.fragment_geographies USING btree (fragment_hash);
+
+
+--
+-- Name: fragment_geographies_geography_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX fragment_geographies_geography_id_idx ON public.fragment_geographies USING btree (geography_id);
 
 
 --
@@ -21460,6 +22104,20 @@ CREATE INDEX projects_name_idx ON public.projects USING btree (name);
 
 
 --
+-- Name: sketch_class_geographies_geography_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_class_geographies_geography_id_idx ON public.sketch_class_geographies USING btree (geography_id);
+
+
+--
+-- Name: sketch_class_geographies_sketch_class_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_class_geographies_sketch_class_id_idx ON public.sketch_class_geographies USING btree (sketch_class_id);
+
+
+--
 -- Name: sketch_classes_form_element_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -21499,6 +22157,20 @@ CREATE INDEX sketch_folders_user_id_idx ON public.sketch_folders USING btree (us
 --
 
 CREATE INDEX sketch_folders_user_id_project_id_idx ON public.sketch_folders USING btree (user_id, project_id);
+
+
+--
+-- Name: sketch_fragments_fragment_hash_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_fragments_fragment_hash_idx ON public.sketch_fragments USING btree (fragment_hash);
+
+
+--
+-- Name: sketch_fragments_sketch_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_fragments_sketch_id_idx ON public.sketch_fragments USING btree (sketch_id);
 
 
 --
@@ -21628,6 +22300,13 @@ CREATE INDEX surveys_project_id_idx ON public.surveys USING btree (project_id);
 
 
 --
+-- Name: table_of_contents_items_acl_lookup_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX table_of_contents_items_acl_lookup_idx ON public.table_of_contents_items USING btree (project_id, is_draft, path) WHERE (is_draft = false);
+
+
+--
 -- Name: table_of_contents_items_is_draft_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -21646,6 +22325,13 @@ CREATE INDEX table_of_contents_items_project_id_idx ON public.table_of_contents_
 --
 
 CREATE INDEX table_of_contents_items_stable_id_idx ON public.table_of_contents_items USING btree (stable_id);
+
+
+--
+-- Name: toc_path_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX toc_path_idx ON public.table_of_contents_items USING gist (path);
 
 
 --
@@ -22651,6 +23337,22 @@ COMMENT ON CONSTRAINT forums_project_id_fkey ON public.forums IS '@simpleCollect
 
 
 --
+-- Name: fragment_geographies fragment_geographies_fragment_hash_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fragment_geographies
+    ADD CONSTRAINT fragment_geographies_fragment_hash_fkey FOREIGN KEY (fragment_hash) REFERENCES public.fragments(hash) ON DELETE CASCADE;
+
+
+--
+-- Name: fragment_geographies fragment_geographies_geography_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fragment_geographies
+    ADD CONSTRAINT fragment_geographies_geography_id_fkey FOREIGN KEY (geography_id) REFERENCES public.project_geography(id) ON DELETE CASCADE;
+
+
+--
 -- Name: geography_clipping_layers geography_clipping_layers_data_layer_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -22992,6 +23694,22 @@ ALTER TABLE ONLY public.projects_shared_basemaps
 
 
 --
+-- Name: sketch_class_geographies sketch_class_geographies_geography_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_geographies
+    ADD CONSTRAINT sketch_class_geographies_geography_id_fkey FOREIGN KEY (geography_id) REFERENCES public.project_geography(id);
+
+
+--
+-- Name: sketch_class_geographies sketch_class_geographies_sketch_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_geographies
+    ADD CONSTRAINT sketch_class_geographies_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id);
+
+
+--
 -- Name: sketch_classes sketch_classes_form_element_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -23085,6 +23803,22 @@ ALTER TABLE ONLY public.sketch_folders
 --
 
 COMMENT ON CONSTRAINT sketch_folders_user_id_fkey ON public.sketch_folders IS '@omit';
+
+
+--
+-- Name: sketch_fragments sketch_fragments_fragment_hash_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_fragments
+    ADD CONSTRAINT sketch_fragments_fragment_hash_fkey FOREIGN KEY (fragment_hash) REFERENCES public.fragments(hash) ON DELETE CASCADE;
+
+
+--
+-- Name: sketch_fragments sketch_fragments_sketch_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_fragments
+    ADD CONSTRAINT sketch_fragments_sketch_id_fkey FOREIGN KEY (sketch_id) REFERENCES public.sketches(id) ON DELETE CASCADE;
 
 
 --
@@ -23434,6 +24168,22 @@ CREATE POLICY "Allow project owners to insert, update, and delete their own ge" 
 --
 
 CREATE POLICY "Allow project owners to insert, update, and delete their own pr" ON public.project_geography TO seasketch_user USING (public.session_is_admin(project_id)) WITH CHECK (public.session_is_admin(project_id));
+
+
+--
+-- Name: sketch_fragments Enable users to edit their own sketch fragments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Enable users to edit their own sketch fragments" ON public.sketch_fragments USING ((EXISTS ( SELECT 1
+   FROM public.sketches
+  WHERE ((sketches.user_id = (current_setting('session.user_id'::text, true))::integer) AND (sketches.id = sketch_fragments.sketch_id)))));
+
+
+--
+-- Name: sketch_fragments Enable users to view relation between sketches and fragments; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY "Enable users to view relation between sketches and fragments" ON public.sketch_fragments FOR SELECT USING (true);
 
 
 --
@@ -23911,12 +24661,6 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
--- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -24089,6 +24833,12 @@ CREATE POLICY sketch_folders_forum_read ON public.sketch_folders FOR SELECT USIN
 
 CREATE POLICY sketch_folders_policy ON public.sketch_folders TO seasketch_user USING (public.it_me(user_id)) WITH CHECK (public.it_me(user_id));
 
+
+--
+-- Name: sketch_fragments; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.sketch_fragments ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: sketches; Type: ROW SECURITY; Schema: public; Owner: -
@@ -24293,7 +25043,7 @@ CREATE POLICY table_of_contents_items_admin ON public.table_of_contents_items US
 -- Name: table_of_contents_items table_of_contents_items_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY table_of_contents_items_select ON public.table_of_contents_items FOR SELECT TO anon USING (((public.session_has_project_access(project_id) AND (is_draft = false) AND public._session_on_toc_item_acl(path)) OR (data_library_template_id IS NOT NULL)));
+CREATE POLICY table_of_contents_items_select ON public.table_of_contents_items FOR SELECT TO anon USING (((public.session_has_project_access(project_id) AND (NOT is_draft) AND public._session_has_toc_access(id)) OR (data_library_template_id IS NOT NULL)));
 
 
 --
@@ -24433,55 +25183,6 @@ GRANT ALL ON FUNCTION public.texticregexeq(public.citext, public.citext) TO anon
 
 
 --
--- Name: FUNCTION geography_analyze(internal); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_analyze(internal) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography_in(cstring, oid, integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_in(cstring, oid, integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography_out(public.geography); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_out(public.geography) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography_recv(internal, oid, integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_recv(internal, oid, integer) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography_send(public.geography); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_send(public.geography) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography_typmod_in(cstring[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_typmod_in(cstring[]) FROM PUBLIC;
-
-
---
--- Name: FUNCTION geography_typmod_out(integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.geography_typmod_out(integer) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION geometry_analyze(internal); Type: ACL; Schema: public; Owner: -
 --
 
@@ -24528,6 +25229,55 @@ REVOKE ALL ON FUNCTION public.geometry_typmod_in(cstring[]) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.geometry_typmod_out(integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_analyze(internal); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_analyze(internal) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_in(cstring, oid, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_in(cstring, oid, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_out(public.geography); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_out(public.geography) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_recv(internal, oid, integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_recv(internal, oid, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_send(public.geography); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_send(public.geography) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_typmod_in(cstring[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_typmod_in(cstring[]) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION geography_typmod_out(integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_typmod_out(integer) FROM PUBLIC;
 
 
 --
@@ -24862,6 +25612,13 @@ GRANT UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seask
 
 
 --
+-- Name: COLUMN sketch_classes.is_geography_clipping_enabled; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -25092,6 +25849,14 @@ REVOKE ALL ON FUNCTION public._postgis_selectivity(tbl regclass, att_name text, 
 --
 
 REVOKE ALL ON FUNCTION public._postgis_stats(tbl regclass, att_name text, text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION _session_has_toc_access(item_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public._session_has_toc_access(item_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public._session_has_toc_access(item_id integer) TO anon;
 
 
 --
@@ -25836,6 +26601,14 @@ GRANT SELECT(id) ON TABLE public.users TO anon;
 
 REVOKE ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.approve_participant("projectId" integer, "userId" integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION approximate_fgb_index_size(feature_count integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.approximate_fgb_index_size(feature_count integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.approximate_fgb_index_size(feature_count integer) TO anon;
 
 
 --
@@ -26720,6 +27493,22 @@ REVOKE ALL ON FUNCTION public.citext_smaller(public.citext, public.citext) FROM 
 
 
 --
+-- Name: FUNCTION cleanup_orphaned_fragments(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.cleanup_orphaned_fragments() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cleanup_orphaned_fragments() TO seasketch_user;
+
+
+--
+-- Name: FUNCTION cleanup_orphaned_fragments(scope text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.cleanup_orphaned_fragments(scope text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.cleanup_orphaned_fragments(scope text[]) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION cleanup_tile_package(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -26732,6 +27521,14 @@ REVOKE ALL ON FUNCTION public.cleanup_tile_package() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION clipping_layers_for_sketch_class(pid integer, scid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid integer) TO seasketch_user;
 
 
 --
@@ -27162,6 +27959,14 @@ GRANT ALL ON FUNCTION public.copy_sketch_folder(folder_id integer) TO seasketch_
 
 REVOKE ALL ON FUNCTION public.copy_sketch_folder(folder_id integer, clear_parent boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.copy_sketch_folder(folder_id integer, clear_parent boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION copy_sketch_fragments(from_sketch_id integer, to_sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.copy_sketch_fragments(from_sketch_id integer, to_sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.copy_sketch_fragments(from_sketch_id integer, to_sketch_id integer) TO seasketch_user;
 
 
 --
@@ -27888,6 +28693,14 @@ GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
 --
 
 GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: FUNCTION data_sources_approximate_fgb_index_size(ds public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.data_sources_approximate_fgb_index_size(ds public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_approximate_fgb_index_size(ds public.data_sources) TO anon;
 
 
 --
@@ -29261,6 +30074,14 @@ REVOKE ALL ON FUNCTION public.geomfromewkt(text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION geostats_feature_count(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geostats_feature_count(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geostats_feature_count(geostats jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION get_all_sketch_toc_children(parent_id integer, parent_type public.sketch_child_type); Type: ACL; Schema: public; Owner: -
 --
 
@@ -29306,6 +30127,14 @@ GRANT ALL ON FUNCTION public.get_children_of_collection("collectionId" integer) 
 
 REVOKE ALL ON FUNCTION public.get_children_of_folder("folderId" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_children_of_folder("folderId" integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_fragments_for_sketch(sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_fragments_for_sketch(sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_fragments_for_sketch(sketch_id integer) TO anon;
 
 
 --
@@ -29449,6 +30278,14 @@ REVOKE ALL ON FUNCTION public.gserialized_gist_sel_2d(internal, oid, internal, i
 --
 
 REVOKE ALL ON FUNCTION public.gserialized_gist_sel_nd(internal, oid, internal, integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION has_fgb_output(ds public.data_sources); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.has_fgb_output(ds public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.has_fgb_output(ds public.data_sources) TO anon;
 
 
 --
@@ -30139,6 +30976,14 @@ REVOKE ALL ON FUNCTION public.on_user_insert_create_notification_preferences() F
 
 REVOKE ALL ON FUNCTION public.onboarded() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.onboarded() TO seasketch_user;
+
+
+--
+-- Name: FUNCTION overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer) TO seasketch_user;
 
 
 --
@@ -31805,6 +32650,42 @@ GRANT ALL ON FUNCTION public.sketches_filter_mvt_url(s public.sketches) TO anon;
 
 
 --
+-- Name: FUNCTION st_asbinary(public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_asbinary(public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_normalize(geom public.geometry); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_normalize(geom public.geometry) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_xmax(public.box3d); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_xmax(public.box3d) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION st_xmin(public.box3d); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.st_xmin(public.box3d) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION sketches_fragments(s public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_fragments(s public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_fragments(s public.sketches) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION sketches_geojson_feature(sketch public.sketches); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32044,13 +32925,6 @@ REVOKE ALL ON FUNCTION public.st_area2d(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.st_asbinary(public.geography) FROM PUBLIC;
-
-
---
--- Name: FUNCTION st_asbinary(public.geometry); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_asbinary(public.geometry) FROM PUBLIC;
 
 
 --
@@ -33879,13 +34753,6 @@ REVOKE ALL ON FUNCTION public.st_node(g public.geometry) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION st_normalize(geom public.geometry); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_normalize(geom public.geometry) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION st_nrings(public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34612,20 +35479,6 @@ REVOKE ALL ON FUNCTION public.st_x(public.geometry) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION st_xmax(public.box3d); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_xmax(public.box3d) FROM PUBLIC;
-
-
---
--- Name: FUNCTION st_xmin(public.box3d); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.st_xmin(public.box3d) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION st_y(public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34890,14 +35743,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_download_options(item publi
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_has_arcgis_vector_layer(item public.table_of_contents_items) TO anon;
-
-
---
--- Name: FUNCTION table_of_contents_items_has_metadata(toc public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.table_of_contents_items_has_metadata(toc public.table_of_contents_items) TO anon;
 
 
 --
@@ -35342,6 +36187,22 @@ REVOKE ALL ON FUNCTION public.update_project_geography_hash_on_delete() FROM PUB
 
 REVOKE ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, geography_ids integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_sketch_fragments(p_sketch_id integer, p_fragments public.fragment_input[], p_fragment_deletion_scope text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_sketch_fragments(p_sketch_id integer, p_fragments public.fragment_input[], p_fragment_deletion_scope text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_sketch_fragments(p_sketch_id integer, p_fragments public.fragment_input[], p_fragment_deletion_scope text[]) TO seasketch_user;
 
 
 --
@@ -35798,6 +36659,13 @@ GRANT SELECT,UPDATE ON TABLE public.email_notification_preferences TO seasketch_
 
 
 --
+-- Name: TABLE fragment_geographies; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.fragment_geographies TO anon;
+
+
+--
 -- Name: TABLE interactivity_settings; Type: ACL; Schema: public; Owner: -
 --
 
@@ -35854,6 +36722,20 @@ GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 
 GRANT SELECT ON TABLE public.projects_shared_basemaps TO anon;
 GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
+
+
+--
+-- Name: TABLE sketch_class_geographies; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.sketch_class_geographies TO anon;
+
+
+--
+-- Name: TABLE sketch_fragments; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT,DELETE,UPDATE ON TABLE public.sketch_fragments TO seasketch_user;
 
 
 --

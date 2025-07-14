@@ -4,6 +4,7 @@ import {
   Pencil1Icon,
   Pencil2Icon,
   PlusCircledIcon,
+  CaretDownIcon,
 } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -48,6 +49,52 @@ type AdminState = {
   wizardActive: boolean;
   sidebarVisible: boolean;
   showLayerChoice: boolean;
+  selectedGeographyId?: number;
+  showGeographyDropdown: boolean;
+};
+
+const ensureGeographyVisibleAndInView = (
+  geographyId: number,
+  map: mapboxgl.Map | null,
+  hiddenGeographies: number[],
+  onToggleVisibility: (id: number) => void,
+  geographies: any[]
+) => {
+  // Make sure geography is visible
+  if (hiddenGeographies.includes(geographyId)) {
+    onToggleVisibility(geographyId);
+  }
+
+  // Check if we need to adjust the map view
+  if (map) {
+    const geography = geographies.find((g) => g.id === geographyId);
+    if (geography?.bounds) {
+      const currentBounds = map.getBounds();
+      const geographyBounds = new mapboxgl.LngLatBounds(
+        [geography.bounds[0], geography.bounds[1]],
+        [geography.bounds[2], geography.bounds[3]]
+      );
+
+      // Check if the geography bounds are completely outside the current view
+      const currentNE = currentBounds.getNorthEast();
+      const currentSW = currentBounds.getSouthWest();
+      const geographyNE = geographyBounds.getNorthEast();
+      const geographySW = geographyBounds.getSouthWest();
+
+      // Check if the bounding boxes don't overlap at all
+      if (
+        currentNE.lng < geographySW.lng ||
+        currentSW.lng > geographyNE.lng ||
+        currentNE.lat < geographySW.lat ||
+        currentSW.lat > geographyNE.lat
+      ) {
+        map.fitBounds(geography.bounds as [number, number, number, number], {
+          padding: 50,
+          animate: true,
+        });
+      }
+    }
+  }
 };
 
 export default function GeographyAdmin() {
@@ -65,6 +112,7 @@ export default function GeographyAdmin() {
     wizardActive: false,
     sidebarVisible: true,
     showLayerChoice: false,
+    showGeographyDropdown: false,
   });
 
   const coastline = data?.geographyClippingLayers?.find(
@@ -424,21 +472,39 @@ export default function GeographyAdmin() {
   const [drawFeature, setDrawFeature] = useState<Feature | null>(null);
 
   const extraRequestParams = useMemo(() => {
+    const geographies = [];
+    // Only include the selected geography for clipping
+    const selectedGeography = data?.projectBySlug?.geographies?.find(
+      (geog) => geog.id === state.selectedGeographyId
+    );
+    if (selectedGeography) {
+      const clippingLayers = [];
+      if (selectedGeography.clippingLayers) {
+        for (const layer of selectedGeography.clippingLayers) {
+          if (!layer.dataLayer?.vectorObjectKey) {
+            throw new Error("Vector object key is required");
+          }
+          if (layer.objectKey) {
+            clippingLayers.push({
+              id: layer.id,
+              cql2Query: layer.cql2Query,
+              op: layer.operationType,
+              dataset: layer.dataLayer.vectorObjectKey,
+              templateId: layer.templateId,
+            });
+          }
+        }
+      }
+      geographies.push({
+        name: selectedGeography.name,
+        id: selectedGeography.id,
+        clippingLayers,
+      });
+    }
     return {
-      removeLand: true,
-      landDataset:
-        (coastline?.dataSource?.url || "").replace(
-          "https://tiles.seasketch.org/",
-          ""
-        ) + ".fgb",
-      clipToEEZIds: [],
-      eezDataset:
-        (eez?.dataSource?.url || "").replace(
-          "https://tiles.seasketch.org/",
-          ""
-        ) + ".fgb",
+      geographies,
     };
-  }, [coastline?.dataSource?.url, eez?.dataSource?.url]);
+  }, [data?.projectBySlug?.geographies, state.selectedGeographyId]);
 
   const draw = useMapboxGLDraw(
     mapContext,
@@ -448,11 +514,32 @@ export default function GeographyAdmin() {
       setDrawFeature(feature);
     },
     undefined,
-    "https://overlay.seasketch.org/clip",
+    // "https://overlay.seasketch.org/geographies/clip",
+    "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip",
+    // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand",
     (geom, performance) => {
       // console.log("geom", geom, performance);
     },
-    extraRequestParams
+    extraRequestParams,
+    (feature) => {
+      if (feature.geometry.coordinates[0].length > 3) {
+        fetch(
+          "https://sketch-preprocessing-worker.underbluewaters.workers.dev/warm-cache",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              ...extraRequestParams,
+              feature,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        ).catch((err) => {
+          console.error("err", err);
+        });
+      }
+    }
   );
 
   const unrepresentedTerritorialSeas = useMemo(() => {
@@ -629,37 +716,131 @@ export default function GeographyAdmin() {
           !state.wizardActive &&
           data?.projectBySlug?.geographies?.length && (
             <div className="absolute top-0 left-0 p-3 flex items-center space-x-2 z-10">
-              <Button
-                className=""
-                small
-                label={t("Draw polygon")}
-                onClick={() => {
-                  draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                  draw.create(false, true);
-                }}
-              >
-                <span className="flex items-center space-x-1">
-                  <Pencil1Icon />
-                  <span>{t("Draw polygon")}</span>
-                </span>
-              </Button>
+              {!state.selectedGeographyId ? (
+                <select
+                  className="form-select rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-sm"
+                  value={state.selectedGeographyId || ""}
+                  onChange={(e) => {
+                    const id = parseInt(e.target.value);
+                    if (id) {
+                      setState((prev) => ({
+                        ...prev,
+                        selectedGeographyId: id,
+                      }));
+                      ensureGeographyVisibleAndInView(
+                        id,
+                        state.map,
+                        state.hiddenGeographies,
+                        handleGeographyVisibilityToggle,
+                        data?.projectBySlug?.geographies || []
+                      );
+                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                      setTimeout(() => {
+                        draw.create(false, true);
+                      }, 0);
+                    }
+                  }}
+                >
+                  <option value="">{t("Draw within a Geography...")}</option>
+                  {data.projectBySlug.geographies.map((geog) => (
+                    <option key={geog.id} value={geog.id}>
+                      {geog.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <div className="relative inline-flex">
+                  <div className="group relative inline-flex items-center rounded-md bg-white text-sm font-medium shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+                    <button
+                      type="button"
+                      className="flex items-center space-x-2 px-1.5 py-1"
+                      onClick={() => {
+                        draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                        setTimeout(() => {
+                          draw.create(false, true);
+                        }, 0);
+                      }}
+                    >
+                      <Pencil1Icon className="h-4 w-4" />
+                      <span>
+                        {t("Draw Polygon - ")}
+                        {
+                          data.projectBySlug.geographies.find(
+                            (g) => g.id === state.selectedGeographyId
+                          )?.name
+                        }
+                      </span>
+                    </button>
+                    <div className="relative">
+                      <div className="h-full w-px bg-gray-300" />
+                    </div>
+                    <button
+                      type="button"
+                      className="px-2 hover:bg-gray-100 rounded-r-md h-full border-l border-black/90"
+                      onClick={() =>
+                        setState((prev) => ({
+                          ...prev,
+                          showGeographyDropdown: !prev.showGeographyDropdown,
+                        }))
+                      }
+                    >
+                      <CaretDownIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                  {state.showGeographyDropdown && (
+                    <div className="absolute right-0 top-full mt-1 w-56 rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 z-50 focus:outline-none">
+                      <div className="py-1" role="menu">
+                        {data.projectBySlug.geographies.map((geog) => (
+                          <button
+                            key={geog.id}
+                            className={`block w-full text-left px-4 py-2 text-sm hover:bg-gray-100 ${
+                              geog.id === state.selectedGeographyId
+                                ? "bg-gray-50 text-blue-600"
+                                : "text-gray-700"
+                            }`}
+                            onClick={() => {
+                              setState((prev) => ({
+                                ...prev,
+                                selectedGeographyId: geog.id,
+                                showGeographyDropdown: false,
+                              }));
+                              ensureGeographyVisibleAndInView(
+                                geog.id,
+                                state.map,
+                                state.hiddenGeographies,
+                                handleGeographyVisibilityToggle,
+                                data?.projectBySlug?.geographies || []
+                              );
+                              draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                              setTimeout(() => {
+                                draw.create(false, true);
+                              }, 0);
+                            }}
+                          >
+                            {geog.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
               {(drawFeature ||
                 (draw.digitizingState !== DigitizingState.DISABLED &&
                   draw.digitizingState !== DigitizingState.NO_SELECTION)) && (
-                <>
-                  <Button
-                    small
-                    label={t("Clear")}
-                    onClick={() => {
-                      setDrawFeature(null);
-                      draw.setCollection(EMPTY_FEATURE_COLLECTION);
-                    }}
-                  >
-                    <span className="flex items-center space-x-1">
-                      <span>{t("Clear")}</span>
-                    </span>
-                  </Button>
-                </>
+                <Button
+                  small
+                  buttonClassName=""
+                  label={t("Clear")}
+                  onClick={() => {
+                    setDrawFeature(null);
+                    draw.setCollection(EMPTY_FEATURE_COLLECTION);
+                  }}
+                >
+                  <span className="flex items-center space-x-1">
+                    <span>{t("Clear")}</span>
+                  </span>
+                </Button>
               )}
             </div>
           )}

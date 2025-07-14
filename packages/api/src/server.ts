@@ -62,11 +62,11 @@ if (process.env.SENTRY_DSN) {
   app.use(
     Sentry.Handlers.requestHandler({
       user: false,
-    })
+    }) as express.RequestHandler
   );
 
   // TracingHandler creates a trace for every incoming request
-  app.use(Sentry.Handlers.tracingHandler());
+  app.use(Sentry.Handlers.tracingHandler() as express.RequestHandler);
 }
 
 app.use(compression());
@@ -637,10 +637,10 @@ app.use(
     ...graphileOptions(),
     pgSettings: getPgSettings,
     websocketMiddlewares: [
-      authorizationMiddleware,
-      currentProjectMiddlware,
-      userAccountMiddlware,
-      verifyEmailMiddleware,
+      authorizationMiddleware as any,
+      currentProjectMiddlware as any,
+      userAccountMiddlware as any,
+      verifyEmailMiddleware as any,
     ],
     async additionalGraphQLContextFromRequest(req, res) {
       // Return here things that your resolvers need
@@ -651,11 +651,11 @@ app.use(
         adminPool: loadersPool,
       };
     },
-  })
+  }) as express.RequestHandler
 );
 
 // The error handler must be before any other error middleware and after all controllers
-app.use(Sentry.Handlers.errorHandler());
+app.use(Sentry.Handlers.errorHandler() as express.ErrorRequestHandler);
 
 if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
   https

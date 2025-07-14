@@ -8,6 +8,7 @@ import {
   clearSession,
   createGroup,
   addGroupToAcl,
+  addUserToGroup,
   projectTransaction,
   verifyOnlyAuthorsCanEditRecords,
   verifyOnlyAuthorsCanAccessRecords,
@@ -1002,14 +1003,23 @@ describe("Access control", () => {
           groupId
         );
         await conn.any(sql`select publish_table_of_contents(${projectId})`);
-        let publishedItemId = await conn.oneFirst(
+
+        // Test that the stored procedure returns the correct items based on access control
+        const publishedItemId = await conn.oneFirst(
           sql`select id from table_of_contents_items where is_draft = false and stable_id = ${folderBStableId}`
         );
-        let unprotectedItem = await conn.one(
-          sql`select id, title, stable_id, is_folder, is_draft from table_of_contents_items where is_draft = false and stable_id = ${unprotectedFolderStableId}`
+
+        // Verify the stored procedure respects access control
+        const results = await conn.many(
+          sql`SELECT t.* FROM projects, LATERAL projects_table_of_contents_items(projects.*) t WHERE projects.id = ${projectId}`
         );
-        await clearSession(conn);
-        // return unprotectedItem.id as number;
+
+        // Should return the protected subfolder (inherits parent's access control)
+        const subfolderResult = results.find(
+          (r) => r.stable_id === folderBStableId
+        );
+        expect(subfolderResult).toBeTruthy();
+
         return publishedItemId as number;
       }
     );
@@ -1080,6 +1090,52 @@ describe("Access control", () => {
             sql`select id from table_of_contents_items where id = ${publishedFolderAId}`
           )
         ).rejects.toThrow(/not found/);
+      }
+    );
+  });
+  test("projects_table_of_contents_items stored procedure respects access control lists", async () => {
+    await verifyOnlyProjectGroupMembersCanAccessResource(
+      pool,
+      "table_of_contents_items",
+      async (conn, projectId, groupId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const folderAStableId = id();
+        const folderBStableId = id();
+        const protectedId = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderA', true, ${folderAStableId}) returning id`
+        );
+        const protectedSubfolderId = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id, parent_stable_id) values (${projectId}, 'subfolder', true, ${folderBStableId}, ${folderAStableId}) returning id`
+        );
+        const unprotectedFolderStableId = id();
+        const unprotectedFolderId = await conn.oneFirst(
+          sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'unprotected', true, ${unprotectedFolderStableId}) returning id`
+        );
+        await limitToGroup(
+          conn,
+          "table_of_contents_item_id",
+          protectedId,
+          groupId
+        );
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+
+        // Test that the stored procedure returns the correct items based on access control
+        const publishedItemId = await conn.oneFirst(
+          sql`select id from table_of_contents_items where is_draft = false and stable_id = ${folderBStableId}`
+        );
+
+        // Verify the stored procedure respects access control
+        const results = await conn.many(
+          sql`SELECT t.* FROM projects, LATERAL projects_table_of_contents_items(projects.*) t WHERE projects.id = ${projectId}`
+        );
+
+        // Should return the protected subfolder (inherits parent's access control)
+        const subfolderResult = results.find(
+          (r) => r.stable_id === folderBStableId
+        );
+        expect(subfolderResult).toBeTruthy();
+
+        return publishedItemId as number;
       }
     );
   });

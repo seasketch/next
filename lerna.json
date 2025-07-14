@@ -12,7 +12,10 @@
     "packages/spatial-uploads-handler",
     "packages/uploads-server",
     "packages/vector-data-source",
-    "packages/geostats-types"
+    "packages/geostats-types",
+    "packages/fgb-source",
+    "packages/overlay-engine",
+    "packages/sketch-preprocessing-worker"
   ],
   "version": "independent"
 }
