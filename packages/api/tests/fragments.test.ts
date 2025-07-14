@@ -4534,7 +4534,15 @@ function compareWithExpectedOutput(
         const current = sortedCurrentFragments[i];
         const expected = sortedExpectedFragments[i];
 
-        expect(current.geometry).toEqual(expected.geometry);
+        // Normalize coordinates before comparison to handle rounding differences
+        const normalizedCurrentGeometry = normalizeCoordinates(
+          current.geometry
+        );
+        const normalizedExpectedGeometry = normalizeCoordinates(
+          expected.geometry
+        );
+
+        expect(normalizedCurrentGeometry).toEqual(normalizedExpectedGeometry);
         expect(current.properties.__hash).toBe(expected.properties.__hash);
         // Note: We don't compare geography IDs or sketch IDs since they depend on database state
         // and are not meaningful for regression testing
@@ -4544,7 +4552,15 @@ function compareWithExpectedOutput(
       const currentSketch = currentData as Feature<Polygon | MultiPolygon>;
       const expectedSketch = expectedData as Feature<Polygon | MultiPolygon>;
 
-      expect(currentSketch.geometry).toEqual(expectedSketch.geometry);
+      // Normalize coordinates before comparison to handle rounding differences
+      const normalizedCurrentGeometry = normalizeCoordinates(
+        currentSketch.geometry
+      );
+      const normalizedExpectedGeometry = normalizeCoordinates(
+        expectedSketch.geometry
+      );
+
+      expect(normalizedCurrentGeometry).toEqual(normalizedExpectedGeometry);
       // Note: We don't compare IDs since they depend on database state and are not meaningful for regression testing
     }
   } catch (error) {
@@ -4610,4 +4626,63 @@ async function fragmentsForCollection(
   })) as SketchFragment[];
   await conn.any(sql`set role = seasketch_user`);
   return fragments;
+}
+
+// Helper function to normalize coordinates by rounding to 8 decimal places
+function normalizeCoordinates(geometry: any): any {
+  if (!geometry || typeof geometry !== "object") {
+    return geometry;
+  }
+
+  if (geometry.type && geometry.coordinates) {
+    // This is a GeoJSON geometry object
+    return {
+      ...geometry,
+      coordinates: normalizeCoordinateArray(geometry.coordinates),
+    };
+  }
+
+  return geometry;
+}
+
+function normalizeCoordinateArray(coordinates: any): any {
+  if (Array.isArray(coordinates)) {
+    if (coordinates.length > 0 && typeof coordinates[0] === "number") {
+      // This is a coordinate pair [lon, lat]
+      return coordinates.map((coord) =>
+        typeof coord === "number"
+          ? Math.round(coord * 100000000) / 100000000
+          : coord
+      );
+    } else {
+      // This is an array of coordinate arrays
+      return coordinates.map(normalizeCoordinateArray);
+    }
+  }
+
+  return coordinates;
+}
+
+// Helper function to normalize a GeoJSON feature or geometry
+function normalizeGeometry(data: any): any {
+  if (!data || typeof data !== "object") {
+    return data;
+  }
+
+  if (data.type === "Feature") {
+    return {
+      ...data,
+      geometry: normalizeCoordinates(data.geometry),
+    };
+  } else if (data.type === "FeatureCollection") {
+    return {
+      ...data,
+      features: data.features.map(normalizeGeometry),
+    };
+  } else if (data.geometry) {
+    // This is a geometry object
+    return normalizeCoordinates(data);
+  }
+
+  return data;
 }
