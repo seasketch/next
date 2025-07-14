@@ -403,13 +403,7 @@ export async function deleteSketchTocItems(
 
   await pgClient.query(`delete from sketches where id = any($1)`, [sketches]);
 
-  await pgClient.query(`set role = postgres`);
-  // delete any fragments that are now orphaned
-  await pgClient.query(
-    `delete from fragments where hash = any($1) and not exists (select 1 from sketch_fragments where fragment_hash = fragments.hash)`,
-    [hashes]
-  );
-  await pgClient.query(`set role = seasketch_user`);
+  await pgClient.query(`select cleanup_orphaned_fragments($1)`, [hashes]);
 
   // results will be populated by resolvers above
   return { deletedItems, previousCollectionIds };
@@ -515,34 +509,12 @@ export async function getFragmentsForSketch(
     removeOverlap?: boolean;
   }
 ): Promise<SketchFragment[]> {
-  await pgClient.query(`set role = postgres`);
   const { rows } = await pgClient.query(
     `
-    SELECT
-    fragments.hash,
-    ST_AsGeoJSON(fragments.geometry) as geometry,
-    ARRAY(
-      SELECT sketch_fragments.sketch_id
-      FROM sketch_fragments
-      WHERE sketch_fragments.fragment_hash = fragments.hash
-    ) AS sketch_ids,
-    ARRAY(
-      SELECT fragment_geographies.geography_id
-      FROM fragment_geographies
-      WHERE fragment_geographies.fragment_hash = fragments.hash
-    ) AS geography_ids
-    FROM fragments
-    WHERE
-    EXISTS (
-      SELECT 1
-      FROM sketch_fragments
-      WHERE sketch_fragments.fragment_hash = fragments.hash
-        AND sketch_fragments.sketch_id = $1
-    )
+    select * from get_fragments_for_sketch($1)
     `,
     [sketchId]
   );
-  await pgClient.query(`set role = seasketch_user`);
   let fragments: SketchFragment[] = rows.map((r: any) => ({
     type: "Feature",
     properties: {
@@ -675,31 +647,13 @@ export async function createOrUpdateSketch({
 
   // Get all the clipping layers for geographies in this project, including
   // those used for clipping this sketch class.
-  await pgClient.query(`set role = postgres`);
 
   let { rows: clippingLayers } = await pgClient.query(
     `
-    select 
-      gcl.id,
-      gcl.project_geography_id as geography_id,
-      data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
-      gcl.operation_type,
-      gcl.cql2_query,
-      gcl.template_id,
-      exists(
-        select 1 
-        from sketch_class_geographies scg 
-        where scg.geography_id = gcl.project_geography_id 
-        and scg.sketch_class_id = $1
-      ) as for_clipping
-    from geography_clipping_layers gcl
-    join project_geography pg on gcl.project_geography_id = pg.id
-    where pg.project_id = $2
+    select * from clipping_layers_for_sketch_class($1, $2)
     `,
-    [sketchClassId, projectId]
+    [projectId, sketchClassId]
   );
-
-  await pgClient.query(`set role = seasketch_user`);
 
   // group by geography_id
   const geographies = clippingLayers.reduce(

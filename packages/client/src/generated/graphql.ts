@@ -5832,36 +5832,6 @@ export enum ForumsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
-export type Fragment = Node & {
-  __typename?: 'Fragment';
-  geometry: GeometryPolygon;
-  hash: Scalars['String'];
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-};
-
-/** A connection to a list of `Fragment` values. */
-export type FragmentsConnection = {
-  __typename?: 'FragmentsConnection';
-  /** A list of edges which contains the `Fragment` and cursor to aid in pagination. */
-  edges: Array<FragmentsEdge>;
-  /** A list of `Fragment` objects. */
-  nodes: Array<Fragment>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `Fragment` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `Fragment` edge in the connection. */
-export type FragmentsEdge = {
-  __typename?: 'FragmentsEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `Fragment` at the end of the edge. */
-  node: Fragment;
-};
-
 /** All input for the `generateOfflineTilePackage` mutation. */
 export type GenerateOfflineTilePackageInput = {
   /**
@@ -12989,8 +12959,6 @@ export type Sketch = Node & {
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
   formElementId?: Maybe<Scalars['Int']>;
-  /** Reads and enables pagination through a set of `Fragment`. */
-  fragmentsConnection: FragmentsConnection;
   /**
    * Use this to get a copy of the sketch with properties populated exactly as they
    * would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
@@ -13037,25 +13005,6 @@ export type Sketch = Node & {
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
-};
-
-
-/**
- * A *Sketch* is a spatial feature that matches the schema defined by the related
- * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
- * shared in the discussion forum. They are also the gateway to analytical reports.
- *
- * Sketches are completely owned by individual users, so access control rules
- * ensure that only the owner of a sketch can perform CRUD operations on them.
- * Admins have no special access. Use the graphile-generated mutations to manage
- * these records.
- */
-export type SketchFragmentsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
 };
 
 export enum SketchChildType {
