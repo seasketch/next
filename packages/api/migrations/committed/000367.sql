@@ -1,5 +1,6 @@
---! Previous: sha1:40903e02c06538ab9d0ecdfe4c7da9648b475017
---! Hash: sha1:b81788eda4ea1b22925107a27887b27ace367e99
+--! AllowInvalidHash
+--! Previous: sha1:5273cee724a348faf796d7182414b2521afb9183
+--! Hash: sha1:3f9e714d9e247240dffdbfc4f2d80b244bb9630f
 
 -- Enter migration here
 drop function if exists sketch_classes_geographies(sketch_classes);

@@ -1,6 +1,6 @@
 --! AllowInvalidHash
 --! Previous: sha1:a4dfe0c8b3e916dcd11e60980df8f7e19b66a7bd
---! Hash: sha1:40903e02c06538ab9d0ecdfe4c7da9648b475017
+--! Hash: sha1:5273cee724a348faf796d7182414b2521afb9183
 
 -- Enter migration here
 alter table sketch_classes add column if not exists is_geography_clipping_enabled boolean not null default false;

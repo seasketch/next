@@ -1,5 +1,6 @@
---! Previous: sha1:b81788eda4ea1b22925107a27887b27ace367e99
---! Hash: sha1:88755ea64499fbe3c97e8e3522662171df8cf929
+--! AllowInvalidHash
+--! Previous: sha1:3f9e714d9e247240dffdbfc4f2d80b244bb9630f
+--! Hash: sha1:b5b5d7581aecdff4c0bf6900ee0dda12964c83bf
 
 -- Enter migration here
 drop table if exists fragment_geographies cascade;
