@@ -632,7 +632,11 @@ export default function GeographyAdmin() {
                     >
                       support@seasketch.org
                     </a>{" "}
-                    for assistance.
+                    for assistance. Documentation on updating template layers is
+                    online at{" "}
+                    <a href="https://github.com/seasketch/next/wiki/Data-Library#assigning-data-library-template-ids">
+                      https://github.com/seasketch/next/wiki/Data-Library#assigning-data-library-template-ids
+                    </a>
                   </Trans>
                 )}
               </Warning>
