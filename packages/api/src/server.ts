@@ -258,6 +258,7 @@ run({
   */5 * * * * rollupDataSourceRequests
   * * * * * deleteExpiredArchivedDataSources
   0 */6 * * * updateCRWTemplate
+  * 1 * * * refreshGmapsApiSession
   `
       : `
   * * * * * cleanupProjectBackgroundJobs
