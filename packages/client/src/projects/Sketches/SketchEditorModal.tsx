@@ -478,13 +478,7 @@ function SketchEditorModal({
         variables: geometryChanged
           ? {
               name,
-              userGeom:
-                preprocessedGeometry && !sketchClass.isGeographyClippingEnabled
-                  ? {
-                      ...feature,
-                      geometry: preprocessedGeometry,
-                    }
-                  : feature,
+              userGeom: feature,
               properties,
               id: sketch.id,
             }
@@ -500,13 +494,7 @@ function SketchEditorModal({
         variables: {
           name,
           sketchClassId: sketchClass.id,
-          userGeom:
-            preprocessedGeometry && !sketchClass.isGeographyClippingEnabled
-              ? {
-                  ...feature,
-                  geometry: preprocessedGeometry,
-                }
-              : feature,
+          userGeom: feature,
           folderId,
           collectionId,
           properties: properties,
