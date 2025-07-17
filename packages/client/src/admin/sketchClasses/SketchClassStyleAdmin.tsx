@@ -98,7 +98,7 @@ export default function SketchClassStyleAdmin({
         },
       });
     },
-    500,
+    100,
     {
       trailing: true,
     }
@@ -168,36 +168,97 @@ export default function SketchClassStyleAdmin({
   }, [sketchAttributeValues, map, sketchClass]);
 
   return (
-    <div className="flex flex-col bg-gray-700 h-full">
-      <div ref={mapContainer} className="h-64 bg-green-800"></div>
-      {/* eslint-disable-next-line i18next/no-literal-string */}
-      <div className="flex items-center space-x-1 p-1 bg-gray-600">
-        {relevantProps.map((fe) => {
-          if (fe?.type?.componentName === "FeatureName") {
-            return (
-              <input
-                className="text-xs p-1 bg-gray-500 rounded-sm"
-                type="text"
-                placeholder="Sketch Name"
-                value={sketchAttributeValues.name || ""}
-                onChange={(e) => {
-                  setSketchAttributeValues((prev) => ({
-                    ...prev,
-                    name: e.target.value,
-                  }));
-                }}
-              />
-            );
-          } else {
-            switch (fe?.type?.geostatsType) {
-              case ExtendedGeostatsType.String:
-                if (
-                  fe?.componentSettings?.options &&
-                  fe?.componentSettings?.options?.length > 0
-                ) {
+    <div className="flex flex-col-reverse 1.5xl:flex-row bg-gray-700 h-full">
+      <div className="flex flex-col flex-1 bg-white min-w-[480px]">
+        <GLStyleEditor
+          hideNewCartographyTools={true}
+          className="overflow-hidden"
+          initialStyle={JSON.stringify(sketchClass.mapboxGlStyle || [])}
+          onChange={(newStyle) => {
+            update(sketchClass.id, newStyle);
+          }}
+          geostats={geostats}
+          bounds={bounds || undefined}
+          onRequestShowBounds={() => {
+            map?.fitBounds(bounds!, { padding: 20 });
+          }}
+        />
+        <div className="flex items-center space-x-1 p-1 bg-gray-600 flex-1">
+          {relevantProps.map((fe) => {
+            if (fe?.type?.componentName === "FeatureName") {
+              return (
+                <input
+                  className="text-xs p-1 bg-gray-500 rounded-sm"
+                  type="text"
+                  placeholder="Sketch Name"
+                  value={sketchAttributeValues.name || ""}
+                  onChange={(e) => {
+                    setSketchAttributeValues((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }));
+                  }}
+                />
+              );
+            } else {
+              switch (fe?.type?.geostatsType) {
+                case ExtendedGeostatsType.String:
+                  if (
+                    fe?.componentSettings?.options &&
+                    fe?.componentSettings?.options?.length > 0
+                  ) {
+                    return (
+                      <select
+                        className="text-xs rounded-sm p-1 bg-gray-500 pr-2"
+                        value={sketchAttributeValues[fe.generatedExportId]}
+                        onChange={(e) => {
+                          setSketchAttributeValues((prev) => ({
+                            ...prev,
+                            [fe.generatedExportId]: e.target.value,
+                          }));
+                        }}
+                      >
+                        {fe?.componentSettings?.options?.map(
+                          (option: FormElementOption) => {
+                            return (
+                              <option value={option.value || option.label}>
+                                {option.label}
+                              </option>
+                            );
+                          }
+                        )}
+                      </select>
+                    );
+                  } else {
+                    return (
+                      <input
+                        type="text"
+                        value={sketchAttributeValues[fe.generatedExportId]}
+                      />
+                    );
+                  }
+                case ExtendedGeostatsType.Boolean:
                   return (
-                    <select
-                      className="text-xs rounded-sm p-1 bg-gray-500 pr-2"
+                    <div className="text-xs inline-block px-2 space-x-2">
+                      <label>{fe.generatedLabel || ""}</label>
+                      <input
+                        className="rounded bg-gray-500"
+                        type="checkbox"
+                        checked={sketchAttributeValues[fe.generatedExportId]}
+                        onChange={(e) => {
+                          setSketchAttributeValues((prev) => ({
+                            ...prev,
+                            [fe.generatedExportId]: e.target.checked,
+                          }));
+                        }}
+                      />
+                    </div>
+                  );
+                case ExtendedGeostatsType.Number:
+                  return (
+                    <input
+                      className="text-xs p-1 bg-gray-500 rounded-sm"
+                      type="number"
                       value={sketchAttributeValues[fe.generatedExportId]}
                       onChange={(e) => {
                         setSketchAttributeValues((prev) => ({
@@ -205,120 +266,64 @@ export default function SketchClassStyleAdmin({
                           [fe.generatedExportId]: e.target.value,
                         }));
                       }}
-                    >
-                      {fe?.componentSettings?.options?.map(
-                        (option: FormElementOption) => {
-                          return (
-                            <option value={option.value || option.label}>
-                              {option.label}
-                            </option>
-                          );
-                        }
-                      )}
-                    </select>
-                  );
-                } else {
-                  return (
-                    <input
-                      type="text"
-                      value={sketchAttributeValues[fe.generatedExportId]}
                     />
                   );
-                }
-              case ExtendedGeostatsType.Boolean:
-                return (
-                  <div className="text-xs inline-block px-2 space-x-2">
-                    <label>{fe.generatedLabel || ""}</label>
-                    <input
-                      className="rounded bg-gray-500"
-                      type="checkbox"
-                      checked={sketchAttributeValues[fe.generatedExportId]}
-                      onChange={(e) => {
-                        setSketchAttributeValues((prev) => ({
-                          ...prev,
-                          [fe.generatedExportId]: e.target.checked,
-                        }));
-                      }}
-                    />
-                  </div>
-                );
-              case ExtendedGeostatsType.Number:
-                return (
-                  <input
-                    className="text-xs p-1 bg-gray-500 rounded-sm"
-                    type="number"
-                    value={sketchAttributeValues[fe.generatedExportId]}
-                    onChange={(e) => {
-                      setSketchAttributeValues((prev) => ({
-                        ...prev,
-                        [fe.generatedExportId]: e.target.value,
-                      }));
-                    }}
-                  />
-                );
-              case ExtendedGeostatsType.Array:
-                if (
-                  fe.type?.geostatsArrayOf === ExtendedGeostatsType.String &&
-                  fe.componentSettings.options
-                ) {
-                  return (
-                    <select
-                      // This just gets ugly and difficult to use if set to multiple.
-                      // Wait to enable until someone asks for it.
-                      // -cb aug 14, 2023
-                      // multiple={fe.componentSettings.multipleSelect == true}
-                      className="text-xs rounded-sm p-1 bg-gray-500 pr-2 max-h-8"
-                      value={sketchAttributeValues[fe.generatedExportId]}
-                      onChange={(e) => {
-                        const options = e.target.options;
-                        const selectedOptions = [];
-                        const selectedValues: string[] = [];
+                case ExtendedGeostatsType.Array:
+                  if (
+                    fe.type?.geostatsArrayOf === ExtendedGeostatsType.String &&
+                    fe.componentSettings.options
+                  ) {
+                    return (
+                      <select
+                        // This just gets ugly and difficult to use if set to multiple.
+                        // Wait to enable until someone asks for it.
+                        // -cb aug 14, 2023
+                        // multiple={fe.componentSettings.multipleSelect == true}
+                        className="text-xs rounded-sm p-1 bg-gray-500 pr-2 max-h-8"
+                        value={sketchAttributeValues[fe.generatedExportId]}
+                        onChange={(e) => {
+                          const options = e.target.options;
+                          const selectedOptions = [];
+                          const selectedValues: string[] = [];
 
-                        for (let i = 0; i < options.length; i++) {
-                          if (options[i].selected) {
-                            selectedOptions.push(options[i]);
-                            selectedValues.push(options[i].value);
+                          for (let i = 0; i < options.length; i++) {
+                            if (options[i].selected) {
+                              selectedOptions.push(options[i]);
+                              selectedValues.push(options[i].value);
+                            }
                           }
-                        }
-                        setSketchAttributeValues((prev) => ({
-                          ...prev,
-                          [fe.generatedExportId]: selectedValues,
-                        }));
-                      }}
-                    >
-                      {fe?.componentSettings?.options?.map(
-                        (option: FormElementOption) => {
-                          return (
-                            <option value={option.value || option.label}>
-                              {option.label}
-                            </option>
-                          );
-                        }
-                      )}
-                    </select>
-                  );
-                }
-                break;
+                          setSketchAttributeValues((prev) => ({
+                            ...prev,
+                            [fe.generatedExportId]: selectedValues,
+                          }));
+                        }}
+                      >
+                        {fe?.componentSettings?.options?.map(
+                          (option: FormElementOption) => {
+                            return (
+                              <option value={option.value || option.label}>
+                                {option.label}
+                              </option>
+                            );
+                          }
+                        )}
+                      </select>
+                    );
+                  }
+                  break;
+              }
+              // return components[fe?.type?.componentName || ""].displayName;
             }
-            // return components[fe?.type?.componentName || ""].displayName;
-          }
-          // return fe?.type?.componentName || "";
-          return null;
-        })}
+            // return fe?.type?.componentName || "";
+            return null;
+          })}
+        </div>
       </div>
-      <GLStyleEditor
-        hideNewCartographyTools={true}
-        className="flex-1 overflow-hidden"
-        initialStyle={JSON.stringify(sketchClass.mapboxGlStyle || [])}
-        onChange={(newStyle) => {
-          update(sketchClass.id, newStyle);
-        }}
-        geostats={geostats}
-        bounds={bounds || undefined}
-        onRequestShowBounds={() => {
-          map?.fitBounds(bounds!, { padding: 20 });
-        }}
-      />
+      <div
+        ref={mapContainer}
+        className="1.5xl:h-full bg-black 1.5xl:flex-2 flex-1"
+      ></div>
+      {/* eslint-disable-next-line i18next/no-literal-string */}
     </div>
   );
 }

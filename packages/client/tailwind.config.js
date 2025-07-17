@@ -36,6 +36,7 @@ module.exports = {
       screens: {
         tall: { raw: "(min-height: 700px)" },
         "mid-height": { raw: "(min-height: 600px)" },
+        "1.5xl": { raw: "(min-width: 1420px)" },
       },
       flexGrow: {
         0: 0,

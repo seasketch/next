@@ -137,7 +137,7 @@ export default function SketchClassForm({
     });
   }, [sketchClass, mutate]);
   return (
-    <div className="min-h-screen max-h-screen overflow-hidden flex-col flex">
+    <div className="min-h-screen max-h-screen overflow-hidden flex-col flex w-full">
       <div className="p-2 bg-gray-700">
         <h1 className="text-lg font-semibold flex items-center text-gray-50 mb-2">
           <span className="flex-1">
@@ -154,9 +154,15 @@ export default function SketchClassForm({
           <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
         </div>
       </div>
-      <div className="bg-white flex-1 max-w-xl shadow z-0 w-128 overflow-x-hidden overflow-y-auto">
+      <div
+        className="bg-white flex-1 shadow z-0 overflow-x-hidden w-full"
+        style={{
+          background:
+            'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAACFJREFUKFNjXL58oxQDEYARpDAy0v8ZIbWjCvGGENHBAwCZWCYkLmgNZgAAAABJRU5ErkJggg==") repeat rgba(238, 240, 241)',
+        }}
+      >
         {selectedTab === "settings" && (
-          <div className="p-4 space-y-4">
+          <div className="px-6 p-4 space-y-4 w-full max-w-xl min-h-full bg-white shadow border-r">
             <div className="flex w-full items-center">
               <div className="flex-1">
                 <MutableAutosaveInput
@@ -268,6 +274,7 @@ export default function SketchClassForm({
         )}
         {selectedTab === "attributes" && sketchClass.form && (
           <SketchClassAttributesAdmin
+            sketchClassName={sketchClass.name}
             formId={sketchClass.form.id}
             filterServiceLocation={
               sketchClass.filterApiServerLocation || undefined

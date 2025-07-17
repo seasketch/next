@@ -73,7 +73,7 @@ export default function GeoprocessingTab({
   }
 
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6 bg-white max-w-144 shadow border-r min-h-full">
       {!showLegacySystem && geographyData?.projectBySlug?.geographies && (
         <SketchClassGeographiesInput
           sketchClassId={sketchClass.id}

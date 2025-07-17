@@ -4647,6 +4647,10 @@ select{
   top:-3rem
 }
 
+.-top-2{
+  top:-0.5rem
+}
+
 .-top-3{
   top:-0.75rem
 }
@@ -6053,12 +6057,20 @@ select{
   min-width:0px
 }
 
+.min-w-128{
+  min-width:32rem
+}
+
 .min-w-40{
   min-width:10rem
 }
 
 .min-w-60{
   min-width:15rem
+}
+
+.min-w-96{
+  min-width:24rem
 }
 
 .min-w-\[260px\]{
@@ -6071,6 +6083,10 @@ select{
 
 .min-w-\[40px\]{
   min-width:40px
+}
+
+.min-w-\[480px\]{
+  min-width:480px
 }
 
 .min-w-full{
@@ -6183,6 +6199,14 @@ select{
 
 .max-w-xs{
   max-width:20rem
+}
+
+.max-w-128{
+  max-width:32rem
+}
+
+.max-w-144{
+  max-width:36rem
 }
 
 .flex-1{
@@ -7039,6 +7063,10 @@ select{
   border-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
 }
 
+.border-black\/10{
+  border-color:rgb(0 0 0 / 0.1)
+}
+
 .border-black\/15{
   border-color:rgb(0 0 0 / 0.15)
 }
@@ -7233,6 +7261,33 @@ select{
 .border-yellow-600{
   --tw-border-opacity:1;
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
+}
+
+.border-b-black{
+  --tw-border-opacity:1;
+  border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
+}
+
+.border-b-black\/20{
+  border-bottom-color:rgb(0 0 0 / 0.2)
+}
+
+.border-r-black{
+  --tw-border-opacity:1;
+  border-right-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
+}
+
+.border-r-black\/15{
+  border-right-color:rgb(0 0 0 / 0.15)
+}
+
+.border-t-black{
+  --tw-border-opacity:1;
+  border-top-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
+}
+
+.border-t-black\/10{
+  border-top-color:rgb(0 0 0 / 0.1)
 }
 
 .border-opacity-0{
@@ -11201,12 +11256,24 @@ input[type="checkbox"][indeterminate="true"]:checked {
     height:4rem
   }
 
+  .\32xl\:h-full{
+    height:100%
+  }
+
   .\32xl\:w-128{
     width:32rem
   }
 
   .\32xl\:w-27{
     width:6.75rem
+  }
+
+  .\32xl\:flex-2{
+    flex:2 2 0%
+  }
+
+  .\32xl\:flex-row{
+    flex-direction:row
   }
 
   .\32xl\:p-14{
@@ -11236,6 +11303,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .mid-height\:pt-4{
     padding-top:1rem
+  }
+}
+
+@media (min-width: 1420px){
+  .\31\.5xl\:h-full{
+    height:100%
+  }
+
+  .\31\.5xl\:flex-2{
+    flex:2 2 0%
+  }
+
+  .\31\.5xl\:flex-row{
+    flex-direction:row
   }
 }
 
