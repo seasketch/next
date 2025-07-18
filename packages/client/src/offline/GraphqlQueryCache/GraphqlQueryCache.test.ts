@@ -89,6 +89,11 @@ beforeEach(async () => {
   // @ts-ignore
   fetch.mockClear();
   process.env.REACT_APP_ENABLE_GRAPHQL_QUERY_CACHE_BY_DEFAULT = "true";
+  // Clear any existing caches to prevent interference between tests
+  await localforage.clear();
+  // Clear all caches to prevent interference
+  const cacheNames = await caches.keys();
+  await Promise.all(cacheNames.map((name: string) => caches.delete(name)));
 });
 
 test("init", async () => {
@@ -182,6 +187,9 @@ describe("Static strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.id).toBe(1);
 
+    // Wait for any pending cache operations to complete
+    await waitForCacheOperations();
+
     const secondRequest = await mockGqlRequest(
       ProjectBySlug,
       { slug: "maldives" },
@@ -194,6 +202,8 @@ describe("Static strategy", () => {
       }
     );
     const response2 = await cache.handleRequest(ENDPOINT_URL, secondRequest);
+    // Wait for any pending cache operations to complete
+    await waitForCacheOperations();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect((await response2.json()).data.projectBySlug.name).toBe("Maldives");
     await cache.clear();
@@ -277,6 +287,10 @@ describe("lru strategy", () => {
     const json = await response.json();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.name).toBe("Maldives");
+
+    // Wait for cache operations to complete
+    await waitForCacheOperations();
+
     const azoresRequest = await mockGqlRequest(
       ProjectBySlug,
       { slug: "azores" },
@@ -287,6 +301,8 @@ describe("lru strategy", () => {
       }
     );
     await cache.handleRequest(ENDPOINT_URL, azoresRequest);
+    await waitForCacheOperations();
+
     const fijiRequest = await mockGqlRequest(
       ProjectBySlug,
       { slug: "fiji" },
@@ -297,6 +313,7 @@ describe("lru strategy", () => {
       }
     );
     await cache.handleRequest(ENDPOINT_URL, fijiRequest);
+    await waitForCacheOperations();
     expect(fetch).toHaveBeenCalledTimes(3);
 
     // Azores should still be in cache
@@ -310,6 +327,7 @@ describe("lru strategy", () => {
       }
     );
     await cache.handleRequest(ENDPOINT_URL, azoresRequest2);
+    await waitForCacheOperations();
     expect(fetch).toHaveBeenCalledTimes(3);
 
     // Maldives should not, and trigger another request
@@ -326,6 +344,7 @@ describe("lru strategy", () => {
       ENDPOINT_URL,
       maldivesRequest2
     );
+    await waitForCacheOperations();
     // expect(fetch).toHaveBeenCalledTimes(4);
     expect((await maldivesEdited.json()).data.projectBySlug.name).toBe(
       "Maldives (Edited)"
@@ -345,6 +364,7 @@ describe("lru strategy", () => {
       ENDPOINT_URL,
       azoresRequest3
     );
+    await waitForCacheOperations();
     // expect(fetch).toHaveBeenCalledTimes(4);
     expect((await azoresCached.json()).data.projectBySlug.name).toBe("Azores");
     await cache.clear();
@@ -373,6 +393,8 @@ describe("byArgs strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.name).toBe("Maldives");
 
+    await waitForCacheOperations();
+
     const secondMaldivesRequest = await mockGqlRequest(
       ProjectBySlug,
       { slug: "maldives" },
@@ -390,6 +412,8 @@ describe("byArgs strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json2.data.projectBySlug.name).toBe("Maldives");
 
+    await waitForCacheOperations();
+
     // The following are ignored by the strategy
     const azoresRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -404,6 +428,8 @@ describe("byArgs strategy", () => {
     const json3 = await response3.json();
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(json3.data.projectBySlug.name).toBe("azores");
+
+    await waitForCacheOperations();
 
     const secondazoresRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -426,4 +452,12 @@ describe("byArgs strategy", () => {
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Wait for cache operations to complete to prevent race conditions in tests
+ */
+async function waitForCacheOperations() {
+  // Wait for debounced cache pruning to complete
+  await sleep(20);
 }
