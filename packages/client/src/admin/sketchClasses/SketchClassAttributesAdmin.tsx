@@ -467,8 +467,10 @@ export default function SketchClassAttributesAdmin({
             <div
               ref={setPopperElement}
               className="bg-white max-w-sm shadow-xl rounded z-50 border border-opacity-10 border-black PopperContextMenu"
+              style={{
+                ...styles.popper,
+              }}
               {...attributes.popper}
-              style={styles.popper}
             >
               {editableElementId !== null &&
                 (() => {

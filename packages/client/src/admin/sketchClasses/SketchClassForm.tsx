@@ -1,3 +1,4 @@
+/* eslint-disable react/jsx-no-target-blank */
 import {
   useUpdateSketchClassMutation,
   useDeleteSketchClassMutation,
@@ -5,6 +6,8 @@ import {
   SketchClassesDocument,
   SketchGeometryType,
   AdminSketchingDetailsFragment,
+  useToggleSketchClassGeographyClippingMutation,
+  useSketchClassGeographyEditorDetailsQuery,
 } from "../../generated/graphql";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -23,26 +26,82 @@ import TranslatedPropControl from "../../components/TranslatedPropControl";
 import SketchClassStyleAdmin from "./SketchClassStyleAdmin";
 import EvaluateFilterServiceModal from "./EvaluateFilterServiceModal";
 import GeoprocessingTab from "./GeoprocessingTab";
+import GeographyClippingTab from "./GeographyClippingTab";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
+import SketchClassReportsAdmin from "./SketchClassReportsAdmin";
+import { useHistory, useParams } from "react-router-dom";
 
 export default function SketchClassForm({
   sketchClass,
+  selectedTab: initialTab = "settings",
   onDelete,
 }: {
   sketchClass: AdminSketchingDetailsFragment;
+  selectedTab?: string;
   onDelete?: (id: number) => void;
 }) {
   const onError = useGlobalErrorHandler();
+  const projectMetadata = useCurrentProjectMetadata();
   const { t } = useTranslation("admin:sketching");
+  const history = useHistory();
+  const { tab } = useParams<{ tab?: string }>();
+
+  // Use tab from URL params, fallback to prop, then default to "settings"
+  const selectedTab = tab || initialTab;
+
+  // Update URL when tab changes
+  const updateTabInUrl = useCallback(
+    (tabId: string) => {
+      const currentPath = history.location.pathname;
+      const pathParts = currentPath.split("/");
+
+      // Remove the last part if it looks like a tab (not a number)
+      if (
+        pathParts.length > 0 &&
+        isNaN(parseInt(pathParts[pathParts.length - 1]))
+      ) {
+        pathParts.pop();
+      }
+
+      // Add the new tab
+      const newPath = [...pathParts, tabId].join("/");
+      history.replace(newPath);
+    },
+    [history]
+  );
+
   const [mutate, mutationState] = useUpdateSketchClassMutation({
     variables: {
       id: sketchClass.id,
     },
     onError,
   });
-  const [selectedTab, setSelectedTab] = useState("settings");
   const [filterLocationModal, setFilterLocationModal] = useState<
     string | undefined
   >();
+  const [toggleClipping] = useToggleSketchClassGeographyClippingMutation({
+    onError,
+  });
+
+  const { data: geographyData } = useSketchClassGeographyEditorDetailsQuery({
+    variables: { slug: getSlug() },
+  });
+
+  const handleLegacyReportingToggle = useCallback(
+    (enabled: boolean) => {
+      toggleClipping({
+        variables: {
+          id: sketchClass.id,
+          isGeographyClippingEnabled: !enabled,
+        },
+      });
+    },
+    [sketchClass.id, toggleClipping]
+  );
+
+  const isReportBuilderEnabled =
+    projectMetadata.data?.project?.enableReportBuilder;
+  const showLegacySystem = !sketchClass.isGeographyClippingEnabled;
 
   const tabs: NonLinkTabItem[] = useMemo(() => {
     return [
@@ -56,11 +115,26 @@ export default function SketchClassForm({
         id: "attributes",
         current: selectedTab === "attributes",
       },
-      {
-        name: "Geoprocessing",
-        id: "geoprocessing",
-        current: selectedTab === "geoprocessing",
-      },
+      ...(isReportBuilderEnabled && !showLegacySystem
+        ? [
+            {
+              name: "Geography Clipping",
+              id: "geography-clipping",
+              current: selectedTab === "geography-clipping",
+            },
+            {
+              name: "Reports",
+              id: "reports",
+              current: selectedTab === "reports",
+            },
+          ]
+        : [
+            {
+              name: "Geoprocessing",
+              id: "geoprocessing",
+              current: selectedTab === "geoprocessing",
+            },
+          ]),
       ...(sketchClass.geometryType !== SketchGeometryType.Collection &&
       sketchClass.geometryType !== SketchGeometryType.ChooseFeature &&
       sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
@@ -73,7 +147,12 @@ export default function SketchClassForm({
           ]
         : []),
     ];
-  }, [selectedTab, sketchClass.geometryType]);
+  }, [
+    selectedTab,
+    sketchClass.geometryType,
+    isReportBuilderEnabled,
+    showLegacySystem,
+  ]);
 
   const { confirmDelete } = useDialog();
 
@@ -136,9 +215,18 @@ export default function SketchClassForm({
       },
     });
   }, [sketchClass, mutate]);
+
+  // Handle tab click - update URL
+  const handleTabClick = useCallback(
+    (tabId: string) => {
+      updateTabInUrl(tabId);
+    },
+    [updateTabInUrl]
+  );
+
   return (
     <div className="min-h-screen max-h-screen overflow-hidden flex-col flex w-full">
-      <div className="p-2 bg-gray-700">
+      <div className="p-2 bg-gray-700 pl-4">
         <h1 className="text-lg font-semibold flex items-center text-gray-50 mb-2">
           <span className="flex-1">
             {/* <Trans>Sketch class settings</Trans> */}
@@ -151,7 +239,7 @@ export default function SketchClassForm({
           />
         </h1>
         <div className="flex-0 mb-2 -mt-2 bg-gray-700 text-primary-300 flex items-center">
-          <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
+          <Tabs dark small tabs={tabs} onClick={handleTabClick} />
         </div>
       </div>
       <div
@@ -238,6 +326,32 @@ export default function SketchClassForm({
                 )}
               />
             </div>
+            {isReportBuilderEnabled && (
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={showLegacySystem}
+                    onClick={(enabled) => handleLegacyReportingToggle(enabled)}
+                  />
+                }
+                title={t("Enable Legacy Reporting System")}
+                description={
+                  <>
+                    <Trans ns="admin:sketching">
+                      When enabled, uses preprocessing and{" "}
+                      <a
+                        target="_blank"
+                        href="https://github.com/seasketch/geoprocessing"
+                        className="text-primary-500 hover:underline"
+                      >
+                        geoprocessing services
+                      </a>{" "}
+                      for reporting instead of the new geography-based system.
+                    </Trans>
+                  </>
+                }
+              />
+            )}
             <InputBlock
               input={
                 <Button
@@ -289,6 +403,12 @@ export default function SketchClassForm({
             location={filterLocationModal}
             onRequestClose={() => setFilterLocationModal(undefined)}
           />
+        )}
+        {selectedTab === "geography-clipping" && (
+          <GeographyClippingTab sketchClass={sketchClass} />
+        )}
+        {selectedTab === "reports" && (
+          <SketchClassReportsAdmin sketchClass={sketchClass} />
         )}
       </div>
     </div>

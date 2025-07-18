@@ -64,7 +64,7 @@ export default function SketchClassAdmin() {
       <Switch>
         <Route exact path={`${path}/new`}>
           <div className="items-center flex-1">
-            <div className="max-w-xl  rounded mx-auto mt-10 p-4">
+            <div className="max-w-xl rounded mx-auto mt-10 p-4">
               <h2 className="text-lg font-semibold mb-2">
                 {t("Create a new Sketch Class")}
               </h2>
@@ -98,11 +98,13 @@ export default function SketchClassAdmin() {
           </div>
         </Route>
         <Route
-          path={`${path}/:id?`}
+          path={`${path}/:id?/:tab?`}
           children={({ match }) => {
             const selectedSketch = match?.params.id
               ? sketchClasses.find((sc) => sc.id === parseInt(match.params.id!))
               : null;
+            const selectedTab = match?.params.tab || "settings";
+
             return (
               <>
                 {(sketchClasses.length > 0 ||
@@ -133,7 +135,7 @@ export default function SketchClassAdmin() {
                   sketchClasses.length === 0 &&
                   !templateQuery.loading && (
                     <div className="items-center flex-1">
-                      <div className="max-w-xl  rounded mx-auto mt-10 p-4">
+                      <div className="max-w-xl rounded mx-auto mt-10 p-4">
                         <h2 className="text-lg font-semibold mb-2">
                           {t("Create your first Sketch Class")}
                         </h2>
@@ -143,9 +145,9 @@ export default function SketchClassAdmin() {
                   )}
                 {selectedSketch && (
                   <SketchClassForm
-                    // trigger reload of whole form component
                     key={selectedSketch.id}
                     sketchClass={selectedSketch}
+                    selectedTab={selectedTab}
                     onDelete={() => {
                       history.push(`/${slug}/admin/sketching`);
                     }}

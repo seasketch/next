@@ -6934,6 +6934,11 @@ select{
   border-top-right-radius:0.375rem
 }
 
+.rounded-b-lg{
+  border-bottom-right-radius:0.5rem;
+  border-bottom-left-radius:0.5rem
+}
+
 .rounded-bl-lg{
   border-bottom-left-radius:0.5rem
 }
@@ -7263,6 +7268,19 @@ select{
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
 }
 
+.border-blue-100\/10{
+  border-color:rgb(219 234 254 / 0.1)
+}
+
+.border-blue-100{
+  --tw-border-opacity:1;
+  border-color:rgb(219 234 254 / var(--tw-border-opacity, 1))
+}
+
+.border-blue-100\/5{
+  border-color:rgb(219 234 254 / 0.05)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -7288,6 +7306,27 @@ select{
 
 .border-t-black\/10{
   border-top-color:rgb(0 0 0 / 0.1)
+}
+
+.border-b-black\/15{
+  border-bottom-color:rgb(0 0 0 / 0.15)
+}
+
+.border-l-black\/10{
+  border-left-color:rgb(0 0 0 / 0.1)
+}
+
+.border-t-black\/5{
+  border-top-color:rgb(0 0 0 / 0.05)
+}
+
+.border-l-black{
+  --tw-border-opacity:1;
+  border-left-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
+}
+
+.border-r-black\/10{
+  border-right-color:rgb(0 0 0 / 0.1)
 }
 
 .border-opacity-0{
@@ -7655,6 +7694,26 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
+}
+
+.bg-blue-100\/10{
+  background-color:rgb(219 234 254 / 0.1)
+}
+
+.bg-blue-100\/20{
+  background-color:rgb(219 234 254 / 0.2)
+}
+
+.bg-blue-100\/5{
+  background-color:rgb(219 234 254 / 0.05)
+}
+
+.bg-blue-500\/5{
+  background-color:rgb(59 130 246 / 0.05)
+}
+
+.bg-blue-300\/5{
+  background-color:rgb(147 197 253 / 0.05)
 }
 
 .bg-opacity-10{
@@ -8888,6 +8947,11 @@ select{
   --tw-shadow:var(--tw-shadow-colored)
 }
 
+.shadow-purple-500{
+  --tw-shadow-color:#a855f7;
+  --tw-shadow:var(--tw-shadow-colored)
+}
+
 .outline-none{
   outline:2px solid transparent;
   outline-offset:2px
@@ -8899,6 +8963,14 @@ select{
 
 .outline-0{
   outline-width:0px
+}
+
+.outline-blue-100\/5{
+  outline-color:rgb(219 234 254 / 0.05)
+}
+
+.outline-blue-100{
+  outline-color:#dbeafe
 }
 
 .ring{
@@ -9648,6 +9720,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:bg-yellow-200:hover{
   --tw-bg-opacity:1;
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
+}
+
+.hover\:bg-blue-100\/10:hover{
+  background-color:rgb(219 234 254 / 0.1)
+}
+
+.hover\:bg-blue-100\/5:hover{
+  background-color:rgb(219 234 254 / 0.05)
 }
 
 .hover\:bg-opacity-10:hover{

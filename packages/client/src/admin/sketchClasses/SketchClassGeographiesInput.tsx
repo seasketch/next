@@ -113,39 +113,27 @@ export default function SketchClassGeographiesInput({
 
   return (
     <>
-      <div className="space-y-4">
-        <div>
-          <h3 className="">{t("Geography")}</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {t(
-              "Choose a geography to associate with this sketch class. Polygons will be clipped to the geography bounds."
-            )}
-          </p>
+      <select
+        value={selectedGeographyId || ""}
+        onChange={(e) => {
+          const selectedId = e.target.value ? Number(e.target.value) : null;
+          handleGeographyChange(selectedId);
+        }}
+        disabled={isUpdating}
+        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md disabled:opacity-50"
+      >
+        <option value="">{t("Select a geography...")}</option>
+        {projectGeographies.map((geography) => (
+          <option key={geography.id} value={geography.id}>
+            {geography.name}
+          </option>
+        ))}
+      </select>
+      {isUpdating && (
+        <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-md">
+          <Spinner />
         </div>
-        <div className="relative">
-          <select
-            value={selectedGeographyId || ""}
-            onChange={(e) => {
-              const selectedId = e.target.value ? Number(e.target.value) : null;
-              handleGeographyChange(selectedId);
-            }}
-            disabled={isUpdating}
-            className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md disabled:opacity-50"
-          >
-            <option value="">{t("Select a geography...")}</option>
-            {projectGeographies.map((geography) => (
-              <option key={geography.id} value={geography.id}>
-                {geography.name}
-              </option>
-            ))}
-          </select>
-          {isUpdating && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 rounded-md">
-              <Spinner />
-            </div>
-          )}
-        </div>
-      </div>
+      )}
 
       {showConfirmModal && (
         <Modal

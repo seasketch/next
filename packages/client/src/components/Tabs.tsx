@@ -109,7 +109,7 @@ function TabButton({
               ? "bg-indigo-100 text-gray-600"
               : "bg-blue-100 text-primary-600"
             : dark
-            ? "text-gray-400 hover:text-gray-300"
+            ? "text-gray-400 hover:text-gray-300 outline outline-blue-100/5 hover:bg-blue-100/5"
             : "text-gray-500 hover:text-gray-700",
           tab.disabled ? "pointer-events-none" : "",
           small ? "px-2 py-1" : "px-2 py-1",
