@@ -6932,6 +6932,7 @@ type GeographyClippingLayer implements Node {
   """
   dataLayer: DataLayer
   dataLayerId: Int!
+  dataSource: DataSource
   id: Int!
 
   """

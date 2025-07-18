@@ -90,7 +90,15 @@ export default function SketchClassGeographiesInput({
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-full">
+      <div className="space-y-4">
+        <div>
+          <h3 className="">{t("Geography")}</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {t(
+              "Choose a geography to associate with this sketch class. Polygons will be clipped to the geography bounds."
+            )}
+          </p>
+        </div>
         <Spinner />
       </div>
     );

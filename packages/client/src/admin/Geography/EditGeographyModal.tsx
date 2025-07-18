@@ -138,7 +138,7 @@ export default function EditGeographyModal({
         name: data.geography.name,
         clippingLayers:
           data.geography.clippingLayers?.map((layer) => {
-            const authorProfile = layer.dataLayer?.dataSource?.authorProfile;
+            const authorProfile = layer.dataSource?.authorProfile;
             return {
               dataLayerId: layer.dataLayer?.id || 0,
               operationType: layer.operationType,
@@ -146,7 +146,7 @@ export default function EditGeographyModal({
               localMetadata: authorProfile
                 ? {
                     title: layer.dataLayer?.tableOfContentsItem?.title || "",
-                    createdAt: layer.dataLayer?.dataSource?.createdAt || "",
+                    createdAt: layer.dataSource?.createdAt || "",
                     authorProfile: {
                       __typename: "Profile",
                       picture: authorProfile.picture || null,

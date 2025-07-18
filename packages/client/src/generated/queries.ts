@@ -5924,6 +5924,7 @@ export type GeographyClippingLayer = Node & {
   /** Reads a single `DataLayer` that is related to this `GeographyClippingLayer`. */
   dataLayer?: Maybe<DataLayer>;
   dataLayerId: Scalars['Int'];
+  dataSource?: Maybe<DataSource>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -19630,10 +19631,6 @@ export type ClippingDataSourceDetailsFragment = (
 export type ClippingLayerDetailsFragment = (
   { __typename?: 'DataLayer' }
   & Pick<DataLayer, 'id' | 'version' | 'mapboxGlStyles' | 'sourceLayer' | 'vectorObjectKey'>
-  & { dataSource?: Maybe<(
-    { __typename?: 'DataSource' }
-    & ClippingDataSourceDetailsFragment
-  )> }
 );
 
 export type GeographyDetailsFragment = (
@@ -19645,6 +19642,9 @@ export type GeographyDetailsFragment = (
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & ClippingLayerDetailsFragment
+    )>, dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & ClippingDataSourceDetailsFragment
     )> }
   )>> }
 );
@@ -19661,6 +19661,10 @@ export type GeographyClippingSettingsQuery = (
     & Pick<GoogleMapsTileApiSession, 'expiresAt' | 'mapType' | 'session'>
   )>, geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & ClippingDataSourceDetailsFragment
+    )> }
     & ClippingLayerDetailsFragment
   )>>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
@@ -19723,6 +19727,10 @@ export type GeographyByIdQuery = (
   { __typename?: 'Query' }
   & { geographyClippingLayers?: Maybe<Array<(
     { __typename?: 'DataLayer' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & ClippingDataSourceDetailsFragment
+    )> }
     & ClippingLayerDetailsFragment
   )>>, geography?: Maybe<(
     { __typename?: 'Geography' }
@@ -19736,6 +19744,9 @@ export type GeographyByIdQuery = (
           & Pick<TableOfContentsItem, 'title' | 'id'>
         )> }
         & ClippingLayerDetailsFragment
+      )>, dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & ClippingDataSourceDetailsFragment
       )> }
     )>> }
     & GeographyDetailsFragment
@@ -23993,6 +24004,15 @@ export const ProjectListItemFragmentDoc = /*#__PURE__*/ gql`
   translatedProps
 }
     `;
+export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ClippingLayerDetails on DataLayer {
+  id
+  version
+  mapboxGlStyles
+  sourceLayer
+  vectorObjectKey
+}
+    `;
 export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment UserProfileDetails on Profile {
   userId
@@ -24020,18 +24040,6 @@ export const ClippingDataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${UserProfileDetailsFragmentDoc}`;
-export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment ClippingLayerDetails on DataLayer {
-  id
-  version
-  mapboxGlStyles
-  sourceLayer
-  vectorObjectKey
-  dataSource {
-    ...ClippingDataSourceDetails
-  }
-}
-    ${ClippingDataSourceDetailsFragmentDoc}`;
 export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment GeographyDetails on Geography {
   id
@@ -24049,9 +24057,13 @@ export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     dataLayer {
       ...ClippingLayerDetails
     }
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
   }
 }
-    ${ClippingLayerDetailsFragmentDoc}`;
+    ${ClippingLayerDetailsFragmentDoc}
+${ClippingDataSourceDetailsFragmentDoc}`;
 export const SketchingGeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchingGeographyDetails on SketchClass {
   clippingGeographies {
@@ -26415,6 +26427,9 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
   }
   geographyClippingLayers {
     ...ClippingLayerDetails
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
   }
   projectBySlug(slug: $slug) {
     id
@@ -26427,6 +26442,7 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
   }
 }
     ${ClippingLayerDetailsFragmentDoc}
+${ClippingDataSourceDetailsFragmentDoc}
 ${GeographyDetailsFragmentDoc}`;
 export const EezLayerDocument = /*#__PURE__*/ gql`
     query EEZLayer {
@@ -26463,6 +26479,9 @@ export const GeographyByIdDocument = /*#__PURE__*/ gql`
     query GeographyById($id: Int!) {
   geographyClippingLayers {
     ...ClippingLayerDetails
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
   }
   geography(id: $id) {
     ...GeographyDetails
@@ -26478,10 +26497,14 @@ export const GeographyByIdDocument = /*#__PURE__*/ gql`
           id
         }
       }
+      dataSource {
+        ...ClippingDataSourceDetails
+      }
     }
   }
 }
     ${ClippingLayerDetailsFragmentDoc}
+${ClippingDataSourceDetailsFragmentDoc}
 ${GeographyDetailsFragmentDoc}`;
 export const DeleteGeographyDocument = /*#__PURE__*/ gql`
     mutation DeleteGeography($id: Int!, $deleteRelatedLayers: Boolean = false) {

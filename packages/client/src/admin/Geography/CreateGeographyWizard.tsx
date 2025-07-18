@@ -8,6 +8,7 @@ import RadioGroup from "../../components/RadioGroup";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
 import {
+  ClippingDataSourceDetailsFragment,
   ClippingLayerDetailsFragment,
   CreateGeographyArgs,
   GeographyClippingSettingsDocument,
@@ -207,8 +208,12 @@ export default function CreateGeographyWizard({
   active: boolean;
   onRequestClose: () => void;
   landLayerId: number;
-  eezLayer: ClippingLayerDetailsFragment;
-  territorialSeaLayer: ClippingLayerDetailsFragment;
+  eezLayer: ClippingLayerDetailsFragment & {
+    dataSource: ClippingDataSourceDetailsFragment;
+  };
+  territorialSeaLayer: ClippingLayerDetailsFragment & {
+    dataSource: ClippingDataSourceDetailsFragment;
+  };
   usedTemplates: string[];
   usedEEZs: number[];
   map: mapboxgl.Map | null;

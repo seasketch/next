@@ -4820,6 +4820,59 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
 
 
 --
+-- Name: clipping_layer_source(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.clipping_layer_source(clipping_layer_id integer) RETURNS TABLE(url text, object_key text)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select
+    data_sources.url as url,
+    geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key
+  from
+    geography_clipping_layers
+  inner join data_layers on geography_clipping_layers.data_layer_id = data_layers.id
+  inner join data_sources on data_layers.data_source_id = data_sources.id
+  where geography_clipping_layers.id = clipping_layer_id;
+$$;
+
+
+--
+-- Name: FUNCTION clipping_layer_source(clipping_layer_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.clipping_layer_source(clipping_layer_id integer) IS '@omit';
+
+
+--
+-- Name: clipping_layers_for_geography(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.clipping_layers_for_geography(gid integer) RETURNS TABLE(id integer, cql2_query jsonb, template_id text, object_key text, url text, operation_type public.geography_layer_operation)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select
+    gcl.id,
+    gcl.cql2_query,
+    gcl.template_id,
+    data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
+    data_sources.url as url,
+    gcl.operation_type
+  from geography_clipping_layers gcl
+  inner join data_layers on gcl.data_layer_id = data_layers.id
+  inner join data_sources on data_layers.data_source_id = data_sources.id
+  where gcl.project_geography_id = gid;
+$$;
+
+
+--
+-- Name: FUNCTION clipping_layers_for_geography(gid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.clipping_layers_for_geography(gid integer) IS '@omit';
+
+
+--
 -- Name: clipping_layers_for_sketch_class(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10272,6 +10325,18 @@ CREATE TABLE public.geography_clipping_layers (
     template_id text,
     CONSTRAINT geography_clipping_layers_cql2_query_check CHECK (((jsonb_typeof(cql2_query) = 'object'::text) AND (cql2_query ? 'op'::text) AND (cql2_query ? 'args'::text)))
 );
+
+
+--
+-- Name: geography_clipping_layers_data_source(public.geography_clipping_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.geography_clipping_layers_data_source(clipping_layer public.geography_clipping_layers) RETURNS public.data_sources
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select * from data_sources
+  where id = (select data_source_id from data_layers where id = clipping_layer.data_layer_id);
+$$;
 
 
 --
@@ -27524,6 +27589,22 @@ GRANT ALL ON FUNCTION public.clear_form_element_style(form_element_id integer) T
 
 
 --
+-- Name: FUNCTION clipping_layer_source(clipping_layer_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.clipping_layer_source(clipping_layer_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.clipping_layer_source(clipping_layer_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION clipping_layers_for_geography(gid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.clipping_layers_for_geography(gid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.clipping_layers_for_geography(gid integer) TO anon;
+
+
+--
 -- Name: FUNCTION clipping_layers_for_sketch_class(pid integer, scid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -29337,6 +29418,14 @@ GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE public.geography_clipping_layers TO seasketch_user;
 GRANT SELECT ON TABLE public.geography_clipping_layers TO anon;
+
+
+--
+-- Name: FUNCTION geography_clipping_layers_data_source(clipping_layer public.geography_clipping_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_clipping_layers_data_source(clipping_layer public.geography_clipping_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers_data_source(clipping_layer public.geography_clipping_layers) TO anon;
 
 
 --

@@ -151,17 +151,17 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // get the data source url for this clipping layer
           const { rows: dataLayerRows } = await pgClient.query(
-            `SELECT
-              data_sources.url as url,
-              geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key
-            FROM
-              geography_clipping_layers
-            INNER JOIN
-              data_layers ON geography_clipping_layers.data_layer_id = data_layers.id
-            INNER JOIN
-              data_sources ON data_layers.data_source_id = data_sources.id
-            WHERE
-              geography_clipping_layers.id = $1`,
+            `SELECT url, object_key from clipping_layer_source($1)`,
+            //   data_sources.url as url,
+            //   geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key
+            // FROM
+            //   geography_clipping_layers
+            // INNER JOIN
+            //   data_layers ON geography_clipping_layers.data_layer_id = data_layers.id
+            // INNER JOIN
+            //   data_sources ON data_layers.data_source_id = data_sources.id
+            // WHERE
+            //   geography_clipping_layers.id = $1`,
             [clippingLayer.id]
           );
           if (dataLayerRows.length === 0) {
@@ -174,12 +174,14 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           if (templateId === "DAYLIGHT_COASTLINE") {
             return null;
           }
+          console.time("getBoundsForClippingLayer");
           const bounds = await getBoundsForClippingLayer(
             dataSourceUrl,
             objectKey,
             cql2Query,
             clippingLayer.templateId
           );
+          console.timeEnd("getBoundsForClippingLayer");
           return bounds;
         },
       },
@@ -192,21 +194,23 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const { id: geographyId } = geography;
           const { rows: clippingLayerRows } = await pgClient.query(
             `
-            select
-              geography_clipping_layers.id,
-              geography_clipping_layers.cql2_query,
-              geography_clipping_layers.template_id,
-              geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key,
-              data_sources.url as url
-            from
-              geography_clipping_layers
-            inner join
-              data_layers on geography_clipping_layers.data_layer_id = data_layers.id
-            inner join
-              data_sources on data_layers.data_source_id = data_sources.id
-            where
-              geography_clipping_layers.project_geography_id = $1
-          `,
+            select id, cql2_query, template_id, object_key, url, operation_type from clipping_layers_for_geography($1);
+            `,
+            // select
+            //   geography_clipping_layers.id,
+            //   geography_clipping_layers.cql2_query,
+            //   geography_clipping_layers.template_id,
+            //   geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key,
+            //   data_sources.url as url
+            // from
+            //   geography_clipping_layers
+            // inner join
+            //   data_layers on geography_clipping_layers.data_layer_id = data_layers.id
+            // inner join
+            //   data_sources on data_layers.data_source_id = data_sources.id
+            // where
+            //   geography_clipping_layers.project_geography_id = $1
+            // `,
             [geographyId]
           );
           await Promise.all(

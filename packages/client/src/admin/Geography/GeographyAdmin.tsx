@@ -312,26 +312,22 @@ export default function GeographyAdmin() {
       for (const geography of data.projectBySlug?.geographies || []) {
         if (hiddenGeogIds.includes(geography.id)) continue;
         for (const layer of geography.clippingLayers || []) {
-          if (layer.dataLayer?.dataSource) {
-            const sourceId = SOURCE_ID_PREFIX + layer.dataLayer.dataSource.id;
+          if (layer.dataSource) {
+            const sourceId = SOURCE_ID_PREFIX + layer.dataSource.id;
             if (!(sourceId in sources)) {
-              if (
-                layer.dataLayer.dataSource.type === DataSourceTypes.SeasketchMvt
-              ) {
+              if (layer.dataSource.type === DataSourceTypes.SeasketchMvt) {
                 sources[sourceId] = {
                   type: "vector",
-                  url: layer.dataLayer.dataSource.url! + JSON_EXTENSION,
+                  url: layer.dataSource.url! + JSON_EXTENSION,
                 };
-              } else if (
-                layer.dataLayer.dataSource.type === DataSourceTypes.Geojson
-              ) {
+              } else if (layer.dataSource.type === DataSourceTypes.Geojson) {
                 sources[sourceId] = {
                   type: "geojson",
-                  data: layer.dataLayer.dataSource.url!,
+                  data: layer.dataSource.url!,
                 };
               } else {
                 throw new Error(
-                  `Unsupported data source type: ${layer.dataLayer.dataSource.type}`
+                  `Unsupported data source type: ${layer.dataSource.type}`
                 );
               }
             }
@@ -343,7 +339,7 @@ export default function GeographyAdmin() {
               }
               customLayerGeographies[sourceId].push({ geography, layer });
             } else {
-              if (layer.dataLayer.mapboxGlStyles?.length) {
+              if (layer.dataLayer?.mapboxGlStyles?.length) {
                 const hasMatches = layers.some(
                   (existingLayer: any) =>
                     existingLayer.metadata?.layerId === layer.dataLayer?.id
@@ -546,7 +542,7 @@ export default function GeographyAdmin() {
     const mrgidEEZs: Set<number> = new Set();
     for (const geog of data?.projectBySlug?.geographies || []) {
       const eezLayer = geog.clippingLayers?.find(
-        (l) => l.dataLayer?.dataSource?.dataLibraryTemplateId === EEZ
+        (l) => l.dataSource?.dataLibraryTemplateId === EEZ
       );
       const cql = eezLayer?.cql2Query;
       if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
@@ -563,8 +559,7 @@ export default function GeographyAdmin() {
     // then, remove EEZs that already have a territorial sea geography
     for (const geog of data?.projectBySlug?.geographies || []) {
       const territorialSeaLayer = geog.clippingLayers?.find(
-        (l) =>
-          l.dataLayer?.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
+        (l) => l.dataSource?.dataLibraryTemplateId === TERRITORIAL_SEA
       );
       if (territorialSeaLayer) {
         const cql = territorialSeaLayer.cql2Query;
@@ -894,8 +889,11 @@ export default function GeographyAdmin() {
           }}
           usedTemplates={usedTemplates}
           landLayerId={coastline.id}
-          eezLayer={eez}
-          territorialSeaLayer={territorialSea}
+          eezLayer={{ ...eez, dataSource: eez.dataSource! }}
+          territorialSeaLayer={{
+            ...territorialSea,
+            dataSource: territorialSea.dataSource!,
+          }}
           map={map}
           onRequestToggleSidebar={handleToggleSidebar}
         />

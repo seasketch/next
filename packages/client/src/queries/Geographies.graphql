@@ -20,9 +20,6 @@ fragment ClippingLayerDetails on DataLayer {
   mapboxGlStyles
   sourceLayer
   vectorObjectKey
-  dataSource {
-    ...ClippingDataSourceDetails
-  }
 }
 
 fragment GeographyDetails on Geography {
@@ -41,6 +38,9 @@ fragment GeographyDetails on Geography {
     dataLayer {
       ...ClippingLayerDetails
     }
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
   }
 }
 
@@ -52,6 +52,9 @@ query GeographyClippingSettings($slug: String!) {
   }
   geographyClippingLayers {
     ...ClippingLayerDetails
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
   }
   projectBySlug(slug: $slug) {
     id
@@ -96,6 +99,9 @@ mutation CreateGeographies($geographies: [CreateGeographyArgs!]!) {
 query GeographyById($id: Int!) {
   geographyClippingLayers {
     ...ClippingLayerDetails
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
   }
   geography(id: $id) {
     ...GeographyDetails
@@ -110,6 +116,9 @@ query GeographyById($id: Int!) {
           title
           id
         }
+      }
+      dataSource {
+        ...ClippingDataSourceDetails
       }
     }
   }

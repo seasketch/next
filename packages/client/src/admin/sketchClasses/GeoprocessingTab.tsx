@@ -50,7 +50,7 @@ export default function GeoprocessingTab({
   // Show new system by default while loading
   if (!geographyData) {
     return (
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-6 bg-white max-w-144 shadow border-r min-h-full">
         <SketchClassGeographiesInput
           sketchClassId={sketchClass.id}
           projectGeographies={[]}
@@ -62,7 +62,7 @@ export default function GeoprocessingTab({
   // After loading, show legacy system only if report builder is explicitly disabled
   if (!isReportBuilderEnabled) {
     return (
-      <div className="p-4 space-y-4">
+      <div className="p-4 space-y-6 bg-white max-w-144 shadow border-r min-h-full">
         {sketchClass.geometryType !== SketchGeometryType.Collection &&
           sketchClass.geometryType !== SketchGeometryType.ChooseFeature && (
             <PreprocessorInput sketchClass={sketchClass} />

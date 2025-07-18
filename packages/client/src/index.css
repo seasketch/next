@@ -8436,6 +8436,10 @@ select{
   line-height:1
 }
 
+.leading-3{
+  line-height:.75rem
+}
+
 .tracking-tight{
   letter-spacing:-0.025em
 }
