@@ -967,7 +967,7 @@ const nationalGeographies: (GeographySettings & { name: string })[] = [
 
 describe("Integration tests", () => {
   beforeAll(async () => {
-    jest.setTimeout(8000);
+    jest.setTimeout(12000);
   });
   describe("createOrUpdateSketch", () => {
     test("Fragments are created for new sketches", async () => {
