@@ -8,7 +8,7 @@ const bboxUtils_1 = require("./bboxUtils");
 const cleanCoords_1 = require("./cleanCoords");
 const utils_1 = require("./utils");
 const bbox_1 = __importDefault(require("@turf/bbox"));
-const splitGeoJSON = require("geojson-antimeridian-cut");
+const geojson_antimeridian_cut_1 = __importDefault(require("geojson-antimeridian-cut"));
 /**
  * Prepares a sketch for processing by:
  * 1. Validating geometry type
@@ -31,7 +31,7 @@ function prepareSketch(feature) {
     const bbox = (0, bboxUtils_1.cleanBBox)((0, bbox_1.default)(sketch));
     const split = (0, bboxUtils_1.splitBBoxAntimeridian)(bbox);
     const envelopes = split.map((box) => (0, bboxUtils_1.bboxToEnvelope)(box));
-    sketch = splitGeoJSON((0, cleanCoords_1.cleanCoords)(sketch));
+    sketch = (0, geojson_antimeridian_cut_1.default)((0, cleanCoords_1.cleanCoords)(sketch));
     if (sketch.geometry.coordinates.length > 1) {
         sketch = (0, cleanCoords_1.cleanCoords)(sketch);
     }
