@@ -1,0 +1,21 @@
+import { RasterInfo } from "@seasketch/geostats-types";
+import { ProgressUpdater, ResponseOutput } from "./handleUpload";
+import { Logger } from "./logger";
+export declare function processRasterUpload(options: {
+    logger: Logger;
+    /** Path to original upload */
+    path: string;
+    /** Outputs will be uploaded to r2 after processing */
+    outputs: (ResponseOutput & {
+        local: string;
+    })[];
+    updateProgress: ProgressUpdater;
+    baseKey: string;
+    /** Tmp directory for storing outputs and derivative files */
+    workingDirectory: string;
+    /** filename for outputs. Should be something unique, like jobid */
+    jobId: string;
+    /** Santitized original filename. Used for layer name */
+    originalName: string;
+}): Promise<RasterInfo>;
+//# sourceMappingURL=processRasterUpload.d.ts.map

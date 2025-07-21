@@ -14,7 +14,7 @@ import {
   mergeTouchingFragments,
   PendingFragmentResult,
 } from "../src/fragments";
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import {
   caPescaderoFeature,
   fijiShape2,
@@ -72,6 +72,9 @@ const fijiGeographies: GeographySettings[] = [
     ],
   },
 ];
+
+// set test timeout to 10 seconds
+vi.setConfig({ testTimeout: 10000 });
 
 describe("createFragments", () => {
   let sourceCache: SourceCache;

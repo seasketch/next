@@ -10,8 +10,7 @@
     "watch": "rollup -c rollup.config.js --watch",
     "test": "jest",
     "docs": "rm -rf docs && npx typedoc",
-    "build": "tsc -b && rollup -c rollup.config.js",
-    "install": "npm run build"
+    "build": "tsc -b && rollup -c rollup.config.js"
   },
   "repository": {
     "type": "git",

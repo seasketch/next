@@ -23,8 +23,7 @@
   },
   "scripts": {
     "test": "echo \"Error: run tests from root\" && exit 1",
-    "build": "tsc && esbuild --bundle --platform=node --format=cjs lib/index.ts > dist/bundled.js && cp ./dist/index.d.ts ./dist/bundled.d.ts",
-    "install": "npm run build"
+    "build": "tsc && esbuild --bundle --platform=node --format=cjs lib/index.ts > dist/bundled.js && cp ./dist/index.d.ts ./dist/bundled.d.ts"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

@@ -1,0 +1,1 @@
+{"version":3,"file":"netcdf.d.ts","sourceRoot":"","sources":["../../../src/formats/netcdf.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,MAAM,EAAE,MAAM,WAAW,CAAC;AAEnC,wBAAsB,mBAAmB,CAAC,IAAI,EAAE,MAAM,EAAE,MAAM,EAAE,MAAM,qBAgBrE;AAED,wBAAsB,gBAAgB,CACpC,OAAO,EAAE,MAAM,EACf,UAAU,EAAE,MAAM,EAClB,MAAM,EAAE,MAAM,mBAOf"}

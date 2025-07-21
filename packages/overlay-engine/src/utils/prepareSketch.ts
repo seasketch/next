@@ -4,8 +4,7 @@ import { cleanCoords } from "./cleanCoords";
 import { Feature } from "geojson";
 import { makeMultipolygon } from "./utils";
 import turfBBox from "@turf/bbox";
-import splitGeojson from "geojson-antimeridian-cut";
-const splitGeoJSON = require("geojson-antimeridian-cut");
+import splitGeoJSON from "geojson-antimeridian-cut";
 
 export type PreparedSketch = {
   feature: Feature<MultiPolygon>;

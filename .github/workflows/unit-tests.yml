@@ -21,11 +21,15 @@ jobs:
         with:
           node-version: "18.17"
           cache: "npm"
-      # - name: Setup tmate session
-      #   uses: mxschmitt/action-tmate@v3
       - name: Install dependencies
         run: |
           npx lerna@6.6.2 bootstrap --ci
+      # - name: Setup tmate session
+      #   uses: mxschmitt/action-tmate@v3
+      - name: Build API
+        working-directory: ./packages/api
+        run: |
+          npm run build
       - name: Init docker db
         working-directory: ./packages/api
         env:
@@ -69,6 +73,10 @@ jobs:
       - name: Install dependencies
         run: |
           npx lerna@6.6.2 bootstrap --ci
+      - name: Build API
+        working-directory: ./packages/api
+        run: |
+          npm run build
       - name: Initialize database
         working-directory: ./packages/api
         env:

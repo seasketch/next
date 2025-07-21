@@ -15,9 +15,7 @@ const DataSourcePlugin = makeExtendSchemaPlugin((build) => {
     resolvers: {
       DataSource: {
         presignedUploadUrl: async (source, args, context, info) => {
-          const {
-            rows,
-          } = await context.pgClient.query(
+          const { rows } = await context.pgClient.query(
             `select region, bucket from data_sources_buckets where url = $1`,
             [source.bucketId]
           );
