@@ -133,6 +133,7 @@ export async function sign(
     keyid: privateKey.kid,
     algorithm: "RS256",
     header: {
+      alg: "RS256",
       jku: `${
         /^http/.test(issuer) ? "" : "https://"
       }${issuer}/.well-known/jwks.json`,
@@ -176,15 +177,16 @@ export async function verify<Claims>(
     }
   };
   return new Promise((resolve, reject) => {
+    const issuerArray = Array.isArray(issuer) ? issuer : [issuer];
     jwt.verify(
       token,
       getKey,
       {
         algorithms: ["RS256"],
         maxAge: "90 days",
-        issuer,
+        issuer: issuerArray as [string, ...string[]],
       },
-      (err, token) => {
+      (err: jwt.VerifyErrors | null, token: any) => {
         if (err) {
           reject(err);
         } else {
