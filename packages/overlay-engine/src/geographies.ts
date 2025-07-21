@@ -613,6 +613,3 @@ export async function clipToGeographies(
     fragments,
   };
 }
-// test nodemon restart
-// another test
-// test root watch

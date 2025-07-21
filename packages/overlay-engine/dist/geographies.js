@@ -479,7 +479,4 @@ async function clipToGeographies(preparedSketch, geographies, geographiesForClip
         fragments,
     };
 }
-// test nodemon restart
-// another test
-// test root watch
 //# sourceMappingURL=geographies.js.map
