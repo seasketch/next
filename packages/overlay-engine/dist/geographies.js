@@ -332,7 +332,6 @@ async function clipSketchToPolygons(preparedSketch, op, cql2Query, polygonSource
  * @returns
  */
 async function clipToGeographies(preparedSketch, geographies, geographiesForClipping, existingSketchFragments, existingSketchId, clippingFn) {
-    console.log("~~~~~~~~~~ clipping to geographies ~~~~~~~~");
     // Create fragments for all overlapping geographies
     let fragments = (await (0, fragments_1.createFragments)(preparedSketch, geographies, clippingFn)).map((f) => ({
         ...f,
