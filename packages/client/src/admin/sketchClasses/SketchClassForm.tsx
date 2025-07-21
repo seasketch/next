@@ -245,8 +245,14 @@ export default function SketchClassForm({
       <div
         className="bg-white flex-1 shadow z-0 overflow-x-hidden w-full"
         style={{
-          background:
-            'url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAACFJREFUKFNjXL58oxQDEYARpDAy0v8ZIbWjCvGGENHBAwCZWCYkLmgNZgAAAABJRU5ErkJggg==") repeat rgba(238, 240, 241)',
+          background: `
+            linear-gradient(150deg, 
+              rgba(238, 240, 241, 0) 0%, 
+              rgba(238, 240, 241, 0.6) 60%, 
+              rgba(238, 240, 241, 0.8) 100%
+            ),
+            url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAACFJREFUKFNjXL58oxQDEYARpDAy0v8ZIbWjCvGGENHBAwCZWCYkLmgNZgAAAABJRU5ErkJggg==") repeat rgba(238, 240, 241)
+          `,
         }}
       >
         {selectedTab === "settings" && (
