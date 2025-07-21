@@ -1,0 +1,17 @@
+{
+  "watch": [
+    "src/**/*.ts",
+    "tasks/**/*.ts",
+    "dist/**/*.js",
+    "../*/dist/**/*.js"
+  ],
+  "ext": "ts,js",
+  "ignore": ["node_modules/**/*", "dist/**/*.map"],
+  "exec": "node dist/src/server.js",
+  "env": {
+    "NODE_ENV": "development"
+  },
+  "events": {
+    "restart": "echo 'Server restarted due to changes'"
+  }
+}

@@ -307,3 +307,4 @@ function parseConstraints(constraints) {
     }
     return constraintsSummary;
 }
+//# sourceMappingURL=iso19139ToProseMirror.js.map

@@ -1,35 +1,11 @@
 'use strict';
 
-var t = require('flatbuffers');
 var lruCache = require('lru-cache');
 var bytes = require('bytes');
 
 function _interopDefault (e) { return e && e.__esModule ? e : { default: e }; }
 
-function _interopNamespace(e) {
-  if (e && e.__esModule) return e;
-  var n = Object.create(null);
-  if (e) {
-    Object.keys(e).forEach(function (k) {
-      if (k !== 'default') {
-        var d = Object.getOwnPropertyDescriptor(e, k);
-        Object.defineProperty(n, k, d.get ? d : {
-          enumerable: true,
-          get: function () { return e[k]; }
-        });
-      }
-    });
-  }
-  n.default = e;
-  return Object.freeze(n);
-}
-
-var t__namespace = /*#__PURE__*/_interopNamespace(t);
 var bytes__default = /*#__PURE__*/_interopDefault(bytes);
-
-var __defProp = Object.defineProperty;
-var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
-var __publicField = (obj, key, value) => __defNormalProp(obj, typeof key !== "symbol" ? key + "" : key, value);
 
 // src/rtree.ts
 var NODE_ITEM_BYTE_LENGTH = 8 * 4 + 8;
@@ -170,177 +146,437 @@ function upperBound(value, arr) {
   return arr[i];
 }
 
+// node_modules/flatbuffers/mjs/constants.js
+var SIZEOF_INT = 4;
+var FILE_IDENTIFIER_LENGTH = 4;
+var SIZE_PREFIX_LENGTH = 4;
+
+// node_modules/flatbuffers/mjs/utils.js
+var int32 = new Int32Array(2);
+var float32 = new Float32Array(int32.buffer);
+var float64 = new Float64Array(int32.buffer);
+var isLittleEndian = new Uint16Array(new Uint8Array([1, 0]).buffer)[0] === 1;
+
+// node_modules/flatbuffers/mjs/encoding.js
+var Encoding;
+(function(Encoding2) {
+  Encoding2[Encoding2["UTF8_BYTES"] = 1] = "UTF8_BYTES";
+  Encoding2[Encoding2["UTF16_STRING"] = 2] = "UTF16_STRING";
+})(Encoding || (Encoding = {}));
+
+// node_modules/flatbuffers/mjs/byte-buffer.js
+var ByteBuffer = class _ByteBuffer {
+  /**
+   * Create a new ByteBuffer with a given array of bytes (`Uint8Array`)
+   */
+  constructor(bytes_) {
+    this.bytes_ = bytes_;
+    this.position_ = 0;
+    this.text_decoder_ = new TextDecoder();
+  }
+  /**
+   * Create and allocate a new ByteBuffer with a given size.
+   */
+  static allocate(byte_size) {
+    return new _ByteBuffer(new Uint8Array(byte_size));
+  }
+  clear() {
+    this.position_ = 0;
+  }
+  /**
+   * Get the underlying `Uint8Array`.
+   */
+  bytes() {
+    return this.bytes_;
+  }
+  /**
+   * Get the buffer's position.
+   */
+  position() {
+    return this.position_;
+  }
+  /**
+   * Set the buffer's position.
+   */
+  setPosition(position) {
+    this.position_ = position;
+  }
+  /**
+   * Get the buffer's capacity.
+   */
+  capacity() {
+    return this.bytes_.length;
+  }
+  readInt8(offset) {
+    return this.readUint8(offset) << 24 >> 24;
+  }
+  readUint8(offset) {
+    return this.bytes_[offset];
+  }
+  readInt16(offset) {
+    return this.readUint16(offset) << 16 >> 16;
+  }
+  readUint16(offset) {
+    return this.bytes_[offset] | this.bytes_[offset + 1] << 8;
+  }
+  readInt32(offset) {
+    return this.bytes_[offset] | this.bytes_[offset + 1] << 8 | this.bytes_[offset + 2] << 16 | this.bytes_[offset + 3] << 24;
+  }
+  readUint32(offset) {
+    return this.readInt32(offset) >>> 0;
+  }
+  readInt64(offset) {
+    return BigInt.asIntN(64, BigInt(this.readUint32(offset)) + (BigInt(this.readUint32(offset + 4)) << BigInt(32)));
+  }
+  readUint64(offset) {
+    return BigInt.asUintN(64, BigInt(this.readUint32(offset)) + (BigInt(this.readUint32(offset + 4)) << BigInt(32)));
+  }
+  readFloat32(offset) {
+    int32[0] = this.readInt32(offset);
+    return float32[0];
+  }
+  readFloat64(offset) {
+    int32[isLittleEndian ? 0 : 1] = this.readInt32(offset);
+    int32[isLittleEndian ? 1 : 0] = this.readInt32(offset + 4);
+    return float64[0];
+  }
+  writeInt8(offset, value) {
+    this.bytes_[offset] = value;
+  }
+  writeUint8(offset, value) {
+    this.bytes_[offset] = value;
+  }
+  writeInt16(offset, value) {
+    this.bytes_[offset] = value;
+    this.bytes_[offset + 1] = value >> 8;
+  }
+  writeUint16(offset, value) {
+    this.bytes_[offset] = value;
+    this.bytes_[offset + 1] = value >> 8;
+  }
+  writeInt32(offset, value) {
+    this.bytes_[offset] = value;
+    this.bytes_[offset + 1] = value >> 8;
+    this.bytes_[offset + 2] = value >> 16;
+    this.bytes_[offset + 3] = value >> 24;
+  }
+  writeUint32(offset, value) {
+    this.bytes_[offset] = value;
+    this.bytes_[offset + 1] = value >> 8;
+    this.bytes_[offset + 2] = value >> 16;
+    this.bytes_[offset + 3] = value >> 24;
+  }
+  writeInt64(offset, value) {
+    this.writeInt32(offset, Number(BigInt.asIntN(32, value)));
+    this.writeInt32(offset + 4, Number(BigInt.asIntN(32, value >> BigInt(32))));
+  }
+  writeUint64(offset, value) {
+    this.writeUint32(offset, Number(BigInt.asUintN(32, value)));
+    this.writeUint32(offset + 4, Number(BigInt.asUintN(32, value >> BigInt(32))));
+  }
+  writeFloat32(offset, value) {
+    float32[0] = value;
+    this.writeInt32(offset, int32[0]);
+  }
+  writeFloat64(offset, value) {
+    float64[0] = value;
+    this.writeInt32(offset, int32[isLittleEndian ? 0 : 1]);
+    this.writeInt32(offset + 4, int32[isLittleEndian ? 1 : 0]);
+  }
+  /**
+   * Return the file identifier.   Behavior is undefined for FlatBuffers whose
+   * schema does not include a file_identifier (likely points at padding or the
+   * start of a the root vtable).
+   */
+  getBufferIdentifier() {
+    if (this.bytes_.length < this.position_ + SIZEOF_INT + FILE_IDENTIFIER_LENGTH) {
+      throw new Error("FlatBuffers: ByteBuffer is too short to contain an identifier.");
+    }
+    let result = "";
+    for (let i = 0; i < FILE_IDENTIFIER_LENGTH; i++) {
+      result += String.fromCharCode(this.readInt8(this.position_ + SIZEOF_INT + i));
+    }
+    return result;
+  }
+  /**
+   * Look up a field in the vtable, return an offset into the object, or 0 if the
+   * field is not present.
+   */
+  __offset(bb_pos, vtable_offset) {
+    const vtable = bb_pos - this.readInt32(bb_pos);
+    return vtable_offset < this.readInt16(vtable) ? this.readInt16(vtable + vtable_offset) : 0;
+  }
+  /**
+   * Initialize any Table-derived type to point to the union at the given offset.
+   */
+  __union(t, offset) {
+    t.bb_pos = offset + this.readInt32(offset);
+    t.bb = this;
+    return t;
+  }
+  /**
+   * Create a JavaScript string from UTF-8 data stored inside the FlatBuffer.
+   * This allocates a new string and converts to wide chars upon each access.
+   *
+   * To avoid the conversion to string, pass Encoding.UTF8_BYTES as the
+   * "optionalEncoding" argument. This is useful for avoiding conversion when
+   * the data will just be packaged back up in another FlatBuffer later on.
+   *
+   * @param offset
+   * @param opt_encoding Defaults to UTF16_STRING
+   */
+  __string(offset, opt_encoding) {
+    offset += this.readInt32(offset);
+    const length = this.readInt32(offset);
+    offset += SIZEOF_INT;
+    const utf8bytes = this.bytes_.subarray(offset, offset + length);
+    if (opt_encoding === Encoding.UTF8_BYTES)
+      return utf8bytes;
+    else
+      return this.text_decoder_.decode(utf8bytes);
+  }
+  /**
+   * Handle unions that can contain string as its member, if a Table-derived type then initialize it,
+   * if a string then return a new one
+   *
+   * WARNING: strings are immutable in JS so we can't change the string that the user gave us, this
+   * makes the behaviour of __union_with_string different compared to __union
+   */
+  __union_with_string(o2, offset) {
+    if (typeof o2 === "string") {
+      return this.__string(offset);
+    }
+    return this.__union(o2, offset);
+  }
+  /**
+   * Retrieve the relative offset stored at "offset"
+   */
+  __indirect(offset) {
+    return offset + this.readInt32(offset);
+  }
+  /**
+   * Get the start of data of a vector whose offset is stored at "offset" in this object.
+   */
+  __vector(offset) {
+    return offset + this.readInt32(offset) + SIZEOF_INT;
+  }
+  /**
+   * Get the length of a vector whose offset is stored at "offset" in this object.
+   */
+  __vector_len(offset) {
+    return this.readInt32(offset + this.readInt32(offset));
+  }
+  __has_identifier(ident) {
+    if (ident.length != FILE_IDENTIFIER_LENGTH) {
+      throw new Error("FlatBuffers: file identifier must be length " + FILE_IDENTIFIER_LENGTH);
+    }
+    for (let i = 0; i < FILE_IDENTIFIER_LENGTH; i++) {
+      if (ident.charCodeAt(i) != this.readInt8(this.position() + SIZEOF_INT + i)) {
+        return false;
+      }
+    }
+    return true;
+  }
+  /**
+   * A helper function for generating list for obj api
+   */
+  createScalarList(listAccessor, listLength) {
+    const ret = [];
+    for (let i = 0; i < listLength; ++i) {
+      const val = listAccessor(i);
+      if (val !== null) {
+        ret.push(val);
+      }
+    }
+    return ret;
+  }
+  /**
+   * A helper function for generating list for obj api
+   * @param listAccessor function that accepts an index and return data at that index
+   * @param listLength listLength
+   * @param res result list
+   */
+  createObjList(listAccessor, listLength) {
+    const ret = [];
+    for (let i = 0; i < listLength; ++i) {
+      const val = listAccessor(i);
+      if (val !== null) {
+        ret.push(val.unpack());
+      }
+    }
+    return ret;
+  }
+};
+
 // node_modules/flatgeobuf/lib/mjs/flat-geobuf/column-type.js
 var o;
 var ColumnType = ((o = {})[o.Byte = 0] = "Byte", o[o.UByte = 1] = "UByte", o[o.Bool = 2] = "Bool", o[o.Short = 3] = "Short", o[o.UShort = 4] = "UShort", o[o.Int = 5] = "Int", o[o.UInt = 6] = "UInt", o[o.Long = 7] = "Long", o[o.ULong = 8] = "ULong", o[o.Float = 9] = "Float", o[o.Double = 10] = "Double", o[o.String = 11] = "String", o[o.Json = 12] = "Json", o[o.DateTime = 13] = "DateTime", o[o.Binary = 14] = "Binary", o);
 
 // node_modules/flatgeobuf/lib/mjs/flat-geobuf/column.js
 var Column = class _Column {
-  constructor() {
-    __publicField(this, "bb", null);
-    __publicField(this, "bb_pos", 0);
+  bb = null;
+  bb_pos = 0;
+  __init(t, s2) {
+    return this.bb_pos = t, this.bb = s2, this;
   }
-  __init(t7, s2) {
-    return this.bb_pos = t7, this.bb = s2, this;
-  }
-  static getRootAsColumn(t7, s2) {
-    return (s2 || new _Column()).__init(t7.readInt32(t7.position()) + t7.position(), t7);
+  static getRootAsColumn(t, s2) {
+    return (s2 || new _Column()).__init(t.readInt32(t.position()) + t.position(), t);
   }
   static getSizePrefixedRootAsColumn(s2, i) {
-    return s2.setPosition(s2.position() + t__namespace.SIZE_PREFIX_LENGTH), (i || new _Column()).__init(s2.readInt32(s2.position()) + s2.position(), s2);
+    return s2.setPosition(s2.position() + SIZE_PREFIX_LENGTH), (i || new _Column()).__init(s2.readInt32(s2.position()) + s2.position(), s2);
   }
-  name(t7) {
+  name(t) {
     let s2 = this.bb.__offset(this.bb_pos, 4);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
   type() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? this.bb.readUint8(this.bb_pos + t7) : ColumnType.Byte;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? this.bb.readUint8(this.bb_pos + t) : ColumnType.Byte;
   }
-  title(t7) {
+  title(t) {
     let s2 = this.bb.__offset(this.bb_pos, 8);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  description(t7) {
+  description(t) {
     let s2 = this.bb.__offset(this.bb_pos, 10);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
   width() {
-    let t7 = this.bb.__offset(this.bb_pos, 12);
-    return t7 ? this.bb.readInt32(this.bb_pos + t7) : -1;
+    let t = this.bb.__offset(this.bb_pos, 12);
+    return t ? this.bb.readInt32(this.bb_pos + t) : -1;
   }
   precision() {
-    let t7 = this.bb.__offset(this.bb_pos, 14);
-    return t7 ? this.bb.readInt32(this.bb_pos + t7) : -1;
+    let t = this.bb.__offset(this.bb_pos, 14);
+    return t ? this.bb.readInt32(this.bb_pos + t) : -1;
   }
   scale() {
-    let t7 = this.bb.__offset(this.bb_pos, 16);
-    return t7 ? this.bb.readInt32(this.bb_pos + t7) : -1;
+    let t = this.bb.__offset(this.bb_pos, 16);
+    return t ? this.bb.readInt32(this.bb_pos + t) : -1;
   }
   nullable() {
-    let t7 = this.bb.__offset(this.bb_pos, 18);
-    return !t7 || !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 18);
+    return !t || !!this.bb.readInt8(this.bb_pos + t);
   }
   unique() {
-    let t7 = this.bb.__offset(this.bb_pos, 20);
-    return !!t7 && !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 20);
+    return !!t && !!this.bb.readInt8(this.bb_pos + t);
   }
   primaryKey() {
-    let t7 = this.bb.__offset(this.bb_pos, 22);
-    return !!t7 && !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 22);
+    return !!t && !!this.bb.readInt8(this.bb_pos + t);
   }
-  metadata(t7) {
+  metadata(t) {
     let s2 = this.bb.__offset(this.bb_pos, 24);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  static startColumn(t7) {
-    t7.startObject(11);
+  static startColumn(t) {
+    t.startObject(11);
   }
-  static addName(t7, s2) {
-    t7.addFieldOffset(0, s2, 0);
+  static addName(t, s2) {
+    t.addFieldOffset(0, s2, 0);
   }
-  static addType(t7, i) {
-    t7.addFieldInt8(1, i, ColumnType.Byte);
+  static addType(t, i) {
+    t.addFieldInt8(1, i, ColumnType.Byte);
   }
-  static addTitle(t7, s2) {
-    t7.addFieldOffset(2, s2, 0);
+  static addTitle(t, s2) {
+    t.addFieldOffset(2, s2, 0);
   }
-  static addDescription(t7, s2) {
-    t7.addFieldOffset(3, s2, 0);
+  static addDescription(t, s2) {
+    t.addFieldOffset(3, s2, 0);
   }
-  static addWidth(t7, s2) {
-    t7.addFieldInt32(4, s2, -1);
+  static addWidth(t, s2) {
+    t.addFieldInt32(4, s2, -1);
   }
-  static addPrecision(t7, s2) {
-    t7.addFieldInt32(5, s2, -1);
+  static addPrecision(t, s2) {
+    t.addFieldInt32(5, s2, -1);
   }
-  static addScale(t7, s2) {
-    t7.addFieldInt32(6, s2, -1);
+  static addScale(t, s2) {
+    t.addFieldInt32(6, s2, -1);
   }
-  static addNullable(t7, s2) {
-    t7.addFieldInt8(7, +s2, 1);
+  static addNullable(t, s2) {
+    t.addFieldInt8(7, +s2, 1);
   }
-  static addUnique(t7, s2) {
-    t7.addFieldInt8(8, +s2, 0);
+  static addUnique(t, s2) {
+    t.addFieldInt8(8, +s2, 0);
   }
-  static addPrimaryKey(t7, s2) {
-    t7.addFieldInt8(9, +s2, 0);
+  static addPrimaryKey(t, s2) {
+    t.addFieldInt8(9, +s2, 0);
   }
-  static addMetadata(t7, s2) {
-    t7.addFieldOffset(10, s2, 0);
+  static addMetadata(t, s2) {
+    t.addFieldOffset(10, s2, 0);
   }
-  static endColumn(t7) {
-    let s2 = t7.endObject();
-    return t7.requiredField(s2, 4), s2;
+  static endColumn(t) {
+    let s2 = t.endObject();
+    return t.requiredField(s2, 4), s2;
   }
-  static createColumn(t7, s2, i, e4, b, d, n2, a, o2, l, r2, _) {
-    return _Column.startColumn(t7), _Column.addName(t7, s2), _Column.addType(t7, i), _Column.addTitle(t7, e4), _Column.addDescription(t7, b), _Column.addWidth(t7, d), _Column.addPrecision(t7, n2), _Column.addScale(t7, a), _Column.addNullable(t7, o2), _Column.addUnique(t7, l), _Column.addPrimaryKey(t7, r2), _Column.addMetadata(t7, _), _Column.endColumn(t7);
+  static createColumn(t, s2, i, e2, b, d, n2, a, o2, l, r2, _) {
+    return _Column.startColumn(t), _Column.addName(t, s2), _Column.addType(t, i), _Column.addTitle(t, e2), _Column.addDescription(t, b), _Column.addWidth(t, d), _Column.addPrecision(t, n2), _Column.addScale(t, a), _Column.addNullable(t, o2), _Column.addUnique(t, l), _Column.addPrimaryKey(t, r2), _Column.addMetadata(t, _), _Column.endColumn(t);
   }
 };
+
+// node_modules/flatgeobuf/lib/mjs/flat-geobuf/crs.js
 var Crs = class _Crs {
-  constructor() {
-    __publicField(this, "bb", null);
-    __publicField(this, "bb_pos", 0);
+  bb = null;
+  bb_pos = 0;
+  __init(t, s2) {
+    return this.bb_pos = t, this.bb = s2, this;
   }
-  __init(t7, s2) {
-    return this.bb_pos = t7, this.bb = s2, this;
-  }
-  static getRootAsCrs(t7, s2) {
-    return (s2 || new _Crs()).__init(t7.readInt32(t7.position()) + t7.position(), t7);
+  static getRootAsCrs(t, s2) {
+    return (s2 || new _Crs()).__init(t.readInt32(t.position()) + t.position(), t);
   }
   static getSizePrefixedRootAsCrs(s2, i) {
-    return s2.setPosition(s2.position() + t__namespace.SIZE_PREFIX_LENGTH), (i || new _Crs()).__init(s2.readInt32(s2.position()) + s2.position(), s2);
+    return s2.setPosition(s2.position() + SIZE_PREFIX_LENGTH), (i || new _Crs()).__init(s2.readInt32(s2.position()) + s2.position(), s2);
   }
-  org(t7) {
+  org(t) {
     let s2 = this.bb.__offset(this.bb_pos, 4);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
   code() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? this.bb.readInt32(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? this.bb.readInt32(this.bb_pos + t) : 0;
   }
-  name(t7) {
+  name(t) {
     let s2 = this.bb.__offset(this.bb_pos, 8);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  description(t7) {
+  description(t) {
     let s2 = this.bb.__offset(this.bb_pos, 10);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  wkt(t7) {
+  wkt(t) {
     let s2 = this.bb.__offset(this.bb_pos, 12);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  codeString(t7) {
+  codeString(t) {
     let s2 = this.bb.__offset(this.bb_pos, 14);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  static startCrs(t7) {
-    t7.startObject(6);
+  static startCrs(t) {
+    t.startObject(6);
   }
-  static addOrg(t7, s2) {
-    t7.addFieldOffset(0, s2, 0);
+  static addOrg(t, s2) {
+    t.addFieldOffset(0, s2, 0);
   }
-  static addCode(t7, s2) {
-    t7.addFieldInt32(1, s2, 0);
+  static addCode(t, s2) {
+    t.addFieldInt32(1, s2, 0);
   }
-  static addName(t7, s2) {
-    t7.addFieldOffset(2, s2, 0);
+  static addName(t, s2) {
+    t.addFieldOffset(2, s2, 0);
   }
-  static addDescription(t7, s2) {
-    t7.addFieldOffset(3, s2, 0);
+  static addDescription(t, s2) {
+    t.addFieldOffset(3, s2, 0);
   }
-  static addWkt(t7, s2) {
-    t7.addFieldOffset(4, s2, 0);
+  static addWkt(t, s2) {
+    t.addFieldOffset(4, s2, 0);
   }
-  static addCodeString(t7, s2) {
-    t7.addFieldOffset(5, s2, 0);
+  static addCodeString(t, s2) {
+    t.addFieldOffset(5, s2, 0);
   }
-  static endCrs(t7) {
-    return t7.endObject();
+  static endCrs(t) {
+    return t.endObject();
   }
-  static createCrs(t7, s2, i, e4, r2, b, d) {
-    return _Crs.startCrs(t7), _Crs.addOrg(t7, s2), _Crs.addCode(t7, i), _Crs.addName(t7, e4), _Crs.addDescription(t7, r2), _Crs.addWkt(t7, b), _Crs.addCodeString(t7, d), _Crs.endCrs(t7);
+  static createCrs(t, s2, i, e2, r2, b, d) {
+    return _Crs.startCrs(t), _Crs.addOrg(t, s2), _Crs.addCode(t, i), _Crs.addName(t, e2), _Crs.addDescription(t, r2), _Crs.addWkt(t, b), _Crs.addCodeString(t, d), _Crs.endCrs(t);
   }
 };
 
@@ -350,432 +586,428 @@ var GeometryType = ((r = {})[r.Unknown = 0] = "Unknown", r[r.Point = 1] = "Point
 
 // node_modules/flatgeobuf/lib/mjs/flat-geobuf/header.js
 var Header = class _Header {
-  constructor() {
-    __publicField(this, "bb", null);
-    __publicField(this, "bb_pos", 0);
+  bb = null;
+  bb_pos = 0;
+  __init(t, s2) {
+    return this.bb_pos = t, this.bb = s2, this;
   }
-  __init(t7, s2) {
-    return this.bb_pos = t7, this.bb = s2, this;
+  static getRootAsHeader(t, s2) {
+    return (s2 || new _Header()).__init(t.readInt32(t.position()) + t.position(), t);
   }
-  static getRootAsHeader(t7, s2) {
-    return (s2 || new _Header()).__init(t7.readInt32(t7.position()) + t7.position(), t7);
+  static getSizePrefixedRootAsHeader(s2, e2) {
+    return s2.setPosition(s2.position() + SIZE_PREFIX_LENGTH), (e2 || new _Header()).__init(s2.readInt32(s2.position()) + s2.position(), s2);
   }
-  static getSizePrefixedRootAsHeader(s2, e4) {
-    return s2.setPosition(s2.position() + t__namespace.SIZE_PREFIX_LENGTH), (e4 || new _Header()).__init(s2.readInt32(s2.position()) + s2.position(), s2);
-  }
-  name(t7) {
+  name(t) {
     let s2 = this.bb.__offset(this.bb_pos, 4);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  envelope(t7) {
+  envelope(t) {
     let s2 = this.bb.__offset(this.bb_pos, 6);
-    return s2 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + s2) + 8 * t7) : 0;
+    return s2 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + s2) + 8 * t) : 0;
   }
   envelopeLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   envelopeArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
   geometryType() {
-    let t7 = this.bb.__offset(this.bb_pos, 8);
-    return t7 ? this.bb.readUint8(this.bb_pos + t7) : GeometryType.Unknown;
+    let t = this.bb.__offset(this.bb_pos, 8);
+    return t ? this.bb.readUint8(this.bb_pos + t) : GeometryType.Unknown;
   }
   hasZ() {
-    let t7 = this.bb.__offset(this.bb_pos, 10);
-    return !!t7 && !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 10);
+    return !!t && !!this.bb.readInt8(this.bb_pos + t);
   }
   hasM() {
-    let t7 = this.bb.__offset(this.bb_pos, 12);
-    return !!t7 && !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 12);
+    return !!t && !!this.bb.readInt8(this.bb_pos + t);
   }
   hasT() {
-    let t7 = this.bb.__offset(this.bb_pos, 14);
-    return !!t7 && !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 14);
+    return !!t && !!this.bb.readInt8(this.bb_pos + t);
   }
   hasTm() {
-    let t7 = this.bb.__offset(this.bb_pos, 16);
-    return !!t7 && !!this.bb.readInt8(this.bb_pos + t7);
+    let t = this.bb.__offset(this.bb_pos, 16);
+    return !!t && !!this.bb.readInt8(this.bb_pos + t);
   }
-  columns(t7, e4) {
+  columns(t, e2) {
     let i = this.bb.__offset(this.bb_pos, 18);
-    return i ? (e4 || new Column()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + i) + 4 * t7), this.bb) : null;
+    return i ? (e2 || new Column()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + i) + 4 * t), this.bb) : null;
   }
   columnsLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 18);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 18);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   featuresCount() {
-    let t7 = this.bb.__offset(this.bb_pos, 20);
-    return t7 ? this.bb.readUint64(this.bb_pos + t7) : BigInt("0");
+    let t = this.bb.__offset(this.bb_pos, 20);
+    return t ? this.bb.readUint64(this.bb_pos + t) : BigInt("0");
   }
   indexNodeSize() {
-    let t7 = this.bb.__offset(this.bb_pos, 22);
-    return t7 ? this.bb.readUint16(this.bb_pos + t7) : 16;
+    let t = this.bb.__offset(this.bb_pos, 22);
+    return t ? this.bb.readUint16(this.bb_pos + t) : 16;
   }
-  crs(t7) {
+  crs(t) {
     let s2 = this.bb.__offset(this.bb_pos, 24);
-    return s2 ? (t7 || new Crs()).__init(this.bb.__indirect(this.bb_pos + s2), this.bb) : null;
+    return s2 ? (t || new Crs()).__init(this.bb.__indirect(this.bb_pos + s2), this.bb) : null;
   }
-  title(t7) {
+  title(t) {
     let s2 = this.bb.__offset(this.bb_pos, 26);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  description(t7) {
+  description(t) {
     let s2 = this.bb.__offset(this.bb_pos, 28);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  metadata(t7) {
+  metadata(t) {
     let s2 = this.bb.__offset(this.bb_pos, 30);
-    return s2 ? this.bb.__string(this.bb_pos + s2, t7) : null;
+    return s2 ? this.bb.__string(this.bb_pos + s2, t) : null;
   }
-  static startHeader(t7) {
-    t7.startObject(14);
+  static startHeader(t) {
+    t.startObject(14);
   }
-  static addName(t7, s2) {
-    t7.addFieldOffset(0, s2, 0);
+  static addName(t, s2) {
+    t.addFieldOffset(0, s2, 0);
   }
-  static addEnvelope(t7, s2) {
-    t7.addFieldOffset(1, s2, 0);
+  static addEnvelope(t, s2) {
+    t.addFieldOffset(1, s2, 0);
   }
-  static createEnvelopeVector(t7, s2) {
-    t7.startVector(8, s2.length, 8);
-    for (let e4 = s2.length - 1; e4 >= 0; e4--) t7.addFloat64(s2[e4]);
-    return t7.endVector();
+  static createEnvelopeVector(t, s2) {
+    t.startVector(8, s2.length, 8);
+    for (let e2 = s2.length - 1; e2 >= 0; e2--) t.addFloat64(s2[e2]);
+    return t.endVector();
   }
-  static startEnvelopeVector(t7, s2) {
-    t7.startVector(8, s2, 8);
+  static startEnvelopeVector(t, s2) {
+    t.startVector(8, s2, 8);
   }
-  static addGeometryType(t7, s2) {
-    t7.addFieldInt8(2, s2, GeometryType.Unknown);
+  static addGeometryType(t, s2) {
+    t.addFieldInt8(2, s2, GeometryType.Unknown);
   }
-  static addHasZ(t7, s2) {
-    t7.addFieldInt8(3, +s2, 0);
+  static addHasZ(t, s2) {
+    t.addFieldInt8(3, +s2, 0);
   }
-  static addHasM(t7, s2) {
-    t7.addFieldInt8(4, +s2, 0);
+  static addHasM(t, s2) {
+    t.addFieldInt8(4, +s2, 0);
   }
-  static addHasT(t7, s2) {
-    t7.addFieldInt8(5, +s2, 0);
+  static addHasT(t, s2) {
+    t.addFieldInt8(5, +s2, 0);
   }
-  static addHasTm(t7, s2) {
-    t7.addFieldInt8(6, +s2, 0);
+  static addHasTm(t, s2) {
+    t.addFieldInt8(6, +s2, 0);
   }
-  static addColumns(t7, s2) {
-    t7.addFieldOffset(7, s2, 0);
+  static addColumns(t, s2) {
+    t.addFieldOffset(7, s2, 0);
   }
-  static createColumnsVector(t7, s2) {
-    t7.startVector(4, s2.length, 4);
-    for (let e4 = s2.length - 1; e4 >= 0; e4--) t7.addOffset(s2[e4]);
-    return t7.endVector();
+  static createColumnsVector(t, s2) {
+    t.startVector(4, s2.length, 4);
+    for (let e2 = s2.length - 1; e2 >= 0; e2--) t.addOffset(s2[e2]);
+    return t.endVector();
   }
-  static startColumnsVector(t7, s2) {
-    t7.startVector(4, s2, 4);
+  static startColumnsVector(t, s2) {
+    t.startVector(4, s2, 4);
   }
-  static addFeaturesCount(t7, s2) {
-    t7.addFieldInt64(8, s2, BigInt("0"));
+  static addFeaturesCount(t, s2) {
+    t.addFieldInt64(8, s2, BigInt("0"));
   }
-  static addIndexNodeSize(t7, s2) {
-    t7.addFieldInt16(9, s2, 16);
+  static addIndexNodeSize(t, s2) {
+    t.addFieldInt16(9, s2, 16);
   }
-  static addCrs(t7, s2) {
-    t7.addFieldOffset(10, s2, 0);
+  static addCrs(t, s2) {
+    t.addFieldOffset(10, s2, 0);
   }
-  static addTitle(t7, s2) {
-    t7.addFieldOffset(11, s2, 0);
+  static addTitle(t, s2) {
+    t.addFieldOffset(11, s2, 0);
   }
-  static addDescription(t7, s2) {
-    t7.addFieldOffset(12, s2, 0);
+  static addDescription(t, s2) {
+    t.addFieldOffset(12, s2, 0);
   }
-  static addMetadata(t7, s2) {
-    t7.addFieldOffset(13, s2, 0);
+  static addMetadata(t, s2) {
+    t.addFieldOffset(13, s2, 0);
   }
-  static endHeader(t7) {
-    return t7.endObject();
+  static endHeader(t) {
+    return t.endObject();
   }
-  static finishHeaderBuffer(t7, s2) {
-    t7.finish(s2);
+  static finishHeaderBuffer(t, s2) {
+    t.finish(s2);
   }
-  static finishSizePrefixedHeaderBuffer(t7, s2) {
-    t7.finish(s2, void 0, true);
+  static finishSizePrefixedHeaderBuffer(t, s2) {
+    t.finish(s2, void 0, true);
   }
 };
+
+// node_modules/flatgeobuf/lib/mjs/flat-geobuf/geometry.js
 var Geometry = class _Geometry {
-  constructor() {
-    __publicField(this, "bb", null);
-    __publicField(this, "bb_pos", 0);
+  bb = null;
+  bb_pos = 0;
+  __init(t, e2) {
+    return this.bb_pos = t, this.bb = e2, this;
   }
-  __init(t7, e4) {
-    return this.bb_pos = t7, this.bb = e4, this;
+  static getRootAsGeometry(t, e2) {
+    return (e2 || new _Geometry()).__init(t.readInt32(t.position()) + t.position(), t);
   }
-  static getRootAsGeometry(t7, e4) {
-    return (e4 || new _Geometry()).__init(t7.readInt32(t7.position()) + t7.position(), t7);
+  static getSizePrefixedRootAsGeometry(e2, s2) {
+    return e2.setPosition(e2.position() + SIZE_PREFIX_LENGTH), (s2 || new _Geometry()).__init(e2.readInt32(e2.position()) + e2.position(), e2);
   }
-  static getSizePrefixedRootAsGeometry(e4, s2) {
-    return e4.setPosition(e4.position() + t__namespace.SIZE_PREFIX_LENGTH), (s2 || new _Geometry()).__init(e4.readInt32(e4.position()) + e4.position(), e4);
-  }
-  ends(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 4);
-    return e4 ? this.bb.readUint32(this.bb.__vector(this.bb_pos + e4) + 4 * t7) : 0;
+  ends(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 4);
+    return e2 ? this.bb.readUint32(this.bb.__vector(this.bb_pos + e2) + 4 * t) : 0;
   }
   endsLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 4);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 4);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   endsArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 4);
-    return t7 ? new Uint32Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 4);
+    return t ? new Uint32Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
-  xy(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 6);
-    return e4 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e4) + 8 * t7) : 0;
+  xy(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 6);
+    return e2 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e2) + 8 * t) : 0;
   }
   xyLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   xyArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
-  z(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 8);
-    return e4 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e4) + 8 * t7) : 0;
+  z(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 8);
+    return e2 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e2) + 8 * t) : 0;
   }
   zLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 8);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 8);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   zArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 8);
-    return t7 ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 8);
+    return t ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
-  m(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 10);
-    return e4 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e4) + 8 * t7) : 0;
+  m(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 10);
+    return e2 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e2) + 8 * t) : 0;
   }
   mLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 10);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 10);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   mArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 10);
-    return t7 ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 10);
+    return t ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
-  t(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 12);
-    return e4 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e4) + 8 * t7) : 0;
+  t(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 12);
+    return e2 ? this.bb.readFloat64(this.bb.__vector(this.bb_pos + e2) + 8 * t) : 0;
   }
   tLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 12);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 12);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   tArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 12);
-    return t7 ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 12);
+    return t ? new Float64Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
-  tm(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 14);
-    return e4 ? this.bb.readUint64(this.bb.__vector(this.bb_pos + e4) + 8 * t7) : BigInt(0);
+  tm(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 14);
+    return e2 ? this.bb.readUint64(this.bb.__vector(this.bb_pos + e2) + 8 * t) : BigInt(0);
   }
   tmLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 14);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 14);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   type() {
-    let t7 = this.bb.__offset(this.bb_pos, 16);
-    return t7 ? this.bb.readUint8(this.bb_pos + t7) : GeometryType.Unknown;
+    let t = this.bb.__offset(this.bb_pos, 16);
+    return t ? this.bb.readUint8(this.bb_pos + t) : GeometryType.Unknown;
   }
-  parts(t7, e4) {
+  parts(t, e2) {
     let s2 = this.bb.__offset(this.bb_pos, 18);
-    return s2 ? (e4 || new _Geometry()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + s2) + 4 * t7), this.bb) : null;
+    return s2 ? (e2 || new _Geometry()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + s2) + 4 * t), this.bb) : null;
   }
   partsLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 18);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 18);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
-  static startGeometry(t7) {
-    t7.startObject(8);
+  static startGeometry(t) {
+    t.startObject(8);
   }
-  static addEnds(t7, e4) {
-    t7.addFieldOffset(0, e4, 0);
+  static addEnds(t, e2) {
+    t.addFieldOffset(0, e2, 0);
   }
-  static createEndsVector(t7, e4) {
-    t7.startVector(4, e4.length, 4);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addInt32(e4[s2]);
-    return t7.endVector();
+  static createEndsVector(t, e2) {
+    t.startVector(4, e2.length, 4);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addInt32(e2[s2]);
+    return t.endVector();
   }
-  static startEndsVector(t7, e4) {
-    t7.startVector(4, e4, 4);
+  static startEndsVector(t, e2) {
+    t.startVector(4, e2, 4);
   }
-  static addXy(t7, e4) {
-    t7.addFieldOffset(1, e4, 0);
+  static addXy(t, e2) {
+    t.addFieldOffset(1, e2, 0);
   }
-  static createXyVector(t7, e4) {
-    t7.startVector(8, e4.length, 8);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addFloat64(e4[s2]);
-    return t7.endVector();
+  static createXyVector(t, e2) {
+    t.startVector(8, e2.length, 8);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addFloat64(e2[s2]);
+    return t.endVector();
   }
-  static startXyVector(t7, e4) {
-    t7.startVector(8, e4, 8);
+  static startXyVector(t, e2) {
+    t.startVector(8, e2, 8);
   }
-  static addZ(t7, e4) {
-    t7.addFieldOffset(2, e4, 0);
+  static addZ(t, e2) {
+    t.addFieldOffset(2, e2, 0);
   }
-  static createZVector(t7, e4) {
-    t7.startVector(8, e4.length, 8);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addFloat64(e4[s2]);
-    return t7.endVector();
+  static createZVector(t, e2) {
+    t.startVector(8, e2.length, 8);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addFloat64(e2[s2]);
+    return t.endVector();
   }
-  static startZVector(t7, e4) {
-    t7.startVector(8, e4, 8);
+  static startZVector(t, e2) {
+    t.startVector(8, e2, 8);
   }
-  static addM(t7, e4) {
-    t7.addFieldOffset(3, e4, 0);
+  static addM(t, e2) {
+    t.addFieldOffset(3, e2, 0);
   }
-  static createMVector(t7, e4) {
-    t7.startVector(8, e4.length, 8);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addFloat64(e4[s2]);
-    return t7.endVector();
+  static createMVector(t, e2) {
+    t.startVector(8, e2.length, 8);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addFloat64(e2[s2]);
+    return t.endVector();
   }
-  static startMVector(t7, e4) {
-    t7.startVector(8, e4, 8);
+  static startMVector(t, e2) {
+    t.startVector(8, e2, 8);
   }
-  static addT(t7, e4) {
-    t7.addFieldOffset(4, e4, 0);
+  static addT(t, e2) {
+    t.addFieldOffset(4, e2, 0);
   }
-  static createTVector(t7, e4) {
-    t7.startVector(8, e4.length, 8);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addFloat64(e4[s2]);
-    return t7.endVector();
+  static createTVector(t, e2) {
+    t.startVector(8, e2.length, 8);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addFloat64(e2[s2]);
+    return t.endVector();
   }
-  static startTVector(t7, e4) {
-    t7.startVector(8, e4, 8);
+  static startTVector(t, e2) {
+    t.startVector(8, e2, 8);
   }
-  static addTm(t7, e4) {
-    t7.addFieldOffset(5, e4, 0);
+  static addTm(t, e2) {
+    t.addFieldOffset(5, e2, 0);
   }
-  static createTmVector(t7, e4) {
-    t7.startVector(8, e4.length, 8);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addInt64(e4[s2]);
-    return t7.endVector();
+  static createTmVector(t, e2) {
+    t.startVector(8, e2.length, 8);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addInt64(e2[s2]);
+    return t.endVector();
   }
-  static startTmVector(t7, e4) {
-    t7.startVector(8, e4, 8);
+  static startTmVector(t, e2) {
+    t.startVector(8, e2, 8);
   }
-  static addType(t7, s2) {
-    t7.addFieldInt8(6, s2, GeometryType.Unknown);
+  static addType(t, s2) {
+    t.addFieldInt8(6, s2, GeometryType.Unknown);
   }
-  static addParts(t7, e4) {
-    t7.addFieldOffset(7, e4, 0);
+  static addParts(t, e2) {
+    t.addFieldOffset(7, e2, 0);
   }
-  static createPartsVector(t7, e4) {
-    t7.startVector(4, e4.length, 4);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addOffset(e4[s2]);
-    return t7.endVector();
+  static createPartsVector(t, e2) {
+    t.startVector(4, e2.length, 4);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addOffset(e2[s2]);
+    return t.endVector();
   }
-  static startPartsVector(t7, e4) {
-    t7.startVector(4, e4, 4);
+  static startPartsVector(t, e2) {
+    t.startVector(4, e2, 4);
   }
-  static endGeometry(t7) {
-    return t7.endObject();
+  static endGeometry(t) {
+    return t.endObject();
   }
-  static createGeometry(t7, e4, s2, b, r2, o2, i, _, h) {
-    return _Geometry.startGeometry(t7), _Geometry.addEnds(t7, e4), _Geometry.addXy(t7, s2), _Geometry.addZ(t7, b), _Geometry.addM(t7, r2), _Geometry.addT(t7, o2), _Geometry.addTm(t7, i), _Geometry.addType(t7, _), _Geometry.addParts(t7, h), _Geometry.endGeometry(t7);
+  static createGeometry(t, e2, s2, b, r2, o2, i, _, h) {
+    return _Geometry.startGeometry(t), _Geometry.addEnds(t, e2), _Geometry.addXy(t, s2), _Geometry.addZ(t, b), _Geometry.addM(t, r2), _Geometry.addT(t, o2), _Geometry.addTm(t, i), _Geometry.addType(t, _), _Geometry.addParts(t, h), _Geometry.endGeometry(t);
   }
 };
 
 // node_modules/flatgeobuf/lib/mjs/flat-geobuf/feature.js
 var Feature = class _Feature {
-  constructor() {
-    __publicField(this, "bb", null);
-    __publicField(this, "bb_pos", 0);
+  bb = null;
+  bb_pos = 0;
+  __init(t, e2) {
+    return this.bb_pos = t, this.bb = e2, this;
   }
-  __init(t7, e4) {
-    return this.bb_pos = t7, this.bb = e4, this;
+  static getRootAsFeature(t, e2) {
+    return (e2 || new _Feature()).__init(t.readInt32(t.position()) + t.position(), t);
   }
-  static getRootAsFeature(t7, e4) {
-    return (e4 || new _Feature()).__init(t7.readInt32(t7.position()) + t7.position(), t7);
+  static getSizePrefixedRootAsFeature(e2, s2) {
+    return e2.setPosition(e2.position() + SIZE_PREFIX_LENGTH), (s2 || new _Feature()).__init(e2.readInt32(e2.position()) + e2.position(), e2);
   }
-  static getSizePrefixedRootAsFeature(e4, s2) {
-    return e4.setPosition(e4.position() + t__namespace.SIZE_PREFIX_LENGTH), (s2 || new _Feature()).__init(e4.readInt32(e4.position()) + e4.position(), e4);
+  geometry(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 4);
+    return e2 ? (t || new Geometry()).__init(this.bb.__indirect(this.bb_pos + e2), this.bb) : null;
   }
-  geometry(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 4);
-    return e4 ? (t7 || new Geometry()).__init(this.bb.__indirect(this.bb_pos + e4), this.bb) : null;
-  }
-  properties(t7) {
-    let e4 = this.bb.__offset(this.bb_pos, 6);
-    return e4 ? this.bb.readUint8(this.bb.__vector(this.bb_pos + e4) + t7) : 0;
+  properties(t) {
+    let e2 = this.bb.__offset(this.bb_pos, 6);
+    return e2 ? this.bb.readUint8(this.bb.__vector(this.bb_pos + e2) + t) : 0;
   }
   propertiesLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
   propertiesArray() {
-    let t7 = this.bb.__offset(this.bb_pos, 6);
-    return t7 ? new Uint8Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t7), this.bb.__vector_len(this.bb_pos + t7)) : null;
+    let t = this.bb.__offset(this.bb_pos, 6);
+    return t ? new Uint8Array(this.bb.bytes().buffer, this.bb.bytes().byteOffset + this.bb.__vector(this.bb_pos + t), this.bb.__vector_len(this.bb_pos + t)) : null;
   }
-  columns(t7, s2) {
+  columns(t, s2) {
     let r2 = this.bb.__offset(this.bb_pos, 8);
-    return r2 ? (s2 || new Column()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + r2) + 4 * t7), this.bb) : null;
+    return r2 ? (s2 || new Column()).__init(this.bb.__indirect(this.bb.__vector(this.bb_pos + r2) + 4 * t), this.bb) : null;
   }
   columnsLength() {
-    let t7 = this.bb.__offset(this.bb_pos, 8);
-    return t7 ? this.bb.__vector_len(this.bb_pos + t7) : 0;
+    let t = this.bb.__offset(this.bb_pos, 8);
+    return t ? this.bb.__vector_len(this.bb_pos + t) : 0;
   }
-  static startFeature(t7) {
-    t7.startObject(3);
+  static startFeature(t) {
+    t.startObject(3);
   }
-  static addGeometry(t7, e4) {
-    t7.addFieldOffset(0, e4, 0);
+  static addGeometry(t, e2) {
+    t.addFieldOffset(0, e2, 0);
   }
-  static addProperties(t7, e4) {
-    t7.addFieldOffset(1, e4, 0);
+  static addProperties(t, e2) {
+    t.addFieldOffset(1, e2, 0);
   }
-  static createPropertiesVector(t7, e4) {
-    t7.startVector(1, e4.length, 1);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addInt8(e4[s2]);
-    return t7.endVector();
+  static createPropertiesVector(t, e2) {
+    t.startVector(1, e2.length, 1);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addInt8(e2[s2]);
+    return t.endVector();
   }
-  static startPropertiesVector(t7, e4) {
-    t7.startVector(1, e4, 1);
+  static startPropertiesVector(t, e2) {
+    t.startVector(1, e2, 1);
   }
-  static addColumns(t7, e4) {
-    t7.addFieldOffset(2, e4, 0);
+  static addColumns(t, e2) {
+    t.addFieldOffset(2, e2, 0);
   }
-  static createColumnsVector(t7, e4) {
-    t7.startVector(4, e4.length, 4);
-    for (let s2 = e4.length - 1; s2 >= 0; s2--) t7.addOffset(e4[s2]);
-    return t7.endVector();
+  static createColumnsVector(t, e2) {
+    t.startVector(4, e2.length, 4);
+    for (let s2 = e2.length - 1; s2 >= 0; s2--) t.addOffset(e2[s2]);
+    return t.endVector();
   }
-  static startColumnsVector(t7, e4) {
-    t7.startVector(4, e4, 4);
+  static startColumnsVector(t, e2) {
+    t.startVector(4, e2, 4);
   }
-  static endFeature(t7) {
-    return t7.endObject();
+  static endFeature(t) {
+    return t.endObject();
   }
-  static finishFeatureBuffer(t7, e4) {
-    t7.finish(e4);
+  static finishFeatureBuffer(t, e2) {
+    t.finish(e2);
   }
-  static finishSizePrefixedFeatureBuffer(t7, e4) {
-    t7.finish(e4, void 0, true);
+  static finishSizePrefixedFeatureBuffer(t, e2) {
+    t.finish(e2, void 0, true);
   }
-  static createFeature(t7, e4, s2, r2) {
-    return _Feature.startFeature(t7), _Feature.addGeometry(t7, e4), _Feature.addProperties(t7, s2), _Feature.addColumns(t7, r2), _Feature.endFeature(t7);
+  static createFeature(t, e2, s2, r2) {
+    return _Feature.startFeature(t), _Feature.addGeometry(t, e2), _Feature.addProperties(t, s2), _Feature.addColumns(t, r2), _Feature.endFeature(t);
   }
 };
 
 // node_modules/flatgeobuf/lib/mjs/header-meta.js
-function fromByteBuffer(t7) {
-  let r2 = Header.getRootAsHeader(t7), i = r2.featuresCount(), n2 = r2.indexNodeSize(), o2 = [];
-  for (let e4 = 0; e4 < r2.columnsLength(); e4++) {
-    let t8 = r2.columns(e4);
-    if (!t8) throw Error("Column unexpectedly missing");
-    if (!t8.name()) throw Error("Column name unexpectedly missing");
-    o2.push({ name: t8.name(), type: t8.type(), title: t8.title(), description: t8.description(), width: t8.width(), precision: t8.precision(), scale: t8.scale(), nullable: t8.nullable(), unique: t8.unique(), primary_key: t8.primaryKey() });
+function fromByteBuffer(t) {
+  let r2 = Header.getRootAsHeader(t), i = r2.featuresCount(), n2 = r2.indexNodeSize(), o2 = [];
+  for (let e2 = 0; e2 < r2.columnsLength(); e2++) {
+    let t2 = r2.columns(e2);
+    if (!t2) throw Error("Column unexpectedly missing");
+    if (!t2.name()) throw Error("Column name unexpectedly missing");
+    o2.push({ name: t2.name(), type: t2.type(), title: t2.title(), description: t2.description(), width: t2.width(), precision: t2.precision(), scale: t2.scale(), nullable: t2.nullable(), unique: t2.unique(), primary_key: t2.primaryKey() });
   }
   let l = r2.crs(), s2 = l ? { org: l.org(), code: l.code(), name: l.name(), description: l.description(), wkt: l.wkt(), code_string: l.codeString() } : null;
   return { geometryType: r2.geometryType(), columns: o2, envelope: null, featuresCount: Number(i), indexNodeSize: n2, crs: s2, title: r2.title(), description: r2.description(), metadata: r2.metadata() };
@@ -807,15 +1039,15 @@ function __awaiter(thisArg, _arguments, P, generator) {
     function fulfilled(value) {
       try {
         step(generator.next(value));
-      } catch (e4) {
-        reject2(e4);
+      } catch (e2) {
+        reject2(e2);
       }
     }
     function rejected(value) {
       try {
         step(generator["throw"](value));
-      } catch (e4) {
-        reject2(e4);
+      } catch (e2) {
+        reject2(e2);
       }
     }
     function step(result) {
@@ -826,9 +1058,9 @@ function __awaiter(thisArg, _arguments, P, generator) {
 }
 function __generator(thisArg, body) {
   var _ = { label: 0, sent: function() {
-    if (t7[0] & 1) throw t7[1];
-    return t7[1];
-  }, trys: [], ops: [] }, f, y, t7, g;
+    if (t[0] & 1) throw t[1];
+    return t[1];
+  }, trys: [], ops: [] }, f, y, t, g;
   return g = { next: verb(0), "throw": verb(1), "return": verb(2) }, typeof Symbol === "function" && (g[Symbol.iterator] = function() {
     return this;
   }), g;
@@ -840,12 +1072,12 @@ function __generator(thisArg, body) {
   function step(op) {
     if (f) throw new TypeError("Generator is already executing.");
     while (_) try {
-      if (f = 1, y && (t7 = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t7 = y["return"]) && t7.call(y), 0) : y.next) && !(t7 = t7.call(y, op[1])).done) return t7;
-      if (y = 0, t7) op = [op[0] & 2, t7.value];
+      if (f = 1, y && (t = op[0] & 2 ? y["return"] : op[0] ? y["throw"] || ((t = y["return"]) && t.call(y), 0) : y.next) && !(t = t.call(y, op[1])).done) return t;
+      if (y = 0, t) op = [op[0] & 2, t.value];
       switch (op[0]) {
         case 0:
         case 1:
-          t7 = op;
+          t = op;
           break;
         case 4:
           _.label++;
@@ -860,34 +1092,34 @@ function __generator(thisArg, body) {
           _.trys.pop();
           continue;
         default:
-          if (!(t7 = _.trys, t7 = t7.length > 0 && t7[t7.length - 1]) && (op[0] === 6 || op[0] === 2)) {
+          if (!(t = _.trys, t = t.length > 0 && t[t.length - 1]) && (op[0] === 6 || op[0] === 2)) {
             _ = 0;
             continue;
           }
-          if (op[0] === 3 && (!t7 || op[1] > t7[0] && op[1] < t7[3])) {
+          if (op[0] === 3 && (!t || op[1] > t[0] && op[1] < t[3])) {
             _.label = op[1];
             break;
           }
-          if (op[0] === 6 && _.label < t7[1]) {
-            _.label = t7[1];
-            t7 = op;
+          if (op[0] === 6 && _.label < t[1]) {
+            _.label = t[1];
+            t = op;
             break;
           }
-          if (t7 && _.label < t7[2]) {
-            _.label = t7[2];
+          if (t && _.label < t[2]) {
+            _.label = t[2];
             _.ops.push(op);
             break;
           }
-          if (t7[2]) _.ops.pop();
+          if (t[2]) _.ops.pop();
           _.trys.pop();
           continue;
       }
       op = body.call(thisArg, _);
-    } catch (e4) {
-      op = [6, e4];
+    } catch (e2) {
+      op = [6, e2];
       y = 0;
     } finally {
-      f = t7 = 0;
+      f = t = 0;
     }
     if (op[0] & 5) throw op[1];
     return { value: op[0] ? op[1] : void 0, done: true };
@@ -923,8 +1155,8 @@ function __asyncGenerator(thisArg, _arguments, generator) {
   function resume(n2, v) {
     try {
       step(g[n2](v));
-    } catch (e4) {
-      settle(q[0][3], e4);
+    } catch (e2) {
+      settle(q[0][3], e2);
     }
   }
   function step(r2) {
@@ -1857,26 +2089,24 @@ function latest(contenders) {
 }
 
 // node_modules/flatgeobuf/lib/mjs/config.js
-var _e = class _e {
-  constructor() {
-    __publicField(this, "_extraRequestThreshold", 262144);
-  }
+(class _e {
+  static global = new _e();
+  _extraRequestThreshold = 262144;
   extraRequestThreshold() {
     return this._extraRequestThreshold;
   }
-  setExtraRequestThreshold(e4) {
-    if (e4 < 0) throw Error("extraRequestThreshold cannot be negative");
-    this._extraRequestThreshold = e4;
+  setExtraRequestThreshold(e2) {
+    if (e2 < 0) throw Error("extraRequestThreshold cannot be negative");
+    this._extraRequestThreshold = e2;
   }
-};
-__publicField(_e, "global", new _e());
+});
 
 // node_modules/flatgeobuf/lib/mjs/generic/geometry.js
-function pairFlatCoordinates(t7, e4) {
+function pairFlatCoordinates(t, e2) {
   let r2 = [];
-  for (let o2 = 0; o2 < t7.length; o2 += 2) {
-    let n2 = [t7[o2], t7[o2 + 1]];
-    e4 && n2.push(e4[o2 >> 1]), r2.push(n2);
+  for (let o2 = 0; o2 < t.length; o2 += 2) {
+    let n2 = [t[o2], t[o2 + 1]];
+    e2 && n2.push(e2[o2 >> 1]), r2.push(n2);
   }
   return r2;
 }
@@ -1884,16 +2114,16 @@ function pairFlatCoordinates(t7, e4) {
 // node_modules/flatgeobuf/lib/mjs/generic/feature.js
 new TextEncoder();
 var s = new TextDecoder();
-function parseProperties(e4, r2) {
+function parseProperties(e2, r2) {
   let a = {};
   if (!r2 || 0 === r2.length) return a;
-  let n2 = e4.propertiesArray();
+  let n2 = e2.propertiesArray();
   if (!n2) return a;
-  let o2 = new DataView(n2.buffer, n2.byteOffset), i = e4.propertiesLength(), l = 0;
+  let o2 = new DataView(n2.buffer, n2.byteOffset), i = e2.propertiesLength(), l = 0;
   for (; l < i; ) {
-    let e5 = o2.getUint16(l, true);
+    let e3 = o2.getUint16(l, true);
     l += 2;
-    let i2 = r2[e5], c = i2.name;
+    let i2 = r2[e3], c = i2.name;
     switch (i2.type) {
       case ColumnType.Bool:
         a[c] = !!o2.getUint8(l), l += 1;
@@ -1930,20 +2160,20 @@ function parseProperties(e4, r2) {
         break;
       case ColumnType.DateTime:
       case ColumnType.String: {
-        let e6 = o2.getUint32(l, true);
-        l += 4, a[c] = s.decode(n2.subarray(l, l + e6)), l += e6;
+        let e4 = o2.getUint32(l, true);
+        l += 4, a[c] = s.decode(n2.subarray(l, l + e4)), l += e4;
         break;
       }
       case ColumnType.Json: {
-        let e6 = o2.getUint32(l, true);
+        let e4 = o2.getUint32(l, true);
         l += 4;
-        let t7 = s.decode(n2.subarray(l, l + e6));
-        a[c] = JSON.parse(t7), l += e6;
+        let t = s.decode(n2.subarray(l, l + e4));
+        a[c] = JSON.parse(t), l += e4;
         break;
       }
       case ColumnType.Binary: {
-        let e6 = o2.getUint32(l, true);
-        l += 4, a[c] = n2.subarray(l, l + e6), l += e6;
+        let e4 = o2.getUint32(l, true);
+        l += 4, a[c] = n2.subarray(l, l + e4), l += e4;
         break;
       }
       default:
@@ -2131,54 +2361,54 @@ async function* executeQueryPlan(plan, fetchRange, options = {}) {
 }
 
 // node_modules/flatgeobuf/lib/mjs/geojson/geometry.js
-function fromGeometry(t7, o2) {
+function fromGeometry(t, o2) {
   let n2 = o2;
-  if (n2 === GeometryType.Unknown && (n2 = t7.type()), n2 === GeometryType.GeometryCollection) {
+  if (n2 === GeometryType.Unknown && (n2 = t.type()), n2 === GeometryType.GeometryCollection) {
     let r2 = [];
-    for (let e4 = 0; e4 < t7.partsLength(); e4++) {
-      let o3 = t7.parts(e4), n3 = o3.type();
+    for (let e2 = 0; e2 < t.partsLength(); e2++) {
+      let o3 = t.parts(e2), n3 = o3.type();
       r2.push(fromGeometry(o3, n3));
     }
     return { type: GeometryType[n2], geometries: r2 };
   }
   if (n2 === GeometryType.MultiPolygon) {
     let r2 = [];
-    for (let o3 = 0; o3 < t7.partsLength(); o3++) r2.push(fromGeometry(t7.parts(o3), GeometryType.Polygon));
-    return { type: GeometryType[n2], coordinates: r2.map((e4) => e4.coordinates) };
+    for (let o3 = 0; o3 < t.partsLength(); o3++) r2.push(fromGeometry(t.parts(o3), GeometryType.Polygon));
+    return { type: GeometryType[n2], coordinates: r2.map((e2) => e2.coordinates) };
   }
-  let i = function(t8, o3) {
-    let n3 = t8.xyArray(), i2 = t8.zArray();
+  let i = function(t2, o3) {
+    let n3 = t2.xyArray(), i2 = t2.zArray();
     switch (o3) {
       case GeometryType.Point: {
-        let e4 = Array.from(n3);
-        return i2 && e4.push(i2[0]), e4;
+        let e2 = Array.from(n3);
+        return i2 && e2.push(i2[0]), e2;
       }
       case GeometryType.MultiPoint:
       case GeometryType.LineString:
         return pairFlatCoordinates(n3, i2);
       case GeometryType.MultiLineString:
       case GeometryType.Polygon:
-        return function(e4, t9, o4) {
+        return function(e2, t3, o4) {
           let n4;
-          if (!o4 || 0 === o4.length) return [pairFlatCoordinates(e4, t9)];
-          let i3 = 0, a = Array.from(o4).map((t10) => e4.slice(i3, i3 = t10 << 1));
-          return t9 && (i3 = 0, n4 = Array.from(o4).map((e5) => t9.slice(i3, i3 = e5))), a.map((e5, t10) => pairFlatCoordinates(e5, n4 ? n4[t10] : void 0));
-        }(n3, i2, t8.endsArray());
+          if (!o4 || 0 === o4.length) return [pairFlatCoordinates(e2, t3)];
+          let i3 = 0, a = Array.from(o4).map((t4) => e2.slice(i3, i3 = t4 << 1));
+          return t3 && (i3 = 0, n4 = Array.from(o4).map((e3) => t3.slice(i3, i3 = e3))), a.map((e3, t4) => pairFlatCoordinates(e3, n4 ? n4[t4] : void 0));
+        }(n3, i2, t2.endsArray());
     }
-  }(t7, n2);
+  }(t, n2);
   return { type: GeometryType[n2], coordinates: i };
 }
 
 // node_modules/flatgeobuf/lib/mjs/geojson/feature.js
-function fromFeature(t7, o2, m) {
+function fromFeature(t, o2, m) {
   let p = m.columns;
-  return { type: "Feature", id: t7, geometry: fromGeometry(o2.geometry(), m.geometryType), properties: parseProperties(o2, p) };
+  return { type: "Feature", id: t, geometry: fromGeometry(o2.geometry(), m.geometryType), properties: parseProperties(o2, p) };
 }
 function validateFeatureData(view, size) {
   view.getUint32(0, true);
 }
 function parseFeatureData(offset, bytesAligned, header) {
-  const bb = new t.ByteBuffer(bytesAligned);
+  const bb = new ByteBuffer(bytesAligned);
   bb.setPosition(SIZE_PREFIX_LEN2);
   const feature = fromFeature(offset, Feature.getRootAsFeature(bb), header);
   return {
@@ -2371,7 +2601,7 @@ var FlatGeobufSource = class {
     while (offset < data.byteLength) {
       const size = view.getUint32(offset, true);
       const bytesAligned = new Uint8Array(data, offset, size + SIZE_PREFIX_LEN2);
-      const bb = new t.ByteBuffer(bytesAligned);
+      const bb = new ByteBuffer(bytesAligned);
       bb.setPosition(SIZE_PREFIX_LEN2);
       yield {
         properties: parseProperties2(bb, this.header.columns, offset)
@@ -2402,7 +2632,7 @@ async function createSource(urlOrKey, options) {
     }
   }
   const offset = MAGIC_BYTES.length + 4;
-  const bb = new t.ByteBuffer(new Uint8Array(headerData, offset));
+  const bb = new ByteBuffer(new Uint8Array(headerData, offset));
   const headerSize = view.getUint32(MAGIC_BYTES.length, true);
   const header = fromByteBuffer(bb);
   const featuresCount = header.featuresCount;

@@ -55,7 +55,7 @@
       "path": "packages/api/",
       "problemMatcher": [],
       "label": "GraphQL server: watch mode",
-      "detail": "nodemon dist/src/server.js"
+      "detail": "nodemon"
     },
     {
       "type": "npm",
@@ -67,27 +67,6 @@
       "problemMatcher": [],
       "label": "Start Database & Redis",
       "detail": "docker-compose up -d"
-    },
-    {
-      "type": "npm",
-      "script": "watch",
-      "path": "packages/mapbox-gl-esri-sources/",
-      "problemMatcher": [],
-      "label": "Rollup: mapbox-gl-esri-sources",
-      "runOptions": {
-        "runOn": "folderOpen"
-      }
-    },
-    {
-      "type": "typescript",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
-      "tsconfig": "packages/mapbox-gl-esri-sources/tsconfig.json",
-      "option": "watch",
-      "problemMatcher": ["$tsc-watch"],
-      "group": "build",
-      "label": "TypeScript: watch mapbox-gl-esri-sources"
     }
   ]
 }

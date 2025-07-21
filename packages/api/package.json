@@ -15,8 +15,9 @@
     "test": "jest --runInBand",
     "start": "node dist/src/server.js",
     "debug": "nodemon --inspect dist/src/server.js",
-    "watch": "nodemon dist/src/server.js",
+    "watch": "nodemon",
     "build": "tsc -b",
+    "build:watch": "tsc -b --watch",
     "install": "npm run build",
     "db:migrate": "graphile-migrate migrate",
     "db:watch": "graphile-migrate watch",
@@ -31,7 +32,7 @@
     "db:drift": "diff -w generated-schema.gql generated-schema-clean.gql",
     "db:schema": "docker exec seasketch_db pg_dump --no-sync --schema-only --no-owner --exclude-schema=graphile_migrate --exclude-schema=postgraphile_watch -U postgres seasketch > ./schema.sql",
     "db:logs": "docker compose logs -f --tail=100 db",
-    "env:dev": "op inject -i .env.template > .env"
+    "dev": "nodemon"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

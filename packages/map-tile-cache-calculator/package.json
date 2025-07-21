@@ -5,7 +5,7 @@
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
-  "main": "dist/bundled.js",
+  "main": "dist/map-tile-cache-calculator.js",
   "module": "dist/map-tile-cache-calculator.js",
   "directories": {
     "lib": "lib",

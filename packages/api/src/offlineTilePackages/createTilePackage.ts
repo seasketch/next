@@ -1,6 +1,6 @@
 import { Feature, Polygon } from "geojson";
 import { DBClient } from "../dbClient";
-import { MapTileCacheCalculator } from "@seasketch/map-tile-cache-calculator/dist/bundled";
+import { MapTileCacheCalculator } from "@seasketch/map-tile-cache-calculator";
 import { file } from "tmp-promise";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";

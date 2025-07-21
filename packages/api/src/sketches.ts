@@ -10,14 +10,12 @@ import {
   FragmentResult,
   eliminateOverlap,
   mergeTouchingFragments,
-} from "overlay-engine";
-import { PoolClient } from "pg";
-import {
   clipSketchToPolygons,
   clipToGeographies,
-} from "overlay-engine/dist/src/geographies";
+} from "overlay-engine";
+import { PoolClient } from "pg";
 import bbox from "@turf/bbox";
-import { PendingFragmentResult } from "overlay-engine/dist/src/fragments";
+import { PendingFragmentResult } from "overlay-engine/dist/fragments";
 
 // Initialize source cache for clipping operations
 const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {

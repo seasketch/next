@@ -206,3 +206,4 @@ function getAttribution(metadata) {
     var contactOrg = getFirst(cntorgp === null || cntorgp === void 0 ? void 0 : cntorgp.cntorg);
     return contactOrg || undefined;
 }
+//# sourceMappingURL=fgdcToProsemirror.js.map

@@ -428,6 +428,7 @@ export async function clipToGeographies(
   clipped: PreparedSketch["feature"] | null;
   fragments: FragmentResult[];
 }> {
+  console.log("~~~~~~~~~~ clipping to geographies ~~~~~~~~");
   // Create fragments for all overlapping geographies
   let fragments: SketchFragment[] = (
     await createFragments(preparedSketch, geographies, clippingFn)
@@ -612,3 +613,6 @@ export async function clipToGeographies(
     fragments,
   };
 }
+// test nodemon restart
+// another test
+// test root watch

@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2019",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "references": [
+    { "path": "./packages/geostats-types" },
+    { "path": "./packages/vector-data-source" },
+    { "path": "./packages/map-tile-cache-calculator" },
+    { "path": "./packages/mapbox-gl-esri-sources" },
+    { "path": "./packages/metadata-parser" },
+    { "path": "./packages/overlay-engine" },
+    { "path": "./packages/spatial-uploads-handler" },
+    { "path": "./packages/api" }
+  ]
+}
