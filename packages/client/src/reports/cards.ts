@@ -1,4 +1,4 @@
-export type ProsemirrorBodyJSON = JSON;
+export type ProsemirrorBodyJSON = any;
 
 export type ReportCardType = "SketchAttributes" | "TextBlock" | "SketchSize";
 
@@ -91,3 +91,13 @@ export type ReportConfiguration = {
    */
   tabs: ReportTabConfiguration[];
 };
+
+export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
+  config: T;
+};
+
+// Import card implementations
+
+export function registerCards() {
+  import("./TextBlockCard");
+}

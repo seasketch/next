@@ -901,6 +901,36 @@ type CancelBackgroundJobPayload {
   query: Query
 }
 
+"""All input for the `checkDuplicateSketchClasses` mutation."""
+input CheckDuplicateSketchClassesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `checkDuplicateSketchClasses` mutation."""
+type CheckDuplicateSketchClassesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  results: [CheckDuplicateSketchClassesRecord]
+}
+
+"""The return type of our `checkDuplicateSketchClasses` mutation."""
+type CheckDuplicateSketchClassesRecord {
+  count: BigInt
+  id: Int
+}
+
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
   """
@@ -1411,6 +1441,40 @@ type CreateDataUploadPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `createDraftReport` mutation."""
+input CreateDraftReportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sketchClassId: Int
+}
+
+"""The output of our `createDraftReport` mutation."""
+type CreateDraftReportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  report: Report
+
+  """An edge for our `Report`. May be used by Relay 1."""
+  reportEdge(
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsEdge
+
+  """Reads a single `SketchClass` that is related to this `Report`."""
+  sketchClass: SketchClass
 }
 
 """All input for the create `FormElement` mutation."""
@@ -2132,6 +2196,44 @@ type CreateRemoteMvtSourcePayload {
   """
   query: Query
   tableOfContentsItems: [TableOfContentsItem!]
+}
+
+"""All input for the create `Report` mutation."""
+input CreateReportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `Report` to be created by this mutation."""
+  report: ReportInput!
+}
+
+"""The output of our create `Report` mutation."""
+type CreateReportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Report` that was created by this mutation."""
+  report: Report
+
+  """An edge for our `Report`. May be used by Relay 1."""
+  reportEdge(
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsEdge
+
+  """Reads a single `SketchClass` that is related to this `Report`."""
+  sketchClass: SketchClass
 }
 
 """All input for the `createSketchClassFromTemplate` mutation."""
@@ -4792,6 +4894,57 @@ type DeleteProjectsSharedBasemapPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `deleteReportByNodeId` mutation."""
+input DeleteReportByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Report` to be deleted.
+  """
+  nodeId: ID!
+}
+
+"""All input for the `deleteReport` mutation."""
+input DeleteReportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+}
+
+"""The output of our delete `Report` mutation."""
+type DeleteReportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedReportNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Report` that was deleted by this mutation."""
+  report: Report
+
+  """An edge for our `Report`. May be used by Relay 1."""
+  reportEdge(
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsEdge
+
+  """Reads a single `SketchClass` that is related to this `Report`."""
+  sketchClass: SketchClass
 }
 
 """All input for the `deleteSketchByNodeId` mutation."""
@@ -8289,6 +8442,12 @@ type Mutation {
     """
     input: CancelBackgroundJobInput!
   ): CancelBackgroundJobPayload
+  checkDuplicateSketchClasses(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CheckDuplicateSketchClassesInput!
+  ): CheckDuplicateSketchClassesPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -8423,6 +8582,12 @@ type Mutation {
     """
     input: CreateDataUploadInput!
   ): CreateDataUploadPayload
+  createDraftReport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateDraftReportInput!
+  ): CreateDraftReportPayload
   createFileUpload(contentType: String!, filename: String!, fileSizeBytes: Int!, projectId: Int!, usage: FileUploadUsageInput!): UploaderResponse!
 
   """Creates a single `FormElement`."""
@@ -8590,6 +8755,14 @@ type Mutation {
     """
     input: CreateRemoteMvtSourceInput!
   ): CreateRemoteMvtSourcePayload
+
+  """Creates a single `Report`."""
+  createReport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateReportInput!
+  ): CreateReportPayload
 
   """
   Create a new sketch in the user's account. If preprocessing is enabled,
@@ -9027,6 +9200,22 @@ type Mutation {
     """
     input: DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput!
   ): DeleteProjectsSharedBasemapPayload
+
+  """Deletes a single `Report` using a unique key."""
+  deleteReport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteReportInput!
+  ): DeleteReportPayload
+
+  """Deletes a single `Report` using its globally unique id."""
+  deleteReportByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteReportByNodeIdInput!
+  ): DeleteReportPayload
 
   """Deletes a single `Sketch` using a unique key."""
   deleteSketch(
@@ -10121,6 +10310,22 @@ type Mutation {
     """
     input: UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput!
   ): UpdateProjectsSharedBasemapPayload
+
+  """Updates a single `Report` using a unique key and a patch."""
+  updateReport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateReportInput!
+  ): UpdateReportPayload
+
+  """Updates a single `Report` using its globally unique id and a patch."""
+  updateReportByNodeId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateReportByNodeIdInput!
+  ): UpdateReportPayload
 
   """
   If preprocessing is enabled,
@@ -13090,6 +13295,42 @@ type Query implements Node {
   which can only query top level fields if they are in a particular form.
   """
   query: Query!
+  report(id: Int!): Report
+
+  """Reads a single `Report` using its globally unique `ID`."""
+  reportByNodeId(
+    """The globally unique `ID` to be used in selecting a single `Report`."""
+    nodeId: ID!
+  ): Report
+
+  """Reads and enables pagination through a set of `Report`."""
+  reportsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ReportCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsConnection
 
   """Reads and enables pagination through a set of `SearchResult`."""
   searchOverlays(
@@ -13531,6 +13772,137 @@ enum RenderUnderType {
   LABELS
   LAND
   NONE
+}
+
+type Report implements Node {
+  createdAt: Datetime!
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  projectId: Int!
+
+  """Reads a single `SketchClass` that is related to this `Report`."""
+  sketchClass: SketchClass
+  sketchClassId: Int!
+
+  """Reads and enables pagination through a set of `ReportTab`."""
+  tabs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ReportTab!]
+}
+
+type ReportCard implements Node {
+  alternateLanguageSettings: JSON!
+  body: JSON!
+  componentSettings: JSON!
+  icon: String
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  position: Int!
+  reportTabId: Int!
+  tint: String
+  title: String!
+  type: String!
+}
+
+"""
+A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’
+"""
+input ReportCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `sketchClassId` field."""
+  sketchClassId: Int
+}
+
+"""An input for mutations affecting `Report`"""
+input ReportInput {
+  createdAt: Datetime
+  projectId: Int!
+  sketchClassId: Int!
+}
+
+"""
+Represents an update to a `Report`. Fields that are set will be updated.
+"""
+input ReportPatch {
+  createdAt: Datetime
+  projectId: Int
+  sketchClassId: Int
+}
+
+"""A connection to a list of `Report` values."""
+type ReportsConnection {
+  """
+  A list of edges which contains the `Report` and cursor to aid in pagination.
+  """
+  edges: [ReportsEdge!]!
+
+  """A list of `Report` objects."""
+  nodes: [Report!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `Report` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `Report` edge in the connection."""
+type ReportsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `Report` at the end of the edge."""
+  node: Report!
+}
+
+"""Methods to use when ordering `Report`."""
+enum ReportsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  SKETCH_CLASS_ID_ASC
+  SKETCH_CLASS_ID_DESC
+}
+
+type ReportTab implements Node {
+  alternateLanguageSettings: JSON!
+
+  """Reads and enables pagination through a set of `ReportCard`."""
+  cards(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ReportCard!]
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  position: Int!
+
+  """Reads a single `Report` that is related to this `ReportTab`."""
+  report: Report
+  reportId: Int!
+  title: String!
 }
 
 type RetentionChangeEstimate {
@@ -14134,6 +14506,8 @@ type SketchClass implements Node {
   """
   canDigitize: Boolean
   clippingGeographies: [Geography]!
+  draftReport: Report
+  draftReportId: Int
   filterApiServerLocation: String
   filterApiVersion: Int!
 
@@ -14209,6 +14583,35 @@ type SketchClass implements Node {
 
   """SketchClasses belong to a single project."""
   projectId: Int!
+
+  """Reads and enables pagination through a set of `Report`."""
+  reportsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ReportCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsConnection!
 
   """Number of sketches created with this sketch class"""
   sketchCount: BigInt
@@ -17550,6 +17953,66 @@ type UpdateProjectsSharedBasemapPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+"""All input for the `updateReportByNodeId` mutation."""
+input UpdateReportByNodeIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """
+  The globally unique `ID` which will identify a single `Report` to be updated.
+  """
+  nodeId: ID!
+
+  """
+  An object where the defined keys will be set on the `Report` being updated.
+  """
+  patch: ReportPatch!
+}
+
+"""All input for the `updateReport` mutation."""
+input UpdateReportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  id: Int!
+
+  """
+  An object where the defined keys will be set on the `Report` being updated.
+  """
+  patch: ReportPatch!
+}
+
+"""The output of our update `Report` mutation."""
+type UpdateReportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """The `Report` that was updated by this mutation."""
+  report: Report
+
+  """An edge for our `Report`. May be used by Relay 1."""
+  reportEdge(
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsEdge
+
+  """Reads a single `SketchClass` that is related to this `Report`."""
+  sketchClass: SketchClass
 }
 
 """All input for the `updateSketchClassByFormElementId` mutation."""

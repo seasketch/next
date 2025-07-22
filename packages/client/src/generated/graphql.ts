@@ -777,6 +777,35 @@ export type CancelBackgroundJobPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `checkDuplicateSketchClasses` mutation. */
+export type CheckDuplicateSketchClassesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `checkDuplicateSketchClasses` mutation. */
+export type CheckDuplicateSketchClassesPayload = {
+  __typename?: 'CheckDuplicateSketchClassesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  results?: Maybe<Array<Maybe<CheckDuplicateSketchClassesRecord>>>;
+};
+
+/** The return type of our `checkDuplicateSketchClasses` mutation. */
+export type CheckDuplicateSketchClassesRecord = {
+  __typename?: 'CheckDuplicateSketchClassesRecord';
+  count?: Maybe<Scalars['BigInt']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -1230,6 +1259,39 @@ export type CreateDataUploadPayload = {
 /** The output of our `createDataUpload` mutation. */
 export type CreateDataUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
+};
+
+/** All input for the `createDraftReport` mutation. */
+export type CreateDraftReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createDraftReport` mutation. */
+export type CreateDraftReportPayload = {
+  __typename?: 'CreateDraftReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our `createDraftReport` mutation. */
+export type CreateDraftReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the create `FormElement` mutation. */
@@ -1877,6 +1939,41 @@ export type CreateRemoteMvtSourcePayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
+/** All input for the create `Report` mutation. */
+export type CreateReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `Report` to be created by this mutation. */
+  report: ReportInput;
+};
+
+/** The output of our create `Report` mutation. */
+export type CreateReportPayload = {
+  __typename?: 'CreateReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `Report` that was created by this mutation. */
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our create `Report` mutation. */
+export type CreateReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the `createSketchClassFromTemplate` mutation. */
@@ -4106,6 +4203,52 @@ export type DeleteProjectsSharedBasemapPayload = {
 /** The output of our delete `ProjectsSharedBasemap` mutation. */
 export type DeleteProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the `deleteReportByNodeId` mutation. */
+export type DeleteReportByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Report` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteReport` mutation. */
+export type DeleteReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `Report` mutation. */
+export type DeleteReportPayload = {
+  __typename?: 'DeleteReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedReportNodeId?: Maybe<Scalars['ID']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `Report` that was deleted by this mutation. */
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our delete `Report` mutation. */
+export type DeleteReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the `deleteSketchByNodeId` mutation. */
@@ -7110,6 +7253,7 @@ export type Mutation = {
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
+  checkDuplicateSketchClasses?: Maybe<CheckDuplicateSketchClassesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
@@ -7162,6 +7306,7 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
+  createDraftReport?: Maybe<CreateDraftReportPayload>;
   createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
@@ -7213,6 +7358,8 @@ export type Mutation = {
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
+  /** Creates a single `Report`. */
+  createReport?: Maybe<CreateReportPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7324,6 +7471,10 @@ export type Mutation = {
   deleteProjectInviteGroupByInviteIdAndGroupId?: Maybe<DeleteProjectInviteGroupPayload>;
   /** Deletes a single `ProjectsSharedBasemap` using a unique key. */
   deleteProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<DeleteProjectsSharedBasemapPayload>;
+  /** Deletes a single `Report` using a unique key. */
+  deleteReport?: Maybe<DeleteReportPayload>;
+  /** Deletes a single `Report` using its globally unique id. */
+  deleteReportByNodeId?: Maybe<DeleteReportPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
   /** Deletes a single `Sketch` using its globally unique id. */
@@ -7627,6 +7778,10 @@ export type Mutation = {
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
   /** Updates a single `ProjectsSharedBasemap` using a unique key and a patch. */
   updateProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<UpdateProjectsSharedBasemapPayload>;
+  /** Updates a single `Report` using a unique key and a patch. */
+  updateReport?: Maybe<UpdateReportPayload>;
+  /** Updates a single `Report` using its globally unique id and a patch. */
+  updateReportByNodeId?: Maybe<UpdateReportPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7763,6 +7918,12 @@ export type MutationCancelBackgroundJobArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCheckDuplicateSketchClassesArgs = {
+  input: CheckDuplicateSketchClassesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationClearFormElementStyleArgs = {
   input: ClearFormElementStyleInput;
 };
@@ -7859,6 +8020,12 @@ export type MutationCreateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataUploadArgs = {
   input: CreateDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateDraftReportArgs = {
+  input: CreateDraftReportInput;
 };
 
 
@@ -7996,6 +8163,12 @@ export type MutationCreateRemoteGeojsonSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateRemoteMvtSourceArgs = {
   input: CreateRemoteMvtSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateReportArgs = {
+  input: CreateReportInput;
 };
 
 
@@ -8334,6 +8507,18 @@ export type MutationDeleteProjectInviteGroupByInviteIdAndGroupIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
   input: DeleteProjectsSharedBasemapByBasemapIdAndProjectIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportArgs = {
+  input: DeleteReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportByNodeIdArgs = {
+  input: DeleteReportByNodeIdInput;
 };
 
 
@@ -9140,6 +9325,18 @@ export type MutationUpdateProjectInviteGroupByInviteIdAndGroupIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
   input: UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportArgs = {
+  input: UpdateReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportByNodeIdArgs = {
+  input: UpdateReportByNodeIdInput;
 };
 
 
@@ -11206,6 +11403,11 @@ export type Query = Node & {
    * which can only query top level fields if they are in a particular form.
    */
   query: Query;
+  report?: Maybe<Report>;
+  /** Reads a single `Report` using its globally unique `ID`. */
+  reportByNodeId?: Maybe<Report>;
+  /** Reads and enables pagination through a set of `Report`. */
+  reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
   searchOverlays?: Maybe<Array<SearchResult>>;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
@@ -12064,6 +12266,30 @@ export type QueryPublicSpritesArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryReportArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySearchOverlaysArgs = {
   draft?: Maybe<Scalars['Boolean']>;
   first?: Maybe<Scalars['Int']>;
@@ -12497,6 +12723,118 @@ export type RenderedAboutPageContent = {
   html?: Maybe<Scalars['String']>;
   lang?: Maybe<Scalars['String']>;
 };
+
+export type Report = Node & {
+  __typename?: 'Report';
+  createdAt: Scalars['Datetime'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  projectId: Scalars['Int'];
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+  sketchClassId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `ReportTab`. */
+  tabs?: Maybe<Array<ReportTab>>;
+};
+
+
+export type ReportTabsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+export type ReportCard = Node & {
+  __typename?: 'ReportCard';
+  alternateLanguageSettings: Scalars['JSON'];
+  body: Scalars['JSON'];
+  componentSettings: Scalars['JSON'];
+  icon?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  position: Scalars['Int'];
+  reportTabId: Scalars['Int'];
+  tint?: Maybe<Scalars['String']>;
+  title: Scalars['String'];
+  type: Scalars['String'];
+};
+
+/** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type ReportCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `sketchClassId` field. */
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `Report` */
+export type ReportInput = {
+  createdAt?: Maybe<Scalars['Datetime']>;
+  projectId: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+};
+
+/** Represents an update to a `Report`. Fields that are set will be updated. */
+export type ReportPatch = {
+  createdAt?: Maybe<Scalars['Datetime']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+export type ReportTab = Node & {
+  __typename?: 'ReportTab';
+  alternateLanguageSettings: Scalars['JSON'];
+  /** Reads and enables pagination through a set of `ReportCard`. */
+  cards?: Maybe<Array<ReportCard>>;
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  position: Scalars['Int'];
+  /** Reads a single `Report` that is related to this `ReportTab`. */
+  report?: Maybe<Report>;
+  reportId: Scalars['Int'];
+  title: Scalars['String'];
+};
+
+
+export type ReportTabCardsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `Report` values. */
+export type ReportsConnection = {
+  __typename?: 'ReportsConnection';
+  /** A list of edges which contains the `Report` and cursor to aid in pagination. */
+  edges: Array<ReportsEdge>;
+  /** A list of `Report` objects. */
+  nodes: Array<Report>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `Report` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `Report` edge in the connection. */
+export type ReportsEdge = {
+  __typename?: 'ReportsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `Report` at the end of the edge. */
+  node: Report;
+};
+
+/** Methods to use when ordering `Report`. */
+export enum ReportsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  SketchClassIdAsc = 'SKETCH_CLASS_ID_ASC',
+  SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC'
+}
 
 export type RetentionChangeEstimate = {
   __typename?: 'RetentionChangeEstimate';
@@ -13037,6 +13375,8 @@ export type SketchClass = Node & {
    */
   canDigitize?: Maybe<Scalars['Boolean']>;
   clippingGeographies: Array<Maybe<Geography>>;
+  draftReport?: Maybe<Report>;
+  draftReportId?: Maybe<Scalars['Int']>;
   filterApiServerLocation?: Maybe<Scalars['String']>;
   filterApiVersion: Scalars['Int'];
   /** Reads a single `Form` that is related to this `SketchClass`. */
@@ -13082,12 +13422,26 @@ export type SketchClass = Node & {
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `Report`. */
+  reportsConnection: ReportsConnection;
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
   translatedProps: Scalars['JSON'];
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
+};
+
+
+/** Sketch Classes act as a schema for sketches drawn by users. */
+export type SketchClassReportsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 
@@ -15853,6 +16207,55 @@ export type UpdateProjectsSharedBasemapPayload = {
 /** The output of our update `ProjectsSharedBasemap` mutation. */
 export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the `updateReportByNodeId` mutation. */
+export type UpdateReportByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Report` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `Report` being updated. */
+  patch: ReportPatch;
+};
+
+/** All input for the `updateReport` mutation. */
+export type UpdateReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `Report` being updated. */
+  patch: ReportPatch;
+};
+
+/** The output of our update `Report` mutation. */
+export type UpdateReportPayload = {
+  __typename?: 'UpdateReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `Report` that was updated by this mutation. */
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our update `Report` mutation. */
+export type UpdateReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the `updateSketchClassByFormElementId` mutation. */
@@ -20995,6 +21398,51 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type DraftReportDetailsFragment = (
+  { __typename?: 'Report' }
+  & Pick<Report, 'id' | 'createdAt'>
+  & { tabs?: Maybe<Array<(
+    { __typename?: 'ReportTab' }
+    & Pick<ReportTab, 'id' | 'title' | 'position'>
+    & { cards?: Maybe<Array<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id' | 'title' | 'position' | 'body' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon'>
+    )>> }
+  )>> }
+);
+
+export type DraftReportQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type DraftReportQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { draftReport?: Maybe<(
+      { __typename?: 'Report' }
+      & DraftReportDetailsFragment
+    )> }
+  )> }
+);
+
+export type CreateDraftReportMutationVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type CreateDraftReportMutation = (
+  { __typename?: 'Mutation' }
+  & { createDraftReport?: Maybe<(
+    { __typename?: 'CreateDraftReportPayload' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & DraftReportDetailsFragment
+    )> }
+  )> }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
@@ -24210,6 +24658,28 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const DraftReportDetailsFragmentDoc = gql`
+    fragment DraftReportDetails on Report {
+  id
+  createdAt
+  tabs {
+    id
+    title
+    position
+    cards {
+      id
+      title
+      position
+      body
+      type
+      componentSettings
+      alternateLanguageSettings
+      tint
+      icon
+    }
+  }
+}
+    `;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -32533,6 +33003,78 @@ export function useSketchClassGeographyEditorDetailsLazyQuery(baseOptions?: Apol
 export type SketchClassGeographyEditorDetailsQueryHookResult = ReturnType<typeof useSketchClassGeographyEditorDetailsQuery>;
 export type SketchClassGeographyEditorDetailsLazyQueryHookResult = ReturnType<typeof useSketchClassGeographyEditorDetailsLazyQuery>;
 export type SketchClassGeographyEditorDetailsQueryResult = Apollo.QueryResult<SketchClassGeographyEditorDetailsQuery, SketchClassGeographyEditorDetailsQueryVariables>;
+export const DraftReportDocument = gql`
+    query DraftReport($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    draftReport {
+      ...DraftReportDetails
+    }
+  }
+}
+    ${DraftReportDetailsFragmentDoc}`;
+
+/**
+ * __useDraftReportQuery__
+ *
+ * To run a query within a React component, call `useDraftReportQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDraftReportQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftReportQuery({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useDraftReportQuery(baseOptions: Apollo.QueryHookOptions<DraftReportQuery, DraftReportQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DraftReportQuery, DraftReportQueryVariables>(DraftReportDocument, options);
+      }
+export function useDraftReportLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DraftReportQuery, DraftReportQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DraftReportQuery, DraftReportQueryVariables>(DraftReportDocument, options);
+        }
+export type DraftReportQueryHookResult = ReturnType<typeof useDraftReportQuery>;
+export type DraftReportLazyQueryHookResult = ReturnType<typeof useDraftReportLazyQuery>;
+export type DraftReportQueryResult = Apollo.QueryResult<DraftReportQuery, DraftReportQueryVariables>;
+export const CreateDraftReportDocument = gql`
+    mutation CreateDraftReport($sketchClassId: Int!) {
+  createDraftReport(input: {sketchClassId: $sketchClassId}) {
+    report {
+      ...DraftReportDetails
+    }
+  }
+}
+    ${DraftReportDetailsFragmentDoc}`;
+export type CreateDraftReportMutationFn = Apollo.MutationFunction<CreateDraftReportMutation, CreateDraftReportMutationVariables>;
+
+/**
+ * __useCreateDraftReportMutation__
+ *
+ * To run a mutation, you first call `useCreateDraftReportMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDraftReportMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDraftReportMutation, { data, loading, error }] = useCreateDraftReportMutation({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useCreateDraftReportMutation(baseOptions?: Apollo.MutationHookOptions<CreateDraftReportMutation, CreateDraftReportMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateDraftReportMutation, CreateDraftReportMutationVariables>(CreateDraftReportDocument, options);
+      }
+export type CreateDraftReportMutationHookResult = ReturnType<typeof useCreateDraftReportMutation>;
+export type CreateDraftReportMutationResult = Apollo.MutationResult<CreateDraftReportMutation>;
+export type CreateDraftReportMutationOptions = Apollo.BaseMutationOptions<CreateDraftReportMutation, CreateDraftReportMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -36141,6 +36683,7 @@ export const namedOperations = {
     SketchClasses: 'SketchClasses',
     SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
     SketchClassGeographyEditorDetails: 'SketchClassGeographyEditorDetails',
+    DraftReport: 'DraftReport',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -36282,6 +36825,7 @@ export const namedOperations = {
     DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
     UpdateSketchClassStyle: 'UpdateSketchClassStyle',
     ToggleSketchClassGeographyClipping: 'ToggleSketchClassGeographyClipping',
+    CreateDraftReport: 'CreateDraftReport',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -36423,6 +36967,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    DraftReportDetails: 'DraftReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

@@ -7243,6 +7243,10 @@ select{
   border-color:rgb(239 68 68 / var(--tw-border-opacity, 1))
 }
 
+.border-red-500\/90{
+  border-color:rgb(239 68 68 / 0.9)
+}
+
 .border-red-600{
   --tw-border-opacity:1;
   border-color:rgb(220 38 38 / var(--tw-border-opacity, 1))
@@ -7262,6 +7266,11 @@ select{
   border-color:rgb(255 255 255 / var(--tw-border-opacity, 1))
 }
 
+.border-yellow-200{
+  --tw-border-opacity:1;
+  border-color:rgb(253 230 138 / var(--tw-border-opacity, 1))
+}
+
 .border-yellow-300{
   --tw-border-opacity:1;
   border-color:rgb(252 211 77 / var(--tw-border-opacity, 1))
@@ -7275,6 +7284,50 @@ select{
 .border-yellow-600{
   --tw-border-opacity:1;
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
+}
+
+.border-red-500\/80{
+  border-color:rgb(239 68 68 / 0.8)
+}
+
+.border-red-500\/50{
+  border-color:rgb(239 68 68 / 0.5)
+}
+
+.border-red-500\/20{
+  border-color:rgb(239 68 68 / 0.2)
+}
+
+.border-red-500\/10{
+  border-color:rgb(239 68 68 / 0.1)
+}
+
+.border-yellow-200\/20{
+  border-color:rgb(253 230 138 / 0.2)
+}
+
+.border-yellow-400\/20{
+  border-color:rgb(251 191 36 / 0.2)
+}
+
+.border-yellow-400\/10{
+  border-color:rgb(251 191 36 / 0.1)
+}
+
+.border-yellow-400\/15{
+  border-color:rgb(251 191 36 / 0.15)
+}
+
+.border-blue-200\/20{
+  border-color:rgb(191 219 254 / 0.2)
+}
+
+.border-blue-500\/20{
+  border-color:rgb(59 130 246 / 0.2)
+}
+
+.border-blue-500\/10{
+  border-color:rgb(59 130 246 / 0.1)
 }
 
 .border-b-black{
@@ -7315,6 +7368,11 @@ select{
 
 .border-t-black\/5{
   border-top-color:rgb(0 0 0 / 0.05)
+}
+
+.border-t-white{
+  --tw-border-opacity:1;
+  border-top-color:rgb(255 255 255 / var(--tw-border-opacity, 1))
 }
 
 .border-opacity-0{
@@ -8758,6 +8816,11 @@ select{
 .text-yellow-800{
   --tw-text-opacity:1;
   color:rgb(146 64 14 / var(--tw-text-opacity, 1))
+}
+
+.text-yellow-900{
+  --tw-text-opacity:1;
+  color:rgb(120 53 15 / var(--tw-text-opacity, 1))
 }
 
 .text-opacity-80{

@@ -374,3 +374,40 @@ query SketchClassGeographyEditorDetails($slug: String!) {
     }
   }
 }
+
+fragment DraftReportDetails on Report {
+  id
+  createdAt
+  tabs {
+    id
+    title
+    position
+    cards {
+      id
+      title
+      position
+      body
+      type
+      componentSettings
+      alternateLanguageSettings
+      tint
+      icon
+    }
+  }
+}
+
+query DraftReport($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    draftReport {
+      ...DraftReportDetails
+    }
+  }
+}
+
+mutation CreateDraftReport($sketchClassId: Int!) {
+  createDraftReport(input: { sketchClassId: $sketchClassId }) {
+    report {
+      ...DraftReportDetails
+    }
+  }
+}
