@@ -375,24 +375,27 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
+fragment ReportTabDetails on ReportTab {
+  id
+  title
+  position
+  cards {
+    id
+    title
+    position
+    type
+    componentSettings
+    alternateLanguageSettings
+    tint
+    icon
+  }
+}
+
 fragment DraftReportDetails on Report {
   id
   createdAt
   tabs {
-    id
-    title
-    position
-    cards {
-      id
-      title
-      position
-      body
-      type
-      componentSettings
-      alternateLanguageSettings
-      tint
-      icon
-    }
+    ...ReportTabDetails
   }
 }
 
@@ -408,6 +411,40 @@ mutation CreateDraftReport($sketchClassId: Int!) {
   createDraftReport(input: { sketchClassId: $sketchClassId }) {
     report {
       ...DraftReportDetails
+    }
+  }
+}
+
+mutation AddReportTab($reportId: Int!, $title: String!, $position: Int!) {
+  addReportTab(
+    input: { reportId: $reportId, title: $title, tabPosition: $position }
+  ) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+
+mutation DeleteReportTab($tabId: Int!, $moveCardsToTabId: Int) {
+  deleteReportTab(
+    input: { tabId: $tabId, moveCardsToTabId: $moveCardsToTabId }
+  ) {
+    boolean
+  }
+}
+
+mutation RenameReportTab($tabId: Int!, $title: String!) {
+  renameReportTab(input: { tabId: $tabId, title: $title }) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+
+mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
+  reorderReportTabs(input: { reportId: $reportId, tabIds: $tabIds }) {
+    reportTabs {
+      ...ReportTabDetails
     }
   }
 }

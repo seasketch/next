@@ -101,6 +101,36 @@ type AddGroupToAclPayload {
   tableOfContentsItem: TableOfContentsItem
 }
 
+"""All input for the `addReportTab` mutation."""
+input AddReportTabInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  reportId: Int
+  tabPosition: Int
+  title: String
+}
+
+"""The output of our `addReportTab` mutation."""
+type AddReportTabPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Report` that is related to this `ReportTab`."""
+  report: Report
+  reportTab: ReportTab
+}
+
 """All input for the `addUserToGroup` mutation."""
 input AddUserToGroupInput {
   """
@@ -899,36 +929,6 @@ type CancelBackgroundJobPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-}
-
-"""All input for the `checkDuplicateSketchClasses` mutation."""
-input CheckDuplicateSketchClassesInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-}
-
-"""The output of our `checkDuplicateSketchClasses` mutation."""
-type CheckDuplicateSketchClassesPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  results: [CheckDuplicateSketchClassesRecord]
-}
-
-"""The return type of our `checkDuplicateSketchClasses` mutation."""
-type CheckDuplicateSketchClassesRecord {
-  count: BigInt
-  id: Int
 }
 
 """All input for the `clearFormElementStyle` mutation."""
@@ -4947,6 +4947,33 @@ type DeleteReportPayload {
   sketchClass: SketchClass
 }
 
+"""All input for the `deleteReportTab` mutation."""
+input DeleteReportTabInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  moveCardsToTabId: Int
+  tabId: Int
+}
+
+"""The output of our `deleteReportTab` mutation."""
+type DeleteReportTabPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `deleteSketchByNodeId` mutation."""
 input DeleteSketchByNodeIdInput {
   """
@@ -8397,6 +8424,12 @@ type Mutation {
     input: AddGroupToAclInput!
   ): AddGroupToAclPayload
   addImageToSprite(height: Int!, image: Upload!, pixelRatio: Int!, spriteId: Int!, width: Int!): Sprite
+  addReportTab(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AddReportTabInput!
+  ): AddReportTabPayload
 
   """
   Add the given user to a group. Must be an administrator of the project.
@@ -8442,12 +8475,6 @@ type Mutation {
     """
     input: CancelBackgroundJobInput!
   ): CancelBackgroundJobPayload
-  checkDuplicateSketchClasses(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CheckDuplicateSketchClassesInput!
-  ): CheckDuplicateSketchClassesPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9216,6 +9243,12 @@ type Mutation {
     """
     input: DeleteReportByNodeIdInput!
   ): DeleteReportPayload
+  deleteReportTab(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteReportTabInput!
+  ): DeleteReportTabPayload
 
   """Deletes a single `Sketch` using a unique key."""
   deleteSketch(
@@ -9628,6 +9661,18 @@ type Mutation {
     """
     input: RemoveValidChildSketchClassInput!
   ): RemoveValidChildSketchClassPayload
+  renameReportTab(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RenameReportTabInput!
+  ): RenameReportTabPayload
+  reorderReportTabs(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ReorderReportTabsInput!
+  ): ReorderReportTabsPayload
 
   """Replace the tileset for an existing data source"""
   replacePMTiles(dataSourceId: Int!, pmtilesKey: String!): DataLayer!
@@ -13763,6 +13808,35 @@ type RemoveValidChildSketchClassPayload {
   query: Query
 }
 
+"""All input for the `renameReportTab` mutation."""
+input RenameReportTabInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  tabId: Int
+  title: String
+}
+
+"""The output of our `renameReportTab` mutation."""
+type RenameReportTabPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Report` that is related to this `ReportTab`."""
+  report: Report
+  reportTab: ReportTab
+}
+
 type RenderedAboutPageContent {
   html: String
   lang: String
@@ -13772,6 +13846,32 @@ enum RenderUnderType {
   LABELS
   LAND
   NONE
+}
+
+"""All input for the `reorderReportTabs` mutation."""
+input ReorderReportTabsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  reportId: Int
+  tabIds: [Int]
+}
+
+"""The output of our `reorderReportTabs` mutation."""
+type ReorderReportTabsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportTabs: [ReportTab!]
 }
 
 type Report implements Node {

@@ -137,6 +137,33 @@ export type AddGroupToAclPayload = {
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
+/** All input for the `addReportTab` mutation. */
+export type AddReportTabInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportId?: Maybe<Scalars['Int']>;
+  tabPosition?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `addReportTab` mutation. */
+export type AddReportTabPayload = {
+  __typename?: 'AddReportTabPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Report` that is related to this `ReportTab`. */
+  report?: Maybe<Report>;
+  reportTab?: Maybe<ReportTab>;
+};
+
 /** All input for the `addUserToGroup` mutation. */
 export type AddUserToGroupInput = {
   /**
@@ -773,35 +800,6 @@ export type CancelBackgroundJobPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-};
-
-/** All input for the `checkDuplicateSketchClasses` mutation. */
-export type CheckDuplicateSketchClassesInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `checkDuplicateSketchClasses` mutation. */
-export type CheckDuplicateSketchClassesPayload = {
-  __typename?: 'CheckDuplicateSketchClassesPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  results?: Maybe<Array<Maybe<CheckDuplicateSketchClassesRecord>>>;
-};
-
-/** The return type of our `checkDuplicateSketchClasses` mutation. */
-export type CheckDuplicateSketchClassesRecord = {
-  __typename?: 'CheckDuplicateSketchClassesRecord';
-  count?: Maybe<Scalars['BigInt']>;
-  id?: Maybe<Scalars['Int']>;
 };
 
 /** All input for the `clearFormElementStyle` mutation. */
@@ -4249,6 +4247,30 @@ export type DeleteReportPayloadReportEdgeArgs = {
   orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
+/** All input for the `deleteReportTab` mutation. */
+export type DeleteReportTabInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  moveCardsToTabId?: Maybe<Scalars['Int']>;
+  tabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `deleteReportTab` mutation. */
+export type DeleteReportTabPayload = {
+  __typename?: 'DeleteReportTabPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `deleteSketchByNodeId` mutation. */
 export type DeleteSketchByNodeIdInput = {
   /**
@@ -7243,6 +7265,7 @@ export type Mutation = {
   /** Add a group to a given access control list. Must be an administrator. */
   addGroupToAcl?: Maybe<AddGroupToAclPayload>;
   addImageToSprite?: Maybe<Sprite>;
+  addReportTab?: Maybe<AddReportTabPayload>;
   /** Add the given user to a group. Must be an administrator of the project. */
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
   /** Add a SketchClass to the list of valid children for a Collection-type SketchClass. */
@@ -7251,7 +7274,6 @@ export type Mutation = {
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
-  checkDuplicateSketchClasses?: Maybe<CheckDuplicateSketchClassesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
@@ -7473,6 +7495,7 @@ export type Mutation = {
   deleteReport?: Maybe<DeleteReportPayload>;
   /** Deletes a single `Report` using its globally unique id. */
   deleteReportByNodeId?: Maybe<DeleteReportPayload>;
+  deleteReportTab?: Maybe<DeleteReportTabPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
   /** Deletes a single `Sketch` using its globally unique id. */
@@ -7594,6 +7617,8 @@ export type Mutation = {
   removeUserFromGroup?: Maybe<RemoveUserFromGroupPayload>;
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
+  renameReportTab?: Maybe<RenameReportTabPayload>;
+  reorderReportTabs?: Maybe<ReorderReportTabsPayload>;
   /** Replace the tileset for an existing data source */
   replacePMTiles: DataLayer;
   /**
@@ -7880,6 +7905,12 @@ export type MutationAddImageToSpriteArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationAddReportTabArgs = {
+  input: AddReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationAddUserToGroupArgs = {
   input: AddUserToGroupInput;
 };
@@ -7912,12 +7943,6 @@ export type MutationArchiveResponsesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCancelBackgroundJobArgs = {
   input: CancelBackgroundJobInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCheckDuplicateSketchClassesArgs = {
-  input: CheckDuplicateSketchClassesInput;
 };
 
 
@@ -8521,6 +8546,12 @@ export type MutationDeleteReportByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportTabArgs = {
+  input: DeleteReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchArgs = {
   input: DeleteSketchInput;
 };
@@ -8823,6 +8854,18 @@ export type MutationRemoveUserFromGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveValidChildSketchClassArgs = {
   input: RemoveValidChildSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRenameReportTabArgs = {
+  input: RenameReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReorderReportTabsArgs = {
+  input: ReorderReportTabsInput;
 };
 
 
@@ -12710,6 +12753,32 @@ export type RemoveValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `renameReportTab` mutation. */
+export type RenameReportTabInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tabId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `renameReportTab` mutation. */
+export type RenameReportTabPayload = {
+  __typename?: 'RenameReportTabPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Report` that is related to this `ReportTab`. */
+  report?: Maybe<Report>;
+  reportTab?: Maybe<ReportTab>;
+};
+
 export enum RenderUnderType {
   Labels = 'LABELS',
   Land = 'LAND',
@@ -12720,6 +12789,30 @@ export type RenderedAboutPageContent = {
   __typename?: 'RenderedAboutPageContent';
   html?: Maybe<Scalars['String']>;
   lang?: Maybe<Scalars['String']>;
+};
+
+/** All input for the `reorderReportTabs` mutation. */
+export type ReorderReportTabsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportId?: Maybe<Scalars['Int']>;
+  tabIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `reorderReportTabs` mutation. */
+export type ReorderReportTabsPayload = {
+  __typename?: 'ReorderReportTabsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportTabs?: Maybe<Array<ReportTab>>;
 };
 
 export type Report = Node & {
@@ -21396,16 +21489,21 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type ReportTabDetailsFragment = (
+  { __typename?: 'ReportTab' }
+  & Pick<ReportTab, 'id' | 'title' | 'position'>
+  & { cards?: Maybe<Array<(
+    { __typename?: 'ReportCard' }
+    & Pick<ReportCard, 'id' | 'title' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon'>
+  )>> }
+);
+
 export type DraftReportDetailsFragment = (
   { __typename?: 'Report' }
   & Pick<Report, 'id' | 'createdAt'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
-    & Pick<ReportTab, 'id' | 'title' | 'position'>
-    & { cards?: Maybe<Array<(
-      { __typename?: 'ReportCard' }
-      & Pick<ReportCard, 'id' | 'title' | 'position' | 'body' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon'>
-    )>> }
+    & ReportTabDetailsFragment
   )>> }
 );
 
@@ -21438,6 +21536,72 @@ export type CreateDraftReportMutation = (
       { __typename?: 'Report' }
       & DraftReportDetailsFragment
     )> }
+  )> }
+);
+
+export type AddReportTabMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+  title: Scalars['String'];
+  position: Scalars['Int'];
+}>;
+
+
+export type AddReportTabMutation = (
+  { __typename?: 'Mutation' }
+  & { addReportTab?: Maybe<(
+    { __typename?: 'AddReportTabPayload' }
+    & { reportTab?: Maybe<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteReportTabMutationVariables = Exact<{
+  tabId: Scalars['Int'];
+  moveCardsToTabId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type DeleteReportTabMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReportTab?: Maybe<(
+    { __typename?: 'DeleteReportTabPayload' }
+    & Pick<DeleteReportTabPayload, 'boolean'>
+  )> }
+);
+
+export type RenameReportTabMutationVariables = Exact<{
+  tabId: Scalars['Int'];
+  title: Scalars['String'];
+}>;
+
+
+export type RenameReportTabMutation = (
+  { __typename?: 'Mutation' }
+  & { renameReportTab?: Maybe<(
+    { __typename?: 'RenameReportTabPayload' }
+    & { reportTab?: Maybe<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )> }
+  )> }
+);
+
+export type ReorderReportTabsMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+  tabIds: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type ReorderReportTabsMutation = (
+  { __typename?: 'Mutation' }
+  & { reorderReportTabs?: Maybe<(
+    { __typename?: 'ReorderReportTabsPayload' }
+    & { reportTabs?: Maybe<Array<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )>> }
   )> }
 );
 
@@ -24656,28 +24820,32 @@ export const LogicRuleEditorFormDetailsFragmentDoc = /*#__PURE__*/ gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ReportTabDetails on ReportTab {
+  id
+  title
+  position
+  cards {
+    id
+    title
+    position
+    type
+    componentSettings
+    alternateLanguageSettings
+    tint
+    icon
+  }
+}
+    `;
 export const DraftReportDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment DraftReportDetails on Report {
   id
   createdAt
   tabs {
-    id
-    title
-    position
-    cards {
-      id
-      title
-      position
-      body
-      type
-      componentSettings
-      alternateLanguageSettings
-      tint
-      icon
-    }
+    ...ReportTabDetails
   }
 }
-    `;
+    ${ReportTabDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -27732,6 +27900,42 @@ export const CreateDraftReportDocument = /*#__PURE__*/ gql`
   }
 }
     ${DraftReportDetailsFragmentDoc}`;
+export const AddReportTabDocument = /*#__PURE__*/ gql`
+    mutation AddReportTab($reportId: Int!, $title: String!, $position: Int!) {
+  addReportTab(
+    input: {reportId: $reportId, title: $title, tabPosition: $position}
+  ) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export const DeleteReportTabDocument = /*#__PURE__*/ gql`
+    mutation DeleteReportTab($tabId: Int!, $moveCardsToTabId: Int) {
+  deleteReportTab(input: {tabId: $tabId, moveCardsToTabId: $moveCardsToTabId}) {
+    boolean
+  }
+}
+    `;
+export const RenameReportTabDocument = /*#__PURE__*/ gql`
+    mutation RenameReportTab($tabId: Int!, $title: String!) {
+  renameReportTab(input: {tabId: $tabId, title: $title}) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export const ReorderReportTabsDocument = /*#__PURE__*/ gql`
+    mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
+  reorderReportTabs(input: {reportId: $reportId, tabIds: $tabIds}) {
+    reportTabs {
+      ...ReportTabDetails
+    }
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -29172,6 +29376,10 @@ export const namedOperations = {
     UpdateSketchClassStyle: 'UpdateSketchClassStyle',
     ToggleSketchClassGeographyClipping: 'ToggleSketchClassGeographyClipping',
     CreateDraftReport: 'CreateDraftReport',
+    AddReportTab: 'AddReportTab',
+    DeleteReportTab: 'DeleteReportTab',
+    RenameReportTab: 'RenameReportTab',
+    ReorderReportTabs: 'ReorderReportTabs',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -29313,6 +29521,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    ReportTabDetails: 'ReportTabDetails',
     DraftReportDetails: 'DraftReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',

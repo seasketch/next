@@ -1,6 +1,9 @@
-import { Trans, useTranslation } from "react-i18next";
+import React, { useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
+  DraftReportDocument,
   SketchingDetailsFragment,
+  useAddReportTabMutation,
   useCreateDraftReportMutation,
   useDraftReportQuery,
 } from "../../generated/graphql";
@@ -11,16 +14,14 @@ import {
   MenuBarContentClasses,
   MenuBarItemClasses,
 } from "../../components/Menubar";
-import {
-  ReportCardConfiguration,
-  ReportConfiguration,
-  registerCards,
-} from "../../reports/cards";
-import { ReportCardFactory } from "../../reports/ReportCard";
-import { TextBlockCardConfiguration } from "../../reports/TextBlockCard";
+import { ReportConfiguration, registerCards } from "../../reports/cards";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
-import useDebounce from "../../useDebounce";
+import useDialog from "../../components/useDialog";
+import { ReportContextProvider } from "../../reports/ReportContext";
+import { ReportTabs } from "../../reports/ReportTabs";
+import { ReportBody } from "../../reports/ReportBody";
+import { ReportTabManagementModal } from "../../reports/ReportTabManagementModal";
 
 registerCards();
 
@@ -41,59 +42,48 @@ export default function SketchClassReportsAdmin({
 
   const [createDraftReport, createDraftReportState] =
     useCreateDraftReportMutation({
-      // refetchQueries: [
-      //   {
-      //     query: DraftReportDocument,
-      //     variables: { sketchClassId: sketchClass.id },
-      //   },
-      // ],
       awaitRefetchQueries: true,
+      refetchQueries: [DraftReportDocument],
     });
 
-  // const report: ReportConfiguration = {
-  //   id: 1,
-  //   tabs: [
-  //     {
-  //       id: 1,
-  //       title: "Tab 1",
-  //       cards: [
-  //         {
-  //           id: 1,
-  //           type: "TextBlock",
-  //           title: "Welcome",
-  //           body: {
-  //             type: "doc",
-  //             content: [
-  //               {
-  //                 type: "paragraph",
-  //                 content: [
-  //                   {
-  //                     type: "text",
-  //                     text: "This is your first report. Please click the + button to customize it.",
-  //                   },
-  //                 ],
-  //               },
-  //             ],
-  //           },
-  //           alternateLanguageSettings: {},
-  //           componentSettings: {
-  //             presentation: "info",
-  //           },
-  //           position: 1,
-  //         } as TextBlockCardConfiguration,
-  //       ],
-  //       position: 1,
-  //       alternateLanguageSettings: {},
-  //     },
-  //   ],
-  // };
+  const [createReportTab] = useAddReportTabMutation({
+    awaitRefetchQueries: true,
+    refetchQueries: [DraftReportDocument],
+  });
 
-  console.log(data);
+  const dialog = useDialog();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [manageTabsModalOpen, setManageTabsModalOpen] = useState(false);
+
+  const handleAddNewTab = () => {
+    if (!draftReport) return;
+
+    const tabName = prompt(t("Choose a name for this Tab"));
+
+    if (tabName === null) {
+      // User cancelled
+      return;
+    }
+
+    if (!tabName.trim()) {
+      alert(t("Tab name cannot be empty"));
+      return;
+    }
+
+    createReportTab({
+      variables: {
+        reportId: draftReport.id,
+        title: tabName.trim(),
+        position: (draftReport.tabs?.length || 0) + 1,
+      },
+    }).catch((error) => {
+      onError(error);
+    });
+  };
 
   const draftReport = data?.sketchClass?.draftReport;
-  const selectedTab = draftReport?.tabs?.[0];
 
-  // console.log({ draftReport, selectedTab });
+  console.log("draftReport", draftReport?.tabs);
 
   if (!loading && !draftReport) {
     if (
@@ -111,7 +101,6 @@ export default function SketchClassReportsAdmin({
     }
     return (
       <div className="flex flex-col w-full h-full items-center p-8">
-        {console.log(data)}
         {createDraftReportState.called &&
           !createDraftReportState.loading &&
           !createDraftReportState.error && (
@@ -148,63 +137,87 @@ export default function SketchClassReportsAdmin({
         {/* main content */}
         <div className="flex-1 p-8">
           {draftReport && (
-            <div className="w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20">
-              {/* report header */}
-              <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
-                <div className="flex-1">
-                  {sketchClass.name} {t("Report")}
-                </div>
-                <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
-                  <button>
-                    <DotsHorizontalIcon className="w-6 h-6 text-gray-400" />
-                  </button>
-                </div>
-                <div className="flex-none flex items-center">
-                  <DropdownMenu.Root>
-                    <DropdownMenu.Trigger asChild>
-                      <button title={t("Add a card or tab")}>
-                        <PlusCircleIcon className="w-7 h-7 text-blue-500 hover:text-blue-600" />
-                      </button>
-                    </DropdownMenu.Trigger>
-                    <DropdownMenu.Content
-                      className={MenuBarContentClasses}
-                      side="bottom"
-                      align="end"
-                      sideOffset={5}
-                    >
-                      <DropdownMenu.Item className={MenuBarItemClasses}>
-                        {t("Add a Card")}
-                      </DropdownMenu.Item>
-                      <DropdownMenu.Item className={MenuBarItemClasses}>
-                        {t("Add a New Tab")}
-                      </DropdownMenu.Item>
-                    </DropdownMenu.Content>
-                  </DropdownMenu.Root>
-                </div>
-              </div>
-              {/* report tabs */}
-              {draftReport.tabs && draftReport.tabs?.length > 1 && <div></div>}
-              {/* report body */}
-              <div className="p-4 bg-gray-50 rounded-b-lg space-y-2">
-                {selectedTab?.cards?.length === 0 && (
-                  <div>
-                    <p className="text-sm text-gray-500">
-                      <Trans ns="admin:sketching">
-                        No cards found. Click the + button to customize.
-                      </Trans>
-                    </p>
+            <>
+              <div className="w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20">
+                {/* report header */}
+                <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
+                  <div className="flex-1">
+                    {sketchClass.name} {t("Report")}
                   </div>
-                )}
-                {selectedTab?.cards?.map((card) => (
-                  <ReportCardFactory
-                    key={card.id}
-                    config={card as ReportCardConfiguration<any>}
-                  />
-                ))}
+                  <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
+                    <button>
+                      <DotsHorizontalIcon className="w-6 h-6 text-gray-400" />
+                    </button>
+                  </div>
+                  <div className="flex-none flex items-center">
+                    <DropdownMenu.Root
+                      open={dropdownOpen}
+                      onOpenChange={setDropdownOpen}
+                    >
+                      <DropdownMenu.Trigger asChild>
+                        <button title={t("Add a card or tab")}>
+                          <PlusCircleIcon className="w-7 h-7 text-blue-500 hover:text-blue-600" />
+                        </button>
+                      </DropdownMenu.Trigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.Content
+                          className={MenuBarContentClasses}
+                          side="bottom"
+                          align="end"
+                          sideOffset={5}
+                        >
+                          <DropdownMenu.Item className={MenuBarItemClasses}>
+                            {t("Add a Card")}
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item
+                            className={MenuBarItemClasses}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              handleAddNewTab();
+                              setDropdownOpen(false);
+                            }}
+                          >
+                            {t("Add a New Tab")}
+                          </DropdownMenu.Item>
+                          <DropdownMenu.Item
+                            className={MenuBarItemClasses}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setManageTabsModalOpen(true);
+                              setDropdownOpen(false);
+                            }}
+                          >
+                            {t("Manage Tabs")}
+                          </DropdownMenu.Item>
+                        </DropdownMenu.Content>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Root>
+                  </div>
+                </div>
+                <ReportContextProvider
+                  report={draftReport as unknown as ReportConfiguration}
+                  sketchClass={sketchClass}
+                  sketch={null}
+                >
+                  {/* report tabs */}
+                  <ReportTabs />
+                  {/* report body */}
+                  <ReportBody />
+                </ReportContextProvider>
+                {/* report footer */}
+                {/* <div className="p-4 border-t"></div> */}
               </div>
-              {/* report footer */}
-              {/* <div className="p-4 border-t"></div> */}
-            </div>
+            </>
+          )}
+
+          {/* Manage Tabs Modal */}
+          {draftReport && (
+            <ReportTabManagementModal
+              isOpen={manageTabsModalOpen}
+              onClose={() => setManageTabsModalOpen(false)}
+              tabs={draftReport.tabs || []}
+              reportId={draftReport.id}
+            />
           )}
         </div>
 
