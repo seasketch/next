@@ -375,19 +375,24 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
+fragment ReportCardDetails on ReportCard {
+  id
+  title
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+}
+
 fragment ReportTabDetails on ReportTab {
   id
   title
   position
   cards {
-    id
-    title
-    position
-    type
-    componentSettings
-    alternateLanguageSettings
-    tint
-    icon
+    ...ReportCardDetails
   }
 }
 
@@ -446,5 +451,72 @@ mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
     reportTabs {
       ...ReportTabDetails
     }
+  }
+}
+
+mutation AddReportCard(
+  $reportTabId: Int!
+  $title: String!
+  $componentSettings: JSON!
+  $cardType: String!
+  $body: JSON!
+) {
+  addReportCard(
+    input: {
+      reportTabId: $reportTabId
+      title: $title
+      componentSettings: $componentSettings
+      cardType: $cardType
+      body: $body
+    }
+  ) {
+    reportCard {
+      id
+    }
+  }
+}
+
+mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
+  reorderReportTabCards(
+    input: { reportTabId: $reportTabId, cardIds: $cardIds }
+  ) {
+    reportCards {
+      id
+      position
+    }
+  }
+}
+
+mutation UpdateReportCard(
+  $id: Int!
+  $title: String!
+  $componentSettings: JSON
+  $alternateLanguageSettings: JSON
+  $body: JSON
+  $tint: String
+  $icon: String
+  $cardType: String
+) {
+  updateReportCard(
+    input: {
+      cardId: $id
+      title: $title
+      componentSettings: $componentSettings
+      alternateLanguageSettings: $alternateLanguageSettings
+      body: $body
+      tint: $tint
+      icon: $icon
+      cardType: $cardType
+    }
+  ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+
+mutation DeleteReportCard($id: Int!) {
+  deleteReportCard(input: { cardId: $id }) {
+    boolean
   }
 }

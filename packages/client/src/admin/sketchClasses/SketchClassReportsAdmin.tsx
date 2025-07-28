@@ -1,27 +1,47 @@
-import React, { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useTranslation } from "react-i18next";
+import { useHistory } from "react-router-dom";
 import {
   DraftReportDocument,
   SketchingDetailsFragment,
-  useAddReportTabMutation,
+  useAddReportCardMutation,
   useCreateDraftReportMutation,
+  useDeleteReportCardMutation,
   useDraftReportQuery,
+  useReorderReportTabCardsMutation,
+  useUpdateReportCardMutation,
+  useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
-import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   MenuBarContentClasses,
   MenuBarItemClasses,
 } from "../../components/Menubar";
-import { ReportConfiguration, registerCards } from "../../reports/cards";
+import {
+  ReportConfiguration,
+  registerCards,
+  ReportCardType,
+  ReportCardConfiguration,
+} from "../../reports/cards/cards";
+import { getCardRegistration } from "../../reports/registerCard";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
-import useDialog from "../../components/useDialog";
-import { ReportContextProvider } from "../../reports/ReportContext";
+import {
+  ReportContextProvider,
+  useReportState,
+} from "../../reports/ReportContext";
 import { ReportTabs } from "../../reports/ReportTabs";
-import { ReportBody } from "../../reports/ReportBody";
+import { SortableReportBody } from "../../reports/SortableReportBody";
 import { ReportTabManagementModal } from "../../reports/ReportTabManagementModal";
+import { AddCardModal } from "../../reports/AddCardModal";
+import Button from "../../components/Button";
+import useDialog from "../../components/useDialog";
+import Spinner from "../../components/Spinner";
+import { FormLanguageContext } from "../../formElements/FormElement";
+import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
+import languages from "../../lang/supported";
+import getSlug from "../../getSlug";
 
 registerCards();
 
@@ -30,7 +50,9 @@ export default function SketchClassReportsAdmin({
 }: {
   sketchClass: SketchingDetailsFragment;
 }) {
-  const { t } = useTranslation("admin:sketching");
+  const { t, i18n } = useTranslation("admin:sketching");
+  const { confirmDelete } = useDialog();
+  const slug = getSlug();
 
   const onError = useGlobalErrorHandler();
   const { data, loading } = useDraftReportQuery({
@@ -40,50 +62,200 @@ export default function SketchClassReportsAdmin({
     onError,
   });
 
+  const { data: projectData } = useProjectMetadataQuery({
+    variables: { slug },
+  });
+
+  // Set up language state
+  let lang = languages.find((l) => l.code === (i18n.language || "EN"))!;
+  if (!lang) {
+    lang = languages.find((l) => l.code === "EN")!;
+  }
+  const [language, setLanguage] = useState(lang);
+
   const [createDraftReport, createDraftReportState] =
     useCreateDraftReportMutation({
       awaitRefetchQueries: true,
       refetchQueries: [DraftReportDocument],
     });
 
-  const [createReportTab] = useAddReportTabMutation({
+  const [addReportCard, addReportCardState] = useAddReportCardMutation({
     awaitRefetchQueries: true,
     refetchQueries: [DraftReportDocument],
   });
 
-  const dialog = useDialog();
+  const [updateReportCard, updateReportCardState] = useUpdateReportCardMutation(
+    { onError }
+  );
+
+  const [reorderReportTabCards] = useReorderReportTabCardsMutation({
+    onError,
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
+  });
+
+  const [deleteCardMutation, deleteCardMutationState] =
+    useDeleteReportCardMutation({
+      onError,
+      refetchQueries: [DraftReportDocument],
+      awaitRefetchQueries: true,
+    });
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageTabsModalOpen, setManageTabsModalOpen] = useState(false);
+  const [addCardModalOpen, setAddCardModalOpen] = useState(false);
+  const [localCardEdits, setLocalCardEdits] =
+    useState<ReportCardConfiguration<any> | null>(null);
 
-  const handleAddNewTab = () => {
-    if (!draftReport) return;
-
-    const tabName = prompt(t("Choose a name for this Tab"));
-
-    if (tabName === null) {
-      // User cancelled
-      return;
-    }
-
-    if (!tabName.trim()) {
-      alert(t("Tab name cannot be empty"));
-      return;
-    }
-
-    createReportTab({
-      variables: {
-        reportId: draftReport.id,
-        title: tabName.trim(),
-        position: (draftReport.tabs?.length || 0) + 1,
-      },
-    }).catch((error) => {
-      onError(error);
-    });
-  };
+  const history = useHistory();
 
   const draftReport = data?.sketchClass?.draftReport;
 
-  console.log("draftReport", draftReport?.tabs);
+  // Use the custom hook to manage report state
+  const {
+    selectedTabId,
+    setSelectedTabId,
+    selectedTab,
+    selectedForEditing,
+    setSelectedForEditing,
+  } = useReportState((draftReport as any) || undefined);
+
+  const handleCardReorder = async (cardIds: number[], reportTabId: number) => {
+    try {
+      await reorderReportTabCards({
+        variables: {
+          reportTabId,
+          cardIds,
+        },
+      });
+    } catch (error) {
+      // Error is handled by onError
+    }
+  };
+
+  const handleCardSelect = async (cardType: string) => {
+    if (!selectedTab) {
+      console.error("No selected tab");
+      return;
+    }
+
+    const registration = getCardRegistration(cardType as ReportCardType);
+    if (!registration) {
+      console.error("Card registration not found for type:", cardType);
+      return;
+    }
+
+    try {
+      await addReportCard({
+        variables: {
+          reportTabId: selectedTab.id,
+          title: registration.pickerSettings.title,
+          componentSettings: registration.defaultSettings,
+          cardType: cardType,
+          body: registration.pickerSettings.body || {},
+        },
+      });
+      setAddCardModalOpen(false);
+    } catch (error) {
+      // Error is handled by onError
+    }
+  };
+
+  const handleCancelEditing = () => {
+    setSelectedForEditing(null);
+    setLocalCardEdits(null);
+  };
+
+  const handleCardUpdate = (
+    cardId: number,
+    updatedConfig: ReportCardConfiguration<any>
+  ) => {
+    if (selectedForEditing === cardId) {
+      setLocalCardEdits(updatedConfig);
+    }
+  };
+
+  const handleDeleteCard = async (cardId: number) => {
+    await confirmDelete({
+      message: t("Are you sure you want to delete this card?"),
+      description: t("This action cannot be undone."),
+      onDelete: async () => {
+        try {
+          await deleteCardMutation({
+            variables: {
+              id: cardId,
+            },
+          });
+        } catch (error) {
+          // Error is handled by onError
+        }
+      },
+    });
+  };
+
+  const handleSaveCard = async () => {
+    if (!selectedCardForEditing) {
+      return;
+    }
+
+    if (!localCardEdits) {
+      // cancel
+      setSelectedForEditing(null);
+      setLocalCardEdits(null);
+      return;
+    }
+
+    try {
+      await updateReportCard({
+        variables: {
+          id: selectedCardForEditing.id,
+          title: localCardEdits.title || selectedCardForEditing.title,
+          componentSettings:
+            localCardEdits.componentSettings ||
+            selectedCardForEditing.componentSettings,
+          alternateLanguageSettings:
+            localCardEdits.alternateLanguageSettings ||
+            selectedCardForEditing.alternateLanguageSettings,
+          body: localCardEdits.body || selectedCardForEditing.body,
+          cardType: localCardEdits.type || selectedCardForEditing.type,
+        },
+        refetchQueries: [DraftReportDocument],
+        awaitRefetchQueries: true,
+      });
+
+      // Clear local edits and exit editing mode on successful save
+      setSelectedForEditing(null);
+      setLocalCardEdits(null);
+    } catch (error) {
+      // Error is handled by onError
+    }
+  };
+
+  // Handle navigation blocking when editing
+  useEffect(() => {
+    if (!selectedForEditing) return;
+
+    const message = t(
+      "You have unsaved changes to a report card. Are you sure you want to leave?"
+    );
+
+    // Handle browser refresh/close (beforeunload)
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = message;
+      return message;
+    };
+
+    // Handle React Router navigation
+    const unblock = history.block(() => message);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      unblock();
+    };
+  }, [selectedForEditing, history, t]);
 
   if (!loading && !draftReport) {
     if (
@@ -124,109 +296,243 @@ export default function SketchClassReportsAdmin({
     );
   }
 
+  const selectedCardForEditing = selectedForEditing
+    ? selectedTab?.cards.find((card) => card.id === selectedForEditing)
+    : null;
+
+  // Merge local edits with server state for the card being edited
+  const cardWithLocalEdits =
+    selectedCardForEditing && localCardEdits
+      ? { ...selectedCardForEditing, ...localCardEdits }
+      : selectedCardForEditing;
+
   return (
-    <div className="flex flex-col w-full h-full">
-      {/* Header */}
-      <div className="bg-gray-100 p-4 flex-none border-b shadow"></div>
+    <FormLanguageContext.Provider
+      value={{
+        lang: language,
+        setLanguage: (code: string) => {
+          const lang = languages.find((lang) => lang.code === code);
+          if (!lang) {
+            throw new Error(`Unrecognized language ${code}`);
+          }
+          setLanguage(lang);
+          i18n.changeLanguage(lang.code);
+        },
+        supportedLanguages:
+          (projectData?.project?.supportedLanguages as string[]) || [],
+      }}
+    >
+      <ReportContextProvider
+        report={draftReport as unknown as ReportConfiguration}
+        sketchClass={sketchClass}
+        sketch={null}
+        adminMode={true}
+        selectedTabId={selectedTabId}
+        setSelectedTabId={setSelectedTabId}
+        selectedTab={selectedTab}
+        selectedForEditing={selectedForEditing}
+        setSelectedForEditing={setSelectedForEditing}
+        deleteCard={handleDeleteCard}
+      >
+        <div className="flex flex-col w-full h-full">
+          {/* Header */}
+          <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
+            <div className="flex-1"></div>
+            <EditorLanguageSelector />
+          </div>
 
-      {/* Main */}
-      <div className="flex-1 flex">
-        {/* left sidebar */}
-        <div className="w-0 bg-white flex-none border-r shadow"></div>
-
-        {/* main content */}
-        <div className="flex-1 p-8">
-          {draftReport && (
-            <>
-              <div className="w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20">
-                {/* report header */}
-                <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
+          {/* Main */}
+          <div className="flex-1 flex relative">
+            {/* left sidebar */}
+            <div
+              className={`absolute left-0 top-0 bg-white flex-none border-r shadow-lg border-black/15 min-h-full flex flex-col w-72 transition-transform ${
+                selectedForEditing ? "translate-x-0" : "-translate-x-72"
+              }`}
+            >
+              {selectedCardForEditing && (
+                <>
                   <div className="flex-1">
-                    {sketchClass.name} {t("Report")}
+                    <div className="p-4">
+                      <h3 className="text-lg font-medium">
+                        {selectedCardForEditing.title}
+                      </h3>
+                    </div>
+                    <div className="p-4 pt-0">
+                      <Suspense
+                        fallback={
+                          <div>
+                            <Spinner />
+                          </div>
+                        }
+                      >
+                        <AdminFactory
+                          type={selectedCardForEditing.type}
+                          config={cardWithLocalEdits}
+                          onUpdate={setLocalCardEdits}
+                        />
+                      </Suspense>
+                    </div>
                   </div>
-                  <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
-                    <button>
-                      <DotsHorizontalIcon className="w-6 h-6 text-gray-400" />
-                    </button>
+                  <div className="flex-none bg-gray-100 p-4 space-x-2 border-t flex justify-end">
+                    <Button
+                      label={t("Cancel")}
+                      onClick={handleCancelEditing}
+                      disabled={updateReportCardState.loading}
+                    />
+                    <Button
+                      label={t("Save")}
+                      onClick={handleSaveCard}
+                      primary
+                      loading={updateReportCardState.loading}
+                      disabled={updateReportCardState.loading}
+                    />
                   </div>
-                  <div className="flex-none flex items-center">
-                    <DropdownMenu.Root
-                      open={dropdownOpen}
-                      onOpenChange={setDropdownOpen}
-                    >
-                      <DropdownMenu.Trigger asChild>
-                        <button title={t("Add a card or tab")}>
-                          <PlusCircleIcon className="w-7 h-7 text-blue-500 hover:text-blue-600" />
-                        </button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.Content
-                          className={MenuBarContentClasses}
-                          side="bottom"
-                          align="end"
-                          sideOffset={5}
+                </>
+              )}
+            </div>
+
+            {/* main content */}
+            <div className="flex-1 p-8">
+              {draftReport && (
+                <>
+                  <div
+                    className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
+                      selectedForEditing
+                        ? "3xl:translate-x-0 translate-x-36"
+                        : ""
+                    }`}
+                  >
+                    {/* report header */}
+                    <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
+                      <div className="flex-1">
+                        {sketchClass.name} {t("Report")}
+                      </div>
+                      {/* <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
+                      <button>
+                        <DotsHorizontalIcon className="w-6 h-6 text-gray-400" />
+                      </button>
+                    </div> */}
+                      <div className="flex-none flex items-center">
+                        <DropdownMenu.Root
+                          open={dropdownOpen}
+                          onOpenChange={setDropdownOpen}
                         >
-                          <DropdownMenu.Item className={MenuBarItemClasses}>
-                            {t("Add a Card")}
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Item
-                            className={MenuBarItemClasses}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              handleAddNewTab();
-                              setDropdownOpen(false);
-                            }}
+                          <DropdownMenu.Trigger
+                            asChild
+                            disabled={!!selectedForEditing}
                           >
-                            {t("Add a New Tab")}
-                          </DropdownMenu.Item>
-                          <DropdownMenu.Item
-                            className={MenuBarItemClasses}
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              setManageTabsModalOpen(true);
-                              setDropdownOpen(false);
-                            }}
-                          >
-                            {t("Manage Tabs")}
-                          </DropdownMenu.Item>
-                        </DropdownMenu.Content>
-                      </DropdownMenu.Portal>
-                    </DropdownMenu.Root>
+                            <button
+                              // disabled={!!selectedForEditing}
+                              title={
+                                selectedForEditing
+                                  ? t("Cannot add a card or tab while editing")
+                                  : t("Add a card or tab")
+                              }
+                            >
+                              <PlusCircleIcon
+                                className={`w-7 h-7 text-blue-500  ${
+                                  selectedForEditing
+                                    ? "text-gray-400"
+                                    : "hover:text-blue-600"
+                                }`}
+                              />
+                            </button>
+                          </DropdownMenu.Trigger>
+                          <DropdownMenu.Portal>
+                            <DropdownMenu.Content
+                              className={MenuBarContentClasses}
+                              side="bottom"
+                              align="end"
+                              sideOffset={5}
+                            >
+                              <DropdownMenu.Item
+                                className={MenuBarItemClasses}
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  setAddCardModalOpen(true);
+                                  setDropdownOpen(false);
+                                }}
+                              >
+                                {t("Add a Card")}
+                              </DropdownMenu.Item>
+                              <DropdownMenu.Item
+                                className={MenuBarItemClasses}
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  setManageTabsModalOpen(true);
+                                  setDropdownOpen(false);
+                                }}
+                              >
+                                {t("Manage Tabs")}
+                              </DropdownMenu.Item>
+                            </DropdownMenu.Content>
+                          </DropdownMenu.Portal>
+                        </DropdownMenu.Root>
+                      </div>
+                    </div>
+
+                    {/* report tabs */}
+                    <ReportTabs />
+                    {/* report body */}
+                    <SortableReportBody
+                      onReorder={(cardIds) =>
+                        handleCardReorder(cardIds, selectedTabId)
+                      }
+                      selectedTab={selectedTab}
+                      selectedForEditing={selectedForEditing}
+                      localCardEdits={localCardEdits}
+                      onCardUpdate={handleCardUpdate}
+                    />
+                    {/* Add Card Modal */}
+                    {draftReport && (
+                      <AddCardModal
+                        isOpen={addCardModalOpen}
+                        onClose={() => setAddCardModalOpen(false)}
+                        onSelect={handleCardSelect}
+                      />
+                    )}
+                    {/* report footer */}
+                    {/* <div className="p-4 border-t"></div> */}
                   </div>
-                </div>
-                <ReportContextProvider
-                  report={draftReport as unknown as ReportConfiguration}
-                  sketchClass={sketchClass}
-                  sketch={null}
-                >
-                  {/* report tabs */}
-                  <ReportTabs />
-                  {/* report body */}
-                  <ReportBody />
-                </ReportContextProvider>
-                {/* report footer */}
-                {/* <div className="p-4 border-t"></div> */}
-              </div>
-            </>
-          )}
+                </>
+              )}
 
-          {/* Manage Tabs Modal */}
-          {draftReport && (
-            <ReportTabManagementModal
-              isOpen={manageTabsModalOpen}
-              onClose={() => setManageTabsModalOpen(false)}
-              tabs={draftReport.tabs || []}
-              reportId={draftReport.id}
-            />
-          )}
+              {/* Manage Tabs Modal */}
+              {draftReport && (
+                <ReportTabManagementModal
+                  isOpen={manageTabsModalOpen}
+                  onClose={() => setManageTabsModalOpen(false)}
+                  tabs={draftReport.tabs || []}
+                  reportId={draftReport.id}
+                />
+              )}
+            </div>
+
+            {/* right sidebar */}
+            <div className="w-0 bg-white flex-none border-l shadow"></div>
+          </div>
+
+          {/* Footer */}
+          {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
         </div>
-
-        {/* right sidebar */}
-        <div className="w-0 bg-white flex-none border-l shadow"></div>
-      </div>
-
-      {/* Footer */}
-      {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
-    </div>
+      </ReportContextProvider>
+    </FormLanguageContext.Provider>
   );
+}
+
+function AdminFactory({
+  type,
+  config,
+  onUpdate,
+}: {
+  type: ReportCardType;
+  config: ReportCardConfiguration<any> | null | undefined;
+  onUpdate: (updatedConfig: ReportCardConfiguration<any>) => void;
+}) {
+  const registration = getCardRegistration(type);
+  if (!registration?.adminComponent || !config) {
+    return null;
+  }
+  const Component = registration.adminComponent;
+  return <Component config={config} onUpdate={onUpdate} />;
 }

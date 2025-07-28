@@ -139,6 +139,33 @@ export type AddGroupToAclPayload = {
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
+/** All input for the `addReportCard` mutation. */
+export type AddReportCardInput = {
+  body?: Maybe<Scalars['JSON']>;
+  cardType?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+  reportTabId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `addReportCard` mutation. */
+export type AddReportCardPayload = {
+  __typename?: 'AddReportCardPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** All input for the `addReportTab` mutation. */
 export type AddReportTabInput = {
   /**
@@ -4214,6 +4241,29 @@ export type DeleteReportByNodeIdInput = {
   nodeId: Scalars['ID'];
 };
 
+/** All input for the `deleteReportCard` mutation. */
+export type DeleteReportCardInput = {
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `deleteReportCard` mutation. */
+export type DeleteReportCardPayload = {
+  __typename?: 'DeleteReportCardPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `deleteReport` mutation. */
 export type DeleteReportInput = {
   /**
@@ -7267,6 +7317,7 @@ export type Mutation = {
   /** Add a group to a given access control list. Must be an administrator. */
   addGroupToAcl?: Maybe<AddGroupToAclPayload>;
   addImageToSprite?: Maybe<Sprite>;
+  addReportCard?: Maybe<AddReportCardPayload>;
   addReportTab?: Maybe<AddReportTabPayload>;
   /** Add the given user to a group. Must be an administrator of the project. */
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
@@ -7497,6 +7548,7 @@ export type Mutation = {
   deleteReport?: Maybe<DeleteReportPayload>;
   /** Deletes a single `Report` using its globally unique id. */
   deleteReportByNodeId?: Maybe<DeleteReportPayload>;
+  deleteReportCard?: Maybe<DeleteReportCardPayload>;
   deleteReportTab?: Maybe<DeleteReportTabPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
@@ -7620,6 +7672,7 @@ export type Mutation = {
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
   renameReportTab?: Maybe<RenameReportTabPayload>;
+  reorderReportTabCards?: Maybe<ReorderReportTabCardsPayload>;
   reorderReportTabs?: Maybe<ReorderReportTabsPayload>;
   /** Replace the tileset for an existing data source */
   replacePMTiles: DataLayer;
@@ -7807,6 +7860,7 @@ export type Mutation = {
   updateReport?: Maybe<UpdateReportPayload>;
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
+  updateReportCard?: Maybe<UpdateReportCardPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7903,6 +7957,12 @@ export type MutationAddImageToSpriteArgs = {
   pixelRatio: Scalars['Int'];
   spriteId: Scalars['Int'];
   width: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationAddReportCardArgs = {
+  input: AddReportCardInput;
 };
 
 
@@ -8548,6 +8608,12 @@ export type MutationDeleteReportByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportCardArgs = {
+  input: DeleteReportCardInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteReportTabArgs = {
   input: DeleteReportTabInput;
 };
@@ -8862,6 +8928,12 @@ export type MutationRemoveValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRenameReportTabArgs = {
   input: RenameReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReorderReportTabCardsArgs = {
+  input: ReorderReportTabCardsInput;
 };
 
 
@@ -9380,6 +9452,12 @@ export type MutationUpdateReportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateReportByNodeIdArgs = {
   input: UpdateReportByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardArgs = {
+  input: UpdateReportCardInput;
 };
 
 
@@ -12791,6 +12869,30 @@ export type RenderedAboutPageContent = {
   __typename?: 'RenderedAboutPageContent';
   html?: Maybe<Scalars['String']>;
   lang?: Maybe<Scalars['String']>;
+};
+
+/** All input for the `reorderReportTabCards` mutation. */
+export type ReorderReportTabCardsInput = {
+  cardIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportTabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `reorderReportTabCards` mutation. */
+export type ReorderReportTabCardsPayload = {
+  __typename?: 'ReorderReportTabCardsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCards?: Maybe<Array<ReportCard>>;
 };
 
 /** All input for the `reorderReportTabs` mutation. */
@@ -16313,6 +16415,36 @@ export type UpdateReportByNodeIdInput = {
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Report` being updated. */
   patch: ReportPatch;
+};
+
+/** All input for the `updateReportCard` mutation. */
+export type UpdateReportCardInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  body?: Maybe<Scalars['JSON']>;
+  cardId?: Maybe<Scalars['Int']>;
+  cardType?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+  icon?: Maybe<Scalars['String']>;
+  tint?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateReportCard` mutation. */
+export type UpdateReportCardPayload = {
+  __typename?: 'UpdateReportCardPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
 };
 
 /** All input for the `updateReport` mutation. */
@@ -21491,12 +21623,17 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type ReportCardDetailsFragment = (
+  { __typename?: 'ReportCard' }
+  & Pick<ReportCard, 'id' | 'title' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+);
+
 export type ReportTabDetailsFragment = (
   { __typename?: 'ReportTab' }
   & Pick<ReportTab, 'id' | 'title' | 'position'>
   & { cards?: Maybe<Array<(
     { __typename?: 'ReportCard' }
-    & Pick<ReportCard, 'id' | 'title' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon'>
+    & ReportCardDetailsFragment
   )>> }
 );
 
@@ -21604,6 +21741,79 @@ export type ReorderReportTabsMutation = (
       { __typename?: 'ReportTab' }
       & ReportTabDetailsFragment
     )>> }
+  )> }
+);
+
+export type AddReportCardMutationVariables = Exact<{
+  reportTabId: Scalars['Int'];
+  title: Scalars['String'];
+  componentSettings: Scalars['JSON'];
+  cardType: Scalars['String'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type AddReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { addReportCard?: Maybe<(
+    { __typename?: 'AddReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id'>
+    )> }
+  )> }
+);
+
+export type ReorderReportTabCardsMutationVariables = Exact<{
+  reportTabId: Scalars['Int'];
+  cardIds: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type ReorderReportTabCardsMutation = (
+  { __typename?: 'Mutation' }
+  & { reorderReportTabCards?: Maybe<(
+    { __typename?: 'ReorderReportTabCardsPayload' }
+    & { reportCards?: Maybe<Array<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id' | 'position'>
+    )>> }
+  )> }
+);
+
+export type UpdateReportCardMutationVariables = Exact<{
+  id: Scalars['Int'];
+  title: Scalars['String'];
+  componentSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  body?: Maybe<Scalars['JSON']>;
+  tint?: Maybe<Scalars['String']>;
+  icon?: Maybe<Scalars['String']>;
+  cardType?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReportCard?: Maybe<(
+    { __typename?: 'UpdateReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & ReportCardDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteReportCardMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReportCard?: Maybe<(
+    { __typename?: 'DeleteReportCardPayload' }
+    & Pick<DeleteReportCardPayload, 'boolean'>
   )> }
 );
 
@@ -24822,23 +25032,29 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const ReportCardDetailsFragmentDoc = gql`
+    fragment ReportCardDetails on ReportCard {
+  id
+  title
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+}
+    `;
 export const ReportTabDetailsFragmentDoc = gql`
     fragment ReportTabDetails on ReportTab {
   id
   title
   position
   cards {
-    id
-    title
-    position
-    type
-    componentSettings
-    alternateLanguageSettings
-    tint
-    icon
+    ...ReportCardDetails
   }
 }
-    `;
+    ${ReportCardDetailsFragmentDoc}`;
 export const DraftReportDetailsFragmentDoc = gql`
     fragment DraftReportDetails on Report {
   id
@@ -33388,6 +33604,161 @@ export function useReorderReportTabsMutation(baseOptions?: Apollo.MutationHookOp
 export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderReportTabsMutation>;
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
+export const AddReportCardDocument = gql`
+    mutation AddReportCard($reportTabId: Int!, $title: String!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+  addReportCard(
+    input: {reportTabId: $reportTabId, title: $title, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+  ) {
+    reportCard {
+      id
+    }
+  }
+}
+    `;
+export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutation, AddReportCardMutationVariables>;
+
+/**
+ * __useAddReportCardMutation__
+ *
+ * To run a mutation, you first call `useAddReportCardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddReportCardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addReportCardMutation, { data, loading, error }] = useAddReportCardMutation({
+ *   variables: {
+ *      reportTabId: // value for 'reportTabId'
+ *      title: // value for 'title'
+ *      componentSettings: // value for 'componentSettings'
+ *      cardType: // value for 'cardType'
+ *      body: // value for 'body'
+ *   },
+ * });
+ */
+export function useAddReportCardMutation(baseOptions?: Apollo.MutationHookOptions<AddReportCardMutation, AddReportCardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddReportCardMutation, AddReportCardMutationVariables>(AddReportCardDocument, options);
+      }
+export type AddReportCardMutationHookResult = ReturnType<typeof useAddReportCardMutation>;
+export type AddReportCardMutationResult = Apollo.MutationResult<AddReportCardMutation>;
+export type AddReportCardMutationOptions = Apollo.BaseMutationOptions<AddReportCardMutation, AddReportCardMutationVariables>;
+export const ReorderReportTabCardsDocument = gql`
+    mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
+  reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
+    reportCards {
+      id
+      position
+    }
+  }
+}
+    `;
+export type ReorderReportTabCardsMutationFn = Apollo.MutationFunction<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
+
+/**
+ * __useReorderReportTabCardsMutation__
+ *
+ * To run a mutation, you first call `useReorderReportTabCardsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useReorderReportTabCardsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [reorderReportTabCardsMutation, { data, loading, error }] = useReorderReportTabCardsMutation({
+ *   variables: {
+ *      reportTabId: // value for 'reportTabId'
+ *      cardIds: // value for 'cardIds'
+ *   },
+ * });
+ */
+export function useReorderReportTabCardsMutation(baseOptions?: Apollo.MutationHookOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>(ReorderReportTabCardsDocument, options);
+      }
+export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReorderReportTabCardsMutation>;
+export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
+export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
+export const UpdateReportCardDocument = gql`
+    mutation UpdateReportCard($id: Int!, $title: String!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+  updateReportCard(
+    input: {cardId: $id, title: $title, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+  ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCardMutation, UpdateReportCardMutationVariables>;
+
+/**
+ * __useUpdateReportCardMutation__
+ *
+ * To run a mutation, you first call `useUpdateReportCardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateReportCardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateReportCardMutation, { data, loading, error }] = useUpdateReportCardMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      title: // value for 'title'
+ *      componentSettings: // value for 'componentSettings'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
+ *      body: // value for 'body'
+ *      tint: // value for 'tint'
+ *      icon: // value for 'icon'
+ *      cardType: // value for 'cardType'
+ *   },
+ * });
+ */
+export function useUpdateReportCardMutation(baseOptions?: Apollo.MutationHookOptions<UpdateReportCardMutation, UpdateReportCardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateReportCardMutation, UpdateReportCardMutationVariables>(UpdateReportCardDocument, options);
+      }
+export type UpdateReportCardMutationHookResult = ReturnType<typeof useUpdateReportCardMutation>;
+export type UpdateReportCardMutationResult = Apollo.MutationResult<UpdateReportCardMutation>;
+export type UpdateReportCardMutationOptions = Apollo.BaseMutationOptions<UpdateReportCardMutation, UpdateReportCardMutationVariables>;
+export const DeleteReportCardDocument = gql`
+    mutation DeleteReportCard($id: Int!) {
+  deleteReportCard(input: {cardId: $id}) {
+    boolean
+  }
+}
+    `;
+export type DeleteReportCardMutationFn = Apollo.MutationFunction<DeleteReportCardMutation, DeleteReportCardMutationVariables>;
+
+/**
+ * __useDeleteReportCardMutation__
+ *
+ * To run a mutation, you first call `useDeleteReportCardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteReportCardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteReportCardMutation, { data, loading, error }] = useDeleteReportCardMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteReportCardMutation(baseOptions?: Apollo.MutationHookOptions<DeleteReportCardMutation, DeleteReportCardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteReportCardMutation, DeleteReportCardMutationVariables>(DeleteReportCardDocument, options);
+      }
+export type DeleteReportCardMutationHookResult = ReturnType<typeof useDeleteReportCardMutation>;
+export type DeleteReportCardMutationResult = Apollo.MutationResult<DeleteReportCardMutation>;
+export type DeleteReportCardMutationOptions = Apollo.BaseMutationOptions<DeleteReportCardMutation, DeleteReportCardMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -37143,6 +37514,10 @@ export const namedOperations = {
     DeleteReportTab: 'DeleteReportTab',
     RenameReportTab: 'RenameReportTab',
     ReorderReportTabs: 'ReorderReportTabs',
+    AddReportCard: 'AddReportCard',
+    ReorderReportTabCards: 'ReorderReportTabCards',
+    UpdateReportCard: 'UpdateReportCard',
+    DeleteReportCard: 'DeleteReportCard',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -37284,6 +37659,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     DraftReportDetails: 'DraftReportDetails',
     SketchTocDetails: 'SketchTocDetails',

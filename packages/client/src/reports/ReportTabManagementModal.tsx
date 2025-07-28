@@ -7,7 +7,7 @@ import {
   Droppable,
   DropResult,
 } from "react-beautiful-dnd";
-import { PlusIcon, TrashIcon, PencilIcon } from "@heroicons/react/outline";
+import { TrashIcon, PencilIcon } from "@heroicons/react/outline";
 import {
   useAddReportTabMutation,
   useDeleteReportTabMutation,
@@ -17,9 +17,14 @@ import {
   DraftReportDocument,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import Button from "../components/Button";
 import TextInput from "../components/TextInput";
 import useDialog from "../components/useDialog";
+import {
+  CheckCircledIcon,
+  CrossCircledIcon,
+  DragHandleHorizontalIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
 
 interface ReportTabManagementModalProps {
   isOpen: boolean;
@@ -50,6 +55,10 @@ export function ReportTabManagementModal({
     null
   );
 
+  // Optimistic state for tab ordering
+  const [optimisticTabs, setOptimisticTabs] =
+    useState<ReportTabDetailsFragment[]>(tabs);
+
   // GraphQL mutations
   const [addReportTab, { loading: addingTab }] = useAddReportTabMutation({
     onError,
@@ -57,7 +66,7 @@ export function ReportTabManagementModal({
     awaitRefetchQueries: true,
   });
 
-  const [deleteReportTab, { loading: deletingTab }] =
+  const [deleteReportTab, { loading: deletingTabLoading }] =
     useDeleteReportTabMutation({
       onError,
       refetchQueries: [DraftReportDocument],
@@ -78,6 +87,11 @@ export function ReportTabManagementModal({
       awaitRefetchQueries: true,
     });
 
+  // Update optimistic tabs when tabs prop changes
+  React.useEffect(() => {
+    setOptimisticTabs(tabs);
+  }, [tabs]);
+
   // Handle adding a new tab
   const handleAddTab = useCallback(async () => {
     const tabName = prompt(t("Enter a name for the new tab"));
@@ -91,13 +105,13 @@ export function ReportTabManagementModal({
         variables: {
           reportId,
           title: tabName.trim(),
-          position: tabs.length + 1,
+          position: optimisticTabs.length + 1,
         },
       });
     } catch (error) {
       // Error is handled by onError
     }
-  }, [addReportTab, reportId, tabs.length, t]);
+  }, [addReportTab, reportId, optimisticTabs.length, t]);
 
   // Handle starting delete process
   const handleDeleteTab = useCallback((tab: ReportTabDetailsFragment) => {
@@ -179,9 +193,11 @@ export function ReportTabManagementModal({
         return;
       }
 
-      const reorderedTabs = Array.from(tabs);
+      // Update optimistic state immediately
+      const reorderedTabs = Array.from(optimisticTabs);
       const [removed] = reorderedTabs.splice(sourceIndex, 1);
       reorderedTabs.splice(destinationIndex, 0, removed);
+      setOptimisticTabs(reorderedTabs);
 
       try {
         await reorderReportTabs({
@@ -192,36 +208,50 @@ export function ReportTabManagementModal({
         });
       } catch (error) {
         // Error is handled by onError
+        // Revert optimistic state on error
+        setOptimisticTabs(tabs);
       }
     },
-    [reorderReportTabs, reportId, tabs]
+    [reorderReportTabs, reportId, optimisticTabs, tabs]
   );
 
-  const isLoading = addingTab || deletingTab || renamingTab || reorderingTabs;
+  const isLoading =
+    addingTab || deletingTabLoading || renamingTab || reorderingTabs;
 
   return (
     <>
       <Modal
         open={isOpen}
         onRequestClose={onClose}
-        title={t("Manage Tabs")}
-        className="w-64"
+        title={t("Report Tabs")}
+        className="w-56"
         disableBackdropClick={true}
+        footerClassName="bg-gray-100 border-t"
         footer={[
-          {
-            label: t("Add New Tab"),
-            onClick: handleAddTab,
-            disabled: isLoading,
-            variant: "primary",
-          },
           {
             label: t("Close"),
             onClick: onClose,
             variant: "secondary",
           },
+          {
+            label: (
+              <span className="flex items-center space-x-2">
+                <PlusIcon className="" />
+                <span>{t("Add New Tab")}</span>
+              </span>
+            ),
+            onClick: handleAddTab,
+            // variant: "primary",
+            className: "",
+          },
         ]}
       >
-        <div className="space-y-4">
+        <div className="space-y-4 mb-6">
+          <p className="text-sm text-gray-500">
+            {t(
+              "The tab bar will only be shown if a report has 2 or more tabs."
+            )}
+          </p>
           {/* Tabs List */}
           <DragDropContext onDragEnd={handleDragEnd}>
             <Droppable droppableId="tabs">
@@ -231,7 +261,7 @@ export function ReportTabManagementModal({
                   ref={provided.innerRef}
                   className="space-y-2"
                 >
-                  {tabs.map((tab, index) => (
+                  {optimisticTabs.map((tab, index) => (
                     <Draggable
                       key={tab.id}
                       draggableId={tab.id.toString()}
@@ -241,33 +271,23 @@ export function ReportTabManagementModal({
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`bg-gray-50 rounded-lg p-4 border ${
+                          className={`bg-gray-50 rounded-lg px-4 py-2 border ${
                             snapshot.isDragging
-                              ? "shadow-lg rotate-2"
+                              ? "shadow-lg"
                               : "hover:bg-gray-100"
-                          } transition-all duration-200`}
+                          } ${!snapshot.isDragging ? "-150" : ""}`}
+                          style={{
+                            ...provided.draggableProps.style,
+                          }}
                         >
                           <div className="flex items-center space-x-3">
                             {/* Drag Handle */}
                             <div
                               {...provided.dragHandleProps}
-                              className="flex-shrink-0 cursor-move text-gray-400 hover:text-gray-600"
+                              className="flex-shrink-0 cursor-move text-gray-500 hover:text-gray-600"
                             >
-                              <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M8 9h8M8 15h8M8 12h8"
-                                />
-                              </svg>
+                              <DragHandleHorizontalIcon className="w-5 h-5" />
                             </div>
-
                             {/* Tab Content */}
                             <div className="flex-1">
                               {editingTabId === tab.id ? (
@@ -286,53 +306,38 @@ export function ReportTabManagementModal({
                                     label=""
                                     name="tabName"
                                   />
+                                  <span>&nbsp;</span>
                                   <button
                                     onClick={handleSaveEdit}
-                                    disabled={isLoading}
-                                    className="text-green-600 hover:text-green-700"
+                                    disabled={isLoading || renamingTab}
+                                    className="text-green-600 hover:text-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M5 13l4 4L19 7"
-                                      />
-                                    </svg>
+                                    {renamingTab ? (
+                                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-600"></div>
+                                    ) : (
+                                      <CheckCircledIcon className="w-5 h-5" />
+                                    )}
                                   </button>
                                   <button
                                     onClick={handleCancelEdit}
-                                    className="text-gray-600 hover:text-gray-700"
+                                    disabled={isLoading || renamingTab}
+                                    className="text-gray-600 hover:text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
-                                    <svg
-                                      className="w-4 h-4"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      viewBox="0 0 24 24"
-                                    >
-                                      <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M6 18L18 6M6 6l12 12"
-                                      />
-                                    </svg>
+                                    <CrossCircledIcon className="w-5 h-5" />
                                   </button>
                                 </div>
                               ) : (
                                 <div className="flex items-center justify-between">
-                                  <div>
+                                  <div className="flex items-center space-x-2">
                                     <h3 className="font-medium text-gray-900">
                                       {tab.title}
                                     </h3>
-                                    <p className="text-sm text-gray-500">
-                                      {tab.cards?.length || 0} {t("cards")}
-                                    </p>
+                                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                                      {tab.cards?.length || 0}{" "}
+                                      {(tab.cards?.length || 0) === 1
+                                        ? t("Card")
+                                        : t("Cards")}
+                                    </span>
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <button
@@ -367,7 +372,7 @@ export function ReportTabManagementModal({
           </DragDropContext>
 
           {/* Empty State */}
-          {tabs.length === 0 && (
+          {optimisticTabs.length === 0 && (
             <div className="text-center py-8">
               <div className="text-gray-400 mb-4">
                 <svg
@@ -409,7 +414,8 @@ export function ReportTabManagementModal({
             {
               label: t("Delete"),
               onClick: handleConfirmDelete,
-              disabled: deletingTab,
+              disabled: deletingTabLoading,
+              loading: deletingTabLoading,
               variant: "danger",
             },
           ]}
@@ -434,28 +440,29 @@ export function ReportTabManagementModal({
                 </p>
 
                 <div className="space-y-2">
-                  {tabs
-                    .filter((tab) => tab.id !== tabToDelete.id)
-                    .map((tab) => (
-                      <label
-                        key={tab.id}
-                        className="flex items-center space-x-2 cursor-pointer"
-                      >
-                        <input
-                          type="radio"
-                          name="moveToTab"
-                          value={tab.id}
-                          checked={selectedMoveToTabId === tab.id}
-                          onChange={(e) =>
-                            setSelectedMoveToTabId(parseInt(e.target.value))
-                          }
-                          className="text-blue-600"
-                        />
-                        <span className="text-sm">
+                  <select
+                    value={selectedMoveToTabId || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value === "") {
+                        setSelectedMoveToTabId(null);
+                      } else if (value) {
+                        setSelectedMoveToTabId(parseInt(value));
+                      }
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="">
+                      {t("Select a tab to move cards to...")}
+                    </option>
+                    {optimisticTabs
+                      .filter((tab) => tab.id !== tabToDelete.id)
+                      .map((tab) => (
+                        <option key={tab.id} value={tab.id}>
                           {tab.title} ({tab.cards?.length || 0} {t("cards")})
-                        </span>
-                      </label>
-                    ))}
+                        </option>
+                      ))}
+                  </select>
                 </div>
 
                 <p className="text-xs text-gray-500">

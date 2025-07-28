@@ -137,6 +137,33 @@ export type AddGroupToAclPayload = {
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
+/** All input for the `addReportCard` mutation. */
+export type AddReportCardInput = {
+  body?: Maybe<Scalars['JSON']>;
+  cardType?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+  reportTabId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `addReportCard` mutation. */
+export type AddReportCardPayload = {
+  __typename?: 'AddReportCardPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** All input for the `addReportTab` mutation. */
 export type AddReportTabInput = {
   /**
@@ -4212,6 +4239,29 @@ export type DeleteReportByNodeIdInput = {
   nodeId: Scalars['ID'];
 };
 
+/** All input for the `deleteReportCard` mutation. */
+export type DeleteReportCardInput = {
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `deleteReportCard` mutation. */
+export type DeleteReportCardPayload = {
+  __typename?: 'DeleteReportCardPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `deleteReport` mutation. */
 export type DeleteReportInput = {
   /**
@@ -7265,6 +7315,7 @@ export type Mutation = {
   /** Add a group to a given access control list. Must be an administrator. */
   addGroupToAcl?: Maybe<AddGroupToAclPayload>;
   addImageToSprite?: Maybe<Sprite>;
+  addReportCard?: Maybe<AddReportCardPayload>;
   addReportTab?: Maybe<AddReportTabPayload>;
   /** Add the given user to a group. Must be an administrator of the project. */
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
@@ -7495,6 +7546,7 @@ export type Mutation = {
   deleteReport?: Maybe<DeleteReportPayload>;
   /** Deletes a single `Report` using its globally unique id. */
   deleteReportByNodeId?: Maybe<DeleteReportPayload>;
+  deleteReportCard?: Maybe<DeleteReportCardPayload>;
   deleteReportTab?: Maybe<DeleteReportTabPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
@@ -7618,6 +7670,7 @@ export type Mutation = {
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
   renameReportTab?: Maybe<RenameReportTabPayload>;
+  reorderReportTabCards?: Maybe<ReorderReportTabCardsPayload>;
   reorderReportTabs?: Maybe<ReorderReportTabsPayload>;
   /** Replace the tileset for an existing data source */
   replacePMTiles: DataLayer;
@@ -7805,6 +7858,7 @@ export type Mutation = {
   updateReport?: Maybe<UpdateReportPayload>;
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
+  updateReportCard?: Maybe<UpdateReportCardPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7901,6 +7955,12 @@ export type MutationAddImageToSpriteArgs = {
   pixelRatio: Scalars['Int'];
   spriteId: Scalars['Int'];
   width: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationAddReportCardArgs = {
+  input: AddReportCardInput;
 };
 
 
@@ -8546,6 +8606,12 @@ export type MutationDeleteReportByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportCardArgs = {
+  input: DeleteReportCardInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteReportTabArgs = {
   input: DeleteReportTabInput;
 };
@@ -8860,6 +8926,12 @@ export type MutationRemoveValidChildSketchClassArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRenameReportTabArgs = {
   input: RenameReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReorderReportTabCardsArgs = {
+  input: ReorderReportTabCardsInput;
 };
 
 
@@ -9378,6 +9450,12 @@ export type MutationUpdateReportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateReportByNodeIdArgs = {
   input: UpdateReportByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardArgs = {
+  input: UpdateReportCardInput;
 };
 
 
@@ -12789,6 +12867,30 @@ export type RenderedAboutPageContent = {
   __typename?: 'RenderedAboutPageContent';
   html?: Maybe<Scalars['String']>;
   lang?: Maybe<Scalars['String']>;
+};
+
+/** All input for the `reorderReportTabCards` mutation. */
+export type ReorderReportTabCardsInput = {
+  cardIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportTabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `reorderReportTabCards` mutation. */
+export type ReorderReportTabCardsPayload = {
+  __typename?: 'ReorderReportTabCardsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCards?: Maybe<Array<ReportCard>>;
 };
 
 /** All input for the `reorderReportTabs` mutation. */
@@ -16311,6 +16413,36 @@ export type UpdateReportByNodeIdInput = {
   nodeId: Scalars['ID'];
   /** An object where the defined keys will be set on the `Report` being updated. */
   patch: ReportPatch;
+};
+
+/** All input for the `updateReportCard` mutation. */
+export type UpdateReportCardInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  body?: Maybe<Scalars['JSON']>;
+  cardId?: Maybe<Scalars['Int']>;
+  cardType?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+  icon?: Maybe<Scalars['String']>;
+  tint?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateReportCard` mutation. */
+export type UpdateReportCardPayload = {
+  __typename?: 'UpdateReportCardPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
 };
 
 /** All input for the `updateReport` mutation. */
@@ -21489,12 +21621,17 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type ReportCardDetailsFragment = (
+  { __typename?: 'ReportCard' }
+  & Pick<ReportCard, 'id' | 'title' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+);
+
 export type ReportTabDetailsFragment = (
   { __typename?: 'ReportTab' }
   & Pick<ReportTab, 'id' | 'title' | 'position'>
   & { cards?: Maybe<Array<(
     { __typename?: 'ReportCard' }
-    & Pick<ReportCard, 'id' | 'title' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon'>
+    & ReportCardDetailsFragment
   )>> }
 );
 
@@ -21602,6 +21739,79 @@ export type ReorderReportTabsMutation = (
       { __typename?: 'ReportTab' }
       & ReportTabDetailsFragment
     )>> }
+  )> }
+);
+
+export type AddReportCardMutationVariables = Exact<{
+  reportTabId: Scalars['Int'];
+  title: Scalars['String'];
+  componentSettings: Scalars['JSON'];
+  cardType: Scalars['String'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type AddReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { addReportCard?: Maybe<(
+    { __typename?: 'AddReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id'>
+    )> }
+  )> }
+);
+
+export type ReorderReportTabCardsMutationVariables = Exact<{
+  reportTabId: Scalars['Int'];
+  cardIds: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type ReorderReportTabCardsMutation = (
+  { __typename?: 'Mutation' }
+  & { reorderReportTabCards?: Maybe<(
+    { __typename?: 'ReorderReportTabCardsPayload' }
+    & { reportCards?: Maybe<Array<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id' | 'position'>
+    )>> }
+  )> }
+);
+
+export type UpdateReportCardMutationVariables = Exact<{
+  id: Scalars['Int'];
+  title: Scalars['String'];
+  componentSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  body?: Maybe<Scalars['JSON']>;
+  tint?: Maybe<Scalars['String']>;
+  icon?: Maybe<Scalars['String']>;
+  cardType?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReportCard?: Maybe<(
+    { __typename?: 'UpdateReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & ReportCardDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteReportCardMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReportCard?: Maybe<(
+    { __typename?: 'DeleteReportCardPayload' }
+    & Pick<DeleteReportCardPayload, 'boolean'>
   )> }
 );
 
@@ -24820,23 +25030,29 @@ export const LogicRuleEditorFormDetailsFragmentDoc = /*#__PURE__*/ gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ReportCardDetails on ReportCard {
+  id
+  title
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+}
+    `;
 export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportTabDetails on ReportTab {
   id
   title
   position
   cards {
-    id
-    title
-    position
-    type
-    componentSettings
-    alternateLanguageSettings
-    tint
-    icon
+    ...ReportCardDetails
   }
 }
-    `;
+    ${ReportCardDetailsFragmentDoc}`;
 export const DraftReportDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment DraftReportDetails on Report {
   id
@@ -27936,6 +28152,45 @@ export const ReorderReportTabsDocument = /*#__PURE__*/ gql`
   }
 }
     ${ReportTabDetailsFragmentDoc}`;
+export const AddReportCardDocument = /*#__PURE__*/ gql`
+    mutation AddReportCard($reportTabId: Int!, $title: String!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+  addReportCard(
+    input: {reportTabId: $reportTabId, title: $title, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+  ) {
+    reportCard {
+      id
+    }
+  }
+}
+    `;
+export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
+    mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
+  reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
+    reportCards {
+      id
+      position
+    }
+  }
+}
+    `;
+export const UpdateReportCardDocument = /*#__PURE__*/ gql`
+    mutation UpdateReportCard($id: Int!, $title: String!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+  updateReportCard(
+    input: {cardId: $id, title: $title, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+  ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export const DeleteReportCardDocument = /*#__PURE__*/ gql`
+    mutation DeleteReportCard($id: Int!) {
+  deleteReportCard(input: {cardId: $id}) {
+    boolean
+  }
+}
+    `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -29380,6 +29635,10 @@ export const namedOperations = {
     DeleteReportTab: 'DeleteReportTab',
     RenameReportTab: 'RenameReportTab',
     ReorderReportTabs: 'ReorderReportTabs',
+    AddReportCard: 'AddReportCard',
+    ReorderReportTabCards: 'ReorderReportTabCards',
+    UpdateReportCard: 'UpdateReportCard',
+    DeleteReportCard: 'DeleteReportCard',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -29521,6 +29780,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     DraftReportDetails: 'DraftReportDetails',
     SketchTocDetails: 'SketchTocDetails',

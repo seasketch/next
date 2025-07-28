@@ -101,6 +101,36 @@ type AddGroupToAclPayload {
   tableOfContentsItem: TableOfContentsItem
 }
 
+"""All input for the `addReportCard` mutation."""
+input AddReportCardInput {
+  body: JSON
+  cardType: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  componentSettings: JSON
+  reportTabId: Int
+  title: String
+}
+
+"""The output of our `addReportCard` mutation."""
+type AddReportCardPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportCard: ReportCard
+}
+
 """All input for the `addReportTab` mutation."""
 input AddReportTabInput {
   """
@@ -4910,6 +4940,33 @@ input DeleteReportByNodeIdInput {
   nodeId: ID!
 }
 
+"""All input for the `deleteReportCard` mutation."""
+input DeleteReportCardInput {
+  cardId: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `deleteReportCard` mutation."""
+type DeleteReportCardPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `deleteReport` mutation."""
 input DeleteReportInput {
   """
@@ -8424,6 +8481,12 @@ type Mutation {
     input: AddGroupToAclInput!
   ): AddGroupToAclPayload
   addImageToSprite(height: Int!, image: Upload!, pixelRatio: Int!, spriteId: Int!, width: Int!): Sprite
+  addReportCard(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AddReportCardInput!
+  ): AddReportCardPayload
   addReportTab(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9243,6 +9306,12 @@ type Mutation {
     """
     input: DeleteReportByNodeIdInput!
   ): DeleteReportPayload
+  deleteReportCard(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeleteReportCardInput!
+  ): DeleteReportCardPayload
   deleteReportTab(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9667,6 +9736,12 @@ type Mutation {
     """
     input: RenameReportTabInput!
   ): RenameReportTabPayload
+  reorderReportTabCards(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ReorderReportTabCardsInput!
+  ): ReorderReportTabCardsPayload
   reorderReportTabs(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10371,6 +10446,12 @@ type Mutation {
     """
     input: UpdateReportByNodeIdInput!
   ): UpdateReportPayload
+  updateReportCard(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateReportCardInput!
+  ): UpdateReportCardPayload
 
   """
   If preprocessing is enabled,
@@ -13846,6 +13927,33 @@ enum RenderUnderType {
   LABELS
   LAND
   NONE
+}
+
+"""All input for the `reorderReportTabCards` mutation."""
+input ReorderReportTabCardsInput {
+  cardIds: [Int]
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  reportTabId: Int
+}
+
+"""The output of our `reorderReportTabCards` mutation."""
+type ReorderReportTabCardsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportCards: [ReportCard!]
 }
 
 """All input for the `reorderReportTabs` mutation."""
@@ -18072,6 +18180,39 @@ input UpdateReportByNodeIdInput {
   An object where the defined keys will be set on the `Report` being updated.
   """
   patch: ReportPatch!
+}
+
+"""All input for the `updateReportCard` mutation."""
+input UpdateReportCardInput {
+  alternateLanguageSettings: JSON
+  body: JSON
+  cardId: Int
+  cardType: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  componentSettings: JSON
+  icon: String
+  tint: String
+  title: String
+}
+
+"""The output of our `updateReportCard` mutation."""
+type UpdateReportCardPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportCard: ReportCard
 }
 
 """All input for the `updateReport` mutation."""

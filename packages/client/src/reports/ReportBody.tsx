@@ -1,10 +1,9 @@
 import React from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { useReportContext } from "./ReportContext";
 import { ReportCardFactory } from "./ReportCard";
 
 export function ReportBody() {
-  const { t } = useTranslation("admin:sketching");
   const { selectedTab } = useReportContext();
 
   if (!selectedTab) {

@@ -13,7 +13,8 @@ import { useReportContext } from "./ReportContext";
 
 export function ReportTabs() {
   const { t } = useTranslation("admin:sketching");
-  const { report, selectedTabId, setSelectedTabId } = useReportContext();
+  const { report, selectedTabId, setSelectedTabId, selectedForEditing } =
+    useReportContext();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<typeof report.tabs>([]);
   const [overflowTabs, setOverflowTabs] = useState<typeof report.tabs>([]);
@@ -45,29 +46,45 @@ export function ReportTabs() {
 
     const containerWidth = containerRef.current.offsetWidth;
     const moreTabWidth = 128; // Approximate width for "More ▼" tab
-    let availableWidth = containerWidth - moreTabWidth;
     const visible: typeof currentSortedTabs = [];
     const overflow: typeof currentSortedTabs = [];
 
+    // First, try to fit all tabs without the "More" tab
+    let availableWidth = containerWidth;
+    let allTabsFit = true;
+
     for (const tab of currentSortedTabs) {
-      const tabElement = tabRefs.current.get(tab.id);
-      if (tabElement) {
-        const tabWidth = tabElement.offsetWidth;
-        if (availableWidth >= tabWidth) {
-          visible.push(tab);
-          availableWidth -= tabWidth;
-        } else {
-          overflow.push(tab);
-        }
+      // Estimate width based on title length
+      const estimatedWidth = Math.max(55, tab.title.length * 8 + 32); // Rough estimate
+      if (availableWidth >= estimatedWidth) {
+        visible.push(tab);
+        availableWidth -= estimatedWidth;
       } else {
-        // If tab element doesn't exist yet, estimate width based on title length
-        const estimatedWidth = Math.max(80, tab.title.length * 8 + 32); // Rough estimate
-        if (availableWidth >= estimatedWidth) {
-          visible.push(tab);
-          availableWidth -= estimatedWidth;
-        } else {
-          overflow.push(tab);
-        }
+        allTabsFit = false;
+        break;
+      }
+    }
+
+    // If all tabs fit, show them all
+    if (allTabsFit) {
+      setVisibleTabs(currentSortedTabs);
+      setOverflowTabs([]);
+      return;
+    }
+
+    // If not all tabs fit, recalculate with space for "More" tab
+    availableWidth = containerWidth - moreTabWidth;
+    visible.length = 0; // Reset visible array
+
+    let isOverflowed = false;
+    for (const tab of currentSortedTabs) {
+      const estimatedWidth = Math.max(55, tab.title.length * 8 + 30);
+      if (!isOverflowed && availableWidth >= estimatedWidth) {
+        visible.push(tab);
+        availableWidth -= estimatedWidth;
+      } else {
+        isOverflowed = true;
+        overflow.push(tab);
       }
     }
 
@@ -114,16 +131,18 @@ export function ReportTabs() {
     return null;
   }
 
+  const isDisabled = !!selectedForEditing;
+
   return (
     <Tabs.Root
       value={selectedTabId.toString()}
       onValueChange={(value) => {
-        // Only update if the value is a valid tab ID (not "overflow")
-        if (value !== "overflow") {
+        // Only update if the value is a valid tab ID (not "overflow") and not disabled
+        if (value !== "overflow" && !isDisabled) {
           setSelectedTabId(parseInt(value));
         }
       }}
-      className="w-full"
+      className={`w-full ${isDisabled ? "pointer-events-none" : ""}`}
     >
       <Tabs.List
         ref={containerRef}
@@ -140,7 +159,13 @@ export function ReportTabs() {
               }
             }}
             value={tab.id.toString()}
-            className="flex-1 px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 text-center items-center justify-center"
+            className={`flex-1 px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
+              isDisabled
+                ? "text-gray-400 cursor-not-allowed opacity-60"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+            } data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 ${
+              isDisabled ? "data-[state=active]:opacity-60" : ""
+            }`}
             style={{
               display: visibleTabs.some((t) => t.id === tab.id)
                 ? "flex"
@@ -164,7 +189,15 @@ export function ReportTabs() {
                       ? selectedTabId.toString()
                       : "overflow"
                   }
-                  className="flex items-center px-4 py-3 text-sm font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 w-32 overflow-x-hidden text-center items-center justify-center"
+                  className={`flex px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 w-32 overflow-x-hidden text-center items-center justify-center ${
+                    isSelectedTabInOverflow
+                      ? `text-blue-600 border-b-2 border-blue-600 bg-blue-50 ${
+                          isDisabled ? "opacity-60" : ""
+                        }`
+                      : isDisabled
+                      ? "text-gray-400 cursor-not-allowed opacity-60"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
                 >
                   {isSelectedTabInOverflow ? (
                     <>
@@ -191,10 +224,16 @@ export function ReportTabs() {
                   {overflowTabs.map((tab) => (
                     <DropdownMenu.Item
                       key={tab.id}
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600"
+                      className={`flex items-center px-4 py-2 text-sm cursor-pointer data-[state=active]:bg-blue-50 data-[state=active]:text-blue-600 ${
+                        isDisabled
+                          ? "text-gray-400 cursor-not-allowed opacity-60"
+                          : "text-gray-700 hover:bg-gray-100"
+                      }`}
                       onSelect={() => {
-                        setSelectedTabId(tab.id);
-                        setDropdownOpen(false);
+                        if (!isDisabled) {
+                          setSelectedTabId(tab.id);
+                          setDropdownOpen(false);
+                        }
                       }}
                     >
                       {tab.title}

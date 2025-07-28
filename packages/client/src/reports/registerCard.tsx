@@ -1,27 +1,27 @@
-import { ReportCardType, ReportCardConfiguration } from "./cards";
+import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
 import { lazy, ComponentType } from "react";
 
-export type ReportCardComponent<T extends { [key: string]: any }> =
-  React.ComponentType<{
-    config: ReportCardConfiguration<T>;
-  }>;
+export type ReportCardComponent<T> = React.ComponentType<{
+  config: ReportCardConfiguration<T>;
+  dragHandleProps?: any;
+  cardId?: number;
+  onUpdate?: (config: ReportCardConfiguration<T>) => void;
+}>;
 
-export type ReportCardAdminComponent<T extends { [key: string]: any }> =
-  React.ComponentType<{
-    config: ReportCardConfiguration<T>;
-    onUpdate: (config: ReportCardConfiguration<T>) => void;
-  }>;
+export type ReportCardAdminComponent<T> = React.ComponentType<{
+  config: ReportCardConfiguration<T>;
+  onUpdate: (config: ReportCardConfiguration<T>) => void;
+}>;
 
-export type ReportCardPickerComponent<T extends { [key: string]: any }> =
-  React.ComponentType<{
-    type: ReportCardType;
-    title: string;
-    description?: string;
-    icon?: React.ComponentType;
-    onClick: () => void;
-  }>;
+export type ReportCardPickerComponent<T> = React.ComponentType<{
+  type: ReportCardType;
+  title: string;
+  description?: string;
+  icon?: React.ComponentType;
+  onClick: () => void;
+}>;
 
-export interface ReportCardRegistration<T extends { [key: string]: any }> {
+export interface ReportCardRegistration<T> {
   type: ReportCardType;
   title: string;
   superusersOnly?: boolean;
@@ -31,7 +31,7 @@ export interface ReportCardRegistration<T extends { [key: string]: any }> {
 
   // Admin components (lazy loaded)
   adminComponent?: React.LazyExoticComponent<ReportCardAdminComponent<T>>;
-  pickerComponent?: React.LazyExoticComponent<ReportCardPickerComponent<T>>;
+  pickerSettings: ReportCardConfiguration<T>;
 
   // Default settings for new cards of this type
   defaultSettings: T;
@@ -46,32 +46,29 @@ export const registeredCards: Map<
   ReportCardRegistration<any>
 > = new Map();
 
-export interface RegisterReportCardConfig<T extends { [key: string]: any }> {
+export interface RegisterReportCardConfig<T> {
   type: ReportCardType;
   title: string;
   component: ReportCardComponent<T>;
   defaultSettings: T;
   superusersOnly?: boolean;
   adminComponent?: React.LazyExoticComponent<ReportCardAdminComponent<T>>;
-  pickerComponent?: React.LazyExoticComponent<ReportCardPickerComponent<T>>;
   validateSettings?: (settings: T) => string[] | null;
   getExportData?: (settings: T, data: any) => any;
+  pickerSettings: ReportCardConfiguration<T>;
 }
 
-export function registerReportCardType<T extends { [key: string]: any }>(
-  config: RegisterReportCardConfig<T>
-) {
-  console.log("registering card type", config.type);
+export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
   registeredCards.set(config.type, {
     type: config.type,
     title: config.title,
     superusersOnly: config.superusersOnly,
     component: config.component,
     adminComponent: config.adminComponent,
-    pickerComponent: config.pickerComponent,
     defaultSettings: config.defaultSettings,
     validateSettings: config.validateSettings,
     getExportData: config.getExportData,
+    pickerSettings: config.pickerSettings,
   });
 }
 
@@ -92,9 +89,18 @@ export function getCardAdminComponent(
 
 export function getCardPickerComponent(
   type: ReportCardType
-): React.LazyExoticComponent<ReportCardPickerComponent<any>> | null {
+): React.ReactNode | null {
   const registration = registeredCards.get(type);
-  return registration?.pickerComponent || null;
+  if (!registration) return null;
+  const Component = getCardComponent(type);
+  if (!Component) return null;
+  return <Component config={{ ...registration.pickerSettings, type }} />;
+}
+
+export function getCardRegistration(
+  type: ReportCardType
+): ReportCardRegistration<any> | null {
+  return registeredCards.get(type) || null;
 }
 
 /**
