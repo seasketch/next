@@ -961,6 +961,36 @@ type CancelBackgroundJobPayload {
   query: Query
 }
 
+"""All input for the `checkDuplicateSketchClasses` mutation."""
+input CheckDuplicateSketchClassesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `checkDuplicateSketchClasses` mutation."""
+type CheckDuplicateSketchClassesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  results: [CheckDuplicateSketchClassesRecord]
+}
+
+"""The return type of our `checkDuplicateSketchClasses` mutation."""
+type CheckDuplicateSketchClassesRecord {
+  count: BigInt
+  id: Int
+}
+
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
   """
@@ -8469,6 +8499,33 @@ type ModifySurveyAnswersPayload {
   surveyResponses: [SurveyResponse!]
 }
 
+"""All input for the `moveCardToTab` mutation."""
+input MoveCardToTabInput {
+  cardId: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  tabId: Int
+}
+
+"""The output of our `moveCardToTab` mutation."""
+type MoveCardToTabPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportCard: ReportCard
+}
+
 """
 The root mutation type which contains root level fields which mutate data.
 """
@@ -8538,6 +8595,12 @@ type Mutation {
     """
     input: CancelBackgroundJobInput!
   ): CancelBackgroundJobPayload
+  checkDuplicateSketchClasses(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CheckDuplicateSketchClassesInput!
+  ): CheckDuplicateSketchClassesPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9688,6 +9751,12 @@ type Mutation {
     """
     input: ModifySurveyAnswersInput!
   ): ModifySurveyAnswersPayload
+  moveCardToTab(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: MoveCardToTabInput!
+  ): MoveCardToTabPayload
 
   """
   Copies all table of contents items, related layers, sources, and access

@@ -520,3 +520,12 @@ mutation DeleteReportCard($id: Int!) {
     boolean
   }
 }
+
+mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
+  moveCardToTab(input: { cardId: $cardId, tabId: $tabId }) {
+    reportCard {
+      id
+      position
+    }
+  }
+}

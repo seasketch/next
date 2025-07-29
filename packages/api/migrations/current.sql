@@ -351,3 +351,47 @@ create or replace function delete_report_card(card_id int)
   $$;
 
 grant execute on function delete_report_card to seasketch_user;
+
+create or replace function move_card_to_tab(card_id int, tab_id int)
+  returns report_cards
+  language plpgsql
+  security definer
+  as $$
+    declare
+      moved_card report_cards;
+      old_tab_id int;
+      report_id int;
+      new_tab_report_id int;
+    begin
+      -- Get the old tab id and report id
+      select report_tab_id, (select report_tabs.report_id from report_tabs where id = report_tab_id)
+      from report_cards 
+      where id = card_id 
+      into old_tab_id, report_id;
+
+      -- Check if user is admin on the report
+      if not session_is_admin((select project_id from reports where id = report_id)) then
+        raise exception 'You are not authorized to move cards in this report';
+      end if;
+
+      -- Get the report id for the new tab
+      select report_tabs.report_id from report_tabs where id = tab_id into new_tab_report_id;
+
+      -- Check if new tab is in same report
+      if report_id != new_tab_report_id then
+        raise exception 'Cannot move card to tab in different report';
+      end if;
+
+      -- Move card to new tab and set position
+      update report_cards 
+      set 
+        report_tab_id = tab_id,
+        position = (select coalesce(min(position), 0) - 1 from report_cards where report_tab_id = tab_id)
+      where id = card_id
+      returning * into moved_card;
+
+      return moved_card;
+    end;
+  $$;
+
+grant execute on function move_card_to_tab to seasketch_user;

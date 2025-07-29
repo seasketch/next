@@ -54,7 +54,7 @@ export function AddCardModal({ isOpen, onClose, onSelect }: AddCardModalProps) {
                 <div
                   key={cardType}
                   role="button"
-                  className="hover:outline outline-blue-400 rounded mx-auto"
+                  className="hover:outline outline-blue-400 rounded mx-auto w-full"
                   // className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors duration-150"
                   onClick={() => {
                     onSelect(cardType);

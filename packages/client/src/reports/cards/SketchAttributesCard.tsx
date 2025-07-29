@@ -199,26 +199,26 @@ function collectTextFromProsemirrorBodyForLabel(body: any): string {
   return output;
 }
 
+const defaultComponentSettings: SketchAttributesCardConfiguration["componentSettings"] =
+  {
+    filterAttributes: false,
+    selectedAttributeIds: [],
+  };
+
 // Register the card type
 registerReportCardType({
   type: "Attributes",
   title: "Sketch Attributes",
   component: SketchAttributesCard,
   adminComponent: SketchAttributesCardAdmin,
-  defaultSettings: {
-    filterAttributes: false,
-    selectedAttributeIds: [],
-  },
+  defaultSettings: defaultComponentSettings,
   pickerSettings: {
     id: 0,
     type: "Attributes",
     title: "Sketch Attributes",
     body: {},
     alternateLanguageSettings: {},
-    componentSettings: {
-      filterAttributes: false,
-      selectedAttributeIds: [],
-    },
+    componentSettings: defaultComponentSettings,
     position: 0,
   },
 });

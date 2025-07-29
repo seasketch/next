@@ -11,6 +11,7 @@ import {
   useReorderReportTabCardsMutation,
   useUpdateReportCardMutation,
   useProjectMetadataQuery,
+  useMoveCardToTabMutation,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -42,6 +43,7 @@ import { FormLanguageContext } from "../../formElements/FormElement";
 import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
 import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
+import { DragDropContext, DropResult } from "react-beautiful-dnd";
 
 registerCards();
 
@@ -60,6 +62,12 @@ export default function SketchClassReportsAdmin({
       sketchClassId: sketchClass.id,
     },
     onError,
+  });
+
+  const [moveCardToTab, moveCardToTabState] = useMoveCardToTabMutation({
+    onError,
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
   });
 
   const { data: projectData } = useProjectMetadataQuery({
@@ -126,6 +134,19 @@ export default function SketchClassReportsAdmin({
         variables: {
           reportTabId,
           cardIds,
+        },
+      });
+    } catch (error) {
+      // Error is handled by onError
+    }
+  };
+
+  const handleCardMove = async (cardId: number, destinationTabId: number) => {
+    try {
+      await moveCardToTab({
+        variables: {
+          cardId,
+          tabId: destinationTabId,
         },
       });
     } catch (error) {
@@ -392,121 +413,188 @@ export default function SketchClassReportsAdmin({
             </div>
 
             {/* main content */}
-            <div className="flex-1 p-8">
-              {draftReport && (
-                <>
-                  <div
-                    className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
-                      selectedForEditing
-                        ? "3xl:translate-x-0 translate-x-36"
-                        : ""
-                    }`}
-                  >
-                    {/* report header */}
-                    <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
-                      <div className="flex-1">
-                        {sketchClass.name} {t("Report")}
-                      </div>
-                      {/* <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
+            <DragDropContext
+              onDragEnd={(result: DropResult) => {
+                if (
+                  !result.destination ||
+                  (result.destination.droppableId ===
+                    result.source.droppableId &&
+                    result.destination.index === result.source.index)
+                ) {
+                  return;
+                }
+
+                const sourceTabId = parseInt(
+                  result.source.droppableId
+                    .replace("tab-header-", "")
+                    .replace("tab-body-", "")
+                );
+                const destinationTabId = parseInt(
+                  result.destination.droppableId
+                    .replace("tab-header-", "")
+                    .replace("tab-body-", "")
+                );
+                const cardId = parseInt(result.draggableId);
+
+                const isSourceTabBody =
+                  result.source.droppableId.startsWith("tab-body-");
+                const isDestinationTabBody =
+                  result.destination.droppableId.startsWith("tab-body-");
+                const isDestinationTabHeader =
+                  result.destination.droppableId.startsWith("tab-header-");
+
+                if (isDestinationTabHeader) {
+                  // Dropped on a tab header - move card to that tab
+                  handleCardMove(cardId, destinationTabId);
+                  // Switch to the destination tab
+                  setSelectedTabId(destinationTabId);
+                } else if (
+                  isSourceTabBody &&
+                  isDestinationTabBody &&
+                  sourceTabId === destinationTabId
+                ) {
+                  // Reorder within the same tab body
+                  const sourceTab = draftReport?.tabs?.find(
+                    (tab) => tab.id === sourceTabId
+                  );
+                  if (sourceTab && sourceTab.cards) {
+                    const cardIds = sourceTab.cards.map((card) => card.id);
+                    // Reorder the cardIds array based on the drag result
+                    const sourceIndex = result.source.index;
+                    const destinationIndex = result.destination.index;
+                    const [removed] = cardIds.splice(sourceIndex, 1);
+                    cardIds.splice(destinationIndex, 0, removed);
+                    handleCardReorder(cardIds, sourceTabId);
+                  }
+                } else if (
+                  isSourceTabBody &&
+                  isDestinationTabBody &&
+                  sourceTabId !== destinationTabId
+                ) {
+                  // Moving between different tab bodies
+                  handleCardMove(cardId, destinationTabId);
+                  // Switch to the destination tab
+                  setSelectedTabId(destinationTabId);
+                } else {
+                  // Fallback for any unexpected scenarios
+                }
+              }}
+            >
+              <div className="flex-1 p-8">
+                {draftReport && (
+                  <>
+                    <div
+                      className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
+                        selectedForEditing
+                          ? "3xl:translate-x-0 translate-x-36"
+                          : ""
+                      }`}
+                    >
+                      {/* report header */}
+                      <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
+                        <div className="flex-1">
+                          {sketchClass.name} {t("Report")}
+                        </div>
+                        {/* <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
                       <button>
                         <DotsHorizontalIcon className="w-6 h-6 text-gray-400" />
                       </button>
                     </div> */}
-                      <div className="flex-none flex items-center">
-                        <DropdownMenu.Root
-                          open={dropdownOpen}
-                          onOpenChange={setDropdownOpen}
-                        >
-                          <DropdownMenu.Trigger
-                            asChild
-                            disabled={!!selectedForEditing}
+                        <div className="flex-none flex items-center">
+                          <DropdownMenu.Root
+                            open={dropdownOpen}
+                            onOpenChange={setDropdownOpen}
                           >
-                            <button
-                              // disabled={!!selectedForEditing}
-                              title={
-                                selectedForEditing
-                                  ? t("Cannot add a card or tab while editing")
-                                  : t("Add a card or tab")
-                              }
+                            <DropdownMenu.Trigger
+                              asChild
+                              disabled={!!selectedForEditing}
                             >
-                              <PlusCircleIcon
-                                className={`w-7 h-7 text-blue-500  ${
+                              <button
+                                // disabled={!!selectedForEditing}
+                                title={
                                   selectedForEditing
-                                    ? "text-gray-400"
-                                    : "hover:text-blue-600"
-                                }`}
-                              />
-                            </button>
-                          </DropdownMenu.Trigger>
-                          <DropdownMenu.Portal>
-                            <DropdownMenu.Content
-                              className={MenuBarContentClasses}
-                              side="bottom"
-                              align="end"
-                              sideOffset={5}
-                            >
-                              <DropdownMenu.Item
-                                className={MenuBarItemClasses}
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  setAddCardModalOpen(true);
-                                  setDropdownOpen(false);
-                                }}
+                                    ? t(
+                                        "Cannot add a card or tab while editing"
+                                      )
+                                    : t("Add a card or tab")
+                                }
                               >
-                                {t("Add a Card")}
-                              </DropdownMenu.Item>
-                              <DropdownMenu.Item
-                                className={MenuBarItemClasses}
-                                onSelect={(e) => {
-                                  e.preventDefault();
-                                  setManageTabsModalOpen(true);
-                                  setDropdownOpen(false);
-                                }}
+                                <PlusCircleIcon
+                                  className={`w-7 h-7 text-blue-500  ${
+                                    selectedForEditing
+                                      ? "text-gray-400"
+                                      : "hover:text-blue-600"
+                                  }`}
+                                />
+                              </button>
+                            </DropdownMenu.Trigger>
+                            <DropdownMenu.Portal>
+                              <DropdownMenu.Content
+                                className={MenuBarContentClasses}
+                                side="bottom"
+                                align="end"
+                                sideOffset={5}
                               >
-                                {t("Manage Tabs")}
-                              </DropdownMenu.Item>
-                            </DropdownMenu.Content>
-                          </DropdownMenu.Portal>
-                        </DropdownMenu.Root>
+                                <DropdownMenu.Item
+                                  className={MenuBarItemClasses}
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    setAddCardModalOpen(true);
+                                    setDropdownOpen(false);
+                                  }}
+                                >
+                                  {t("Add a Card")}
+                                </DropdownMenu.Item>
+                                <DropdownMenu.Item
+                                  className={MenuBarItemClasses}
+                                  onSelect={(e) => {
+                                    e.preventDefault();
+                                    setManageTabsModalOpen(true);
+                                    setDropdownOpen(false);
+                                  }}
+                                >
+                                  {t("Manage Tabs")}
+                                </DropdownMenu.Item>
+                              </DropdownMenu.Content>
+                            </DropdownMenu.Portal>
+                          </DropdownMenu.Root>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* report tabs */}
-                    <ReportTabs />
-                    {/* report body */}
-                    <SortableReportBody
-                      onReorder={(cardIds) =>
-                        handleCardReorder(cardIds, selectedTabId)
-                      }
-                      selectedTab={selectedTab}
-                      selectedForEditing={selectedForEditing}
-                      localCardEdits={localCardEdits}
-                      onCardUpdate={handleCardUpdate}
-                    />
-                    {/* Add Card Modal */}
-                    {draftReport && (
-                      <AddCardModal
-                        isOpen={addCardModalOpen}
-                        onClose={() => setAddCardModalOpen(false)}
-                        onSelect={handleCardSelect}
+                      {/* report tabs */}
+                      <ReportTabs />
+                      {/* report body */}
+                      <SortableReportBody
+                        selectedTab={selectedTab}
+                        selectedForEditing={selectedForEditing}
+                        localCardEdits={localCardEdits}
+                        onCardUpdate={handleCardUpdate}
                       />
-                    )}
-                    {/* report footer */}
-                    {/* <div className="p-4 border-t"></div> */}
-                  </div>
-                </>
-              )}
+                      {/* Add Card Modal */}
+                      {draftReport && (
+                        <AddCardModal
+                          isOpen={addCardModalOpen}
+                          onClose={() => setAddCardModalOpen(false)}
+                          onSelect={handleCardSelect}
+                        />
+                      )}
+                      {/* report footer */}
+                      {/* <div className="p-4 border-t"></div> */}
+                    </div>
+                  </>
+                )}
 
-              {/* Manage Tabs Modal */}
-              {draftReport && (
-                <ReportTabManagementModal
-                  isOpen={manageTabsModalOpen}
-                  onClose={() => setManageTabsModalOpen(false)}
-                  tabs={draftReport.tabs || []}
-                  reportId={draftReport.id}
-                />
-              )}
-            </div>
+                {/* Manage Tabs Modal */}
+                {draftReport && (
+                  <ReportTabManagementModal
+                    isOpen={manageTabsModalOpen}
+                    onClose={() => setManageTabsModalOpen(false)}
+                    tabs={draftReport.tabs || []}
+                    reportId={draftReport.id}
+                  />
+                )}
+              </div>
+            </DragDropContext>
 
             {/* right sidebar */}
             <div className="w-0 bg-white flex-none border-l shadow"></div>

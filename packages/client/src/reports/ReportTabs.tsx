@@ -10,6 +10,7 @@ import * as Tabs from "@radix-ui/react-tabs";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { useReportContext } from "./ReportContext";
+import { Droppable } from "react-beautiful-dnd";
 
 export function ReportTabs() {
   const { t } = useTranslation("admin:sketching");
@@ -148,32 +149,45 @@ export function ReportTabs() {
         ref={containerRef}
         className="flex border-b border-gray-200 bg-white rounded-t-lg"
       >
-        {sortedTabs.map((tab) => (
-          <Tabs.Trigger
-            key={tab.id}
-            ref={(el) => {
-              if (el) {
-                tabRefs.current.set(tab.id, el);
-              } else {
-                tabRefs.current.delete(tab.id);
-              }
-            }}
-            value={tab.id.toString()}
-            className={`flex-1 px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
-              isDisabled
-                ? "text-gray-400 cursor-not-allowed opacity-60"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            } data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 ${
-              isDisabled ? "data-[state=active]:opacity-60" : ""
-            }`}
-            style={{
-              display: visibleTabs.some((t) => t.id === tab.id)
-                ? "flex"
-                : "none",
-            }}
-          >
-            {tab.title}
-          </Tabs.Trigger>
+        {visibleTabs.map((tab) => (
+          <Droppable key={tab.id} droppableId={`tab-header-${tab.id}`}>
+            {(provided, snapshot) => (
+              <div
+                ref={provided.innerRef}
+                {...provided.droppableProps}
+                className={`flex-1 ${
+                  snapshot.isDraggingOver
+                    ? "bg-blue-200 border-b-2 border-blue-500 shadow-lg"
+                    : ""
+                }`}
+              >
+                <Tabs.Trigger
+                  ref={(el) => {
+                    if (el) {
+                      tabRefs.current.set(tab.id, el);
+                    } else {
+                      tabRefs.current.delete(tab.id);
+                    }
+                  }}
+                  value={tab.id.toString()}
+                  className={`w-full px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
+                    isDisabled
+                      ? "text-gray-400 cursor-not-allowed opacity-60"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-blue-200/10"
+                  } data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 ${
+                    isDisabled ? "data-[state=active]:opacity-60" : ""
+                  }`}
+                  style={{
+                    display: visibleTabs.some((t) => t.id === tab.id)
+                      ? "flex"
+                      : "none",
+                  }}
+                >
+                  {tab.title}
+                </Tabs.Trigger>
+              </div>
+            )}
+          </Droppable>
         ))}
 
         {overflowTabs.length > 0 && (

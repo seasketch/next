@@ -829,6 +829,35 @@ export type CancelBackgroundJobPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `checkDuplicateSketchClasses` mutation. */
+export type CheckDuplicateSketchClassesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `checkDuplicateSketchClasses` mutation. */
+export type CheckDuplicateSketchClassesPayload = {
+  __typename?: 'CheckDuplicateSketchClassesPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  results?: Maybe<Array<Maybe<CheckDuplicateSketchClassesRecord>>>;
+};
+
+/** The return type of our `checkDuplicateSketchClasses` mutation. */
+export type CheckDuplicateSketchClassesRecord = {
+  __typename?: 'CheckDuplicateSketchClassesRecord';
+  count?: Maybe<Scalars['BigInt']>;
+  id?: Maybe<Scalars['Int']>;
+};
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -7309,6 +7338,30 @@ export type ModifySurveyAnswersPayload = {
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
+/** All input for the `moveCardToTab` mutation. */
+export type MoveCardToTabInput = {
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `moveCardToTab` mutation. */
+export type MoveCardToTabPayload = {
+  __typename?: 'MoveCardToTabPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** The root mutation type which contains root level fields which mutate data. */
 export type Mutation = {
   __typename?: 'Mutation';
@@ -7325,6 +7378,7 @@ export type Mutation = {
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
+  checkDuplicateSketchClasses?: Maybe<CheckDuplicateSketchClassesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
@@ -7658,6 +7712,7 @@ export type Mutation = {
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
   mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
+  moveCardToTab?: Maybe<MoveCardToTabPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
    * control lists to create a new table of contents that will be displayed to project users.
@@ -8003,6 +8058,12 @@ export type MutationArchiveResponsesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCancelBackgroundJobArgs = {
   input: CancelBackgroundJobInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCheckDuplicateSketchClassesArgs = {
+  input: CheckDuplicateSketchClassesInput;
 };
 
 
@@ -8896,6 +8957,12 @@ export type MutationMergeTranslatedPropsArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationModifySurveyAnswersArgs = {
   input: ModifySurveyAnswersInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationMoveCardToTabArgs = {
+  input: MoveCardToTabInput;
 };
 
 
@@ -21815,6 +21882,23 @@ export type DeleteReportCardMutation = (
   )> }
 );
 
+export type MoveCardToTabMutationVariables = Exact<{
+  cardId: Scalars['Int'];
+  tabId: Scalars['Int'];
+}>;
+
+
+export type MoveCardToTabMutation = (
+  { __typename?: 'Mutation' }
+  & { moveCardToTab?: Maybe<(
+    { __typename?: 'MoveCardToTabPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id' | 'position'>
+    )> }
+  )> }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
@@ -28191,6 +28275,16 @@ export const DeleteReportCardDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const MoveCardToTabDocument = /*#__PURE__*/ gql`
+    mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
+  moveCardToTab(input: {cardId: $cardId, tabId: $tabId}) {
+    reportCard {
+      id
+      position
+    }
+  }
+}
+    `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -29639,6 +29733,7 @@ export const namedOperations = {
     ReorderReportTabCards: 'ReorderReportTabCards',
     UpdateReportCard: 'UpdateReportCard',
     DeleteReportCard: 'DeleteReportCard',
+    MoveCardToTab: 'MoveCardToTab',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
