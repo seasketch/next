@@ -90,8 +90,10 @@ export default function ReportCard({
     >
       <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
         <div className="flex items-center space-x-2" {...dragHandleProps}>
-          {icon && iconMap[icon] && (
+          {icon && iconMap[icon] ? (
             <div className="flex-shrink-0">{iconMap[icon]}</div>
+          ) : (
+            <div className="flex-shrink-0 w-4 h-4" />
           )}
         </div>
       </div>
