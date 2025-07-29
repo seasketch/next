@@ -139,7 +139,7 @@ create or replace function create_draft_report(sketch_class_id int)
         ) values (
           dr_report_tab_id,
           'Attributes',
-          '{}',
+          '{"type": "doc", "content": [{"type": "reportTitle", "content": [{"type": "text", "text": "Attributes"}]}]}'::jsonb,
           0,
           '{}',
           '{}',
@@ -189,7 +189,7 @@ create or replace function delete_report_tab(tab_id int, move_cards_to_tab_id in
         if move_cards_to_tab_id is not null then
           -- increment the postion of related cards by the max position of that
           -- cards in the tab to move to
-          update report_cards set position = position + (select max(position) from report_cards where report_tab_id = move_cards_to_tab_id) where report_tab_id = tab_id;
+          update report_cards set position = position + (select coalesce(max(position), 0) from report_cards where report_tab_id = move_cards_to_tab_id) where report_tab_id = tab_id;
           -- move the cards to the new tab
           update report_cards set report_tab_id = move_cards_to_tab_id where report_tab_id = tab_id;
         end if;
