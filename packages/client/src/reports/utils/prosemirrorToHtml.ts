@@ -10,8 +10,10 @@ export function prosemirrorToHtml(body: any): string {
   if (!body) return "";
 
   try {
-    const serializer = DOMSerializer.fromSchema(formElements.content.schema);
-    const node = Node.fromJSON(formElements.content.schema, body);
+    const serializer = DOMSerializer.fromSchema(
+      formElements.reportCardBody.schema
+    );
+    const node = Node.fromJSON(formElements.reportCardBody.schema, body);
     const fragment = serializer.serializeFragment(node.content);
 
     // Convert the DOM fragment to HTML string

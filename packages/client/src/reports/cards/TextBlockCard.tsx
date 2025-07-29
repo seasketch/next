@@ -46,6 +46,8 @@ export function TextBlockCard({
   // Check if this card is being edited
   const isEditing = selectedForEditing === cardId;
 
+  console.log(config.body);
+
   return (
     <ReportCard
       title={title}
@@ -57,44 +59,8 @@ export function TextBlockCard({
       cardId={cardId}
       onUpdate={onUpdate}
       config={config}
-    >
-      {adminMode && isEditing ? (
-        <ReportCardBodyEditor
-          body={localizedBody}
-          onUpdate={(newBody) => {
-            if (onUpdate) {
-              if (langContext?.lang?.code !== "EN") {
-                // Save to alternateLanguageSettings for non-English languages
-                onUpdate({
-                  ...config,
-                  alternateLanguageSettings: {
-                    ...config.alternateLanguageSettings,
-                    [langContext.lang.code]: {
-                      ...config.alternateLanguageSettings[
-                        langContext.lang.code
-                      ],
-                      body: newBody,
-                    },
-                  },
-                });
-              } else {
-                // Save to main body for English
-                onUpdate({
-                  ...config,
-                  body: newBody,
-                });
-              }
-            }
-          }}
-          // className="min-h-[100px]"
-        />
-      ) : (
-        <div
-          className="ProseMirrorBody"
-          dangerouslySetInnerHTML={{ __html: htmlContent }}
-        />
-      )}
-    </ReportCard>
+      className="pb-2"
+    />
   );
 }
 
@@ -114,6 +80,15 @@ registerReportCardType({
     body: {
       type: "doc",
       content: [
+        {
+          type: "reportTitle",
+          content: [
+            {
+              type: "text",
+              text: "Text Block",
+            },
+          ],
+        },
         {
           type: "paragraph",
           content: [

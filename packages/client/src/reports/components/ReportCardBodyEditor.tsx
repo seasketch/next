@@ -33,9 +33,7 @@ export default function ReportCardBodyEditor({
   isInput = false,
   className = "",
 }: ReportCardBodyEditorProps) {
-  const { schema, plugins } = isInput
-    ? editorConfig.questions
-    : editorConfig.content;
+  const { schema, plugins } = editorConfig.reportCardBody;
 
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
@@ -92,7 +90,7 @@ export default function ReportCardBodyEditor({
   return (
     <div className={`relative ${className}`}>
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
-      <div className="ProseMirrorBody" ref={root}></div>
+      <div className="ProseMirrorBody ReportCardBodyEditor" ref={root}></div>
     </div>
   );
 }

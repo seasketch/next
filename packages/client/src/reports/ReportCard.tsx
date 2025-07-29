@@ -12,6 +12,8 @@ import { TrashIcon } from "@heroicons/react/outline";
 import ReportCardTitleEditor from "./components/ReportCardTitleEditor";
 import { FormLanguageContext } from "../formElements/FormElement";
 import { useContext } from "react";
+import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
+import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 
 export type ReportCardComponentProps = {
   title: string;
@@ -19,10 +21,11 @@ export type ReportCardComponentProps = {
   backgroundTint?: "blue" | "yellow" | "red"; // Simple color enum
   icon?: "info" | "warning" | "error";
   alternateLanguageSettings: { [langCode: string]: any };
-  children: React.ReactNode;
+  children?: React.ReactNode;
   dragHandleProps?: any; // Props from react-beautiful-dnd Draggable
   cardId?: number; // ID of the card for edit functionality
   onUpdate?: (config: ReportCardConfiguration<any>) => void; // Single update callback
+  className?: string;
 };
 
 // Icon mapping for named icons (no color classes, will inherit from parent)
@@ -43,6 +46,7 @@ export default function ReportCard({
   cardId,
   onUpdate,
   config,
+  className,
 }: ReportCardComponentProps & {
   config: ReportCardConfiguration<any>;
 }) {
@@ -50,15 +54,6 @@ export default function ReportCard({
   const { adminMode, selectedForEditing, setSelectedForEditing, deleteCard } =
     useReportContext();
   const langContext = useContext(FormLanguageContext);
-
-  // Get localized title
-  let localizedTitle = title;
-  if (
-    langContext?.lang?.code !== "EN" &&
-    alternateLanguageSettings[langContext?.lang?.code]?.title
-  ) {
-    localizedTitle = alternateLanguageSettings[langContext.lang.code].title;
-  }
 
   const getBackgroundClasses = () => {
     switch (backgroundTint) {
@@ -69,68 +64,41 @@ export default function ReportCard({
       case "red":
         return "bg-red-50 border border-red-500/10";
       default:
-        return "bg-white";
-    }
-  };
-
-  // Create title update callback
-  const handleTitleUpdate = (newTitle: string) => {
-    if (onUpdate) {
-      if (langContext?.lang?.code !== "EN") {
-        // Save to alternateLanguageSettings for non-English languages
-        const updatedConfig = {
-          ...config,
-          alternateLanguageSettings: {
-            ...config.alternateLanguageSettings,
-            [langContext.lang.code]: {
-              ...config.alternateLanguageSettings[langContext.lang.code],
-              title: newTitle,
-            },
-          },
-        };
-        onUpdate(updatedConfig);
-      } else {
-        // Save to main title for English
-        onUpdate({
-          ...config,
-          title: newTitle,
-        });
-      }
+        return "bg-white border border-black/0";
     }
   };
 
   const isSelectedForEditing = selectedForEditing === cardId;
   const isDisabled = selectedForEditing && !isSelectedForEditing;
 
+  // Get localized body
+  let localizedBody = config.body;
+  if (
+    langContext?.lang?.code !== "EN" &&
+    alternateLanguageSettings[langContext?.lang?.code]?.body
+  ) {
+    localizedBody = alternateLanguageSettings[langContext.lang.code].body;
+  }
+
   return (
     <div
-      className={`rounded w-full shadow-sm ${getBackgroundClasses()} group ${
+      className={`relative rounded w-full shadow-sm ${getBackgroundClasses()} group ${
         isSelectedForEditing ? "ring-2 ring-opacity-80 ring-blue-500" : ""
-      } ${isDisabled ? "opacity-60 pointer-events-none select-none" : ""}`}
+      } ${
+        isDisabled ? "opacity-60 pointer-events-none select-none" : ""
+      } ${className}`}
     >
-      <div className={`p-4 pb-1 ${tint}`}>
+      <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
         <div className="flex items-center space-x-2" {...dragHandleProps}>
           {icon && iconMap[icon] && (
             <div className="flex-shrink-0">{iconMap[icon]}</div>
           )}
-          {localizedTitle &&
-            (adminMode && isSelectedForEditing ? (
-              <ReportCardTitleEditor
-                title={localizedTitle}
-                onUpdate={handleTitleUpdate}
-                className={tint}
-              />
-            ) : (
-              <h3
-                className={`font-medium flex-1 ${
-                  !selectedForEditing ? "cursor-move" : ""
-                }`}
-              >
-                {localizedTitle}
-              </h3>
-            ))}
+        </div>
+      </div>
+      <div className="absolute right-2 top-2">
+        <div>
           {adminMode && !selectedForEditing && cardId && (
-            <div className="flex-shrink-0 ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1">
+            <div className="flex-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 justify-end">
               {deleteCard && (
                 <button
                   onClick={(e) => {
@@ -157,7 +125,53 @@ export default function ReportCard({
           )}
         </div>
       </div>
-      <div className="p-4 text-sm pt-0">{children}</div>
+      <div className="px-4 pb-0 text-sm">
+        {adminMode && selectedForEditing === cardId ? (
+          <ReportCardBodyEditor
+            body={localizedBody}
+            onUpdate={(newBody) => {
+              if (onUpdate) {
+                if (langContext?.lang?.code !== "EN") {
+                  // Save to alternateLanguageSettings for non-English languages
+                  onUpdate({
+                    ...config,
+                    alternateLanguageSettings: {
+                      ...config.alternateLanguageSettings,
+                      [langContext.lang.code]: {
+                        ...config.alternateLanguageSettings[
+                          langContext.lang.code
+                        ],
+                        body: newBody,
+                      },
+                    },
+                  });
+                } else {
+                  // Save to main body for English
+                  onUpdate({
+                    ...config,
+                    body: newBody,
+                  });
+                }
+              }
+            }}
+            className={`${tint} ${icon ? "hasIcon" : ""}`}
+          />
+        ) : (
+          <div
+            className={`ReportCard ReportCardBody ProseMirrorBody ${
+              icon ? "hasIcon" : ""
+            } ${tint ? tint : ""}`}
+            dangerouslySetInnerHTML={{
+              __html: prosemirrorToHtml(localizedBody),
+            }}
+          />
+        )}
+      </div>
+      {children && (
+        <>
+          <div className="p-4 text-sm pt-0">{children}</div>
+        </>
+      )}
     </div>
   );
 }

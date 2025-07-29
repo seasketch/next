@@ -216,7 +216,15 @@ registerReportCardType({
     id: 0,
     type: "Attributes",
     title: "Sketch Attributes",
-    body: {},
+    body: {
+      type: "doc",
+      content: [
+        {
+          type: "reportTitle",
+          content: [{ type: "text", text: "Sketch Attributes" }],
+        },
+      ],
+    },
     alternateLanguageSettings: {},
     componentSettings: defaultComponentSettings,
     position: 0,
