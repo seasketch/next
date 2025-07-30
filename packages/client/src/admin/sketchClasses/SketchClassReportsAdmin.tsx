@@ -12,6 +12,7 @@ import {
   useUpdateReportCardMutation,
   useProjectMetadataQuery,
   useMoveCardToTabMutation,
+  usePublishReportMutation,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -25,7 +26,10 @@ import {
   ReportCardType,
   ReportCardConfiguration,
 } from "../../reports/cards/cards";
-import { getCardRegistration } from "../../reports/registerCard";
+import {
+  getCardRegistration,
+  ReportCardConfigUpdateCallback,
+} from "../../reports/registerCard";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
 import {
@@ -109,6 +113,12 @@ export default function SketchClassReportsAdmin({
       awaitRefetchQueries: true,
     });
 
+  const [publishReport, publishReportState] = usePublishReportMutation({
+    onError,
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
+  });
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageTabsModalOpen, setManageTabsModalOpen] = useState(false);
   const [addCardModalOpen, setAddCardModalOpen] = useState(false);
@@ -170,7 +180,6 @@ export default function SketchClassReportsAdmin({
       await addReportCard({
         variables: {
           reportTabId: selectedTab.id,
-          title: registration.pickerSettings.title,
           componentSettings: registration.defaultSettings,
           cardType: cardType,
           body: registration.pickerSettings.body || {},
@@ -189,10 +198,21 @@ export default function SketchClassReportsAdmin({
 
   const handleCardUpdate = (
     cardId: number,
-    updatedConfig: ReportCardConfiguration<any>
+    updatedConfig:
+      | ReportCardConfiguration<any>
+      | ((
+          prevState: ReportCardConfiguration<any>
+        ) => ReportCardConfiguration<any>)
   ) => {
     if (selectedForEditing === cardId) {
-      setLocalCardEdits(updatedConfig);
+      setLocalCardEdits((prevState) => {
+        if (!prevState) {
+          return null;
+        }
+        return typeof updatedConfig === "function"
+          ? updatedConfig(prevState)
+          : updatedConfig;
+      });
     }
   };
 
@@ -230,7 +250,6 @@ export default function SketchClassReportsAdmin({
       await updateReportCard({
         variables: {
           id: selectedCardForEditing.id,
-          title: localCardEdits.title || selectedCardForEditing.title,
           componentSettings:
             localCardEdits.componentSettings ||
             selectedCardForEditing.componentSettings,
@@ -317,15 +336,19 @@ export default function SketchClassReportsAdmin({
     );
   }
 
+  const hasUnpublishedChanges =
+    new Date(data?.sketchClass?.draftReport?.updatedAt) >=
+    new Date(data?.sketchClass?.report?.createdAt);
+
   const selectedCardForEditing = selectedForEditing
     ? selectedTab?.cards.find((card) => card.id === selectedForEditing)
     : null;
 
   // Merge local edits with server state for the card being edited
-  const cardWithLocalEdits =
-    selectedCardForEditing && localCardEdits
-      ? { ...selectedCardForEditing, ...localCardEdits }
-      : selectedCardForEditing;
+  const cardWithLocalEdits = {
+    ...(selectedCardForEditing || {}),
+    ...(localCardEdits || {}),
+  } as ReportCardConfiguration<any>;
 
   return (
     <FormLanguageContext.Provider
@@ -358,6 +381,34 @@ export default function SketchClassReportsAdmin({
         <div className="flex flex-col w-full h-full">
           {/* Header */}
           <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
+            <div className="flex-none space-x-2">
+              <Button
+                small
+                disabled={publishReportState.loading || !hasUnpublishedChanges}
+                title={
+                  hasUnpublishedChanges
+                    ? t("There are unpublished changes. Publish to save them.")
+                    : t("No unpublished changes")
+                }
+                loading={publishReportState.loading}
+                label={t("Publish Report")}
+                onClick={() => {
+                  publishReport({
+                    variables: {
+                      sketchClassId: sketchClass.id,
+                    },
+                  });
+                }}
+                primary={hasUnpublishedChanges}
+              />
+              <span className="text-sm text-gray-500">
+                {data?.sketchClass?.report &&
+                  t("Last published ") +
+                    new Date(
+                      data.sketchClass.report.createdAt
+                    ).toLocaleString()}
+              </span>
+            </div>
             <div className="flex-1"></div>
             <EditorLanguageSelector />
           </div>
@@ -375,7 +426,7 @@ export default function SketchClassReportsAdmin({
                   <div className="flex-1">
                     <div className="p-4">
                       <h3 className="text-lg font-medium">
-                        {selectedCardForEditing.title}
+                        {/* {selectedCardForEditing.title} */}
                       </h3>
                     </div>
                     <div className="p-4 pt-0">
@@ -389,7 +440,15 @@ export default function SketchClassReportsAdmin({
                         <AdminFactory
                           type={selectedCardForEditing.type}
                           config={cardWithLocalEdits}
-                          onUpdate={setLocalCardEdits}
+                          onUpdate={(update) => {
+                            setLocalCardEdits((prevState) => {
+                              const result =
+                                typeof update === "function"
+                                  ? update(prevState || ({} as any))
+                                  : update;
+                              return result;
+                            });
+                          }}
                         />
                       </Suspense>
                     </div>
@@ -562,7 +621,7 @@ export default function SketchClassReportsAdmin({
                       </div>
 
                       {/* report tabs */}
-                      <ReportTabs />
+                      <ReportTabs enableDragDrop={true} />
                       {/* report body */}
                       <SortableReportBody
                         selectedTab={selectedTab}
@@ -615,7 +674,7 @@ function AdminFactory({
 }: {
   type: ReportCardType;
   config: ReportCardConfiguration<any> | null | undefined;
-  onUpdate: (updatedConfig: ReportCardConfiguration<any>) => void;
+  onUpdate: ReportCardConfigUpdateCallback;
 }) {
   const registration = getCardRegistration(type);
   if (!registration?.adminComponent || !config) {

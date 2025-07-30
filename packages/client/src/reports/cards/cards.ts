@@ -21,10 +21,6 @@ export type ReportCardConfiguration<T> = {
    */
   type: ReportCardType;
   /**
-   * All cards have a string title.
-   */
-  title: string;
-  /**
    * Almost all cards will have a main text body area.
    */
   body: ProsemirrorBodyJSON;

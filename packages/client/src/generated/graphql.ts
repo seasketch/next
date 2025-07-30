@@ -150,7 +150,6 @@ export type AddReportCardInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
   reportTabId?: Maybe<Scalars['Int']>;
-  title?: Maybe<Scalars['String']>;
 };
 
 /** The output of our `addReportCard` mutation. */
@@ -829,35 +828,6 @@ export type CancelBackgroundJobPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-};
-
-/** All input for the `checkDuplicateSketchClasses` mutation. */
-export type CheckDuplicateSketchClassesInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `checkDuplicateSketchClasses` mutation. */
-export type CheckDuplicateSketchClassesPayload = {
-  __typename?: 'CheckDuplicateSketchClassesPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  results?: Maybe<Array<Maybe<CheckDuplicateSketchClassesRecord>>>;
-};
-
-/** The return type of our `checkDuplicateSketchClasses` mutation. */
-export type CheckDuplicateSketchClassesRecord = {
-  __typename?: 'CheckDuplicateSketchClassesRecord';
-  count?: Maybe<Scalars['BigInt']>;
-  id?: Maybe<Scalars['Int']>;
 };
 
 /** All input for the `clearFormElementStyle` mutation. */
@@ -7380,7 +7350,6 @@ export type Mutation = {
   approveParticipant?: Maybe<ApproveParticipantPayload>;
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
-  checkDuplicateSketchClasses?: Maybe<CheckDuplicateSketchClassesPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
   computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
@@ -7715,6 +7684,7 @@ export type Mutation = {
   mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   moveCardToTab?: Maybe<MoveCardToTabPayload>;
+  publishReport?: Maybe<PublishReportPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
    * control lists to create a new table of contents that will be displayed to project users.
@@ -8060,12 +8030,6 @@ export type MutationArchiveResponsesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCancelBackgroundJobArgs = {
   input: CancelBackgroundJobInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCheckDuplicateSketchClassesArgs = {
-  input: CheckDuplicateSketchClassesInput;
 };
 
 
@@ -8965,6 +8929,12 @@ export type MutationModifySurveyAnswersArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationMoveCardToTabArgs = {
   input: MoveCardToTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationPublishReportArgs = {
+  input: PublishReportInput;
 };
 
 
@@ -11377,6 +11347,41 @@ export type PublicProjectDetail = {
   supportEmail?: Maybe<Scalars['String']>;
 };
 
+/** All input for the `publishReport` mutation. */
+export type PublishReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `publishReport` mutation. */
+export type PublishReportPayload = {
+  __typename?: 'PublishReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `publishReport` mutation. */
+export type PublishReportPayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
 /** All input for the `publishTableOfContents` mutation. */
 export type PublishTableOfContentsInput = {
   /**
@@ -12998,6 +13003,7 @@ export type Report = Node & {
   sketchClassId: Scalars['Int'];
   /** Reads and enables pagination through a set of `ReportTab`. */
   tabs?: Maybe<Array<ReportTab>>;
+  updatedAt?: Maybe<Scalars['Datetime']>;
 };
 
 
@@ -13018,8 +13024,8 @@ export type ReportCard = Node & {
   position: Scalars['Int'];
   reportTabId: Scalars['Int'];
   tint?: Maybe<Scalars['String']>;
-  title: Scalars['String'];
   type: Scalars['String'];
+  updatedAt: Scalars['Datetime'];
 };
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -13057,6 +13063,7 @@ export type ReportTab = Node & {
   report?: Maybe<Report>;
   reportId: Scalars['Int'];
   title: Scalars['String'];
+  updatedAt: Scalars['Datetime'];
 };
 
 
@@ -13684,6 +13691,8 @@ export type SketchClass = Node & {
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
   projectId: Scalars['Int'];
+  report?: Maybe<Report>;
+  reportId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Report`. */
   reportsConnection: ReportsConnection;
   /** Number of sketches created with this sketch class */
@@ -16498,7 +16507,6 @@ export type UpdateReportCardInput = {
   componentSettings?: Maybe<Scalars['JSON']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
-  title?: Maybe<Scalars['String']>;
 };
 
 /** The output of our `updateReportCard` mutation. */
@@ -21024,7 +21032,7 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -21692,21 +21700,21 @@ export type SketchClassGeographyEditorDetailsQuery = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'title' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
 );
 
 export type ReportTabDetailsFragment = (
   { __typename?: 'ReportTab' }
-  & Pick<ReportTab, 'id' | 'title' | 'position'>
+  & Pick<ReportTab, 'id' | 'position' | 'title'>
   & { cards?: Maybe<Array<(
     { __typename?: 'ReportCard' }
     & ReportCardDetailsFragment
   )>> }
 );
 
-export type DraftReportDetailsFragment = (
+export type ReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id' | 'createdAt'>
+  & Pick<Report, 'id' | 'createdAt' | 'updatedAt'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
@@ -21724,7 +21732,10 @@ export type DraftReportQuery = (
     { __typename?: 'SketchClass' }
     & { draftReport?: Maybe<(
       { __typename?: 'Report' }
-      & DraftReportDetailsFragment
+      & ReportDetailsFragment
+    )>, report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'createdAt'>
     )> }
   )> }
 );
@@ -21740,15 +21751,15 @@ export type CreateDraftReportMutation = (
     { __typename?: 'CreateDraftReportPayload' }
     & { report?: Maybe<(
       { __typename?: 'Report' }
-      & DraftReportDetailsFragment
+      & ReportDetailsFragment
     )> }
   )> }
 );
 
 export type AddReportTabMutationVariables = Exact<{
   reportId: Scalars['Int'];
-  title: Scalars['String'];
   position: Scalars['Int'];
+  title: Scalars['String'];
 }>;
 
 
@@ -21813,7 +21824,6 @@ export type ReorderReportTabsMutation = (
 
 export type AddReportCardMutationVariables = Exact<{
   reportTabId: Scalars['Int'];
-  title: Scalars['String'];
   componentSettings: Scalars['JSON'];
   cardType: Scalars['String'];
   body: Scalars['JSON'];
@@ -21850,7 +21860,6 @@ export type ReorderReportTabCardsMutation = (
 
 export type UpdateReportCardMutationVariables = Exact<{
   id: Scalars['Int'];
-  title: Scalars['String'];
   componentSettings?: Maybe<Scalars['JSON']>;
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
@@ -21897,6 +21906,22 @@ export type MoveCardToTabMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id' | 'position'>
+    )> }
+  )> }
+);
+
+export type PublishReportMutationVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type PublishReportMutation = (
+  { __typename?: 'Mutation' }
+  & { publishReport?: Maybe<(
+    { __typename?: 'PublishReportPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & AdminSketchingDetailsFragment
     )> }
   )> }
 );
@@ -22138,7 +22163,7 @@ export type SketchReportingDetailsQuery = (
   { __typename?: 'Query' }
   & { sketch?: Maybe<(
     { __typename?: 'Sketch' }
-    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties'>
+    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties' | 'sketchClassId'>
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
@@ -22155,6 +22180,9 @@ export type SketchReportingDetailsQuery = (
         { __typename?: 'FormLogicRule' }
         & LogicRuleDetailsFragment
       )>> }
+    )>, report?: Maybe<(
+      { __typename?: 'Report' }
+      & ReportDetailsFragment
     )> }
   )> }
 );
@@ -24785,6 +24813,8 @@ export const ProjectMetadataFragmentDoc = gql`
     formElementId
     isArchived
     translatedProps
+    reportId
+    isGeographyClippingEnabled
   }
   supportedLanguages
   translatedProps
@@ -25119,7 +25149,6 @@ ${LogicRuleDetailsFragmentDoc}`;
 export const ReportCardDetailsFragmentDoc = gql`
     fragment ReportCardDetails on ReportCard {
   id
-  title
   position
   type
   componentSettings
@@ -25132,17 +25161,18 @@ export const ReportCardDetailsFragmentDoc = gql`
 export const ReportTabDetailsFragmentDoc = gql`
     fragment ReportTabDetails on ReportTab {
   id
-  title
   position
+  title
   cards {
     ...ReportCardDetails
   }
 }
     ${ReportCardDetailsFragmentDoc}`;
-export const DraftReportDetailsFragmentDoc = gql`
-    fragment DraftReportDetails on Report {
+export const ReportDetailsFragmentDoc = gql`
+    fragment ReportDetails on Report {
   id
   createdAt
+  updatedAt
   tabs {
     ...ReportTabDetails
   }
@@ -33475,11 +33505,14 @@ export const DraftReportDocument = gql`
     query DraftReport($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
     draftReport {
-      ...DraftReportDetails
+      ...ReportDetails
+    }
+    report {
+      createdAt
     }
   }
 }
-    ${DraftReportDetailsFragmentDoc}`;
+    ${ReportDetailsFragmentDoc}`;
 
 /**
  * __useDraftReportQuery__
@@ -33512,11 +33545,11 @@ export const CreateDraftReportDocument = gql`
     mutation CreateDraftReport($sketchClassId: Int!) {
   createDraftReport(input: {sketchClassId: $sketchClassId}) {
     report {
-      ...DraftReportDetails
+      ...ReportDetails
     }
   }
 }
-    ${DraftReportDetailsFragmentDoc}`;
+    ${ReportDetailsFragmentDoc}`;
 export type CreateDraftReportMutationFn = Apollo.MutationFunction<CreateDraftReportMutation, CreateDraftReportMutationVariables>;
 
 /**
@@ -33544,9 +33577,9 @@ export type CreateDraftReportMutationHookResult = ReturnType<typeof useCreateDra
 export type CreateDraftReportMutationResult = Apollo.MutationResult<CreateDraftReportMutation>;
 export type CreateDraftReportMutationOptions = Apollo.BaseMutationOptions<CreateDraftReportMutation, CreateDraftReportMutationVariables>;
 export const AddReportTabDocument = gql`
-    mutation AddReportTab($reportId: Int!, $title: String!, $position: Int!) {
+    mutation AddReportTab($reportId: Int!, $position: Int!, $title: String!) {
   addReportTab(
-    input: {reportId: $reportId, title: $title, tabPosition: $position}
+    input: {reportId: $reportId, tabPosition: $position, title: $title}
   ) {
     reportTab {
       ...ReportTabDetails
@@ -33570,8 +33603,8 @@ export type AddReportTabMutationFn = Apollo.MutationFunction<AddReportTabMutatio
  * const [addReportTabMutation, { data, loading, error }] = useAddReportTabMutation({
  *   variables: {
  *      reportId: // value for 'reportId'
- *      title: // value for 'title'
  *      position: // value for 'position'
+ *      title: // value for 'title'
  *   },
  * });
  */
@@ -33689,9 +33722,9 @@ export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderRe
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
 export const AddReportCardDocument = gql`
-    mutation AddReportCard($reportTabId: Int!, $title: String!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
   addReportCard(
-    input: {reportTabId: $reportTabId, title: $title, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
   ) {
     reportCard {
       id
@@ -33715,7 +33748,6 @@ export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutat
  * const [addReportCardMutation, { data, loading, error }] = useAddReportCardMutation({
  *   variables: {
  *      reportTabId: // value for 'reportTabId'
- *      title: // value for 'title'
  *      componentSettings: // value for 'componentSettings'
  *      cardType: // value for 'cardType'
  *      body: // value for 'body'
@@ -33767,9 +33799,9 @@ export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReord
 export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
 export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
 export const UpdateReportCardDocument = gql`
-    mutation UpdateReportCard($id: Int!, $title: String!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
   updateReportCard(
-    input: {cardId: $id, title: $title, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
   ) {
     reportCard {
       ...ReportCardDetails
@@ -33793,7 +33825,6 @@ export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCar
  * const [updateReportCardMutation, { data, loading, error }] = useUpdateReportCardMutation({
  *   variables: {
  *      id: // value for 'id'
- *      title: // value for 'title'
  *      componentSettings: // value for 'componentSettings'
  *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
  *      body: // value for 'body'
@@ -33880,6 +33911,41 @@ export function useMoveCardToTabMutation(baseOptions?: Apollo.MutationHookOption
 export type MoveCardToTabMutationHookResult = ReturnType<typeof useMoveCardToTabMutation>;
 export type MoveCardToTabMutationResult = Apollo.MutationResult<MoveCardToTabMutation>;
 export type MoveCardToTabMutationOptions = Apollo.BaseMutationOptions<MoveCardToTabMutation, MoveCardToTabMutationVariables>;
+export const PublishReportDocument = gql`
+    mutation PublishReport($sketchClassId: Int!) {
+  publishReport(input: {sketchClassId: $sketchClassId}) {
+    sketchClass {
+      ...AdminSketchingDetails
+    }
+  }
+}
+    ${AdminSketchingDetailsFragmentDoc}`;
+export type PublishReportMutationFn = Apollo.MutationFunction<PublishReportMutation, PublishReportMutationVariables>;
+
+/**
+ * __usePublishReportMutation__
+ *
+ * To run a mutation, you first call `usePublishReportMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePublishReportMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [publishReportMutation, { data, loading, error }] = usePublishReportMutation({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function usePublishReportMutation(baseOptions?: Apollo.MutationHookOptions<PublishReportMutation, PublishReportMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PublishReportMutation, PublishReportMutationVariables>(PublishReportDocument, options);
+      }
+export type PublishReportMutationHookResult = ReturnType<typeof usePublishReportMutation>;
+export type PublishReportMutationResult = Apollo.MutationResult<PublishReportMutation>;
+export type PublishReportMutationOptions = Apollo.BaseMutationOptions<PublishReportMutation, PublishReportMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -34228,6 +34294,7 @@ export const SketchReportingDetailsDocument = gql`
     properties
     userAttributes
     childProperties
+    sketchClassId
   }
   sketchClass(id: $sketchClassId) {
     project {
@@ -34254,9 +34321,13 @@ export const SketchReportingDetailsDocument = gql`
         ...LogicRuleDetails
       }
     }
+    report {
+      ...ReportDetails
+    }
   }
 }
-    ${LogicRuleDetailsFragmentDoc}`;
+    ${LogicRuleDetailsFragmentDoc}
+${ReportDetailsFragmentDoc}`;
 
 /**
  * __useSketchReportingDetailsQuery__
@@ -37640,6 +37711,7 @@ export const namedOperations = {
     UpdateReportCard: 'UpdateReportCard',
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
+    PublishReport: 'PublishReport',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -37783,7 +37855,7 @@ export const namedOperations = {
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
-    DraftReportDetails: 'DraftReportDetails',
+    ReportDetails: 'ReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

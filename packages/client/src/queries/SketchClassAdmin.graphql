@@ -377,7 +377,6 @@ query SketchClassGeographyEditorDetails($slug: String!) {
 
 fragment ReportCardDetails on ReportCard {
   id
-  title
   position
   type
   componentSettings
@@ -389,16 +388,17 @@ fragment ReportCardDetails on ReportCard {
 
 fragment ReportTabDetails on ReportTab {
   id
-  title
   position
+  title
   cards {
     ...ReportCardDetails
   }
 }
 
-fragment DraftReportDetails on Report {
+fragment ReportDetails on Report {
   id
   createdAt
+  updatedAt
   tabs {
     ...ReportTabDetails
   }
@@ -407,7 +407,10 @@ fragment DraftReportDetails on Report {
 query DraftReport($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
     draftReport {
-      ...DraftReportDetails
+      ...ReportDetails
+    }
+    report {
+      createdAt
     }
   }
 }
@@ -415,14 +418,14 @@ query DraftReport($sketchClassId: Int!) {
 mutation CreateDraftReport($sketchClassId: Int!) {
   createDraftReport(input: { sketchClassId: $sketchClassId }) {
     report {
-      ...DraftReportDetails
+      ...ReportDetails
     }
   }
 }
 
-mutation AddReportTab($reportId: Int!, $title: String!, $position: Int!) {
+mutation AddReportTab($reportId: Int!, $position: Int!, $title: String!) {
   addReportTab(
-    input: { reportId: $reportId, title: $title, tabPosition: $position }
+    input: { reportId: $reportId, tabPosition: $position, title: $title }
   ) {
     reportTab {
       ...ReportTabDetails
@@ -456,7 +459,6 @@ mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
 
 mutation AddReportCard(
   $reportTabId: Int!
-  $title: String!
   $componentSettings: JSON!
   $cardType: String!
   $body: JSON!
@@ -464,7 +466,6 @@ mutation AddReportCard(
   addReportCard(
     input: {
       reportTabId: $reportTabId
-      title: $title
       componentSettings: $componentSettings
       cardType: $cardType
       body: $body
@@ -489,7 +490,6 @@ mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
 
 mutation UpdateReportCard(
   $id: Int!
-  $title: String!
   $componentSettings: JSON
   $alternateLanguageSettings: JSON
   $body: JSON
@@ -500,7 +500,6 @@ mutation UpdateReportCard(
   updateReportCard(
     input: {
       cardId: $id
-      title: $title
       componentSettings: $componentSettings
       alternateLanguageSettings: $alternateLanguageSettings
       body: $body
@@ -526,6 +525,14 @@ mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
     reportCard {
       id
       position
+    }
+  }
+}
+
+mutation PublishReport($sketchClassId: Int!) {
+  publishReport(input: { sketchClassId: $sketchClassId }) {
+    sketchClass {
+      ...AdminSketchingDetails
     }
   }
 }

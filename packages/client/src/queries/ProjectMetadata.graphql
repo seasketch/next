@@ -19,6 +19,8 @@ fragment ProjectMetadata on Project {
     formElementId
     isArchived
     translatedProps
+    reportId
+    isGeographyClippingEnabled
   }
   supportedLanguages
   translatedProps

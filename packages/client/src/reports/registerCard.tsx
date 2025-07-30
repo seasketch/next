@@ -1,19 +1,27 @@
+import { SetStateAction } from "react";
 import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
-import { lazy, ComponentType } from "react";
+
+export type ReportCardConfigUpdateCallback = (
+  update:
+    | ReportCardConfiguration<any>
+    | ((
+        prevState: ReportCardConfiguration<any>
+      ) => ReportCardConfiguration<any>)
+) => void;
 
 export type ReportCardComponent<T> = React.ComponentType<{
   config: ReportCardConfiguration<T>;
   dragHandleProps?: any;
   cardId?: number;
-  onUpdate?: (config: ReportCardConfiguration<T>) => void;
+  onUpdate?: ReportCardConfigUpdateCallback;
 }>;
 
 export type ReportCardAdminComponent<T> = React.ComponentType<{
   config: ReportCardConfiguration<T>;
-  onUpdate: (config: ReportCardConfiguration<T>) => void;
+  onUpdate: ReportCardConfigUpdateCallback;
 }>;
 
-export type ReportCardPickerComponent<T> = React.ComponentType<{
+export type ReportCardPickerComponent = React.ComponentType<{
   type: ReportCardType;
   title: string;
   description?: string;

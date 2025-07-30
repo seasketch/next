@@ -4702,10 +4702,6 @@ select{
   top:-2.5rem
 }
 
-.-top-11{
-  top:-2.75rem
-}
-
 .-top-12{
   top:-3rem
 }
@@ -6393,11 +6389,6 @@ select{
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
-.-translate-y-1{
-  --tw-translate-y:-0.25rem;
-  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-}
-
 .-translate-y-96{
   --tw-translate-y:-24rem;
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
@@ -7569,11 +7560,6 @@ select{
 .bg-blue-300{
   --tw-bg-opacity:1;
   background-color:rgb(147 197 253 / var(--tw-bg-opacity, 1))
-}
-
-.bg-blue-400{
-  --tw-bg-opacity:1;
-  background-color:rgb(96 165 250 / var(--tw-bg-opacity, 1))
 }
 
 .bg-blue-50{

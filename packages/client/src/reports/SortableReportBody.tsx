@@ -11,7 +11,11 @@ interface SortableReportBodyProps {
   localCardEdits?: ReportCardConfiguration<any> | null;
   onCardUpdate?: (
     cardId: number,
-    updatedConfig: ReportCardConfiguration<any>
+    updatedConfig:
+      | ReportCardConfiguration<any>
+      | ((
+          prevState: ReportCardConfiguration<any>
+        ) => ReportCardConfiguration<any>)
   ) => void;
 }
 
@@ -96,9 +100,9 @@ export function SortableReportBody({
                         dragHandleProps={
                           selectedForEditing ? {} : provided.dragHandleProps
                         }
-                        onUpdate={(updatedConfig) => {
+                        onUpdate={(update) => {
                           if (onCardUpdate) {
-                            onCardUpdate(card.id, updatedConfig);
+                            onCardUpdate(card.id, update);
                           }
                         }}
                       />

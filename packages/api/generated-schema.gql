@@ -113,7 +113,6 @@ input AddReportCardInput {
   clientMutationId: String
   componentSettings: JSON
   reportTabId: Int
-  title: String
 }
 
 """The output of our `addReportCard` mutation."""
@@ -959,36 +958,6 @@ type CancelBackgroundJobPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-}
-
-"""All input for the `checkDuplicateSketchClasses` mutation."""
-input CheckDuplicateSketchClassesInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-}
-
-"""The output of our `checkDuplicateSketchClasses` mutation."""
-type CheckDuplicateSketchClassesPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  results: [CheckDuplicateSketchClassesRecord]
-}
-
-"""The return type of our `checkDuplicateSketchClasses` mutation."""
-type CheckDuplicateSketchClassesRecord {
-  count: BigInt
-  id: Int
 }
 
 """All input for the `clearFormElementStyle` mutation."""
@@ -8595,12 +8564,6 @@ type Mutation {
     """
     input: CancelBackgroundJobInput!
   ): CancelBackgroundJobPayload
-  checkDuplicateSketchClasses(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CheckDuplicateSketchClassesInput!
-  ): CheckDuplicateSketchClassesPayload
   clearFormElementStyle(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9757,6 +9720,12 @@ type Mutation {
     """
     input: MoveCardToTabInput!
   ): MoveCardToTabPayload
+  publishReport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: PublishReportInput!
+  ): PublishReportPayload
 
   """
   Copies all table of contents items, related layers, sources, and access
@@ -12631,6 +12600,43 @@ type PublicProjectDetail {
   supportEmail: String
 }
 
+"""All input for the `publishReport` mutation."""
+input PublishReportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  sketchClassId: Int
+}
+
+"""The output of our `publishReport` mutation."""
+type PublishReportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
 """All input for the `publishTableOfContents` mutation."""
 input PublishTableOfContentsInput {
   """
@@ -14073,6 +14079,7 @@ type Report implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [ReportTab!]
+  updatedAt: Datetime
 }
 
 type ReportCard implements Node {
@@ -14089,8 +14096,8 @@ type ReportCard implements Node {
   position: Int!
   reportTabId: Int!
   tint: String
-  title: String!
   type: String!
+  updatedAt: Datetime!
 }
 
 """
@@ -14180,6 +14187,7 @@ type ReportTab implements Node {
   report: Report
   reportId: Int!
   title: String!
+  updatedAt: Datetime!
 }
 
 type RetentionChangeEstimate {
@@ -14860,6 +14868,8 @@ type SketchClass implements Node {
 
   """SketchClasses belong to a single project."""
   projectId: Int!
+  report: Report
+  reportId: Int
 
   """Reads and enables pagination through a set of `Report`."""
   reportsConnection(
@@ -18266,7 +18276,6 @@ input UpdateReportCardInput {
   componentSettings: JSON
   icon: String
   tint: String
-  title: String
 }
 
 """The output of our `updateReportCard` mutation."""

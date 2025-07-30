@@ -1,4 +1,3 @@
-import React from "react";
 import { Trans } from "react-i18next";
 import { useReportContext } from "./ReportContext";
 import { ReportCardFactory } from "./ReportCard";
@@ -11,7 +10,7 @@ export function ReportBody() {
   }
 
   return (
-    <div className="p-4 bg-gray-50 rounded-b-lg space-y-2">
+    <div className="p-4 space-y-2">
       {selectedTab.cards?.length === 0 && (
         <div>
           <p className="text-sm text-gray-500">

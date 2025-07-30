@@ -12,7 +12,11 @@ import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { useReportContext } from "./ReportContext";
 import { Droppable } from "react-beautiful-dnd";
 
-export function ReportTabs() {
+export function ReportTabs({
+  enableDragDrop = false,
+}: {
+  enableDragDrop?: boolean;
+}) {
   const { t } = useTranslation("admin:sketching");
   const { report, selectedTabId, setSelectedTabId, selectedForEditing } =
     useReportContext();
@@ -134,6 +138,60 @@ export function ReportTabs() {
 
   const isDisabled = !!selectedForEditing;
 
+  // Helper function to render a tab with optional drag & drop
+  const renderTab = (tab: (typeof report.tabs)[0]) => {
+    const tabContent = (
+      <Tabs.Trigger
+        ref={(el) => {
+          if (el) {
+            tabRefs.current.set(tab.id, el);
+          } else {
+            tabRefs.current.delete(tab.id);
+          }
+        }}
+        value={tab.id.toString()}
+        className={`w-full px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
+          isDisabled
+            ? "text-gray-400 cursor-not-allowed opacity-60"
+            : "text-gray-600 hover:text-gray-900 hover:bg-blue-200/10"
+        } data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 ${
+          isDisabled ? "data-[state=active]:opacity-60" : ""
+        }`}
+        style={{
+          display: visibleTabs.some((t) => t.id === tab.id) ? "flex" : "none",
+        }}
+      >
+        {tab.title}
+      </Tabs.Trigger>
+    );
+
+    if (enableDragDrop) {
+      return (
+        <Droppable key={tab.id} droppableId={`tab-header-${tab.id}`}>
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              {...provided.droppableProps}
+              className={`flex-1 ${
+                snapshot.isDraggingOver
+                  ? "bg-blue-200 border-b-2 border-blue-500 shadow-lg"
+                  : ""
+              }`}
+            >
+              {tabContent}
+            </div>
+          )}
+        </Droppable>
+      );
+    } else {
+      return (
+        <div key={tab.id} className="flex-1">
+          {tabContent}
+        </div>
+      );
+    }
+  };
+
   return (
     <Tabs.Root
       value={selectedTabId.toString()}
@@ -149,46 +207,7 @@ export function ReportTabs() {
         ref={containerRef}
         className="flex border-b border-gray-200 bg-white rounded-t-lg"
       >
-        {visibleTabs.map((tab) => (
-          <Droppable key={tab.id} droppableId={`tab-header-${tab.id}`}>
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={`flex-1 ${
-                  snapshot.isDraggingOver
-                    ? "bg-blue-200 border-b-2 border-blue-500 shadow-lg"
-                    : ""
-                }`}
-              >
-                <Tabs.Trigger
-                  ref={(el) => {
-                    if (el) {
-                      tabRefs.current.set(tab.id, el);
-                    } else {
-                      tabRefs.current.delete(tab.id);
-                    }
-                  }}
-                  value={tab.id.toString()}
-                  className={`w-full px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
-                    isDisabled
-                      ? "text-gray-400 cursor-not-allowed opacity-60"
-                      : "text-gray-600 hover:text-gray-900 hover:bg-blue-200/10"
-                  } data-[state=active]:text-blue-600 data-[state=active]:border-b-2 data-[state=active]:border-blue-600 data-[state=active]:bg-blue-50 ${
-                    isDisabled ? "data-[state=active]:opacity-60" : ""
-                  }`}
-                  style={{
-                    display: visibleTabs.some((t) => t.id === tab.id)
-                      ? "flex"
-                      : "none",
-                  }}
-                >
-                  {tab.title}
-                </Tabs.Trigger>
-              </div>
-            )}
-          </Droppable>
-        ))}
+        {visibleTabs.map((tab) => renderTab(tab))}
 
         {overflowTabs.length > 0 && (
           <div className="flex-none">

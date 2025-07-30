@@ -4,10 +4,11 @@ import Switch from "../../components/Switch";
 import { useReportContext } from "../../reports/ReportContext";
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import { ReportCardConfigUpdateCallback } from "../registerCard";
 
 interface SketchAttributesCardAdminProps {
   config: SketchAttributesCardConfiguration;
-  onUpdate: (config: SketchAttributesCardConfiguration) => void;
+  onUpdate: ReportCardConfigUpdateCallback;
 }
 
 export default function SketchAttributesCardAdmin({
@@ -28,13 +29,13 @@ export default function SketchAttributesCardAdmin({
   const updateSettings = (
     newSettings: Partial<typeof config.componentSettings>
   ) => {
-    onUpdate({
-      ...config,
+    onUpdate((prevState) => ({
+      ...prevState,
       componentSettings: {
         ...config.componentSettings,
         ...newSettings,
       },
-    });
+    }));
   };
 
   const toggleFiltering = (enabled: boolean) => {

@@ -1,11 +1,10 @@
 import { ReportCardConfiguration, ReportCardProps } from "./cards";
 import ReportCard, { ReportCardComponentProps } from "../ReportCard";
-import { prosemirrorToHtml } from "../utils/prosemirrorToHtml";
-import { registerReportCardType } from "../registerCard";
-import { lazy, useContext } from "react";
-import { useReportContext } from "../ReportContext";
-import ReportCardBodyEditor from "../components/ReportCardBodyEditor";
-import { FormLanguageContext } from "../../formElements/FormElement";
+import {
+  registerReportCardType,
+  ReportCardConfigUpdateCallback,
+} from "../registerCard";
+import { lazy } from "react";
 
 export type TextBlockCardConfiguration = ReportCardConfiguration<{
   presentation: "default" | "info" | "warning" | "error";
@@ -21,36 +20,15 @@ export function TextBlockCard({
 }: TextBlockCardProps & {
   dragHandleProps?: any;
   cardId?: number;
-  onUpdate?: (config: TextBlockCardConfiguration) => void;
+  onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const { presentation } = config.componentSettings;
-  const { title, body, alternateLanguageSettings } = config;
-  const { adminMode, selectedForEditing, setSelectedForEditing } =
-    useReportContext();
-  const langContext = useContext(FormLanguageContext);
-
-  // Get localized body
-  let localizedBody = body;
-  if (
-    langContext?.lang?.code !== "EN" &&
-    alternateLanguageSettings[langContext?.lang?.code]?.body
-  ) {
-    localizedBody = alternateLanguageSettings[langContext.lang.code].body;
-  }
-
-  // Convert Prosemirror JSON to HTML
-  const htmlContent = prosemirrorToHtml(localizedBody);
+  const { alternateLanguageSettings } = config;
 
   const { tint, backgroundTint, icon } = getTintAndIcon(presentation);
 
-  // Check if this card is being edited
-  const isEditing = selectedForEditing === cardId;
-
-  console.log(config.body);
-
   return (
     <ReportCard
-      title={title}
       tint={tint}
       backgroundTint={backgroundTint}
       icon={icon}
@@ -112,7 +90,6 @@ registerReportCardType({
     position: 0,
     id: 0,
     type: "TextBlock",
-    title: "Text Block",
   },
   adminComponent: lazy(() => import("./TextBlockCardAdmin")),
 });

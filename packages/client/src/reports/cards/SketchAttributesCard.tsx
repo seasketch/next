@@ -1,6 +1,9 @@
 import { ReportCardConfiguration, ReportCardProps } from "./cards";
 import ReportCard from "../ReportCard";
-import { registerReportCardType } from "../registerCard";
+import {
+  registerReportCardType,
+  ReportCardConfigUpdateCallback,
+} from "../registerCard";
 import { useContext } from "react";
 import { useReportContext } from "../ReportContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
@@ -28,21 +31,12 @@ export function SketchAttributesCard({
 }: SketchAttributesCardProps & {
   dragHandleProps?: any;
   cardId?: number;
-  onUpdate?: (config: SketchAttributesCardConfiguration) => void;
+  onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const { sketchClass, sketch, adminMode } = useReportContext();
+
   const langContext = useContext(FormLanguageContext);
   const { t } = useTranslation("admin:sketching");
-
-  // Get localized title
-  let localizedTitle = config.title;
-  if (
-    langContext?.lang?.code !== "EN" &&
-    config.alternateLanguageSettings[langContext?.lang?.code]?.title
-  ) {
-    localizedTitle =
-      config.alternateLanguageSettings[langContext.lang.code].title;
-  }
 
   // Get form elements from sketch class
   const formElements = sketchClass?.form?.formElements || [];
@@ -73,7 +67,6 @@ export function SketchAttributesCard({
 
   return (
     <ReportCard
-      title={localizedTitle}
       alternateLanguageSettings={config.alternateLanguageSettings}
       dragHandleProps={dragHandleProps}
       cardId={cardId}
@@ -215,7 +208,6 @@ registerReportCardType({
   pickerSettings: {
     id: 0,
     type: "Attributes",
-    title: "Sketch Attributes",
     body: {
       type: "doc",
       content: [

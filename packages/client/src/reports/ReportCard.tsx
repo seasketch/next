@@ -1,6 +1,9 @@
 import { useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards/cards";
-import { getCardComponent } from "./registerCard";
+import {
+  getCardComponent,
+  ReportCardConfigUpdateCallback,
+} from "./registerCard";
 import { useReportContext } from "./ReportContext";
 import {
   InfoCircledIcon,
@@ -9,14 +12,12 @@ import {
   Pencil1Icon,
 } from "@radix-ui/react-icons";
 import { TrashIcon } from "@heroicons/react/outline";
-import ReportCardTitleEditor from "./components/ReportCardTitleEditor";
 import { FormLanguageContext } from "../formElements/FormElement";
-import { useContext } from "react";
+import { useContext, useCallback, useEffect } from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 
 export type ReportCardComponentProps = {
-  title: string;
   tint?: string; // Any Tailwind text color class
   backgroundTint?: "blue" | "yellow" | "red"; // Simple color enum
   icon?: "info" | "warning" | "error";
@@ -24,7 +25,7 @@ export type ReportCardComponentProps = {
   children?: React.ReactNode;
   dragHandleProps?: any; // Props from react-beautiful-dnd Draggable
   cardId?: number; // ID of the card for edit functionality
-  onUpdate?: (config: ReportCardConfiguration<any>) => void; // Single update callback
+  onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
 };
 
@@ -36,7 +37,6 @@ const iconMap = {
 };
 
 export default function ReportCard({
-  title,
   tint = "text-black",
   backgroundTint,
   icon,
@@ -54,6 +54,32 @@ export default function ReportCard({
   const { adminMode, selectedForEditing, setSelectedForEditing, deleteCard } =
     useReportContext();
   const langContext = useContext(FormLanguageContext);
+
+  const handleBodyUpdate = useCallback(
+    (newBody: any) => {
+      if (onUpdate) {
+        if (langContext?.lang?.code !== "EN") {
+          // Save to alternateLanguageSettings for non-English languages
+          onUpdate((prevState) => ({
+            ...prevState,
+            alternateLanguageSettings: {
+              ...prevState.alternateLanguageSettings,
+              [langContext.lang.code]: {
+                ...prevState.alternateLanguageSettings[langContext.lang.code],
+                body: newBody,
+              },
+            },
+          }));
+        } else {
+          onUpdate((prevState) => ({
+            ...prevState,
+            body: newBody,
+          }));
+        }
+      }
+    },
+    [onUpdate, config, langContext?.lang?.code]
+  );
 
   const getBackgroundClasses = () => {
     switch (backgroundTint) {
@@ -131,31 +157,7 @@ export default function ReportCard({
         {adminMode && selectedForEditing === cardId ? (
           <ReportCardBodyEditor
             body={localizedBody}
-            onUpdate={(newBody) => {
-              if (onUpdate) {
-                if (langContext?.lang?.code !== "EN") {
-                  // Save to alternateLanguageSettings for non-English languages
-                  onUpdate({
-                    ...config,
-                    alternateLanguageSettings: {
-                      ...config.alternateLanguageSettings,
-                      [langContext.lang.code]: {
-                        ...config.alternateLanguageSettings[
-                          langContext.lang.code
-                        ],
-                        body: newBody,
-                      },
-                    },
-                  });
-                } else {
-                  // Save to main body for English
-                  onUpdate({
-                    ...config,
-                    body: newBody,
-                  });
-                }
-              }
-            }}
+            onUpdate={handleBodyUpdate}
             className={`${tint} ${icon ? "hasIcon" : ""}`}
           />
         ) : (
@@ -185,7 +187,7 @@ export function ReportCardFactory({
 }: {
   config: ReportCardConfiguration<any>;
   dragHandleProps?: any;
-  onUpdate?: (config: ReportCardConfiguration<any>) => void;
+  onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const { t } = useTranslation("admin:sketching");
   const cardType = config.type;
@@ -194,7 +196,6 @@ export function ReportCardFactory({
   if (!CardComponent) {
     return (
       <ReportCard
-        title={t("Unknown Card Type")}
         alternateLanguageSettings={config.alternateLanguageSettings}
         dragHandleProps={dragHandleProps}
         cardId={config.id}

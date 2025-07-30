@@ -5,10 +5,11 @@ import {
   ExclamationTriangleIcon,
   CrossCircledIcon,
 } from "@radix-ui/react-icons";
+import { ReportCardConfigUpdateCallback } from "../registerCard";
 
 interface TextBlockCardAdminProps {
   config: TextBlockCardConfiguration;
-  onUpdate: (config: TextBlockCardConfiguration) => void;
+  onUpdate: ReportCardConfigUpdateCallback;
 }
 
 export default function TextBlockCardAdmin({
@@ -50,13 +51,13 @@ export default function TextBlockCardAdmin({
   ];
 
   const handlePresentationChange = (newPresentation: typeof presentation) => {
-    onUpdate({
-      ...config,
+    onUpdate((prevState) => ({
+      ...prevState,
       componentSettings: {
-        ...config.componentSettings,
+        ...prevState.componentSettings,
         presentation: newPresentation,
       },
-    });
+    }));
   };
 
   return (

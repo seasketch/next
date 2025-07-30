@@ -197,6 +197,7 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     properties
     userAttributes
     childProperties
+    sketchClassId
   }
   sketchClass(id: $sketchClassId) {
     project {
@@ -222,6 +223,9 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
       logicRules {
         ...LogicRuleDetails
       }
+    }
+    report {
+      ...ReportDetails
     }
   }
 }
