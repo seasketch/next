@@ -1507,6 +1507,8 @@ CREATE TABLE public.sketch_classes (
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
     is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
+    draft_report_id integer,
+    report_id integer,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
@@ -2077,8 +2079,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
@@ -2404,6 +2406,90 @@ $$;
 --
 
 COMMENT ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) IS '@omit';
+
+
+--
+-- Name: report_cards; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.report_cards (
+    id integer NOT NULL,
+    report_tab_id integer NOT NULL,
+    body jsonb DEFAULT '{}'::jsonb NOT NULL,
+    "position" integer NOT NULL,
+    alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    type text NOT NULL,
+    tint text,
+    icon text,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: add_report_card(integer, jsonb, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) RETURNS public.report_cards
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      new_card report_cards;
+    begin
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = add_report_card.report_tab_id))) then
+        insert into report_cards (
+          report_tab_id, 
+          position, 
+          component_settings, 
+          type,
+          body
+        ) values (
+          add_report_card.report_tab_id, 
+          coalesce((select max(position) from report_cards where report_cards.report_tab_id = add_report_card.report_tab_id), 0) + 1,
+          add_report_card.component_settings, 
+          add_report_card.card_type,
+          add_report_card.body
+        ) returning * into new_card;
+        return new_card;
+      else
+        raise exception 'You are not authorized to add a card to this report';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: report_tabs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.report_tabs (
+    id integer NOT NULL,
+    report_id integer NOT NULL,
+    title text NOT NULL,
+    "position" integer NOT NULL,
+    alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: add_report_tab(integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_report_tab(report_id integer, title text, tab_position integer) RETURNS public.report_tabs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      new_tab report_tabs;
+    begin
+      if session_is_admin((select project_id from reports where id = report_id)) then
+        insert into report_tabs (report_id, title, position) values (report_id, title, tab_position) returning * into new_tab;
+        return new_tab;
+      else
+        raise exception 'You are not authorized to add a tab to this report';
+      end if;
+    end;
+  $$;
 
 
 --
@@ -6756,6 +6842,77 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
 
 
 --
+-- Name: reports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.reports (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    sketch_class_id integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: create_draft_report(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_draft_report(sketch_class_id integer) RETURNS public.reports
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      dr_report_id int;
+      dr_report_tab_id int;
+      pid int;
+      report reports;
+    begin
+      select (select project_id into pid from sketch_classes where sketch_classes.id = sketch_class_id limit 1);
+      if session_is_admin(pid) then
+        if ((select draft_report_id from sketch_classes where id = sketch_class_id)) is not null then
+          raise exception 'A draft report already exists for this sketch class';
+        end if;
+        insert into reports (
+          project_id, 
+          sketch_class_id
+        ) values (
+          pid,
+          create_draft_report.sketch_class_id
+        ) returning * into report;
+        insert into report_tabs (
+          report_id,
+          title,
+          position
+        ) values (
+          report.id,
+          'Attributes',
+          0
+        ) returning id into dr_report_tab_id;
+        insert into report_cards (
+          report_tab_id,
+          body,
+          position,
+          alternate_language_settings,
+          component_settings,
+          type
+        ) values (
+          dr_report_tab_id,
+          '{"type": "doc", "content": [{"type": "reportTitle", "content": [{"type": "text", "text": "Attributes"}]}]}'::jsonb,
+          0,
+          '{}',
+          '{}',
+          'Attributes'
+        );
+        -- raise exception 'report id: %, sketch class id: %, report %', report.id, sketch_class_id, report;
+        update sketch_classes set draft_report_id = report.id where sketch_classes.id = create_draft_report.sketch_class_id;
+        return report;
+      else
+        raise exception 'You are not authorized to create a draft report for this sketch class';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: create_form_element_associated_sketch_class(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9342,6 +9499,54 @@ $$;
 --
 
 COMMENT ON FUNCTION public.delete_project(project_id integer, OUT project public.projects) IS 'Marks project as deleted. Will remain in database but not accessible to anyone. Function can only be accessed by project administrators.';
+
+
+--
+-- Name: delete_report_card(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_report_card(card_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = (select report_tab_id from report_cards where id = card_id)))) then
+        delete from report_cards where id = card_id;
+        return true;
+      else
+        raise exception 'You are not authorized to delete this card';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: delete_report_tab(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_report_tab(tab_id integer, move_cards_to_tab_id integer) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      tab_to_delete report_tabs;
+    begin
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
+        select * from report_tabs where id = tab_id into tab_to_delete;
+        if move_cards_to_tab_id is not null then
+          -- increment the postion of related cards by the max position of that
+          -- cards in the tab to move to
+          update report_cards set position = position + (select coalesce(max(position), 0) from report_cards where report_tab_id = move_cards_to_tab_id) where report_tab_id = tab_id;
+          -- move the cards to the new tab
+          update report_cards set report_tab_id = move_cards_to_tab_id where report_tab_id = tab_id;
+        end if;
+        -- delete the tab. If cards are still remaining, they will be deleted by
+        -- cascade
+        delete from report_tabs where id = tab_id;
+      else
+        raise exception 'You are not authorized to delete this tab';
+      end if;
+      return true;
+    end;
+  $$;
 
 
 --
@@ -12115,6 +12320,51 @@ CREATE FUNCTION public.modify_survey_answers(response_ids integer[], answers jso
 
 
 --
+-- Name: move_card_to_tab(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.move_card_to_tab(card_id integer, tab_id integer) RETURNS public.report_cards
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      moved_card report_cards;
+      old_tab_id int;
+      report_id int;
+      new_tab_report_id int;
+    begin
+      -- Get the old tab id and report id
+      select report_tab_id, (select report_tabs.report_id from report_tabs where id = report_tab_id)
+      from report_cards 
+      where id = card_id 
+      into old_tab_id, report_id;
+
+      -- Check if user is admin on the report
+      if not session_is_admin((select project_id from reports where id = report_id)) then
+        raise exception 'You are not authorized to move cards in this report';
+      end if;
+
+      -- Get the report id for the new tab
+      select report_tabs.report_id from report_tabs where id = tab_id into new_tab_report_id;
+
+      -- Check if new tab is in same report
+      if report_id != new_tab_report_id then
+        raise exception 'Cannot move card to tab in different report';
+      end if;
+
+      -- Move card to new tab and set position
+      update report_cards 
+      set 
+        report_tab_id = tab_id,
+        position = (select coalesce(min(position), 0) - 1 from report_cards where report_tab_id = tab_id)
+      where id = card_id
+      returning * into moved_card;
+
+      return moved_card;
+    end;
+  $$;
+
+
+--
 -- Name: my_folders(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -14545,6 +14795,109 @@ Used by project administrators to access a list of public sprites promoted by th
 
 
 --
+-- Name: publish_report(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      published_sketch_class sketch_classes;
+      new_report reports;
+      draft_report_id int;
+      project_id int;
+      new_report_id int;
+      new_tab_id int;
+      old_report_id int;
+    begin
+      -- Note that this function copies many columns by name, much like the 
+      -- data layers table of contents publishing function. Like it, we will
+      -- need to update this function regularly as columns are added or removed.
+      
+      -- Get the draft report id and project id
+      select sc.draft_report_id, sc.project_id 
+      from sketch_classes sc 
+      where sc.id = sketch_class_id 
+      into draft_report_id, project_id;
+      
+      -- Check authorization
+      if not session_is_admin(project_id) then
+        raise exception 'You are not authorized to publish this report';
+      end if;
+      
+      -- Check that there is an existing draft report
+      if draft_report_id is null then
+        raise exception 'No draft report exists for this sketch class';
+      end if;
+      
+      -- Get the current published report id (if any)
+      select sc.report_id from sketch_classes sc where sc.id = sketch_class_id into old_report_id;
+      
+      -- Create a new report by copying the draft report
+      insert into reports (project_id, sketch_class_id)
+      select reports.project_id, reports.sketch_class_id
+      from reports 
+      where id = draft_report_id
+      returning * into new_report;
+      
+      new_report_id := new_report.id;
+      
+      -- Copy all report tabs from draft to new report
+      for new_tab_id in 
+        select rt.id 
+        from report_tabs rt 
+        where rt.report_id = draft_report_id 
+        order by rt.position
+      loop
+        declare
+          new_tab_id_copy int;
+          old_tab_id int;
+        begin
+          old_tab_id := new_tab_id;
+          
+          -- Insert the tab and get the new tab id
+          insert into report_tabs (report_id, title, position, alternate_language_settings, updated_at)
+          select new_report_id, title, position, alternate_language_settings, updated_at
+          from report_tabs 
+          where id = old_tab_id
+          returning id into new_tab_id_copy;
+          
+          -- Copy all cards for this tab
+          insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at)
+          select 
+            new_tab_id_copy,
+            rc.body, 
+            rc.position, 
+            rc.alternate_language_settings, 
+            rc.component_settings, 
+            rc.type, 
+            rc.tint, 
+            rc.icon,
+            rc.updated_at
+          from report_cards rc 
+          where rc.report_tab_id = old_tab_id
+          order by rc.position;
+        end;
+      end loop;
+      
+      -- Delete the current published report if it exists
+      if old_report_id is not null then
+        delete from reports where id = old_report_id;
+      end if;
+      
+      -- Update sketch_class to point to the new published report
+      update sketch_classes 
+      set report_id = new_report_id 
+      where id = sketch_class_id;
+      
+      -- Return the updated sketch class
+      select * from sketch_classes where id = sketch_class_id into published_sketch_class;
+      return published_sketch_class;
+    end;
+  $$;
+
+
+--
 -- Name: publish_table_of_contents(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15233,6 +15586,82 @@ Remove a SketchClass from the list of valid children for a Collection.
 
 
 --
+-- Name: rename_report_tab(integer, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.rename_report_tab(tab_id integer, title text, alternate_language_settings jsonb) RETURNS public.report_tabs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      tab_to_rename report_tabs;
+    begin
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
+        update report_tabs set title = rename_report_tab.title, alternate_language_settings = rename_report_tab.alternate_language_settings where id = tab_id returning * into tab_to_rename;
+        return tab_to_rename;
+      else
+        raise exception 'You are not authorized to rename this tab';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: reorder_report_tab_cards(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reorder_report_tab_cards(report_tab_id integer, card_ids integer[]) RETURNS SETOF public.report_cards
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      -- check auth
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = report_tab_id))) then
+        -- check that all card ids are valid
+        if not exists (select 1 from report_cards where id = any(card_ids) and report_cards.report_tab_id = reorder_report_tab_cards.report_tab_id) then
+          raise exception 'Invalid card ids';
+        end if;
+        -- reorder the cards. Start at zero, and loop through the card ids, 
+        -- setting the position of the card to the current index.
+        for i in 0..array_length(card_ids, 1) loop
+          update report_cards set position = i where id = card_ids[i];
+        end loop;
+        -- return the cards in the new order
+        return query select * from report_cards where id = any(card_ids) order by position asc;
+      else
+        raise exception 'You are not authorized to reorder cards for this report';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: reorder_report_tabs(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reorder_report_tabs(report_id integer, tab_ids integer[]) RETURNS SETOF public.report_tabs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      -- check auth
+      if session_is_admin((select project_id from reports where id = report_id)) then
+        -- check that all tab ids are valid
+        if not exists (select 1 from report_tabs where id = any(tab_ids) and report_tabs.report_id = reorder_report_tabs.report_id) then
+          raise exception 'Invalid tab ids';
+        end if;
+        -- reorder the tabs. Start at zero, and loop through the tab ids, 
+        -- setting the position of the tab to the current index.
+        for i in 0..array_length(tab_ids, 1) loop
+          update report_tabs set position = i where id = tab_ids[i];
+        end loop;
+        -- return the tabs in the new order
+        return query select * from report_tabs where id = any(tab_ids) order by position asc;
+      else
+        raise exception 'You are not authorized to reorder tabs for this report';
+      end if;
+    end;
+  $$;
+
+
+--
 -- Name: replace_data_source(integer, integer, text, numeric[], jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15360,6 +15789,53 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
             end
           );
     end;
+  $$;
+
+
+--
+-- Name: report_tabs_cards(public.report_tabs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.report_tabs_cards(report_tab public.report_tabs) RETURNS SETOF public.report_cards
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from report_cards where report_tab_id = report_tab.id order by position asc;
+  $$;
+
+
+--
+-- Name: FUNCTION report_tabs_cards(report_tab public.report_tabs); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.report_tabs_cards(report_tab public.report_tabs) IS '@simpleCollections only';
+
+
+--
+-- Name: reports_tabs(public.reports); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reports_tabs(report public.reports) RETURNS SETOF public.report_tabs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from report_tabs where report_id = report.id order by position asc;
+  $$;
+
+
+--
+-- Name: FUNCTION reports_tabs(report public.reports); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.reports_tabs(report public.reports) IS '@simpleCollections only';
+
+
+--
+-- Name: reports_updated_at(public.reports); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reports_updated_at(r public.reports) RETURNS timestamp with time zone
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select max(updated_at) from report_tabs where report_id = r.id;
   $$;
 
 
@@ -16763,6 +17239,17 @@ COMMENT ON FUNCTION public.sketch_classes_can_digitize(sketch_class public.sketc
 
 
 --
+-- Name: sketch_classes_draft_report(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) RETURNS public.reports
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from reports where id = sc.draft_report_id limit 1;
+  $$;
+
+
+--
 -- Name: sketch_classes_prohibit_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16779,6 +17266,17 @@ CREATE FUNCTION public.sketch_classes_prohibit_delete() RETURNS trigger
         return OLD;
       end if;
     end
+  $$;
+
+
+--
+-- Name: sketch_classes_report(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_classes_report(sc public.sketch_classes) RETURNS public.reports
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from reports where id = sc.report_id limit 1;
   $$;
 
 
@@ -18007,23 +18505,6 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
--- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = stableId
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18715,6 +19196,93 @@ CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin bool
         raise exception 'Must be a project admin';
       end if;
     end;
+  $$;
+
+
+--
+-- Name: update_report_card(integer, jsonb, jsonb, jsonb, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text) RETURNS public.report_cards
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      updated_card report_cards;
+      tab_id int;
+    begin
+      select report_tab_id from report_cards where id = card_id into tab_id;
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
+        update report_cards set component_settings = update_report_card.component_settings, body = update_report_card.body, alternate_language_settings = update_report_card.alternate_language_settings, tint = update_report_card.tint, icon = update_report_card.icon, type = update_report_card.card_type where id = update_report_card.card_id returning * into updated_card;
+        return updated_card;
+      else
+        raise exception 'You are not authorized to update this card';
+      end if;
+    end;
+  $$;
+
+
+--
+-- Name: update_report_cards_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_report_cards_updated_at() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      new.updated_at = now();
+      return new;
+    end;
+  $$;
+
+
+--
+-- Name: update_report_tabs_from_cards(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_report_tabs_from_cards() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      -- For INSERT operations
+      if tg_op = 'INSERT' then
+        update report_tabs set updated_at = now() where id = new.report_tab_id;
+        return new;
+      end if;
+      
+      -- For UPDATE operations
+      if tg_op = 'UPDATE' then
+        -- Update the old tab if report_tab_id changed
+        if old.report_tab_id is distinct from new.report_tab_id then
+          update report_tabs set updated_at = now() where id = old.report_tab_id;
+        end if;
+        -- Update the new tab (or same tab if no change)
+        update report_tabs set updated_at = now() where id = new.report_tab_id;
+        return new;
+      end if;
+      
+      -- For DELETE operations
+      if tg_op = 'DELETE' then
+        update report_tabs set updated_at = now() where id = old.report_tab_id;
+        return old;
+      end if;
+      
+      return null;
+    end;
+  $$;
+
+
+--
+-- Name: update_report_tabs_updated_at(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_report_tabs_updated_at() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      new.updated_at = now();
+      return new;
+    end;
+
   $$;
 
 
@@ -20416,6 +20984,48 @@ CREATE TABLE public.projects_shared_basemaps (
 
 
 --
+-- Name: report_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.report_cards ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.report_cards_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: report_tabs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.report_tabs ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.report_tabs_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: reports_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.reports ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.reports_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: sketch_class_geographies; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -21342,6 +21952,30 @@ ALTER TABLE ONLY public.projects
 
 
 --
+-- Name: report_cards report_cards_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_cards
+    ADD CONSTRAINT report_cards_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: report_tabs report_tabs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_tabs
+    ADD CONSTRAINT report_tabs_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: reports reports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reports
+    ADD CONSTRAINT reports_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: sketch_class_geographies sketch_class_geographies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -22169,6 +22803,27 @@ CREATE INDEX projects_name_idx ON public.projects USING btree (name);
 
 
 --
+-- Name: report_cards_report_tab_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX report_cards_report_tab_id_idx ON public.report_cards USING btree (report_tab_id);
+
+
+--
+-- Name: report_tabs_report_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX report_tabs_report_id_idx ON public.report_tabs USING btree (report_id);
+
+
+--
+-- Name: reports_sketch_class_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reports_sketch_class_id_idx ON public.reports USING btree (sketch_class_id);
+
+
+--
 -- Name: sketch_class_geographies_geography_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -22943,6 +23598,27 @@ CREATE TRIGGER trig_create_sketch_class_acl AFTER INSERT ON public.sketch_classe
 --
 
 CREATE TRIGGER trig_create_table_of_contents_item_acl AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.create_table_of_contents_item_acl();
+
+
+--
+-- Name: report_cards update_report_cards_updated_at_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_report_cards_updated_at_trigger BEFORE UPDATE ON public.report_cards FOR EACH ROW EXECUTE FUNCTION public.update_report_cards_updated_at();
+
+
+--
+-- Name: report_cards update_report_tabs_from_cards_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_report_tabs_from_cards_trigger AFTER INSERT OR DELETE OR UPDATE ON public.report_cards FOR EACH ROW EXECUTE FUNCTION public.update_report_tabs_from_cards();
+
+
+--
+-- Name: report_tabs update_report_tabs_updated_at_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_report_tabs_updated_at_trigger BEFORE UPDATE ON public.report_tabs FOR EACH ROW EXECUTE FUNCTION public.update_report_tabs_updated_at();
 
 
 --
@@ -23759,6 +24435,38 @@ ALTER TABLE ONLY public.projects_shared_basemaps
 
 
 --
+-- Name: report_cards report_cards_report_tab_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_cards
+    ADD CONSTRAINT report_cards_report_tab_id_fkey FOREIGN KEY (report_tab_id) REFERENCES public.report_tabs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: report_tabs report_tabs_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_tabs
+    ADD CONSTRAINT report_tabs_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.reports(id) ON DELETE CASCADE;
+
+
+--
+-- Name: reports reports_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reports
+    ADD CONSTRAINT reports_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: reports reports_sketch_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reports
+    ADD CONSTRAINT reports_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id) ON DELETE CASCADE;
+
+
+--
 -- Name: sketch_class_geographies sketch_class_geographies_geography_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -23772,6 +24480,14 @@ ALTER TABLE ONLY public.sketch_class_geographies
 
 ALTER TABLE ONLY public.sketch_class_geographies
     ADD CONSTRAINT sketch_class_geographies_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id);
+
+
+--
+-- Name: sketch_classes sketch_classes_draft_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_classes
+    ADD CONSTRAINT sketch_classes_draft_report_id_fkey FOREIGN KEY (draft_report_id) REFERENCES public.reports(id) ON DELETE SET NULL;
 
 
 --
@@ -23805,6 +24521,14 @@ ALTER TABLE ONLY public.sketch_classes
 --
 
 COMMENT ON CONSTRAINT sketch_classes_project_id_fkey ON public.sketch_classes IS '@simpleCollections only';
+
+
+--
+-- Name: sketch_classes sketch_classes_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_classes
+    ADD CONSTRAINT sketch_classes_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.reports(id) ON DELETE SET NULL;
 
 
 --
@@ -24726,6 +25450,12 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -24812,6 +25542,32 @@ CREATE POLICY projects_shared_basemaps_select ON public.projects_shared_basemaps
 --
 
 CREATE POLICY projects_update ON public.projects FOR UPDATE TO seasketch_user USING (public.session_is_admin(id)) WITH CHECK (public.session_is_admin(id));
+
+
+--
+-- Name: reports; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.reports ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: reports reports_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY reports_admin ON public.reports USING (public.session_is_admin(( SELECT sketch_classes.project_id
+   FROM public.sketch_classes
+  WHERE (sketch_classes.id = reports.sketch_class_id)))) WITH CHECK (public.session_is_admin(( SELECT sketch_classes.project_id
+   FROM public.sketch_classes
+  WHERE (sketch_classes.id = reports.sketch_class_id))));
+
+
+--
+-- Name: reports reports_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY reports_select ON public.reports FOR SELECT USING (public.session_on_acl(( SELECT access_control_lists.id
+   FROM public.access_control_lists
+  WHERE (access_control_lists.sketch_class_id = access_control_lists.sketch_class_id))));
 
 
 --
@@ -26459,17 +27215,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -26522,6 +27278,22 @@ GRANT SELECT ON TABLE public.sprites TO anon;
 
 REVOKE ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio" integer, width integer, height integer, image text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION add_report_tab(report_id integer, title text, tab_position integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_report_tab(report_id integer, title text, tab_position integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_report_tab(report_id integer, title text, tab_position integer) TO seasketch_user;
 
 
 --
@@ -28161,6 +28933,22 @@ GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id intege
 
 
 --
+-- Name: TABLE reports; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.reports TO anon;
+GRANT ALL ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_draft_report(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_draft_report(sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_draft_report(sketch_class_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_form_element_associated_sketch_class(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -28942,6 +29730,22 @@ GRANT ALL ON FUNCTION public.delete_project(project_id integer, OUT project publ
 
 
 --
+-- Name: FUNCTION delete_report_card(card_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_report_card(card_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.delete_report_card(card_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION delete_report_tab(tab_id integer, move_cards_to_tab_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_report_tab(tab_id integer, move_cards_to_tab_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.delete_report_tab(tab_id integer, move_cards_to_tab_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION delete_table_of_contents_branch("tableOfContentsItemId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -29409,6 +30213,7 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -30984,6 +31789,14 @@ GRANT ALL ON FUNCTION public.modify_survey_answers(response_ids integer[], answe
 
 
 --
+-- Name: FUNCTION move_card_to_tab(card_id integer, tab_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.move_card_to_tab(card_id integer, tab_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.move_card_to_tab(card_id integer, tab_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION my_folders("projectId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32225,6 +33038,14 @@ GRANT ALL ON FUNCTION public.public_sprites() TO seasketch_user;
 
 
 --
+-- Name: FUNCTION publish_report(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.publish_report(sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.publish_report(sketch_class_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION publish_table_of_contents("projectId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32355,6 +33176,30 @@ GRANT ALL ON FUNCTION public.remove_valid_child_sketch_class(parent integer, chi
 
 
 --
+-- Name: FUNCTION rename_report_tab(tab_id integer, title text, alternate_language_settings jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.rename_report_tab(tab_id integer, title text, alternate_language_settings jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.rename_report_tab(tab_id integer, title text, alternate_language_settings jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION reorder_report_tab_cards(report_tab_id integer, card_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reorder_report_tab_cards(report_tab_id integer, card_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reorder_report_tab_cards(report_tab_id integer, card_ids integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION reorder_report_tabs(report_id integer, tab_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reorder_report_tabs(report_id integer, tab_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reorder_report_tabs(report_id integer, tab_ids integer[]) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION replace(public.citext, public.citext, public.citext); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32366,6 +33211,30 @@ REVOKE ALL ON FUNCTION public.replace(public.citext, public.citext, public.citex
 --
 
 REVOKE ALL ON FUNCTION public.replace_data_source(data_layer_id integer, data_source_id integer, source_layer text, bounds numeric[], gl_styles jsonb) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION report_tabs_cards(report_tab public.report_tabs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_tabs_cards(report_tab public.report_tabs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.report_tabs_cards(report_tab public.report_tabs) TO anon;
+
+
+--
+-- Name: FUNCTION reports_tabs(report public.reports); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reports_tabs(report public.reports) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reports_tabs(report public.reports) TO anon;
+
+
+--
+-- Name: FUNCTION reports_updated_at(r public.reports); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reports_updated_at(r public.reports) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reports_updated_at(r public.reports) TO anon;
 
 
 --
@@ -32692,10 +33561,26 @@ GRANT ALL ON FUNCTION public.sketch_classes_can_digitize(sketch_class public.ske
 
 
 --
+-- Name: FUNCTION sketch_classes_draft_report(sc public.sketch_classes); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) TO anon;
+
+
+--
 -- Name: FUNCTION sketch_classes_prohibit_delete(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.sketch_classes_prohibit_delete() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION sketch_classes_report(sc public.sketch_classes); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) TO anon;
 
 
 --
@@ -35938,13 +36823,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
--- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36276,6 +37154,35 @@ REVOKE ALL ON FUNCTION public.update_project_geography_hash_on_delete() FROM PUB
 
 REVOKE ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admin boolean, email text, fullname text, groups integer[]) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_report_cards_updated_at(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_report_cards_updated_at() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION update_report_tabs_from_cards(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_report_tabs_from_cards() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION update_report_tabs_updated_at(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_report_tabs_updated_at() FROM PUBLIC;
 
 
 --
