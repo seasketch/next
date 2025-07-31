@@ -1735,7 +1735,6 @@ export default function SketchUIStateContextProvider({
                   sketchClass?.isGeographyClippingEnabled &&
                   sketchClass?.reportId
                 ) {
-                  console.log("new style report");
                   return (
                     <SketchReportWindow
                       key={sketchId}

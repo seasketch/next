@@ -203,7 +203,8 @@ create or replace function delete_report_tab(tab_id int, move_cards_to_tab_id in
 
 grant execute on function delete_report_tab to seasketch_user;
 
-create or replace function rename_report_tab(tab_id int, title text)
+drop function if exists rename_report_tab;
+create or replace function rename_report_tab(tab_id int, title text, alternate_language_settings jsonb)
   returns report_tabs
   language plpgsql
   security definer
@@ -212,7 +213,7 @@ create or replace function rename_report_tab(tab_id int, title text)
       tab_to_rename report_tabs;
     begin
       if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
-        update report_tabs set title = rename_report_tab.title where id = tab_id returning * into tab_to_rename;
+        update report_tabs set title = rename_report_tab.title, alternate_language_settings = rename_report_tab.alternate_language_settings where id = tab_id returning * into tab_to_rename;
         return tab_to_rename;
       else
         raise exception 'You are not authorized to rename this tab';

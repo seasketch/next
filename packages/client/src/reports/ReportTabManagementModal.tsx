@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import {
@@ -25,6 +25,9 @@ import {
   DragHandleHorizontalIcon,
   PlusIcon,
 } from "@radix-ui/react-icons";
+import { FormLanguageContext } from "../formElements/FormElement";
+import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
+import languages from "../lang/supported";
 
 interface ReportTabManagementModalProps {
   isOpen: boolean;
@@ -42,6 +45,7 @@ export function ReportTabManagementModal({
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const dialog = useDialog();
+  const langContext = useContext(FormLanguageContext);
 
   // State for editing tab names
   const [editingTabId, setEditingTabId] = useState<number | null>(null);
@@ -92,6 +96,21 @@ export function ReportTabManagementModal({
     setOptimisticTabs(tabs);
   }, [tabs]);
 
+  // Helper function to get localized tab title
+  const getLocalizedTabTitle = useCallback(
+    (tab: ReportTabDetailsFragment) => {
+      if (langContext?.lang?.code !== "EN" && tab.alternateLanguageSettings) {
+        const alternateSettings =
+          tab.alternateLanguageSettings[langContext.lang.code];
+        if (alternateSettings?.title) {
+          return alternateSettings.title;
+        }
+      }
+      return tab.title;
+    },
+    [langContext?.lang?.code]
+  );
+
   // Handle adding a new tab
   const handleAddTab = useCallback(async () => {
     const tabName = prompt(t("Enter a name for the new tab"));
@@ -101,6 +120,8 @@ export function ReportTabManagementModal({
     }
 
     try {
+      // TODO: Update AddReportTabMutation to support alternateLanguageSettings
+      // For now, we'll save to the main title regardless of language
       await addReportTab({
         variables: {
           reportId,
@@ -147,10 +168,14 @@ export function ReportTabManagementModal({
   }, []);
 
   // Handle starting to edit a tab name
-  const handleStartEdit = useCallback((tab: ReportTabDetailsFragment) => {
-    setEditingTabId(tab.id);
-    setEditingTabName(tab.title);
-  }, []);
+  const handleStartEdit = useCallback(
+    (tab: ReportTabDetailsFragment) => {
+      setEditingTabId(tab.id);
+      // Use localized title for editing
+      setEditingTabName(getLocalizedTabTitle(tab));
+    },
+    [getLocalizedTabTitle]
+  );
 
   // Handle saving the edited tab name
   const handleSaveEdit = useCallback(async () => {
@@ -160,10 +185,35 @@ export function ReportTabManagementModal({
     }
 
     try {
+      // Find the current tab to get its existing alternateLanguageSettings
+      const currentTab = optimisticTabs.find((tab) => tab.id === editingTabId);
+      if (!currentTab) {
+        setEditingTabId(null);
+        return;
+      }
+
+      let newAlternateLanguageSettings =
+        currentTab.alternateLanguageSettings || {};
+
+      if (langContext?.lang?.code !== "EN") {
+        // Update alternate language settings for non-English languages
+        newAlternateLanguageSettings = {
+          ...newAlternateLanguageSettings,
+          [langContext.lang.code]: {
+            ...newAlternateLanguageSettings[langContext.lang.code],
+            title: editingTabName.trim(),
+          },
+        };
+      }
+
       await renameReportTab({
         variables: {
           tabId: editingTabId,
-          title: editingTabName.trim(),
+          title:
+            langContext?.lang?.code === "EN"
+              ? editingTabName.trim()
+              : currentTab.title,
+          alternateLanguageSettings: newAlternateLanguageSettings,
         },
       });
       setEditingTabId(null);
@@ -171,7 +221,13 @@ export function ReportTabManagementModal({
     } catch (error) {
       // Error is handled by onError
     }
-  }, [renameReportTab, editingTabId, editingTabName]);
+  }, [
+    renameReportTab,
+    editingTabId,
+    editingTabName,
+    langContext?.lang?.code,
+    optimisticTabs,
+  ]);
 
   // Handle canceling edit
   const handleCancelEdit = useCallback(() => {
@@ -246,6 +302,12 @@ export function ReportTabManagementModal({
           },
         ]}
       >
+        {/* Language Selector */}
+        {langContext && (
+          <div className="mb-4 flex justify-end">
+            <EditorLanguageSelector />
+          </div>
+        )}
         <div className="space-y-4 mb-6">
           <p className="text-sm text-gray-500">
             {t(
@@ -329,9 +391,19 @@ export function ReportTabManagementModal({
                               ) : (
                                 <div className="flex items-center justify-between">
                                   <div className="flex items-center space-x-2">
-                                    <h3 className="font-medium text-gray-900">
-                                      {tab.title}
-                                    </h3>
+                                    <div className="flex items-center space-x-1">
+                                      <h3 className="font-medium text-gray-900">
+                                        {getLocalizedTabTitle(tab)}
+                                      </h3>
+                                      {langContext?.lang?.code !== "EN" &&
+                                        tab.alternateLanguageSettings?.[
+                                          langContext.lang.code
+                                        ]?.title && (
+                                          <span className="text-xs text-blue-600 bg-blue-100 px-1 py-0.5 rounded">
+                                            {langContext.lang.code}
+                                          </span>
+                                        )}
+                                    </div>
                                     <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
                                       {tab.cards?.length || 0}{" "}
                                       {(tab.cards?.length || 0) === 1
@@ -423,7 +495,7 @@ export function ReportTabManagementModal({
           <div className="space-y-4">
             <p>
               {t("Are you sure you want to delete the tab '{{tabTitle}}'?", {
-                tabTitle: tabToDelete.title,
+                tabTitle: getLocalizedTabTitle(tabToDelete),
               })}
             </p>
 
@@ -459,7 +531,8 @@ export function ReportTabManagementModal({
                       .filter((tab) => tab.id !== tabToDelete.id)
                       .map((tab) => (
                         <option key={tab.id} value={tab.id}>
-                          {tab.title} ({tab.cards?.length || 0} {t("cards")})
+                          {getLocalizedTabTitle(tab)} ({tab.cards?.length || 0}{" "}
+                          {t("cards")})
                         </option>
                       ))}
                   </select>

@@ -337,8 +337,9 @@ export default function SketchClassReportsAdmin({
   }
 
   const hasUnpublishedChanges =
+    (data?.sketchClass && !data?.sketchClass?.report) ||
     new Date(data?.sketchClass?.draftReport?.updatedAt) >=
-    new Date(data?.sketchClass?.report?.createdAt);
+      new Date(data?.sketchClass?.report?.createdAt);
 
   const selectedCardForEditing = selectedForEditing
     ? selectedTab?.cards.find((card) => card.id === selectedForEditing)

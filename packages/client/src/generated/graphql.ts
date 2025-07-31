@@ -12907,6 +12907,7 @@ export type RemoveValidChildSketchClassPayload = {
 
 /** All input for the `renameReportTab` mutation. */
 export type RenameReportTabInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
@@ -21705,7 +21706,7 @@ export type ReportCardDetailsFragment = (
 
 export type ReportTabDetailsFragment = (
   { __typename?: 'ReportTab' }
-  & Pick<ReportTab, 'id' | 'position' | 'title'>
+  & Pick<ReportTab, 'id' | 'position' | 'title' | 'alternateLanguageSettings'>
   & { cards?: Maybe<Array<(
     { __typename?: 'ReportCard' }
     & ReportCardDetailsFragment
@@ -21791,6 +21792,7 @@ export type DeleteReportTabMutation = (
 export type RenameReportTabMutationVariables = Exact<{
   tabId: Scalars['Int'];
   title: Scalars['String'];
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -25163,6 +25165,7 @@ export const ReportTabDetailsFragmentDoc = gql`
   id
   position
   title
+  alternateLanguageSettings
   cards {
     ...ReportCardDetails
   }
@@ -33650,8 +33653,10 @@ export type DeleteReportTabMutationHookResult = ReturnType<typeof useDeleteRepor
 export type DeleteReportTabMutationResult = Apollo.MutationResult<DeleteReportTabMutation>;
 export type DeleteReportTabMutationOptions = Apollo.BaseMutationOptions<DeleteReportTabMutation, DeleteReportTabMutationVariables>;
 export const RenameReportTabDocument = gql`
-    mutation RenameReportTab($tabId: Int!, $title: String!) {
-  renameReportTab(input: {tabId: $tabId, title: $title}) {
+    mutation RenameReportTab($tabId: Int!, $title: String!, $alternateLanguageSettings: JSON) {
+  renameReportTab(
+    input: {tabId: $tabId, title: $title, alternateLanguageSettings: $alternateLanguageSettings}
+  ) {
     reportTab {
       ...ReportTabDetails
     }
@@ -33675,6 +33680,7 @@ export type RenameReportTabMutationFn = Apollo.MutationFunction<RenameReportTabM
  *   variables: {
  *      tabId: // value for 'tabId'
  *      title: // value for 'title'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
  *   },
  * });
  */

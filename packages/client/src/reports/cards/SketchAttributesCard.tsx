@@ -93,11 +93,11 @@ export function SketchAttributesCard({
                 let label = element.generatedLabel;
                 if (
                   langContext?.lang?.code !== "EN" &&
-                  element.alternateLanguageSettings[langContext?.lang?.code]
+                  element.alternateLanguageSettings?.[langContext?.lang?.code]
                     ?.body
                 ) {
                   label = collectTextFromProsemirrorBodyForLabel(
-                    element.alternateLanguageSettings[langContext?.lang?.code]
+                    element.alternateLanguageSettings?.[langContext?.lang?.code]
                       ?.body
                   );
                 }

@@ -4,6 +4,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useContext,
 } from "react";
 import { useTranslation } from "react-i18next";
 import * as Tabs from "@radix-ui/react-tabs";
@@ -11,6 +12,7 @@ import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import { useReportContext } from "./ReportContext";
 import { Droppable } from "react-beautiful-dnd";
+import { FormLanguageContext } from "../formElements/FormElement";
 
 export function ReportTabs({
   enableDragDrop = false,
@@ -20,6 +22,7 @@ export function ReportTabs({
   const { t } = useTranslation("admin:sketching");
   const { report, selectedTabId, setSelectedTabId, selectedForEditing } =
     useReportContext();
+  const langContext = useContext(FormLanguageContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<typeof report.tabs>([]);
   const [overflowTabs, setOverflowTabs] = useState<typeof report.tabs>([]);
@@ -29,6 +32,21 @@ export function ReportTabs({
   const sortedTabs = useMemo(
     () => [...(report.tabs || [])].sort((a, b) => a.position - b.position),
     [report.tabs]
+  );
+
+  // Helper function to get localized tab title
+  const getLocalizedTabTitle = useCallback(
+    (tab: (typeof report.tabs)[0]) => {
+      if (langContext?.lang?.code !== "EN" && tab.alternateLanguageSettings) {
+        const alternateSettings =
+          tab.alternateLanguageSettings[langContext.lang.code];
+        if (alternateSettings?.title) {
+          return alternateSettings.title;
+        }
+      }
+      return tab.title;
+    },
+    [langContext?.lang?.code]
   );
 
   // Check if selected tab is in overflow
@@ -59,8 +77,9 @@ export function ReportTabs({
     let allTabsFit = true;
 
     for (const tab of currentSortedTabs) {
-      // Estimate width based on title length
-      const estimatedWidth = Math.max(55, tab.title.length * 8 + 32); // Rough estimate
+      // Estimate width based on localized title length
+      const localizedTitle = getLocalizedTabTitle(tab);
+      const estimatedWidth = Math.max(55, localizedTitle.length * 8 + 32); // Rough estimate
       if (availableWidth >= estimatedWidth) {
         visible.push(tab);
         availableWidth -= estimatedWidth;
@@ -83,7 +102,8 @@ export function ReportTabs({
 
     let isOverflowed = false;
     for (const tab of currentSortedTabs) {
-      const estimatedWidth = Math.max(55, tab.title.length * 8 + 30);
+      const localizedTitle = getLocalizedTabTitle(tab);
+      const estimatedWidth = Math.max(55, localizedTitle.length * 8 + 30);
       if (!isOverflowed && availableWidth >= estimatedWidth) {
         visible.push(tab);
         availableWidth -= estimatedWidth;
@@ -103,10 +123,10 @@ export function ReportTabs({
     setOverflowTabs(overflow);
   };
 
-  // Calculate visible tabs when tabs change
+  // Calculate visible tabs when tabs change or language changes
   useEffect(() => {
     calculateVisibleTabsRef.current?.();
-  }, [sortedTabs]);
+  }, [sortedTabs, langContext?.lang?.code]);
 
   const [containerWidth, setContainerWidth] = useState(0);
 
@@ -150,7 +170,7 @@ export function ReportTabs({
           }
         }}
         value={tab.id.toString()}
-        className={`w-full px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
+        className={`whitespace-nowrap w-full px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 text-center items-center justify-center ${
           isDisabled
             ? "text-gray-400 cursor-not-allowed opacity-60"
             : "text-gray-600 hover:text-gray-900 hover:bg-blue-200/10"
@@ -161,7 +181,7 @@ export function ReportTabs({
           display: visibleTabs.some((t) => t.id === tab.id) ? "flex" : "none",
         }}
       >
-        {tab.title}
+        {getLocalizedTabTitle(tab)}
       </Tabs.Trigger>
     );
 
@@ -235,7 +255,7 @@ export function ReportTabs({
                   {isSelectedTabInOverflow ? (
                     <>
                       <span className="truncate flex-1">
-                        {selectedTab?.title}
+                        {selectedTab ? getLocalizedTabTitle(selectedTab) : ""}
                       </span>
                       <ChevronDownIcon className="w-4 h-4 ml-1" />
                     </>
@@ -269,7 +289,7 @@ export function ReportTabs({
                         }
                       }}
                     >
-                      {tab.title}
+                      {getLocalizedTabTitle(tab)}
                     </DropdownMenu.Item>
                   ))}
                 </DropdownMenu.Content>
