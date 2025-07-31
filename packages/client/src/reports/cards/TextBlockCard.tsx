@@ -15,11 +15,9 @@ export type TextBlockCardProps = ReportCardProps<TextBlockCardConfiguration>;
 export function TextBlockCard({
   config,
   dragHandleProps,
-  cardId,
   onUpdate,
 }: TextBlockCardProps & {
   dragHandleProps?: any;
-  cardId?: number;
   onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const { presentation } = config.componentSettings;
@@ -32,9 +30,8 @@ export function TextBlockCard({
       tint={tint}
       backgroundTint={backgroundTint}
       icon={icon}
-      alternateLanguageSettings={alternateLanguageSettings}
       dragHandleProps={dragHandleProps}
-      cardId={cardId}
+      cardId={config.id}
       onUpdate={onUpdate}
       config={config}
       className="pb-2"
@@ -49,12 +46,10 @@ const defaultComponentSettings: TextBlockCardConfiguration["componentSettings"] 
 
 registerReportCardType({
   type: "TextBlock",
-  title: "Text Block",
   component: TextBlockCard,
   defaultSettings: defaultComponentSettings,
   pickerSettings: {
     componentSettings: defaultComponentSettings,
-    alternateLanguageSettings: {},
     body: {
       type: "doc",
       content: [
@@ -87,9 +82,6 @@ registerReportCardType({
         },
       ],
     },
-    position: 0,
-    id: 0,
-    type: "TextBlock",
   },
   adminComponent: lazy(() => import("./TextBlockCardAdmin")),
 });

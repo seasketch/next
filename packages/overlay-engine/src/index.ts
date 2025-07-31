@@ -18,3 +18,14 @@ export {
   GeographySettings,
   mergeTouchingFragments,
 } from "./fragments";
+
+export {
+  Metric,
+  MetricType,
+  TotalAreaMetric,
+  OverlayAreaMetric,
+  CountMetric,
+  PresenceMetric,
+  PresenceTableMetric,
+  MetricTypeMap,
+} from "./metrics/metrics";

@@ -17,11 +17,12 @@ import { useContext, useCallback, useEffect } from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 
+export type ReportCardIcon = "info" | "warning" | "error";
+
 export type ReportCardComponentProps = {
   tint?: string; // Any Tailwind text color class
   backgroundTint?: "blue" | "yellow" | "red"; // Simple color enum
-  icon?: "info" | "warning" | "error";
-  alternateLanguageSettings: { [langCode: string]: any };
+  icon?: ReportCardIcon;
   children?: React.ReactNode;
   dragHandleProps?: any; // Props from react-beautiful-dnd Draggable
   cardId?: number; // ID of the card for edit functionality
@@ -40,7 +41,6 @@ export default function ReportCard({
   tint = "text-black",
   backgroundTint,
   icon,
-  alternateLanguageSettings,
   children,
   dragHandleProps,
   cardId,
@@ -54,6 +54,7 @@ export default function ReportCard({
   const { adminMode, selectedForEditing, setSelectedForEditing, deleteCard } =
     useReportContext();
   const langContext = useContext(FormLanguageContext);
+  const { alternateLanguageSettings } = config;
 
   const handleBodyUpdate = useCallback(
     (newBody: any) => {
@@ -196,7 +197,6 @@ export function ReportCardFactory({
   if (!CardComponent) {
     return (
       <ReportCard
-        alternateLanguageSettings={config.alternateLanguageSettings}
         dragHandleProps={dragHandleProps}
         cardId={config.id}
         onUpdate={onUpdate}

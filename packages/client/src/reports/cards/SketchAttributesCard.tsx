@@ -26,11 +26,9 @@ const SketchAttributesCardAdmin = lazy(
 export function SketchAttributesCard({
   config,
   dragHandleProps,
-  cardId,
   onUpdate,
 }: SketchAttributesCardProps & {
   dragHandleProps?: any;
-  cardId?: number;
   onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const { sketchClass, sketch, adminMode } = useReportContext();
@@ -67,9 +65,8 @@ export function SketchAttributesCard({
 
   return (
     <ReportCard
-      alternateLanguageSettings={config.alternateLanguageSettings}
       dragHandleProps={dragHandleProps}
-      cardId={cardId}
+      cardId={config.id}
       onUpdate={onUpdate}
       backgroundTint={nameOnly ? "yellow" : undefined}
       config={config}
@@ -201,13 +198,10 @@ const defaultComponentSettings: SketchAttributesCardConfiguration["componentSett
 // Register the card type
 registerReportCardType({
   type: "Attributes",
-  title: "Sketch Attributes",
   component: SketchAttributesCard,
   adminComponent: SketchAttributesCardAdmin,
   defaultSettings: defaultComponentSettings,
   pickerSettings: {
-    id: 0,
-    type: "Attributes",
     body: {
       type: "doc",
       content: [
@@ -217,8 +211,6 @@ registerReportCardType({
         },
       ],
     },
-    alternateLanguageSettings: {},
     componentSettings: defaultComponentSettings,
-    position: 0,
   },
 });

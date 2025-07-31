@@ -4994,6 +4994,10 @@ select{
   top:1.25rem
 }
 
+.top-6{
+  top:1.5rem
+}
+
 .top-7{
   top:1.75rem
 }
@@ -5012,10 +5016,6 @@ select{
 
 .top-full{
   top:100%
-}
-
-.top-6{
-  top:1.5rem
 }
 
 .isolate{
