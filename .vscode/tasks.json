@@ -15,14 +15,6 @@
     },
     {
       "type": "npm",
-      "script": "storybook",
-      "path": "packages/client/",
-      "problemMatcher": [],
-      "label": "Storybook",
-      "detail": "start-storybook -p 6006 -s public"
-    },
-    {
-      "type": "npm",
       "script": "start",
       "path": "packages/client/",
       "problemMatcher": [],
@@ -47,7 +39,10 @@
       "group": "build",
       "problemMatcher": [],
       "label": "Watch database changes (current.sql)",
-      "detail": "dotenv graphile-migrate watch"
+      "detail": "dotenv graphile-migrate watch",
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
     },
     {
       "type": "npm",
@@ -55,7 +50,10 @@
       "path": "packages/api/",
       "problemMatcher": [],
       "label": "GraphQL server: watch mode",
-      "detail": "nodemon"
+      "detail": "nodemon",
+      "runOptions": {
+        "runOn": "folderOpen"
+      }
     },
     {
       "type": "npm",
@@ -65,8 +63,17 @@
         "runOn": "folderOpen"
       },
       "problemMatcher": [],
-      "label": "Start Database & Redis",
-      "detail": "docker-compose up -d"
+      "label": "Start Database & Redis"
+    },
+    {
+      "type": "npm",
+      "script": "css:watch",
+      "path": "packages/client/",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "problemMatcher": [],
+      "label": "Tailwind CSS: watch mode"
     }
   ]
 }

@@ -139,6 +139,59 @@ export type AddGroupToAclPayload = {
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
+/** All input for the `addReportCard` mutation. */
+export type AddReportCardInput = {
+  body?: Maybe<Scalars['JSON']>;
+  cardType?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+  reportTabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `addReportCard` mutation. */
+export type AddReportCardPayload = {
+  __typename?: 'AddReportCardPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
+/** All input for the `addReportTab` mutation. */
+export type AddReportTabInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportId?: Maybe<Scalars['Int']>;
+  tabPosition?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `addReportTab` mutation. */
+export type AddReportTabPayload = {
+  __typename?: 'AddReportTabPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Report` that is related to this `ReportTab`. */
+  report?: Maybe<Report>;
+  reportTab?: Maybe<ReportTab>;
+};
+
 /** All input for the `addUserToGroup` mutation. */
 export type AddUserToGroupInput = {
   /**
@@ -1232,6 +1285,39 @@ export type CreateDataUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
+/** All input for the `createDraftReport` mutation. */
+export type CreateDraftReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createDraftReport` mutation. */
+export type CreateDraftReportPayload = {
+  __typename?: 'CreateDraftReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our `createDraftReport` mutation. */
+export type CreateDraftReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
 /** All input for the create `FormElement` mutation. */
 export type CreateFormElementInput = {
   /**
@@ -1877,6 +1963,41 @@ export type CreateRemoteMvtSourcePayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
+/** All input for the create `Report` mutation. */
+export type CreateReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `Report` to be created by this mutation. */
+  report: ReportInput;
+};
+
+/** The output of our create `Report` mutation. */
+export type CreateReportPayload = {
+  __typename?: 'CreateReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `Report` that was created by this mutation. */
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our create `Report` mutation. */
+export type CreateReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the `createSketchClassFromTemplate` mutation. */
@@ -4106,6 +4227,99 @@ export type DeleteProjectsSharedBasemapPayload = {
 /** The output of our delete `ProjectsSharedBasemap` mutation. */
 export type DeleteProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the `deleteReportByNodeId` mutation. */
+export type DeleteReportByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Report` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteReportCard` mutation. */
+export type DeleteReportCardInput = {
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `deleteReportCard` mutation. */
+export type DeleteReportCardPayload = {
+  __typename?: 'DeleteReportCardPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `deleteReport` mutation. */
+export type DeleteReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `Report` mutation. */
+export type DeleteReportPayload = {
+  __typename?: 'DeleteReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedReportNodeId?: Maybe<Scalars['ID']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `Report` that was deleted by this mutation. */
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our delete `Report` mutation. */
+export type DeleteReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
+/** All input for the `deleteReportTab` mutation. */
+export type DeleteReportTabInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  moveCardsToTabId?: Maybe<Scalars['Int']>;
+  tabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `deleteReportTab` mutation. */
+export type DeleteReportTabPayload = {
+  __typename?: 'DeleteReportTabPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `deleteSketchByNodeId` mutation. */
@@ -7096,12 +7310,38 @@ export type ModifySurveyAnswersPayload = {
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
+/** All input for the `moveCardToTab` mutation. */
+export type MoveCardToTabInput = {
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `moveCardToTab` mutation. */
+export type MoveCardToTabPayload = {
+  __typename?: 'MoveCardToTabPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** The root mutation type which contains root level fields which mutate data. */
 export type Mutation = {
   __typename?: 'Mutation';
   /** Add a group to a given access control list. Must be an administrator. */
   addGroupToAcl?: Maybe<AddGroupToAclPayload>;
   addImageToSprite?: Maybe<Sprite>;
+  addReportCard?: Maybe<AddReportCardPayload>;
+  addReportTab?: Maybe<AddReportTabPayload>;
   /** Add the given user to a group. Must be an administrator of the project. */
   addUserToGroup?: Maybe<AddUserToGroupPayload>;
   /** Add a SketchClass to the list of valid children for a Collection-type SketchClass. */
@@ -7162,6 +7402,7 @@ export type Mutation = {
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
+  createDraftReport?: Maybe<CreateDraftReportPayload>;
   createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
@@ -7213,6 +7454,8 @@ export type Mutation = {
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
+  /** Creates a single `Report`. */
+  createReport?: Maybe<CreateReportPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7324,6 +7567,12 @@ export type Mutation = {
   deleteProjectInviteGroupByInviteIdAndGroupId?: Maybe<DeleteProjectInviteGroupPayload>;
   /** Deletes a single `ProjectsSharedBasemap` using a unique key. */
   deleteProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<DeleteProjectsSharedBasemapPayload>;
+  /** Deletes a single `Report` using a unique key. */
+  deleteReport?: Maybe<DeleteReportPayload>;
+  /** Deletes a single `Report` using its globally unique id. */
+  deleteReportByNodeId?: Maybe<DeleteReportPayload>;
+  deleteReportCard?: Maybe<DeleteReportCardPayload>;
+  deleteReportTab?: Maybe<DeleteReportTabPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
   /** Deletes a single `Sketch` using its globally unique id. */
@@ -7434,6 +7683,8 @@ export type Mutation = {
   markTopicAsRead?: Maybe<MarkTopicAsReadPayload>;
   mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
+  moveCardToTab?: Maybe<MoveCardToTabPayload>;
+  publishReport?: Maybe<PublishReportPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
    * control lists to create a new table of contents that will be displayed to project users.
@@ -7445,6 +7696,9 @@ export type Mutation = {
   removeUserFromGroup?: Maybe<RemoveUserFromGroupPayload>;
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
+  renameReportTab?: Maybe<RenameReportTabPayload>;
+  reorderReportTabCards?: Maybe<ReorderReportTabCardsPayload>;
+  reorderReportTabs?: Maybe<ReorderReportTabsPayload>;
   /** Replace the tileset for an existing data source */
   replacePMTiles: DataLayer;
   /**
@@ -7627,6 +7881,11 @@ export type Mutation = {
   updateProjectInviteGroupByInviteIdAndGroupId?: Maybe<UpdateProjectInviteGroupPayload>;
   /** Updates a single `ProjectsSharedBasemap` using a unique key and a patch. */
   updateProjectsSharedBasemapByBasemapIdAndProjectId?: Maybe<UpdateProjectsSharedBasemapPayload>;
+  /** Updates a single `Report` using a unique key and a patch. */
+  updateReport?: Maybe<UpdateReportPayload>;
+  /** Updates a single `Report` using its globally unique id and a patch. */
+  updateReportByNodeId?: Maybe<UpdateReportPayload>;
+  updateReportCard?: Maybe<UpdateReportCardPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7723,6 +7982,18 @@ export type MutationAddImageToSpriteArgs = {
   pixelRatio: Scalars['Int'];
   spriteId: Scalars['Int'];
   width: Scalars['Int'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationAddReportCardArgs = {
+  input: AddReportCardInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationAddReportTabArgs = {
+  input: AddReportTabInput;
 };
 
 
@@ -7863,6 +8134,12 @@ export type MutationCreateDataUploadArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateDraftReportArgs = {
+  input: CreateDraftReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFileUploadArgs = {
   contentType: Scalars['String'];
   filename: Scalars['String'];
@@ -7996,6 +8273,12 @@ export type MutationCreateRemoteGeojsonSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateRemoteMvtSourceArgs = {
   input: CreateRemoteMvtSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateReportArgs = {
+  input: CreateReportInput;
 };
 
 
@@ -8338,6 +8621,30 @@ export type MutationDeleteProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportArgs = {
+  input: DeleteReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportByNodeIdArgs = {
+  input: DeleteReportByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportCardArgs = {
+  input: DeleteReportCardInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportTabArgs = {
+  input: DeleteReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteSketchArgs = {
   input: DeleteSketchInput;
 };
@@ -8620,6 +8927,18 @@ export type MutationModifySurveyAnswersArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationMoveCardToTabArgs = {
+  input: MoveCardToTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationPublishReportArgs = {
+  input: PublishReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationPublishTableOfContentsArgs = {
   input: PublishTableOfContentsInput;
 };
@@ -8640,6 +8959,24 @@ export type MutationRemoveUserFromGroupArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRemoveValidChildSketchClassArgs = {
   input: RemoveValidChildSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRenameReportTabArgs = {
+  input: RenameReportTabInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReorderReportTabCardsArgs = {
+  input: ReorderReportTabCardsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationReorderReportTabsArgs = {
+  input: ReorderReportTabsInput;
 };
 
 
@@ -9140,6 +9477,24 @@ export type MutationUpdateProjectInviteGroupByInviteIdAndGroupIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateProjectsSharedBasemapByBasemapIdAndProjectIdArgs = {
   input: UpdateProjectsSharedBasemapByBasemapIdAndProjectIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportArgs = {
+  input: UpdateReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportByNodeIdArgs = {
+  input: UpdateReportByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardArgs = {
+  input: UpdateReportCardInput;
 };
 
 
@@ -10992,6 +11347,41 @@ export type PublicProjectDetail = {
   supportEmail?: Maybe<Scalars['String']>;
 };
 
+/** All input for the `publishReport` mutation. */
+export type PublishReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `publishReport` mutation. */
+export type PublishReportPayload = {
+  __typename?: 'PublishReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `publishReport` mutation. */
+export type PublishReportPayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
 /** All input for the `publishTableOfContents` mutation. */
 export type PublishTableOfContentsInput = {
   /**
@@ -11206,6 +11596,11 @@ export type Query = Node & {
    * which can only query top level fields if they are in a particular form.
    */
   query: Query;
+  report?: Maybe<Report>;
+  /** Reads a single `Report` using its globally unique `ID`. */
+  reportByNodeId?: Maybe<Report>;
+  /** Reads and enables pagination through a set of `Report`. */
+  reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
   searchOverlays?: Maybe<Array<SearchResult>>;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
@@ -12064,6 +12459,30 @@ export type QueryPublicSpritesArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryReportArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySearchOverlaysArgs = {
   draft?: Maybe<Scalars['Boolean']>;
   first?: Maybe<Scalars['Int']>;
@@ -12486,6 +12905,33 @@ export type RemoveValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `renameReportTab` mutation. */
+export type RenameReportTabInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tabId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `renameReportTab` mutation. */
+export type RenameReportTabPayload = {
+  __typename?: 'RenameReportTabPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** Reads a single `Report` that is related to this `ReportTab`. */
+  report?: Maybe<Report>;
+  reportTab?: Maybe<ReportTab>;
+};
+
 export enum RenderUnderType {
   Labels = 'LABELS',
   Land = 'LAND',
@@ -12497,6 +12943,168 @@ export type RenderedAboutPageContent = {
   html?: Maybe<Scalars['String']>;
   lang?: Maybe<Scalars['String']>;
 };
+
+/** All input for the `reorderReportTabCards` mutation. */
+export type ReorderReportTabCardsInput = {
+  cardIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportTabId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `reorderReportTabCards` mutation. */
+export type ReorderReportTabCardsPayload = {
+  __typename?: 'ReorderReportTabCardsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCards?: Maybe<Array<ReportCard>>;
+};
+
+/** All input for the `reorderReportTabs` mutation. */
+export type ReorderReportTabsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportId?: Maybe<Scalars['Int']>;
+  tabIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
+/** The output of our `reorderReportTabs` mutation. */
+export type ReorderReportTabsPayload = {
+  __typename?: 'ReorderReportTabsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportTabs?: Maybe<Array<ReportTab>>;
+};
+
+export type Report = Node & {
+  __typename?: 'Report';
+  createdAt: Scalars['Datetime'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  projectId: Scalars['Int'];
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+  sketchClassId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `ReportTab`. */
+  tabs?: Maybe<Array<ReportTab>>;
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
+
+
+export type ReportTabsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+export type ReportCard = Node & {
+  __typename?: 'ReportCard';
+  alternateLanguageSettings: Scalars['JSON'];
+  body: Scalars['JSON'];
+  componentSettings: Scalars['JSON'];
+  icon?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  position: Scalars['Int'];
+  reportTabId: Scalars['Int'];
+  tint?: Maybe<Scalars['String']>;
+  type: Scalars['String'];
+  updatedAt: Scalars['Datetime'];
+};
+
+/** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
+export type ReportCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `sketchClassId` field. */
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `Report` */
+export type ReportInput = {
+  createdAt?: Maybe<Scalars['Datetime']>;
+  projectId: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+};
+
+/** Represents an update to a `Report`. Fields that are set will be updated. */
+export type ReportPatch = {
+  createdAt?: Maybe<Scalars['Datetime']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+export type ReportTab = Node & {
+  __typename?: 'ReportTab';
+  alternateLanguageSettings: Scalars['JSON'];
+  /** Reads and enables pagination through a set of `ReportCard`. */
+  cards?: Maybe<Array<ReportCard>>;
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  position: Scalars['Int'];
+  /** Reads a single `Report` that is related to this `ReportTab`. */
+  report?: Maybe<Report>;
+  reportId: Scalars['Int'];
+  title: Scalars['String'];
+  updatedAt: Scalars['Datetime'];
+};
+
+
+export type ReportTabCardsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `Report` values. */
+export type ReportsConnection = {
+  __typename?: 'ReportsConnection';
+  /** A list of edges which contains the `Report` and cursor to aid in pagination. */
+  edges: Array<ReportsEdge>;
+  /** A list of `Report` objects. */
+  nodes: Array<Report>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `Report` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `Report` edge in the connection. */
+export type ReportsEdge = {
+  __typename?: 'ReportsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `Report` at the end of the edge. */
+  node: Report;
+};
+
+/** Methods to use when ordering `Report`. */
+export enum ReportsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  SketchClassIdAsc = 'SKETCH_CLASS_ID_ASC',
+  SketchClassIdDesc = 'SKETCH_CLASS_ID_DESC'
+}
 
 export type RetentionChangeEstimate = {
   __typename?: 'RetentionChangeEstimate';
@@ -13037,6 +13645,8 @@ export type SketchClass = Node & {
    */
   canDigitize?: Maybe<Scalars['Boolean']>;
   clippingGeographies: Array<Maybe<Geography>>;
+  draftReport?: Maybe<Report>;
+  draftReportId?: Maybe<Scalars['Int']>;
   filterApiServerLocation?: Maybe<Scalars['String']>;
   filterApiVersion: Scalars['Int'];
   /** Reads a single `Form` that is related to this `SketchClass`. */
@@ -13082,12 +13692,28 @@ export type SketchClass = Node & {
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
   projectId: Scalars['Int'];
+  report?: Maybe<Report>;
+  reportId?: Maybe<Scalars['Int']>;
+  /** Reads and enables pagination through a set of `Report`. */
+  reportsConnection: ReportsConnection;
   /** Number of sketches created with this sketch class */
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
   translatedProps: Scalars['JSON'];
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
+};
+
+
+/** Sketch Classes act as a schema for sketches drawn by users. */
+export type SketchClassReportsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 
@@ -15853,6 +16479,84 @@ export type UpdateProjectsSharedBasemapPayload = {
 /** The output of our update `ProjectsSharedBasemap` mutation. */
 export type UpdateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the `updateReportByNodeId` mutation. */
+export type UpdateReportByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `Report` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `Report` being updated. */
+  patch: ReportPatch;
+};
+
+/** All input for the `updateReportCard` mutation. */
+export type UpdateReportCardInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  body?: Maybe<Scalars['JSON']>;
+  cardId?: Maybe<Scalars['Int']>;
+  cardType?: Maybe<Scalars['String']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  componentSettings?: Maybe<Scalars['JSON']>;
+  icon?: Maybe<Scalars['String']>;
+  tint?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateReportCard` mutation. */
+export type UpdateReportCardPayload = {
+  __typename?: 'UpdateReportCardPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
+/** All input for the `updateReport` mutation. */
+export type UpdateReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `Report` being updated. */
+  patch: ReportPatch;
+};
+
+/** The output of our update `Report` mutation. */
+export type UpdateReportPayload = {
+  __typename?: 'UpdateReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `Report` that was updated by this mutation. */
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our update `Report` mutation. */
+export type UpdateReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the `updateSketchClassByFormElementId` mutation. */
@@ -20329,7 +21033,7 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps'>
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -20995,6 +21699,235 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type ReportCardDetailsFragment = (
+  { __typename?: 'ReportCard' }
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+);
+
+export type ReportTabDetailsFragment = (
+  { __typename?: 'ReportTab' }
+  & Pick<ReportTab, 'id' | 'position' | 'title' | 'alternateLanguageSettings'>
+  & { cards?: Maybe<Array<(
+    { __typename?: 'ReportCard' }
+    & ReportCardDetailsFragment
+  )>> }
+);
+
+export type ReportDetailsFragment = (
+  { __typename?: 'Report' }
+  & Pick<Report, 'id' | 'createdAt' | 'updatedAt'>
+  & { tabs?: Maybe<Array<(
+    { __typename?: 'ReportTab' }
+    & ReportTabDetailsFragment
+  )>> }
+);
+
+export type DraftReportQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type DraftReportQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { draftReport?: Maybe<(
+      { __typename?: 'Report' }
+      & ReportDetailsFragment
+    )>, report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'createdAt'>
+    )> }
+  )> }
+);
+
+export type CreateDraftReportMutationVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type CreateDraftReportMutation = (
+  { __typename?: 'Mutation' }
+  & { createDraftReport?: Maybe<(
+    { __typename?: 'CreateDraftReportPayload' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & ReportDetailsFragment
+    )> }
+  )> }
+);
+
+export type AddReportTabMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+  position: Scalars['Int'];
+  title: Scalars['String'];
+}>;
+
+
+export type AddReportTabMutation = (
+  { __typename?: 'Mutation' }
+  & { addReportTab?: Maybe<(
+    { __typename?: 'AddReportTabPayload' }
+    & { reportTab?: Maybe<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteReportTabMutationVariables = Exact<{
+  tabId: Scalars['Int'];
+  moveCardsToTabId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type DeleteReportTabMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReportTab?: Maybe<(
+    { __typename?: 'DeleteReportTabPayload' }
+    & Pick<DeleteReportTabPayload, 'boolean'>
+  )> }
+);
+
+export type RenameReportTabMutationVariables = Exact<{
+  tabId: Scalars['Int'];
+  title: Scalars['String'];
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type RenameReportTabMutation = (
+  { __typename?: 'Mutation' }
+  & { renameReportTab?: Maybe<(
+    { __typename?: 'RenameReportTabPayload' }
+    & { reportTab?: Maybe<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )> }
+  )> }
+);
+
+export type ReorderReportTabsMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+  tabIds: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type ReorderReportTabsMutation = (
+  { __typename?: 'Mutation' }
+  & { reorderReportTabs?: Maybe<(
+    { __typename?: 'ReorderReportTabsPayload' }
+    & { reportTabs?: Maybe<Array<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )>> }
+  )> }
+);
+
+export type AddReportCardMutationVariables = Exact<{
+  reportTabId: Scalars['Int'];
+  componentSettings: Scalars['JSON'];
+  cardType: Scalars['String'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type AddReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { addReportCard?: Maybe<(
+    { __typename?: 'AddReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id'>
+    )> }
+  )> }
+);
+
+export type ReorderReportTabCardsMutationVariables = Exact<{
+  reportTabId: Scalars['Int'];
+  cardIds: Array<Scalars['Int']> | Scalars['Int'];
+}>;
+
+
+export type ReorderReportTabCardsMutation = (
+  { __typename?: 'Mutation' }
+  & { reorderReportTabCards?: Maybe<(
+    { __typename?: 'ReorderReportTabCardsPayload' }
+    & { reportCards?: Maybe<Array<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id' | 'position'>
+    )>> }
+  )> }
+);
+
+export type UpdateReportCardMutationVariables = Exact<{
+  id: Scalars['Int'];
+  componentSettings?: Maybe<Scalars['JSON']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
+  body?: Maybe<Scalars['JSON']>;
+  tint?: Maybe<Scalars['String']>;
+  icon?: Maybe<Scalars['String']>;
+  cardType?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReportCard?: Maybe<(
+    { __typename?: 'UpdateReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & ReportCardDetailsFragment
+    )> }
+  )> }
+);
+
+export type DeleteReportCardMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type DeleteReportCardMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReportCard?: Maybe<(
+    { __typename?: 'DeleteReportCardPayload' }
+    & Pick<DeleteReportCardPayload, 'boolean'>
+  )> }
+);
+
+export type MoveCardToTabMutationVariables = Exact<{
+  cardId: Scalars['Int'];
+  tabId: Scalars['Int'];
+}>;
+
+
+export type MoveCardToTabMutation = (
+  { __typename?: 'Mutation' }
+  & { moveCardToTab?: Maybe<(
+    { __typename?: 'MoveCardToTabPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & Pick<ReportCard, 'id' | 'position'>
+    )> }
+  )> }
+);
+
+export type PublishReportMutationVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type PublishReportMutation = (
+  { __typename?: 'Mutation' }
+  & { publishReport?: Maybe<(
+    { __typename?: 'PublishReportPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & AdminSketchingDetailsFragment
+    )> }
+  )> }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
@@ -21232,7 +22165,7 @@ export type SketchReportingDetailsQuery = (
   { __typename?: 'Query' }
   & { sketch?: Maybe<(
     { __typename?: 'Sketch' }
-    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties'>
+    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties' | 'sketchClassId'>
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
@@ -21249,6 +22182,9 @@ export type SketchReportingDetailsQuery = (
         { __typename?: 'FormLogicRule' }
         & LogicRuleDetailsFragment
       )>> }
+    )>, report?: Maybe<(
+      { __typename?: 'Report' }
+      & ReportDetailsFragment
     )> }
   )> }
 );
@@ -23879,6 +24815,8 @@ export const ProjectMetadataFragmentDoc = gql`
     formElementId
     isArchived
     translatedProps
+    reportId
+    isGeographyClippingEnabled
   }
   supportedLanguages
   translatedProps
@@ -24210,6 +25148,39 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const ReportCardDetailsFragmentDoc = gql`
+    fragment ReportCardDetails on ReportCard {
+  id
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+}
+    `;
+export const ReportTabDetailsFragmentDoc = gql`
+    fragment ReportTabDetails on ReportTab {
+  id
+  position
+  title
+  alternateLanguageSettings
+  cards {
+    ...ReportCardDetails
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export const ReportDetailsFragmentDoc = gql`
+    fragment ReportDetails on Report {
+  id
+  createdAt
+  updatedAt
+  tabs {
+    ...ReportTabDetails
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -32533,6 +33504,454 @@ export function useSketchClassGeographyEditorDetailsLazyQuery(baseOptions?: Apol
 export type SketchClassGeographyEditorDetailsQueryHookResult = ReturnType<typeof useSketchClassGeographyEditorDetailsQuery>;
 export type SketchClassGeographyEditorDetailsLazyQueryHookResult = ReturnType<typeof useSketchClassGeographyEditorDetailsLazyQuery>;
 export type SketchClassGeographyEditorDetailsQueryResult = Apollo.QueryResult<SketchClassGeographyEditorDetailsQuery, SketchClassGeographyEditorDetailsQueryVariables>;
+export const DraftReportDocument = gql`
+    query DraftReport($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    draftReport {
+      ...ReportDetails
+    }
+    report {
+      createdAt
+    }
+  }
+}
+    ${ReportDetailsFragmentDoc}`;
+
+/**
+ * __useDraftReportQuery__
+ *
+ * To run a query within a React component, call `useDraftReportQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDraftReportQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftReportQuery({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useDraftReportQuery(baseOptions: Apollo.QueryHookOptions<DraftReportQuery, DraftReportQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DraftReportQuery, DraftReportQueryVariables>(DraftReportDocument, options);
+      }
+export function useDraftReportLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DraftReportQuery, DraftReportQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DraftReportQuery, DraftReportQueryVariables>(DraftReportDocument, options);
+        }
+export type DraftReportQueryHookResult = ReturnType<typeof useDraftReportQuery>;
+export type DraftReportLazyQueryHookResult = ReturnType<typeof useDraftReportLazyQuery>;
+export type DraftReportQueryResult = Apollo.QueryResult<DraftReportQuery, DraftReportQueryVariables>;
+export const CreateDraftReportDocument = gql`
+    mutation CreateDraftReport($sketchClassId: Int!) {
+  createDraftReport(input: {sketchClassId: $sketchClassId}) {
+    report {
+      ...ReportDetails
+    }
+  }
+}
+    ${ReportDetailsFragmentDoc}`;
+export type CreateDraftReportMutationFn = Apollo.MutationFunction<CreateDraftReportMutation, CreateDraftReportMutationVariables>;
+
+/**
+ * __useCreateDraftReportMutation__
+ *
+ * To run a mutation, you first call `useCreateDraftReportMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateDraftReportMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createDraftReportMutation, { data, loading, error }] = useCreateDraftReportMutation({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useCreateDraftReportMutation(baseOptions?: Apollo.MutationHookOptions<CreateDraftReportMutation, CreateDraftReportMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateDraftReportMutation, CreateDraftReportMutationVariables>(CreateDraftReportDocument, options);
+      }
+export type CreateDraftReportMutationHookResult = ReturnType<typeof useCreateDraftReportMutation>;
+export type CreateDraftReportMutationResult = Apollo.MutationResult<CreateDraftReportMutation>;
+export type CreateDraftReportMutationOptions = Apollo.BaseMutationOptions<CreateDraftReportMutation, CreateDraftReportMutationVariables>;
+export const AddReportTabDocument = gql`
+    mutation AddReportTab($reportId: Int!, $position: Int!, $title: String!) {
+  addReportTab(
+    input: {reportId: $reportId, tabPosition: $position, title: $title}
+  ) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export type AddReportTabMutationFn = Apollo.MutationFunction<AddReportTabMutation, AddReportTabMutationVariables>;
+
+/**
+ * __useAddReportTabMutation__
+ *
+ * To run a mutation, you first call `useAddReportTabMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddReportTabMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addReportTabMutation, { data, loading, error }] = useAddReportTabMutation({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      position: // value for 'position'
+ *      title: // value for 'title'
+ *   },
+ * });
+ */
+export function useAddReportTabMutation(baseOptions?: Apollo.MutationHookOptions<AddReportTabMutation, AddReportTabMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddReportTabMutation, AddReportTabMutationVariables>(AddReportTabDocument, options);
+      }
+export type AddReportTabMutationHookResult = ReturnType<typeof useAddReportTabMutation>;
+export type AddReportTabMutationResult = Apollo.MutationResult<AddReportTabMutation>;
+export type AddReportTabMutationOptions = Apollo.BaseMutationOptions<AddReportTabMutation, AddReportTabMutationVariables>;
+export const DeleteReportTabDocument = gql`
+    mutation DeleteReportTab($tabId: Int!, $moveCardsToTabId: Int) {
+  deleteReportTab(input: {tabId: $tabId, moveCardsToTabId: $moveCardsToTabId}) {
+    boolean
+  }
+}
+    `;
+export type DeleteReportTabMutationFn = Apollo.MutationFunction<DeleteReportTabMutation, DeleteReportTabMutationVariables>;
+
+/**
+ * __useDeleteReportTabMutation__
+ *
+ * To run a mutation, you first call `useDeleteReportTabMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteReportTabMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteReportTabMutation, { data, loading, error }] = useDeleteReportTabMutation({
+ *   variables: {
+ *      tabId: // value for 'tabId'
+ *      moveCardsToTabId: // value for 'moveCardsToTabId'
+ *   },
+ * });
+ */
+export function useDeleteReportTabMutation(baseOptions?: Apollo.MutationHookOptions<DeleteReportTabMutation, DeleteReportTabMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteReportTabMutation, DeleteReportTabMutationVariables>(DeleteReportTabDocument, options);
+      }
+export type DeleteReportTabMutationHookResult = ReturnType<typeof useDeleteReportTabMutation>;
+export type DeleteReportTabMutationResult = Apollo.MutationResult<DeleteReportTabMutation>;
+export type DeleteReportTabMutationOptions = Apollo.BaseMutationOptions<DeleteReportTabMutation, DeleteReportTabMutationVariables>;
+export const RenameReportTabDocument = gql`
+    mutation RenameReportTab($tabId: Int!, $title: String!, $alternateLanguageSettings: JSON) {
+  renameReportTab(
+    input: {tabId: $tabId, title: $title, alternateLanguageSettings: $alternateLanguageSettings}
+  ) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export type RenameReportTabMutationFn = Apollo.MutationFunction<RenameReportTabMutation, RenameReportTabMutationVariables>;
+
+/**
+ * __useRenameReportTabMutation__
+ *
+ * To run a mutation, you first call `useRenameReportTabMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameReportTabMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameReportTabMutation, { data, loading, error }] = useRenameReportTabMutation({
+ *   variables: {
+ *      tabId: // value for 'tabId'
+ *      title: // value for 'title'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
+ *   },
+ * });
+ */
+export function useRenameReportTabMutation(baseOptions?: Apollo.MutationHookOptions<RenameReportTabMutation, RenameReportTabMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameReportTabMutation, RenameReportTabMutationVariables>(RenameReportTabDocument, options);
+      }
+export type RenameReportTabMutationHookResult = ReturnType<typeof useRenameReportTabMutation>;
+export type RenameReportTabMutationResult = Apollo.MutationResult<RenameReportTabMutation>;
+export type RenameReportTabMutationOptions = Apollo.BaseMutationOptions<RenameReportTabMutation, RenameReportTabMutationVariables>;
+export const ReorderReportTabsDocument = gql`
+    mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
+  reorderReportTabs(input: {reportId: $reportId, tabIds: $tabIds}) {
+    reportTabs {
+      ...ReportTabDetails
+    }
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export type ReorderReportTabsMutationFn = Apollo.MutationFunction<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
+
+/**
+ * __useReorderReportTabsMutation__
+ *
+ * To run a mutation, you first call `useReorderReportTabsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useReorderReportTabsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [reorderReportTabsMutation, { data, loading, error }] = useReorderReportTabsMutation({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      tabIds: // value for 'tabIds'
+ *   },
+ * });
+ */
+export function useReorderReportTabsMutation(baseOptions?: Apollo.MutationHookOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>(ReorderReportTabsDocument, options);
+      }
+export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderReportTabsMutation>;
+export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
+export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
+export const AddReportCardDocument = gql`
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+  addReportCard(
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+  ) {
+    reportCard {
+      id
+    }
+  }
+}
+    `;
+export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutation, AddReportCardMutationVariables>;
+
+/**
+ * __useAddReportCardMutation__
+ *
+ * To run a mutation, you first call `useAddReportCardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useAddReportCardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [addReportCardMutation, { data, loading, error }] = useAddReportCardMutation({
+ *   variables: {
+ *      reportTabId: // value for 'reportTabId'
+ *      componentSettings: // value for 'componentSettings'
+ *      cardType: // value for 'cardType'
+ *      body: // value for 'body'
+ *   },
+ * });
+ */
+export function useAddReportCardMutation(baseOptions?: Apollo.MutationHookOptions<AddReportCardMutation, AddReportCardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<AddReportCardMutation, AddReportCardMutationVariables>(AddReportCardDocument, options);
+      }
+export type AddReportCardMutationHookResult = ReturnType<typeof useAddReportCardMutation>;
+export type AddReportCardMutationResult = Apollo.MutationResult<AddReportCardMutation>;
+export type AddReportCardMutationOptions = Apollo.BaseMutationOptions<AddReportCardMutation, AddReportCardMutationVariables>;
+export const ReorderReportTabCardsDocument = gql`
+    mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
+  reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
+    reportCards {
+      id
+      position
+    }
+  }
+}
+    `;
+export type ReorderReportTabCardsMutationFn = Apollo.MutationFunction<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
+
+/**
+ * __useReorderReportTabCardsMutation__
+ *
+ * To run a mutation, you first call `useReorderReportTabCardsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useReorderReportTabCardsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [reorderReportTabCardsMutation, { data, loading, error }] = useReorderReportTabCardsMutation({
+ *   variables: {
+ *      reportTabId: // value for 'reportTabId'
+ *      cardIds: // value for 'cardIds'
+ *   },
+ * });
+ */
+export function useReorderReportTabCardsMutation(baseOptions?: Apollo.MutationHookOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>(ReorderReportTabCardsDocument, options);
+      }
+export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReorderReportTabCardsMutation>;
+export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
+export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
+export const UpdateReportCardDocument = gql`
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+  updateReportCard(
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+  ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCardMutation, UpdateReportCardMutationVariables>;
+
+/**
+ * __useUpdateReportCardMutation__
+ *
+ * To run a mutation, you first call `useUpdateReportCardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateReportCardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateReportCardMutation, { data, loading, error }] = useUpdateReportCardMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      componentSettings: // value for 'componentSettings'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
+ *      body: // value for 'body'
+ *      tint: // value for 'tint'
+ *      icon: // value for 'icon'
+ *      cardType: // value for 'cardType'
+ *   },
+ * });
+ */
+export function useUpdateReportCardMutation(baseOptions?: Apollo.MutationHookOptions<UpdateReportCardMutation, UpdateReportCardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateReportCardMutation, UpdateReportCardMutationVariables>(UpdateReportCardDocument, options);
+      }
+export type UpdateReportCardMutationHookResult = ReturnType<typeof useUpdateReportCardMutation>;
+export type UpdateReportCardMutationResult = Apollo.MutationResult<UpdateReportCardMutation>;
+export type UpdateReportCardMutationOptions = Apollo.BaseMutationOptions<UpdateReportCardMutation, UpdateReportCardMutationVariables>;
+export const DeleteReportCardDocument = gql`
+    mutation DeleteReportCard($id: Int!) {
+  deleteReportCard(input: {cardId: $id}) {
+    boolean
+  }
+}
+    `;
+export type DeleteReportCardMutationFn = Apollo.MutationFunction<DeleteReportCardMutation, DeleteReportCardMutationVariables>;
+
+/**
+ * __useDeleteReportCardMutation__
+ *
+ * To run a mutation, you first call `useDeleteReportCardMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteReportCardMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteReportCardMutation, { data, loading, error }] = useDeleteReportCardMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useDeleteReportCardMutation(baseOptions?: Apollo.MutationHookOptions<DeleteReportCardMutation, DeleteReportCardMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteReportCardMutation, DeleteReportCardMutationVariables>(DeleteReportCardDocument, options);
+      }
+export type DeleteReportCardMutationHookResult = ReturnType<typeof useDeleteReportCardMutation>;
+export type DeleteReportCardMutationResult = Apollo.MutationResult<DeleteReportCardMutation>;
+export type DeleteReportCardMutationOptions = Apollo.BaseMutationOptions<DeleteReportCardMutation, DeleteReportCardMutationVariables>;
+export const MoveCardToTabDocument = gql`
+    mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
+  moveCardToTab(input: {cardId: $cardId, tabId: $tabId}) {
+    reportCard {
+      id
+      position
+    }
+  }
+}
+    `;
+export type MoveCardToTabMutationFn = Apollo.MutationFunction<MoveCardToTabMutation, MoveCardToTabMutationVariables>;
+
+/**
+ * __useMoveCardToTabMutation__
+ *
+ * To run a mutation, you first call `useMoveCardToTabMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useMoveCardToTabMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [moveCardToTabMutation, { data, loading, error }] = useMoveCardToTabMutation({
+ *   variables: {
+ *      cardId: // value for 'cardId'
+ *      tabId: // value for 'tabId'
+ *   },
+ * });
+ */
+export function useMoveCardToTabMutation(baseOptions?: Apollo.MutationHookOptions<MoveCardToTabMutation, MoveCardToTabMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<MoveCardToTabMutation, MoveCardToTabMutationVariables>(MoveCardToTabDocument, options);
+      }
+export type MoveCardToTabMutationHookResult = ReturnType<typeof useMoveCardToTabMutation>;
+export type MoveCardToTabMutationResult = Apollo.MutationResult<MoveCardToTabMutation>;
+export type MoveCardToTabMutationOptions = Apollo.BaseMutationOptions<MoveCardToTabMutation, MoveCardToTabMutationVariables>;
+export const PublishReportDocument = gql`
+    mutation PublishReport($sketchClassId: Int!) {
+  publishReport(input: {sketchClassId: $sketchClassId}) {
+    sketchClass {
+      ...AdminSketchingDetails
+    }
+  }
+}
+    ${AdminSketchingDetailsFragmentDoc}`;
+export type PublishReportMutationFn = Apollo.MutationFunction<PublishReportMutation, PublishReportMutationVariables>;
+
+/**
+ * __usePublishReportMutation__
+ *
+ * To run a mutation, you first call `usePublishReportMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePublishReportMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [publishReportMutation, { data, loading, error }] = usePublishReportMutation({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function usePublishReportMutation(baseOptions?: Apollo.MutationHookOptions<PublishReportMutation, PublishReportMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PublishReportMutation, PublishReportMutationVariables>(PublishReportDocument, options);
+      }
+export type PublishReportMutationHookResult = ReturnType<typeof usePublishReportMutation>;
+export type PublishReportMutationResult = Apollo.MutationResult<PublishReportMutation>;
+export type PublishReportMutationOptions = Apollo.BaseMutationOptions<PublishReportMutation, PublishReportMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -32881,6 +34300,7 @@ export const SketchReportingDetailsDocument = gql`
     properties
     userAttributes
     childProperties
+    sketchClassId
   }
   sketchClass(id: $sketchClassId) {
     project {
@@ -32907,9 +34327,13 @@ export const SketchReportingDetailsDocument = gql`
         ...LogicRuleDetails
       }
     }
+    report {
+      ...ReportDetails
+    }
   }
 }
-    ${LogicRuleDetailsFragmentDoc}`;
+    ${LogicRuleDetailsFragmentDoc}
+${ReportDetailsFragmentDoc}`;
 
 /**
  * __useSketchReportingDetailsQuery__
@@ -36141,6 +37565,7 @@ export const namedOperations = {
     SketchClasses: 'SketchClasses',
     SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
     SketchClassGeographyEditorDetails: 'SketchClassGeographyEditorDetails',
+    DraftReport: 'DraftReport',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -36282,6 +37707,17 @@ export const namedOperations = {
     DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
     UpdateSketchClassStyle: 'UpdateSketchClassStyle',
     ToggleSketchClassGeographyClipping: 'ToggleSketchClassGeographyClipping',
+    CreateDraftReport: 'CreateDraftReport',
+    AddReportTab: 'AddReportTab',
+    DeleteReportTab: 'DeleteReportTab',
+    RenameReportTab: 'RenameReportTab',
+    ReorderReportTabs: 'ReorderReportTabs',
+    AddReportCard: 'AddReportCard',
+    ReorderReportTabCards: 'ReorderReportTabCards',
+    UpdateReportCard: 'UpdateReportCard',
+    DeleteReportCard: 'DeleteReportCard',
+    MoveCardToTab: 'MoveCardToTab',
+    PublishReport: 'PublishReport',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -36423,6 +37859,9 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    ReportCardDetails: 'ReportCardDetails',
+    ReportTabDetails: 'ReportTabDetails',
+    ReportDetails: 'ReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

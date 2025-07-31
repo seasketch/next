@@ -55,7 +55,9 @@ import useAccessToken from "../../useAccessToken";
 import useLocalStorage from "../../useLocalStorage";
 import { currentSidebarState } from "../ProjectAppSidebar";
 import SketchEditorModal from "./SketchEditorModal";
-import SketchReportWindow, { ReportWindowUIState } from "./SketchReportWindow";
+import LegacySketchReportWindow, {
+  ReportWindowUIState,
+} from "./LegacySketchReportWindow";
 import { useTranslatedProps } from "../../components/TranslatedPropControl";
 import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
@@ -69,6 +71,7 @@ import {
 import { LegendItem } from "../../dataLayers/Legend";
 import { compileLegendFromGLStyleLayers } from "../../dataLayers/legends/compileLegend";
 import { LegendForGLLayers } from "../../dataLayers/legends/LegendDataModel";
+import SketchReportWindow from "./SketchReportWindow";
 
 type ReportState = {
   sketchId: number;
@@ -1723,20 +1726,50 @@ export default function SketchUIStateContextProvider({
               style={{ zIndex: 20 }}
               className="absolute top-2 right-2 flex flex-wrap gap-2 max-w-full justify-end pointer-events-none"
             >
-              {openReports.map(({ sketchId, uiState, sketchClassId }) => (
-                <SketchReportWindow
-                  key={sketchId}
-                  sketchId={sketchId}
-                  sketchClassId={sketchClassId}
-                  onRequestClose={onRequestReportClose}
-                  uiState={uiState}
-                  selected={selectedIds.indexOf(`Sketch:${sketchId}`) !== -1}
-                  reportingAccessToken={
-                    projectMetadata?.data?.project?.sketchGeometryToken
-                  }
-                  onClick={onReportClick}
-                />
-              ))}
+              {openReports.map(({ sketchId, uiState, sketchClassId }) => {
+                const sketchClass =
+                  projectMetadata.data?.project?.sketchClasses?.find(
+                    (sc) => sc.id === sketchClassId
+                  );
+                if (
+                  sketchClass?.isGeographyClippingEnabled &&
+                  sketchClass?.reportId
+                ) {
+                  return (
+                    <SketchReportWindow
+                      key={sketchId}
+                      sketchId={sketchId}
+                      sketchClassId={sketchClassId}
+                      onRequestClose={onRequestReportClose}
+                      uiState={uiState}
+                      selected={
+                        selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
+                      }
+                      reportingAccessToken={
+                        projectMetadata?.data?.project?.sketchGeometryToken
+                      }
+                      onClick={onReportClick}
+                    />
+                  );
+                } else {
+                  return (
+                    <LegacySketchReportWindow
+                      key={sketchId}
+                      sketchId={sketchId}
+                      sketchClassId={sketchClassId}
+                      onRequestClose={onRequestReportClose}
+                      uiState={uiState}
+                      selected={
+                        selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
+                      }
+                      reportingAccessToken={
+                        projectMetadata?.data?.project?.sketchGeometryToken
+                      }
+                      onClick={onReportClick}
+                    />
+                  );
+                }
+              })}
             </div>,
             document.body
           )}

@@ -8,6 +8,7 @@ import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
+import ReportTitlePlaceholderPlugin from "./ReportTitlePlaceholderPlugin";
 import { tableNodes } from "prosemirror-tables";
 import {
   defaultSettings,
@@ -65,6 +66,38 @@ const questionSchema: Schema = new Schema({
     })
     .update("doc", {
       content: "question block*",
+    })
+    .remove("heading"),
+  // @ts-ignore
+  marks: baseMarks,
+});
+
+const reportCardBodySchema: Schema = new Schema({
+  nodes: spec.nodes
+    .append({
+      reportTitle: {
+        content: "text*",
+        group: "block",
+        defining: true,
+        marks: "em",
+        parseDOM: [{ tag: "h1[data-report-title]" }],
+        toDOM: function (node: any) {
+          return ["h1", { "data-report-title": "yes" }, 0];
+        },
+      },
+      h2: {
+        content: "inline*",
+        group: "block",
+        defining: true,
+        parseDOM: [{ tag: "h2" }],
+        // @ts-ignore
+        toDOM(node: Node) {
+          return ["h2", 0];
+        },
+      },
+    })
+    .update("doc", {
+      content: "reportTitle block*",
     })
     .remove("heading"),
   // @ts-ignore
@@ -365,6 +398,13 @@ export const formElements = {
     // TODO: customize for this type
     schema: contentSchema,
     plugins: exampleSetup({ schema: contentSchema, menuBar: false }),
+  },
+  reportCardBody: {
+    schema: reportCardBodySchema,
+    plugins: [
+      ...exampleSetup({ schema: reportCardBodySchema, menuBar: false }),
+      ReportTitlePlaceholderPlugin(),
+    ],
   },
 };
 

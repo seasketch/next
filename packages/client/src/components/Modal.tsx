@@ -18,6 +18,7 @@ export type FooterButtonProps = {
   variant?: "primary" | "secondary" | "danger" | "trash";
   label: string | ReactNode;
   autoFocus?: boolean;
+  className?: string;
 };
 
 interface ModalProps {
@@ -354,7 +355,8 @@ function FooterButton(props: FooterButtonProps) {
       className={clsx(
         props.disabled && "pointer-events-none opacity-50",
         "inline-flex justify-center w-full rounded-md border shadow-sm px-4 py-2 text-base font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 sm:w-auto sm:text-sm items-center",
-        colors
+        colors,
+        props.className
       )}
       onClick={props.onClick}
     >

@@ -374,3 +374,176 @@ query SketchClassGeographyEditorDetails($slug: String!) {
     }
   }
 }
+
+fragment ReportCardDetails on ReportCard {
+  id
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+}
+
+fragment ReportTabDetails on ReportTab {
+  id
+  position
+  title
+  alternateLanguageSettings
+  cards {
+    ...ReportCardDetails
+  }
+}
+
+fragment ReportDetails on Report {
+  id
+  createdAt
+  updatedAt
+  tabs {
+    ...ReportTabDetails
+  }
+}
+
+query DraftReport($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    draftReport {
+      ...ReportDetails
+    }
+    report {
+      createdAt
+    }
+  }
+}
+
+mutation CreateDraftReport($sketchClassId: Int!) {
+  createDraftReport(input: { sketchClassId: $sketchClassId }) {
+    report {
+      ...ReportDetails
+    }
+  }
+}
+
+mutation AddReportTab($reportId: Int!, $position: Int!, $title: String!) {
+  addReportTab(
+    input: { reportId: $reportId, tabPosition: $position, title: $title }
+  ) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+
+mutation DeleteReportTab($tabId: Int!, $moveCardsToTabId: Int) {
+  deleteReportTab(
+    input: { tabId: $tabId, moveCardsToTabId: $moveCardsToTabId }
+  ) {
+    boolean
+  }
+}
+
+mutation RenameReportTab(
+  $tabId: Int!
+  $title: String!
+  $alternateLanguageSettings: JSON
+) {
+  renameReportTab(
+    input: {
+      tabId: $tabId
+      title: $title
+      alternateLanguageSettings: $alternateLanguageSettings
+    }
+  ) {
+    reportTab {
+      ...ReportTabDetails
+    }
+  }
+}
+
+mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
+  reorderReportTabs(input: { reportId: $reportId, tabIds: $tabIds }) {
+    reportTabs {
+      ...ReportTabDetails
+    }
+  }
+}
+
+mutation AddReportCard(
+  $reportTabId: Int!
+  $componentSettings: JSON!
+  $cardType: String!
+  $body: JSON!
+) {
+  addReportCard(
+    input: {
+      reportTabId: $reportTabId
+      componentSettings: $componentSettings
+      cardType: $cardType
+      body: $body
+    }
+  ) {
+    reportCard {
+      id
+    }
+  }
+}
+
+mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
+  reorderReportTabCards(
+    input: { reportTabId: $reportTabId, cardIds: $cardIds }
+  ) {
+    reportCards {
+      id
+      position
+    }
+  }
+}
+
+mutation UpdateReportCard(
+  $id: Int!
+  $componentSettings: JSON
+  $alternateLanguageSettings: JSON
+  $body: JSON
+  $tint: String
+  $icon: String
+  $cardType: String
+) {
+  updateReportCard(
+    input: {
+      cardId: $id
+      componentSettings: $componentSettings
+      alternateLanguageSettings: $alternateLanguageSettings
+      body: $body
+      tint: $tint
+      icon: $icon
+      cardType: $cardType
+    }
+  ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+
+mutation DeleteReportCard($id: Int!) {
+  deleteReportCard(input: { cardId: $id }) {
+    boolean
+  }
+}
+
+mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
+  moveCardToTab(input: { cardId: $cardId, tabId: $tabId }) {
+    reportCard {
+      id
+      position
+    }
+  }
+}
+
+mutation PublishReport($sketchClassId: Int!) {
+  publishReport(input: { sketchClassId: $sketchClassId }) {
+    sketchClass {
+      ...AdminSketchingDetails
+    }
+  }
+}

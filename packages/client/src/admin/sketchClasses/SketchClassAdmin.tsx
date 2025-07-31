@@ -111,7 +111,7 @@ export default function SketchClassAdmin() {
                   loading ||
                   templateQuery.loading) && (
                   <NavSidebar
-                    className="z-10"
+                    className="z-10 !w-[340px]"
                     loading={loading}
                     loadingSkeletonItemCount={4}
                     items={navItems}

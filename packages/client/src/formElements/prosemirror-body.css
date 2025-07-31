@@ -155,3 +155,51 @@ div[attachments="forumAttachments"] {
 .about-editor .ProseMirror {
   height: 100%;
 }
+
+/* Report Cards */
+
+.ProseMirror .empty-report-title-node::before {
+  position: absolute;
+  /* color: #aaa; */
+  opacity: 0.5;
+  cursor: text;
+}
+
+.ProseMirror .empty-report-title-node:hover::before {
+  opacity: 0.3;
+}
+
+.ProseMirror h1.empty-report-title-node::before {
+  content: "Card Title...";
+}
+
+.ReportCardBody h1[data-report-title="yes"],
+.ReportCardBodyEditor h1[data-report-title="yes"] {
+  @apply text-base font-medium max-w-3/4 truncate py-2 pb-0;
+}
+
+.ReportCardBody h1[data-report-title="yes"] {
+  @apply pointer-events-none;
+}
+
+.ReportCardBodyEditor h1[data-report-title="yes"] {
+  /* @apply; */
+}
+
+.hasIcon .ReportCardBodyEditor h1[data-report-title="yes"] {
+  @apply pl-6 mt-2;
+}
+
+.ReportCardBody.hasIcon h1[data-report-title="yes"] {
+  @apply pl-6;
+}
+
+.ReportCardBody p,
+.ReportCardBodyEditor p {
+  @apply text-black;
+}
+
+.ReportCardBodyEditor p:first-of-type,
+.ReportCardBody p:first-of-type {
+  /* @apply pt-0 mt-0; */
+}
