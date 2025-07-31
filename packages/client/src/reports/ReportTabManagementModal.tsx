@@ -304,14 +304,14 @@ export function ReportTabManagementModal({
       >
         {/* Language Selector */}
         {langContext && (
-          <div className="mb-4 flex justify-end">
+          <div className="mb-4 flex justify-end absolute top-6 right-6">
             <EditorLanguageSelector />
           </div>
         )}
         <div className="space-y-4 mb-6">
           <p className="text-sm text-gray-500">
             {t(
-              "The tab bar will only be shown if a report has 2 or more tabs."
+              "The tab bar will only be shown if a report has 2 or more tabs. Use the language selector if you would like to provide translated tab titles."
             )}
           </p>
           {/* Tabs List */}
