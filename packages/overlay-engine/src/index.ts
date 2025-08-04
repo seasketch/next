@@ -28,4 +28,5 @@ export {
   PresenceMetric,
   PresenceTableMetric,
   MetricTypeMap,
+  subjectIsFragment,
 } from "./metrics/metrics";

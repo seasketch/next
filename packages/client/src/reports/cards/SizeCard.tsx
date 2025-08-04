@@ -6,9 +6,10 @@ import {
 } from "../registerCard";
 import { lazy, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { TotalAreaMetric } from "overlay-engine";
+import { TotalAreaMetric, subjectIsFragment } from "overlay-engine";
 import { useMetrics } from "../hooks/useMetrics";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import { useReportContext } from "../ReportContext";
 
 export type SizeCardConfiguration = ReportCardConfiguration<{}>;
 
@@ -28,9 +29,11 @@ export function SizeCard({
     type: "total_area",
   });
   const totalArea = useMemo(() => {
-    return metrics.data.reduce((acc, metric) => {
-      return acc + metric.value;
-    }, 0);
+    return metrics.data
+      .filter((d) => subjectIsFragment(d.subject))
+      .reduce((acc, metric) => {
+        return acc + metric.value;
+      }, 0);
   }, [metrics.data]);
 
   const NumberFormatter = new Intl.NumberFormat(langContext?.lang?.code, {

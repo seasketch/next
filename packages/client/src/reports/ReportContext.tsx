@@ -12,7 +12,7 @@ export interface ReportContextState {
   /**
    * The sketch class details for the report
    */
-  sketchClass: SketchingDetailsFragment | null;
+  sketchClass: SketchingDetailsFragment;
 
   /**
    * The sketch being reported on
@@ -26,7 +26,17 @@ export interface ReportContextState {
     | "collectionId"
     | "updatedAt"
     | "properties"
-  > | null;
+  >;
+
+  /**
+   * Whether the sketch is a collection
+   */
+  isCollection: boolean;
+
+  /**
+   * The IDs of the child sketches, if a collection
+   */
+  childSketchIds: number[];
 
   /**
    * The report configuration containing tabs and cards
@@ -116,60 +126,31 @@ export function useReportState(
   };
 }
 
-export interface ReportContextProviderProps {
-  children: ReactNode;
-  sketchClass: SketchingDetailsFragment | null;
-  sketch: Pick<
-    Sketch,
-    | "id"
-    | "name"
-    | "sketchClassId"
-    | "createdAt"
-    | "collectionId"
-    | "updatedAt"
-    | "properties"
-    | "userAttributes"
-  > | null;
-  report: ReportConfiguration;
-  adminMode?: boolean;
-  selectedTabId: number;
-  setSelectedTabId: (tabId: number) => void;
-  selectedTab: ReportConfiguration["tabs"][0];
-  selectedForEditing: number | null;
-  setSelectedForEditing: (cardId: number | null) => void;
-  deleteCard?: (cardId: number) => void;
-}
-
-export function ReportContextProvider({
-  children,
-  sketchClass,
-  sketch,
-  report,
-  adminMode = false,
-  selectedTabId,
-  setSelectedTabId,
-  selectedTab,
-  selectedForEditing,
-  setSelectedForEditing,
-  deleteCard,
-}: ReportContextProviderProps) {
-  const value: ReportContextState = {
-    sketchClass,
-    sketch,
-    report,
-    selectedTabId,
-    selectedTab,
-    setSelectedTabId,
-    adminMode,
-    selectedForEditing,
-    setSelectedForEditing,
-    deleteCard,
-  };
-
-  return (
-    <ReportContext.Provider value={value}>{children}</ReportContext.Provider>
-  );
-}
+// export interface ReportContextProviderProps {
+//   children: ReactNode;
+//   sketchClass: SketchingDetailsFragment | null;
+//   sketch: Pick<
+//     Sketch,
+//     | "id"
+//     | "name"
+//     | "sketchClassId"
+//     | "createdAt"
+//     | "collectionId"
+//     | "updatedAt"
+//     | "properties"
+//     | "userAttributes"
+//   > | null;
+//   isCollection: boolean;
+//   childSketchIds: number[];
+//   report: ReportConfiguration;
+//   adminMode?: boolean;
+//   selectedTabId: number;
+//   setSelectedTabId: (tabId: number) => void;
+//   selectedTab: ReportConfiguration["tabs"][0];
+//   selectedForEditing: number | null;
+//   setSelectedForEditing: (cardId: number | null) => void;
+//   deleteCard?: (cardId: number) => void;
+// }
 
 export function useReportContext(): ReportContextState {
   const context = useContext(ReportContext);

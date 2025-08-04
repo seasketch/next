@@ -58,4 +58,5 @@ export type MetricTypeMap = {
     presence: PresenceMetric;
     presence_table: PresenceTableMetric;
 };
+export declare function subjectIsFragment(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
 //# sourceMappingURL=metrics.d.ts.map

@@ -2,6 +2,7 @@ import { XIcon } from "@heroicons/react/outline";
 import { useContext, useMemo } from "react";
 import Skeleton from "../../components/Skeleton";
 import {
+  SketchGeometryType,
   SketchingDetailsFragment,
   useSketchReportingDetailsQuery,
 } from "../../generated/graphql";
@@ -129,6 +130,12 @@ export default function SketchReportWindow({
               selectedForEditing,
               setSelectedForEditing,
               adminMode: false,
+              isCollection:
+                data.sketchClass.geometryType === SketchGeometryType.Collection,
+              childSketchIds:
+                data.sketchClass.geometryType === SketchGeometryType.Collection
+                  ? []
+                  : [],
             }}
           >
             <>

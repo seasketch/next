@@ -85,3 +85,9 @@ export type MetricTypeMap = {
   presence: PresenceMetric;
   presence_table: PresenceTableMetric;
 };
+
+export function subjectIsFragment(
+  subject: MetricSubjectFragment | MetricSubjectGeography
+): subject is MetricSubjectFragment {
+  return "hash" in subject;
+}

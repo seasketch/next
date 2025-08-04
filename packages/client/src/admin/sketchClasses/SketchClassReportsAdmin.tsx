@@ -13,6 +13,7 @@ import {
   useProjectMetadataQuery,
   useMoveCardToTabMutation,
   usePublishReportMutation,
+  SketchTocDetailsFragment,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -32,10 +33,7 @@ import {
 } from "../../reports/registerCard";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
-import {
-  ReportContextProvider,
-  useReportState,
-} from "../../reports/ReportContext";
+import { ReportContext, useReportState } from "../../reports/ReportContext";
 import { ReportTabs } from "../../reports/ReportTabs";
 import { SortableReportBody } from "../../reports/SortableReportBody";
 import { ReportTabManagementModal } from "../../reports/ReportTabManagementModal";
@@ -367,17 +365,21 @@ export default function SketchClassReportsAdmin({
           (projectData?.project?.supportedLanguages as string[]) || [],
       }}
     >
-      <ReportContextProvider
-        report={draftReport as unknown as ReportConfiguration}
-        sketchClass={sketchClass}
-        sketch={null}
-        adminMode={true}
-        selectedTabId={selectedTabId}
-        setSelectedTabId={setSelectedTabId}
-        selectedTab={selectedTab}
-        selectedForEditing={selectedForEditing}
-        setSelectedForEditing={setSelectedForEditing}
-        deleteCard={handleDeleteCard}
+      <ReportContext.Provider
+        value={{
+          report: draftReport as unknown as ReportConfiguration,
+          sketchClass,
+          sketch: {} as any,
+          adminMode: true,
+          selectedTabId,
+          setSelectedTabId,
+          selectedTab,
+          selectedForEditing,
+          setSelectedForEditing,
+          deleteCard: handleDeleteCard,
+          isCollection: false,
+          childSketchIds: [],
+        }}
       >
         <div className="flex flex-col w-full h-full">
           {/* Header */}
@@ -663,7 +665,7 @@ export default function SketchClassReportsAdmin({
           {/* Footer */}
           {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
         </div>
-      </ReportContextProvider>
+      </ReportContext.Provider>
     </FormLanguageContext.Provider>
   );
 }
