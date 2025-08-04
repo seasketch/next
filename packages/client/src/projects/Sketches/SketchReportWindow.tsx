@@ -136,6 +136,7 @@ export default function SketchReportWindow({
                 data.sketchClass.geometryType === SketchGeometryType.Collection
                   ? []
                   : [],
+              geographies: data.sketchClass?.project?.geographies || [],
             }}
           >
             <>

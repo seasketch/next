@@ -4,8 +4,14 @@ import React, {
   useState,
   ReactNode,
   useEffect,
+  useCallback,
 } from "react";
-import { Sketch, SketchingDetailsFragment } from "../generated/graphql";
+import {
+  Geography,
+  Sketch,
+  SketchingDetailsFragment,
+  SpatialMetricDependency,
+} from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 
 export interface ReportContextState {
@@ -77,6 +83,7 @@ export interface ReportContextState {
    * Function to delete a card
    */
   deleteCard?: (cardId: number) => void;
+  geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -117,6 +124,54 @@ export function useReportState(
     }
   }, [report?.tabs, selectedTabId]);
 
+  const [metricDependencies, setMetricDependencies] = useState<
+    (SpatialMetricDependency & { hash: string; cards: number[] })[]
+  >([]);
+
+  // Adds a metric dependency to metricDependencies, tracking the card it
+  // belongs to. Multiple cards can share the same dependency, it should only be
+  // added once, tracking all the cards that share the same dependency.
+  const addMetricDependency = useCallback(
+    async (cardId: number, dependency: SpatialMetricDependency) => {
+      const hash = await hashMetricDependency(dependency);
+      const existingDependency = metricDependencies.find(
+        (d) => d.hash === hash
+      );
+      if (existingDependency) {
+        existingDependency.cards.push(cardId);
+        setMetricDependencies([...metricDependencies]);
+      } else {
+        setMetricDependencies([
+          ...metricDependencies,
+          { ...dependency, hash, cards: [cardId] },
+        ]);
+      }
+    },
+    [metricDependencies]
+  );
+
+  // Removes a metric dependency from metricDependencies, assuming no cards
+  // reference it anymore.
+  const removeMetricDependency = useCallback(
+    async (cardId: number, dependency: SpatialMetricDependency) => {
+      const hash = await hashMetricDependency(dependency);
+      const existingDependency = metricDependencies.find(
+        (d) => d.hash === hash
+      );
+      if (existingDependency) {
+        existingDependency.cards = existingDependency.cards.filter(
+          (id) => id !== cardId
+        );
+        if (existingDependency.cards.length === 0) {
+          setMetricDependencies(
+            metricDependencies.filter((d) => d.hash !== hash)
+          );
+        }
+      }
+    },
+    [metricDependencies]
+  );
+
   return {
     selectedTabId,
     setSelectedTabId,
@@ -126,32 +181,6 @@ export function useReportState(
   };
 }
 
-// export interface ReportContextProviderProps {
-//   children: ReactNode;
-//   sketchClass: SketchingDetailsFragment | null;
-//   sketch: Pick<
-//     Sketch,
-//     | "id"
-//     | "name"
-//     | "sketchClassId"
-//     | "createdAt"
-//     | "collectionId"
-//     | "updatedAt"
-//     | "properties"
-//     | "userAttributes"
-//   > | null;
-//   isCollection: boolean;
-//   childSketchIds: number[];
-//   report: ReportConfiguration;
-//   adminMode?: boolean;
-//   selectedTabId: number;
-//   setSelectedTabId: (tabId: number) => void;
-//   selectedTab: ReportConfiguration["tabs"][0];
-//   selectedForEditing: number | null;
-//   setSelectedForEditing: (cardId: number | null) => void;
-//   deleteCard?: (cardId: number) => void;
-// }
-
 export function useReportContext(): ReportContextState {
   const context = useContext(ReportContext);
   if (!context) {
@@ -160,4 +189,19 @@ export function useReportContext(): ReportContextState {
     );
   }
   return context;
+}
+
+async function hashMetricDependency(
+  dependency: SpatialMetricDependency
+): Promise<string> {
+  const data = JSON.stringify(dependency);
+
+  const hashBuffer = await crypto.subtle.digest(
+    "SHA-1",
+    new TextEncoder().encode(data)
+  );
+
+  // Convert the hash buffer to a hex string
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }

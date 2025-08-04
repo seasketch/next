@@ -6113,6 +6113,8 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SpatialMetric`. */
+  spatialMetricsConnection: SpatialMetricsConnection;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -6131,6 +6133,15 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+
+export type GeographySpatialMetricsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 export type GeographyClippingLayer = Node & {
@@ -6564,6 +6575,11 @@ export type GetChildFoldersRecursivePayload = {
   integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type GetOrCreateSpatialMetricsResults = {
+  __typename?: 'GetOrCreateSpatialMetricsResults';
+  metrics: Array<SpatialMetric>;
 };
 
 export type GoogleMapsTileApiSession = Node & {
@@ -7286,6 +7302,11 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
+export enum MetricOverlayType {
+  Raster = 'RASTER',
+  Vector = 'VECTOR'
+}
+
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
   answers?: Maybe<Scalars['JSON']>;
@@ -7636,6 +7657,8 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
+  /** Create or update spatial metrics. */
+  getOrCreateSpatialMetrics: GetOrCreateSpatialMetricsResults;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -8827,6 +8850,12 @@ export type MutationGenerateOfflineTilePackageArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetChildFoldersRecursiveArgs = {
   input: GetChildFoldersRecursiveInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetOrCreateSpatialMetricsArgs = {
+  inputs: Array<SpatialMetricDependency>;
 };
 
 
@@ -13598,6 +13627,8 @@ export type Sketch = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SpatialMetric`. */
+  spatialMetricsConnection: SpatialMetricsConnection;
   /**
    * Greater of updatedAt, createdAt, as stringified epoch timestamp.
    * Useful for requesting the latest geometry
@@ -13614,6 +13645,25 @@ export type Sketch = Node & {
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * A *Sketch* is a spatial feature that matches the schema defined by the related
+ * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
+ * shared in the discussion forum. They are also the gateway to analytical reports.
+ *
+ * Sketches are completely owned by individual users, so access control rules
+ * ensure that only the owner of a sketch can perform CRUD operations on them.
+ * Admins have no special access. Use the graphile-generated mutations to manage
+ * these records.
+ */
+export type SketchSpatialMetricsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 export enum SketchChildType {
@@ -13911,6 +13961,72 @@ export enum SortByDirection {
   Asc = 'ASC',
   Desc = 'DESC'
 }
+
+export type SpatialMetric = Node & {
+  __typename?: 'SpatialMetric';
+  createdAt: Scalars['Datetime'];
+  errorMessage?: Maybe<Scalars['String']>;
+  id: Scalars['BigInt'];
+  includedProperties?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  overlayGroupBy?: Maybe<Scalars['String']>;
+  overlayLayerStableId?: Maybe<Scalars['String']>;
+  overlaySourceRemote?: Maybe<Scalars['String']>;
+  overlayType: MetricOverlayType;
+  state: SpatialMetricState;
+  subjectFragmentId?: Maybe<Scalars['String']>;
+  subjectGeographyId?: Maybe<Scalars['Int']>;
+  type: SpatialMetricType;
+  updatedAt: Scalars['Datetime'];
+  value?: Maybe<Scalars['JSON']>;
+};
+
+export type SpatialMetricDependency = {
+  geographyId?: Maybe<Scalars['Int']>;
+  included_properties?: Maybe<Array<Scalars['String']>>;
+  overlay_group_by?: Maybe<Scalars['String']>;
+  overlay_stable_id?: Maybe<Scalars['String']>;
+  sketchId?: Maybe<Scalars['Int']>;
+  type: Scalars['String'];
+};
+
+export enum SpatialMetricState {
+  Complete = 'COMPLETE',
+  Error = 'ERROR',
+  Processing = 'PROCESSING',
+  Queued = 'QUEUED'
+}
+
+export enum SpatialMetricType {
+  Area = 'AREA',
+  Count = 'COUNT',
+  NumberStats = 'NUMBER_STATS',
+  Presence = 'PRESENCE',
+  PresenceTable = 'PRESENCE_TABLE'
+}
+
+/** A connection to a list of `SpatialMetric` values. */
+export type SpatialMetricsConnection = {
+  __typename?: 'SpatialMetricsConnection';
+  /** A list of edges which contains the `SpatialMetric` and cursor to aid in pagination. */
+  edges: Array<SpatialMetricsEdge>;
+  /** A list of `SpatialMetric` objects. */
+  nodes: Array<SpatialMetric>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SpatialMetric` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `SpatialMetric` edge in the connection. */
+export type SpatialMetricsEdge = {
+  __typename?: 'SpatialMetricsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `SpatialMetric` at the end of the edge. */
+  node: SpatialMetric;
+};
 
 /**
  * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
@@ -21737,6 +21853,13 @@ export type DraftReportQuery = (
     )>, report?: Maybe<(
       { __typename?: 'Report' }
       & Pick<Report, 'createdAt'>
+    )>, project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id'>
+      & { geographies: Array<(
+        { __typename?: 'Geography' }
+        & Pick<Geography, 'id' | 'name' | 'translatedProps'>
+      )> }
     )> }
   )> }
 );
@@ -22172,6 +22295,10 @@ export type SketchReportingDetailsQuery = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'supportedLanguages'>
+      & { geographies: Array<(
+        { __typename?: 'Geography' }
+        & Pick<Geography, 'id' | 'name' | 'translatedProps'>
+      )> }
     )>, form?: Maybe<(
       { __typename?: 'Form' }
       & Pick<Form, 'id'>
@@ -33513,6 +33640,14 @@ export const DraftReportDocument = gql`
     report {
       createdAt
     }
+    project {
+      id
+      geographies {
+        id
+        name
+        translatedProps
+      }
+    }
   }
 }
     ${ReportDetailsFragmentDoc}`;
@@ -34306,6 +34441,11 @@ export const SketchReportingDetailsDocument = gql`
     project {
       id
       supportedLanguages
+      geographies {
+        id
+        name
+        translatedProps
+      }
     }
     id
     geoprocessingClientName
@@ -34329,6 +34469,14 @@ export const SketchReportingDetailsDocument = gql`
     }
     report {
       ...ReportDetails
+    }
+    project {
+      id
+      geographies {
+        id
+        name
+        translatedProps
+      }
     }
   }
 }

@@ -227,6 +227,14 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     report {
       ...ReportDetails
     }
+    project {
+      id
+      geographies {
+        id
+        name
+        translatedProps
+      }
+    }
   }
 }
 

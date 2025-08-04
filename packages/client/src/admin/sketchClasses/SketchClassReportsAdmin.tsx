@@ -379,6 +379,7 @@ export default function SketchClassReportsAdmin({
           deleteCard: handleDeleteCard,
           isCollection: false,
           childSketchIds: [],
+          geographies: data?.sketchClass?.project?.geographies || [],
         }}
       >
         <div className="flex flex-col w-full h-full">

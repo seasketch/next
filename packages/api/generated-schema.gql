@@ -7156,6 +7156,27 @@ type Geography implements Node {
   """Reads a single `Project` that is related to this `Geography`."""
   project: Project
   projectId: Int!
+
+  """Reads and enables pagination through a set of `SpatialMetric`."""
+  spatialMetricsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+  ): SpatialMetricsConnection!
   translatedProps: JSON
 }
 
@@ -7594,6 +7615,10 @@ type GetChildFoldersRecursivePayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type GetOrCreateSpatialMetricsResults {
+  metrics: [SpatialMetric!]!
 }
 
 type GoogleMapsTileApiSession implements Node {
@@ -8439,6 +8464,11 @@ type MergeTranslatedPropsPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+enum MetricOverlayType {
+  RASTER
+  VECTOR
 }
 
 """All input for the `modifySurveyAnswers` mutation."""
@@ -9581,6 +9611,9 @@ type Mutation {
     """
     input: GetChildFoldersRecursiveInput!
   ): GetChildFoldersRecursivePayload
+
+  """Create or update spatial metrics."""
+  getOrCreateSpatialMetrics(inputs: [SpatialMetricDependency!]!): GetOrCreateSpatialMetricsResults!
 
   """
   Use to create new sprites. If an existing sprite in the database for this
@@ -14738,6 +14771,27 @@ type Sketch implements Node {
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
 
+  """Reads and enables pagination through a set of `SpatialMetric`."""
+  spatialMetricsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+  ): SpatialMetricsConnection!
+
   """
   Greater of updatedAt, createdAt, as stringified epoch timestamp.
   Useful for requesting the latest geometry
@@ -15143,6 +15197,78 @@ type SoftDeleteSpritePayload {
 enum SortByDirection {
   ASC
   DESC
+}
+
+type SpatialMetric implements Node {
+  createdAt: Datetime!
+  errorMessage: String
+  id: BigInt!
+  includedProperties: [String]
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  overlayGroupBy: String
+  overlayLayerStableId: String
+  overlaySourceRemote: String
+  overlayType: MetricOverlayType!
+  state: SpatialMetricState!
+  subjectFragmentId: String
+  subjectGeographyId: Int
+  type: SpatialMetricType!
+  updatedAt: Datetime!
+  value: JSON
+}
+
+input SpatialMetricDependency {
+  geographyId: Int
+  included_properties: [String!]
+  overlay_group_by: String
+  overlay_stable_id: String
+  sketchId: Int
+  type: String!
+}
+
+"""A connection to a list of `SpatialMetric` values."""
+type SpatialMetricsConnection {
+  """
+  A list of edges which contains the `SpatialMetric` and cursor to aid in pagination.
+  """
+  edges: [SpatialMetricsEdge!]!
+
+  """A list of `SpatialMetric` objects."""
+  nodes: [SpatialMetric!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """The count of *all* `SpatialMetric` you could get from the connection."""
+  totalCount: Int!
+}
+
+"""A `SpatialMetric` edge in the connection."""
+type SpatialMetricsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SpatialMetric` at the end of the edge."""
+  node: SpatialMetric!
+}
+
+enum SpatialMetricState {
+  COMPLETE
+  ERROR
+  PROCESSING
+  QUEUED
+}
+
+enum SpatialMetricType {
+  AREA
+  COUNT
+  NUMBER_STATS
+  PRESENCE
+  PRESENCE_TABLE
 }
 
 """

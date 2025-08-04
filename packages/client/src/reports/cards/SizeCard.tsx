@@ -4,12 +4,13 @@ import {
   registerReportCardType,
   ReportCardConfigUpdateCallback,
 } from "../registerCard";
-import { lazy, useContext, useMemo } from "react";
+import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { TotalAreaMetric, subjectIsFragment } from "overlay-engine";
+import { subjectIsFragment } from "overlay-engine";
 import { useMetrics } from "../hooks/useMetrics";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useReportContext } from "../ReportContext";
+import Skeleton from "../../components/Skeleton";
 
 export type SizeCardConfiguration = ReportCardConfiguration<{}>;
 
@@ -24,10 +25,19 @@ export function SizeCard({
   onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const langContext = useContext(FormLanguageContext);
+  const reportContext = useReportContext();
+  const allGeographyIds = useMemo(() => {
+    return reportContext.geographies.map((g) => g.id);
+  }, [reportContext.geographies]);
+
   const { t } = useTranslation("reports");
+
   const metrics = useMetrics({
     type: "total_area",
+    // just fetch area stats for all geographies since it is easy to calculate
+    geographyIds: allGeographyIds,
   });
+
   const totalArea = useMemo(() => {
     return metrics.data
       .filter((d) => subjectIsFragment(d.subject))
@@ -53,9 +63,13 @@ export function SizeCard({
       icon={config.icon}
     >
       <div>
-        <p>
-          {NumberFormatter.format(totalArea)} {t("sq km")}
-        </p>
+        {metrics.loading ? (
+          <Skeleton className="w-full h-4" />
+        ) : (
+          <p>
+            {NumberFormatter.format(totalArea)} {t("sq km")}
+          </p>
+        )}
       </div>
     </ReportCard>
   );

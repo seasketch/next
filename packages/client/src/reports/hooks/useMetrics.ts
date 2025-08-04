@@ -16,14 +16,15 @@ import { useState } from "react";
  *
  * useMetrics will fetch metrics which apply to any fragments belonging directly
  * to the sketch being reported on, or any fragments belonging to child sketches
- * the case of collections.
+ * the case of collections. It will also fetch metrics which apply to
+ * geographies associated with the ids provided in the options.
  *
  * @param options
  * @returns
  */
 export function useMetrics<
   T extends keyof MetricTypeMap | Metric["type"]
->(options: { type: T }) {
+>(options: { type: T; geographyIds?: number[] }) {
   const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
 
