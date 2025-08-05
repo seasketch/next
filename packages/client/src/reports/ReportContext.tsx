@@ -89,17 +89,27 @@ export interface ReportContextState {
    * Function to add a metric dependency
    */
   addMetricDependency: (
-    cardId: number,
+    hookId: number,
     dependency: SpatialMetricDependency
-  ) => Promise<void>;
+  ) => void;
 
   /**
    * Function to remove a metric dependency
    */
   removeMetricDependency: (
-    cardId: number,
+    hookId: number,
     dependency: SpatialMetricDependency
-  ) => Promise<void>;
+  ) => void;
+
+  /**
+   * Function to get all the metric dependencies registered with the context
+   */
+  getMetricDependencies: () => SpatialMetricDependency[];
+
+  /**
+   * The current metric dependencies, debounced
+   */
+  currentMetricDependencies: SpatialMetricDependency[];
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -141,52 +151,89 @@ export function useReportState(
   }, [report?.tabs, selectedTabId]);
 
   const [metricDependencies, setMetricDependencies] = useState<
-    (SpatialMetricDependency & { hash: string; cards: number[] })[]
+    (SpatialMetricDependency & { hash: string; hooks: number[] })[]
   >([]);
 
   // Adds a metric dependency to metricDependencies, tracking the card it
   // belongs to. Multiple cards can share the same dependency, it should only be
   // added once, tracking all the cards that share the same dependency.
   const addMetricDependency = useCallback(
-    async (cardId: number, dependency: SpatialMetricDependency) => {
-      const hash = await hashMetricDependency(dependency);
-      const existingDependency = metricDependencies.find(
-        (d) => d.hash === hash
-      );
-      if (existingDependency) {
-        existingDependency.cards.push(cardId);
-        setMetricDependencies([...metricDependencies]);
-      } else {
-        setMetricDependencies([
-          ...metricDependencies,
-          { ...dependency, hash, cards: [cardId] },
-        ]);
-      }
+    (hookId: number, dependency: SpatialMetricDependency) => {
+      const hash = hashMetricDependency(dependency);
+      setMetricDependencies((currentDependencies) => {
+        const existingDependency = currentDependencies.find(
+          (d) => d.hash === hash
+        );
+        if (existingDependency) {
+          return currentDependencies.map((d) =>
+            d.hash === hash ? { ...d, hooks: [...d.hooks, hookId] } : d
+          );
+        } else {
+          return [
+            ...currentDependencies,
+            { ...dependency, hash, hooks: [hookId] },
+          ];
+        }
+      });
     },
-    [metricDependencies]
+    []
   );
 
   // Removes a metric dependency from metricDependencies, assuming no cards
   // reference it anymore.
   const removeMetricDependency = useCallback(
-    async (cardId: number, dependency: SpatialMetricDependency) => {
-      const hash = await hashMetricDependency(dependency);
-      const existingDependency = metricDependencies.find(
-        (d) => d.hash === hash
-      );
-      if (existingDependency) {
-        existingDependency.cards = existingDependency.cards.filter(
-          (id) => id !== cardId
+    (hookId: number, dependency: SpatialMetricDependency) => {
+      const hash = hashMetricDependency(dependency);
+      setMetricDependencies((currentDependencies) => {
+        const existingDependency = currentDependencies.find(
+          (d) => d.hash === hash
         );
-        if (existingDependency.cards.length === 0) {
-          setMetricDependencies(
-            metricDependencies.filter((d) => d.hash !== hash)
+        if (existingDependency) {
+          const updatedHooks = existingDependency.hooks.filter(
+            (id) => id !== hookId
           );
+          if (updatedHooks.length === 0) {
+            return currentDependencies.filter((d) => d.hash !== hash);
+          } else {
+            return currentDependencies.map((d) =>
+              d.hash === hash ? { ...d, hooks: updatedHooks } : d
+            );
+          }
         }
-      }
+        return currentDependencies;
+      });
     },
-    [metricDependencies]
+    []
   );
+
+  // Returns a list of all the metric dependencies registered with the context,
+  // without any hook or hash ids.
+  const getMetricDependencies = useCallback(() => {
+    return metricDependencies.map((d) => {
+      const dep = {
+        ...d,
+      } as any;
+      delete dep.hash;
+      delete dep.hooks;
+      return dep as SpatialMetricDependency;
+    });
+  }, [metricDependencies]);
+
+  const [currentMetricDependencies, setCurrentMetricDependencies] = useState<
+    SpatialMetricDependency[]
+  >([]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setCurrentMetricDependencies(getMetricDependencies());
+    }, 5);
+
+    return () => clearTimeout(handler);
+  }, [metricDependencies]);
+
+  useEffect(() => {
+    console.log("currentMetricDependencies", currentMetricDependencies);
+  }, [currentMetricDependencies]);
 
   return {
     selectedTabId,
@@ -196,6 +243,8 @@ export function useReportState(
     setSelectedForEditing,
     addMetricDependency,
     removeMetricDependency,
+    getMetricDependencies,
+    currentMetricDependencies,
   };
 }
 
@@ -209,17 +258,17 @@ export function useReportContext(): ReportContextState {
   return context;
 }
 
-async function hashMetricDependency(
-  dependency: SpatialMetricDependency
-): Promise<string> {
+function hashMetricDependency(dependency: SpatialMetricDependency): string {
   const data = JSON.stringify(dependency);
 
-  const hashBuffer = await crypto.subtle.digest(
-    "SHA-1",
-    new TextEncoder().encode(data)
-  );
+  // Simple djb2 hash algorithm - works in both browser and Node.js
+  let hash = 5381;
+  for (let i = 0; i < data.length; i++) {
+    hash = (hash << 5) + hash + data.charCodeAt(i);
+    // Convert to 32-bit integer
+    hash = hash & hash;
+  }
 
-  // Convert the hash buffer to a hex string
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  // Convert to positive hex string
+  return Math.abs(hash).toString(16);
 }

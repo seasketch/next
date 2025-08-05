@@ -13983,7 +13983,7 @@ export type SpatialMetric = Node & {
 };
 
 export type SpatialMetricDependency = {
-  geographyId?: Maybe<Scalars['Int']>;
+  geographyIds?: Maybe<Scalars['Int']>;
   included_properties?: Maybe<Array<Scalars['String']>>;
   overlay_group_by?: Maybe<Scalars['String']>;
   overlay_stable_id?: Maybe<Scalars['String']>;
@@ -14000,8 +14000,8 @@ export enum SpatialMetricState {
 
 export enum SpatialMetricType {
   Area = 'AREA',
+  ContextualizedMean = 'CONTEXTUALIZED_MEAN',
   Count = 'COUNT',
-  NumberStats = 'NUMBER_STATS',
   Presence = 'PRESENCE',
   PresenceTable = 'PRESENCE_TABLE'
 }

@@ -15222,7 +15222,7 @@ type SpatialMetric implements Node {
 }
 
 input SpatialMetricDependency {
-  geographyId: Int
+  geographyIds: Int
   included_properties: [String!]
   overlay_group_by: String
   overlay_stable_id: String
@@ -15265,8 +15265,8 @@ enum SpatialMetricState {
 
 enum SpatialMetricType {
   AREA
+  CONTEXTUALIZED_MEAN
   COUNT
-  NUMBER_STATS
   PRESENCE
   PRESENCE_TABLE
 }

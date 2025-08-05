@@ -6,7 +6,7 @@ drop type if exists spatial_metric_state;
 drop type if exists metric_overlay_type;
 drop type if exists metric_execution_environment;
 
-create type spatial_metric_type as enum ('area', 'count', 'presence', 'presence_table', 'number_stats');
+create type spatial_metric_type as enum ('area', 'count', 'presence', 'presence_table', 'contextualized_mean');
 
 create type spatial_metric_state as enum ('queued', 'processing', 'complete', 'error');
 

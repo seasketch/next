@@ -1,4 +1,4 @@
-export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "number_stats";
+export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "contextualized_mean";
 export type MetricSubjectFragment = {
     hash: string;
     geographies: number[];

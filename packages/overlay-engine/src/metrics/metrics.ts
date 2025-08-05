@@ -4,7 +4,7 @@ export type MetricType =
   | "count"
   | "presence"
   | "presence_table"
-  | "number_stats";
+  | "contextualized_mean";
 
 export type MetricSubjectFragment = {
   hash: string;
