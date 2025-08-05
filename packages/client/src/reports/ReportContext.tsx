@@ -232,7 +232,7 @@ export function useReportState(
   }, [metricDependencies]);
 
   useEffect(() => {
-    console.log("currentMetricDependencies", currentMetricDependencies);
+    // console.log("currentMetricDependencies", currentMetricDependencies);
   }, [currentMetricDependencies]);
 
   return {
