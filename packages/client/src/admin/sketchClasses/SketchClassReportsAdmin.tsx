@@ -128,13 +128,7 @@ export default function SketchClassReportsAdmin({
   const draftReport = data?.sketchClass?.draftReport;
 
   // Use the custom hook to manage report state
-  const {
-    selectedTabId,
-    setSelectedTabId,
-    selectedTab,
-    selectedForEditing,
-    setSelectedForEditing,
-  } = useReportState((draftReport as any) || undefined);
+  const reportState = useReportState((draftReport as any) || undefined);
 
   const handleCardReorder = async (cardIds: number[], reportTabId: number) => {
     try {
@@ -163,7 +157,7 @@ export default function SketchClassReportsAdmin({
   };
 
   const handleCardSelect = async (cardType: string) => {
-    if (!selectedTab) {
+    if (!reportState.selectedTab) {
       console.error("No selected tab");
       return;
     }
@@ -177,7 +171,7 @@ export default function SketchClassReportsAdmin({
     try {
       await addReportCard({
         variables: {
-          reportTabId: selectedTab.id,
+          reportTabId: reportState.selectedTab.id,
           componentSettings: registration.defaultSettings,
           cardType: cardType,
           body: registration.pickerSettings.body || {},
@@ -190,7 +184,7 @@ export default function SketchClassReportsAdmin({
   };
 
   const handleCancelEditing = () => {
-    setSelectedForEditing(null);
+    reportState.setSelectedForEditing(null);
     setLocalCardEdits(null);
   };
 
@@ -202,7 +196,7 @@ export default function SketchClassReportsAdmin({
           prevState: ReportCardConfiguration<any>
         ) => ReportCardConfiguration<any>)
   ) => {
-    if (selectedForEditing === cardId) {
+    if (reportState.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
         if (!prevState) {
           return null;
@@ -239,7 +233,7 @@ export default function SketchClassReportsAdmin({
 
     if (!localCardEdits) {
       // cancel
-      setSelectedForEditing(null);
+      reportState.setSelectedForEditing(null);
       setLocalCardEdits(null);
       return;
     }
@@ -262,7 +256,7 @@ export default function SketchClassReportsAdmin({
       });
 
       // Clear local edits and exit editing mode on successful save
-      setSelectedForEditing(null);
+      reportState.setSelectedForEditing(null);
       setLocalCardEdits(null);
     } catch (error) {
       // Error is handled by onError
@@ -271,7 +265,7 @@ export default function SketchClassReportsAdmin({
 
   // Handle navigation blocking when editing
   useEffect(() => {
-    if (!selectedForEditing) return;
+    if (!reportState.selectedForEditing) return;
 
     const message = t(
       "You have unsaved changes to a report card. Are you sure you want to leave?"
@@ -293,7 +287,7 @@ export default function SketchClassReportsAdmin({
       window.removeEventListener("beforeunload", handleBeforeUnload);
       unblock();
     };
-  }, [selectedForEditing, history, t]);
+  }, [reportState.selectedForEditing, history, t]);
 
   if (!loading && !draftReport) {
     if (
@@ -339,8 +333,10 @@ export default function SketchClassReportsAdmin({
     new Date(data?.sketchClass?.draftReport?.updatedAt) >=
       new Date(data?.sketchClass?.report?.createdAt);
 
-  const selectedCardForEditing = selectedForEditing
-    ? selectedTab?.cards.find((card) => card.id === selectedForEditing)
+  const selectedCardForEditing = reportState.selectedForEditing
+    ? reportState.selectedTab?.cards.find(
+        (card) => card.id === reportState.selectedForEditing
+      )
     : null;
 
   // Merge local edits with server state for the card being edited
@@ -371,11 +367,7 @@ export default function SketchClassReportsAdmin({
           sketchClass,
           sketch: {} as any,
           adminMode: true,
-          selectedTabId,
-          setSelectedTabId,
-          selectedTab,
-          selectedForEditing,
-          setSelectedForEditing,
+          ...reportState,
           deleteCard: handleDeleteCard,
           isCollection: false,
           childSketchIds: [],
@@ -422,7 +414,9 @@ export default function SketchClassReportsAdmin({
             {/* left sidebar */}
             <div
               className={`absolute left-0 top-0 bg-white flex-none border-r shadow-lg border-black/15 min-h-full flex flex-col w-72 transition-transform ${
-                selectedForEditing ? "translate-x-0" : "-translate-x-72"
+                reportState.selectedForEditing
+                  ? "translate-x-0"
+                  : "-translate-x-72"
               }`}
             >
               {selectedCardForEditing && (
@@ -510,7 +504,7 @@ export default function SketchClassReportsAdmin({
                   // Dropped on a tab header - move card to that tab
                   handleCardMove(cardId, destinationTabId);
                   // Switch to the destination tab
-                  setSelectedTabId(destinationTabId);
+                  reportState.setSelectedTabId(destinationTabId);
                 } else if (
                   isSourceTabBody &&
                   isDestinationTabBody &&
@@ -537,7 +531,7 @@ export default function SketchClassReportsAdmin({
                   // Moving between different tab bodies
                   handleCardMove(cardId, destinationTabId);
                   // Switch to the destination tab
-                  setSelectedTabId(destinationTabId);
+                  reportState.setSelectedTabId(destinationTabId);
                 } else {
                   // Fallback for any unexpected scenarios
                 }
@@ -548,7 +542,7 @@ export default function SketchClassReportsAdmin({
                   <>
                     <div
                       className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
-                        selectedForEditing
+                        reportState.selectedForEditing
                           ? "3xl:translate-x-0 translate-x-36"
                           : ""
                       }`}
@@ -570,12 +564,12 @@ export default function SketchClassReportsAdmin({
                           >
                             <DropdownMenu.Trigger
                               asChild
-                              disabled={!!selectedForEditing}
+                              disabled={!!reportState.selectedForEditing}
                             >
                               <button
                                 // disabled={!!selectedForEditing}
                                 title={
-                                  selectedForEditing
+                                  reportState.selectedForEditing
                                     ? t(
                                         "Cannot add a card or tab while editing"
                                       )
@@ -584,7 +578,7 @@ export default function SketchClassReportsAdmin({
                               >
                                 <PlusCircleIcon
                                   className={`w-7 h-7 text-blue-500  ${
-                                    selectedForEditing
+                                    reportState.selectedForEditing
                                       ? "text-gray-400"
                                       : "hover:text-blue-600"
                                   }`}
@@ -628,8 +622,8 @@ export default function SketchClassReportsAdmin({
                       <ReportTabs enableDragDrop={true} />
                       {/* report body */}
                       <SortableReportBody
-                        selectedTab={selectedTab}
-                        selectedForEditing={selectedForEditing}
+                        selectedTab={reportState.selectedTab}
+                        selectedForEditing={reportState.selectedForEditing}
                         localCardEdits={localCardEdits}
                         onCardUpdate={handleCardUpdate}
                       />

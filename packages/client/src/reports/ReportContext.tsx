@@ -84,6 +84,22 @@ export interface ReportContextState {
    */
   deleteCard?: (cardId: number) => void;
   geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
+
+  /**
+   * Function to add a metric dependency
+   */
+  addMetricDependency: (
+    cardId: number,
+    dependency: SpatialMetricDependency
+  ) => Promise<void>;
+
+  /**
+   * Function to remove a metric dependency
+   */
+  removeMetricDependency: (
+    cardId: number,
+    dependency: SpatialMetricDependency
+  ) => Promise<void>;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -178,6 +194,8 @@ export function useReportState(
     selectedTab,
     selectedForEditing,
     setSelectedForEditing,
+    addMetricDependency,
+    removeMetricDependency,
   };
 }
 
