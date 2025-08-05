@@ -1,5 +1,6 @@
 import { SetStateAction } from "react";
 import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
+import { MetricType } from "overlay-engine";
 
 export type ReportCardConfigUpdateCallback = (
   update:
@@ -29,9 +30,13 @@ export type ReportCardPickerComponent = React.ComponentType<{
   onClick: () => void;
 }>;
 
+export type PickerSettings = Pick<
+  ReportCardConfiguration<any>,
+  "componentSettings" | "body"
+>;
+
 export interface ReportCardRegistration<T> {
   type: ReportCardType;
-  title: string;
   superusersOnly?: boolean;
 
   // User-facing component (always loaded)
@@ -39,7 +44,7 @@ export interface ReportCardRegistration<T> {
 
   // Admin components (lazy loaded)
   adminComponent?: React.LazyExoticComponent<ReportCardAdminComponent<T>>;
-  pickerSettings: ReportCardConfiguration<T>;
+  pickerSettings: PickerSettings;
 
   // Default settings for new cards of this type
   defaultSettings: T;
@@ -56,20 +61,19 @@ export const registeredCards: Map<
 
 export interface RegisterReportCardConfig<T> {
   type: ReportCardType;
-  title: string;
   component: ReportCardComponent<T>;
   defaultSettings: T;
   superusersOnly?: boolean;
   adminComponent?: React.LazyExoticComponent<ReportCardAdminComponent<T>>;
   validateSettings?: (settings: T) => string[] | null;
   getExportData?: (settings: T, data: any) => any;
-  pickerSettings: ReportCardConfiguration<T>;
+  pickerSettings: PickerSettings;
+  requiredMetrics?: (componentSettings: T) => MetricType[];
 }
 
 export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
   registeredCards.set(config.type, {
     type: config.type,
-    title: config.title,
     superusersOnly: config.superusersOnly,
     component: config.component,
     adminComponent: config.adminComponent,
@@ -102,7 +106,17 @@ export function getCardPickerComponent(
   if (!registration) return null;
   const Component = getCardComponent(type);
   if (!Component) return null;
-  return <Component config={{ ...registration.pickerSettings, type }} />;
+  return (
+    <Component
+      config={{
+        ...registration.pickerSettings,
+        type,
+        id: 0,
+        position: 0,
+        alternateLanguageSettings: {},
+      }}
+    />
+  );
 }
 
 export function getCardRegistration(
@@ -124,6 +138,6 @@ export function getAvailableCardTypes(options?: {
 
   return Array.from(registeredCards.values())
     .filter((card) => !card.superusersOnly || isSuperuser)
-    .sort((a, b) => a.title.localeCompare(b.title))
+    .sort((a, b) => a.type.localeCompare(b.type))
     .map((card) => card.type);
 }

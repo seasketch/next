@@ -1,6 +1,8 @@
+import { ReportCardIcon } from "../ReportCard";
+
 export type ProsemirrorBodyJSON = any;
 
-export type ReportCardType = "Attributes" | "TextBlock" | "SketchSize";
+export type ReportCardType = "Attributes" | "TextBlock" | "SketchSize" | "Size";
 
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
@@ -40,6 +42,14 @@ export type ReportCardConfiguration<T> = {
    * of position.
    */
   position: number;
+  /**
+   * The tint of the card.
+   */
+  tint?: string;
+  /**
+   * The icon of the card.
+   */
+  icon?: ReportCardIcon;
 };
 
 export type ReportTabConfiguration = {
@@ -97,4 +107,5 @@ export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
 export function registerCards() {
   import("./TextBlockCard");
   import("./SketchAttributesCard");
+  import("./SizeCard");
 }

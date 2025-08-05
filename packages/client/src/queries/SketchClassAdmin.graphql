@@ -413,6 +413,14 @@ query DraftReport($sketchClassId: Int!) {
     report {
       createdAt
     }
+    project {
+      id
+      geographies {
+        id
+        name
+        translatedProps
+      }
+    }
   }
 }
 

@@ -2,6 +2,7 @@ import { XIcon } from "@heroicons/react/outline";
 import { useContext, useMemo } from "react";
 import Skeleton from "../../components/Skeleton";
 import {
+  SketchGeometryType,
   SketchingDetailsFragment,
   useSketchReportingDetailsQuery,
 } from "../../generated/graphql";
@@ -47,13 +48,9 @@ export default function SketchReportWindow({
     fetchPolicy: "cache-first",
   });
 
-  const {
-    selectedTabId,
-    setSelectedTabId,
-    selectedTab,
-    selectedForEditing,
-    setSelectedForEditing,
-  } = useReportState((data?.sketchClass?.report as any) || undefined);
+  const reportState = useReportState(
+    (data?.sketchClass?.report as any) || undefined
+  );
 
   const filteredLanguages = useMemo(
     () =>
@@ -123,12 +120,15 @@ export default function SketchReportWindow({
               sketch: data.sketch,
               report: data?.sketchClass
                 ?.report as unknown as ReportConfiguration,
-              setSelectedTabId: setSelectedTabId,
-              selectedTabId,
-              selectedTab,
-              selectedForEditing,
-              setSelectedForEditing,
+              ...reportState,
               adminMode: false,
+              isCollection:
+                data.sketchClass.geometryType === SketchGeometryType.Collection,
+              childSketchIds:
+                data.sketchClass.geometryType === SketchGeometryType.Collection
+                  ? []
+                  : [],
+              geographies: data.sketchClass?.project?.geographies || [],
             }}
           >
             <>

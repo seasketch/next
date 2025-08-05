@@ -593,6 +593,26 @@ CREATE TYPE public.invite_stats AS (
 
 
 --
+-- Name: metric_execution_environment; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.metric_execution_environment AS ENUM (
+    'lambda',
+    'api_server'
+);
+
+
+--
+-- Name: metric_overlay_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.metric_overlay_type AS ENUM (
+    'vector',
+    'raster'
+);
+
+
+--
 -- Name: offline_tile_package_source_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -858,6 +878,31 @@ CREATE TYPE public.sketch_geometry_type AS ENUM (
 CREATE TYPE public.sort_by_direction AS ENUM (
     'ASC',
     'DESC'
+);
+
+
+--
+-- Name: spatial_metric_state; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.spatial_metric_state AS ENUM (
+    'queued',
+    'processing',
+    'complete',
+    'error'
+);
+
+
+--
+-- Name: spatial_metric_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.spatial_metric_type AS ENUM (
+    'area',
+    'count',
+    'presence',
+    'presence_table',
+    'contextualized_mean'
 );
 
 
@@ -1507,8 +1552,8 @@ CREATE TABLE public.sketch_classes (
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
     is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
-    draft_report_id integer,
     report_id integer,
+    draft_report_id integer,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
@@ -8820,7 +8865,7 @@ CREATE TABLE public.data_sources (
     uploaded_source_filename text,
     uploaded_source_layername text,
     normalized_source_object_key text,
-    normalized_source_bytes integer,
+    normalized_source_bytes bigint,
     geostats jsonb,
     upload_task_id uuid,
     translated_props jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -12992,6 +13037,40 @@ CREATE FUNCTION public.project_geography_clipping_layers(geography public.projec
 
 COMMENT ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) IS '@simpleCollections only
 @description "Returns the clipping layers for a given geography."';
+
+
+--
+-- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.spatial_metrics (
+    id bigint NOT NULL,
+    subject_fragment_id text,
+    subject_geography_id integer,
+    type public.spatial_metric_type NOT NULL,
+    overlay_layer_stable_id text,
+    overlay_source_remote text,
+    overlay_group_by text,
+    included_properties text[],
+    value jsonb,
+    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    overlay_type public.metric_overlay_type NOT NULL,
+    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
+);
+
+
+--
+-- Name: project_geography_spatial_metrics(public.project_geography); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_geography_spatial_metrics(geography public.project_geography) RETURNS SETOF public.spatial_metrics
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from spatial_metrics where subject_geography_id = geography.id
+  $$;
 
 
 --
@@ -17509,6 +17588,17 @@ CREATE FUNCTION public.sketches_parent_collection(sketch public.sketches) RETURN
 
 
 --
+-- Name: sketches_spatial_metrics(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_spatial_metrics(sketch public.sketches) RETURNS SETOF public.spatial_metrics
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from spatial_metrics where subject_fragment_id in (select fragment_hash from sketch_fragments where sketch_id = sketch.id)
+  $$;
+
+
+--
 -- Name: sketches_user_attributes(public.sketches); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -20682,6 +20772,39 @@ JSON web key set table. Design guided by https://tools.ietf.org/html/rfc7517
 
 
 --
+-- Name: metric_work_chunk; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.metric_work_chunk (
+    id bigint NOT NULL,
+    spatial_metric_id bigint,
+    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
+    error_message text,
+    value jsonb,
+    total_bytes bigint,
+    offsets bigint[],
+    bbox public.geometry(Polygon,4326),
+    execution_environment public.metric_execution_environment DEFAULT 'lambda'::public.metric_execution_environment NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
+-- Name: metric_work_chunk_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.metric_work_chunk ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.metric_work_chunk_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: offline_tile_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -21111,6 +21234,20 @@ Associations between sketches and fragments';
 
 ALTER TABLE public.sketches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.sketches_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: spatial_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.spatial_metrics ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.spatial_metrics_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -21760,6 +21897,14 @@ ALTER TABLE ONLY public.map_data_requests
 
 
 --
+-- Name: metric_work_chunk metric_work_chunk_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.metric_work_chunk
+    ADD CONSTRAINT metric_work_chunk_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: offline_tile_packages offline_tile_packages_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -22044,6 +22189,14 @@ ALTER TABLE ONLY public.sketch_fragments
 
 ALTER TABLE ONLY public.sketches
     ADD CONSTRAINT sketches_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: spatial_metrics spatial_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spatial_metrics
+    ADD CONSTRAINT spatial_metrics_pkey PRIMARY KEY (id);
 
 
 --
@@ -24181,6 +24334,14 @@ ALTER TABLE ONLY public.map_bookmarks
 
 
 --
+-- Name: metric_work_chunk metric_work_chunk_spatial_metric_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.metric_work_chunk
+    ADD CONSTRAINT metric_work_chunk_spatial_metric_id_fkey FOREIGN KEY (spatial_metric_id) REFERENCES public.spatial_metrics(id) ON DELETE CASCADE;
+
+
+--
 -- Name: offline_tile_packages offline_tile_packages_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -24524,14 +24685,6 @@ COMMENT ON CONSTRAINT sketch_classes_project_id_fkey ON public.sketch_classes IS
 
 
 --
--- Name: sketch_classes sketch_classes_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.sketch_classes
-    ADD CONSTRAINT sketch_classes_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.reports(id) ON DELETE SET NULL;
-
-
---
 -- Name: sketch_classes_valid_children sketch_classes_valid_children_child_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -24703,6 +24856,22 @@ COMMENT ON CONSTRAINT sketches_sketch_class_id_fkey ON public.sketches IS '@omit
 
 ALTER TABLE ONLY public.sketches
     ADD CONSTRAINT sketches_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: spatial_metrics spatial_metrics_subject_fragment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spatial_metrics
+    ADD CONSTRAINT spatial_metrics_subject_fragment_id_fkey FOREIGN KEY (subject_fragment_id) REFERENCES public.fragments(hash) ON DELETE CASCADE;
+
+
+--
+-- Name: spatial_metrics spatial_metrics_subject_geography_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spatial_metrics
+    ADD CONSTRAINT spatial_metrics_subject_geography_id_fkey FOREIGN KEY (subject_geography_id) REFERENCES public.project_geography(id) ON DELETE CASCADE;
 
 
 --
@@ -32610,6 +32779,14 @@ GRANT ALL ON FUNCTION public.project_geography_clipping_layers(geography public.
 
 
 --
+-- Name: FUNCTION project_geography_spatial_metrics(geography public.project_geography); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_geography_spatial_metrics(geography public.project_geography) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_geography_spatial_metrics(geography public.project_geography) TO anon;
+
+
+--
 -- Name: FUNCTION project_groups_member_count(g public.project_groups); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33689,6 +33866,14 @@ GRANT ALL ON FUNCTION public.sketches_is_collection(sketch public.sketches) TO a
 
 REVOKE ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_spatial_metrics(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_spatial_metrics(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_spatial_metrics(sketch public.sketches) TO anon;
 
 
 --
