@@ -2669,7 +2669,7 @@ export type DataSource = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   /** Size of the normalized file. SEASKETCH_VECTOR sources only. */
-  normalizedSourceBytes?: Maybe<Scalars['Int']>;
+  normalizedSourceBytes?: Maybe<Scalars['BigInt']>;
   /**
    * Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
    * store indefinitely so they may be processed into tilesets and to support the
@@ -2916,7 +2916,7 @@ export type DataSourceInput = {
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
   minzoom?: Maybe<Scalars['Int']>;
   /** Size of the normalized file. SEASKETCH_VECTOR sources only. */
-  normalizedSourceBytes?: Maybe<Scalars['Int']>;
+  normalizedSourceBytes?: Maybe<Scalars['BigInt']>;
   /**
    * Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
    * store indefinitely so they may be processed into tilesets and to support the
@@ -8872,7 +8872,7 @@ export type MutationGetOrCreateSpriteArgs = {
 
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
-  bytes: Scalars['Int'];
+  bytes: Scalars['BigInt'];
   filename: Scalars['String'];
 };
 
@@ -18898,7 +18898,7 @@ export type ReplacePmTilesMutation = (
 
 export type GetPresignedPmTilesUploadUrlMutationVariables = Exact<{
   filename: Scalars['String'];
-  bytes: Scalars['Int'];
+  bytes: Scalars['BigInt'];
 }>;
 
 
@@ -28224,7 +28224,7 @@ export type ReplacePmTilesMutationHookResult = ReturnType<typeof useReplacePmTil
 export type ReplacePmTilesMutationResult = Apollo.MutationResult<ReplacePmTilesMutation>;
 export type ReplacePmTilesMutationOptions = Apollo.BaseMutationOptions<ReplacePmTilesMutation, ReplacePmTilesMutationVariables>;
 export const GetPresignedPmTilesUploadUrlDocument = gql`
-    mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
+    mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: BigInt!) {
   getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
     url
     key

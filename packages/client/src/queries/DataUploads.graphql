@@ -175,7 +175,7 @@ mutation ReplacePMTiles($dataSourceId: Int!, $pmtilesKey: String!) {
   }
 }
 
-mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: Int!) {
+mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: BigInt!) {
   getPresignedPMTilesUploadUrl(bytes: $bytes, filename: $filename) {
     url
     key

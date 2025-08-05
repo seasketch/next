@@ -40,7 +40,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
 
         getPresignedPMTilesUploadUrl(
           filename: String!
-          bytes: Int!
+          bytes: BigInt!
         ): PresignedUrl!
       }
     `,

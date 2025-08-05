@@ -3073,7 +3073,7 @@ type DataSource implements Node {
   nodeId: ID!
 
   """Size of the normalized file. SEASKETCH_VECTOR sources only."""
-  normalizedSourceBytes: Int
+  normalizedSourceBytes: BigInt
 
   """
   Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
@@ -3338,7 +3338,7 @@ input DataSourceInput {
   minzoom: Int
 
   """Size of the normalized file. SEASKETCH_VECTOR sources only."""
-  normalizedSourceBytes: Int
+  normalizedSourceBytes: BigInt
 
   """
   Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
@@ -9629,7 +9629,7 @@ type Mutation {
     type: String
     width: Int!
   ): Sprite
-  getPresignedPMTilesUploadUrl(bytes: Int!, filename: String!): PresignedUrl!
+  getPresignedPMTilesUploadUrl(bytes: BigInt!, filename: String!): PresignedUrl!
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
