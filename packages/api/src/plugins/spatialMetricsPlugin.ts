@@ -9,7 +9,7 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
       input SpatialMetricDependency {
         type: String!
         sketchId: Int
-        geographyIds: Int
+        geographyIds: [Int!]
         overlay_stable_id: String
         overlay_group_by: String
         included_properties: [String!]

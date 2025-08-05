@@ -13981,7 +13981,7 @@ export type SpatialMetric = Node & {
 };
 
 export type SpatialMetricDependency = {
-  geographyIds?: Maybe<Scalars['Int']>;
+  geographyIds?: Maybe<Array<Scalars['Int']>>;
   included_properties?: Maybe<Array<Scalars['String']>>;
   overlay_group_by?: Maybe<Scalars['String']>;
   overlay_stable_id?: Maybe<Scalars['String']>;

@@ -15222,7 +15222,7 @@ type SpatialMetric implements Node {
 }
 
 input SpatialMetricDependency {
-  geographyIds: Int
+  geographyIds: [Int!]
   included_properties: [String!]
   overlay_group_by: String
   overlay_stable_id: String
