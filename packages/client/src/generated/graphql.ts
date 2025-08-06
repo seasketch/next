@@ -21859,7 +21859,10 @@ export type DraftReportQuery = (
       & { geographies: Array<(
         { __typename?: 'Geography' }
         & Pick<Geography, 'id' | 'name' | 'translatedProps'>
-      )> }
+      )>, mySketches?: Maybe<Array<(
+        { __typename?: 'Sketch' }
+        & Pick<Sketch, 'id' | 'name' | 'sketchClassId' | 'createdAt'>
+      )>> }
     )> }
   )> }
 );
@@ -33646,6 +33649,12 @@ export const DraftReportDocument = gql`
         id
         name
         translatedProps
+      }
+      mySketches {
+        id
+        name
+        sketchClassId
+        createdAt
       }
     }
   }
