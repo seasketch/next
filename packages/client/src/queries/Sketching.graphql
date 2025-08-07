@@ -198,6 +198,21 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     userAttributes
     childProperties
     sketchClassId
+    relatedFragments {
+      hash
+      sketches
+      geographies
+    }
+    siblings {
+      id
+      name
+      sketchClassId
+    }
+    children {
+      id
+      name
+      sketchClassId
+    }
   }
   sketchClass(id: $sketchClassId) {
     project {

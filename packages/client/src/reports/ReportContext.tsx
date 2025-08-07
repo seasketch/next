@@ -2,7 +2,6 @@ import React, {
   createContext,
   useContext,
   useState,
-  ReactNode,
   useEffect,
   useCallback,
 } from "react";
@@ -13,6 +12,7 @@ import {
   SpatialMetricDependency,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
+import { MetricSubjectFragment } from "overlay-engine";
 
 export interface ReportContextState {
   /**
@@ -39,10 +39,8 @@ export interface ReportContextState {
    */
   isCollection: boolean;
 
-  /**
-   * The IDs of the child sketches, if a collection
-   */
-  childSketchIds: number[];
+  childSketches: Pick<Sketch, "id" | "name" | "sketchClassId">[];
+  siblingSketches: Pick<Sketch, "id" | "name" | "sketchClassId">[];
 
   /**
    * The report configuration containing tabs and cards
@@ -84,6 +82,7 @@ export interface ReportContextState {
    */
   deleteCard?: (cardId: number) => void;
   geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
+  relatedFragments: MetricSubjectFragment[];
 
   /**
    * Function to add a metric dependency

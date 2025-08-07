@@ -23,7 +23,7 @@ function createStableId() {
  */
 export function useMetrics<
   T extends keyof MetricTypeMap | Metric["type"]
->(options: { type: T; geographyIds?: number[] }) {
+>(options: { type: T; geographyIds?: number[]; excludeSiblings?: boolean }) {
   const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
 
