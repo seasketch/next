@@ -15,6 +15,7 @@ import {
   usePublishReportMutation,
   SketchTocDetailsFragment,
   useSketchReportingDetailsQuery,
+  SketchGeometryType,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -181,7 +182,10 @@ export default function SketchClassReportsAdmin({
   const draftReport = data?.sketchClass?.draftReport;
 
   // Use the custom hook to manage report state
-  const reportState = useReportState((draftReport as any) || undefined);
+  const reportState = useReportState(
+    (draftReport as any) || undefined,
+    selectedSketchId || 0
+  );
 
   // Get the selected sketch for demonstration
   const selectedSketch = sketchReportingDetails.data?.sketch;
