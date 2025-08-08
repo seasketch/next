@@ -50,6 +50,7 @@ import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
+import { MetricSubjectFragment } from "overlay-engine";
 
 registerCards();
 
@@ -433,7 +434,11 @@ export default function SketchClassReportsAdmin({
           ...reportState,
           deleteCard: handleDeleteCard,
           isCollection: false,
-          childSketchIds: [],
+          childSketches: selectedSketch?.children || [],
+          siblingSketches: selectedSketch?.siblings || [],
+          relatedFragments:
+            (selectedSketch?.relatedFragments as unknown as MetricSubjectFragment[]) ||
+            [],
           geographies:
             selectedSketchClass?.project?.geographies ||
             data?.sketchClass?.project?.geographies ||

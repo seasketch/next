@@ -1,40 +1,39 @@
 export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "contextualized_mean";
+type MetricBase = {
+    type: MetricType;
+    subject: MetricSubjectFragment | MetricSubjectGeography;
+};
+type OverlayMetricBase = MetricBase & {
+    layerStableId: string;
+    groupBy: string;
+};
 export type MetricSubjectFragment = {
     hash: string;
     geographies: number[];
     sketches: number[];
 };
 export type MetricSubjectGeography = {
+    type: "geography";
     id: number;
 };
-export type TotalAreaMetric = {
+export type TotalAreaMetric = MetricBase & {
     type: "total_area";
-    subject: MetricSubjectFragment | MetricSubjectGeography;
     value: number;
 };
-export type OverlayAreaMetric = {
+export type OverlayAreaMetric = OverlayMetricBase & {
     type: "overlay_area";
-    subject: MetricSubjectFragment | MetricSubjectGeography;
-    layerStableId: string;
-    groupBy: string;
     value: number | {
         [groupBy: string]: number;
     };
 };
-export type CountMetric = {
+export type CountMetric = OverlayMetricBase & {
     type: "count";
-    subject: MetricSubjectFragment | MetricSubjectGeography;
-    layerStableId: string;
-    groupBy: string;
     value: number | {
         [groupBy: string]: number;
     };
 };
-export type PresenceMetric = {
+export type PresenceMetric = OverlayMetricBase & {
     type: "presence";
-    subject: MetricSubjectFragment | MetricSubjectGeography;
-    layerStableId: string;
-    groupBy: string;
     value: boolean | {
         [groupBy: string]: boolean;
     };
@@ -43,10 +42,8 @@ export type PresenceTableValue = {
     id: string;
     [attribute: string]: any;
 };
-export type PresenceTableMetric = {
+export type PresenceTableMetric = OverlayMetricBase & {
     type: "presence_table";
-    subject: MetricSubjectFragment | MetricSubjectGeography;
-    layerStableId: string;
     value: PresenceTableValue[];
     count: number;
 };
@@ -59,4 +56,6 @@ export type MetricTypeMap = {
     presence_table: PresenceTableMetric;
 };
 export declare function subjectIsFragment(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
+export declare function subjectIsGeography(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
+export {};
 //# sourceMappingURL=metrics.d.ts.map

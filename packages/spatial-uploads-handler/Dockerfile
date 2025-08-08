@@ -17,11 +17,15 @@ RUN dnf install -y jq
 COPY tsconfig.json  ./
 COPY package.json ./package.json.original
 RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"]) | del(.dependences["@seasketch/metadata-parser"])' package.json.original > package.json
-# Not using lerna, so need to copy this manually
+# Copy the referenced TypeScript projects for project references
+COPY ./@seasketch/geostats-types ../geostats-types
+COPY ./@seasketch/metadata-parser ../metadata-parser
+# Also copy as node_modules for runtime dependencies
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
 COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
 RUN npm install
+# Ensure the projects are still available after npm install
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
 COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser

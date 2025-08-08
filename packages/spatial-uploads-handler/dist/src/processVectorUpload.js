@@ -292,7 +292,6 @@ async function processVectorUpload(options) {
                 ...numericAttributes.map((a) => [`-T`, `${a.name}:${a.type}`]).flat(),
                 "-n",
                 `"${originalName}"`,
-                "-zg",
                 ...(/point/i.test(geometryType)
                     ? [
                         // prevent tippecanoe from dropping too many points
@@ -301,6 +300,14 @@ async function processVectorUpload(options) {
                         "1",
                     ]
                     : []),
+                ...(/point/i.test(geometryType) && normalizedVectorFileSize < 1000000
+                    ? ["-z", "14"]
+                    : [
+                        "-zg",
+                        ...(normalizedVectorFileSize < 1000000
+                            ? ["--smallest-maximum-zoom-guess", "4"]
+                            : []),
+                    ]),
                 "--generate-ids",
                 "--drop-densest-as-needed",
                 "-l",

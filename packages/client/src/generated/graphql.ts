@@ -13579,6 +13579,8 @@ export type Sketch = Node & {
    * report clients in the initialization message.
    */
   childProperties?: Maybe<Scalars['JSON']>;
+  /** Reads and enables pagination through a set of `Sketch`. */
+  children?: Maybe<Array<Sketch>>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   collection?: Maybe<Sketch>;
   /** If the sketch is not a collection, it can belong to a collection (collections cannot be nested). */
@@ -13621,8 +13623,11 @@ export type Sketch = Node & {
   parentCollection?: Maybe<Sketch>;
   postId?: Maybe<Scalars['Int']>;
   properties: Scalars['JSON'];
+  relatedFragments?: Maybe<Array<Maybe<SketchesRelatedFragmentsRecord>>>;
   responseId?: Maybe<Scalars['Int']>;
   sharedInForum: Scalars['Boolean'];
+  /** Reads and enables pagination through a set of `Sketch`. */
+  siblings?: Maybe<Array<Sketch>>;
   /** Reads a single `SketchClass` that is related to this `Sketch`. */
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
@@ -13645,6 +13650,54 @@ export type Sketch = Node & {
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * A *Sketch* is a spatial feature that matches the schema defined by the related
+ * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
+ * shared in the discussion forum. They are also the gateway to analytical reports.
+ *
+ * Sketches are completely owned by individual users, so access control rules
+ * ensure that only the owner of a sketch can perform CRUD operations on them.
+ * Admins have no special access. Use the graphile-generated mutations to manage
+ * these records.
+ */
+export type SketchChildrenArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * A *Sketch* is a spatial feature that matches the schema defined by the related
+ * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
+ * shared in the discussion forum. They are also the gateway to analytical reports.
+ *
+ * Sketches are completely owned by individual users, so access control rules
+ * ensure that only the owner of a sketch can perform CRUD operations on them.
+ * Admins have no special access. Use the graphile-generated mutations to manage
+ * these records.
+ */
+export type SketchRelatedFragmentsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * A *Sketch* is a spatial feature that matches the schema defined by the related
+ * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
+ * shared in the discussion forum. They are also the gateway to analytical reports.
+ *
+ * Sketches are completely owned by individual users, so access control rules
+ * ensure that only the owner of a sketch can perform CRUD operations on them.
+ * Admins have no special access. Use the graphile-generated mutations to manage
+ * these records.
+ */
+export type SketchSiblingsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -13934,6 +13987,14 @@ export enum SketchGeometryType {
   Polygon = 'POLYGON'
 }
 
+/** The return type of our `relatedFragmentsConnection` query. */
+export type SketchesRelatedFragmentsRecord = {
+  __typename?: 'SketchesRelatedFragmentsRecord';
+  geographies?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  hash?: Maybe<Scalars['String']>;
+  sketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
+};
+
 /** All input for the `softDeleteSprite` mutation. */
 export type SoftDeleteSpriteInput = {
   /**
@@ -13984,10 +14045,10 @@ export type SpatialMetric = Node & {
 
 export type SpatialMetricDependency = {
   geographyIds?: Maybe<Array<Scalars['Int']>>;
-  included_properties?: Maybe<Array<Scalars['String']>>;
-  overlay_group_by?: Maybe<Scalars['String']>;
-  overlay_stable_id?: Maybe<Scalars['String']>;
+  groupBy?: Maybe<Scalars['String']>;
+  includedProperties?: Maybe<Array<Scalars['String']>>;
   sketchId?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
   type: Scalars['String'];
 };
 
@@ -22292,6 +22353,16 @@ export type SketchReportingDetailsQuery = (
   & { sketch?: Maybe<(
     { __typename?: 'Sketch' }
     & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties' | 'sketchClassId'>
+    & { relatedFragments?: Maybe<Array<Maybe<(
+      { __typename?: 'SketchesRelatedFragmentsRecord' }
+      & Pick<SketchesRelatedFragmentsRecord, 'hash' | 'sketches' | 'geographies'>
+    )>>>, siblings?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'name' | 'sketchClassId'>
+    )>>, children?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'name' | 'sketchClassId'>
+    )>> }
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
@@ -34445,6 +34516,21 @@ export const SketchReportingDetailsDocument = gql`
     userAttributes
     childProperties
     sketchClassId
+    relatedFragments {
+      hash
+      sketches
+      geographies
+    }
+    siblings {
+      id
+      name
+      sketchClassId
+    }
+    children {
+      id
+      name
+      sketchClassId
+    }
   }
   sketchClass(id: $sketchClassId) {
     project {

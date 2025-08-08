@@ -3,5 +3,5 @@ export { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
 export { clipToGeography, ClippingFn, ClippingOperation, ClippingLayerOption, clipSketchToPolygons, PolygonClipResult, clipToGeographies, } from "./geographies";
 export { Cql2Query } from "./cql2";
 export { createFragments, eliminateOverlap, FragmentResult, SketchFragment, GeographySettings, mergeTouchingFragments, } from "./fragments";
-export { Metric, MetricType, TotalAreaMetric, OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, MetricTypeMap, subjectIsFragment, } from "./metrics/metrics";
+export { Metric, MetricType, TotalAreaMetric, OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, MetricTypeMap, subjectIsFragment, MetricSubjectFragment, } from "./metrics/metrics";
 //# sourceMappingURL=index.d.ts.map

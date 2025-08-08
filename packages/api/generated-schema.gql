@@ -14705,6 +14705,15 @@ type Sketch implements Node {
   """
   childProperties: JSON
 
+  """Reads and enables pagination through a set of `Sketch`."""
+  children(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sketch!]
+
   """Reads a single `Sketch` that is related to this `Sketch`."""
   collection: Sketch
 
@@ -14762,8 +14771,24 @@ type Sketch implements Node {
   parentCollection: Sketch
   postId: Int
   properties: JSON!
+  relatedFragments(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SketchesRelatedFragmentsRecord]
   responseId: Int
   sharedInForum: Boolean!
+
+  """Reads and enables pagination through a set of `Sketch`."""
+  siblings(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sketch!]
 
   """Reads a single `SketchClass` that is related to this `Sketch`."""
   sketchClass: SketchClass
@@ -15071,6 +15096,13 @@ input SketchClassPatch {
   translatedProps: JSON
 }
 
+"""The return type of our `relatedFragmentsConnection` query."""
+type SketchesRelatedFragmentsRecord {
+  geographies: [Int]
+  hash: String
+  sketches: [Int]
+}
+
 type SketchFolder implements Node {
   """
   The parent sketch collection, if any. Folders can only have a single parent entity.
@@ -15223,10 +15255,10 @@ type SpatialMetric implements Node {
 
 input SpatialMetricDependency {
   geographyIds: [Int!]
-  included_properties: [String!]
-  overlay_group_by: String
-  overlay_stable_id: String
+  groupBy: String
+  includedProperties: [String!]
   sketchId: Int
+  stableId: String
   type: String!
 }
 

@@ -18,6 +18,7 @@ import { ReportTabs } from "../../reports/ReportTabs";
 import { ReportConfiguration } from "../../reports/cards/cards";
 import { ReportBody } from "../../reports/ReportBody";
 import { registerCards } from "../../reports/cards/cards";
+import { MetricSubjectFragment } from "overlay-engine";
 
 registerCards();
 
@@ -124,10 +125,12 @@ export default function SketchReportWindow({
               adminMode: false,
               isCollection:
                 data.sketchClass.geometryType === SketchGeometryType.Collection,
-              childSketchIds:
-                data.sketchClass.geometryType === SketchGeometryType.Collection
-                  ? []
-                  : [],
+              childSketches: data.sketch?.children || [],
+              siblingSketches: data.sketch?.siblings || [],
+              relatedFragments:
+                (data.sketch
+                  ?.relatedFragments as unknown as MetricSubjectFragment[]) ||
+                [],
               geographies: data.sketchClass?.project?.geographies || [],
             }}
           >
