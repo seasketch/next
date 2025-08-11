@@ -39,12 +39,13 @@ export function SizeCard({
   });
 
   const totalArea = useMemo(() => {
-    return metrics.data
-      .filter((d) => subjectIsFragment(d.subject))
-      .reduce((acc, metric) => {
+    return metrics.data.reduce((acc, metric) => {
+      if (subjectIsFragment(metric.subject)) {
         return acc + metric.value;
-      }, 0);
-  }, [metrics.data]);
+      }
+      return acc;
+    }, 0);
+  }, [metrics.data, metrics.loading]);
 
   const NumberFormatter = new Intl.NumberFormat(langContext?.lang?.code, {
     style: "decimal",

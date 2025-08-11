@@ -83,43 +83,16 @@ export default function SketchClassReportsAdmin({
       const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA; // Most recent first
     });
-  }, [data]);
+  }, [data, sketchClass.id]);
 
-  const [selectedSketchId, setSelectedSketchId] = useState<number | null>(
-    () => {
-      // Auto-select the first (most recent) sketch by default
-      const sketches =
-        data?.sketchClass?.project?.mySketches?.filter(
-          (sketch) => sketch.sketchClassId === sketchClass.id
-        ) || [];
+  const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
 
-      if (sketches.length > 0) {
-        // Sort by createdAt and select the most recent
-        const sortedSketches = sketches.sort((a, b) => {
-          const dateA = new Date(a.createdAt).getTime();
-          const dateB = new Date(b.createdAt).getTime();
-          return dateB - dateA; // Most recent first
-        });
-        return sortedSketches[0].id;
-      }
-      return null;
-    }
-  );
-
-  // Update selectedSketchId when sketches change
+  // Auto-select the first sketch when sketches become available
   useEffect(() => {
-    if (!selectedSketchId && sketchesForDemonstration.length > 0) {
+    if (sketchesForDemonstration.length > 0 && !selectedSketchId) {
       setSelectedSketchId(sketchesForDemonstration[0].id);
     }
-  }, [sketchesForDemonstration, selectedSketchId]);
-
-  const sketchReportingDetails = useSketchReportingDetailsQuery({
-    variables: {
-      id: selectedSketchId || 0,
-      sketchClassId: sketchClass.id,
-    },
-    skip: !selectedSketchId,
-  });
+  }, [sketchesForDemonstration]);
 
   const [moveCardToTab, moveCardToTabState] = useMoveCardToTabMutation({
     onError,
@@ -185,12 +158,14 @@ export default function SketchClassReportsAdmin({
   // Use the custom hook to manage report state
   const reportState = useReportState(
     (draftReport as any) || undefined,
-    selectedSketchId || 0
+    sketchClass.id,
+    selectedSketchId
   );
 
   // Get the selected sketch for demonstration
-  const selectedSketch = sketchReportingDetails.data?.sketch;
-  const selectedSketchClass = sketchReportingDetails.data?.sketchClass;
+  const selectedSketch = sketchesForDemonstration.find(
+    (sketch) => sketch.id === selectedSketchId
+  );
 
   const handleCardReorder = async (cardIds: number[], reportTabId: number) => {
     try {
@@ -423,89 +398,73 @@ export default function SketchClassReportsAdmin({
           (projectData?.project?.supportedLanguages as string[]) || [],
       }}
     >
-      <ReportContext.Provider
-        value={{
-          report: draftReport as unknown as ReportConfiguration,
-          sketchClass:
-            (selectedSketchClass as unknown as SketchingDetailsFragment) ||
-            sketchClass,
-          sketch: selectedSketch || ({} as any),
-          adminMode: true,
-          ...reportState,
-          deleteCard: handleDeleteCard,
-          isCollection: false,
-          childSketches: selectedSketch?.children || [],
-          siblingSketches: selectedSketch?.siblings || [],
-          relatedFragments:
-            (selectedSketch?.relatedFragments as unknown as MetricSubjectFragment[]) ||
-            [],
-          geographies:
-            selectedSketchClass?.project?.geographies ||
-            data?.sketchClass?.project?.geographies ||
-            [],
-        }}
-      >
-        <div className="flex flex-col w-full h-full">
-          {/* Header */}
-          <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
-            <div className="flex-none space-x-2">
-              <Button
-                small
-                disabled={publishReportState.loading || !hasUnpublishedChanges}
-                title={
-                  hasUnpublishedChanges
-                    ? t("There are unpublished changes. Publish to save them.")
-                    : t("No unpublished changes")
-                }
-                loading={publishReportState.loading}
-                label={t("Publish Report")}
-                onClick={() => {
-                  publishReport({
-                    variables: {
-                      sketchClassId: sketchClass.id,
-                    },
-                  });
-                }}
-                primary={hasUnpublishedChanges}
-              />
-              <span className="text-sm text-gray-500">
-                {data?.sketchClass?.report &&
-                  t("Published ") +
-                    new Date(
-                      data.sketchClass.report.createdAt
-                    ).toLocaleDateString()}
-              </span>
-            </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">
-                  {t("Demo Sketch:")}
-                </span>
-                <DropdownButton
-                  small
-                  disabled={sketchesForDemonstration.length === 0}
-                  label={
-                    selectedSketch ? (
-                      <Trans ns="admin:sketching">
-                        Displayed Sketch: {selectedSketch.name}
-                      </Trans>
-                    ) : (
-                      t("Select a sketch...")
-                    )
-                  }
-                  // buttonClassName="min-w-72"
-                  options={sketchesForDemonstration.map((sketch) => ({
-                    label: sketch.name,
-                    onClick: () => setSelectedSketchId(sketch.id),
-                    id: sketch.id.toString(),
-                  }))}
-                />
-                {sketchReportingDetails.loading && <Spinner />}
-              </div>
-            </div>
-            <EditorLanguageSelector />
+      <div className="flex flex-col w-full h-full">
+        {/* Header */}
+        <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
+          <div className="flex-none space-x-2">
+            <Button
+              small
+              disabled={publishReportState.loading || !hasUnpublishedChanges}
+              title={
+                hasUnpublishedChanges
+                  ? t("There are unpublished changes. Publish to save them.")
+                  : t("No unpublished changes")
+              }
+              loading={publishReportState.loading}
+              label={t("Publish Report")}
+              onClick={() => {
+                publishReport({
+                  variables: {
+                    sketchClassId: sketchClass.id,
+                  },
+                });
+              }}
+              primary={hasUnpublishedChanges}
+            />
+            <span className="text-sm text-gray-500">
+              {data?.sketchClass?.report &&
+                t("Published ") +
+                  new Date(
+                    data.sketchClass.report.createdAt
+                  ).toLocaleDateString()}
+            </span>
           </div>
-
+          <div className="flex-1 flex items-center justify-center">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-600">{t("Demo Sketch:")}</span>
+              <DropdownButton
+                small
+                disabled={sketchesForDemonstration.length === 0}
+                label={
+                  selectedSketch ? (
+                    <Trans ns="admin:sketching">
+                      Displayed Sketch: {selectedSketch.name}
+                    </Trans>
+                  ) : (
+                    t("Select a sketch...")
+                  )
+                }
+                options={sketchesForDemonstration.map((sketch) => ({
+                  label: sketch.name,
+                  onClick: () => setSelectedSketchId(sketch.id),
+                  id: sketch.id.toString(),
+                  selected: sketch.id === selectedSketchId,
+                }))}
+              />
+            </div>
+          </div>
+          <EditorLanguageSelector />
+        </div>
+        <ReportContext.Provider
+          value={{
+            report: draftReport as unknown as ReportConfiguration,
+            adminMode: true,
+            ...reportState,
+            deleteCard: handleDeleteCard,
+            isCollection: false,
+            geographies: data?.sketchClass?.project?.geographies || [],
+          }}
+        >
           {/* Main */}
           <div className="flex-1 flex relative">
             {/* left sidebar */}
@@ -567,7 +526,7 @@ export default function SketchClassReportsAdmin({
             </div>
 
             {/* main content */}
-            {sketchesForDemonstration.length === 0 ? (
+            {sketchesForDemonstration.length === 0 && !loading ? (
               <div className="flex-1 p-8 pt-16">
                 <div className="max-w-md text-center mx-auto">
                   <div className="mb-6">
@@ -593,6 +552,10 @@ export default function SketchClassReportsAdmin({
                     primary
                   />
                 </div>
+              </div>
+            ) : reportState.loading ? (
+              <div className="flex-1 p-8 pt-16">
+                <Spinner />
               </div>
             ) : (
               <DragDropContext
@@ -663,7 +626,26 @@ export default function SketchClassReportsAdmin({
                 }}
               >
                 <div className="flex-1 p-8">
-                  {draftReport && (
+                  {draftReport && !selectedSketch && selectedSketchId && (
+                    <div className="max-w-md text-center mx-auto">
+                      <div className="mb-6">
+                        <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                          <div className="w-6 h-6 text-yellow-600">
+                            {SketchingIcon}
+                          </div>
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                        {t("Sketch not found")}
+                      </h3>
+                      <p className="text-gray-600 mb-6">
+                        {t(
+                          "The selected sketch could not be loaded. Please try selecting a different sketch."
+                        )}
+                      </p>
+                    </div>
+                  )}
+                  {draftReport && selectedSketch && (
                     <>
                       <div
                         className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
@@ -674,7 +656,11 @@ export default function SketchClassReportsAdmin({
                       >
                         {/* report header */}
                         <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
-                          <div className="flex-1">{selectedSketch?.name}</div>
+                          <div className="flex-1">
+                            {selectedSketch
+                              ? selectedSketch.name
+                              : t("Loading...")}
+                          </div>
                           {/* <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
                         <button>
                           <DotsHorizontalIcon className="w-6 h-6 text-gray-400" />
@@ -780,11 +766,11 @@ export default function SketchClassReportsAdmin({
             {/* right sidebar */}
             <div className="w-0 bg-white flex-none border-l shadow"></div>
           </div>
+        </ReportContext.Provider>
 
-          {/* Footer */}
-          {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
-        </div>
-      </ReportContext.Provider>
+        {/* Footer */}
+        {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
+      </div>
     </FormLanguageContext.Provider>
   );
 }

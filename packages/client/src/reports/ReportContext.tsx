@@ -1,4 +1,4 @@
-import React, {
+import {
   createContext,
   useContext,
   useState,
@@ -6,34 +6,25 @@ import React, {
   useCallback,
 } from "react";
 import {
+  CompatibleSpatialMetricDetailsFragment,
   Geography,
+  MetricWorkChunk,
+  ReportContextSketchClassDetailsFragment,
+  ReportContextSketchDetailsFragment,
   Sketch,
-  SketchingDetailsFragment,
   SpatialMetricDependency,
+  SpatialMetricState,
+  useGeographyMetricSubscriptionSubscription,
+  useGetOrCreateSpatialMetricsMutation,
+  useSketchMetricSubscriptionSubscription,
+  useSketchReportingDetailsQuery,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
-import { MetricSubjectFragment } from "overlay-engine";
+import { Metric, MetricSubjectFragment } from "overlay-engine";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import useProjectId from "../useProjectId";
 
 export interface ReportContextState {
-  /**
-   * The sketch class details for the report
-   */
-  sketchClass: SketchingDetailsFragment;
-
-  /**
-   * The sketch being reported on
-   */
-  sketch: Pick<
-    Sketch,
-    | "id"
-    | "name"
-    | "sketchClassId"
-    | "createdAt"
-    | "collectionId"
-    | "updatedAt"
-    | "properties"
-  >;
-
   /**
    * Whether the sketch is a collection
    */
@@ -41,6 +32,7 @@ export interface ReportContextState {
 
   childSketches: Pick<Sketch, "id" | "name" | "sketchClassId">[];
   siblingSketches: Pick<Sketch, "id" | "name" | "sketchClassId">[];
+  relatedFragments: MetricSubjectFragment[];
 
   /**
    * The report configuration containing tabs and cards
@@ -82,7 +74,6 @@ export interface ReportContextState {
    */
   deleteCard?: (cardId: number) => void;
   geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
-  relatedFragments: MetricSubjectFragment[];
 
   /**
    * Function to add a metric dependency
@@ -101,23 +92,34 @@ export interface ReportContextState {
   ) => void;
 
   /**
-   * Function to get all the metric dependencies registered with the context
-   */
-  getMetricDependencies: () => SpatialMetricDependency[];
-
-  /**
    * The current metric dependencies, debounced
    */
-  currentMetricDependencies: SpatialMetricDependency[];
+  metricDependencies: SpatialMetricDependency[];
+  selectedSketchId: number | null;
+  sketch?: ReportContextSketchDetailsFragment;
+  sketchClass?: ReportContextSketchClassDetailsFragment;
+  metrics: LocalMetrics;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
+
+type LocalMetric = Metric & {
+  id: number;
+  state: SpatialMetricState;
+  createdAt: Date;
+  updatedAt: Date | null;
+  chunks?: MetricWorkChunk[];
+};
+
+type LocalMetrics = LocalMetric[];
 
 /**
  * Custom hook to manage report state
  */
 export function useReportState(
   report: ReportConfiguration | undefined,
+  sketchClassId: number,
+  selectedSketchId: number | null,
   initialSelectedTabId?: number
 ) {
   const [selectedTabId, setSelectedTabId] = useState<number>(
@@ -126,6 +128,8 @@ export function useReportState(
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
+
+  const [metrics, setMetrics] = useState<LocalMetrics>([]);
 
   // Get the selected tab based on selectedTabId, fallback to first tab
   const selectedTab = report?.tabs?.find((tab) => tab.id === selectedTabId) ||
@@ -136,6 +140,85 @@ export function useReportState(
       cards: [],
       alternateLanguageSettings: {},
     };
+
+  const onError = useGlobalErrorHandler();
+  const sketchReportingDetails = useSketchReportingDetailsQuery({
+    variables: {
+      id: selectedSketchId!,
+      sketchClassId,
+    },
+    skip: !selectedSketchId,
+    onError,
+  });
+
+  useEffect(() => {
+    if (selectedSketchId) {
+      setMetrics([]);
+    }
+  }, [selectedSketchId]);
+
+  const projectId = useProjectId();
+
+  useGeographyMetricSubscriptionSubscription({
+    variables: {
+      projectId: projectId!,
+    },
+    skip: !projectId,
+    onData: ({ data }) => {
+      const metric = data.data?.geographyMetrics?.metric
+        ? parseMetric(data.data.geographyMetrics.metric)
+        : null;
+      if (metric) {
+        setMetrics((prev) => {
+          const newVal = prev.map((existing) => {
+            if (
+              existing.id === metric.id &&
+              (existing.state !== SpatialMetricState.Complete ||
+                metric.state === SpatialMetricState.Complete)
+            ) {
+              return {
+                ...existing,
+                ...metric,
+              };
+            }
+            return existing;
+          });
+          return newVal;
+        });
+      }
+    },
+  });
+
+  useSketchMetricSubscriptionSubscription({
+    variables: {
+      sketchId: selectedSketchId!,
+    },
+    skip: !selectedSketchId,
+    onData: ({ data }) => {
+      const metric = data.data?.sketchMetrics?.metric
+        ? parseMetric(data.data.sketchMetrics.metric)
+        : null;
+      if (metric) {
+        setMetrics((prev) => {
+          const newVal = prev.map((existing) => {
+            if (
+              existing.id === metric.id &&
+              (existing.state !== SpatialMetricState.Complete ||
+                metric.state === SpatialMetricState.Complete)
+            ) {
+              return {
+                ...existing,
+                ...metric,
+              };
+            }
+            return existing;
+          });
+
+          return newVal;
+        });
+      }
+    },
+  });
 
   // Update selectedTabId if the current one is no longer valid
   useEffect(() => {
@@ -205,34 +288,45 @@ export function useReportState(
     []
   );
 
-  // Returns a list of all the metric dependencies registered with the context,
-  // without any hook or hash ids.
-  const getMetricDependencies = useCallback(() => {
-    return metricDependencies.map((d) => {
-      const dep = {
-        ...d,
-      } as any;
-      delete dep.hash;
-      delete dep.hooks;
-      return dep as SpatialMetricDependency;
-    });
-  }, [metricDependencies]);
-
   const [currentMetricDependencies, setCurrentMetricDependencies] = useState<
     SpatialMetricDependency[]
   >([]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
-      setCurrentMetricDependencies(getMetricDependencies());
+      const deps = metricDependencies.map((d) => {
+        const dep = {
+          ...d,
+        } as any;
+        delete dep.hash;
+        delete dep.hooks;
+        return dep as SpatialMetricDependency;
+      });
+      setCurrentMetricDependencies(deps);
     }, 5);
 
     return () => clearTimeout(handler);
   }, [metricDependencies]);
 
+  const [getOrCreateSpatialMetrics, mutationState] =
+    useGetOrCreateSpatialMetricsMutation();
+
   useEffect(() => {
-    // console.log("currentMetricDependencies", currentMetricDependencies);
-  }, [currentMetricDependencies]);
+    if (currentMetricDependencies.length > 0) {
+      getOrCreateSpatialMetrics({
+        variables: {
+          dependencies: currentMetricDependencies,
+        },
+      }).then((results) => {
+        setMetrics((prev) => {
+          return updateMetricsList(
+            prev,
+            results.data?.getOrCreateSpatialMetrics?.metrics || []
+          );
+        });
+      });
+    }
+  }, [currentMetricDependencies, setMetrics, getOrCreateSpatialMetrics]);
 
   return {
     selectedTabId,
@@ -242,8 +336,19 @@ export function useReportState(
     setSelectedForEditing,
     addMetricDependency,
     removeMetricDependency,
-    getMetricDependencies,
-    currentMetricDependencies,
+    metricDependencies: currentMetricDependencies,
+    selectedSketchId,
+    sketch: sketchReportingDetails.data
+      ?.sketch as ReportContextSketchDetailsFragment,
+    sketchClass: sketchReportingDetails.data
+      ?.sketchClass as ReportContextSketchClassDetailsFragment,
+    childSketches: sketchReportingDetails.data?.sketch?.children || [],
+    siblingSketches: sketchReportingDetails.data?.sketch?.siblings || [],
+    relatedFragments:
+      (sketchReportingDetails.data?.sketch
+        ?.relatedFragments as MetricSubjectFragment[]) || [],
+    loading: sketchReportingDetails.loading,
+    metrics,
   };
 }
 
@@ -270,4 +375,45 @@ function hashMetricDependency(dependency: SpatialMetricDependency): string {
 
   // Convert to positive hex string
   return Math.abs(hash).toString(16);
+}
+
+function updateMetricsList(
+  prev: LocalMetrics,
+  newMetrics: CompatibleSpatialMetricDetailsFragment[]
+): LocalMetrics {
+  const newList = newMetrics.map((m) => {
+    const existing = prev.find((p) => p.id === m.id);
+    if (
+      existing &&
+      (existing.state !== SpatialMetricState.Complete ||
+        m.state === SpatialMetricState.Complete)
+    ) {
+      return {
+        ...existing,
+        ...parseMetric(m),
+      };
+    } else {
+      return parseMetric(m);
+    }
+  });
+  return newList;
+}
+
+function parseMetric(m: CompatibleSpatialMetricDetailsFragment): LocalMetric {
+  return {
+    ...m,
+    id: parseInt(m.id),
+    state: m.state,
+    createdAt: new Date(m.createdAt!),
+    updatedAt: m.updatedAt ? new Date(m.updatedAt) : null,
+    // @ts-ignore
+    chunks:
+      m.chunks?.map((c) => ({
+        id: parseInt(c.id),
+        state: c.state,
+        totalBytes: c.totalBytes,
+        errorMessage: c.errorMessage,
+        __typename: "MetricWorkChunk",
+      })) || [],
+  };
 }

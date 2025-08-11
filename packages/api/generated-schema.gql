@@ -1061,6 +1061,20 @@ input CommunityGuidelinePatch {
   content: JSON
 }
 
+type CompatibleSpatialMetric {
+  chunks: [MetricWorkChunk!]!
+  createdAt: Datetime!
+  groupBy: String
+  id: BigInt!
+  includedProperties: [String!]
+  stableId: String
+  state: SpatialMetricState!
+  subject: MetricSubject!
+  type: String!
+  updatedAt: Datetime
+  value: JSON
+}
+
 """All input for the `computeProjectGeographyHash` mutation."""
 input ComputeProjectGeographyHashInput {
   """
@@ -7048,6 +7062,12 @@ enum ForumsOrderBy {
   PROJECT_ID_DESC
 }
 
+type FragmentSubject {
+  geographies: [Int!]!
+  hash: String!
+  sketches: [Int!]!
+}
+
 """All input for the `generateOfflineTilePackage` mutation."""
 input GenerateOfflineTilePackageInput {
   """
@@ -7156,27 +7176,6 @@ type Geography implements Node {
   """Reads a single `Project` that is related to this `Geography`."""
   project: Project
   projectId: Int!
-
-  """Reads and enables pagination through a set of `SpatialMetric`."""
-  spatialMetricsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-  ): SpatialMetricsConnection!
   translatedProps: JSON
 }
 
@@ -7334,6 +7333,13 @@ type GeographyLineString implements GeographyGeometry & GeographyInterface {
   srid: Int!
 }
 
+type GeographyMetricSubscriptionPayload {
+  geographyId: Int!
+  metric: CompatibleSpatialMetric
+  metricId: BigInt!
+  projectId: Int!
+}
+
 """
 Represents an update to a `Geography`. Fields that are set will be updated.
 """
@@ -7358,6 +7364,10 @@ type GeographyPolygon implements GeographyGeometry & GeographyInterface {
   geojson: GeoJSON
   interiors: [GeographyLineString]
   srid: Int!
+}
+
+type GeographySubject {
+  id: Int!
 }
 
 type GeographyUpdatedPayload {
@@ -7617,8 +7627,40 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
+"""All input for the `getOrCreateSpatialMetric` mutation."""
+input GetOrCreateSpatialMetricInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  pIncludedProperties: [String]
+  pOverlayGroupBy: String
+  pOverlayLayerStableId: String
+  pOverlaySourceRemote: String
+  pOverlayType: MetricOverlayType
+  pSubjectFragmentId: String
+  pSubjectGeographyId: Int
+  pType: SpatialMetricType
+}
+
+"""The output of our `getOrCreateSpatialMetric` mutation."""
+type GetOrCreateSpatialMetricPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  spatialMetric: SpatialMetric
+}
+
 type GetOrCreateSpatialMetricsResults {
-  metrics: [SpatialMetric!]!
+  metrics: [CompatibleSpatialMetric!]!
 }
 
 type GoogleMapsTileApiSession implements Node {
@@ -8466,9 +8508,35 @@ type MergeTranslatedPropsPayload {
   query: Query
 }
 
+enum MetricExecutionEnvironment {
+  API_SERVER
+  LAMBDA
+}
+
 enum MetricOverlayType {
   RASTER
   VECTOR
+}
+
+union MetricSubject = FragmentSubject | GeographySubject
+
+type MetricWorkChunk implements Node {
+  bbox: GeometryPolygon
+  createdAt: Datetime!
+  errorMessage: String
+  executionEnvironment: MetricExecutionEnvironment!
+  id: BigInt!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  offsets: [BigInt]
+  spatialMetricId: BigInt
+  state: SpatialMetricState!
+  totalBytes: BigInt
+  updatedAt: Datetime!
+  value: JSON
 }
 
 """All input for the `modifySurveyAnswers` mutation."""
@@ -9611,6 +9679,12 @@ type Mutation {
     """
     input: GetChildFoldersRecursiveInput!
   ): GetChildFoldersRecursivePayload
+  getOrCreateSpatialMetric(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GetOrCreateSpatialMetricInput!
+  ): GetOrCreateSpatialMetricPayload
 
   """Create or update spatial metrics."""
   getOrCreateSpatialMetrics(inputs: [SpatialMetricDependency!]!): GetOrCreateSpatialMetricsResults!
@@ -14796,27 +14870,6 @@ type Sketch implements Node {
   """SketchClass that defines the behavior of this type of sketch."""
   sketchClassId: Int!
 
-  """Reads and enables pagination through a set of `SpatialMetric`."""
-  spatialMetricsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-  ): SpatialMetricsConnection!
-
   """
   Greater of updatedAt, createdAt, as stringified epoch timestamp.
   Useful for requesting the latest geometry
@@ -15201,6 +15254,12 @@ enum SketchGeometryType {
   POLYGON
 }
 
+type SketchMetricSubscriptionPayload {
+  metric: CompatibleSpatialMetric
+  metricId: BigInt!
+  sketchId: Int!
+}
+
 """All input for the `softDeleteSprite` mutation."""
 input SoftDeleteSpriteInput {
   """
@@ -15244,7 +15303,7 @@ type SpatialMetric implements Node {
   overlayGroupBy: String
   overlayLayerStableId: String
   overlaySourceRemote: String
-  overlayType: MetricOverlayType!
+  overlayType: MetricOverlayType
   state: SpatialMetricState!
   subjectFragmentId: String
   subjectGeographyId: Int
@@ -15257,35 +15316,10 @@ input SpatialMetricDependency {
   geographyIds: [Int!]
   groupBy: String
   includedProperties: [String!]
+  includeSiblings: Boolean
   sketchId: Int
   stableId: String
   type: String!
-}
-
-"""A connection to a list of `SpatialMetric` values."""
-type SpatialMetricsConnection {
-  """
-  A list of edges which contains the `SpatialMetric` and cursor to aid in pagination.
-  """
-  edges: [SpatialMetricsEdge!]!
-
-  """A list of `SpatialMetric` objects."""
-  nodes: [SpatialMetric!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """The count of *all* `SpatialMetric` you could get from the connection."""
-  totalCount: Int!
-}
-
-"""A `SpatialMetric` edge in the connection."""
-type SpatialMetricsEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `SpatialMetric` at the end of the edge."""
-  node: SpatialMetric!
 }
 
 enum SpatialMetricState {
@@ -15296,11 +15330,12 @@ enum SpatialMetricState {
 }
 
 enum SpatialMetricType {
-  AREA
   CONTEXTUALIZED_MEAN
   COUNT
+  OVERLAY_AREA
   PRESENCE
   PRESENCE_TABLE
+  TOTAL_AREA
 }
 
 """
@@ -15438,6 +15473,7 @@ type Subscription {
 
   """Triggered when a new post is created in the subscribed topic"""
   forumActivity(slug: String!): ForumActivityPayload
+  geographyMetrics(projectId: Int!): GeographyMetricSubscriptionPayload
 
   """
   Triggered when the status of a project invite changes, generally because
@@ -15445,6 +15481,7 @@ type Subscription {
   x-ss-slug to determine appropriate project.
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
+  sketchMetrics(sketchId: Int!): SketchMetricSubscriptionPayload
 
   """Triggered when a project's draft table of contents status changes"""
   updatedDraftTableOfContentsStatus(slug: String!): ProjectDraftTableOfContentsStatusPayload

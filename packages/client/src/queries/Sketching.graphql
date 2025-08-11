@@ -84,6 +84,11 @@ fragment SketchCRUDResponse on Sketch {
     updatedAt
     timestamp
   }
+  relatedFragments {
+    hash
+    sketches
+    geographies
+  }
 }
 
 mutation CreateSketch(
@@ -188,68 +193,76 @@ mutation UpdateTocItemsParent(
   }
 }
 
-query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
-  sketch(id: $id) {
+fragment ReportContextSketchDetails on Sketch {
+  id
+  name
+  createdAt
+  updatedAt
+  properties
+  userAttributes
+  childProperties
+  sketchClassId
+  relatedFragments {
+    hash
+    sketches
+    geographies
+  }
+  siblings {
     id
     name
-    createdAt
-    updatedAt
-    properties
-    userAttributes
-    childProperties
     sketchClassId
-    relatedFragments {
-      hash
-      sketches
-      geographies
-    }
-    siblings {
+  }
+  children {
+    id
+    name
+    sketchClassId
+  }
+}
+
+fragment ReportContextSketchClassDetails on SketchClass {
+  id
+  projectId
+  geometryType
+  form {
+    id
+    formElements {
+      exportId
       id
-      name
-      sketchClassId
+      isInput
+      typeId
+      body
+      generatedExportId
+      generatedLabel
+      position
+      alternateLanguageSettings
     }
-    children {
-      id
-      name
-      sketchClassId
+    logicRules {
+      ...LogicRuleDetails
     }
   }
-  sketchClass(id: $sketchClassId) {
-    project {
-      id
-      supportedLanguages
-    }
+  report {
+    ...ReportDetails
+  }
+  project {
     id
+    supportedLanguages
+    geographies {
+      id
+      name
+      translatedProps
+    }
+  }
+}
+
+query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
+  sketch(id: $id) {
+    ...ReportContextSketchDetails
+  }
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
     geoprocessingClientName
     geoprocessingClientUrl
     geoprocessingProjectUrl
-    geometryType
-    form {
-      id
-      formElements {
-        exportId
-        id
-        isInput
-        typeId
-        body
-        generatedExportId
-        generatedLabel
-      }
-      logicRules {
-        ...LogicRuleDetails
-      }
-    }
-    report {
-      ...ReportDetails
-    }
-    project {
-      id
-      geographies {
-        id
-        name
-        translatedProps
-      }
-    }
   }
 }
 
@@ -272,5 +285,68 @@ mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
 fragment ProjectSketches on Project {
   sketchClasses {
     ...SketchingDetails
+  }
+}
+
+fragment GeographySubjectDetails on GeographySubject {
+  id
+  __typename
+}
+
+fragment FragmentSubjectDetails on FragmentSubject {
+  hash
+  sketches
+  geographies
+  __typename
+}
+
+fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
+  id
+  type
+  subject {
+    ...GeographySubjectDetails
+    ...FragmentSubjectDetails
+  }
+  createdAt
+  updatedAt
+  value
+  state
+  stableId
+  groupBy
+  includedProperties
+  chunks {
+    id
+    state
+    totalBytes
+    errorMessage
+  }
+}
+
+mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {
+  getOrCreateSpatialMetrics(inputs: $dependencies) {
+    metrics {
+      ...CompatibleSpatialMetricDetails
+    }
+  }
+}
+
+subscription GeographyMetricSubscription($projectId: Int!) {
+  geographyMetrics(projectId: $projectId) {
+    metricId
+    geographyId
+    projectId
+    metric {
+      ...CompatibleSpatialMetricDetails
+    }
+  }
+}
+
+subscription SketchMetricSubscription($sketchId: Int!) {
+  sketchMetrics(sketchId: $sketchId) {
+    metricId
+    sketchId
+    metric {
+      ...CompatibleSpatialMetricDetails
+    }
   }
 }

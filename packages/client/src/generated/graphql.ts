@@ -911,6 +911,21 @@ export type CommunityGuidelinePatch = {
   content?: Maybe<Scalars['JSON']>;
 };
 
+export type CompatibleSpatialMetric = {
+  __typename?: 'CompatibleSpatialMetric';
+  chunks: Array<MetricWorkChunk>;
+  createdAt: Scalars['Datetime'];
+  groupBy?: Maybe<Scalars['String']>;
+  id: Scalars['BigInt'];
+  includedProperties?: Maybe<Array<Scalars['String']>>;
+  stableId?: Maybe<Scalars['String']>;
+  state: SpatialMetricState;
+  subject: MetricSubject;
+  type: Scalars['String'];
+  updatedAt?: Maybe<Scalars['Datetime']>;
+  value?: Maybe<Scalars['JSON']>;
+};
+
 /** All input for the `computeProjectGeographyHash` mutation. */
 export type ComputeProjectGeographyHashInput = {
   /**
@@ -6046,6 +6061,13 @@ export enum ForumsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+export type FragmentSubject = {
+  __typename?: 'FragmentSubject';
+  geographies: Array<Scalars['Int']>;
+  hash: Scalars['String'];
+  sketches: Array<Scalars['Int']>;
+};
+
 /** All input for the `generateOfflineTilePackage` mutation. */
 export type GenerateOfflineTilePackageInput = {
   /**
@@ -6113,8 +6135,6 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
-  /** Reads and enables pagination through a set of `SpatialMetric`. */
-  spatialMetricsConnection: SpatialMetricsConnection;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
 
@@ -6133,15 +6153,6 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
-};
-
-
-export type GeographySpatialMetricsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
 };
 
 export type GeographyClippingLayer = Node & {
@@ -6278,6 +6289,14 @@ export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   srid: Scalars['Int'];
 };
 
+export type GeographyMetricSubscriptionPayload = {
+  __typename?: 'GeographyMetricSubscriptionPayload';
+  geographyId: Scalars['Int'];
+  metric?: Maybe<CompatibleSpatialMetric>;
+  metricId: Scalars['BigInt'];
+  projectId: Scalars['Int'];
+};
+
 /** Represents an update to a `Geography`. Fields that are set will be updated. */
 export type GeographyPatch = {
   clientTemplate?: Maybe<Scalars['String']>;
@@ -6302,6 +6321,11 @@ export type GeographyPolygon = GeographyGeometry & GeographyInterface & {
   geojson?: Maybe<Scalars['GeoJSON']>;
   interiors?: Maybe<Array<Maybe<GeographyLineString>>>;
   srid: Scalars['Int'];
+};
+
+export type GeographySubject = {
+  __typename?: 'GeographySubject';
+  id: Scalars['Int'];
 };
 
 export type GeographyUpdatedPayload = {
@@ -6577,9 +6601,39 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getOrCreateSpatialMetric` mutation. */
+export type GetOrCreateSpatialMetricInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  pIncludedProperties?: Maybe<Array<Maybe<Scalars['String']>>>;
+  pOverlayGroupBy?: Maybe<Scalars['String']>;
+  pOverlayLayerStableId?: Maybe<Scalars['String']>;
+  pOverlaySourceRemote?: Maybe<Scalars['String']>;
+  pOverlayType?: Maybe<MetricOverlayType>;
+  pSubjectFragmentId?: Maybe<Scalars['String']>;
+  pSubjectGeographyId?: Maybe<Scalars['Int']>;
+  pType?: Maybe<SpatialMetricType>;
+};
+
+/** The output of our `getOrCreateSpatialMetric` mutation. */
+export type GetOrCreateSpatialMetricPayload = {
+  __typename?: 'GetOrCreateSpatialMetricPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  spatialMetric?: Maybe<SpatialMetric>;
+};
+
 export type GetOrCreateSpatialMetricsResults = {
   __typename?: 'GetOrCreateSpatialMetricsResults';
-  metrics: Array<SpatialMetric>;
+  metrics: Array<CompatibleSpatialMetric>;
 };
 
 export type GoogleMapsTileApiSession = Node & {
@@ -7302,10 +7356,34 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
+export enum MetricExecutionEnvironment {
+  ApiServer = 'API_SERVER',
+  Lambda = 'LAMBDA'
+}
+
 export enum MetricOverlayType {
   Raster = 'RASTER',
   Vector = 'VECTOR'
 }
+
+export type MetricSubject = FragmentSubject | GeographySubject;
+
+export type MetricWorkChunk = Node & {
+  __typename?: 'MetricWorkChunk';
+  bbox?: Maybe<GeometryPolygon>;
+  createdAt: Scalars['Datetime'];
+  errorMessage?: Maybe<Scalars['String']>;
+  executionEnvironment: MetricExecutionEnvironment;
+  id: Scalars['BigInt'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  offsets?: Maybe<Array<Maybe<Scalars['BigInt']>>>;
+  spatialMetricId?: Maybe<Scalars['BigInt']>;
+  state: SpatialMetricState;
+  totalBytes?: Maybe<Scalars['BigInt']>;
+  updatedAt: Scalars['Datetime'];
+  value?: Maybe<Scalars['JSON']>;
+};
 
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
@@ -7657,6 +7735,7 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
+  getOrCreateSpatialMetric?: Maybe<GetOrCreateSpatialMetricPayload>;
   /** Create or update spatial metrics. */
   getOrCreateSpatialMetrics: GetOrCreateSpatialMetricsResults;
   /**
@@ -8850,6 +8929,12 @@ export type MutationGenerateOfflineTilePackageArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetChildFoldersRecursiveArgs = {
   input: GetChildFoldersRecursiveInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetOrCreateSpatialMetricArgs = {
+  input: GetOrCreateSpatialMetricInput;
 };
 
 
@@ -13632,8 +13717,6 @@ export type Sketch = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** SketchClass that defines the behavior of this type of sketch. */
   sketchClassId: Scalars['Int'];
-  /** Reads and enables pagination through a set of `SpatialMetric`. */
-  spatialMetricsConnection: SpatialMetricsConnection;
   /**
    * Greater of updatedAt, createdAt, as stringified epoch timestamp.
    * Useful for requesting the latest geometry
@@ -13697,25 +13780,6 @@ export type SketchRelatedFragmentsArgs = {
  */
 export type SketchSiblingsArgs = {
   first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-};
-
-
-/**
- * A *Sketch* is a spatial feature that matches the schema defined by the related
- * *SketchClass*. User *Sketches* appears in the user's "My Plans" tab and can be
- * shared in the discussion forum. They are also the gateway to analytical reports.
- *
- * Sketches are completely owned by individual users, so access control rules
- * ensure that only the owner of a sketch can perform CRUD operations on them.
- * Admins have no special access. Use the graphile-generated mutations to manage
- * these records.
- */
-export type SketchSpatialMetricsConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
 
@@ -13987,6 +14051,13 @@ export enum SketchGeometryType {
   Polygon = 'POLYGON'
 }
 
+export type SketchMetricSubscriptionPayload = {
+  __typename?: 'SketchMetricSubscriptionPayload';
+  metric?: Maybe<CompatibleSpatialMetric>;
+  metricId: Scalars['BigInt'];
+  sketchId: Scalars['Int'];
+};
+
 /** The return type of our `relatedFragmentsConnection` query. */
 export type SketchesRelatedFragmentsRecord = {
   __typename?: 'SketchesRelatedFragmentsRecord';
@@ -14034,7 +14105,7 @@ export type SpatialMetric = Node & {
   overlayGroupBy?: Maybe<Scalars['String']>;
   overlayLayerStableId?: Maybe<Scalars['String']>;
   overlaySourceRemote?: Maybe<Scalars['String']>;
-  overlayType: MetricOverlayType;
+  overlayType?: Maybe<MetricOverlayType>;
   state: SpatialMetricState;
   subjectFragmentId?: Maybe<Scalars['String']>;
   subjectGeographyId?: Maybe<Scalars['Int']>;
@@ -14047,6 +14118,7 @@ export type SpatialMetricDependency = {
   geographyIds?: Maybe<Array<Scalars['Int']>>;
   groupBy?: Maybe<Scalars['String']>;
   includedProperties?: Maybe<Array<Scalars['String']>>;
+  includeSiblings?: Maybe<Scalars['Boolean']>;
   sketchId?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
   type: Scalars['String'];
@@ -14060,34 +14132,13 @@ export enum SpatialMetricState {
 }
 
 export enum SpatialMetricType {
-  Area = 'AREA',
   ContextualizedMean = 'CONTEXTUALIZED_MEAN',
   Count = 'COUNT',
+  OverlayArea = 'OVERLAY_AREA',
   Presence = 'PRESENCE',
-  PresenceTable = 'PRESENCE_TABLE'
+  PresenceTable = 'PRESENCE_TABLE',
+  TotalArea = 'TOTAL_AREA'
 }
-
-/** A connection to a list of `SpatialMetric` values. */
-export type SpatialMetricsConnection = {
-  __typename?: 'SpatialMetricsConnection';
-  /** A list of edges which contains the `SpatialMetric` and cursor to aid in pagination. */
-  edges: Array<SpatialMetricsEdge>;
-  /** A list of `SpatialMetric` objects. */
-  nodes: Array<SpatialMetric>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `SpatialMetric` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `SpatialMetric` edge in the connection. */
-export type SpatialMetricsEdge = {
-  __typename?: 'SpatialMetricsEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `SpatialMetric` at the end of the edge. */
-  node: SpatialMetric;
-};
 
 /**
  * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
@@ -14203,12 +14254,14 @@ export type Subscription = {
   backgroundJobs?: Maybe<ProjectBackgroundJobSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
+  geographyMetrics?: Maybe<GeographyMetricSubscriptionPayload>;
   /**
    * Triggered when the status of a project invite changes, generally because
    * of a change in the delivery status of a related InviteEmail. Uses
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
@@ -14225,6 +14278,18 @@ export type SubscriptionBackgroundJobsArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
   slug: Scalars['String'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionGeographyMetricsArgs = {
+  projectId: Scalars['Int'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionSketchMetricsArgs = {
+  sketchId: Scalars['Int'];
 };
 
 
@@ -22201,7 +22266,10 @@ export type SketchCrudResponseFragment = (
   )>, parentCollection?: Maybe<(
     { __typename?: 'Sketch' }
     & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
-  )> }
+  )>, relatedFragments?: Maybe<Array<Maybe<(
+    { __typename?: 'SketchesRelatedFragmentsRecord' }
+    & Pick<SketchesRelatedFragmentsRecord, 'hash' | 'sketches' | 'geographies'>
+  )>>> }
   & SketchTocDetailsFragment
   & SketchEditorModalDetailsFragment
 );
@@ -22342,6 +22410,47 @@ export type UpdateTocItemsParentMutation = (
   )> }
 );
 
+export type ReportContextSketchDetailsFragment = (
+  { __typename?: 'Sketch' }
+  & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties' | 'sketchClassId'>
+  & { relatedFragments?: Maybe<Array<Maybe<(
+    { __typename?: 'SketchesRelatedFragmentsRecord' }
+    & Pick<SketchesRelatedFragmentsRecord, 'hash' | 'sketches' | 'geographies'>
+  )>>>, siblings?: Maybe<Array<(
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'name' | 'sketchClassId'>
+  )>>, children?: Maybe<Array<(
+    { __typename?: 'Sketch' }
+    & Pick<Sketch, 'id' | 'name' | 'sketchClassId'>
+  )>> }
+);
+
+export type ReportContextSketchClassDetailsFragment = (
+  { __typename?: 'SketchClass' }
+  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType'>
+  & { form?: Maybe<(
+    { __typename?: 'Form' }
+    & Pick<Form, 'id'>
+    & { formElements?: Maybe<Array<(
+      { __typename?: 'FormElement' }
+      & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel' | 'position' | 'alternateLanguageSettings'>
+    )>>, logicRules?: Maybe<Array<(
+      { __typename?: 'FormLogicRule' }
+      & LogicRuleDetailsFragment
+    )>> }
+  )>, report?: Maybe<(
+    { __typename?: 'Report' }
+    & ReportDetailsFragment
+  )>, project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'supportedLanguages'>
+    & { geographies: Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'translatedProps'>
+    )> }
+  )> }
+);
+
 export type SketchReportingDetailsQueryVariables = Exact<{
   id: Scalars['Int'];
   sketchClassId: Scalars['Int'];
@@ -22352,41 +22461,11 @@ export type SketchReportingDetailsQuery = (
   { __typename?: 'Query' }
   & { sketch?: Maybe<(
     { __typename?: 'Sketch' }
-    & Pick<Sketch, 'id' | 'name' | 'createdAt' | 'updatedAt' | 'properties' | 'userAttributes' | 'childProperties' | 'sketchClassId'>
-    & { relatedFragments?: Maybe<Array<Maybe<(
-      { __typename?: 'SketchesRelatedFragmentsRecord' }
-      & Pick<SketchesRelatedFragmentsRecord, 'hash' | 'sketches' | 'geographies'>
-    )>>>, siblings?: Maybe<Array<(
-      { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'name' | 'sketchClassId'>
-    )>>, children?: Maybe<Array<(
-      { __typename?: 'Sketch' }
-      & Pick<Sketch, 'id' | 'name' | 'sketchClassId'>
-    )>> }
+    & ReportContextSketchDetailsFragment
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'geometryType'>
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'supportedLanguages'>
-      & { geographies: Array<(
-        { __typename?: 'Geography' }
-        & Pick<Geography, 'id' | 'name' | 'translatedProps'>
-      )> }
-    )>, form?: Maybe<(
-      { __typename?: 'Form' }
-      & Pick<Form, 'id'>
-      & { formElements?: Maybe<Array<(
-        { __typename?: 'FormElement' }
-        & Pick<FormElement, 'exportId' | 'id' | 'isInput' | 'typeId' | 'body' | 'generatedExportId' | 'generatedLabel'>
-      )>>, logicRules?: Maybe<Array<(
-        { __typename?: 'FormLogicRule' }
-        & LogicRuleDetailsFragment
-      )>> }
-    )>, report?: Maybe<(
-      { __typename?: 'Report' }
-      & ReportDetailsFragment
-    )> }
+    & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+    & ReportContextSketchClassDetailsFragment
   )> }
 );
 
@@ -22419,6 +22498,81 @@ export type ProjectSketchesFragment = (
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & SketchingDetailsFragment
+  )> }
+);
+
+export type GeographySubjectDetailsFragment = (
+  { __typename: 'GeographySubject' }
+  & Pick<GeographySubject, 'id'>
+);
+
+export type FragmentSubjectDetailsFragment = (
+  { __typename: 'FragmentSubject' }
+  & Pick<FragmentSubject, 'hash' | 'sketches' | 'geographies'>
+);
+
+export type CompatibleSpatialMetricDetailsFragment = (
+  { __typename?: 'CompatibleSpatialMetric' }
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties'>
+  & { subject: (
+    { __typename?: 'FragmentSubject' }
+    & FragmentSubjectDetailsFragment
+  ) | (
+    { __typename?: 'GeographySubject' }
+    & GeographySubjectDetailsFragment
+  ), chunks: Array<(
+    { __typename?: 'MetricWorkChunk' }
+    & Pick<MetricWorkChunk, 'id' | 'state' | 'totalBytes' | 'errorMessage'>
+  )> }
+);
+
+export type GetOrCreateSpatialMetricsMutationVariables = Exact<{
+  dependencies: Array<SpatialMetricDependency> | SpatialMetricDependency;
+}>;
+
+
+export type GetOrCreateSpatialMetricsMutation = (
+  { __typename?: 'Mutation' }
+  & { getOrCreateSpatialMetrics: (
+    { __typename?: 'GetOrCreateSpatialMetricsResults' }
+    & { metrics: Array<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
+  ) }
+);
+
+export type GeographyMetricSubscriptionSubscriptionVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type GeographyMetricSubscriptionSubscription = (
+  { __typename?: 'Subscription' }
+  & { geographyMetrics?: Maybe<(
+    { __typename?: 'GeographyMetricSubscriptionPayload' }
+    & Pick<GeographyMetricSubscriptionPayload, 'metricId' | 'geographyId' | 'projectId'>
+    & { metric?: Maybe<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
+  )> }
+);
+
+export type SketchMetricSubscriptionSubscriptionVariables = Exact<{
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type SketchMetricSubscriptionSubscription = (
+  { __typename?: 'Subscription' }
+  & { sketchMetrics?: Maybe<(
+    { __typename?: 'SketchMetricSubscriptionPayload' }
+    & Pick<SketchMetricSubscriptionPayload, 'metricId' | 'sketchId'>
+    & { metric?: Maybe<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
   )> }
 );
 
@@ -25349,39 +25503,6 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
-export const ReportCardDetailsFragmentDoc = gql`
-    fragment ReportCardDetails on ReportCard {
-  id
-  position
-  type
-  componentSettings
-  alternateLanguageSettings
-  tint
-  icon
-  body
-}
-    `;
-export const ReportTabDetailsFragmentDoc = gql`
-    fragment ReportTabDetails on ReportTab {
-  id
-  position
-  title
-  alternateLanguageSettings
-  cards {
-    ...ReportCardDetails
-  }
-}
-    ${ReportCardDetailsFragmentDoc}`;
-export const ReportDetailsFragmentDoc = gql`
-    fragment ReportDetails on Report {
-  id
-  createdAt
-  updatedAt
-  tabs {
-    ...ReportTabDetails
-  }
-}
-    ${ReportTabDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -25442,9 +25563,111 @@ export const SketchCrudResponseFragmentDoc = gql`
     updatedAt
     timestamp
   }
+  relatedFragments {
+    hash
+    sketches
+    geographies
+  }
 }
     ${SketchTocDetailsFragmentDoc}
 ${SketchEditorModalDetailsFragmentDoc}`;
+export const ReportContextSketchDetailsFragmentDoc = gql`
+    fragment ReportContextSketchDetails on Sketch {
+  id
+  name
+  createdAt
+  updatedAt
+  properties
+  userAttributes
+  childProperties
+  sketchClassId
+  relatedFragments {
+    hash
+    sketches
+    geographies
+  }
+  siblings {
+    id
+    name
+    sketchClassId
+  }
+  children {
+    id
+    name
+    sketchClassId
+  }
+}
+    `;
+export const ReportCardDetailsFragmentDoc = gql`
+    fragment ReportCardDetails on ReportCard {
+  id
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+}
+    `;
+export const ReportTabDetailsFragmentDoc = gql`
+    fragment ReportTabDetails on ReportTab {
+  id
+  position
+  title
+  alternateLanguageSettings
+  cards {
+    ...ReportCardDetails
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export const ReportDetailsFragmentDoc = gql`
+    fragment ReportDetails on Report {
+  id
+  createdAt
+  updatedAt
+  tabs {
+    ...ReportTabDetails
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export const ReportContextSketchClassDetailsFragmentDoc = gql`
+    fragment ReportContextSketchClassDetails on SketchClass {
+  id
+  projectId
+  geometryType
+  form {
+    id
+    formElements {
+      exportId
+      id
+      isInput
+      typeId
+      body
+      generatedExportId
+      generatedLabel
+      position
+      alternateLanguageSettings
+    }
+    logicRules {
+      ...LogicRuleDetails
+    }
+  }
+  report {
+    ...ReportDetails
+  }
+  project {
+    id
+    supportedLanguages
+    geographies {
+      id
+      name
+      translatedProps
+    }
+  }
+}
+    ${LogicRuleDetailsFragmentDoc}
+${ReportDetailsFragmentDoc}`;
 export const ProjectSketchesFragmentDoc = gql`
     fragment ProjectSketches on Project {
   sketchClasses {
@@ -25452,6 +25675,44 @@ export const ProjectSketchesFragmentDoc = gql`
   }
 }
     ${SketchingDetailsFragmentDoc}`;
+export const GeographySubjectDetailsFragmentDoc = gql`
+    fragment GeographySubjectDetails on GeographySubject {
+  id
+  __typename
+}
+    `;
+export const FragmentSubjectDetailsFragmentDoc = gql`
+    fragment FragmentSubjectDetails on FragmentSubject {
+  hash
+  sketches
+  geographies
+  __typename
+}
+    `;
+export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
+    fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
+  id
+  type
+  subject {
+    ...GeographySubjectDetails
+    ...FragmentSubjectDetails
+  }
+  createdAt
+  updatedAt
+  value
+  state
+  stableId
+  groupBy
+  includedProperties
+  chunks {
+    id
+    state
+    totalBytes
+    errorMessage
+  }
+}
+    ${GeographySubjectDetailsFragmentDoc}
+${FragmentSubjectDetailsFragmentDoc}`;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -34508,75 +34769,17 @@ export type UpdateTocItemsParentMutationOptions = Apollo.BaseMutationOptions<Upd
 export const SketchReportingDetailsDocument = gql`
     query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
   sketch(id: $id) {
-    id
-    name
-    createdAt
-    updatedAt
-    properties
-    userAttributes
-    childProperties
-    sketchClassId
-    relatedFragments {
-      hash
-      sketches
-      geographies
-    }
-    siblings {
-      id
-      name
-      sketchClassId
-    }
-    children {
-      id
-      name
-      sketchClassId
-    }
+    ...ReportContextSketchDetails
   }
   sketchClass(id: $sketchClassId) {
-    project {
-      id
-      supportedLanguages
-      geographies {
-        id
-        name
-        translatedProps
-      }
-    }
-    id
+    ...ReportContextSketchClassDetails
     geoprocessingClientName
     geoprocessingClientUrl
     geoprocessingProjectUrl
-    geometryType
-    form {
-      id
-      formElements {
-        exportId
-        id
-        isInput
-        typeId
-        body
-        generatedExportId
-        generatedLabel
-      }
-      logicRules {
-        ...LogicRuleDetails
-      }
-    }
-    report {
-      ...ReportDetails
-    }
-    project {
-      id
-      geographies {
-        id
-        name
-        translatedProps
-      }
-    }
   }
 }
-    ${LogicRuleDetailsFragmentDoc}
-${ReportDetailsFragmentDoc}`;
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}`;
 
 /**
  * __useSketchReportingDetailsQuery__
@@ -34651,6 +34854,110 @@ export function useCopyTocItemMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CopyTocItemMutationHookResult = ReturnType<typeof useCopyTocItemMutation>;
 export type CopyTocItemMutationResult = Apollo.MutationResult<CopyTocItemMutation>;
 export type CopyTocItemMutationOptions = Apollo.BaseMutationOptions<CopyTocItemMutation, CopyTocItemMutationVariables>;
+export const GetOrCreateSpatialMetricsDocument = gql`
+    mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {
+  getOrCreateSpatialMetrics(inputs: $dependencies) {
+    metrics {
+      ...CompatibleSpatialMetricDetails
+    }
+  }
+}
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export type GetOrCreateSpatialMetricsMutationFn = Apollo.MutationFunction<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>;
+
+/**
+ * __useGetOrCreateSpatialMetricsMutation__
+ *
+ * To run a mutation, you first call `useGetOrCreateSpatialMetricsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGetOrCreateSpatialMetricsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [getOrCreateSpatialMetricsMutation, { data, loading, error }] = useGetOrCreateSpatialMetricsMutation({
+ *   variables: {
+ *      dependencies: // value for 'dependencies'
+ *   },
+ * });
+ */
+export function useGetOrCreateSpatialMetricsMutation(baseOptions?: Apollo.MutationHookOptions<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>(GetOrCreateSpatialMetricsDocument, options);
+      }
+export type GetOrCreateSpatialMetricsMutationHookResult = ReturnType<typeof useGetOrCreateSpatialMetricsMutation>;
+export type GetOrCreateSpatialMetricsMutationResult = Apollo.MutationResult<GetOrCreateSpatialMetricsMutation>;
+export type GetOrCreateSpatialMetricsMutationOptions = Apollo.BaseMutationOptions<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>;
+export const GeographyMetricSubscriptionDocument = gql`
+    subscription GeographyMetricSubscription($projectId: Int!) {
+  geographyMetrics(projectId: $projectId) {
+    metricId
+    geographyId
+    projectId
+    metric {
+      ...CompatibleSpatialMetricDetails
+    }
+  }
+}
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useGeographyMetricSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useGeographyMetricSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useGeographyMetricSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeographyMetricSubscriptionSubscription({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useGeographyMetricSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<GeographyMetricSubscriptionSubscription, GeographyMetricSubscriptionSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<GeographyMetricSubscriptionSubscription, GeographyMetricSubscriptionSubscriptionVariables>(GeographyMetricSubscriptionDocument, options);
+      }
+export type GeographyMetricSubscriptionSubscriptionHookResult = ReturnType<typeof useGeographyMetricSubscriptionSubscription>;
+export type GeographyMetricSubscriptionSubscriptionResult = Apollo.SubscriptionResult<GeographyMetricSubscriptionSubscription>;
+export const SketchMetricSubscriptionDocument = gql`
+    subscription SketchMetricSubscription($sketchId: Int!) {
+  sketchMetrics(sketchId: $sketchId) {
+    metricId
+    sketchId
+    metric {
+      ...CompatibleSpatialMetricDetails
+    }
+  }
+}
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useSketchMetricSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useSketchMetricSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useSketchMetricSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchMetricSubscriptionSubscription({
+ *   variables: {
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useSketchMetricSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<SketchMetricSubscriptionSubscription, SketchMetricSubscriptionSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<SketchMetricSubscriptionSubscription, SketchMetricSubscriptionSubscriptionVariables>(SketchMetricSubscriptionDocument, options);
+      }
+export type SketchMetricSubscriptionSubscriptionHookResult = ReturnType<typeof useSketchMetricSubscriptionSubscription>;
+export type SketchMetricSubscriptionSubscriptionResult = Apollo.SubscriptionResult<SketchMetricSubscriptionSubscription>;
 export const SurveysDocument = gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -37968,6 +38275,7 @@ export const namedOperations = {
     RenameFolder: 'RenameFolder',
     UpdateTocItemsParent: 'UpdateTocItemsParent',
     CopyTocItem: 'CopyTocItem',
+    GetOrCreateSpatialMetrics: 'GetOrCreateSpatialMetrics',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',
@@ -38025,6 +38333,8 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
+    GeographyMetricSubscription: 'GeographyMetricSubscription',
+    SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {
@@ -38109,7 +38419,12 @@ export const namedOperations = {
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',
     SketchEditorModalDetails: 'SketchEditorModalDetails',
+    ReportContextSketchDetails: 'ReportContextSketchDetails',
+    ReportContextSketchClassDetails: 'ReportContextSketchClassDetails',
     ProjectSketches: 'ProjectSketches',
+    GeographySubjectDetails: 'GeographySubjectDetails',
+    FragmentSubjectDetails: 'FragmentSubjectDetails',
+    CompatibleSpatialMetricDetails: 'CompatibleSpatialMetricDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

@@ -1,6 +1,7 @@
-import { Metric, MetricTypeMap } from "overlay-engine";
+import { Metric, MetricTypeMap, subjectIsFragment } from "overlay-engine";
 import { useReportContext } from "../ReportContext";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { SpatialMetricState } from "../../generated/graphql";
 
 let idCounter = 0;
 
@@ -23,7 +24,7 @@ function createStableId() {
  */
 export function useMetrics<
   T extends keyof MetricTypeMap | Metric["type"]
->(options: { type: T; geographyIds?: number[]; excludeSiblings?: boolean }) {
+>(options: { type: T; geographyIds?: number[]; includeSiblings?: boolean }) {
   const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
 
@@ -31,10 +32,16 @@ export function useMetrics<
   const stableId = useRef(createStableId()).current;
 
   useEffect(() => {
+    if (!reportContext.sketch?.id) {
+      return;
+    }
+
     // Create a dependency object that matches SpatialMetricDependency
     const dependency = {
       type: options.type,
+      sketchId: reportContext.sketch?.id,
       geographyIds: options.geographyIds || [],
+      includeSiblings: options.includeSiblings || false,
     };
 
     reportContext.addMetricDependency(stableId, dependency);
@@ -43,10 +50,42 @@ export function useMetrics<
     return () => {
       reportContext.removeMetricDependency(stableId, dependency);
     };
-  }, [options.type, options.geographyIds, stableId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    options.type,
+    options.geographyIds,
+    options.includeSiblings,
+    stableId,
+    reportContext.sketch?.id,
+  ]);
+
+  const fragmentIds = useMemo(() => {
+    return reportContext.relatedFragments.map((f) => f.hash);
+  }, [reportContext.relatedFragments]);
+
+  const data = useMemo(() => {
+    return reportContext.metrics.filter((m) => {
+      if (m.type !== options.type) {
+        return false;
+      }
+      if (subjectIsFragment(m.subject)) {
+        if (!fragmentIds.includes(m.subject.hash)) {
+          return false;
+        }
+      } else {
+        if (!(options.geographyIds || []).includes(m.subject.id)) {
+          return false;
+        }
+      }
+      // TODO: check for matching stableId, groupBy, etc.
+      return true;
+    });
+  }, [reportContext.metrics, fragmentIds, options]);
 
   return {
-    data: [] as MetricTypeMap[T][],
-    loading,
+    data: data as unknown as MetricTypeMap[T][],
+    loading:
+      data.length === 0 ||
+      data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0,
   };
 }

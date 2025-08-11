@@ -50,7 +50,9 @@ export default function SketchReportWindow({
   });
 
   const reportState = useReportState(
-    (data?.sketchClass?.report as any) || undefined
+    (data?.sketchClass?.report as any) || undefined,
+    data?.sketchClass?.id || 0,
+    data?.sketch?.id || 0
   );
 
   const filteredLanguages = useMemo(
@@ -116,22 +118,13 @@ export default function SketchReportWindow({
         {data?.sketchClass?.report && data?.sketch && (
           <ReportContext.Provider
             value={{
-              sketchClass:
-                data.sketchClass as unknown as SketchingDetailsFragment,
-              sketch: data.sketch,
               report: data?.sketchClass
                 ?.report as unknown as ReportConfiguration,
-              ...reportState,
               adminMode: false,
               isCollection:
                 data.sketchClass.geometryType === SketchGeometryType.Collection,
-              childSketches: data.sketch?.children || [],
-              siblingSketches: data.sketch?.siblings || [],
-              relatedFragments:
-                (data.sketch
-                  ?.relatedFragments as unknown as MetricSubjectFragment[]) ||
-                [],
               geographies: data.sketchClass?.project?.geographies || [],
+              ...reportState,
             }}
           >
             <>
