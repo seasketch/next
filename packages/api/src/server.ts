@@ -259,6 +259,7 @@ run({
   * * * * * deleteExpiredArchivedDataSources
   0 */6 * * * updateCRWTemplate
   * 1 * * * refreshGmapsApiSession
+  * * * * * cleanupTimedOutSpatialMetricTasks
   `
       : `
   * * * * * cleanupProjectBackgroundJobs
@@ -266,6 +267,7 @@ run({
   * * * * * collectActivityStats
   * * * * * deleteExpiredArchivedDataSources
   * 1 * * * refreshGmapsApiSession
+  * * * * * cleanupTimedOutSpatialMetricTasks
   `,
 }).then((runner) => {
   runner.events.on("job:start", ({ worker, job }) => {

@@ -28,7 +28,7 @@ export function useMetrics<
 >(options: { type: T; geographyIds?: number[]; includeSiblings?: boolean }) {
   const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
-  const { showBoundary } = useErrorBoundary();
+  const { showBoundary, resetBoundary } = useErrorBoundary();
 
   // Create a stable numeric ID that never changes for this hook instance
   const stableId = useRef(createStableId()).current;
@@ -95,6 +95,9 @@ export function useMetrics<
     const e = new Error(`Error fetching ${options.type} metrics`);
     // @ts-ignore
     e.errorMessages = errors;
+    // This trick hides the create-react-app error overlay in development mode
+    // https://github.com/facebook/create-react-app/issues/6530#issuecomment-768517453
+    delete e.stack;
     showBoundary(e);
   }
 

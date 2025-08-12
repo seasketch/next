@@ -350,6 +350,12 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       __byteLength: number;
       __offset: number;
     };
+    getFeature: () => T & {
+      properties: GeoJsonProperties & {
+        __byteLength: number;
+        __offset: number;
+      };
+    };
   }> {
     /**
      * This method returns an async generator for feature properties only.
@@ -369,6 +375,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       bb.setPosition(SIZE_PREFIX_LEN);
       yield {
         properties: parseProperties(bb, this.header.columns, offset),
+        getFeature: () => parseFeatureData(offset, bytesAligned, this.header),
       };
       offset += size + SIZE_PREFIX_LEN;
     }

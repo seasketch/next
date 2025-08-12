@@ -2604,7 +2604,8 @@ var FlatGeobufSource = class {
       const bb = new ByteBuffer(bytesAligned);
       bb.setPosition(SIZE_PREFIX_LEN2);
       yield {
-        properties: parseProperties2(bb, this.header.columns, offset)
+        properties: parseProperties2(bb, this.header.columns, offset),
+        getFeature: () => parseFeatureData(offset, bytesAligned, this.header)
       };
       offset += size + SIZE_PREFIX_LEN2;
     }

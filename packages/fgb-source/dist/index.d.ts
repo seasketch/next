@@ -326,6 +326,12 @@ declare class FlatGeobufSource<T = Feature> {
             __byteLength: number;
             __offset: number;
         };
+        getFeature: () => T & {
+            properties: GeoJsonProperties & {
+                __byteLength: number;
+                __offset: number;
+            };
+        };
     }>;
 }
 /**

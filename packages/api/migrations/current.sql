@@ -240,6 +240,8 @@ create or replace function get_fragment_hashes_for_sketch(sketch_id integer) ret
   end;
   $$;
 
+comment on function public.get_fragment_hashes_for_sketch is '@omit';
+
 grant execute on function public.get_fragment_hashes_for_sketch to anon;
 
 CREATE OR REPLACE FUNCTION public.get_fragment_ids_for_sketch_recursive(sketch_id integer) RETURNS TABLE(hash text, sketches integer[], geographies integer[])
@@ -461,14 +463,16 @@ create or replace function get_spatial_metric(metric_id bigint)
     select subject_geography_id, subject_fragment_id into subj_geography_id, subj_fragment_id
     from spatial_metrics
     where id = metric_id;
-    if subj_geography_id is not null then
-      if not session_has_project_access((select project_id from project_geography where id = subj_geography_id limit 1)) then
-        raise exception 'Permission denied';
-      end if;
-    else
-      policy_passed := check_sketch_rls_policy((select sketch_id from sketch_fragments where fragment_hash = subj_fragment_id limit 1));
-      if not policy_passed then
-        raise exception 'Permission denied';
+    if current_user not in ('graphile_worker', 'postgres') then
+      if subj_geography_id is not null then
+        if not session_has_project_access((select project_id from project_geography where id = subj_geography_id limit 1)) then
+          raise exception 'Permission denied';
+        end if;
+      else
+        policy_passed := check_sketch_rls_policy((select sketch_id from sketch_fragments where fragment_hash = subj_fragment_id limit 1));
+        if not policy_passed then
+          raise exception 'Permission denied';
+        end if;
       end if;
     end if;
     return (
@@ -560,7 +564,10 @@ create or replace function queue_calculate_spatial_metric_task()
     if NEW.state = 'queued' then
       perform graphile_worker.add_job(
         'calculateSpatialMetric',
-        json_build_object('metricId', NEW.id)
+        json_build_object('metricId', NEW.id),
+        max_attempts := 1,
+        job_key := 'calculateSpatialMetric:' || NEW.id,
+        job_key_mode := 'replace'
       );
     end if;
     return NEW;
@@ -572,3 +579,5 @@ create trigger queue_calculate_spatial_metric_task_trigger
   for each row
   execute function queue_calculate_spatial_metric_task();
 
+-- create an index to support finding spatial metrics that are queued, and have a created_at older than some period of time
+create index if not exists spatial_metrics_queued_created_at_idx on spatial_metrics (created_at) where state = 'queued';

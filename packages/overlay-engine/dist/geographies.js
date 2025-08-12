@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.clipToGeography = clipToGeography;
 exports.clipSketchToPolygons = clipSketchToPolygons;
 exports.clipToGeographies = clipToGeographies;
+exports.calculateArea = calculateArea;
 const cql2_1 = require("./cql2");
 const polygonClipping = __importStar(require("polygon-clipping"));
 const fragments_1 = require("./fragments");
@@ -487,5 +488,35 @@ async function clipToGeographies(preparedSketch, geographies, geographiesForClip
         clipped: (0, unionAtAntimeridian_1.unionAtAntimeridian)(clipped),
         fragments,
     };
+}
+async function calculateArea(geography, sourceCache) {
+    // first, fetch all intersection layers and union the features
+    const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
+    const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
+    const intersectionFeatures = [];
+    await Promise.all(intersectionLayers.map(async (l) => {
+        const source = await sourceCache.get(l.source);
+        for await (const { properties, getFeature, } of source.getFeatureProperties()) {
+            if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {
+                intersectionFeatures.push(getFeature());
+            }
+        }
+    }));
+    console.log("got intersection features", intersectionFeatures.length);
+    console.log(JSON.stringify(intersectionFeatures.map((f) => {
+        var _a, _b, _c;
+        return ({
+            name: ((_a = f.properties) === null || _a === void 0 ? void 0 : _a.NAME) || ((_b = f.properties) === null || _b === void 0 ? void 0 : _b.UNION),
+            size: (_c = f.properties) === null || _c === void 0 ? void 0 : _c.__byteLength,
+        });
+    }), null, 2));
+    if (differenceLayers.length === 0) {
+        const sumArea = intersectionFeatures.reduce((acc, f) => acc + (0, area_1.default)(f), 0);
+        // convert to square kilometers
+        return sumArea / 1000000;
+    }
+    else {
+        throw new Error("Difference layers not yet implemented");
+    }
 }
 //# sourceMappingURL=geographies.js.map

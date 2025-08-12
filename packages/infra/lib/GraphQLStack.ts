@@ -144,7 +144,7 @@ export class GraphQLStack extends cdk.Stack {
             TILE_PACKAGES_BUCKET: props.tilePackagesBucket.bucketName,
             REDIS_HOST: props.redisHost,
             SES_EMAIL_SOURCE: props.emailSource,
-            GRAPHILE_WORKER_CONCURRENCY: "5",
+            GRAPHILE_WORKER_CONCURRENCY: "20",
             BUILD: process.env.BUILD || "dev",
             UNSPLASH_KEY,
             SENTRY_DSN,

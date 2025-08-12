@@ -5,8 +5,7 @@ import {
   Point,
   Polygon,
 } from "geojson";
-import { FlatGeobufSource } from "fgb-source";
-import { PreparedSketch, prepareSketch } from "./utils/prepareSketch";
+import { PreparedSketch } from "./utils/prepareSketch";
 import {
   Cql2Query,
   consolidateCql2Queries,
@@ -23,6 +22,7 @@ import {
 import area from "@turf/area";
 import { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
 import { union } from "./utils/polygonClipping";
+import { SourceCache } from "fgb-source";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 
@@ -611,4 +611,47 @@ export async function clipToGeographies(
     clipped: unionAtAntimeridian(clipped) as PreparedSketch["feature"],
     fragments,
   };
+}
+
+export async function calculateArea(
+  geography: ClippingLayerOption[],
+  sourceCache: SourceCache
+) {
+  // first, fetch all intersection layers and union the features
+  const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
+  const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
+  const intersectionFeatures = [] as Feature<Polygon | MultiPolygon>[];
+  await Promise.all(
+    intersectionLayers.map(async (l) => {
+      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
+        l.source
+      );
+      for await (const {
+        properties,
+        getFeature,
+      } of source.getFeatureProperties()) {
+        if (evaluateCql2JSONQuery(l.cql2Query, properties)) {
+          intersectionFeatures.push(getFeature());
+        }
+      }
+    })
+  );
+  console.log("got intersection features", intersectionFeatures.length);
+  console.log(
+    JSON.stringify(
+      intersectionFeatures.map((f) => ({
+        name: f.properties?.NAME || f.properties?.UNION,
+        size: f.properties?.__byteLength,
+      })),
+      null,
+      2
+    )
+  );
+  if (differenceLayers.length === 0) {
+    const sumArea = intersectionFeatures.reduce((acc, f) => acc + area(f), 0);
+    // convert to square kilometers
+    return sumArea / 1_000_000;
+  } else {
+    throw new Error("Difference layers not yet implemented");
+  }
 }

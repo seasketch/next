@@ -13,10 +13,10 @@ import {
 } from "@radix-ui/react-icons";
 import { TrashIcon } from "@heroicons/react/outline";
 import { FormLanguageContext } from "../formElements/FormElement";
-import { useContext, useCallback, useEffect, Component } from "react";
+import { useContext, useCallback, useEffect, Component, useState } from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
-import { ErrorBoundary } from "react-error-boundary";
+import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 
@@ -213,52 +213,16 @@ export function ReportCardFactory({
   }
   return (
     <ErrorBoundary
-      fallbackRender={({ error }) => {
-        const errors = {} as { [key: string]: number };
-        if ("errorMessages" in error && Array.isArray(error.errorMessages)) {
-          for (const msg of error.errorMessages) {
-            if (msg in errors) {
-              errors[msg]++;
-            } else {
-              errors[msg] = 1;
-            }
-          }
-        }
-        return (
-          <ReportCard
-            config={config}
-            backgroundTint="red"
-            tint="text-red-500"
-            cardId={config.id}
-            onUpdate={onUpdate}
-            dragHandleProps={dragHandleProps}
-            key={config.id}
-          >
-            {Object.keys(errors).length > 0 ? (
-              <>
-                <p>
-                  <Trans ns="sketching">
-                    There was a problem calculating metrics for this card.
-                  </Trans>
-                </p>
-                <ul className="list-disc pl-4 pt-2">
-                  {Object.entries(errors).map(([msg, count]) => (
-                    <li key={msg}>
-                      {msg}{" "}
-                      {count > 1 && <Badge variant="error">{count}x</Badge>}
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-2">
-                  <Button onClick={() => {}} label="Retry calculations" small />
-                </div>
-              </>
-            ) : (
-              <p>{error.message}</p>
-            )}
-          </ReportCard>
-        );
-      }}
+      fallbackRender={(props) => (
+        <ErrorFallback
+          {...props}
+          config={config}
+          onUpdate={onUpdate}
+          dragHandleProps={dragHandleProps}
+          cardId={config.id}
+          error={props.error}
+        />
+      )}
     >
       <CardComponent
         config={config}
@@ -267,5 +231,83 @@ export function ReportCardFactory({
         onUpdate={onUpdate}
       />
     </ErrorBoundary>
+  );
+}
+
+function ErrorFallback({
+  config,
+  onUpdate,
+  dragHandleProps,
+  cardId,
+  error,
+}: {
+  config: ReportCardConfiguration<any>;
+  onUpdate?: ReportCardConfigUpdateCallback;
+  dragHandleProps?: any;
+  cardId?: number;
+  error: any;
+}) {
+  const { t } = useTranslation("sketching");
+  const reportContext = useReportContext();
+  const { resetBoundary } = useErrorBoundary();
+
+  const [didMount, setDidMount] = useState(false);
+
+  useEffect(() => {
+    if (didMount) {
+      resetBoundary();
+    } else {
+      setDidMount(true);
+    }
+  }, [reportContext.metrics]);
+
+  const errors = {} as { [key: string]: number };
+  if ("errorMessages" in error && Array.isArray(error.errorMessages)) {
+    for (const msg of error.errorMessages) {
+      if (msg in errors) {
+        errors[msg]++;
+      } else {
+        errors[msg] = 1;
+      }
+    }
+  }
+  return (
+    <ReportCard
+      config={config}
+      backgroundTint="red"
+      tint="text-red-500"
+      cardId={config.id}
+      onUpdate={onUpdate}
+      dragHandleProps={dragHandleProps}
+      key={config.id}
+    >
+      {Object.keys(errors).length > 0 ? (
+        <>
+          <p>
+            <Trans ns="sketching">
+              There was a problem calculating metrics for this card.
+            </Trans>
+          </p>
+          <ul className="list-disc pl-4 pt-2">
+            {Object.entries(errors).map(([msg, count]) => (
+              <li key={msg}>
+                {msg}{" "}
+                {count > 1 && (
+                  <Badge variant="error">
+                    {count}
+                    {t("x")}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+          <div className="mt-2">
+            <Button onClick={() => {}} label={t("Retry calculations")} small />
+          </div>
+        </>
+      ) : (
+        <p>{error.message}</p>
+      )}
+    </ReportCard>
   );
 }

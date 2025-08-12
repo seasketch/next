@@ -2,6 +2,7 @@ import { Feature, MultiPolygon, Polygon } from "geojson";
 import { PreparedSketch } from "./utils/prepareSketch";
 import { Cql2Query } from "./cql2";
 import { FragmentResult, GeographySettings, SketchFragment } from "./fragments";
+import { SourceCache } from "fgb-source";
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 /**
  * The result of a single clipping operation, as returned by a ClippingSource
@@ -193,4 +194,5 @@ export declare function clipToGeographies(preparedSketch: PreparedSketch, geogra
     clipped: PreparedSketch["feature"] | null;
     fragments: FragmentResult[];
 }>;
+export declare function calculateArea(geography: ClippingLayerOption[], sourceCache: SourceCache): Promise<number>;
 //# sourceMappingURL=geographies.d.ts.map

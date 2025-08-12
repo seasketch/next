@@ -8,6 +8,7 @@ export {
   clipSketchToPolygons,
   PolygonClipResult,
   clipToGeographies,
+  calculateArea,
 } from "./geographies";
 export { Cql2Query } from "./cql2";
 export {
