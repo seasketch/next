@@ -109,6 +109,7 @@ type LocalMetric = Metric & {
   createdAt: Date;
   updatedAt: Date | null;
   chunks?: MetricWorkChunk[];
+  errorMessage?: string;
 };
 
 type LocalMetrics = LocalMetric[];

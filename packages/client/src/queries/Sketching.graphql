@@ -314,6 +314,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   stableId
   groupBy
   includedProperties
+  errorMessage
   chunks {
     id
     state

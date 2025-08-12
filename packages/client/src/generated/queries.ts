@@ -913,6 +913,7 @@ export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
   chunks: Array<MetricWorkChunk>;
   createdAt: Scalars['Datetime'];
+  errorMessage?: Maybe<Scalars['String']>;
   groupBy?: Maybe<Scalars['String']>;
   id: Scalars['BigInt'];
   includedProperties?: Maybe<Array<Scalars['String']>>;
@@ -22511,7 +22512,7 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
@@ -25702,6 +25703,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
   stableId
   groupBy
   includedProperties
+  errorMessage
   chunks {
     id
     state

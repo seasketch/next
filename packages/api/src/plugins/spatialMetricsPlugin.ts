@@ -69,6 +69,7 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
         includedProperties: [String!]
         subject: MetricSubject!
         chunks: [MetricWorkChunk!]!
+        errorMessage: String
       }
 
       type GetOrCreateSpatialMetricsResults {

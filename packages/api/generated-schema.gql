@@ -1064,6 +1064,7 @@ input CommunityGuidelinePatch {
 type CompatibleSpatialMetric {
   chunks: [MetricWorkChunk!]!
   createdAt: Datetime!
+  errorMessage: String
   groupBy: String
   id: BigInt!
   includedProperties: [String!]

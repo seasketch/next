@@ -388,7 +388,8 @@ create or replace function get_metrics_for_geography(geography_id integer)
           'stableId', overlay_layer_stable_id,
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
-          'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject')
+          'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
+          'errorMessage', error_message
         )
       )
       from spatial_metrics
@@ -430,7 +431,8 @@ create or replace function get_metrics_for_sketch(skid integer)
           'stableId', overlay_layer_stable_id,
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
-          'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
+          'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
+          'errorMessage', error_message
         )
       )
       from spatial_metrics
@@ -485,7 +487,8 @@ create or replace function get_spatial_metric(metric_id bigint)
           jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject')
         else
           jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
-        end
+        end,
+        'errorMessage', error_message
       ) from spatial_metrics where id = metric_id
     );
   end;

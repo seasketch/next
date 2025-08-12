@@ -2,6 +2,7 @@ import { Metric, MetricTypeMap, subjectIsFragment } from "overlay-engine";
 import { useReportContext } from "../ReportContext";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { SpatialMetricState } from "../../generated/graphql";
+import { useErrorBoundary } from "react-error-boundary";
 
 let idCounter = 0;
 
@@ -27,6 +28,7 @@ export function useMetrics<
 >(options: { type: T; geographyIds?: number[]; includeSiblings?: boolean }) {
   const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
+  const { showBoundary } = useErrorBoundary();
 
   // Create a stable numeric ID that never changes for this hook instance
   const stableId = useRef(createStableId()).current;
@@ -82,10 +84,25 @@ export function useMetrics<
     });
   }, [reportContext.metrics, fragmentIds, options]);
 
+  const errors = useMemo(() => {
+    const errors = data
+      .filter((m) => m.state === SpatialMetricState.Error)
+      .map((m) => m.errorMessage || "Unknown error");
+    return errors;
+  }, [data]);
+
+  if (errors.length > 0) {
+    const e = new Error(`Error fetching ${options.type} metrics`);
+    // @ts-ignore
+    e.errorMessages = errors;
+    showBoundary(e);
+  }
+
   return {
     data: data as unknown as MetricTypeMap[T][],
     loading:
       data.length === 0 ||
       data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0,
+    errors,
   };
 }
