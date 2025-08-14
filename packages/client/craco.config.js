@@ -35,6 +35,14 @@ module.exports = {
       remove: ["InjectManifest"],
     },
     configure: {
+      resolve: {
+        alias: {
+          "polyclip-ts": path.resolve(
+            __dirname,
+            "../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs"
+          ),
+        },
+      },
       module: {
         rules: [
           {

@@ -16,6 +16,12 @@ export type QueryPlanRequest = {
   offsets: [number, number | null][];
 };
 
+export type QueryPlan = {
+  requests: QueryPlanRequest[];
+  bytes: number;
+  features: number;
+};
+
 /**
  * Options for query planning and execution.
  */
@@ -34,24 +40,40 @@ export function createQueryPlan(
   results: OffsetAndLength[],
   featureDataOffset: number,
   options: QueryPlanOptions
-): QueryPlanRequest[] {
+): QueryPlan {
   // Sort results by offset to maintain feature order
   results.sort((a, b) => a[0] - b[0]);
 
   if (results.length === 0) {
-    return [];
+    return {
+      requests: [],
+      bytes: 0,
+      features: 0,
+    };
   } else if (results.length === 1) {
     const result = results[0];
-    return [
-      {
-        range: toRange(result, featureDataOffset),
-        offsets: [[0, result[1]]],
-      },
-    ];
+    return {
+      requests: [
+        {
+          range: toRange(result, featureDataOffset),
+          offsets: [[0, result[1]]],
+        },
+      ],
+      bytes: result[1] ? result[1] - result[0] : 0,
+      features: 1,
+    };
   }
 
   // Group results into ranges that can be fetched in a single request
-  const ranges: QueryPlanRequest[] = [];
+  const plan: QueryPlan = {
+    requests: [],
+    bytes: results.reduce((acc, [offset, length]) => {
+      const range = toRange([offset, length], featureDataOffset);
+      acc += range[1] ? range[1] - range[0] : 0;
+      return acc;
+    }, 0),
+    features: results.length,
+  };
   let offset = 0;
   const [start, length] = results[0];
   let currentRange: QueryPlanRequest = {
@@ -59,9 +81,8 @@ export function createQueryPlan(
     offsets: [[0, length!]],
   };
   offset = length!;
-  ranges.push(currentRange);
+  plan.requests.push(currentRange);
 
-  const maxRangeSize = 1024 * 1024 * 10; // 10MB max range size
   const overfetchBytes =
     options.overfetchBytes ?? QUERY_PLAN_DEFAULTS.overfetchBytes;
 
@@ -69,17 +90,12 @@ export function createQueryPlan(
     const [start, length] = results[i];
     const range = toRange([start, length], featureDataOffset);
     const distance = range[0] - currentRange.range[1]! - 1;
-    const mergedRangeSize = range[1]! - currentRange.range[0];
 
     // Merge ranges if:
     // 1. The distance between ranges is small enough
     // 2. The merged range size would be reasonable
     // 3. The total number of features in the range isn't too large
-    if (
-      distance < overfetchBytes &&
-      mergedRangeSize < maxRangeSize &&
-      currentRange.offsets.length < 100
-    ) {
+    if (distance < overfetchBytes && currentRange.offsets.length < 10000) {
       // merge the ranges and add to existing request
       currentRange.range[1] = range[1];
       offset += distance;
@@ -92,11 +108,11 @@ export function createQueryPlan(
         offsets: [[0, length!]],
       };
       offset = length!;
-      ranges.push(currentRange);
+      plan.requests.push(currentRange);
     }
   }
 
-  return ranges;
+  return plan;
 }
 
 /**

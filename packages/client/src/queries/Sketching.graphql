@@ -351,3 +351,9 @@ subscription SketchMetricSubscription($sketchId: Int!) {
     }
   }
 }
+
+mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {
+  retryFailedSpatialMetrics(input: { metricIds: $metricIds }) {
+    boolean
+  }
+}

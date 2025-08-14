@@ -95,6 +95,10 @@ export function useMetrics<
     const e = new Error(`Error fetching ${options.type} metrics`);
     // @ts-ignore
     e.errorMessages = errors;
+    // @ts-ignore
+    e.failedMetrics = data
+      .filter((m) => m.state === SpatialMetricState.Error)
+      .map((m) => m.id);
     // This trick hides the create-react-app error overlay in development mode
     // https://github.com/facebook/create-react-app/issues/6530#issuecomment-768517453
     delete e.stack;

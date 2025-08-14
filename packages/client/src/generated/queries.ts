@@ -7807,6 +7807,7 @@ export type Mutation = {
    * current user session
    */
   resendVerificationEmail: SendVerificationEmailResults;
+  retryFailedSpatialMetrics?: Maybe<RetryFailedSpatialMetricsPayload>;
   /** Remove participant admin privileges. */
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
   revokeApiKey?: Maybe<RevokeApiKeyPayload>;
@@ -9097,6 +9098,12 @@ export type MutationReorderReportTabsArgs = {
 export type MutationReplacePmTilesArgs = {
   dataSourceId: Scalars['Int'];
   pmtilesKey: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRetryFailedSpatialMetricsArgs = {
+  input: RetryFailedSpatialMetricsInput;
 };
 
 
@@ -13223,6 +13230,29 @@ export type RetentionChangeEstimate = {
   __typename?: 'RetentionChangeEstimate';
   bytes?: Maybe<Scalars['BigInt']>;
   numSources?: Maybe<Scalars['Int']>;
+};
+
+/** All input for the `retryFailedSpatialMetrics` mutation. */
+export type RetryFailedSpatialMetricsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  metricIds?: Maybe<Array<Maybe<Scalars['BigInt']>>>;
+};
+
+/** The output of our `retryFailedSpatialMetrics` mutation. */
+export type RetryFailedSpatialMetricsPayload = {
+  __typename?: 'RetryFailedSpatialMetricsPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `revokeAdminAccess` mutation. */
@@ -22575,6 +22605,19 @@ export type SketchMetricSubscriptionSubscription = (
   )> }
 );
 
+export type RetryFailedSpatialMetricsMutationVariables = Exact<{
+  metricIds: Array<Scalars['BigInt']> | Scalars['BigInt'];
+}>;
+
+
+export type RetryFailedSpatialMetricsMutation = (
+  { __typename?: 'Mutation' }
+  & { retryFailedSpatialMetrics?: Maybe<(
+    { __typename?: 'RetryFailedSpatialMetricsPayload' }
+    & Pick<RetryFailedSpatialMetricsPayload, 'boolean'>
+  )> }
+);
+
 export type SurveyListDetailsFragment = (
   { __typename?: 'Survey' }
   & Pick<Survey, 'id' | 'accessType' | 'showProgress' | 'isDisabled' | 'limitToSingleResponse' | 'name' | 'submittedResponseCount' | 'practiceResponseCount' | 'projectId' | 'isTemplate' | 'showFacilitationOption' | 'supportedLanguages'>
@@ -28986,6 +29029,13 @@ export const SketchMetricSubscriptionDocument = /*#__PURE__*/ gql`
   }
 }
     ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const RetryFailedSpatialMetricsDocument = /*#__PURE__*/ gql`
+    mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {
+  retryFailedSpatialMetrics(input: {metricIds: $metricIds}) {
+    boolean
+  }
+}
+    `;
 export const SurveysDocument = /*#__PURE__*/ gql`
     query Surveys($projectId: Int!) {
   project(id: $projectId) {
@@ -30275,6 +30325,7 @@ export const namedOperations = {
     UpdateTocItemsParent: 'UpdateTocItemsParent',
     CopyTocItem: 'CopyTocItem',
     GetOrCreateSpatialMetrics: 'GetOrCreateSpatialMetrics',
+    RetryFailedSpatialMetrics: 'RetryFailedSpatialMetrics',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
     UpdateFormElementSketchClass: 'UpdateFormElementSketchClass',

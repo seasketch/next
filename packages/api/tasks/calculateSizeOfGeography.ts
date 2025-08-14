@@ -9,12 +9,28 @@ export default async function calculateSizeOfGeography(
   helpers: Helpers
 ) {
   await helpers.withPgClient(async (client) => {
+    const { rows: metrics } = await client.query(
+      `update spatial_metrics set state = 'processing' where id = $1 returning *`,
+      [payload.metricId]
+    );
+    if (metrics.length < 1) {
+      throw new Error("Metric not found");
+    }
+    const metric = metrics[0];
+
     // first, gather all the clipping layers in a format that overlay-engine can use
     const results = await client.query(
       `select (clipping_layers_for_geography($1)).*`,
       [payload.geographyId]
     );
+    const geography = await client.query(
+      `select id, name from project_geography where id = $1`,
+      [payload.geographyId]
+    );
+    const geographyName = geography.rows[0].name;
+    console.log("calculating area for", geographyName);
     const clippingLayers = results.rows.map((row) => parseClippingLayer(row));
+    console.log("clipping layers", JSON.stringify(clippingLayers, null, 2));
     try {
       const area = await calculateArea(clippingLayers, sourceCache);
       console.log("area", area);
@@ -28,7 +44,9 @@ export default async function calculateSizeOfGeography(
         `update spatial_metrics set state = 'error', error_message = $2 where id = $1`,
         [
           payload.metricId,
-          "message" in (e as any) ? (e as Error).message : "Unknown error",
+          "message" in (e as any)
+            ? geographyName + ": " + (e as Error).message
+            : "Unknown error",
         ]
       );
     }

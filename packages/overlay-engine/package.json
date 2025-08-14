@@ -36,6 +36,7 @@
     "@turf/area": "^7.2.0",
     "@turf/bbox": "^7.2.0",
     "@turf/bbox-polygon": "^7.2.0",
+    "@turf/boolean-contains": "^7.2.0",
     "@turf/boolean-equal": "^7.2.0",
     "@turf/boolean-intersects": "^7.2.0",
     "@turf/boolean-touches": "^7.2.0",
@@ -44,6 +45,7 @@
     "fgb-source": "^1.0.0",
     "geojson": "^0.5.0",
     "geojson-antimeridian-cut": "^0.1.0",
+    "polyclip-ts": "^0.16.8",
     "polygon-clipping": "^0.15.7"
   }
 }

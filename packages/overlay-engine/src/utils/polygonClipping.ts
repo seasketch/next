@@ -1,4 +1,5 @@
-import * as polygonClipping from "polygon-clipping";
+// import * as polygonClipping from "polygon-clipping";
+import * as clipper from "polyclip-ts";
 
 /**
  * Union a list of polygons into a single polygon.
@@ -13,8 +14,8 @@ import * as polygonClipping from "polygon-clipping";
  * @param geometries - The list of polygons to union.
  * @returns The union of the polygons.
  */
-export function union(geometries: polygonClipping.Geom[]) {
-  return polygonClipping.union(geometries[0], ...geometries.slice(1));
+export function union(geometries: clipper.Geom[]) {
+  return clipper.union(geometries[0], ...geometries.slice(1));
 }
 
 /**
@@ -23,10 +24,24 @@ export function union(geometries: polygonClipping.Geom[]) {
  * @param geometries - The list of polygons to intersect.
  * @returns The intersection of the polygons.
  */
-export function intersection(geometries: polygonClipping.Geom[]) {
+export function intersection(geometries: clipper.Geom[]) {
   if (geometries.length < 2) {
     throw new Error("At least two geometries are required for intersection");
   } else {
-    return polygonClipping.intersection(geometries[0], ...geometries.slice(1));
+    return clipper.intersection(geometries[0], ...geometries.slice(1));
+  }
+}
+
+/**
+ * Difference a list of polygons into a single polygon.
+ *
+ * @param geometries - The list of polygons to difference.
+ * @returns The difference of the polygons.
+ */
+export function difference(geometries: clipper.Geom[]) {
+  if (geometries.length < 2) {
+    throw new Error("At least two geometries are required for difference");
+  } else {
+    return clipper.difference(geometries[0], ...geometries.slice(1));
   }
 }

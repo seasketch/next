@@ -581,3 +581,33 @@ create trigger queue_calculate_spatial_metric_task_trigger
 
 -- create an index to support finding spatial metrics that are queued, and have a created_at older than some period of time
 create index if not exists spatial_metrics_queued_created_at_idx on spatial_metrics (created_at) where state = 'queued';
+
+drop function if exists retry_failed_spatial_metrics;
+create or replace function retry_failed_spatial_metrics(metric_ids bigint[])
+  returns boolean
+  security definer
+  language plpgsql
+  as $$
+  declare
+    metric spatial_metrics;
+    updated_metric_id bigint;
+    metric_id bigint;
+  begin
+    -- loop through the metric ids, and update the state to queued
+    foreach metric_id in array metric_ids loop
+      update spatial_metrics set state = 'queued', error_message = null where id = metric_id returning id into updated_metric_id;
+      if updated_metric_id is not null then
+        perform graphile_worker.add_job(
+          'calculateSpatialMetric',
+          json_build_object('metricId', updated_metric_id),
+          max_attempts := 1,
+          job_key := 'calculateSpatialMetric:' || updated_metric_id,
+          job_key_mode := 'replace'
+        );
+      end if;
+    end loop;
+    return true;
+  end;
+  $$;
+
+grant execute on function public.retry_failed_spatial_metrics to anon;

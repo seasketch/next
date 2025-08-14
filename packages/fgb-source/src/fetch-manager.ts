@@ -84,12 +84,14 @@ export class FetchManager {
     // Check cache first
     const cached = this.cache.get(cacheKey);
     if (cached) {
+      console.log("returning cached", cacheKey);
       return cached;
     }
 
     // Check for in-flight request
     const inFlightRequest = this.inFlightRequests.get(cacheKey);
     if (inFlightRequest) {
+      console.log("returning in flight request", cacheKey);
       return inFlightRequest;
     }
 
@@ -97,17 +99,29 @@ export class FetchManager {
     const request = (async () => {
       try {
         const bytes = await this.fetchRangeFn(range);
+        console.log("got bytes", bytes.byteLength);
         // Store in cache
         this.cache.set(cacheKey, bytes);
-        return bytes;
-      } finally {
-        // Clean up in-flight request map
         this.inFlightRequests.delete(cacheKey);
+        console.log(
+          "deleting cachekey. in flight requests cache size",
+          this.inFlightRequests.size
+        );
+        return bytes;
+      } catch (e) {
+        console.error("error fetching range", e);
+        this.inFlightRequests.delete(cacheKey);
+        throw e;
       }
     })();
 
     // Store request in in-flight map
     this.inFlightRequests.set(cacheKey, request);
+    console.log(
+      "setting cachekey. in flight requests cache size",
+      this.inFlightRequests.size,
+      range
+    );
     return request;
   }
 

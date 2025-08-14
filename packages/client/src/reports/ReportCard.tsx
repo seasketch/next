@@ -19,6 +19,7 @@ import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
+import { useRetryFailedSpatialMetricsMutation } from "../generated/graphql";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -271,6 +272,13 @@ function ErrorFallback({
       }
     }
   }
+
+  const [retry, retryState] = useRetryFailedSpatialMetricsMutation({
+    variables: {
+      metricIds: error.failedMetrics || [],
+    },
+  });
+
   return (
     <ReportCard
       config={config}
@@ -301,9 +309,19 @@ function ErrorFallback({
               </li>
             ))}
           </ul>
-          <div className="mt-2">
-            <Button onClick={() => {}} label={t("Retry calculations")} small />
-          </div>
+          {error.failedMetrics?.length && (
+            <div className="mt-2">
+              <Button
+                onClick={() => {
+                  retry();
+                }}
+                label={t("Retry calculations")}
+                small
+                disabled={retryState.loading}
+                loading={retryState.loading}
+              />
+            </div>
+          )}
         </>
       ) : (
         <p>{error.message}</p>
