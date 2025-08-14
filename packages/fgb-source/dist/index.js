@@ -2385,6 +2385,7 @@ async function* executeQueryPlan(plan, fetchRange, options = {}) {
       }
       const featureView = new DataView(data, offset, length);
       yield [featureView, offset];
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 }

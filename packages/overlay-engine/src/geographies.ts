@@ -23,14 +23,11 @@ import area from "@turf/area";
 import { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
 import { union, difference, intersection } from "./utils/polygonClipping";
 import { SourceCache } from "fgb-source";
-import { featureCollection } from "@turf/helpers";
-import bbox from "@turf/bbox";
-import { bboxToEnvelope, splitBBoxAntimeridian } from "./utils/bboxUtils";
-import { makeMultipolygon } from "./utils/utils";
-import { cleanCoords } from "./utils/cleanCoords";
-import splitGeoJSON from "geojson-antimeridian-cut";
+import { featureCollection, geometry } from "@turf/helpers";
 import contains from "@turf/boolean-contains";
 import bboxPolygon from "@turf/bbox-polygon";
+import { simplify } from "@turf/simplify";
+import { ContainerIndex } from "./utils/containerIndex";
 import fs from "fs";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
@@ -642,6 +639,7 @@ export async function calculateArea(
   let intersectionFeatureBytes = 0;
   await Promise.all(
     intersectionLayers.map(async (l) => {
+      console.log("get layer", l.source);
       const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
         l.source
       );
@@ -654,6 +652,7 @@ export async function calculateArea(
           intersectionFeatureBytes += properties?.__byteLength || 0;
         }
       }
+      console.log("got intersection features", intersectionFeatures.length);
     })
   );
   console.log(
@@ -673,32 +672,25 @@ export async function calculateArea(
         (f) => f.geometry.coordinates as polygonClipping.Geom
       )
     );
-
+    const intersectionFeaturesByteSize = intersectionFeatures.reduce(
+      (sum, f) => {
+        sum += f.properties?.__byteLength || 0;
+        return sum;
+      },
+      0
+    );
     // turn back into geojson feature
     let intersectionFeatureGeojson = unionAtAntimeridian({
       type: "Feature",
       geometry: { type: "MultiPolygon", coordinates: intersectionFeature },
       properties: {},
     });
-    fs.writeFileSync(
-      "/Users/cburt/Downloads/union.geojson.json",
-      JSON.stringify(intersectionFeatureGeojson, null, 2)
-    );
 
     const prepared = prepareSketch(intersectionFeatureGeojson);
     const envelopes = prepared.envelopes;
-    fs.writeFileSync(
-      "/Users/cburt/Downloads/envelopes.geojson.json",
-      JSON.stringify(
-        featureCollection(
-          envelopes.map((e) => {
-            return bboxPolygon([e.minX, e.minY, e.maxX, e.maxY]);
-          })
-        ),
-        null,
-        2
-      )
-    );
+
+    let mixedGeoms = [] as polygonClipping.Geom[];
+    let mixedGeomsBytes = 0;
     const differenceGeoms = [] as polygonClipping.Geom[];
     let bytesFetched = 0;
     let overlappingDifferenceFeaturesSqKm = 0;
@@ -709,16 +701,32 @@ export async function calculateArea(
       const { bytes, features } = await source.countAndBytesForQuery(envelopes);
       console.log("bytes", bytes, "features", features, envelopes);
       if (
+        true ||
         bytes > MAX_SAFE_CLIPPING_OPERATION_BYTES ||
         features > MAX_SAFE_CLIPPING_OPERATION_FEATURE_COUNT
       ) {
         console.log(
           "Large difference layer. Performing piecemeal intersection to calculate area"
         );
+        console.log({ intersectionFeatureBytes });
+        let simplifiedIntersectionFeature: Feature<
+          Polygon | MultiPolygon
+        > | null = null;
+        fs.writeFileSync(
+          "/Users/cburt/Downloads/prepared.geojson.json",
+          JSON.stringify(prepared.feature, null, 2)
+        );
+        // simplifiedIntersectionFeature = simplify(prepared.feature, {
+        //   tolerance: 0.01,
+        // });
         let i = 0;
         let fullyContainedFeatures = 0;
         let intersectingFeatures = 0;
         let lastLoggedPercent = 0;
+        let outsideFeatures = 0;
+        const containerIndex = new ContainerIndex(
+          simplifiedIntersectionFeature || intersectionFeatureGeojson
+        );
         // get features from difference layer
         for await (const f of source.getFeaturesAsync(envelopes)) {
           if (
@@ -726,49 +734,88 @@ export async function calculateArea(
             evaluateCql2JSONQuery(layer.cql2Query, f.properties)
           ) {
             i++;
+            // console.log(i);
             const percent = (i / features) * 100;
-            if (percent - lastLoggedPercent > 0.2) {
+            if (percent - lastLoggedPercent > 1) {
               lastLoggedPercent = percent;
               console.log(
                 `running overlap ${percent.toFixed(2)}%`,
-                `fully contained features: ${fullyContainedFeatures}, intersecting features: ${intersectingFeatures}, total features: ${i}`
+                `fully contained features: ${fullyContainedFeatures}, intersecting features: ${intersectingFeatures}, outside features: ${outsideFeatures}, total features: ${i}`
               );
             }
-            if (
-              contains(
-                {
-                  type: "Feature",
-                  geometry: {
-                    type: "MultiPolygon",
-                    coordinates: intersectionFeature,
-                  },
-                  properties: {},
-                },
-                f
-              )
-            ) {
+            const classification = containerIndex.classify(f);
+            if (classification === "inside") {
               overlappingDifferenceFeaturesSqKm += area(f) / 1_000_000;
               fullyContainedFeatures++;
+            } else if (classification === "mixed") {
+              intersectingFeatures++;
+              mixedGeoms.push(f.geometry.coordinates as polygonClipping.Geom);
+              mixedGeomsBytes += f.properties?.__byteLength || 0;
+              if (mixedGeomsBytes > 10_000) {
+                console.log(
+                  `calculating intersection of mixed geoms. ${mixedGeomsBytes} bytes, ${mixedGeoms.length} geoms`
+                );
+                for (const geom of mixedGeoms) {
+                  const overlap = intersection([intersectionFeature, geom]);
+                  if (overlap) {
+                    const overlappingSqKm =
+                      area({
+                        type: "Feature",
+                        geometry: {
+                          type: "MultiPolygon",
+                          coordinates: overlap,
+                        },
+                        properties: {},
+                      }) / 1_000_000;
+                    overlappingDifferenceFeaturesSqKm += overlappingSqKm;
+                    console.log("overlapping sq km", overlappingSqKm);
+                  }
+                }
+                mixedGeoms = [];
+                mixedGeomsBytes = 0;
+              }
             } else {
-              const overlap = intersection([
-                intersectionFeature,
-                f.geometry.coordinates as polygonClipping.Geom,
-              ]);
+              // outside
+              outsideFeatures++;
+            }
+            // const overlap = intersection([
+            //   intersectionFeature,
+            //   f.geometry.coordinates as polygonClipping.Geom,
+            // ]);
+            // const overlappingSqKm =
+            //   area({
+            //     type: "Feature",
+            //     geometry: { type: "MultiPolygon", coordinates: overlap },
+            //     properties: {},
+            //   }) / 1_000_000;
+            // overlappingDifferenceFeaturesSqKm += overlappingSqKm;
+            // if (overlappingSqKm > 0) {
+            //   intersectingFeatures++;
+            // }
+          }
+        }
+        if (mixedGeoms.length > 0) {
+          console.log(
+            `calculating intersection of mixed geoms. ${mixedGeomsBytes} bytes, ${mixedGeoms.length} geoms`
+          );
+          for (const geom of mixedGeoms) {
+            const overlap = intersection([intersectionFeature, geom]);
+            if (overlap) {
               const overlappingSqKm =
                 area({
                   type: "Feature",
                   geometry: { type: "MultiPolygon", coordinates: overlap },
                   properties: {},
                 }) / 1_000_000;
+              console.log("overlapping sq km", overlappingSqKm);
               overlappingDifferenceFeaturesSqKm += overlappingSqKm;
-              if (overlappingSqKm > 0) {
-                intersectingFeatures++;
-              }
             }
           }
+          mixedGeoms = [];
+          mixedGeomsBytes = 0;
         }
         console.log(
-          `fully contained features: ${fullyContainedFeatures}, intersecting features: ${intersectingFeatures}, total features: ${i}`
+          `fully contained features: ${fullyContainedFeatures}, intersecting features: ${intersectingFeatures}, outside features: ${outsideFeatures}, total features: ${i}`
         );
       } else {
         console.log(
@@ -810,6 +857,52 @@ export async function calculateArea(
 
     console.log("product made, calculate area");
     const sqKm = area(productGeojson) / 1_000_000;
+    console.log({
+      sqKm,
+      overlappingDifferenceFeaturesSqKm,
+      total: sqKm - overlappingDifferenceFeaturesSqKm,
+    });
     return sqKm - overlappingDifferenceFeaturesSqKm;
+  }
+}
+
+function isContained(
+  container: Feature<Polygon | MultiPolygon>,
+  feature: Feature<Polygon | MultiPolygon>
+) {
+  if (container.geometry.type === "MultiPolygon") {
+    // any part may contain the feature and pass
+    for (const part of container.geometry.coordinates) {
+      const c = {
+        ...container,
+        geometry: {
+          type: "Polygon",
+          coordinates: part,
+        },
+      } as Feature<Polygon>;
+      if (isContained(c, feature)) {
+        return true;
+      }
+    }
+    return false;
+  } else if (container.geometry.type === "Polygon") {
+    if (feature.geometry.type === "MultiPolygon") {
+      // every part must be contained
+      for (const part of feature.geometry.coordinates) {
+        const f = {
+          ...feature,
+          geometry: {
+            type: "Polygon",
+            coordinates: part,
+          },
+        };
+        if (!contains(container, f)) {
+          return false;
+        }
+      }
+      return true;
+    } else {
+      return contains(container, feature);
+    }
   }
 }

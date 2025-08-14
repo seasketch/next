@@ -39,13 +39,20 @@
     "@turf/boolean-contains": "^7.2.0",
     "@turf/boolean-equal": "^7.2.0",
     "@turf/boolean-intersects": "^7.2.0",
+    "@turf/boolean-point-in-polygon": "^7.2.0",
     "@turf/boolean-touches": "^7.2.0",
     "@turf/invariant": "^7.2.0",
+    "@turf/simplify": "^7.2.0",
+    "@types/flatbush": "^4.2.2",
     "@types/geojson": "^7946.0.16",
+    "@types/robust-segment-intersect": "^1.0.2",
     "fgb-source": "^1.0.0",
+    "flatbush": "3",
     "geojson": "^0.5.0",
     "geojson-antimeridian-cut": "^0.1.0",
     "polyclip-ts": "^0.16.8",
-    "polygon-clipping": "^0.15.7"
+    "polygon-clipping": "^0.15.7",
+    "robust-point-in-polygon": "^1.0.3",
+    "robust-segment-intersect": "^1.0.1"
   }
 }

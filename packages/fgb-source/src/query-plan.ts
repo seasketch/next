@@ -183,6 +183,10 @@ export async function* executeQueryPlan(
         }
       }
       yield [featureView, offset];
+
+      // Yield control to event loop after each feature to allow other promises to resolve
+      // This ensures pending fetch promises can complete their cleanup without blocking
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 }
