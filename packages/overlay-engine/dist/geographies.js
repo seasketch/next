@@ -48,8 +48,8 @@ const area_1 = __importDefault(require("@turf/area"));
 const unionAtAntimeridian_1 = require("./utils/unionAtAntimeridian");
 const polygonClipping_1 = require("./utils/polygonClipping");
 const boolean_contains_1 = __importDefault(require("@turf/boolean-contains"));
+const simplify_1 = require("@turf/simplify");
 const containerIndex_1 = require("./utils/containerIndex");
-const fs_1 = __importDefault(require("fs"));
 /**
  * Clips a sketch to a geography defined by one or more clipping layers.
  *
@@ -557,10 +557,9 @@ async function calculateArea(geography, sourceCache) {
                 console.log("Large difference layer. Performing piecemeal intersection to calculate area");
                 console.log({ intersectionFeatureBytes });
                 let simplifiedIntersectionFeature = null;
-                fs_1.default.writeFileSync("/Users/cburt/Downloads/prepared.geojson.json", JSON.stringify(prepared.feature, null, 2));
-                // simplifiedIntersectionFeature = simplify(prepared.feature, {
-                //   tolerance: 0.01,
-                // });
+                simplifiedIntersectionFeature = (0, simplify_1.simplify)(prepared.feature, {
+                    tolerance: 0.01,
+                });
                 let i = 0;
                 let fullyContainedFeatures = 0;
                 let intersectingFeatures = 0;

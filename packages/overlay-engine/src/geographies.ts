@@ -712,13 +712,9 @@ export async function calculateArea(
         let simplifiedIntersectionFeature: Feature<
           Polygon | MultiPolygon
         > | null = null;
-        fs.writeFileSync(
-          "/Users/cburt/Downloads/prepared.geojson.json",
-          JSON.stringify(prepared.feature, null, 2)
-        );
-        // simplifiedIntersectionFeature = simplify(prepared.feature, {
-        //   tolerance: 0.01,
-        // });
+        simplifiedIntersectionFeature = simplify(prepared.feature, {
+          tolerance: 0.01,
+        });
         let i = 0;
         let fullyContainedFeatures = 0;
         let intersectingFeatures = 0;
