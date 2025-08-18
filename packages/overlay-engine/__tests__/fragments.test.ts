@@ -3,7 +3,7 @@ import {
   ClippingFn,
   ClippingLayerOption,
   clipSketchToPolygons,
-} from "../src/geographies";
+} from "../src/geographies/geographies";
 import { SourceCache } from "fgb-source";
 import { prepareSketch } from "../src/utils/prepareSketch";
 import {

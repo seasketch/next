@@ -95,10 +95,9 @@ export class FetchManager {
       return inFlightRequest;
     }
 
-    // Create new request
-    const request = (async () => {
-      try {
-        const bytes = await this.fetchRangeFn(range);
+    // Create new request promise
+    const requestPromise = this.fetchRangeFn(range).then(
+      (bytes) => {
         console.log("got bytes", bytes.byteLength);
         // Store in cache
         this.cache.set(cacheKey, bytes);
@@ -108,21 +107,22 @@ export class FetchManager {
           this.inFlightRequests.size
         );
         return bytes;
-      } catch (e) {
-        console.error("error fetching range", e);
+      },
+      (error) => {
+        console.error("error fetching range", error);
         this.inFlightRequests.delete(cacheKey);
-        throw e;
+        throw error;
       }
-    })();
+    );
 
     // Store request in in-flight map
-    this.inFlightRequests.set(cacheKey, request);
+    this.inFlightRequests.set(cacheKey, requestPromise);
     console.log(
       "setting cachekey. in flight requests cache size",
       this.inFlightRequests.size,
       range
     );
-    return request;
+    return requestPromise;
   }
 
   /**

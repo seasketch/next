@@ -21,6 +21,10 @@ class ContainerIndex {
     constructor(container) {
         this.segsA = []; // segment endpoints A
         this.segsB = []; // segment endpoints B
+        this.bboxPolygons = {
+            type: "FeatureCollection",
+            features: [],
+        };
         this.container = container;
         this.rings = extractRings(container.geometry);
         this.containerBBox = (0, bbox_1.default)(container);
@@ -43,6 +47,12 @@ class ContainerIndex {
         }
         this.index = new flatbush_1.default(this.segsA.length);
         for (let i = 0; i < this.segsA.length; i++) {
+            this.bboxPolygons.features.push((0, bbox_polygon_1.default)([
+                boxes[4 * i],
+                boxes[4 * i + 1],
+                boxes[4 * i + 2],
+                boxes[4 * i + 3],
+            ]));
             this.index.add(boxes[4 * i], boxes[4 * i + 1], boxes[4 * i + 2], boxes[4 * i + 3]);
         }
         this.index.finish();
@@ -87,6 +97,9 @@ class ContainerIndex {
         if (pointOnAnyRingBoundary(v, this.rings))
             return "mixed";
         return "inside";
+    }
+    getBBoxPolygons() {
+        return this.bboxPolygons;
     }
 }
 exports.ContainerIndex = ContainerIndex;

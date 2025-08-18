@@ -5,7 +5,7 @@ import {
   ClippingFn,
   ClippingLayerOption,
   clipToGeographies,
-} from "../src/geographies";
+} from "../src/geographies/geographies";
 import { SourceCache } from "fgb-source";
 import { prepareSketch } from "../src/utils/prepareSketch";
 import { describe, it, expect, beforeAll } from "vitest";

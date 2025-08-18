@@ -2255,9 +2255,8 @@ var FetchManager = class {
       console.log("returning in flight request", cacheKey);
       return inFlightRequest;
     }
-    const request = (async () => {
-      try {
-        const bytes3 = await this.fetchRangeFn(range);
+    const requestPromise = this.fetchRangeFn(range).then(
+      (bytes3) => {
         console.log("got bytes", bytes3.byteLength);
         this.cache.set(cacheKey, bytes3);
         this.inFlightRequests.delete(cacheKey);
@@ -2266,19 +2265,20 @@ var FetchManager = class {
           this.inFlightRequests.size
         );
         return bytes3;
-      } catch (e2) {
-        console.error("error fetching range", e2);
+      },
+      (error) => {
+        console.error("error fetching range", error);
         this.inFlightRequests.delete(cacheKey);
-        throw e2;
+        throw error;
       }
-    })();
-    this.inFlightRequests.set(cacheKey, request);
+    );
+    this.inFlightRequests.set(cacheKey, requestPromise);
     console.log(
       "setting cachekey. in flight requests cache size",
       this.inFlightRequests.size,
       range
     );
-    return request;
+    return requestPromise;
   }
   /**
    * Default fetch implementation using the fetch API.

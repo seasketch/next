@@ -1,7 +1,7 @@
 // @ts-ignore
 import Flatbush from "flatbush";
 import segIntersect from "robust-segment-intersect";
-import turfBbox from "@turf/bbox";
+import turfBbox, { bbox } from "@turf/bbox";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point as turfPoint } from "@turf/helpers";
 
@@ -12,6 +12,7 @@ import type {
   Position,
   BBox,
   Geometry,
+  FeatureCollection,
 } from "geojson";
 import bboxPolygon from "@turf/bbox-polygon";
 
@@ -36,6 +37,10 @@ export class ContainerIndex {
   private segsA: Pt[] = []; // segment endpoints A
   private segsB: Pt[] = []; // segment endpoints B
   private index: Flatbush;
+  bboxPolygons: FeatureCollection<Polygon> = {
+    type: "FeatureCollection",
+    features: [],
+  };
 
   constructor(container: ContainerFeature) {
     this.container = container;
@@ -61,6 +66,14 @@ export class ContainerIndex {
     }
     this.index = new Flatbush(this.segsA.length);
     for (let i = 0; i < this.segsA.length; i++) {
+      this.bboxPolygons.features.push(
+        bboxPolygon([
+          boxes[4 * i],
+          boxes[4 * i + 1],
+          boxes[4 * i + 2],
+          boxes[4 * i + 3],
+        ])
+      );
       this.index.add(
         boxes[4 * i],
         boxes[4 * i + 1],
@@ -120,6 +133,10 @@ export class ContainerIndex {
     if (pointOnAnyRingBoundary(v, this.rings)) return "mixed";
 
     return "inside";
+  }
+
+  getBBoxPolygons() {
+    return this.bboxPolygons;
   }
 }
 

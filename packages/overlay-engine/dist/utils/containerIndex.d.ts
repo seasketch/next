@@ -1,4 +1,4 @@
-import type { Feature, Polygon, MultiPolygon } from "geojson";
+import type { Feature, Polygon, MultiPolygon, FeatureCollection } from "geojson";
 export type ContainerFeature = Feature<Polygon | MultiPolygon>;
 export type CandidateFeature = Feature<Polygon | MultiPolygon>;
 export type Classification = "inside" | "outside" | "mixed";
@@ -15,6 +15,7 @@ export declare class ContainerIndex {
     private segsA;
     private segsB;
     private index;
+    bboxPolygons: FeatureCollection<Polygon>;
     constructor(container: ContainerFeature);
     /**
      * Classify a candidate polygon:
@@ -23,5 +24,6 @@ export declare class ContainerIndex {
      *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary
      */
     classify(candidate: CandidateFeature): Classification;
+    getBBoxPolygons(): FeatureCollection<Polygon, import("geojson").GeoJsonProperties>;
 }
 //# sourceMappingURL=containerIndex.d.ts.map
