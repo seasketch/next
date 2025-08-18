@@ -11,8 +11,8 @@ const unionAtAntimeridian_1 = require("../utils/unionAtAntimeridian");
 const polygonClipping_1 = require("../utils/polygonClipping");
 const simplify_1 = require("@turf/simplify");
 const containerIndex_1 = require("../utils/containerIndex");
-const debuggingFgbWriter_1 = require("../utils/debuggingFgbWriter");
-const coverWithRectangles_1 = require("../utils/coverWithRectangles");
+// import { DebuggingFgbWriter } from "../utils/debuggingFgbWriter";
+// import { coverWithRectangles } from "../utils/coverWithRectangles";
 // Determines whether to apply a difference operation against an entire diff
 // layer vs the intersection layer union, or to apply an intersection against
 // each feature in the difference layer and sum up the overlapping area
@@ -22,13 +22,25 @@ const coverWithRectangles_1 = require("../utils/coverWithRectangles");
 const MAX_SAFE_CLIPPING_OPERATION_BYTES = 10000000;
 const MAX_SAFE_CLIPPING_OPERATION_FEATURE_COUNT = 2000;
 async function calculateArea(geography, sourceCache) {
-    var _a, _b, _c, _d, _e;
-    const classifiedLand = new debuggingFgbWriter_1.DebuggingFgbWriter("/Users/cburt/Downloads/classified.fgb", [
-        { name: "__offset", type: "integer" },
-        { name: "class", type: "string" },
-    ]);
-    const intersectionWriter = new debuggingFgbWriter_1.DebuggingFgbWriter("/Users/cburt/Downloads/intersection.fgb", [{ name: "name", type: "string" }]);
+    var _a, _b;
+    // first, start initialization of all sources. Later code can still await
+    // sourceCache.get, but the requests will already be resolved or in-flight
+    geography.map((layer) => {
+        sourceCache.get(layer.source);
+    });
+    // const classifiedLand = new DebuggingFgbWriter(
+    //   "/Users/cburt/Downloads/classified.fgb",
+    //   [
+    //     { name: "__offset", type: "integer" },
+    //     { name: "class", type: "string" },
+    //   ]
+    // );
+    // const intersectionWriter = new DebuggingFgbWriter(
+    //   "/Users/cburt/Downloads/intersection.fgb",
+    //   [{ name: "name", type: "string" }]
+    // );
     // first, fetch all intersection layers and union the features
+    console.time("create intersection feature");
     const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
     const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
     const intersectionFeatures = [];
@@ -44,10 +56,11 @@ async function calculateArea(geography, sourceCache) {
         }
         console.log("got intersection features", intersectionFeatures.length);
     }));
+    console.timeEnd("create intersection feature");
     console.log("got intersection features", intersectionFeatures.length, intersectionFeatureBytes + " bytes");
     if (differenceLayers.length === 0) {
         console.log("no difference layers, calculate area");
-        const sumArea = intersectionFeatures.reduce((acc, f) => acc + (0, area_1.default)(f), 0);
+        const sumArea = intersectionFeatures.reduce((acc, f) => acc + polygonArea(f.geometry.coordinates), 0);
         // convert to square kilometers
         return sumArea / 1000000;
     }
@@ -65,37 +78,28 @@ async function calculateArea(geography, sourceCache) {
             geometry: { type: "MultiPolygon", coordinates: intersectionFeature },
             properties: { name: "union-at-antimeridian" },
         });
-        intersectionWriter.addFeature(intersectionFeatureGeojson);
+        // intersectionWriter.addFeature(intersectionFeatureGeojson);
         const prepared = (0, prepareSketch_1.prepareSketch)(intersectionFeatureGeojson);
         const envelopes = prepared.envelopes;
-        intersectionWriter.addFeature({
-            type: "Feature",
-            geometry: prepared.feature.geometry,
-            properties: { name: "prepared" },
-        });
-        await intersectionWriter.close();
-        console.log("cover with rectangles");
-        const rectangles = (0, coverWithRectangles_1.coverWithRectangles)(prepared.feature.geometry, {
-            target: 100,
-        });
-        const rectanglesWriter = new debuggingFgbWriter_1.DebuggingFgbWriter("/Users/cburt/Downloads/rectangles.fgb", []);
-        for (const r of rectangles.inside) {
-            rectanglesWriter.addFeature({
-                type: "Feature",
-                geometry: { type: "Polygon", coordinates: [r] },
-                properties: {},
-            });
-        }
-        await rectanglesWriter.close();
+        // intersectionWriter.addFeature({
+        //   type: "Feature",
+        //   geometry: prepared.feature.geometry,
+        //   properties: { name: "prepared" },
+        // });
+        // await intersectionWriter.close();
         let mixedGeoms = [];
         let mixedGeomsBytes = 0;
         const differenceGeoms = [];
         let bytesFetched = 0;
         let overlappingDifferenceFeaturesSqKm = 0;
         for (const layer of differenceLayers) {
+            console.time("get source");
             const source = await sourceCache.get(layer.source);
+            console.timeEnd("get source");
+            console.time("countAndBytesForQuery");
             const { bytes, features } = await source.countAndBytesForQuery(envelopes);
             console.log("bytes", bytes, "features", features, envelopes);
+            console.timeEnd("countAndBytesForQuery");
             if (true ||
                 bytes > MAX_SAFE_CLIPPING_OPERATION_BYTES ||
                 features > MAX_SAFE_CLIPPING_OPERATION_FEATURE_COUNT) {
@@ -111,12 +115,15 @@ async function calculateArea(geography, sourceCache) {
                 let lastLoggedPercent = 0;
                 let outsideFeatures = 0;
                 const containerIndex = new containerIndex_1.ContainerIndex(simplifiedIntersectionFeature || intersectionFeatureGeojson);
-                const bboxPolygons = containerIndex.getBBoxPolygons();
-                const bboxesWriter = new debuggingFgbWriter_1.DebuggingFgbWriter("/Users/cburt/Downloads/bboxes.fgb", []);
-                for (const f of bboxPolygons.features) {
-                    bboxesWriter.addFeature(f);
-                }
-                await bboxesWriter.close();
+                // const bboxPolygons = containerIndex.getBBoxPolygons();
+                // const bboxesWriter = new DebuggingFgbWriter(
+                //   "/Users/cburt/Downloads/bboxes.fgb",
+                //   []
+                // );
+                // for (const f of bboxPolygons.features) {
+                //   bboxesWriter.addFeature(f);
+                // }
+                // await bboxesWriter.close();
                 // get features from difference layer
                 for await (const f of source.getFeaturesAsync(envelopes)) {
                     if (!layer.cql2Query ||
@@ -130,29 +137,29 @@ async function calculateArea(geography, sourceCache) {
                         }
                         const classification = containerIndex.classify(f);
                         if (classification === "inside") {
-                            classifiedLand.addFeature({
-                                type: "Feature",
-                                geometry: f.geometry,
-                                properties: {
-                                    class: "inside",
-                                    __offset: (_a = f.properties) === null || _a === void 0 ? void 0 : _a.__offset,
-                                },
-                            });
+                            // classifiedLand.addFeature({
+                            //   type: "Feature",
+                            //   geometry: f.geometry,
+                            //   properties: {
+                            //     class: "inside",
+                            //     __offset: f.properties?.__offset,
+                            //   },
+                            // });
                             overlappingDifferenceFeaturesSqKm += (0, area_1.default)(f) / 1000000;
                             fullyContainedFeatures++;
                         }
                         else if (classification === "mixed") {
-                            classifiedLand.addFeature({
-                                type: "Feature",
-                                geometry: f.geometry,
-                                properties: {
-                                    class: "mixed",
-                                    __offset: (_b = f.properties) === null || _b === void 0 ? void 0 : _b.__offset,
-                                },
-                            });
+                            // classifiedLand.addFeature({
+                            //   type: "Feature",
+                            //   geometry: f.geometry,
+                            //   properties: {
+                            //     class: "mixed",
+                            //     __offset: f.properties?.__offset,
+                            //   },
+                            // });
                             intersectingFeatures++;
                             mixedGeoms.push(f.geometry.coordinates);
-                            mixedGeomsBytes += ((_c = f.properties) === null || _c === void 0 ? void 0 : _c.__byteLength) || 0;
+                            mixedGeomsBytes += ((_a = f.properties) === null || _a === void 0 ? void 0 : _a.__byteLength) || 0;
                             if (mixedGeomsBytes > 10000) {
                                 console.log(`calculating intersection of mixed geoms. ${mixedGeomsBytes} bytes, ${mixedGeoms.length} geoms`);
                                 for (const geom of mixedGeoms) {
@@ -176,14 +183,14 @@ async function calculateArea(geography, sourceCache) {
                         }
                         else {
                             // outside
-                            classifiedLand.addFeature({
-                                type: "Feature",
-                                geometry: f.geometry,
-                                properties: {
-                                    class: "outside",
-                                    __offset: (_d = f.properties) === null || _d === void 0 ? void 0 : _d.__offset,
-                                },
-                            });
+                            // classifiedLand.addFeature({
+                            //   type: "Feature",
+                            //   geometry: f.geometry,
+                            //   properties: {
+                            //     class: "outside",
+                            //     __offset: f.properties?.__offset,
+                            //   },
+                            // });
                             outsideFeatures++;
                         }
                     }
@@ -211,7 +218,7 @@ async function calculateArea(geography, sourceCache) {
                 console.log("Small difference layer. Performing union to calculate area");
                 for (const b of envelopes) {
                     for await (const f of source.getFeaturesAsync(b)) {
-                        bytesFetched += ((_e = f.properties) === null || _e === void 0 ? void 0 : _e.__byteLength) || 0;
+                        bytesFetched += ((_b = f.properties) === null || _b === void 0 ? void 0 : _b.__byteLength) || 0;
                         if (bytesFetched > 40000000) {
                             throw new Error("bytes fetched too high, aborting. " + bytesFetched);
                         }
@@ -241,8 +248,22 @@ async function calculateArea(geography, sourceCache) {
             overlappingDifferenceFeaturesSqKm,
             total: sqKm - overlappingDifferenceFeaturesSqKm,
         });
-        await classifiedLand.close();
+        // await classifiedLand.close();
         return sqKm - overlappingDifferenceFeaturesSqKm;
     }
+}
+function ringArea(coords) {
+    let sum = 0;
+    for (let i = 0, len = coords.length, j = len - 1; i < len; j = i++) {
+        sum += (coords[j][0] - coords[i][0]) * (coords[j][1] + coords[i][1]);
+    }
+    return Math.abs(sum / 2);
+}
+function polygonArea(polygon) {
+    let area = ringArea(polygon[0]); // exterior
+    for (let i = 1; i < polygon.length; i++) {
+        area -= ringArea(polygon[i]); // subtract holes
+    }
+    return area;
 }
 //# sourceMappingURL=calculateArea.js.map

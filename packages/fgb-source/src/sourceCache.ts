@@ -175,6 +175,7 @@ export class SourceCache {
     // Check for in-flight request
     const inFlightRequest = this.inFlightRequests.get(key);
     if (inFlightRequest) {
+      console.log("returning in flight request", key);
       return inFlightRequest as Promise<FlatGeobufSource<T>>;
     }
 

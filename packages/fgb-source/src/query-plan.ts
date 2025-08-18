@@ -95,7 +95,7 @@ export function createQueryPlan(
     // 1. The distance between ranges is small enough
     // 2. The merged range size would be reasonable
     // 3. The total number of features in the range isn't too large
-    if (distance < overfetchBytes && currentRange.offsets.length < 10000) {
+    if (distance < overfetchBytes && currentRange.offsets.length < 1000) {
       // merge the ranges and add to existing request
       currentRange.range[1] = range[1];
       offset += distance;
@@ -152,6 +152,10 @@ export async function* executeQueryPlan(
     return { data, offsets, i };
   });
 
+  // console.time("await all fetches");
+  // await Promise.all(fetchPromises);
+  // console.timeEnd("await all fetches");
+
   // Use Promise.race to yield data as soon as each fetch is ready
   const pendingFetches = new Set(plan.map((_, i) => i));
 
@@ -163,17 +167,21 @@ export async function* executeQueryPlan(
 
     // Remove the completed fetch from the pending set
     pendingFetches.delete(completedFetch.i);
+    delete fetchPromises[completedFetch.i];
 
     // Process the completed fetch
     const { data, offsets } = completedFetch;
+    console.time("create dataview: " + data?.byteLength);
     const view = new DataView(data);
+    console.timeEnd("create dataview: " + data?.byteLength);
 
+    let i = 0;
     for (let [offset, length] of offsets) {
       if (length === null) {
         length = view.buffer.byteLength - offset;
       }
 
-      const featureView = new DataView(data, offset, length);
+      let featureView = new DataView(data, offset, length);
       if (VALIDATE_FEATURE_DATA) {
         const size = featureView.getUint32(0, true);
         if (size !== length - SIZE_PREFIX_LEN) {
@@ -184,9 +192,13 @@ export async function* executeQueryPlan(
       }
       yield [featureView, offset];
 
+      i++;
       // Yield control to event loop after each feature to allow other promises to resolve
       // This ensures pending fetch promises can complete their cleanup without blocking
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      if (i % 10 === 0) {
+        process.nextTick(() => {});
+        // await new Promise((resolve) => setTimeout(resolve, 0));
+      }
     }
   }
 }

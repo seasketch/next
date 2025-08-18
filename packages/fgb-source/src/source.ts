@@ -433,7 +433,9 @@ export async function createSource<
           }).then((response) => response.arrayBuffer());
         };
 
+  console.time("initial header fetch: " + urlOrKey);
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
+  console.timeEnd("initial header fetch: " + urlOrKey);
 
   const view = new DataView(headerData);
 
@@ -469,7 +471,9 @@ export async function createSource<
   const indexOffset = headerSize + MAGIC_BYTES.length + 4;
 
   if (headerData.byteLength < indexOffset + indexSize) {
+    console.time("fetch rest of index");
     headerData = await fetchRange([0, indexOffset + indexSize]);
+    console.timeEnd("fetch rest of index");
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);

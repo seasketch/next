@@ -1,4 +1,5 @@
 import * as pc from "polygon-clipping";
+import * as turf from "@turf/area";
 import RBush from "rbush";
 import { Polygon, MultiPolygon, BBox, Position } from "geojson";
 
@@ -50,29 +51,36 @@ function classifyRect(
   poly: MultiRings,
   eps: number = 1e-12
 ): "inside" | "outside" | "mixed" {
-  const I = pc.intersection(poly, [rectToPoly(rect)]);
+  const rectPoly = rectToPoly(rect);
+  const I = pc.intersection(poly, rectPoly);
+
   if (!I || I.length === 0) return "outside";
-  // pc returns a MultiPolygon; compute union area of I in degree^2:
-  let areaI = 0;
-  for (const mp of I)
-    for (const ringSet of mp) {
-      // outer ring only; holes rare for axis-aligned rect ∩ simple poly
-      const ring = ringSet[0];
-      for (let i = 0, a = 0; i < ring.length - 1; i++) {
-        // @ts-ignore
-        const point1 = ring[i] as [number, number];
-        // @ts-ignore
-        const point2 = ring[i + 1] as [number, number];
-        const x1 = point1[0];
-        const y1 = point1[1];
-        const x2 = point2[0];
-        const y2 = point2[1];
-        areaI += x1 * y2 - x2 * y1;
-      }
-    }
-  areaI = Math.abs(areaI) / 2; // shoelace in "degree^2"
+
+  // Convert intersection result to GeoJSON and use turf to calculate area
+  const intersectionGeoJSON = {
+    type: "MultiPolygon" as const,
+    coordinates: I,
+  };
+
+  const areaI = turf.default(intersectionGeoJSON);
+  console.log(`Intersection area (turf): ${areaI}`);
+
   const aR = rectArea(rect);
-  if (Math.abs(areaI - aR) <= eps * Math.max(1, aR)) return "inside";
+  console.log(
+    `Rect [${rect.join(
+      ", "
+    )}]: intersection area=${areaI}, rect area=${aR}, diff=${Math.abs(
+      areaI - aR
+    )}`
+  );
+
+  // Check if the intersection area is very close to the rectangle area (within 1%)
+  const areaRatio = areaI / aR;
+  if (areaRatio > 0.99) return "inside";
+
+  // Check if the intersection area is very small compared to rectangle area (outside)
+  if (areaRatio < 0.01) return "outside";
+
   return "mixed";
 }
 
@@ -96,12 +104,12 @@ function splitRect(rect: Rect, axis: "x" | "y" = "x"): [Rect, Rect] {
 
 // Helper function to convert BBox to Rect (2D only)
 function bboxToRect(bbox: BBox): Rect {
-  // BBox is [minX, minY, minZ?, maxX, maxY, maxZ?] - we only use 2D
+  // BBox is [minX, minY, maxX, maxY] for 2D
   // Ensure we have valid numbers
   const minX = bbox[0] ?? 0;
   const minY = bbox[1] ?? 0;
-  const maxX = bbox[3] ?? 0;
-  const maxY = bbox[4] ?? 0;
+  const maxX = bbox[2] ?? 0;
+  const maxY = bbox[3] ?? 0;
   return [minX, minY, maxX, maxY];
 }
 
@@ -121,6 +129,12 @@ export function coverWithRectangles(
   } = {}
 ): { inside: Rect[]; outside: Rect[] } {
   const poly = toPC(geojson);
+  console.log(
+    `Polygon has ${poly.length} parts, first part has ${
+      poly[0]?.length || 0
+    } rings`
+  );
+
   // start from overall bbox (or given)
   const B: Rect = bbox
     ? bboxToRect(bbox)
@@ -149,6 +163,7 @@ export function coverWithRectangles(
     outside: Rect[] = [],
     queue: Rect[] = [];
   // Seed
+  console.log(`Initial bounding box: [${B.join(", ")}], area: ${rectArea(B)}`);
   queue.push(B);
 
   while (queue.length && inside.length < target) {
@@ -157,15 +172,28 @@ export function coverWithRectangles(
     queue.sort((a, b) => rectArea(b) - rectArea(a));
     const R = queue.shift()!;
     const [minX, minY, maxX, maxY] = R;
-    if (maxX - minX < minWidth || maxY - minY < minHeight) continue;
+    console.log(
+      `Processing rect: [${minX}, ${minY}, ${maxX}, ${maxY}], area: ${rectArea(
+        R
+      )}`
+    );
+
+    if (maxX - minX < minWidth || maxY - minY < minHeight) {
+      console.log(`Rect too small, skipping`);
+      continue;
+    }
 
     const cls = classifyRect(R, poly);
+    console.log(`Classification: ${cls}`);
+
     if (cls === "inside") {
       inside.push(R);
+      console.log(`Added to inside, total: ${inside.length}`);
       continue;
     }
     if (cls === "outside") {
       outside.push(R);
+      console.log(`Added to outside, total: ${outside.length}`);
       continue;
     }
 
@@ -176,6 +204,7 @@ export function coverWithRectangles(
     const gainY = scoreSplit(r1y, r2y, poly);
 
     const chosen = gainX >= gainY ? [r1x, r2x] : [r1y, r2y];
+    console.log(`Splitting rect, adding 2 new rects to queue`);
     queue.push(chosen[0], chosen[1]);
   }
 

@@ -2340,7 +2340,7 @@ function createQueryPlan(results, featureDataOffset, options) {
     const [start2, length2] = results[i];
     const range = toRange([start2, length2], featureDataOffset);
     const distance = range[0] - currentRange.range[1] - 1;
-    if (distance < overfetchBytes && currentRange.offsets.length < 1e4) {
+    if (distance < overfetchBytes && currentRange.offsets.length < 1e3) {
       currentRange.range[1] = range[1];
       offset += distance;
       currentRange.offsets.push([offset, length2]);
@@ -2374,18 +2374,26 @@ async function* executeQueryPlan(plan, fetchRange, options = {}) {
   const pendingFetches = new Set(plan.map((_, i) => i));
   while (pendingFetches.size > 0) {
     const completedFetch = await Promise.race(
-      [...pendingFetches].map((i) => fetchPromises[i])
+      [...pendingFetches].map((i2) => fetchPromises[i2])
     );
     pendingFetches.delete(completedFetch.i);
+    delete fetchPromises[completedFetch.i];
     const { data, offsets } = completedFetch;
+    console.time("create dataview: " + data?.byteLength);
     const view = new DataView(data);
+    console.timeEnd("create dataview: " + data?.byteLength);
+    let i = 0;
     for (let [offset, length] of offsets) {
       if (length === null) {
         length = view.buffer.byteLength - offset;
       }
-      const featureView = new DataView(data, offset, length);
+      let featureView = new DataView(data, offset, length);
       yield [featureView, offset];
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      i++;
+      if (i % 10 === 0) {
+        process.nextTick(() => {
+        });
+      }
     }
   }
 }
@@ -2672,7 +2680,9 @@ async function createSource(urlOrKey, options) {
       headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` }
     }).then((response) => response.arrayBuffer());
   };
+  console.time("initial header fetch: " + urlOrKey);
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
+  console.timeEnd("initial header fetch: " + urlOrKey);
   const view = new DataView(headerData);
   for (let i = 0; i < MAGIC_BYTES.length; i++) {
     if (view.getUint8(i) !== MAGIC_BYTES[i] && i < MAGIC_BYTES.length - 1) {
@@ -2697,7 +2707,9 @@ async function createSource(urlOrKey, options) {
   const indexSize = rtreeDetails.nodesByteSize;
   const indexOffset = headerSize + MAGIC_BYTES.length + 4;
   if (headerData.byteLength < indexOffset + indexSize) {
+    console.time("fetch rest of index");
     headerData = await fetchRange([0, indexOffset + indexSize]);
+    console.timeEnd("fetch rest of index");
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
@@ -2807,6 +2819,7 @@ var SourceCache = class {
     }
     const inFlightRequest = this.inFlightRequests.get(key);
     if (inFlightRequest) {
+      console.log("returning in flight request", key);
       return inFlightRequest;
     }
     const mergedOptions = {
