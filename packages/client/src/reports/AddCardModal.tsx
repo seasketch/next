@@ -1,7 +1,7 @@
 import React from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
-import { getAvailableCardTypes, getCardPickerComponent } from "./registerCard";
+import { getAvailableCardTypes, getCardRegistration } from "./registerCard";
 import { ReportContext, useReportContext } from "./ReportContext";
 
 interface AddCardModalProps {
@@ -39,34 +39,43 @@ export function AddCardModal({ isOpen, onClose, onSelect }: AddCardModalProps) {
         </p>
 
         {/* Cards Grid */}
-        {/* Turn off AdminMode for this modal */}
-        <ReportContext.Provider
-          value={{
-            ...context,
-            adminMode: false,
-          }}
-        >
-          <div className="grid grid-cols-1 gap-3 bg-gray-100 p-4 flex-1 border-t w-128">
-            {availableCardTypes.map((cardType) => {
-              const cardComponent = getCardPickerComponent(cardType);
+        <div className="grid grid-cols-1 gap-3 bg-gray-100 p-4 flex-1 border-t w-128">
+          {availableCardTypes.map((cardType) => {
+            const registration = getCardRegistration(cardType);
+            if (!registration) return null;
 
-              return (
-                <div
-                  key={cardType}
-                  role="button"
-                  className="hover:outline outline-blue-400 rounded mx-auto w-full"
-                  // className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 hover:bg-blue-50 cursor-pointer transition-colors duration-150"
-                  onClick={() => {
-                    onSelect(cardType);
-                    onClose();
-                  }}
-                >
-                  {cardComponent}
+            const IconComponent = registration.icon;
+
+            return (
+              <div
+                key={cardType}
+                role="button"
+                className="bg-white rounded-lg p-4 hover:outline outline-blue-500 cursor-pointer transition-colors duration-150"
+                onClick={() => {
+                  onSelect(cardType);
+                  onClose();
+                }}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="flex-shrink-0 w-8 h-8 rounded overflow-hidden">
+                    <IconComponent
+                      componentSettings={registration.defaultSettings}
+                      sketchClass={null}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-base font-medium text-gray-800">
+                      {registration.label}
+                    </div>
+                    <div className="text-sm text-gray-600 mt-1">
+                      {registration.description}
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </ReportContext.Provider>
+              </div>
+            );
+          })}
+        </div>
 
         {/* Empty State */}
         {availableCardTypes.length === 0 && (

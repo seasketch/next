@@ -5,6 +5,8 @@ import {
   ReportCardConfigUpdateCallback,
 } from "../registerCard";
 import { lazy } from "react";
+import { Trans } from "react-i18next";
+import { DocumentTextIcon } from "@heroicons/react/outline";
 
 export type TextBlockCardConfiguration = ReportCardConfiguration<{
   presentation: "default" | "info" | "warning" | "error";
@@ -44,45 +46,60 @@ const defaultComponentSettings: TextBlockCardConfiguration["componentSettings"] 
     presentation: "default",
   };
 
+const defaultBody = {
+  type: "doc",
+  content: [
+    {
+      type: "reportTitle",
+      content: [
+        {
+          type: "text",
+          text: "Text Block",
+        },
+      ],
+    },
+    {
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text: "Use ",
+        },
+        {
+          type: "text",
+          text: "Text Blocks",
+          marks: [{ type: "strong" }],
+        },
+        {
+          type: "text",
+          text: " to add instructions or other details to your report.",
+        },
+      ],
+    },
+  ],
+};
+
+function TextBlockCardIcon() {
+  return (
+    <div className="bg-blue-900 w-full h-full font-bold text-center flex justify-center items-center text-white">
+      {/*eslint-disable-next-line i18next/no-literal-string*/}
+      <span className="text-2xl">¶</span>
+    </div>
+  );
+}
+
 registerReportCardType({
   type: "TextBlock",
   component: TextBlockCard,
   defaultSettings: defaultComponentSettings,
-  pickerSettings: {
-    componentSettings: defaultComponentSettings,
-    body: {
-      type: "doc",
-      content: [
-        {
-          type: "reportTitle",
-          content: [
-            {
-              type: "text",
-              text: "Text Block",
-            },
-          ],
-        },
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              text: "Use ",
-            },
-            {
-              type: "text",
-              text: "Text Blocks",
-              marks: [{ type: "strong" }],
-            },
-            {
-              type: "text",
-              text: " to add instructions or other details to your report.",
-            },
-          ],
-        },
-      ],
-    },
-  },
+  defaultBody: defaultBody,
+  label: <Trans ns="admin:sketching">Text Block</Trans>,
+  description: (
+    <Trans ns="admin:sketching">
+      Add instructions, descriptions, or other text content to your report.
+    </Trans>
+  ),
+  icon: TextBlockCardIcon,
   adminComponent: lazy(() => import("./TextBlockCardAdmin")),
 });
 

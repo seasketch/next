@@ -11,6 +11,8 @@ import { useMetrics } from "../hooks/useMetrics";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useReportContext } from "../ReportContext";
 import Skeleton from "../../components/Skeleton";
+import { Trans } from "react-i18next";
+import { RulerSquareIcon } from "@radix-ui/react-icons";
 
 export type SizeCardConfiguration = ReportCardConfiguration<{}>;
 
@@ -78,29 +80,39 @@ export function SizeCard({
 
 const defaultComponentSettings: SizeCardConfiguration["componentSettings"] = {};
 
+const defaultBody = {
+  type: "doc",
+  content: [
+    {
+      type: "reportTitle",
+      content: [
+        {
+          type: "text",
+          text: "Size",
+        },
+      ],
+    },
+  ],
+};
+
+function SizeCardIcon() {
+  return (
+    <div className="bg-blue-100 w-full h-full text-blue-600 flex justify-center items-center rounded">
+      <RulerSquareIcon className="w-5 h-5" />
+    </div>
+  );
+}
+
 registerReportCardType({
   type: "Size",
   component: SizeCard,
   defaultSettings: defaultComponentSettings,
-  pickerSettings: {
-    componentSettings: defaultComponentSettings,
-    body: {
-      type: "doc",
-      content: [
-        {
-          type: "reportTitle",
-          content: [
-            {
-              type: "text",
-              text: "Size",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  // requiredMetrics: (componentSettings) => {
-
-  // }
-  // adminComponent: lazy(() => import("./SizeCardAdmin")),
+  defaultBody: defaultBody,
+  label: <Trans ns="admin:sketching">Size</Trans>,
+  description: (
+    <Trans ns="admin:sketching">
+      Display the total area of all geographies in square kilometers.
+    </Trans>
+  ),
+  icon: SizeCardIcon,
 });

@@ -2247,23 +2247,20 @@ var FetchManager = class {
     const cacheKey = `${range[0]}-${range[1] ?? ""}`;
     const cached = this.cache.get(cacheKey);
     if (cached) {
-      console.log("returning cached", cacheKey);
       return cached;
     }
     const inFlightRequest = this.inFlightRequests.get(cacheKey);
     if (inFlightRequest) {
-      console.log("returning in flight request", cacheKey);
       return inFlightRequest;
     }
+    const timeout = setTimeout(() => {
+      throw new Error("Request timed out");
+    }, 12e4);
     const requestPromise = this.fetchRangeFn(range).then(
       (bytes3) => {
-        console.log("got bytes", bytes3.byteLength);
+        clearTimeout(timeout);
         this.cache.set(cacheKey, bytes3);
         this.inFlightRequests.delete(cacheKey);
-        console.log(
-          "deleting cachekey. in flight requests cache size",
-          this.inFlightRequests.size
-        );
         return bytes3;
       },
       (error) => {
@@ -2273,11 +2270,6 @@ var FetchManager = class {
       }
     );
     this.inFlightRequests.set(cacheKey, requestPromise);
-    console.log(
-      "setting cachekey. in flight requests cache size",
-      this.inFlightRequests.size,
-      range
-    );
     return requestPromise;
   }
   /**
@@ -2379,9 +2371,7 @@ async function* executeQueryPlan(plan, fetchRange, options = {}) {
     pendingFetches.delete(completedFetch.i);
     delete fetchPromises[completedFetch.i];
     const { data, offsets } = completedFetch;
-    console.time("create dataview: " + data?.byteLength);
     const view = new DataView(data);
-    console.timeEnd("create dataview: " + data?.byteLength);
     let i = 0;
     for (let [offset, length] of offsets) {
       if (length === null) {
@@ -2596,14 +2586,14 @@ var FlatGeobufSource = class {
     if (!Array.isArray(bbox)) {
       bbox = [bbox];
     }
+    let offsetsSet = /* @__PURE__ */ new Set();
     let offsetAndLengths = [];
     for (const b of bbox) {
       const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
       for (const result of results) {
-        const existing = offsetAndLengths.find(
-          (p) => p[0] === result[0] && p[1] === result[1]
-        );
-        if (!existing) {
+        const key = `${result[0]}-${result[1]}`;
+        if (!offsetsSet.has(key)) {
+          offsetsSet.add(key);
           offsetAndLengths.push(result);
         }
       }
@@ -2707,9 +2697,7 @@ async function createSource(urlOrKey, options) {
   const indexSize = rtreeDetails.nodesByteSize;
   const indexOffset = headerSize + MAGIC_BYTES.length + 4;
   if (headerData.byteLength < indexOffset + indexSize) {
-    console.time("fetch rest of index");
     headerData = await fetchRange([0, indexOffset + indexSize]);
-    console.timeEnd("fetch rest of index");
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
@@ -2819,7 +2807,6 @@ var SourceCache = class {
     }
     const inFlightRequest = this.inFlightRequests.get(key);
     if (inFlightRequest) {
-      console.log("returning in flight request", key);
       return inFlightRequest;
     }
     const mergedOptions = {

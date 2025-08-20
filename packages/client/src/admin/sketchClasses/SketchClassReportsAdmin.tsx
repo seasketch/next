@@ -51,6 +51,7 @@ import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
 import { MetricSubjectFragment } from "overlay-engine";
+import GeographyMetricsProgressIndicator from "./GeographyMetricsProgressIndicator";
 
 registerCards();
 
@@ -151,6 +152,11 @@ export default function SketchClassReportsAdmin({
   const [localCardEdits, setLocalCardEdits] =
     useState<ReportCardConfiguration<any> | null>(null);
 
+  // Optimistic state for card ordering
+  const [optimisticCardOrder, setOptimisticCardOrder] = useState<{
+    [tabId: number]: number[];
+  }>({});
+
   const history = useHistory();
 
   const draftReport = data?.sketchClass?.draftReport;
@@ -175,7 +181,19 @@ export default function SketchClassReportsAdmin({
           cardIds,
         },
       });
+      // Clear optimistic state on success
+      setOptimisticCardOrder((prev) => {
+        const newState = { ...prev };
+        delete newState[reportTabId];
+        return newState;
+      });
     } catch (error) {
+      // Revert optimistic state on error
+      setOptimisticCardOrder((prev) => {
+        const newState = { ...prev };
+        delete newState[reportTabId];
+        return newState;
+      });
       // Error is handled by onError
     }
   };
@@ -211,7 +229,7 @@ export default function SketchClassReportsAdmin({
           reportTabId: reportState.selectedTab.id,
           componentSettings: registration.defaultSettings,
           cardType: cardType,
-          body: registration.pickerSettings.body || {},
+          body: registration.defaultBody || {},
         },
       });
       setAddCardModalOpen(false);
@@ -383,88 +401,90 @@ export default function SketchClassReportsAdmin({
   } as ReportCardConfiguration<any>;
 
   return (
-    <FormLanguageContext.Provider
+    <ReportContext.Provider
       value={{
-        lang: language,
-        setLanguage: (code: string) => {
-          const lang = languages.find((lang) => lang.code === code);
-          if (!lang) {
-            throw new Error(`Unrecognized language ${code}`);
-          }
-          setLanguage(lang);
-          i18n.changeLanguage(lang.code);
-        },
-        supportedLanguages:
-          (projectData?.project?.supportedLanguages as string[]) || [],
+        report: draftReport as unknown as ReportConfiguration,
+        adminMode: true,
+        ...reportState,
+        deleteCard: handleDeleteCard,
+        isCollection: false,
+        geographies: data?.sketchClass?.project?.geographies || [],
       }}
     >
-      <div className="flex flex-col w-full h-full">
-        {/* Header */}
-        <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
-          <div className="flex-none space-x-2">
-            <Button
-              small
-              disabled={publishReportState.loading || !hasUnpublishedChanges}
-              title={
-                hasUnpublishedChanges
-                  ? t("There are unpublished changes. Publish to save them.")
-                  : t("No unpublished changes")
-              }
-              loading={publishReportState.loading}
-              label={t("Publish Report")}
-              onClick={() => {
-                publishReport({
-                  variables: {
-                    sketchClassId: sketchClass.id,
-                  },
-                });
-              }}
-              primary={hasUnpublishedChanges}
-            />
-            <span className="text-sm text-gray-500">
-              {data?.sketchClass?.report &&
-                t("Published ") +
-                  new Date(
-                    data.sketchClass.report.createdAt
-                  ).toLocaleDateString()}
-            </span>
-          </div>
-          <div className="flex-1 flex items-center justify-center">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600">{t("Demo Sketch:")}</span>
-              <DropdownButton
+      <FormLanguageContext.Provider
+        value={{
+          lang: language,
+          setLanguage: (code: string) => {
+            const lang = languages.find((lang) => lang.code === code);
+            if (!lang) {
+              throw new Error(`Unrecognized language ${code}`);
+            }
+            setLanguage(lang);
+            i18n.changeLanguage(lang.code);
+          },
+          supportedLanguages:
+            (projectData?.project?.supportedLanguages as string[]) || [],
+        }}
+      >
+        <div className="flex flex-col w-full h-full">
+          {/* Header */}
+          <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
+            <div className="flex-none space-x-2">
+              <Button
                 small
-                disabled={sketchesForDemonstration.length === 0}
-                label={
-                  selectedSketch ? (
-                    <Trans ns="admin:sketching">
-                      Displayed Sketch: {selectedSketch.name}
-                    </Trans>
-                  ) : (
-                    t("Select a sketch...")
-                  )
+                disabled={publishReportState.loading || !hasUnpublishedChanges}
+                title={
+                  hasUnpublishedChanges
+                    ? t("There are unpublished changes. Publish to save them.")
+                    : t("No unpublished changes")
                 }
-                options={sketchesForDemonstration.map((sketch) => ({
-                  label: sketch.name,
-                  onClick: () => setSelectedSketchId(sketch.id),
-                  id: sketch.id.toString(),
-                  selected: sketch.id === selectedSketchId,
-                }))}
+                loading={publishReportState.loading}
+                label={t("Publish Report")}
+                onClick={() => {
+                  publishReport({
+                    variables: {
+                      sketchClassId: sketchClass.id,
+                    },
+                  });
+                }}
+                primary={hasUnpublishedChanges}
               />
+              <span className="text-sm text-gray-500">
+                {data?.sketchClass?.report &&
+                  t("Published ") +
+                    new Date(
+                      data.sketchClass.report.createdAt
+                    ).toLocaleDateString()}
+              </span>
             </div>
+            <div className="flex-1 flex items-center justify-center">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600">
+                  {t("Demo Sketch:")}
+                </span>
+                <DropdownButton
+                  small
+                  disabled={sketchesForDemonstration.length === 0}
+                  label={
+                    selectedSketch ? (
+                      <Trans ns="admin:sketching">
+                        Displayed Sketch: {selectedSketch.name}
+                      </Trans>
+                    ) : (
+                      t("Select a sketch...")
+                    )
+                  }
+                  options={sketchesForDemonstration.map((sketch) => ({
+                    label: sketch.name,
+                    onClick: () => setSelectedSketchId(sketch.id),
+                    id: sketch.id.toString(),
+                    selected: sketch.id === selectedSketchId,
+                  }))}
+                />
+              </div>
+            </div>
+            <EditorLanguageSelector />
           </div>
-          <EditorLanguageSelector />
-        </div>
-        <ReportContext.Provider
-          value={{
-            report: draftReport as unknown as ReportConfiguration,
-            adminMode: true,
-            ...reportState,
-            deleteCard: handleDeleteCard,
-            isCollection: false,
-            geographies: data?.sketchClass?.project?.geographies || [],
-          }}
-        >
           {/* Main */}
           <div className="flex-1 flex relative">
             {/* left sidebar */}
@@ -609,6 +629,14 @@ export default function SketchClassReportsAdmin({
                       const destinationIndex = result.destination.index;
                       const [removed] = cardIds.splice(sourceIndex, 1);
                       cardIds.splice(destinationIndex, 0, removed);
+
+                      // Update optimistic state immediately
+                      setOptimisticCardOrder((prev) => ({
+                        ...prev,
+                        [sourceTabId]: cardIds,
+                      }));
+
+                      // Call the reorder function
                       handleCardReorder(cardIds, sourceTabId);
                     }
                   } else if (
@@ -735,6 +763,11 @@ export default function SketchClassReportsAdmin({
                           selectedForEditing={reportState.selectedForEditing}
                           localCardEdits={localCardEdits}
                           onCardUpdate={handleCardUpdate}
+                          optimisticCardOrder={
+                            optimisticCardOrder[
+                              reportState.selectedTab?.id || 0
+                            ]
+                          }
                         />
                         {/* Add Card Modal */}
                         {draftReport && (
@@ -765,13 +798,15 @@ export default function SketchClassReportsAdmin({
 
             {/* right sidebar */}
             <div className="w-0 bg-white flex-none border-l shadow"></div>
+            {/* bottom right geography metrics indicator */}
+            <GeographyMetricsProgressIndicator />
           </div>
-        </ReportContext.Provider>
 
-        {/* Footer */}
-        {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
-      </div>
-    </FormLanguageContext.Provider>
+          {/* Footer */}
+          {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
+        </div>
+      </FormLanguageContext.Provider>
+    </ReportContext.Provider>
   );
 }
 

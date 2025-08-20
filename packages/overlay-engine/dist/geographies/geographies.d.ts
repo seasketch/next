@@ -49,6 +49,11 @@ export interface ClippingLayerOption {
      * @see evaluateCql2JSONQuery for supported query syntax
      */
     cql2Query?: Cql2Query;
+    /**
+     * Optional hint for the size of the header of the source file. This is used
+     * to optimize the query plan by avoiding fetching the entire header.
+     */
+    headerSizeHint?: number;
 }
 /**
  * Clips a sketch to a geography defined by one or more clipping layers.

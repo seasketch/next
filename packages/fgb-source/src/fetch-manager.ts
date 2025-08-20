@@ -84,28 +84,28 @@ export class FetchManager {
     // Check cache first
     const cached = this.cache.get(cacheKey);
     if (cached) {
-      console.log("returning cached", cacheKey);
       return cached;
     }
 
     // Check for in-flight request
     const inFlightRequest = this.inFlightRequests.get(cacheKey);
     if (inFlightRequest) {
-      console.log("returning in flight request", cacheKey);
       return inFlightRequest;
     }
+
+    // Add a timeout to the request
+    const timeout = setTimeout(() => {
+      throw new Error("Request timed out");
+    }, 120000);
 
     // Create new request promise
     const requestPromise = this.fetchRangeFn(range).then(
       (bytes) => {
-        console.log("got bytes", bytes.byteLength);
+        // cancel the timeout
+        clearTimeout(timeout);
         // Store in cache
         this.cache.set(cacheKey, bytes);
         this.inFlightRequests.delete(cacheKey);
-        console.log(
-          "deleting cachekey. in flight requests cache size",
-          this.inFlightRequests.size
-        );
         return bytes;
       },
       (error) => {
@@ -117,11 +117,6 @@ export class FetchManager {
 
     // Store request in in-flight map
     this.inFlightRequests.set(cacheKey, requestPromise);
-    console.log(
-      "setting cachekey. in flight requests cache size",
-      this.inFlightRequests.size,
-      range
-    );
     return requestPromise;
   }
 

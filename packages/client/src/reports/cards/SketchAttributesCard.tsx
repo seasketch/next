@@ -9,6 +9,7 @@ import { useReportContext } from "../ReportContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { Trans, useTranslation } from "react-i18next";
 import { lazy } from "react";
+import { DocumentSearchIcon } from "@heroicons/react/outline";
 
 export type SketchAttributesCardConfiguration = ReportCardConfiguration<{
   filterAttributes?: boolean;
@@ -195,22 +196,36 @@ const defaultComponentSettings: SketchAttributesCardConfiguration["componentSett
     selectedAttributeIds: [],
   };
 
+const defaultBody = {
+  type: "doc",
+  content: [
+    {
+      type: "reportTitle",
+      content: [{ type: "text", text: "Sketch Attributes" }],
+    },
+  ],
+};
+
+function SketchAttributesCardIcon() {
+  return (
+    <div className="bg-green-100 w-full h-full text-green-600 flex justify-center items-center rounded">
+      <DocumentSearchIcon className="w-5 h-5" />
+    </div>
+  );
+}
+
 // Register the card type
 registerReportCardType({
   type: "Attributes",
   component: SketchAttributesCard,
   adminComponent: SketchAttributesCardAdmin,
   defaultSettings: defaultComponentSettings,
-  pickerSettings: {
-    body: {
-      type: "doc",
-      content: [
-        {
-          type: "reportTitle",
-          content: [{ type: "text", text: "Sketch Attributes" }],
-        },
-      ],
-    },
-    componentSettings: defaultComponentSettings,
-  },
+  defaultBody: defaultBody,
+  label: <Trans ns="admin:sketching">Sketch Attributes</Trans>,
+  description: (
+    <Trans ns="admin:sketching">
+      Display the attributes and values of the current sketch.
+    </Trans>
+  ),
+  icon: SketchAttributesCardIcon,
 });

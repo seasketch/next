@@ -2,7 +2,7 @@ import { ReportCardIcon } from "../ReportCard";
 
 export type ProsemirrorBodyJSON = any;
 
-export type ReportCardType = "Attributes" | "TextBlock" | "SketchSize" | "Size";
+export type ReportCardType = "Attributes" | "TextBlock" | "Size";
 
 /**
  * A ReportCardConfiguration is a configuration object for a card that is

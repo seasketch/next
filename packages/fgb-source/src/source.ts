@@ -294,16 +294,14 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     if (!Array.isArray(bbox)) {
       bbox = [bbox];
     }
+    let offsetsSet = new Set<string>();
     let offsetAndLengths: OffsetAndLength[] = [];
     for (const b of bbox) {
       const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
       for (const result of results) {
-        // check if the range is already in the query plan
-        const existing = offsetAndLengths.find(
-          (p) => p[0] === result[0] && p[1] === result[1]
-        );
-        if (!existing) {
-          // if not, add it to the query plan
+        const key = `${result[0]}-${result[1]}`;
+        if (!offsetsSet.has(key)) {
+          offsetsSet.add(key);
           offsetAndLengths.push(result);
         }
       }
@@ -471,9 +469,7 @@ export async function createSource<
   const indexOffset = headerSize + MAGIC_BYTES.length + 4;
 
   if (headerData.byteLength < indexOffset + indexSize) {
-    console.time("fetch rest of index");
     headerData = await fetchRange([0, indexOffset + indexSize]);
-    console.timeEnd("fetch rest of index");
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);

@@ -42,6 +42,7 @@
     "@turf/boolean-intersects": "^7.2.0",
     "@turf/boolean-point-in-polygon": "^7.2.0",
     "@turf/boolean-touches": "^7.2.0",
+    "@turf/flatten": "^7.2.0",
     "@turf/invariant": "^7.2.0",
     "@turf/simplify": "^7.2.0",
     "@types/flatbush": "^4.2.2",

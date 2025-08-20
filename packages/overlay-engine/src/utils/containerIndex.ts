@@ -86,9 +86,9 @@ export class ContainerIndex {
 
   /**
    * Classify a candidate polygon:
-   *  - 'outside': bbox disjoint OR vertex outside and no boundary crossings
-   *  - 'inside':  no boundary crossings & vertex inside
-   *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary
+   *  - 'outside': bbox disjoint OR all sampled vertices outside and no boundary crossings
+   *  - 'inside':  no boundary crossings & all sampled vertices inside
+   *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices
    */
   classify(candidate: CandidateFeature): Classification {
     const candBBox = turfBbox(candidate);
@@ -121,17 +121,41 @@ export class ContainerIndex {
       }
     }
 
-    // No boundary crossings: one vertex test decides
-    const v = firstVertex(candidate.geometry);
-    // Treat boundary as mixed: ignoreBoundary=false (the default)
-    const onOrIn = booleanPointInPolygon(turfPoint(v), this.container);
-    if (!onOrIn) return "outside";
+    // No boundary crossings: test multiple representative vertices
+    // const vertices = sampleRepresentativeVertices(candidate.geometry, 1);
+    const vertices = [firstVertex(candidate.geometry)];
+    // console.log("vertices", vertices);
 
-    // booleanPointInPolygon doesn't directly tell on-boundary vs strictly inside.
-    // If you need to distinguish, run a precise point-on-segment test here.
-    // For most workflows, counting boundary as 'mixed' is safer:
-    if (pointOnAnyRingBoundary(v, this.rings)) return "mixed";
+    let insideCount = 0;
+    let outsideCount = 0;
+    let boundaryCount = 0;
 
+    for (const v of vertices) {
+      // Treat boundary as mixed: ignoreBoundary=false (the default)
+      const onOrIn = booleanPointInPolygon(turfPoint(v), this.container);
+
+      if (onOrIn) {
+        // Check if vertex is exactly on boundary
+        if (pointOnAnyRingBoundary(v, this.rings)) {
+          boundaryCount++;
+        } else {
+          insideCount++;
+        }
+      } else {
+        outsideCount++;
+      }
+    }
+
+    // If any vertex is on boundary, classify as mixed
+    if (boundaryCount > 0) return "mixed";
+
+    // If we have both inside and outside vertices, classify as mixed
+    if (insideCount > 0 && outsideCount > 0) return "mixed";
+
+    // If all vertices are outside, classify as outside
+    if (outsideCount > 0) return "outside";
+
+    // If all vertices are inside, classify as inside
     return "inside";
   }
 
@@ -195,6 +219,80 @@ function firstVertex(geom: Geometry): Pt {
     return ring[0];
   }
   throw new Error(`Unsupported geometry type: ${geom.type}`);
+}
+
+/**
+ * Sample multiple representative vertices from a geometry to better determine
+ * if it's inside, outside, or mixed relative to a container.
+ *
+ * Strategy: sample vertices from different parts of the polygon to avoid
+ * misclassification due to complex shapes or unrepresentative first vertices.
+ */
+function sampleRepresentativeVertices(
+  geom: Geometry,
+  maxSamples: number = 5
+): Pt[] {
+  const vertices: Pt[] = [];
+
+  if (geom.type === "Polygon") {
+    const ring = ensureClosed(geom.coordinates[0]);
+
+    if (ring.length <= maxSamples) {
+      // If polygon has few vertices, use them all
+      for (let i = 0; i < ring.length - 1; i++) {
+        vertices.push(ring[i]);
+      }
+    } else {
+      // Sample vertices at regular intervals across the polygon
+      for (let i = 0; i < maxSamples; i++) {
+        const idx = Math.floor((i * (ring.length - 2)) / (maxSamples - 1));
+        vertices.push(ring[idx]);
+      }
+    }
+  } else if (geom.type === "MultiPolygon") {
+    // For multipolygons, sample from each polygon
+    let totalSamples = 0;
+    for (const poly of geom.coordinates) {
+      const ring = ensureClosed(poly[0]);
+      if (ring.length <= 2) continue; // Skip degenerate polygons
+
+      const samplesPerPoly = Math.max(
+        1,
+        Math.floor(maxSamples / geom.coordinates.length)
+      );
+      if (ring.length <= samplesPerPoly) {
+        // Use all vertices from this polygon
+        for (let i = 0; i < ring.length - 1; i++) {
+          vertices.push(ring[i]);
+          totalSamples++;
+        }
+      } else {
+        // Use the same robust sampling strategy
+        const totalVertices = ring.length - 1; // Exclude closing vertex
+        const samples = Math.min(samplesPerPoly, totalVertices);
+
+        // Always include the first vertex
+        vertices.push(ring[0]);
+        totalSamples++;
+
+        if (samples > 1) {
+          // Sample vertices at regular intervals across the polygon
+          for (let i = 1; i < samples && totalSamples < maxSamples; i++) {
+            const idx = Math.floor((i * totalVertices) / samples);
+            const clampedIdx = Math.min(idx, totalVertices - 1);
+            vertices.push(ring[clampedIdx]);
+            totalSamples++;
+          }
+        }
+      }
+
+      if (totalSamples >= maxSamples) break;
+    }
+  } else {
+    throw new Error(`Unsupported geometry type: ${geom.type}`);
+  }
+
+  return vertices;
 }
 
 // Optional: boundary check to treat vertex exactly on container edge as 'mixed'

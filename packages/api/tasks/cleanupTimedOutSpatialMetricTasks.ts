@@ -6,7 +6,7 @@ export default async function cleanupTimedOutSpatialMetricTasks(
 ) {
   await helpers.withPgClient(async (client) => {
     await client.query(
-      `update spatial_metrics set state = 'error', error_message = 'Timeout' where state = 'queued' and created_at < now() - interval '10 seconds'`
+      `update spatial_metrics set state = 'error', error_message = 'Timeout' where state = 'queued' and created_at < now() - interval '60 seconds'`
     );
   });
 }

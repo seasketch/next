@@ -152,10 +152,6 @@ export async function* executeQueryPlan(
     return { data, offsets, i };
   });
 
-  // console.time("await all fetches");
-  // await Promise.all(fetchPromises);
-  // console.timeEnd("await all fetches");
-
   // Use Promise.race to yield data as soon as each fetch is ready
   const pendingFetches = new Set(plan.map((_, i) => i));
 
@@ -171,9 +167,7 @@ export async function* executeQueryPlan(
 
     // Process the completed fetch
     const { data, offsets } = completedFetch;
-    console.time("create dataview: " + data?.byteLength);
     const view = new DataView(data);
-    console.timeEnd("create dataview: " + data?.byteLength);
 
     let i = 0;
     for (let [offset, length] of offsets) {

@@ -19,9 +19,9 @@ export declare class ContainerIndex {
     constructor(container: ContainerFeature);
     /**
      * Classify a candidate polygon:
-     *  - 'outside': bbox disjoint OR vertex outside and no boundary crossings
-     *  - 'inside':  no boundary crossings & vertex inside
-     *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary
+     *  - 'outside': bbox disjoint OR all sampled vertices outside and no boundary crossings
+     *  - 'inside':  no boundary crossings & all sampled vertices inside
+     *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices
      */
     classify(candidate: CandidateFeature): Classification;
     getBBoxPolygons(): FeatureCollection<Polygon, import("geojson").GeoJsonProperties>;
