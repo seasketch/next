@@ -1,7 +1,10 @@
 import { useTranslation, Trans } from "react-i18next";
 import { useReportContext } from "../../reports/ReportContext";
-import { SpatialMetricState } from "../../generated/graphql";
-import { subjectIsGeography } from "overlay-engine/dist/metrics/metrics";
+import { Geography, SpatialMetricState } from "../../generated/graphql";
+import {
+  subjectIsFragment,
+  subjectIsGeography,
+} from "overlay-engine/dist/metrics/metrics";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
@@ -56,19 +59,6 @@ export default function GeographyMetricsProgressIndicator() {
         m.state === SpatialMetricState.Queued)
   );
 
-  const currentlyProcessing = inProgress.find(
-    (m) => m.state === SpatialMetricState.Processing
-  );
-
-  const currentGeography = geographies.find(
-    (g) =>
-      currentlyProcessing &&
-      subjectIsGeography(currentlyProcessing.subject) &&
-      g.id === currentlyProcessing.subject.id
-  );
-
-  const errors = metrics.filter((m) => m.state === SpatialMetricState.Error);
-
   return (
     <AnimatePresence>
       {inProgress.length > 0 && (
@@ -85,16 +75,58 @@ export default function GeographyMetricsProgressIndicator() {
               calculated
             </Trans>
           </h4>
-          <h3>
-            <TypingText
-              className="text-indigo-900"
-              text={`${t("Processing")} ${
-                currentGeography ? currentGeography.name : "..."
-              }`}
-            />
-          </h3>
+          {inProgress.map((m) => (
+            <div key={m.id} className="relative">
+              <h3>
+                <span className="text-indigo-900 relative">{`${labelForState(
+                  m.state
+                )} ${
+                  "id" in m.subject
+                    ? nameForGeography(m.subject, geographies)
+                    : "..."
+                }`}</span>
+                {Boolean(m.progress) && (
+                  <span
+                    className="w-full bottom-0 left-0 h-0.5 absolute bg-indigo-500 transition-transform duration-75"
+                    style={{ transform: `scaleX(${(m.progress || 0) / 100})` }}
+                  ></span>
+                )}
+                {Boolean(m.progress) && (
+                  <span className="text-indigo-500">
+                    {m.progress?.toString() || "0"}%
+                  </span>
+                )}
+              </h3>
+            </div>
+          ))}
         </motion.div>
       )}
     </AnimatePresence>
   );
+}
+
+function nameForGeography(
+  subject: {
+    type: "geography";
+    id: number;
+  },
+  geographies: Pick<Geography, "id" | "name">[]
+) {
+  if (subjectIsFragment(subject)) {
+    return subject.hash;
+  }
+  return geographies.find((g) => g.id === subject.id)?.name;
+}
+
+function labelForState(state: SpatialMetricState) {
+  switch (state) {
+    case SpatialMetricState.Processing:
+      return "Processing";
+    case SpatialMetricState.Queued:
+      return "Queued";
+    case SpatialMetricState.Complete:
+      return "Complete";
+    case SpatialMetricState.Error:
+      return "Error";
+  }
 }

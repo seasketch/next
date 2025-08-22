@@ -43,15 +43,17 @@ async function calculateArea(geography, sourceCache, options = {}) {
     let intersectionFeatureBytes = 0;
     await Promise.all(intersectionLayers.map(async (l) => {
         const source = await sourceCache.get(l.source);
-        progress++;
         if (progressCallback) {
-            progressCallback(progress);
+            progressCallback(progress++); // Starting intersection layer processing
         }
         for await (const { properties, getFeature, } of source.getFeatureProperties()) {
             if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {
                 intersectionFeatures.push(getFeature());
                 intersectionFeatureBytes += (properties === null || properties === void 0 ? void 0 : properties.__byteLength) || 0;
             }
+        }
+        if (progressCallback) {
+            progressCallback(progress++); // Starting intersection layer processing
         }
         console.log("got intersection features", intersectionFeatures.length);
     }));
@@ -67,17 +69,22 @@ async function calculateArea(geography, sourceCache, options = {}) {
         properties: {},
     };
     if (differenceLayers.length === 0) {
-        console.log("no difference layers, calculate area");
         if (progressCallback) {
-            progressCallback(100); // No difference layers, calculation complete
+            progressCallback(50);
         }
         return (0, area_1.default)(intersectionFeatureGeojson) / 1000000;
     }
     else {
+        if (progressCallback) {
+            progressCallback(progress++);
+        }
         const envelopes = (0, flatten_1.default)(intersectionFeatureGeojson).features.map((f) => (0, bboxUtils_1.bboxToEnvelope)((0, bbox_1.default)(f)));
         const simplified = (0, simplify_1.simplify)(intersectionFeatureGeojson, {
             tolerance: 0.002,
         });
+        if (progressCallback) {
+            progressCallback(progress++);
+        }
         if (debuggingCallback) {
             debuggingCallback("intersection-layer", {
                 ...intersectionFeatureGeojson,
@@ -98,11 +105,17 @@ async function calculateArea(geography, sourceCache, options = {}) {
             const source = await sourceCache.get(layer.source, {
                 initialHeaderRequestLength: layer.headerSizeHint,
             });
+            if (progressCallback) {
+                progressCallback(progress++);
+            }
             console.timeEnd("get source");
             console.time("countAndBytesForQuery");
             const { bytes, features } = await source.countAndBytesForQuery(envelopes);
             console.log("bytes", bytes, "features", features, envelopes);
             console.timeEnd("countAndBytesForQuery");
+            if (progressCallback) {
+                progressCallback(progress++);
+            }
             if (true ||
                 bytes > MAX_SAFE_CLIPPING_OPERATION_BYTES ||
                 features > MAX_SAFE_CLIPPING_OPERATION_FEATURE_COUNT) {
@@ -129,7 +142,7 @@ async function calculateArea(geography, sourceCache, options = {}) {
                         if (percent - lastLoggedPercent > 1) {
                             lastLoggedPercent = percent;
                             if (progressCallback) {
-                                progressCallback(Math.round(percent));
+                                progressCallback(Math.round(percent) < 95 ? Math.round(percent) : 95);
                             }
                         }
                         const classification = containerIndex.classify(f);
@@ -208,7 +221,7 @@ async function calculateArea(geography, sourceCache, options = {}) {
             properties: {},
         };
         if (progressCallback) {
-            progressCallback(95); // Final calculation
+            progressCallback(98); // Final calculation
         }
         console.log("product made, calculate area");
         const sqKm = (0, area_1.default)(productGeojson) / 1000000;
@@ -217,9 +230,6 @@ async function calculateArea(geography, sourceCache, options = {}) {
             overlappingDifferenceFeaturesSqKm,
             total: sqKm - overlappingDifferenceFeaturesSqKm,
         });
-        if (progressCallback) {
-            progressCallback(100); // Complete
-        }
         return sqKm - overlappingDifferenceFeaturesSqKm;
     }
 }

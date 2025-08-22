@@ -913,12 +913,12 @@ export type CommunityGuidelinePatch = {
 
 export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
-  chunks: Array<MetricWorkChunk>;
   createdAt: Scalars['Datetime'];
   errorMessage?: Maybe<Scalars['String']>;
   groupBy?: Maybe<Scalars['String']>;
   id: Scalars['BigInt'];
   includedProperties?: Maybe<Array<Scalars['String']>>;
+  progress?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
   state: SpatialMetricState;
   subject: MetricSubject;
@@ -7357,34 +7357,12 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
-export enum MetricExecutionEnvironment {
-  ApiServer = 'API_SERVER',
-  Lambda = 'LAMBDA'
-}
-
 export enum MetricOverlayType {
   Raster = 'RASTER',
   Vector = 'VECTOR'
 }
 
 export type MetricSubject = FragmentSubject | GeographySubject;
-
-export type MetricWorkChunk = Node & {
-  __typename?: 'MetricWorkChunk';
-  bbox?: Maybe<GeometryPolygon>;
-  createdAt: Scalars['Datetime'];
-  errorMessage?: Maybe<Scalars['String']>;
-  executionEnvironment: MetricExecutionEnvironment;
-  id: Scalars['BigInt'];
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  offsets?: Maybe<Array<Maybe<Scalars['BigInt']>>>;
-  spatialMetricId?: Maybe<Scalars['BigInt']>;
-  state: SpatialMetricState;
-  totalBytes?: Maybe<Scalars['BigInt']>;
-  updatedAt: Scalars['Datetime'];
-  value?: Maybe<Scalars['JSON']>;
-};
 
 /** All input for the `modifySurveyAnswers` mutation. */
 export type ModifySurveyAnswersInput = {
@@ -14131,12 +14109,16 @@ export type SpatialMetric = Node & {
   errorMessage?: Maybe<Scalars['String']>;
   id: Scalars['BigInt'];
   includedProperties?: Maybe<Array<Maybe<Scalars['String']>>>;
+  jobKey?: Maybe<Scalars['String']>;
+  logsExpiresAt?: Maybe<Scalars['Datetime']>;
+  logsUrl?: Maybe<Scalars['String']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   overlayGroupBy?: Maybe<Scalars['String']>;
   overlayLayerStableId?: Maybe<Scalars['String']>;
   overlaySourceRemote?: Maybe<Scalars['String']>;
   overlayType?: Maybe<MetricOverlayType>;
+  progressPercentage: Scalars['Int'];
   state: SpatialMetricState;
   subjectFragmentId?: Maybe<Scalars['String']>;
   subjectGeographyId?: Maybe<Scalars['Int']>;
@@ -22544,17 +22526,14 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
   ) | (
     { __typename?: 'GeographySubject' }
     & GeographySubjectDetailsFragment
-  ), chunks: Array<(
-    { __typename?: 'MetricWorkChunk' }
-    & Pick<MetricWorkChunk, 'id' | 'state' | 'totalBytes' | 'errorMessage'>
-  )> }
+  ) }
 );
 
 export type GetOrCreateSpatialMetricsMutationVariables = Exact<{
@@ -25749,12 +25728,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
   groupBy
   includedProperties
   errorMessage
-  chunks {
-    id
-    state
-    totalBytes
-    errorMessage
-  }
+  progress
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;

@@ -12,5 +12,11 @@
   "hosted-zone:account=196230260133:domainName=seasket.ch:region=us-west-2": {
     "Id": "/hostedzone/Z02849091W1ZOT9UE433E",
     "Name": "seasket.ch."
-  }
+  },
+  "acknowledged-issue-numbers": [
+    34892,
+    34892,
+    32775,
+    34892
+  ]
 }

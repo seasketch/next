@@ -688,4 +688,26 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
 
 (async function () {
   rotateKeys(pool);
+
+  // Start the overlay engine worker message consumer if the SQS queue URL is configured
+  if (process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL) {
+    try {
+      const { startOverlayEngineWorkerMessageConsumer } = await import(
+        "./overlayEngineWorkers/messageQueueConsumer"
+      );
+      startOverlayEngineWorkerMessageConsumer(loadersPool);
+      console.log(
+        "Overlay engine worker message consumer started successfully"
+      );
+    } catch (error) {
+      console.error(
+        "Failed to start overlay engine worker message consumer:",
+        error
+      );
+    }
+  } else {
+    console.log(
+      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL not set, skipping message consumer startup"
+    );
+  }
 })();

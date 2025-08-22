@@ -47,6 +47,7 @@
   "dependencies": {
     "@aws-sdk/client-lambda": "^3.360.0",
     "@aws-sdk/client-s3": "^3.360.0",
+    "@aws-sdk/client-sqs": "^3.360.0",
     "@aws-sdk/s3-request-presigner": "^3.360.0",
     "@aws-sdk/types": "^3.357.0",
     "@graphile/pg-pubsub": "^4.11.0",
@@ -111,6 +112,7 @@
     "nanoid": "^3.1.17",
     "node-html-parser": "^6.1.13",
     "overlay-engine": "^1.0.0",
+    "overlay-worker": "^1.0.0",
     "pg-format": "^1.0.4",
     "pg-mem": "^1.9.9",
     "pgmock2": "^2.0.6",

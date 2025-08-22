@@ -315,12 +315,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   groupBy
   includedProperties
   errorMessage
-  chunks {
-    id
-    state
-    totalBytes
-    errorMessage
-  }
+  progress
 }
 
 mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {

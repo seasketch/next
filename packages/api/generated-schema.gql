@@ -1062,12 +1062,12 @@ input CommunityGuidelinePatch {
 }
 
 type CompatibleSpatialMetric {
-  chunks: [MetricWorkChunk!]!
   createdAt: Datetime!
   errorMessage: String
   groupBy: String
   id: BigInt!
   includedProperties: [String!]
+  progress: Int
   stableId: String
   state: SpatialMetricState!
   subject: MetricSubject!
@@ -8509,36 +8509,12 @@ type MergeTranslatedPropsPayload {
   query: Query
 }
 
-enum MetricExecutionEnvironment {
-  API_SERVER
-  LAMBDA
-}
-
 enum MetricOverlayType {
   RASTER
   VECTOR
 }
 
 union MetricSubject = FragmentSubject | GeographySubject
-
-type MetricWorkChunk implements Node {
-  bbox: GeometryPolygon
-  createdAt: Datetime!
-  errorMessage: String
-  executionEnvironment: MetricExecutionEnvironment!
-  id: BigInt!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-  offsets: [BigInt]
-  spatialMetricId: BigInt
-  state: SpatialMetricState!
-  totalBytes: BigInt
-  updatedAt: Datetime!
-  value: JSON
-}
 
 """All input for the `modifySurveyAnswers` mutation."""
 input ModifySurveyAnswersInput {
@@ -15328,6 +15304,9 @@ type SpatialMetric implements Node {
   errorMessage: String
   id: BigInt!
   includedProperties: [String]
+  jobKey: String
+  logsExpiresAt: Datetime
+  logsUrl: String
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
@@ -15337,6 +15316,7 @@ type SpatialMetric implements Node {
   overlayLayerStableId: String
   overlaySourceRemote: String
   overlayType: MetricOverlayType
+  progressPercentage: Int!
   state: SpatialMetricState!
   subjectFragmentId: String
   subjectGeographyId: Int

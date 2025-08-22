@@ -15,7 +15,8 @@
     "packages/geostats-types",
     "packages/fgb-source",
     "packages/overlay-engine",
-    "packages/sketch-preprocessing-worker"
+    "packages/sketch-preprocessing-worker",
+    "packages/overlay-worker"
   ],
   "version": "independent"
 }

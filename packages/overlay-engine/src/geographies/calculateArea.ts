@@ -65,9 +65,8 @@ export async function calculateArea(
       const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
         l.source
       );
-      progress++;
       if (progressCallback) {
-        progressCallback(progress);
+        progressCallback(progress++); // Starting intersection layer processing
       }
       for await (const {
         properties,
@@ -77,6 +76,9 @@ export async function calculateArea(
           intersectionFeatures.push(getFeature());
           intersectionFeatureBytes += properties?.__byteLength || 0;
         }
+      }
+      if (progressCallback) {
+        progressCallback(progress++); // Starting intersection layer processing
       }
       console.log("got intersection features", intersectionFeatures.length);
     })
@@ -103,12 +105,14 @@ export async function calculateArea(
   } as Feature<MultiPolygon>;
 
   if (differenceLayers.length === 0) {
-    console.log("no difference layers, calculate area");
     if (progressCallback) {
-      progressCallback(100); // No difference layers, calculation complete
+      progressCallback(50);
     }
     return area(intersectionFeatureGeojson) / 1_000_000;
   } else {
+    if (progressCallback) {
+      progressCallback(progress++);
+    }
     const envelopes = flatten(intersectionFeatureGeojson).features.map((f) =>
       bboxToEnvelope(bbox(f))
     );
@@ -116,6 +120,10 @@ export async function calculateArea(
     const simplified = simplify(intersectionFeatureGeojson, {
       tolerance: 0.002,
     });
+
+    if (progressCallback) {
+      progressCallback(progress++);
+    }
 
     if (debuggingCallback) {
       debuggingCallback("intersection-layer", {
@@ -141,11 +149,17 @@ export async function calculateArea(
           initialHeaderRequestLength: layer.headerSizeHint,
         }
       );
+      if (progressCallback) {
+        progressCallback(progress++);
+      }
       console.timeEnd("get source");
       console.time("countAndBytesForQuery");
       const { bytes, features } = await source.countAndBytesForQuery(envelopes);
       console.log("bytes", bytes, "features", features, envelopes);
       console.timeEnd("countAndBytesForQuery");
+      if (progressCallback) {
+        progressCallback(progress++);
+      }
       if (
         true ||
         bytes > MAX_SAFE_CLIPPING_OPERATION_BYTES ||
@@ -181,7 +195,9 @@ export async function calculateArea(
             if (percent - lastLoggedPercent > 1) {
               lastLoggedPercent = percent;
               if (progressCallback) {
-                progressCallback(Math.round(percent));
+                progressCallback(
+                  Math.round(percent) < 95 ? Math.round(percent) : 95
+                );
               }
             }
             const classification = containerIndex.classify(f);
@@ -275,7 +291,7 @@ export async function calculateArea(
     } as Feature<MultiPolygon>;
 
     if (progressCallback) {
-      progressCallback(95); // Final calculation
+      progressCallback(98); // Final calculation
     }
     console.log("product made, calculate area");
     const sqKm = area(productGeojson) / 1_000_000;
@@ -284,9 +300,6 @@ export async function calculateArea(
       overlappingDifferenceFeaturesSqKm,
       total: sqKm - overlappingDifferenceFeaturesSqKm,
     });
-    if (progressCallback) {
-      progressCallback(100); // Complete
-    }
     return sqKm - overlappingDifferenceFeaturesSqKm;
   }
 }

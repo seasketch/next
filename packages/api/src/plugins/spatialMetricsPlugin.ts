@@ -68,8 +68,8 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
         groupBy: String
         includedProperties: [String!]
         subject: MetricSubject!
-        chunks: [MetricWorkChunk!]!
         errorMessage: String
+        progress: Int
       }
 
       type GetOrCreateSpatialMetricsResults {
@@ -264,11 +264,6 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
           return results;
         },
       },
-      CompatibleSpatialMetric: {
-        chunks: async (metric, args, context, resolveInfo) => {
-          return context.loaders.spatialMetricChunks.load(metric.id);
-        },
-      },
       GeographyMetricSubscriptionPayload: {
         async metric(
           event,
@@ -281,10 +276,14 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
             `select get_spatial_metric($1) as metric`,
             [parseInt(event.metricId)]
           );
+          console.log("subscription payload", {
+            id: event.metricId,
+            state: result.rows[0].metric.state,
+            progress: result.rows[0].metric.progress,
+          });
           return {
             __typename: "CompatibleSpatialMetric",
             ...result.rows[0].metric,
-            chunks: [],
           };
         },
       },
@@ -303,7 +302,6 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
           return {
             __typename: "CompatibleSpatialMetric",
             ...result.rows[0].metric,
-            chunks: [],
           };
         },
       },

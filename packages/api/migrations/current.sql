@@ -33,6 +33,10 @@ create table spatial_metrics (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   overlay_type metric_overlay_type,
+  progress_percentage int not null default 0,
+  logs_url text,
+  logs_expires_at timestamptz,
+  job_key text,
   constraint spatial_metrics_exclusive_reference 
     check (
       (subject_fragment_id is not null and subject_geography_id is null) or
@@ -43,22 +47,6 @@ create table spatial_metrics (
 
 comment on table spatial_metrics is '@omit';
 
-create table metric_work_chunks (
-  id bigint generated always as identity primary key,
-  spatial_metric_id bigint references spatial_metrics(id) on delete cascade,
-  state spatial_metric_state not null default 'queued',
-  error_message text,
-  value jsonb,
-  total_bytes bigint,
-  offsets bigint[],
-  -- envelope of geotiff to be overlayed
-  bbox geometry(POLYGON, 4326),
-  execution_environment metric_execution_environment not null default 'lambda',
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
-);
-
-create index if not exists metric_work_chunks_spatial_metric_id_idx on metric_work_chunks (spatial_metric_id);
 
 -- Create get_or_create_spatial_metric function
 CREATE OR REPLACE FUNCTION get_or_create_spatial_metric(
@@ -492,7 +480,8 @@ create or replace function get_spatial_metric(metric_id bigint)
         else
           jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
         end,
-        'errorMessage', error_message
+        'errorMessage', error_message,
+        'progress', progress_percentage
       ) from spatial_metrics where id = metric_id
     );
   end;

@@ -8,7 +8,6 @@ import {
 import {
   CompatibleSpatialMetricDetailsFragment,
   Geography,
-  MetricWorkChunk,
   ReportContextSketchClassDetailsFragment,
   ReportContextSketchDetailsFragment,
   Sketch,
@@ -108,8 +107,8 @@ type LocalMetric = Metric & {
   state: SpatialMetricState;
   createdAt: Date;
   updatedAt: Date | null;
-  chunks?: MetricWorkChunk[];
   errorMessage?: string;
+  progress?: number;
 };
 
 type LocalMetrics = LocalMetric[];
@@ -407,14 +406,6 @@ function parseMetric(m: CompatibleSpatialMetricDetailsFragment): LocalMetric {
     state: m.state,
     createdAt: new Date(m.createdAt!),
     updatedAt: m.updatedAt ? new Date(m.updatedAt) : null,
-    // @ts-ignore
-    chunks:
-      m.chunks?.map((c) => ({
-        id: parseInt(c.id),
-        state: c.state,
-        totalBytes: c.totalBytes,
-        errorMessage: c.errorMessage,
-        __typename: "MetricWorkChunk",
-      })) || [],
-  };
+    errorMessage: m.errorMessage || undefined,
+  } as LocalMetric;
 }

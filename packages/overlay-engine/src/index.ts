@@ -35,4 +35,5 @@ export {
   MetricTypeMap,
   subjectIsFragment,
   MetricSubjectFragment,
+  MetricSubjectGeography,
 } from "./metrics/metrics";

@@ -14,6 +14,7 @@ import { MailerLambdaStack } from "../lib/MailerLambdaStack";
 import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadStack";
 import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
+import { SQSStack } from "../lib/SQSStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -156,6 +157,10 @@ const uploadHandler = new UploadHandlerLambdaStack(
     normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
   }
 );
+
+const sqs = new SQSStack(app, "SeaSketchSQS", {
+  env,
+});
 
 new GraphQLStack(app, "SeaSketchGraphQLServer", {
   env,
