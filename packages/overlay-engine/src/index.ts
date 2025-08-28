@@ -9,11 +9,7 @@ export {
   PolygonClipResult,
   clipToGeographies,
 } from "./geographies/geographies";
-export {
-  calculateArea,
-  CalculateAreaOptions,
-  DebuggingCallback,
-} from "./geographies/calculateArea";
+export { calculateArea } from "./geographies/calculateArea";
 export { Cql2Query } from "./cql2";
 export {
   createFragments,

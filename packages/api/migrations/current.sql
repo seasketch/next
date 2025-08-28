@@ -36,7 +36,7 @@ create table spatial_metrics (
   progress_percentage int not null default 0,
   logs_url text,
   logs_expires_at timestamptz,
-  job_key text,
+  job_key text default gen_random_uuid()::text,
   constraint spatial_metrics_exclusive_reference 
     check (
       (subject_fragment_id is not null and subject_geography_id is null) or
@@ -379,7 +379,9 @@ create or replace function get_metrics_for_geography(geography_id integer)
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
           'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
-          'errorMessage', error_message
+          'errorMessage', error_message,
+          'progress', progress_percentage,
+          'jobKey', job_key
         )
       )
       from spatial_metrics
@@ -422,7 +424,9 @@ create or replace function get_metrics_for_sketch(skid integer)
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
           'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
-          'errorMessage', error_message
+          'errorMessage', error_message,
+          'progress', progress_percentage,
+          'jobKey', job_key
         )
       )
       from spatial_metrics
@@ -474,6 +478,7 @@ create or replace function get_spatial_metric(metric_id bigint)
         'stableId', overlay_layer_stable_id,
         'groupBy', overlay_group_by,
         'includedProperties', included_properties,
+        'jobKey', job_key,
         'subject', 
         case when subject_geography_id is not null then
           jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject')
@@ -584,7 +589,7 @@ create or replace function retry_failed_spatial_metrics(metric_ids bigint[])
   begin
     -- loop through the metric ids, and update the state to queued
     foreach metric_id in array metric_ids loop
-      update spatial_metrics set state = 'queued', error_message = null where id = metric_id returning id into updated_metric_id;
+      update spatial_metrics set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where id = metric_id returning id into updated_metric_id;
       if updated_metric_id is not null then
         perform graphile_worker.add_job(
           'calculateSpatialMetric',

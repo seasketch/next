@@ -3,28 +3,28 @@
  * Stacks are created in different regions to support different geographies
  * with data close to their users.
  */
-import * as cdk from "@aws-cdk/core";
-import * as s3 from "@aws-cdk/aws-s3";
-import * as cloudfront from "@aws-cdk/aws-cloudfront";
-import * as iam from "@aws-cdk/aws-iam";
-import * as origins from "@aws-cdk/aws-cloudfront-origins";
-import { ViewerProtocolPolicy } from "@aws-cdk/aws-cloudfront";
-import { CfnOutput, Duration, PhysicalName } from "@aws-cdk/core";
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as rds from "aws-cdk-lib/aws-rds";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import { ViewerProtocolPolicy } from "aws-cdk-lib/aws-cloudfront";
+import { CfnOutput, Duration, PhysicalName } from "aws-cdk-lib";
 import commonAllowedOrigins from "./commonAllowedOrigins";
-import { CustomResource } from "@aws-cdk/core";
-import * as logs from "@aws-cdk/aws-logs";
-import * as cr from "@aws-cdk/custom-resources";
-import * as lambda from "@aws-cdk/aws-lambda";
+import { CustomResource } from "aws-cdk-lib";
+import * as cr from "aws-cdk-lib/custom-resources";
 import * as path from "path";
-import { Vpc } from "@aws-cdk/aws-ec2";
-import { DatabaseInstance } from "@aws-cdk/aws-rds";
 import { HostingStackResourceProperties } from "../lambdas/dataHostDbUpdater/index";
-import { PolicyStatement } from "@aws-cdk/aws-iam";
+import { Construct } from "constructs";
 
 export class DataHostingStack extends cdk.Stack {
   bucket: s3.Bucket;
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
       /* Long/Lat of the data center (approx) to help admins choose which is closest */
@@ -40,11 +40,16 @@ export class DataHostingStack extends cdk.Stack {
     super(scope, id, props);
     const storageBucket = new s3.Bucket(this, "GeoJSONData", {
       publicReadAccess: true,
-      // TODO: Change to retain when in production so we don't lose any user data
       removalPolicy: cdk.RemovalPolicy.RETAIN,
       autoDeleteObjects: false,
       // Versioning will help prevent any data loss due to overwriting
       versioned: true,
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+      }),
       cors: [
         {
           allowedOrigins: [
@@ -67,7 +72,7 @@ export class DataHostingStack extends cdk.Stack {
 
     const distribution = new cloudfront.Distribution(this, "GeoJSONCDN", {
       defaultBehavior: {
-        origin: new origins.S3Origin(storageBucket),
+        origin: origins.S3BucketOrigin.withBucketDefaults(storageBucket),
         cachePolicy: cloudfront.CachePolicy.fromCachePolicyId(
           this,
           "caching-w-cors",
@@ -95,13 +100,15 @@ export class DataHostingStack extends cdk.Stack {
       runtime: lambda.Runtime.NODEJS_14_X,
       // should be more than ample
       timeout: cdk.Duration.seconds(30),
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, "DataHostingStackLogs", {
+        retention: logs.RetentionDays.ONE_DAY,
+      }),
       environment: {
         LAMBDA_FUNCTION_EXPORT_NAME: props.lambdaFunctionNameExport,
         LAMBDA_REGION: props.dbRegion,
       },
       initialPolicy: [
-        new PolicyStatement({
+        new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ["lambda:InvokeFunction"],
           resources: [
@@ -110,7 +117,7 @@ export class DataHostingStack extends cdk.Stack {
             }:function:*`,
           ],
         }),
-        new PolicyStatement({
+        new iam.PolicyStatement({
           effect: iam.Effect.ALLOW,
           actions: ["cloudformation:ListExports"],
           resources: [`*`],
@@ -123,7 +130,9 @@ export class DataHostingStack extends cdk.Stack {
       "DataHostingStackEventHandlerProvider",
       {
         onEventHandler: onEvent,
-        logRetention: logs.RetentionDays.ONE_MONTH,
+        logGroup: new logs.LogGroup(this, "DataHostingStackProviderLogs", {
+          retention: logs.RetentionDays.ONE_MONTH,
+        }),
       }
     );
 

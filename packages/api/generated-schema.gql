@@ -1067,6 +1067,7 @@ type CompatibleSpatialMetric {
   groupBy: String
   id: BigInt!
   includedProperties: [String!]
+  jobKey: String
   progress: Int
   stableId: String
   state: SpatialMetricState!

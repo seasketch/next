@@ -316,6 +316,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   includedProperties
   errorMessage
   progress
+  jobKey
 }
 
 mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {

@@ -1,23 +1,13 @@
-import {
-  Construct,
-  Stack,
-  Tag,
-  ConcreteDependable,
-  StackProps,
-} from "@aws-cdk/core";
-import {
-  CfnClientVpnTargetNetworkAssociation,
-  CfnClientVpnEndpoint,
-  CfnClientVpnAuthorizationRule,
-  CfnClientVpnRoute,
-  Vpc,
-} from "@aws-cdk/aws-ec2";
-import { ISecret } from "@aws-cdk/aws-secretsmanager";
-import * as certManager from "@aws-cdk/aws-certificatemanager";
-import * as logs from "@aws-cdk/aws-logs";
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
+import * as certificatemanager from "aws-cdk-lib/aws-certificatemanager";
+import { Construct } from "constructs";
 
-export class VpnStack extends Stack {
-  readonly secret: ISecret;
+export class VpnStack extends cdk.Stack {
+  readonly secret: secretsmanager.ISecret;
 
   // creating server and clients certs is best done by following the AWS page on:
   // https://docs.aws.amazon.com/de_de/vpn/latest/clientvpn-admin/authentication-authorization.html#mutual
@@ -26,15 +16,19 @@ export class VpnStack extends Stack {
   clientArn =
     "arn:aws:acm:us-west-2:196230260133:certificate/25a5f45c-25c1-4318-a4e6-1d67702bc57a";
 
-  constructor(scope: Construct, id: string, props: StackProps & { vpc: Vpc }) {
+  constructor(
+    scope: Construct,
+    id: string,
+    props: cdk.StackProps & { vpc: ec2.Vpc }
+  ) {
     super(scope, id, props);
 
-    const clientCert = certManager.Certificate.fromCertificateArn(
+    const clientCert = certificatemanager.Certificate.fromCertificateArn(
       this,
       "ClientCertificate",
       this.clientArn
     );
-    const serverCert = certManager.Certificate.fromCertificateArn(
+    const serverCert = certificatemanager.Certificate.fromCertificateArn(
       this,
       "ServerCertificate",
       this.certArn
@@ -46,7 +40,7 @@ export class VpnStack extends Stack {
 
     const logStream = logGroup.addStream("ClientVpnLogStream");
 
-    const endpoint = new CfnClientVpnEndpoint(this, "ClientVpnEndpoint2", {
+    const endpoint = new ec2.CfnClientVpnEndpoint(this, "ClientVpnEndpoint2", {
       description: "VPN",
       authenticationOptions: [
         {
@@ -80,9 +74,8 @@ export class VpnStack extends Stack {
     });
 
     let i = 0;
-    const dependables = new ConcreteDependable();
     props?.vpc.privateSubnets.map((subnet) => {
-      let networkAsc = new CfnClientVpnTargetNetworkAssociation(
+      let networkAsc = new ec2.CfnClientVpnTargetNetworkAssociation(
         this,
         "ClientVpnNetworkAssociation-" + i,
         {
@@ -90,11 +83,10 @@ export class VpnStack extends Stack {
           subnetId: subnet.subnetId,
         }
       );
-      dependables.add(networkAsc);
       i++;
     });
 
-    new CfnClientVpnAuthorizationRule(this, "ClientVpnAuthRule", {
+    new ec2.CfnClientVpnAuthorizationRule(this, "ClientVpnAuthRule", {
       clientVpnEndpointId: endpoint.ref,
       targetNetworkCidr: "0.0.0.0/0",
       authorizeAllGroups: true,
@@ -104,12 +96,12 @@ export class VpnStack extends Stack {
     // add routs for two subnets so that i can surf the internet while in VPN (useful when splitTunnel is off)
     let x = 0;
     props?.vpc.privateSubnets.map((subnet) => {
-      new CfnClientVpnRoute(this, `CfnClientVpnRoute${x}`, {
+      new ec2.CfnClientVpnRoute(this, `CfnClientVpnRoute${x}`, {
         clientVpnEndpointId: endpoint.ref,
         destinationCidrBlock: "0.0.0.0/0",
         description: "Route to all",
         targetVpcSubnetId: props?.vpc.privateSubnets[x].subnetId!,
-      }).node.addDependency(dependables);
+      });
       x++;
     });
   }

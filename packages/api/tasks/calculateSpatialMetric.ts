@@ -8,6 +8,7 @@ import {
 } from "overlay-engine";
 import { MetricSubjectGeography } from "overlay-engine/src/metrics/metrics";
 import { OverlayWorkerPayload } from "overlay-worker";
+import AWS from "aws-sdk";
 
 export default async function calculateSpatialMetric(
   payload: { metricId: number },
@@ -22,7 +23,7 @@ export default async function calculateSpatialMetric(
       );
     });
   }, 10_000);
-  let metric: Metric & { id: number };
+  let metric: Metric & { id: number; jobKey: string };
   await helpers.withPgClient(async (client) => {
     const result = await client.query(
       `select get_spatial_metric($1) as metric`,
@@ -60,36 +61,17 @@ export default async function calculateSpatialMetric(
           console.log("calculating area for", geographyName);
           clippingLayers = results.rows.map((row) => parseClippingLayer(row));
         });
-        const response = await callOverlayWorker({
+        const jobKey = metric.jobKey;
+        console.log("submitting spatial_metric with jobKey", jobKey);
+        await callOverlayWorker({
           type: "total_area",
+          jobKey: jobKey,
           subject: {
             type: "geography",
             id: geographyId,
             clippingLayers,
           },
         } as OverlayWorkerPayload);
-        // update the metric with the result
-        await helpers.withPgClient(async (client) => {
-          await client.query(
-            `update spatial_metrics set job_key = $1, logs_url = $2, logs_expires_at = $3, updated_at = now() where id = $4`,
-            [
-              response.jobKey,
-              response.logsUrl || null,
-              response.logsExpiresAt || null,
-              metric.id,
-            ]
-          );
-        });
-        // await helpers.addJob(
-        //   "calculateSizeOfGeography",
-        //   {
-        //     geographyId: metric.subject.id,
-        //     metricId: metric.id,
-        //   }
-        //   // {
-        //   //   queueName: "calculate-size-of-geography",
-        //   // }
-        // );
       }
     } else {
       throw new Error(`Unsupported metric type: ${metric.type}`);
@@ -109,16 +91,33 @@ export default async function calculateSpatialMetric(
 
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
   if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
+    const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    return response.json();
+  } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
+    const lambda = new AWS.Lambda({
+      region: process.env.AWS_REGION || "us-west-2",
+      httpOptions: {
+        timeout: 120000,
+      },
+    });
+
+    const res = await lambda
+      .invoke({
+        FunctionName: process.env.OVERLAY_WORKER_LAMBDA_ARN,
+        InvocationType: "Event", // Async invocation
+        Payload: JSON.stringify(payload),
+      })
+      .promise();
+
+    console.log("Lambda invocation response", res);
   } else {
     throw new Error(
-      "OVERLAY_WORKER_DEV_HANDLER is not set. Lambda is not implemented."
+      "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented."
     );
   }
-  const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
-    method: "POST",
-    body: JSON.stringify(payload),
-  });
-  return response.json();
 }
 
 function parseClippingLayer(clippingLayer: {

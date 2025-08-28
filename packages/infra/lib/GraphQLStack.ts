@@ -1,17 +1,16 @@
-import * as cdk from "@aws-cdk/core";
-import * as s3 from "@aws-cdk/aws-s3";
-import * as ecsPatterns from "@aws-cdk/aws-ecs-patterns";
-import * as ecs from "@aws-cdk/aws-ecs";
-import * as iam from "@aws-cdk/aws-iam";
-import { DatabaseInstance } from "@aws-cdk/aws-rds";
-import { ISecurityGroup, IVpc, Protocol } from "@aws-cdk/aws-ec2";
-import { Bucket } from "@aws-cdk/aws-s3";
-import { PolicyStatement } from "@aws-cdk/aws-iam";
-import { HostedZone } from "@aws-cdk/aws-route53";
-import { ApplicationProtocol } from "@aws-cdk/aws-elasticloadbalancingv2";
-import { AwsLogDriver } from "@aws-cdk/aws-ecs";
-import { Lambda } from "aws-sdk";
-import { DockerImageFunction } from "@aws-cdk/aws-lambda";
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as ecs from "aws-cdk-lib/aws-ecs";
+import * as ecsPatterns from "aws-cdk-lib/aws-ecs-patterns";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as rds from "aws-cdk-lib/aws-rds";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import { Bucket } from "aws-cdk-lib/aws-s3";
+import { PolicyStatement } from "aws-cdk-lib/aws-iam";
+import { HostedZone } from "aws-cdk-lib/aws-route53";
+import { ApplicationProtocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
+import { AwsLogDriver } from "aws-cdk-lib/aws-ecs";
+import { Construct } from "constructs";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -21,12 +20,12 @@ const HOST = "https://api.seasket.ch";
 
 export class GraphQLStack extends cdk.Stack {
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
-      db: DatabaseInstance;
-      vpc: IVpc;
-      securityGroup: ISecurityGroup;
+      db: rds.DatabaseInstance;
+      vpc: ec2.IVpc;
+      securityGroup: ec2.ISecurityGroup;
       uploadsBucket: Bucket;
       tilePackagesBucket: Bucket;
       uploadsUrl: string;
@@ -36,7 +35,8 @@ export class GraphQLStack extends cdk.Stack {
       spatialUploadsBucket: Bucket;
       normalizedOutputsBucket: Bucket;
       spatialUploadsHandlerArn: string;
-      uploadHandler: DockerImageFunction;
+      overlayWorkerArn: string;
+      uploadHandler: lambda.DockerImageFunction;
     }
   ) {
     super(scope, id, props);
@@ -152,6 +152,7 @@ export class GraphQLStack extends cdk.Stack {
             CLIENT_DOMAIN: props.clientDomain,
             SPATIAL_UPLOADS_BUCKET: props.spatialUploadsBucket.bucketName,
             SPATIAL_UPLOADS_LAMBDA_ARN: props.spatialUploadsHandlerArn,
+            OVERLAY_WORKER_LAMBDA_ARN: props.overlayWorkerArn,
             R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
             R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
             R2_ENDPOINT: process.env.R2_ENDPOINT,
@@ -174,6 +175,8 @@ export class GraphQLStack extends cdk.Stack {
           containerPort: 3857,
         },
         desiredCount: 2,
+        minHealthyPercent: 50,
+        maxHealthyPercent: 200,
         listenerPort: 443,
         domainName: "api.seasket.ch",
         domainZone: HostedZone.fromLookup(this, "seasket.ch", {
@@ -241,6 +244,14 @@ export class GraphQLStack extends cdk.Stack {
         actions: ["lambda:InvokeFunction"],
         effect: iam.Effect.ALLOW,
         resources: [SCREENSHOTTER_FUNCTION_ARN],
+      })
+    );
+
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: ["lambda:InvokeFunction"],
+        effect: iam.Effect.ALLOW,
+        resources: [props.overlayWorkerArn],
       })
     );
 

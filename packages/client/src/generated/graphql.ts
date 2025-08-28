@@ -918,6 +918,7 @@ export type CompatibleSpatialMetric = {
   groupBy?: Maybe<Scalars['String']>;
   id: Scalars['BigInt'];
   includedProperties?: Maybe<Array<Scalars['String']>>;
+  jobKey?: Maybe<Scalars['String']>;
   progress?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
   state: SpatialMetricState;
@@ -22526,7 +22527,7 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
@@ -25729,6 +25730,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
   includedProperties
   errorMessage
   progress
+  jobKey
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;

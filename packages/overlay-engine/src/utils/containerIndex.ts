@@ -37,7 +37,7 @@ export class ContainerIndex {
   private segsA: Pt[] = []; // segment endpoints A
   private segsB: Pt[] = []; // segment endpoints B
   private index: Flatbush;
-  bboxPolygons: FeatureCollection<Polygon> = {
+  bboxPolygons: FeatureCollection<Polygon, {}> = {
     type: "FeatureCollection",
     features: [],
   };
@@ -160,7 +160,7 @@ export class ContainerIndex {
   }
 
   getBBoxPolygons() {
-    return this.bboxPolygons;
+    return this.bboxPolygons as FeatureCollection<Polygon, {}>;
   }
 }
 

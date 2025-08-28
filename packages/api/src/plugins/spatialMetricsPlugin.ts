@@ -70,6 +70,7 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
         subject: MetricSubject!
         errorMessage: String
         progress: Int
+        jobKey: String
       }
 
       type GetOrCreateSpatialMetricsResults {
@@ -276,11 +277,6 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
             `select get_spatial_metric($1) as metric`,
             [parseInt(event.metricId)]
           );
-          console.log("subscription payload", {
-            id: event.metricId,
-            state: result.rows[0].metric.state,
-            progress: result.rows[0].metric.progress,
-          });
           return {
             __typename: "CompatibleSpatialMetric",
             ...result.rows[0].metric,

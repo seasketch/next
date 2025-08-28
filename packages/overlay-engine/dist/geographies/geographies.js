@@ -123,17 +123,23 @@ async function clipToGeography(preparedSketch, clippingLayers, clippingFn) {
     const differenceLayers = clippingLayers.filter((layer) => layer.op === "DIFFERENCE");
     // Kick off the clipping operations in parallel, starting with the INTERSECT
     // layers.
-    const intersectResults = Promise.all(intersectLayers.map((layer) => clippingFn(preparedSketch, layer.source, "INTERSECT", layer.cql2Query)));
-    const differenceResults = Promise.all(differenceLayers.map((layer) => clippingFn(preparedSketch, layer.source, "DIFFERENCE", layer.cql2Query)));
-    let results = await intersectResults;
+    const intersectResultsPromise = Promise.all(intersectLayers.map((layer) => clippingFn(preparedSketch, layer.source, "INTERSECT", layer.cql2Query)));
+    const differenceResultsPromise = Promise.all(differenceLayers.map((layer) => clippingFn(preparedSketch, layer.source, "DIFFERENCE", layer.cql2Query)));
+    const intersectResults = await intersectResultsPromise;
     // if all intersect results are null, the sketch is completely outside
     // the geography
-    if (!results.find((r) => r.output !== null)) {
+    if (!intersectResults.find((r) => r.output !== null)) {
         // Fire and forget, but handle errors to avoid unhandled promise rejections
-        differenceResults.catch(() => { });
+        differenceResultsPromise.catch(() => { });
         return null;
     }
-    results.push(...(await differenceResults));
+    const differenceResults = await differenceResultsPromise;
+    // If any DIFFERENCE layer eliminates the sketch entirely, this geography
+    // should produce no output.
+    if (differenceResults.some((r) => r.op === "DIFFERENCE" && r.changed && r.output === null)) {
+        return null;
+    }
+    const results = [...intersectResults, ...differenceResults];
     const features = [];
     let anyChanges = false;
     for (const result of results) {

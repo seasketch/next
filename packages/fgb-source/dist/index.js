@@ -2670,9 +2670,7 @@ async function createSource(urlOrKey, options) {
       headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` }
     }).then((response) => response.arrayBuffer());
   };
-  console.time("initial header fetch: " + urlOrKey);
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
-  console.timeEnd("initial header fetch: " + urlOrKey);
   const view = new DataView(headerData);
   for (let i = 0; i < MAGIC_BYTES.length; i++) {
     if (view.getUint8(i) !== MAGIC_BYTES[i] && i < MAGIC_BYTES.length - 1) {

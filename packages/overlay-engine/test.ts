@@ -1,10 +1,6 @@
 import { SourceCache } from "fgb-source";
-import {
-  calculateArea,
-  ClippingLayerOption,
-  CalculateAreaOptions,
-  DebuggingCallback,
-} from "./src";
+import { calculateArea, ClippingLayerOption } from "./src";
+import { OverlayWorkerHelpers } from "./src/utils/helpers";
 import https from "https";
 import { DebuggingFgbWriter } from "./src/utils/debuggingFgbWriter";
 
@@ -165,7 +161,7 @@ const sourceCache = new SourceCache("200 MB", {
 
 // Create debugging callback that saves features to FGB files
 function createDebuggingCallback(): {
-  callback: DebuggingCallback;
+  helpers: OverlayWorkerHelpers;
   cleanup: () => Promise<void>;
 } {
   const classifiedLand = new DebuggingFgbWriter(
@@ -184,9 +180,14 @@ function createDebuggingCallback(): {
     []
   );
 
-  const callback: DebuggingCallback = (type, feature) => {
+  const debuggingFeatureCallback = (
+    layer: string,
+    geometryType: any,
+    fields: any,
+    feature: any
+  ) => {
     try {
-      switch (type) {
+      switch (layer) {
         case "edge-box":
           bboxesWriter.addFeature(feature);
           break;
@@ -198,8 +199,18 @@ function createDebuggingCallback(): {
           break;
       }
     } catch (error) {
-      console.error(`Error writing ${type} feature:`, error);
+      console.error(`Error writing ${layer} feature:`, error);
     }
+  };
+
+  const helpers: OverlayWorkerHelpers = {
+    logFeature: debuggingFeatureCallback,
+    progress: (progress: number) => {
+      console.log(`Progress: ${progress}%`);
+    },
+    log: (message: string) => {
+      console.log(message);
+    },
   };
 
   const cleanup = async () => {
@@ -213,22 +224,15 @@ function createDebuggingCallback(): {
     }
   };
 
-  return { callback, cleanup };
+  return { helpers, cleanup };
 }
 
 (async () => {
   try {
     // Create debugging callback if debugging is needed
-    const { callback: debuggingCallback, cleanup } = createDebuggingCallback();
+    const { helpers, cleanup } = createDebuggingCallback();
 
-    const options: CalculateAreaOptions = {
-      debuggingCallback,
-      progressCallback: (progress: number) => {
-        console.log(`Progress: ${progress}%`);
-      },
-    };
-
-    const area = await calculateArea(HAWAII_EEZ, sourceCache, options);
+    const area = await calculateArea(HAWAII_EEZ, sourceCache, helpers);
     console.log(area);
 
     // Cleanup debugging writers

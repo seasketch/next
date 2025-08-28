@@ -1,7 +1,4 @@
 "use strict";
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = handler;
 exports.validatePayload = validatePayload;
@@ -10,10 +7,11 @@ exports.subjectIsGeography = subjectIsGeography;
 const overlay_engine_1 = require("overlay-engine");
 const fgb_source_1 = require("fgb-source");
 const messaging_1 = require("./messaging");
-const lodash_debounce_1 = __importDefault(require("lodash.debounce"));
+const ProgressNotifier_1 = require("./ProgressNotifier");
 const sourceCache = new fgb_source_1.SourceCache("128 mb");
-async function handler(payload, jobKey) {
-    const progressNotifier = new ProgressNotifier(jobKey, 100, 1000);
+async function handler(payload) {
+    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 50, 200);
+    await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString());
     try {
         // Example of how to use the discriminated union with switch statements
         switch (payload.type) {
@@ -21,12 +19,15 @@ async function handler(payload, jobKey) {
                 if (subjectIsGeography(payload.subject)) {
                     progressNotifier.notify(0, "Beginning area calculation");
                     const area = await (0, overlay_engine_1.calculateArea)(payload.subject.clippingLayers, sourceCache, {
-                        progressCallback: (progress) => {
+                        progress: (progress) => {
                             progressNotifier.notify(progress);
                         },
+                        log: (message) => {
+                            console.log(message);
+                        },
                     });
-                    progressNotifier.notify(100, "Area calculation complete");
-                    (0, messaging_1.sendResultMessage)(jobKey, area);
+                    await (0, messaging_1.flushMessages)();
+                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
                     return;
                 }
                 else if (subjectIsFragment(payload.subject)) {
@@ -41,40 +42,25 @@ async function handler(payload, jobKey) {
         }
     }
     catch (e) {
-        await (0, messaging_1.sendErrorMessage)(jobKey, e instanceof Error ? e.message : "Unknown error");
+        await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unknown error");
+        throw e;
     }
-}
-// Debounces progress messages to avoid spamming the database and client
-class ProgressNotifier {
-    constructor(jobKey, debounceMs, maxWaitMs) {
-        this.progress = 0;
-        this.sendMessage = () => { };
-        this.jobKey = jobKey;
-        this.sendMessage = (0, lodash_debounce_1.default)(() => {
-            (0, messaging_1.sendProgressMessage)(this.jobKey, this.progress, this.message);
-        }, debounceMs, {
-            maxWait: maxWaitMs,
-        });
-    }
-    notify(progress, message) {
-        let hasChanged = false;
-        if (progress >= this.progress && message !== this.message) {
-            this.message = message;
-            hasChanged = true;
+    finally {
+        // Ensure any debounced progress sends and pending SQS sends are flushed
+        try {
+            progressNotifier.flush();
         }
-        if (progress > this.progress) {
-            this.progress = progress;
-            hasChanged = true;
-        }
-        if (hasChanged) {
-            this.sendMessage();
-        }
+        catch (_a) { }
+        await (0, messaging_1.flushMessages)();
     }
 }
 function validatePayload(data) {
     // Validate required base properties
     if (!data || typeof data !== "object") {
         throw new Error("Payload must be an object");
+    }
+    if (!data.jobKey || typeof data.jobKey !== "string") {
+        throw new Error("Payload must have a valid jobKey property");
     }
     if (!data.type || typeof data.type !== "string") {
         throw new Error("Payload must have a valid type property");

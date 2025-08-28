@@ -7,6 +7,19 @@ import * as AWS from "aws-sdk";
 import { Client } from "pg";
 const fs = require("fs");
 
+// Type definitions for CDK custom resources
+declare namespace AWSCDKAsyncCustomResource {
+  interface OnEventRequest {
+    RequestType: "Create" | "Update" | "Delete";
+    ResourceProperties: any;
+  }
+
+  interface OnEventResponse {
+    PhysicalResourceId: string;
+    Data?: { [key: string]: any };
+  }
+}
+
 const pem = fs.readFileSync("./rds-ca-2019-root.pem").toString();
 const signer = new AWS.RDS.Signer();
 
@@ -27,7 +40,8 @@ const db = {
 };
 
 export async function handler(event: AWSCDKAsyncCustomResource.OnEventRequest) {
-  const props = event.ResourceProperties as HostingStackResourceProperties;
+  const props = (event as any)
+    .ResourceProperties as HostingStackResourceProperties;
   switch (event.RequestType) {
     case "Create":
       console.log("create", props);
@@ -117,7 +131,9 @@ export async function setDataSourcesBucketOffline(
   `,
     [`https://${event.domain}`]
   );
-  return {};
+  return {
+    PhysicalResourceId: idForEvent(event),
+  };
 }
 
 function idForEvent(event: HostingStackResourceProperties) {

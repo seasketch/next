@@ -10,19 +10,18 @@ import {
 } from "./types";
 import { SourceCache } from "fgb-source";
 import {
+  sendBeginMessage,
   sendErrorMessage,
-  sendProgressMessage,
   sendResultMessage,
+  flushMessages,
 } from "./messaging";
-import debounce from "lodash.debounce";
+import { ProgressNotifier } from "./ProgressNotifier";
 
 const sourceCache = new SourceCache("128 mb");
 
-export default async function handler(
-  payload: OverlayWorkerPayload,
-  jobKey: string
-) {
-  const progressNotifier = new ProgressNotifier(jobKey, 100, 500);
+export default async function handler(payload: OverlayWorkerPayload) {
+  const progressNotifier = new ProgressNotifier(payload.jobKey, 50, 200);
+  await sendBeginMessage(payload.jobKey, "/test", new Date().toISOString());
   try {
     // Example of how to use the discriminated union with switch statements
     switch (payload.type) {
@@ -33,12 +32,16 @@ export default async function handler(
             payload.subject.clippingLayers,
             sourceCache,
             {
-              progressCallback: (progress) => {
+              progress: (progress) => {
                 progressNotifier.notify(progress);
+              },
+              log: (message) => {
+                console.log(message);
               },
             }
           );
-          sendResultMessage(jobKey, area);
+          await flushMessages();
+          await sendResultMessage(payload.jobKey, area);
           return;
         } else if (subjectIsFragment(payload.subject)) {
           throw new Error(
@@ -55,49 +58,16 @@ export default async function handler(
     }
   } catch (e) {
     await sendErrorMessage(
-      jobKey,
+      payload.jobKey,
       e instanceof Error ? e.message : "Unknown error"
     );
-  }
-}
-
-// Debounces progress messages to avoid spamming the database and client
-class ProgressNotifier {
-  private jobKey: string;
-  private progress = 0;
-  private message?: string;
-  private sendMessage = () => {};
-
-  constructor(jobKey: string, debounceMs: number, maxWaitMs: number) {
-    this.jobKey = jobKey;
-    // this.sendMessage = () => {
-    //   console.log("Sending progress message", this.progress, this.message);
-    //   sendProgressMessage(this.jobKey, this.progress, this.message);
-    // };
-    this.sendMessage = debounce(
-      () => {
-        sendProgressMessage(this.jobKey, this.progress, this.message);
-      },
-      debounceMs,
-      {
-        maxWait: maxWaitMs,
-      }
-    );
-  }
-
-  notify(progress: number, message?: string) {
-    let hasChanged = false;
-    if (progress >= this.progress && message !== this.message) {
-      this.message = message;
-      hasChanged = true;
-    }
-    if (progress > this.progress) {
-      this.progress = progress;
-      hasChanged = true;
-    }
-    if (hasChanged) {
-      this.sendMessage();
-    }
+    throw e;
+  } finally {
+    // Ensure any debounced progress sends and pending SQS sends are flushed
+    try {
+      progressNotifier.flush();
+    } catch {}
+    await flushMessages();
   }
 }
 
@@ -105,6 +75,10 @@ export function validatePayload(data: any): OverlayWorkerPayload {
   // Validate required base properties
   if (!data || typeof data !== "object") {
     throw new Error("Payload must be an object");
+  }
+
+  if (!data.jobKey || typeof data.jobKey !== "string") {
+    throw new Error("Payload must have a valid jobKey property");
   }
 
   if (!data.type || typeof data.type !== "string") {
@@ -177,5 +151,3 @@ export function subjectIsGeography(
     "clippingLayers" in subject
   );
 }
-
-export { OverlayWorkerPayload, OverlayWorkerResponse } from "./types";

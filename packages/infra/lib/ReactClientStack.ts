@@ -3,21 +3,24 @@
  * Stacks are created in different regions to support different geographies
  * with data close to their users.
  */
-import * as cdk from "@aws-cdk/core";
-import * as s3 from "@aws-cdk/aws-s3";
-import * as cloudfront from "@aws-cdk/aws-cloudfront";
-import * as origins from "@aws-cdk/aws-cloudfront-origins";
-import * as iam from "@aws-cdk/aws-iam";
-import * as route53 from "@aws-cdk/aws-route53";
-import * as acm from "@aws-cdk/aws-certificatemanager";
-import { ViewerProtocolPolicy } from "@aws-cdk/aws-cloudfront";
-import targets = require("@aws-cdk/aws-route53-targets");
+import * as cdk from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
+import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
+import * as route53 from "aws-cdk-lib/aws-route53";
+import * as route53Targets from "aws-cdk-lib/aws-route53-targets";
+import * as acm from "aws-cdk-lib/aws-certificatemanager";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as s3deploy from "aws-cdk-lib/aws-s3-deployment";
+import * as path from "path";
+import { ViewerProtocolPolicy } from "aws-cdk-lib/aws-cloudfront";
+import { Construct } from "constructs";
 
 export class ReactClientStack extends cdk.Stack {
   bucket: s3.Bucket;
   url: string;
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
       maintenanceRole: iam.IRole;
@@ -33,6 +36,12 @@ export class ReactClientStack extends cdk.Stack {
       autoDeleteObjects: true,
       websiteIndexDocument: "index.html",
       websiteErrorDocument: "index.html",
+      blockPublicAccess: new s3.BlockPublicAccess({
+        blockPublicAcls: false,
+        blockPublicPolicy: false,
+        ignorePublicAcls: false,
+        restrictPublicBuckets: false,
+      }),
     });
     this.bucket.grantPublicAccess();
     new cdk.CfnOutput(this, "ReactClientBucket", {
@@ -47,26 +56,23 @@ export class ReactClientStack extends cdk.Stack {
       : props.domainName;
     new cdk.CfnOutput(this, "Site", { value: "https://" + siteDomain });
     // TLS certificate
-    const certificate = new acm.DnsValidatedCertificate(
-      this,
-      "SiteCertificate",
-      {
-        domainName: siteDomain,
-        hostedZone: zone,
-        region: "us-east-1", // Cloudfront only checks this region for certificates.
-      }
-    );
+    const certificate = new acm.Certificate(this, "SiteCertificate", {
+      domainName: siteDomain,
+      validation: acm.CertificateValidation.fromDns(zone),
+    });
 
     const distribution = new cloudfront.Distribution(this, "ReactClientCF", {
       defaultBehavior: {
-        origin: new origins.S3Origin(this.bucket),
+        origin: origins.S3BucketOrigin.withBucketDefaults(this.bucket),
         cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
         viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
         compress: true,
       },
       additionalBehaviors: {
         "/sprites/*": {
-          origin: new origins.S3Origin(props.publicUploadsBucket),
+          origin: origins.S3BucketOrigin.withBucketDefaults(
+            props.publicUploadsBucket
+          ),
           cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
           viewerProtocolPolicy: ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
           compress: true,
@@ -89,7 +95,7 @@ export class ReactClientStack extends cdk.Stack {
     new route53.ARecord(this, "SiteAliasRecord", {
       recordName: siteDomain,
       target: route53.RecordTarget.fromAlias(
-        new targets.CloudFrontTarget(distribution)
+        new route53Targets.CloudFrontTarget(distribution)
       ),
       zone,
     });

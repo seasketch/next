@@ -5,18 +5,24 @@ exports.sendResultMessage = sendResultMessage;
 exports.sendProgressMessage = sendProgressMessage;
 exports.sendErrorMessage = sendErrorMessage;
 exports.sendBeginMessage = sendBeginMessage;
+exports.flushMessages = flushMessages;
 const client_sqs_1 = require("@aws-sdk/client-sqs");
-async function sendMessage(msg, jobKey) {
+const sqs = new client_sqs_1.SQSClient({ region: process.env.AWS_REGION });
+// Tracks in-flight SQS send operations so they can be flushed later
+const pendingSendOperations = new Set();
+async function sendMessage(msg) {
     const queueUrl = process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL;
     if (!queueUrl) {
         throw new Error("OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL is not set");
     }
-    const sqs = new client_sqs_1.SQSClient({ region: process.env.AWS_REGION });
     const command = new client_sqs_1.SendMessageCommand({
         QueueUrl: queueUrl,
         MessageBody: JSON.stringify(msg),
     });
-    await sqs.send(command);
+    const sendPromise = sqs.send(command);
+    pendingSendOperations.add(sendPromise);
+    sendPromise.finally(() => pendingSendOperations.delete(sendPromise));
+    await sendPromise;
 }
 async function sendResultMessage(jobKey, result) {
     const msg = {
@@ -24,7 +30,7 @@ async function sendResultMessage(jobKey, result) {
         result,
         jobKey,
     };
-    await sendMessage(msg, jobKey);
+    await sendMessage(msg);
 }
 async function sendProgressMessage(jobKey, progress, message) {
     const msg = {
@@ -33,7 +39,7 @@ async function sendProgressMessage(jobKey, progress, message) {
         message,
         jobKey,
     };
-    await sendMessage(msg, jobKey);
+    await sendMessage(msg);
 }
 async function sendErrorMessage(jobKey, error) {
     const msg = {
@@ -41,7 +47,7 @@ async function sendErrorMessage(jobKey, error) {
         error,
         jobKey,
     };
-    await sendMessage(msg, jobKey);
+    await sendMessage(msg);
 }
 async function sendBeginMessage(jobKey, logfileUrl, logsExpiresAt) {
     const msg = {
@@ -50,6 +56,16 @@ async function sendBeginMessage(jobKey, logfileUrl, logsExpiresAt) {
         logsExpiresAt,
         jobKey,
     };
-    await sendMessage(msg, jobKey);
+    await sendMessage(msg);
+}
+/**
+ * Tracks unresolved calls to sendMessage and awaits their completion. Usefull
+ * to call after completing a job.
+ *
+ */
+async function flushMessages() {
+    while (pendingSendOperations.size > 0) {
+        await Promise.allSettled(Array.from(pendingSendOperations));
+    }
 }
 //# sourceMappingURL=messaging.js.map

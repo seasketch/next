@@ -3,14 +3,15 @@
  * Stacks are created in different regions to support different geographies
  * with data close to their users.
  */
-import * as cdk from "@aws-cdk/core";
-import * as s3 from "@aws-cdk/aws-s3";
+import * as cdk from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import { Construct } from "constructs";
 
 export class DataUploadsStack extends cdk.Stack {
   uploadsBucket: s3.Bucket;
   normalizedUploadsBucket: s3.Bucket;
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
       region: string;

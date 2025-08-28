@@ -109,6 +109,7 @@ type LocalMetric = Metric & {
   updatedAt: Date | null;
   errorMessage?: string;
   progress?: number;
+  jobKey?: string;
 };
 
 type LocalMetrics = LocalMetric[];

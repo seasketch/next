@@ -19,6 +19,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
+    "dev": "npx tsx watch server.ts",
     "build": "tsc",
     "watch": "tsc --watch",
     "test": "node ./__tests__/overlay-worker.test.js"
@@ -35,6 +36,7 @@
     "overlay-engine": "^1.0.0"
   },
   "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
     "typescript": "^5.5.2"
   }
 }

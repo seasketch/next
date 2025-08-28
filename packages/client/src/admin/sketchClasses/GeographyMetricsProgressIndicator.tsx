@@ -7,6 +7,7 @@ import {
 } from "overlay-engine/dist/metrics/metrics";
 import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
+import NumberFlow from "@number-flow/react";
 
 // Typing animation component
 function TypingText({ text, className }: { text: string; className?: string }) {
@@ -59,46 +60,76 @@ export default function GeographyMetricsProgressIndicator() {
         m.state === SpatialMetricState.Queued)
   );
 
+  const [recentProcessingCount, setRecentProcessingCount] = useState(0);
+
+  useEffect(() => {
+    if (inProgress.length === 0) {
+      setRecentProcessingCount(0);
+    } else {
+      if (inProgress.length > recentProcessingCount) {
+        setRecentProcessingCount(inProgress.length);
+      }
+    }
+  }, [inProgress, recentProcessingCount]);
+
   return (
     <AnimatePresence>
       {inProgress.length > 0 && (
         <motion.div
-          className="absolute bottom-0 right-0 p-4 text-right text-sm"
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 20 }}
+          className="absolute bottom-0 right-0 p-4 text-right text-sm mb-6 -z-10 opacity-75 transition-opacity"
+          initial={{ y: 20 }}
+          animate={{ y: 0 }}
+          exit={{ y: 20 }}
           transition={{ duration: 0.3, ease: "easeOut" }}
+          style={{
+            height: `${recentProcessingCount * 25 + 20}px`,
+            maxHeight: "90%",
+          }}
         >
           <h4 className="font-medium">
             <Trans ns="admin:sketching">
-              {inProgress.length.toString()} geography-level metrics being
-              calculated
+              {inProgress.length.toString()} geography metrics being calculated
             </Trans>
           </h4>
-          {inProgress.map((m) => (
-            <div key={m.id} className="relative">
-              <h3>
-                <span className="text-indigo-900 relative">{`${labelForState(
-                  m.state
-                )} ${
-                  "id" in m.subject
-                    ? nameForGeography(m.subject, geographies)
-                    : "..."
-                }`}</span>
-                {Boolean(m.progress) && (
-                  <span
-                    className="w-full bottom-0 left-0 h-0.5 absolute bg-indigo-500 transition-transform duration-75"
-                    style={{ transform: `scaleX(${(m.progress || 0) / 100})` }}
-                  ></span>
-                )}
-                {Boolean(m.progress) && (
-                  <span className="text-indigo-500">
-                    {m.progress?.toString() || "0"}%
-                  </span>
-                )}
-              </h3>
-            </div>
-          ))}
+          <div className="space-y-1 text-indigo-900">
+            <AnimatePresence>
+              {inProgress.map((m) => (
+                <motion.div
+                  key={m.id}
+                  className="relative flex items-center space-x-1 text-right justify-end h-5 rounded overflow-hidden"
+                  initial={{ opacity: 0, x: 0 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 200 }}
+                  transition={{ duration: 0.5, ease: "easeOut" }}
+                >
+                  <h3 className="relative px-1">
+                    <div
+                      className="absolute left-0 origin-left w-full bg-indigo-500 h-[1.5px] bottom-0 transition-transform duration-100"
+                      style={{
+                        transform: `scaleX(${(m.progress || 0) / 100})`,
+                      }}
+                    ></div>
+                    <div
+                      className="absolute left-0 origin-left w-full bg-indigo-500/5 h-full bottom-0 transition-transform duration-100"
+                      style={{
+                        transform: `scaleX(${(m.progress || 0) / 100})`,
+                      }}
+                    ></div>
+                    <span className="relative">{`${labelForState(m.state)} ${
+                      "id" in m.subject
+                        ? nameForGeography(m.subject, geographies)
+                        : "..."
+                    }`}</span>
+                  </h3>
+                  <NumberFlow
+                    value={(m.progress || 0) / 100}
+                    format={{ style: "percent" }}
+                  />
+                  {/* <div className="absolute left-0 w-1/2 bg-indigo-500 h-0.5 bottom-0"></div> */}
+                </motion.div>
+              ))}
+            </AnimatePresence>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

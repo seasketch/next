@@ -140,7 +140,8 @@
     "unsplash-js": "^7.0.15",
     "uuid": "^8.3.0",
     "vitest": "^3.2.4",
-    "xml2js": "^0.6.2"
+    "xml2js": "^0.6.2",
+    "yoctocolors-cjs": "^2.1.3"
   },
   "devDependencies": {
     "@babel/core": "^7.10.5",

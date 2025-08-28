@@ -76,6 +76,7 @@ export type FragmentSubjectPayload = {
 // and conditionally adds subject payloads based on subject type
 export type OverlayWorkerPayload = {
   [K in keyof MetricTypeMap]: Omit<MetricTypeMap[K], "value" | "count"> & {
+    jobKey: string;
     subject: MetricTypeMap[K]["subject"] extends MetricSubjectFragment
       ? MetricSubjectFragment & FragmentSubjectPayload
       : MetricTypeMap[K]["subject"] extends MetricSubjectGeography

@@ -24,7 +24,7 @@ const server = createServer(function (req, res) {
           res.setHeader("Content-Type", "application/json");
           // create random job key
           handler(payload, jobKey).then(() => {
-            // do nothing.
+            console.log("Job finished", jobKey);
           });
           res.setHeader("Content-Type", "application/json");
           res.end(

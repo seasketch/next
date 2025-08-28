@@ -431,9 +431,7 @@ export async function createSource<
           }).then((response) => response.arrayBuffer());
         };
 
-  console.time("initial header fetch: " + urlOrKey);
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
-  console.timeEnd("initial header fetch: " + urlOrKey);
 
   const view = new DataView(headerData);
 

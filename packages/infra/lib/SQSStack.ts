@@ -1,5 +1,6 @@
-import * as cdk from "@aws-cdk/core";
-import * as sqs from "@aws-cdk/aws-sqs";
+import * as cdk from "aws-cdk-lib";
+import * as sqs from "aws-cdk-lib/aws-sqs";
+import { Construct } from "constructs";
 
 export interface SQSStackProps {
   env: cdk.Environment;
@@ -9,7 +10,7 @@ export class SQSStack extends cdk.Stack {
   public readonly devOverlayEngineWorkerQueue: sqs.Queue;
   public readonly productionOverlayEngineWorkerQueue: sqs.Queue;
 
-  constructor(scope: cdk.Construct, id: string, props: SQSStackProps) {
+  constructor(scope: Construct, id: string, props: SQSStackProps) {
     super(scope, id, props);
 
     // Dev queue for testing

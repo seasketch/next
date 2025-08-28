@@ -49,6 +49,7 @@ export type FragmentSubjectPayload = {
 };
 export type OverlayWorkerPayload = {
     [K in keyof MetricTypeMap]: Omit<MetricTypeMap[K], "value" | "count"> & {
+        jobKey: string;
         subject: MetricTypeMap[K]["subject"] extends MetricSubjectFragment ? MetricSubjectFragment & FragmentSubjectPayload : MetricTypeMap[K]["subject"] extends MetricSubjectGeography ? MetricSubjectGeography & GeographySubjectPayload : MetricTypeMap[K]["subject"];
     };
 }[keyof MetricTypeMap];

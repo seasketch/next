@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import "source-map-support/register";
 require("dotenv").config();
-import * as cdk from "@aws-cdk/core";
+import * as cdk from "aws-cdk-lib";
+import { Construct } from "constructs";
 import { DatabaseStack } from "../lib/DatabaseStack";
 import { DataHostingStack } from "../lib/DataHostingStack";
 import { MaintenanceStack } from "../lib/MaintenanceStack";
@@ -15,6 +16,7 @@ import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadSt
 import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 import { SQSStack } from "../lib/SQSStack";
+import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -59,13 +61,14 @@ const uploads = new PublicUploadsStack(app, "SeaSketchPublicUploads", {
   allowedCorsDomains,
 });
 
-const client = new ReactClientStack(app, "SeaSketchReactClient", {
-  env,
-  maintenanceRole: maintenance.taskRole,
-  domainName: DOMAIN_NAME,
-  siteSubDomain: SUBDOMAIN,
-  publicUploadsBucket: uploads.bucket,
-});
+// React client hosting has been migrated to Cloudflare
+// const client = new ReactClientStack(app, "SeaSketchReactClient", {
+//   env,
+//   maintenanceRole: maintenance.taskRole,
+//   domainName: DOMAIN_NAME,
+//   siteSubDomain: SUBDOMAIN,
+//   publicUploadsBucket: uploads.bucket,
+// });
 
 const tilePackages = new OfflineTilePackageBucketStack(
   app,
@@ -162,6 +165,16 @@ const sqs = new SQSStack(app, "SeaSketchSQS", {
   env,
 });
 
+const overlayWorker = new OverlayWorkerLambdaStack(
+  app,
+  "SeaSketchOverlayWorker",
+  {
+    env,
+    devQueue: sqs.devOverlayEngineWorkerQueue,
+    productionQueue: sqs.productionOverlayEngineWorkerQueue,
+  }
+);
+
 new GraphQLStack(app, "SeaSketchGraphQLServer", {
   env,
   db: db.instance,
@@ -175,6 +188,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   clientDomain: HOST,
   spatialUploadsBucket: dataUploads.uploadsBucket,
   spatialUploadsHandlerArn: uploadHandler.fn.functionArn,
+  overlayWorkerArn: overlayWorker.fn.functionArn,
   normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
   uploadHandler: uploadHandler.fn,
 });
