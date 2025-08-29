@@ -4,5 +4,5 @@ export { clipToGeography, ClippingFn, ClippingOperation, ClippingLayerOption, cl
 export { calculateArea } from "./geographies/calculateArea";
 export { Cql2Query } from "./cql2";
 export { createFragments, eliminateOverlap, FragmentResult, SketchFragment, GeographySettings, mergeTouchingFragments, } from "./fragments";
-export { Metric, MetricType, TotalAreaMetric, OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, MetricTypeMap, subjectIsFragment, MetricSubjectFragment, MetricSubjectGeography, } from "./metrics/metrics";
+export { Metric, MetricType, TotalAreaMetric, OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, MetricTypeMap, subjectIsFragment, subjectIsGeography, MetricSubjectFragment, MetricSubjectGeography, } from "./metrics/metrics";
 //# sourceMappingURL=index.d.ts.map

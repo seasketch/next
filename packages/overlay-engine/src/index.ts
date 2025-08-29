@@ -30,6 +30,7 @@ export {
   PresenceTableMetric,
   MetricTypeMap,
   subjectIsFragment,
+  subjectIsGeography,
   MetricSubjectFragment,
   MetricSubjectGeography,
 } from "./metrics/metrics";

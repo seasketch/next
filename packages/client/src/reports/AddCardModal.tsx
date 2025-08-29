@@ -1,20 +1,35 @@
-import React from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import { getAvailableCardTypes, getCardRegistration } from "./registerCard";
-import { ReportContext, useReportContext } from "./ReportContext";
+import { ReportConfiguration } from "./cards/cards";
+import { CheckIcon } from "@heroicons/react/solid";
 
 interface AddCardModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (cardType: string) => void;
+  report?: ReportConfiguration;
 }
 
-export function AddCardModal({ isOpen, onClose, onSelect }: AddCardModalProps) {
+export function AddCardModal({
+  isOpen,
+  onClose,
+  onSelect,
+  report,
+}: AddCardModalProps) {
   const { t } = useTranslation("admin:sketching");
 
   const availableCardTypes = getAvailableCardTypes();
-  const context = useReportContext();
+
+  // Get all card types currently in use across all tabs
+  const usedCardTypes = new Set<string>();
+  if (report?.tabs) {
+    report.tabs.forEach((tab) => {
+      tab.cards?.forEach((card) => {
+        usedCardTypes.add(card.type);
+      });
+    });
+  }
 
   return (
     <Modal
@@ -45,17 +60,25 @@ export function AddCardModal({ isOpen, onClose, onSelect }: AddCardModalProps) {
             if (!registration) return null;
 
             const IconComponent = registration.icon;
+            const isAlreadyUsed = usedCardTypes.has(cardType);
 
             return (
               <div
                 key={cardType}
                 role="button"
-                className="bg-white rounded-lg p-4 hover:outline outline-blue-500 cursor-pointer transition-colors duration-150"
+                className="bg-white rounded-lg p-4 hover:outline outline-blue-500 cursor-pointer transition-colors duration-150 relative"
                 onClick={() => {
                   onSelect(cardType);
                   onClose();
                 }}
               >
+                {/* Checkmark indicator for already used cards */}
+                {isAlreadyUsed && (
+                  <div className="absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
+                    <CheckIcon className="w-3 h-3 text-white" />
+                  </div>
+                )}
+
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded overflow-hidden">
                     <IconComponent
@@ -70,6 +93,11 @@ export function AddCardModal({ isOpen, onClose, onSelect }: AddCardModalProps) {
                     <div className="text-sm text-gray-600 mt-1">
                       {registration.description}
                     </div>
+                    {isAlreadyUsed && (
+                      <div className="text-xs text-blue-600 mt-1">
+                        {t("Already in use")}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

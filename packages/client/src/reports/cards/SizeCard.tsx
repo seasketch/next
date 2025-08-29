@@ -1,21 +1,62 @@
-import { ReportCardConfiguration, ReportCardProps } from "./cards";
+import {
+  ReportCardConfiguration,
+  ReportCardProps,
+  useLocalizedCardSetting,
+} from "./cards";
 import ReportCard from "../ReportCard";
 import {
   registerReportCardType,
   ReportCardConfigUpdateCallback,
 } from "../registerCard";
-import { useContext, useMemo } from "react";
+import { lazy, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { subjectIsFragment } from "overlay-engine";
+import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { useMetrics } from "../hooks/useMetrics";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useReportContext } from "../ReportContext";
 import Skeleton from "../../components/Skeleton";
 import { Trans } from "react-i18next";
 import { RulerSquareIcon } from "@radix-ui/react-icons";
-import { subjectIsGeography } from "overlay-engine/dist/metrics/metrics";
+import LocalizedText from "../components/LocalizedText";
 
-export type SizeCardConfiguration = ReportCardConfiguration<{}>;
+// Admin component for configuring the card
+const SizeCardAdmin = lazy(() => import("./SizeCardAdmin"));
+
+export type SizeCardConfiguration = ReportCardConfiguration<{
+  /**
+   * The unit of measurement to display the area in.
+   * @default "km"
+   */
+  unit?: "km" | "mi" | "acres";
+  /**
+   * When true, the table of additional geographies will include
+   * geographies that have 0% overlap with the sketch.
+   * When false, geographies with zero overlap are hidden.
+   * @default false
+   */
+  showZeroOverlapGeographies?: boolean;
+  /**
+   * Column header text for the geographies column in the overlap table.
+   * Provide the default/English text here. Translations should be stored
+   * under config.alternateLanguageSettings[langCode].tableHeadingGeographies.
+   * If not provided, defaults to i18n string for "Additional Geographies".
+   */
+  tableHeadingGeographies?: string;
+  /**
+   * Column header text for the area column in the overlap table.
+   * Provide the default/English text here. Translations should be stored
+   * under config.alternateLanguageSettings[langCode].tableHeadingArea.
+   * If not provided, defaults to i18n string for "area".
+   */
+  tableHeadingArea?: string;
+  /**
+   * Column header text for the percent column in the overlap table.
+   * Provide the default/English text here. Translations should be stored
+   * under config.alternateLanguageSettings[langCode].tableHeadingPercent.
+   * If not provided, defaults to i18n string for "% of total".
+   */
+  tableHeadingPercent?: string;
+}>;
 
 export type SizeCardProps = ReportCardProps<SizeCardConfiguration>;
 
@@ -47,6 +88,8 @@ export function SizeCard({
   }, [reportContext.geographies]);
 
   const { t } = useTranslation("reports");
+
+  const unit = useLocalizedCardSetting(config, "unit", "km");
 
   const metrics = useMetrics({
     type: "total_area",
@@ -124,28 +167,48 @@ export function SizeCard({
     };
   }, [metrics.data, metrics.loading, reportContext.geographies]);
 
+  const convertAreaFromKm2 = useMemo(() => {
+    return (km2: number) => {
+      if (unit === "mi") return km2 / 2.59; // square miles per km²
+      if (unit === "acres") return km2 * 247.105381; // acres per km²
+      return km2; // km²
+    };
+  }, [unit]);
+
   const AreaFormatter = useMemo(() => {
-    return (value: number) => {
+    return (km2Value: number) => {
+      const value = convertAreaFromKm2(km2Value);
       if (value < 100) {
         return new Intl.NumberFormat(langContext?.lang?.code, {
           style: "decimal",
-          unit: "kilometer",
           maximumFractionDigits: 2,
           minimumFractionDigits: 0,
         }).format(value);
       } else {
         return new Intl.NumberFormat(langContext?.lang?.code, {
           style: "decimal",
-          unit: "kilometer",
           maximumFractionDigits: 0,
           minimumFractionDigits: 0,
         }).format(value);
       }
     };
-  }, [langContext?.lang?.code]);
+  }, [convertAreaFromKm2, langContext?.lang?.code]);
+
+  const unitLabel = useMemo(() => {
+    if (unit === "mi") return t("mi²");
+    if (unit === "acres") return t("acres");
+    return t("km²");
+  }, [unit, t]);
 
   const PercentageFormatter = useMemo(() => {
     return (value: number) => {
+      if (value === 0) {
+        return new Intl.NumberFormat(langContext?.lang?.code, {
+          style: "percent",
+          maximumFractionDigits: 0,
+          minimumFractionDigits: 0,
+        }).format(value);
+      }
       if (value < 5) {
         return new Intl.NumberFormat(langContext?.lang?.code, {
           style: "percent",
@@ -161,6 +224,22 @@ export function SizeCard({
       }
     };
   }, [langContext?.lang?.code]);
+
+  const showZeros = Boolean(
+    config.componentSettings?.showZeroOverlapGeographies
+  );
+
+  const secondaryGeographies = useMemo(() => {
+    const list = sizeCardData.geographies
+      .filter((g) => !g.primary && (showZeros ? true : g.overlap.area > 0))
+      .sort((a, b) => {
+        if (b.overlap.area !== a.overlap.area) {
+          return b.overlap.area - a.overlap.area;
+        }
+        return a.name.localeCompare(b.name);
+      });
+    return list;
+  }, [sizeCardData.geographies, showZeros]);
 
   return (
     <ReportCard
@@ -180,7 +259,7 @@ export function SizeCard({
             <p>
               {t("This area is ")}
               <span className="tabular-nums text-base font-medium">
-                {AreaFormatter(sizeCardData.area)} {t("km²")}
+                {AreaFormatter(sizeCardData.area)} {unitLabel}
               </span>
               {sizeCardData.geographies.length > 0 && (
                 <>
@@ -211,60 +290,17 @@ export function SizeCard({
                 </>
               )}
             </p>
-            {(() => {
-              const secondaryGeographies = sizeCardData.geographies.filter(
-                (g) => !g.primary && g.overlap.area > 0
-              );
-              if (secondaryGeographies.length > 0) {
-                return (
-                  <div className="mt-3 overflow-hidden rounded-md border border-gray-200">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
-                          >
-                            {t("Additional Geographies")}
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
-                          >
-                            {t("area")}
-                          </th>
-                          <th
-                            scope="col"
-                            className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
-                          >
-                            {t("% of total")}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-gray-100 bg-white">
-                        {secondaryGeographies.map((g) => (
-                          <tr
-                            key={g.id}
-                            className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
-                          >
-                            <td className="px-3 py-2 text-sm text-gray-800">
-                              {g.name}
-                            </td>
-                            <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
-                              {AreaFormatter(g.overlap.area)} {t("km²")}
-                            </td>
-                            <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
-                              {PercentageFormatter(g.overlap.fraction)}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                );
-              }
-              return null;
-            })()}
+            {secondaryGeographies.length > 0 ? (
+              <GeographiesTable
+                config={config}
+                onUpdate={onUpdate}
+                secondaryGeographies={secondaryGeographies}
+                unitLabel={unitLabel}
+                AreaFormatter={AreaFormatter}
+                PercentageFormatter={PercentageFormatter}
+                editable
+              />
+            ) : null}
           </div>
         )}
       </div>
@@ -300,6 +336,7 @@ function SizeCardIcon() {
 registerReportCardType({
   type: "Size",
   component: SizeCard,
+  adminComponent: SizeCardAdmin,
   defaultSettings: defaultComponentSettings,
   defaultBody: defaultBody,
   label: <Trans ns="admin:sketching">Size</Trans>,
@@ -309,4 +346,105 @@ registerReportCardType({
     </Trans>
   ),
   icon: SizeCardIcon,
+  order: 1,
 });
+
+function GeographiesTable({
+  config,
+  onUpdate,
+  secondaryGeographies,
+  unitLabel,
+  AreaFormatter,
+  PercentageFormatter,
+  editable,
+}: {
+  config: SizeCardConfiguration;
+  onUpdate?: ReportCardConfigUpdateCallback;
+  secondaryGeographies: {
+    id: number;
+    name: string;
+    overlap: { area: number; fraction: number };
+  }[];
+  unitLabel: string;
+  AreaFormatter: (n: number) => string;
+  PercentageFormatter: (n: number) => string;
+  editable: boolean;
+}) {
+  const { t } = useTranslation("reports");
+  return (
+    <div className="mt-3.5 overflow-hidden rounded-md border border-gray-200">
+      <table className="min-w-full divide-y divide-gray-200">
+        <thead className="bg-gray-50">
+          <tr>
+            <th
+              scope="col"
+              className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+            >
+              <LocalizedText
+                config={config}
+                onUpdate={onUpdate}
+                cardId={config.id}
+                settingKey="tableHeadingGeographies"
+                fallback={t("Additional Geographies")}
+                editable={editable}
+                className="text-left text-xs font-semibold uppercase tracking-wide text-gray-600 truncate"
+              />
+            </th>
+            <th
+              scope="col"
+              className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
+            >
+              <LocalizedText
+                config={config}
+                onUpdate={onUpdate}
+                cardId={config.id}
+                settingKey="tableHeadingArea"
+                fallback={t("area")}
+                editable={editable}
+                className="text-right text-xs font-semibold uppercase tracking-wide text-gray-600 truncate"
+              />
+            </th>
+            <th
+              scope="col"
+              className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
+            >
+              <LocalizedText
+                config={config}
+                onUpdate={onUpdate}
+                cardId={config.id}
+                settingKey="tableHeadingPercent"
+                fallback={t("% of total")}
+                editable={editable}
+                className="text-right text-xs font-semibold uppercase tracking-wide text-gray-600 truncate"
+              />
+            </th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100 bg-white">
+          {secondaryGeographies.map((g) => (
+            <tr
+              key={g.id}
+              className={`odd:bg-white even:bg-gray-50 hover:bg-gray-100`}
+            >
+              <td className="px-3 py-2 text-sm text-gray-800">
+                <span className={g.overlap.area === 0 ? "opacity-50" : ""}>
+                  {g.name}
+                </span>
+              </td>
+              <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
+                <span className={g.overlap.area === 0 ? "opacity-50" : ""}>
+                  {AreaFormatter(g.overlap.area)} {unitLabel}
+                </span>
+              </td>
+              <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
+                <span className={g.overlap.area === 0 ? "opacity-50" : ""}>
+                  {PercentageFormatter(g.overlap.fraction)}
+                </span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

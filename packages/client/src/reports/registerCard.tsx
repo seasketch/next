@@ -51,6 +51,7 @@ export interface ReportCardRegistration<T> {
   validateSettings?: (settings: T) => string[] | null;
   getExportData?: (settings: T, data: any) => any;
   requiredMetrics?: (componentSettings: T) => MetricType[];
+  order?: number;
 }
 
 export const registeredCards: Map<
@@ -74,6 +75,7 @@ export interface RegisterReportCardConfig<T> {
     sketchClass?: SketchClassDetailsFragment | undefined | null;
   }>;
   requiredMetrics?: (componentSettings: T) => MetricType[];
+  order?: number;
 }
 
 export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
@@ -90,6 +92,7 @@ export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
     description: config.description,
     icon: config.icon,
     requiredMetrics: config.requiredMetrics,
+    order: config.order,
   });
 }
 
@@ -125,8 +128,17 @@ export function getAvailableCardTypes(options?: {
 }): ReportCardType[] {
   const isSuperuser = options?.superuser || false;
 
-  return Array.from(registeredCards.values())
-    .filter((card) => !card.superusersOnly || isSuperuser)
-    .sort((a, b) => a.type.localeCompare(b.type))
-    .map((card) => card.type);
+  // Get cards and sort by order if specified
+  const cards = Array.from(registeredCards.values()).filter(
+    (card) => !card.superusersOnly || isSuperuser
+  );
+
+  // Sort by order property if available, otherwise preserve insertion order
+  cards.sort((a, b) => {
+    const orderA = a.order ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.order ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
+  });
+
+  return cards.map((card) => card.type);
 }

@@ -58,11 +58,9 @@ export default async function calculateSpatialMetric(
             [geographyId]
           );
           const geographyName = geography.rows[0].name;
-          console.log("calculating area for", geographyName);
           clippingLayers = results.rows.map((row) => parseClippingLayer(row));
         });
         const jobKey = metric.jobKey;
-        console.log("submitting spatial_metric with jobKey", jobKey);
         await callOverlayWorker({
           type: "total_area",
           jobKey: jobKey,
@@ -111,8 +109,6 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
         Payload: JSON.stringify(payload),
       })
       .promise();
-
-    console.log("Lambda invocation response", res);
   } else {
     throw new Error(
       "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented."

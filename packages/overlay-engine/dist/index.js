@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.subjectIsFragment = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
+exports.subjectIsGeography = exports.subjectIsFragment = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
 var prepareSketch_1 = require("./utils/prepareSketch");
 Object.defineProperty(exports, "prepareSketch", { enumerable: true, get: function () { return prepareSketch_1.prepareSketch; } });
 var unionAtAntimeridian_1 = require("./utils/unionAtAntimeridian");
@@ -17,4 +17,5 @@ Object.defineProperty(exports, "eliminateOverlap", { enumerable: true, get: func
 Object.defineProperty(exports, "mergeTouchingFragments", { enumerable: true, get: function () { return fragments_1.mergeTouchingFragments; } });
 var metrics_1 = require("./metrics/metrics");
 Object.defineProperty(exports, "subjectIsFragment", { enumerable: true, get: function () { return metrics_1.subjectIsFragment; } });
+Object.defineProperty(exports, "subjectIsGeography", { enumerable: true, get: function () { return metrics_1.subjectIsGeography; } });
 //# sourceMappingURL=index.js.map

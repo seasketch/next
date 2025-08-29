@@ -93,9 +93,9 @@ export default function SketchClassReportsAdmin({
     if (sketchesForDemonstration.length > 0 && !selectedSketchId) {
       setSelectedSketchId(sketchesForDemonstration[0].id);
     }
-  }, [sketchesForDemonstration]);
+  }, [sketchesForDemonstration, selectedSketchId]);
 
-  const [moveCardToTab, moveCardToTabState] = useMoveCardToTabMutation({
+  const [moveCardToTab] = useMoveCardToTabMutation({
     onError,
     refetchQueries: [DraftReportDocument],
     awaitRefetchQueries: true,
@@ -253,11 +253,11 @@ export default function SketchClassReportsAdmin({
   ) => {
     if (reportState.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
-        if (!prevState) {
-          return null;
-        }
+        const baseState = (prevState ||
+          selectedCardForEditing) as ReportCardConfiguration<any> | null;
+        if (!baseState) return null;
         return typeof updatedConfig === "function"
-          ? updatedConfig(prevState)
+          ? updatedConfig(baseState)
           : updatedConfig;
       });
     }
@@ -500,7 +500,9 @@ export default function SketchClassReportsAdmin({
                   <div className="flex-1">
                     <div className="p-4">
                       <h3 className="text-lg font-medium">
-                        {/* {selectedCardForEditing.title} */}
+                        {collectReportCardTitle(selectedCardForEditing.body) ||
+                          getCardRegistration(selectedCardForEditing.type)
+                            ?.label}
                       </h3>
                     </div>
                     <div className="p-4 pt-0">
@@ -775,6 +777,7 @@ export default function SketchClassReportsAdmin({
                             isOpen={addCardModalOpen}
                             onClose={() => setAddCardModalOpen(false)}
                             onSelect={handleCardSelect}
+                            report={draftReport as any}
                           />
                         )}
                         {/* report footer */}
@@ -825,4 +828,20 @@ function AdminFactory({
   }
   const Component = registration.adminComponent;
   return <Component config={config} onUpdate={onUpdate} />;
+}
+
+function collectReportCardTitle(body: any) {
+  if (
+    body.type === "doc" &&
+    "content" in body &&
+    Array.isArray(body.content) &&
+    body.content.length > 0
+  ) {
+    for (const node of body.content) {
+      if (node.type === "reportTitle") {
+        return node.content[0].text;
+      }
+    }
+  }
+  return null;
 }

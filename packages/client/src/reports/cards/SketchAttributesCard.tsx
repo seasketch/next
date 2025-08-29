@@ -228,4 +228,5 @@ registerReportCardType({
     </Trans>
   ),
   icon: SketchAttributesCardIcon,
+  order: 0,
 });

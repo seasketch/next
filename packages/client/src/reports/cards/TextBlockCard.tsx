@@ -101,6 +101,7 @@ registerReportCardType({
   ),
   icon: TextBlockCardIcon,
   adminComponent: lazy(() => import("./TextBlockCardAdmin")),
+  order: 3,
 });
 
 // Map presentation to tint, backgroundTint and icon
