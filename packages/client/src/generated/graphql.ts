@@ -4476,6 +4476,8 @@ export type DeleteSketchPayload = {
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
   deletedSketchNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `SketchFolder` that is related to this `Sketch`. */
+  folder?: Maybe<SketchFolder>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
@@ -13689,6 +13691,8 @@ export type Sketch = Node & {
   copyOf?: Maybe<Scalars['Int']>;
   createdAt: Scalars['Datetime'];
   filterMvtUrl?: Maybe<Scalars['String']>;
+  /** Reads a single `SketchFolder` that is related to this `Sketch`. */
+  folder?: Maybe<SketchFolder>;
   /** Parent folder. Both regular sketches and collections may be nested within folders for organization purposes. */
   folderId?: Maybe<Scalars['Int']>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
@@ -16986,6 +16990,8 @@ export type UpdateSketchParentPayload = {
   collection?: Maybe<Sketch>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
+  /** Reads a single `SketchFolder` that is related to this `Sketch`. */
+  folder?: Maybe<SketchFolder>;
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */

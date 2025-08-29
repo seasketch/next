@@ -5202,6 +5202,9 @@ type DeleteSketchPayload {
   copiedFrom: Sketch
   deletedSketchNodeId: ID
 
+  """Reads a single `SketchFolder` that is related to this `Sketch`."""
+  folder: SketchFolder
+
   """Reads a single `FormElement` that is related to this `Sketch`."""
   formElement: FormElement
 
@@ -14817,6 +14820,9 @@ type Sketch implements Node {
   createdAt: Datetime!
   filterMvtUrl: String
 
+  """Reads a single `SketchFolder` that is related to this `Sketch`."""
+  folder: SketchFolder
+
   """
   Parent folder. Both regular sketches and collections may be nested within folders for organization purposes.
   """
@@ -18748,6 +18754,9 @@ type UpdateSketchParentPayload {
 
   """Reads a single `Sketch` that is related to this `Sketch`."""
   copiedFrom: Sketch
+
+  """Reads a single `SketchFolder` that is related to this `Sketch`."""
+  folder: SketchFolder
 
   """Reads a single `FormElement` that is related to this `Sketch`."""
   formElement: FormElement
