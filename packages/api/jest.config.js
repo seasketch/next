@@ -166,6 +166,12 @@ module.exports = {
   // An array of regexp pattern strings that are matched against all test paths, matched tests are skipped
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
   modulePathIgnorePatterns: ["dist"],
+  moduleNameMapper: {
+    "^polyclip-ts$":
+      "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",
+    "^splaytree-ts$":
+      "<rootDir>/../overlay-engine/node_modules/splaytree-ts/dist/cjs/index.cjs",
+  },
 
   // The regexp pattern or array of patterns that Jest uses to detect test files
   // testRegex: [],

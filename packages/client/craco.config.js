@@ -203,6 +203,14 @@ module.exports = {
       moduleNameMapper: {
         "mapbox-gl/dist/style-spec/index.es.js":
           "mapbox-gl/dist/style-spec/index.cjs",
+        // Ensure Jest uses CJS build of polyclip-ts (align with Webpack alias)
+        "^polyclip-ts$":
+          "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",
+        // Ensure Jest uses CJS build of splaytree-ts
+        "^splaytree-ts$":
+          "<rootDir>/../overlay-engine/node_modules/splaytree-ts/dist/cjs/index.cjs",
+        // Shim esm-env for Jest as well
+        "^esm-env$": "<rootDir>/src/shims/esm-env.ts",
       },
     },
   },
