@@ -5598,6 +5598,10 @@ select{
   margin-top:0.75rem
 }
 
+.mt-3\.5{
+  margin-top:0.875rem
+}
+
 .mt-4{
   margin-top:1rem
 }
@@ -5624,10 +5628,6 @@ select{
 
 .mt-\[2px\]{
   margin-top:2px
-}
-
-.mt-3\.5{
-  margin-top:0.875rem
 }
 
 .box-content{
@@ -7684,6 +7684,11 @@ select{
   background-color:currentColor
 }
 
+.bg-fuchsia-100{
+  --tw-bg-opacity:1;
+  background-color:rgb(250 232 255 / var(--tw-bg-opacity, 1))
+}
+
 .bg-gray-100{
   --tw-bg-opacity:1;
   background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
@@ -7747,6 +7752,11 @@ select{
 .bg-green-400{
   --tw-bg-opacity:1;
   background-color:rgb(52 211 153 / var(--tw-bg-opacity, 1))
+}
+
+.bg-green-50{
+  --tw-bg-opacity:1;
+  background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))
 }
 
 .bg-green-500{
@@ -7923,16 +7933,6 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
-}
-
-.bg-fuchsia-100{
-  --tw-bg-opacity:1;
-  background-color:rgb(250 232 255 / var(--tw-bg-opacity, 1))
-}
-
-.bg-green-50{
-  --tw-bg-opacity:1;
-  background-color:rgb(236 253 245 / var(--tw-bg-opacity, 1))
 }
 
 .bg-opacity-10{
@@ -8800,6 +8800,11 @@ select{
   color:rgb(156 163 175 / var(--tw-text-opacity, 1))
 }
 
+.text-fuchsia-600{
+  --tw-text-opacity:1;
+  color:rgb(192 38 211 / var(--tw-text-opacity, 1))
+}
+
 .text-gray-100{
   --tw-text-opacity:1;
   color:rgb(243 244 246 / var(--tw-text-opacity, 1))
@@ -8925,6 +8930,10 @@ select{
   color:rgb(49 46 129 / var(--tw-text-opacity, 1))
 }
 
+.text-inherit{
+  color:inherit
+}
+
 .text-primary-300{
   --tw-text-opacity:1;
   color:rgb(71 163 220 / var(--tw-text-opacity, 1))
@@ -9041,15 +9050,6 @@ select{
 .text-yellow-900{
   --tw-text-opacity:1;
   color:rgb(120 53 15 / var(--tw-text-opacity, 1))
-}
-
-.text-inherit{
-  color:inherit
-}
-
-.text-fuchsia-600{
-  --tw-text-opacity:1;
-  color:rgb(192 38 211 / var(--tw-text-opacity, 1))
 }
 
 .text-opacity-80{
@@ -9322,6 +9322,11 @@ select{
   --tw-ring-color:rgb(37 99 235 / var(--tw-ring-opacity, 1))
 }
 
+.ring-gray-200{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(229 231 235 / var(--tw-ring-opacity, 1))
+}
+
 .ring-gray-300{
   --tw-ring-opacity:1;
   --tw-ring-color:rgb(209 213 219 / var(--tw-ring-opacity, 1))
@@ -9330,6 +9335,11 @@ select{
 .ring-gray-400{
   --tw-ring-opacity:1;
   --tw-ring-color:rgb(156 163 175 / var(--tw-ring-opacity, 1))
+}
+
+.ring-green-200{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(167 243 208 / var(--tw-ring-opacity, 1))
 }
 
 .ring-primary-500{
@@ -9345,16 +9355,6 @@ select{
 .ring-red-700{
   --tw-ring-opacity:1;
   --tw-ring-color:rgb(185 28 28 / var(--tw-ring-opacity, 1))
-}
-
-.ring-green-200{
-  --tw-ring-opacity:1;
-  --tw-ring-color:rgb(167 243 208 / var(--tw-ring-opacity, 1))
-}
-
-.ring-gray-200{
-  --tw-ring-opacity:1;
-  --tw-ring-color:rgb(229 231 235 / var(--tw-ring-opacity, 1))
 }
 
 .ring-opacity-10{
@@ -9881,6 +9881,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
 }
 
+.hover\:border-blue-300:hover{
+  --tw-border-opacity:1;
+  border-color:rgb(147 197 253 / var(--tw-border-opacity, 1))
+}
+
 .hover\:border-gray-200:hover{
   --tw-border-opacity:1;
   border-color:rgb(229 231 235 / var(--tw-border-opacity, 1))
@@ -9898,11 +9903,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:border-transparent:hover{
   border-color:transparent
-}
-
-.hover\:border-blue-300:hover{
-  --tw-border-opacity:1;
-  border-color:rgb(147 197 253 / var(--tw-border-opacity, 1))
 }
 
 .hover\:border-opacity-100:hover{
@@ -10276,6 +10276,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:rgb(147 197 253 / var(--tw-border-opacity, 1))
 }
 
+.focus\:border-blue-400:focus{
+  --tw-border-opacity:1;
+  border-color:rgb(96 165 250 / var(--tw-border-opacity, 1))
+}
+
 .focus\:border-blue-500:focus{
   --tw-border-opacity:1;
   border-color:rgb(59 130 246 / var(--tw-border-opacity, 1))
@@ -10312,11 +10317,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus\:border-transparent:focus{
   border-color:transparent
-}
-
-.focus\:border-blue-400:focus{
-  --tw-border-opacity:1;
-  border-color:rgb(96 165 250 / var(--tw-border-opacity, 1))
 }
 
 .focus\:bg-black:focus{
@@ -10413,15 +10413,15 @@ input[type="checkbox"][indeterminate="true"]:checked {
   box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
 }
 
-.focus\:ring-2:focus{
-  --tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
-  --tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
-  box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
-}
-
 .focus\:ring-1:focus{
   --tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
   --tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(1px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
+}
+
+.focus\:ring-2:focus{
+  --tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
   box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
 }
 
@@ -11922,34 +11922,4 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .dark\:hover\:bg-opacity-50:hover{
     --tw-bg-opacity:0.5
   }
-}
-
-.\[\&\>span\]\:text-left>span{
-  text-align:left
-}
-
-.\[\&\>span\]\:text-right>span{
-  text-align:right
-}
-
-.\[\&\>span\]\:text-xs>span{
-  font-size:0.75rem;
-  line-height:1rem
-}
-
-.\[\&\>span\]\:font-semibold>span{
-  font-weight:600
-}
-
-.\[\&\>span\]\:uppercase>span{
-  text-transform:uppercase
-}
-
-.\[\&\>span\]\:tracking-wide>span{
-  letter-spacing:0.025em
-}
-
-.\[\&\>span\]\:text-gray-600>span{
-  --tw-text-opacity:1;
-  color:rgb(75 85 99 / var(--tw-text-opacity, 1))
 }
