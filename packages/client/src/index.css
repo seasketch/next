@@ -10059,6 +10059,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-primary-600\/50:hover{
+  background-color:rgb(36 105 172 / 0.5)
+}
+
+.hover\:\!bg-primary-600:hover{
+  --tw-bg-opacity:1 !important;
+  background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1)) !important
+}
+
+.hover\:\!bg-primary-500:hover{
+  --tw-bg-opacity:1 !important;
+  background-color:rgb(46 115 182 / var(--tw-bg-opacity, 1)) !important
+}
+
 .hover\:bg-opacity-10:hover{
   --tw-bg-opacity:0.1
 }
@@ -10353,6 +10367,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1))
 }
 
+.focus\:\!bg-primary-600:focus{
+  --tw-bg-opacity:1 !important;
+  background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1)) !important
+}
+
 .focus\:bg-opacity-10:focus{
   --tw-bg-opacity:0.1
 }
@@ -10498,6 +10517,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus\:ring-offset-gray-100:focus{
   --tw-ring-offset-color:#f3f4f6
+}
+
+.focus\:hover\:bg-primary-500:hover:focus{
+  --tw-bg-opacity:1;
+  background-color:rgb(46 115 182 / var(--tw-bg-opacity, 1))
 }
 
 .focus-visible\:rounded:focus-visible{

@@ -390,7 +390,7 @@ function SidebarContents(props: {
         </span>
       </div>
       <div className="mt-5 flex-1 flex flex-col">
-        <nav className="flex-1 px-2 bg-gray-800 space-y-1">
+        <nav className="flex-1 px-2 bg-gray-800">
           {props.sections.map((section) => (
             <NavLink
               exact={section.path === "/admin"}
@@ -407,8 +407,8 @@ function SidebarContents(props: {
                 }
               }}
               to={`/${props.slug}${section.path}`}
-              activeClassName="bg-primary-600 text-white"
-              className="group flex items-center px-2 py-2 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
+              activeClassName="bg-primary-600 hover:!bg-primary-500 text-white"
+              className="group flex items-center px-2 py-2.5 md:text-sm leading-5 font-medium text-indigo-100 rounded-md hover:text-white hover:bg-primary-600/50 focus:outline-none focus:text-white focus:bg-primary-600 transition ease-in-out duration-75"
             >
               {section.icon}
               {section.breadcrumb}
