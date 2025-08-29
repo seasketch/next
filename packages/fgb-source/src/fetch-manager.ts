@@ -93,22 +93,31 @@ export class FetchManager {
       return inFlightRequest;
     }
 
-    // Create new request
-    const request = (async () => {
-      try {
-        const bytes = await this.fetchRangeFn(range);
+    // Add a timeout to the request
+    const timeout = setTimeout(() => {
+      throw new Error("Request timed out");
+    }, 120000);
+
+    // Create new request promise
+    const requestPromise = this.fetchRangeFn(range).then(
+      (bytes) => {
+        // cancel the timeout
+        clearTimeout(timeout);
         // Store in cache
         this.cache.set(cacheKey, bytes);
-        return bytes;
-      } finally {
-        // Clean up in-flight request map
         this.inFlightRequests.delete(cacheKey);
+        return bytes;
+      },
+      (error) => {
+        console.error("error fetching range", error);
+        this.inFlightRequests.delete(cacheKey);
+        throw error;
       }
-    })();
+    );
 
     // Store request in in-flight map
-    this.inFlightRequests.set(cacheKey, request);
-    return request;
+    this.inFlightRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }
 
   /**

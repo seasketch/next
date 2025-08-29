@@ -1,6 +1,7 @@
-import { SetStateAction } from "react";
 import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
 import { MetricType } from "overlay-engine";
+import { ReactElement, FunctionComponent } from "react";
+import { SketchClassDetailsFragment } from "../generated/graphql";
 
 export type ReportCardConfigUpdateCallback = (
   update:
@@ -22,19 +23,6 @@ export type ReportCardAdminComponent<T> = React.ComponentType<{
   onUpdate: ReportCardConfigUpdateCallback;
 }>;
 
-export type ReportCardPickerComponent = React.ComponentType<{
-  type: ReportCardType;
-  title: string;
-  description?: string;
-  icon?: React.ComponentType;
-  onClick: () => void;
-}>;
-
-export type PickerSettings = Pick<
-  ReportCardConfiguration<any>,
-  "componentSettings" | "body"
->;
-
 export interface ReportCardRegistration<T> {
   type: ReportCardType;
   superusersOnly?: boolean;
@@ -44,14 +32,26 @@ export interface ReportCardRegistration<T> {
 
   // Admin components (lazy loaded)
   adminComponent?: React.LazyExoticComponent<ReportCardAdminComponent<T>>;
-  pickerSettings: PickerSettings;
 
   // Default settings for new cards of this type
   defaultSettings: T;
 
+  // Default body content for new cards
+  defaultBody: any;
+
+  // Display properties for the admin interface
+  label: ReactElement;
+  description: ReactElement;
+  icon: FunctionComponent<{
+    componentSettings: T;
+    sketchClass?: SketchClassDetailsFragment | undefined | null;
+  }>;
+
   // Validation and export helpers (similar to form elements)
   validateSettings?: (settings: T) => string[] | null;
   getExportData?: (settings: T, data: any) => any;
+  requiredMetrics?: (componentSettings: T) => MetricType[];
+  order?: number;
 }
 
 export const registeredCards: Map<
@@ -63,12 +63,19 @@ export interface RegisterReportCardConfig<T> {
   type: ReportCardType;
   component: ReportCardComponent<T>;
   defaultSettings: T;
+  defaultBody: any;
   superusersOnly?: boolean;
   adminComponent?: React.LazyExoticComponent<ReportCardAdminComponent<T>>;
   validateSettings?: (settings: T) => string[] | null;
   getExportData?: (settings: T, data: any) => any;
-  pickerSettings: PickerSettings;
+  label: ReactElement;
+  description: ReactElement;
+  icon: FunctionComponent<{
+    componentSettings: T;
+    sketchClass?: SketchClassDetailsFragment | undefined | null;
+  }>;
   requiredMetrics?: (componentSettings: T) => MetricType[];
+  order?: number;
 }
 
 export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
@@ -78,9 +85,14 @@ export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
     component: config.component,
     adminComponent: config.adminComponent,
     defaultSettings: config.defaultSettings,
+    defaultBody: config.defaultBody,
     validateSettings: config.validateSettings,
     getExportData: config.getExportData,
-    pickerSettings: config.pickerSettings,
+    label: config.label,
+    description: config.description,
+    icon: config.icon,
+    requiredMetrics: config.requiredMetrics,
+    order: config.order,
   });
 }
 
@@ -97,26 +109,6 @@ export function getCardAdminComponent(
 ): React.LazyExoticComponent<ReportCardAdminComponent<any>> | null {
   const registration = registeredCards.get(type);
   return registration?.adminComponent || null;
-}
-
-export function getCardPickerComponent(
-  type: ReportCardType
-): React.ReactNode | null {
-  const registration = registeredCards.get(type);
-  if (!registration) return null;
-  const Component = getCardComponent(type);
-  if (!Component) return null;
-  return (
-    <Component
-      config={{
-        ...registration.pickerSettings,
-        type,
-        id: 0,
-        position: 0,
-        alternateLanguageSettings: {},
-      }}
-    />
-  );
 }
 
 export function getCardRegistration(
@@ -136,8 +128,17 @@ export function getAvailableCardTypes(options?: {
 }): ReportCardType[] {
   const isSuperuser = options?.superuser || false;
 
-  return Array.from(registeredCards.values())
-    .filter((card) => !card.superusersOnly || isSuperuser)
-    .sort((a, b) => a.type.localeCompare(b.type))
-    .map((card) => card.type);
+  // Get cards and sort by order if specified
+  const cards = Array.from(registeredCards.values()).filter(
+    (card) => !card.superusersOnly || isSuperuser
+  );
+
+  // Sort by order property if available, otherwise preserve insertion order
+  cards.sort((a, b) => {
+    const orderA = a.order ?? Number.MAX_SAFE_INTEGER;
+    const orderB = b.order ?? Number.MAX_SAFE_INTEGER;
+    return orderA - orderB;
+  });
+
+  return cards.map((card) => card.type);
 }

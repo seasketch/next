@@ -1,8 +1,15 @@
 import { ReportCardIcon } from "../ReportCard";
+import { useContext } from "react";
+import { FormLanguageContext } from "../../formElements/FormElement";
+import { ReportCardConfigUpdateCallback } from "../registerCard";
 
 export type ProsemirrorBodyJSON = any;
 
-export type ReportCardType = "Attributes" | "TextBlock" | "SketchSize" | "Size";
+export type ReportCardType =
+  | "Attributes"
+  | "TextBlock"
+  | "Size"
+  | "PolygonOverlap";
 
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
@@ -105,7 +112,105 @@ export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
 // Import card implementations
 
 export function registerCards() {
-  import("./TextBlockCard");
   import("./SketchAttributesCard");
   import("./SizeCard");
+  import("./PolygonOverlapCard");
+  import("./TextBlockCard");
+}
+
+/**
+ * Returns a localized card setting value. For EN, returns componentSettings[key] or fallback.
+ * For non-EN, returns alternateLanguageSettings[lang][key] if present; otherwise falls back
+ * to componentSettings[key] or fallback. Empty strings are treated as "not set" and will
+ * fall back to the provided fallback value.
+ */
+export function useLocalizedCardSetting<
+  TSettings extends Record<string, any>,
+  K extends keyof TSettings
+>(config: ReportCardConfiguration<TSettings>, key: K, fallback: any) {
+  const lang = useContext(FormLanguageContext)?.lang?.code;
+  if (lang && lang !== "EN") {
+    const localized = config.alternateLanguageSettings?.[lang]?.[key as string];
+    if (localized !== undefined && localized !== "") {
+      return localized;
+    }
+  }
+  const base = (config.componentSettings as any)?.[key as string];
+  return base !== undefined && base !== "" ? base : fallback;
+}
+
+/**
+ * Admin helpers for editing localized string fields on a ReportCard.
+ * Provides input value (no EN fallback), placeholder (EN/default), and a setter
+ * that merges edits without clobbering unrelated fields or other languages.
+ */
+export function useCardLocalizedStringAdmin(
+  config: ReportCardConfiguration<any>,
+  onUpdate: ReportCardConfigUpdateCallback
+) {
+  const lang = useContext(FormLanguageContext)?.lang?.code;
+
+  const updateComponentSettings = (
+    newSettings: Partial<Record<string, any>>
+  ) => {
+    onUpdate((prev) => {
+      const previousSettings = {
+        ...(config.componentSettings || {}),
+        ...(prev.componentSettings || {}),
+      } as Record<string, any>;
+      return {
+        ...prev,
+        componentSettings: {
+          ...previousSettings,
+          ...newSettings,
+        },
+      };
+    });
+  };
+
+  const getInputValue = (key: string): string => {
+    if (lang && lang !== "EN") {
+      const localized = config.alternateLanguageSettings?.[lang]?.[key];
+      return typeof localized === "string" ? localized : "";
+    }
+    const base = (config.componentSettings as any)?.[key];
+    return typeof base === "string" ? base : "";
+  };
+
+  const getPlaceholder = (key: string, defaultLabel: string): string => {
+    if (lang && lang !== "EN") {
+      const base = (config.componentSettings as any)?.[key];
+      return typeof base === "string" && base.length > 0 ? base : defaultLabel;
+    }
+    return defaultLabel;
+  };
+
+  const setValue = (key: string, value: string) => {
+    if (!lang || lang === "EN") {
+      updateComponentSettings({ [key]: value });
+    } else {
+      onUpdate((prev) => {
+        const previousAltAll = {
+          ...(config.alternateLanguageSettings || {}),
+          ...(prev.alternateLanguageSettings || {}),
+        } as Record<string, any>;
+        const previousAltForLang = {
+          ...(config.alternateLanguageSettings?.[lang] || {}),
+          ...(prev.alternateLanguageSettings?.[lang] || {}),
+        } as Record<string, any>;
+        return {
+          ...prev,
+          alternateLanguageSettings: {
+            ...previousAltAll,
+            [lang]: {
+              ...previousAltForLang,
+              [key]: value,
+            },
+          },
+        };
+      });
+    }
+  };
+
+  return { getInputValue, getPlaceholder, setValue, updateComponentSettings };
 }

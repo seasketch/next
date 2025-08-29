@@ -35,7 +35,9 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.union = union;
 exports.intersection = intersection;
-const polygonClipping = __importStar(require("polygon-clipping"));
+exports.difference = difference;
+// import * as polygonClipping from "polygon-clipping";
+const clipper = __importStar(require("polyclip-ts"));
 /**
  * Union a list of polygons into a single polygon.
  *
@@ -50,7 +52,7 @@ const polygonClipping = __importStar(require("polygon-clipping"));
  * @returns The union of the polygons.
  */
 function union(geometries) {
-    return polygonClipping.union(geometries[0], ...geometries.slice(1));
+    return clipper.union(geometries[0], ...geometries.slice(1));
 }
 /**
  * Intersect a list of polygons into a single polygon.
@@ -63,7 +65,21 @@ function intersection(geometries) {
         throw new Error("At least two geometries are required for intersection");
     }
     else {
-        return polygonClipping.intersection(geometries[0], ...geometries.slice(1));
+        return clipper.intersection(geometries[0], ...geometries.slice(1));
+    }
+}
+/**
+ * Difference a list of polygons into a single polygon.
+ *
+ * @param geometries - The list of polygons to difference.
+ * @returns The difference of the polygons.
+ */
+function difference(geometries) {
+    if (geometries.length < 2) {
+        throw new Error("At least two geometries are required for difference");
+    }
+    else {
+        return clipper.difference(geometries[0], ...geometries.slice(1));
     }
 }
 //# sourceMappingURL=polygonClipping.js.map

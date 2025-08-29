@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useReportContext } from "./ReportContext";
 import { ReportCardFactory } from "./ReportCard";
@@ -17,6 +17,7 @@ interface SortableReportBodyProps {
           prevState: ReportCardConfiguration<any>
         ) => ReportCardConfiguration<any>)
   ) => void;
+  optimisticCardOrder?: number[];
 }
 
 export function SortableReportBody({
@@ -24,6 +25,7 @@ export function SortableReportBody({
   selectedForEditing: propSelectedForEditing,
   localCardEdits,
   onCardUpdate,
+  optimisticCardOrder,
 }: SortableReportBodyProps) {
   const { t } = useTranslation("admin:sketching");
   const context = useReportContext();
@@ -40,6 +42,26 @@ export function SortableReportBody({
   useEffect(() => {
     setOptimisticCards(selectedTab?.cards || []);
   }, [selectedTab?.cards]);
+
+  // Use optimistic card order if available, otherwise use the default order
+  const displayCards = useMemo(() => {
+    if (!optimisticCardOrder || !selectedTab?.cards) {
+      return optimisticCards;
+    }
+
+    // Reorder cards based on optimistic order
+    const cardMap = new Map(
+      selectedTab.cards.map((card: ReportCardConfiguration<any>) => [
+        card.id,
+        card,
+      ])
+    );
+    return optimisticCardOrder
+      .map((id) => cardMap.get(id))
+      .filter(
+        (card): card is ReportCardConfiguration<any> => card !== undefined
+      );
+  }, [optimisticCardOrder, selectedTab?.cards, optimisticCards]);
 
   if (!selectedTab) {
     return null;
@@ -64,7 +86,7 @@ export function SortableReportBody({
             ref={provided.innerRef}
             className="space-y-2"
           >
-            {optimisticCards.map((card, index) => {
+            {displayCards.map((card, index) => {
               // Merge local edits with the card if it's the one being edited
               const cardWithLocalEdits =
                 selectedForEditing === card.id && localCardEdits

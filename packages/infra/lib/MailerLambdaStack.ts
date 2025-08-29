@@ -3,24 +3,25 @@
  * and also monitoring the sns topics that relay information on email delivery
  * status.
  */
-import * as cdk from "@aws-cdk/core";
-import * as iam from "@aws-cdk/aws-iam";
-import * as logs from "@aws-cdk/aws-logs";
-import * as lambda from "@aws-cdk/aws-lambda";
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as rds from "aws-cdk-lib/aws-rds";
+import * as sns from "aws-cdk-lib/aws-sns";
 import * as path from "path";
-import { Vpc } from "@aws-cdk/aws-ec2";
-import { DatabaseInstance } from "@aws-cdk/aws-rds";
-import { NodejsFunction } from "@aws-cdk/aws-lambda-nodejs";
-import { SnsEventSource } from "@aws-cdk/aws-lambda-event-sources";
-import { Topic } from "@aws-cdk/aws-sns";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { SnsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
+import { Construct } from "constructs";
 
 export class MailerLambdaStack extends cdk.Stack {
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
-      vpc: Vpc;
-      db: DatabaseInstance;
+      vpc: ec2.Vpc;
+      db: rds.DatabaseInstance;
       host: string;
       topic: string;
       emailSource: string;
@@ -44,7 +45,9 @@ export class MailerLambdaStack extends cdk.Stack {
         runtime: lambda.Runtime.NODEJS_14_X,
         vpc: props.vpc,
         timeout: cdk.Duration.seconds(5),
-        logRetention: logs.RetentionDays.ONE_MONTH,
+        logGroup: new logs.LogGroup(this, "MailerLambdaLogs", {
+          retention: logs.RetentionDays.ONE_MONTH,
+        }),
         environment: {
           PGHOST: props.db.instanceEndpoint.hostname,
           PGPORT: "5432",
@@ -80,7 +83,7 @@ export class MailerLambdaStack extends cdk.Stack {
       }
     );
 
-    const notificationTopic = Topic.fromTopicArn(
+    const notificationTopic = sns.Topic.fromTopicArn(
       this,
       "EmailStatusTopic",
       props.topic

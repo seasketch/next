@@ -5,6 +5,19 @@
  */
 import * as AWS from "aws-sdk";
 
+// Type definitions for CDK custom resources
+declare namespace AWSCDKAsyncCustomResource {
+  interface OnEventRequest {
+    RequestType: "Create" | "Update" | "Delete";
+    ResourceProperties: any;
+  }
+
+  interface OnEventResponse {
+    PhysicalResourceId: string;
+    Data?: { [key: string]: any };
+  }
+}
+
 export interface HostingStackResourceProperties {
   region: string;
   coords: [number, number];
@@ -13,13 +26,15 @@ export interface HostingStackResourceProperties {
 }
 
 export async function handler(event: AWSCDKAsyncCustomResource.OnEventRequest) {
-  const props = event.ResourceProperties as HostingStackResourceProperties;
+  const props = (event as any)
+    .ResourceProperties as HostingStackResourceProperties;
   const exportName = process.env.LAMBDA_FUNCTION_EXPORT_NAME!;
   const lambdaRegion = process.env.LAMBDA_REGION!;
   const cf = new AWS.CloudFormation({ region: lambdaRegion });
   const exports = await cf.listExports().promise();
-  const functionName = exports.Exports?.find((e) => e.Name === exportName)
-    ?.Value;
+  const functionName = exports.Exports?.find(
+    (e) => e.Name === exportName
+  )?.Value;
   if (!functionName) {
     console.error(exports);
     throw new Error("Could not find export with name=" + exportName);

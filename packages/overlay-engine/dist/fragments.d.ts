@@ -1,5 +1,5 @@
 import { BBox, Feature, GeoJsonProperties, Polygon } from "geojson";
-import { ClippingFn, ClippingLayerOption } from "./geographies";
+import { ClippingFn, ClippingLayerOption } from "./geographies/geographies";
 import { PreparedSketch } from "./utils/prepareSketch";
 export type GeographySettings = {
     id: number;

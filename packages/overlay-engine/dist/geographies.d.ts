@@ -1,54 +1,64 @@
 import { Feature, MultiPolygon, Polygon } from "geojson";
-import { PreparedSketch } from "./utils/prepareSketch";
-import { Cql2Query } from "./cql2";
-import { FragmentResult, GeographySettings, SketchFragment } from "./fragments";
+import { PreparedSketch } from "../utils/prepareSketch";
+import { Cql2Query } from "../cql2";
+import {
+  FragmentResult,
+  GeographySettings,
+  SketchFragment,
+} from "../fragments";
+import { SourceCache } from "fgb-source";
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 /**
  * The result of a single clipping operation, as returned by a ClippingSource
  * clip method.
  */
 export type PolygonClipResult = {
-    /**
-     * Whether the sketch was changed by this operation. This is particularly
-     * useful to know when running multiple interesect and difference operations,
-     * as an unchanged diff output can be ignored.
-     */
-    changed: boolean;
-    /**
-     * The operation that was performed.
-     */
-    op: ClippingOperation;
-    /**
-     * The output of the clipping operation. This will be null if the sketch is
-     * completely outside the clipping geometry for intersect, or completely
-     * inside the clipping geometry for difference.
-     */
-    output: Feature<MultiPolygon> | null;
+  /**
+   * Whether the sketch was changed by this operation. This is particularly
+   * useful to know when running multiple interesect and difference operations,
+   * as an unchanged diff output can be ignored.
+   */
+  changed: boolean;
+  /**
+   * The operation that was performed.
+   */
+  op: ClippingOperation;
+  /**
+   * The output of the clipping operation. This will be null if the sketch is
+   * completely outside the clipping geometry for intersect, or completely
+   * inside the clipping geometry for difference.
+   */
+  output: Feature<MultiPolygon> | null;
 };
-export type ClippingFn = (preparedSketch: PreparedSketch, source: string, op: ClippingOperation, cql2Query?: Cql2Query) => Promise<PolygonClipResult>;
+export type ClippingFn = (
+  preparedSketch: PreparedSketch,
+  source: string,
+  op: ClippingOperation,
+  cql2Query?: Cql2Query
+) => Promise<PolygonClipResult>;
 /**
  * Options for configuring a clipping layer operation. A Geography consists of
  * one or more clipping layers, at least one of which must be an INTERSECT
  * operation.
  */
 export interface ClippingLayerOption {
-    source: string;
-    /**
-     * The clipping operation to perform:
-     * - INTERSECT: Keep only the parts of the sketch that overlap with
-     *   features from this layer
-     * - DIFFERENCE: Remove the parts of the sketch that overlap with
-     *   features from this layer
-     */
-    op: ClippingOperation;
-    /**
-     * Optional CQL2 query to filter which features from the source are used
-     * for clipping. The query follows OGC CQL2 specification and supports
-     * comparison and logical operators. If not provided, all features from
-     * the source will be used.
-     * @see evaluateCql2JSONQuery for supported query syntax
-     */
-    cql2Query?: Cql2Query;
+  source: string;
+  /**
+   * The clipping operation to perform:
+   * - INTERSECT: Keep only the parts of the sketch that overlap with
+   *   features from this layer
+   * - DIFFERENCE: Remove the parts of the sketch that overlap with
+   *   features from this layer
+   */
+  op: ClippingOperation;
+  /**
+   * Optional CQL2 query to filter which features from the source are used
+   * for clipping. The query follows OGC CQL2 specification and supports
+   * comparison and logical operators. If not provided, all features from
+   * the source will be used.
+   * @see evaluateCql2JSONQuery for supported query syntax
+   */
+  cql2Query?: Cql2Query;
 }
 /**
  * Clips a sketch to a geography defined by one or more clipping layers.
@@ -118,7 +128,11 @@ export interface ClippingLayerOption {
  *   }
  * );
  */
-export declare function clipToGeography(preparedSketch: PreparedSketch, clippingLayers: ClippingLayerOption[], clippingFn: ClippingFn): Promise<PreparedSketch["feature"] | null>;
+export declare function clipToGeography(
+  preparedSketch: PreparedSketch,
+  clippingLayers: ClippingLayerOption[],
+  clippingFn: ClippingFn
+): Promise<PreparedSketch["feature"] | null>;
 /**
  * Performs a single clipping operation between a sketch and a set of polygons.
  *
@@ -166,7 +180,12 @@ export declare function clipToGeography(preparedSketch: PreparedSketch, clipping
  *   source.getFeaturesAsync(preparedSketch.envelopes)
  * );
  */
-export declare function clipSketchToPolygons(preparedSketch: PreparedSketch, op: ClippingOperation, cql2Query: Cql2Query | undefined, polygonSource: AsyncIterable<Feature<MultiPolygon | Polygon>>): Promise<PolygonClipResult>;
+export declare function clipSketchToPolygons(
+  preparedSketch: PreparedSketch,
+  op: ClippingOperation,
+  cql2Query: Cql2Query | undefined,
+  polygonSource: AsyncIterable<Feature<MultiPolygon | Polygon>>
+): Promise<PolygonClipResult>;
 /**
  * Clips a prepared sketch to a set of geographies, and returns the clipped
  * sketch and the fragments that were generated.
@@ -189,8 +208,19 @@ export declare function clipSketchToPolygons(preparedSketch: PreparedSketch, op:
  * @param clippingFn - The function to use for clipping.
  * @returns
  */
-export declare function clipToGeographies(preparedSketch: PreparedSketch, geographies: GeographySettings[], geographiesForClipping: number[], existingSketchFragments: SketchFragment[], existingSketchId: number | null, clippingFn: ClippingFn): Promise<{
-    clipped: PreparedSketch["feature"] | null;
-    fragments: FragmentResult[];
+export declare function clipToGeographies(
+  preparedSketch: PreparedSketch,
+  geographies: GeographySettings[],
+  geographiesForClipping: number[],
+  existingSketchFragments: SketchFragment[],
+  existingSketchId: number | null,
+  clippingFn: ClippingFn
+): Promise<{
+  clipped: PreparedSketch["feature"] | null;
+  fragments: FragmentResult[];
 }>;
+export declare function calculateArea(
+  geography: ClippingLayerOption[],
+  sourceCache: SourceCache
+): Promise<number>;
 //# sourceMappingURL=geographies.d.ts.map

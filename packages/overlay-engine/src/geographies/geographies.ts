@@ -1,17 +1,10 @@
-import {
-  Feature,
-  MultiLineString,
-  MultiPolygon,
-  Point,
-  Polygon,
-} from "geojson";
-import { FlatGeobufSource } from "fgb-source";
-import { PreparedSketch, prepareSketch } from "./utils/prepareSketch";
+import { Feature, MultiPolygon, Polygon } from "geojson";
+import { PreparedSketch } from "../utils/prepareSketch";
 import {
   Cql2Query,
   consolidateCql2Queries,
   evaluateCql2JSONQuery,
-} from "./cql2";
+} from "../cql2";
 import * as polygonClipping from "polygon-clipping";
 import {
   createFragments,
@@ -19,10 +12,10 @@ import {
   FragmentResult,
   GeographySettings,
   SketchFragment,
-} from "./fragments";
+} from "../fragments";
 import area from "@turf/area";
-import { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
-import { union } from "./utils/polygonClipping";
+import { unionAtAntimeridian } from "../utils/unionAtAntimeridian";
+import { union } from "../utils/polygonClipping";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 
@@ -81,6 +74,12 @@ export interface ClippingLayerOption {
    * @see evaluateCql2JSONQuery for supported query syntax
    */
   cql2Query?: Cql2Query;
+
+  /**
+   * Optional hint for the size of the header of the source file. This is used
+   * to optimize the query plan by avoiding fetching the entire header.
+   */
+  headerSizeHint?: number;
 }
 
 /**
@@ -170,27 +169,39 @@ export async function clipToGeography(
 
   // Kick off the clipping operations in parallel, starting with the INTERSECT
   // layers.
-  const intersectResults = Promise.all(
+  const intersectResultsPromise = Promise.all(
     intersectLayers.map((layer) =>
       clippingFn(preparedSketch, layer.source, "INTERSECT", layer.cql2Query)
     )
   );
-  const differenceResults = Promise.all(
+  const differenceResultsPromise = Promise.all(
     differenceLayers.map((layer) =>
       clippingFn(preparedSketch, layer.source, "DIFFERENCE", layer.cql2Query)
     )
   );
 
-  let results = await intersectResults;
+  const intersectResults = await intersectResultsPromise;
   // if all intersect results are null, the sketch is completely outside
   // the geography
-  if (!results.find((r) => r.output !== null)) {
+  if (!intersectResults.find((r) => r.output !== null)) {
     // Fire and forget, but handle errors to avoid unhandled promise rejections
-    differenceResults.catch(() => {});
+    differenceResultsPromise.catch(() => {});
     return null;
   }
 
-  results.push(...(await differenceResults));
+  const differenceResults = await differenceResultsPromise;
+
+  // If any DIFFERENCE layer eliminates the sketch entirely, this geography
+  // should produce no output.
+  if (
+    differenceResults.some(
+      (r) => r.op === "DIFFERENCE" && r.changed && r.output === null
+    )
+  ) {
+    return null;
+  }
+
+  const results = [...intersectResults, ...differenceResults];
 
   const features: Feature<MultiPolygon>[] = [];
   let anyChanges = false;

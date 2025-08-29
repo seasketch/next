@@ -3,7 +3,7 @@ import {
   ClippingFn,
   ClippingLayerOption,
   clipSketchToPolygons,
-} from "../src/geographies";
+} from "../src/geographies/geographies";
 import { SourceCache } from "fgb-source";
 import { prepareSketch } from "../src/utils/prepareSketch";
 import {
@@ -22,6 +22,7 @@ import {
   fsmTestFeatures,
 } from "./test-features";
 import { readOutput, compareFragments, saveOutput } from "./test-helpers";
+import { landUrl } from "./constants";
 
 const eezUrl = "https://uploads.seasketch.org/eez-land-joined.fgb";
 const territorialSeaUrl =
@@ -66,7 +67,7 @@ const fijiGeographies: GeographySettings[] = [
         cql2Query: { op: "=", args: [{ property: "UNION" }, "Fiji"] },
       },
       {
-        source: eezUrl,
+        source: landUrl,
         op: "DIFFERENCE",
       },
     ],
@@ -151,6 +152,55 @@ describe("createFragments", () => {
     );
     // saveOutput("fiji-shape2-fragments", fragments);
     expect(fragments).toHaveLength(3);
+  });
+
+  it("should create single fragment for nearshore sketch with correct geography associations", async () => {
+    // Create a sketch feature from the provided GeoJSON data
+    const nearshoreSketch: Feature<MultiPolygon> = {
+      type: "Feature",
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: [
+          [
+            [
+              [178.876002721, -16.961933722],
+              [178.86230818570306, -17.062247029437067],
+              [178.950887264, -17.106175],
+              [178.993786743, -17.027230092],
+              [178.876002721, -16.961933722],
+            ],
+          ],
+        ],
+      },
+      properties: {},
+    };
+
+    const preparedSketch = prepareSketch(nearshoreSketch);
+    const fragments = await createFragments(
+      preparedSketch,
+      fijiGeographies,
+      clippingFn
+    );
+    // saveOutput("nearshore-sketch", preparedSketch.feature);
+
+    // Should create exactly 1 fragment
+    expect(fragments).toHaveLength(1);
+
+    const fragment = fragments[0];
+    // saveOutput("nearshore-sketch-fragments", fragments);
+
+    // Should be associated with both EEZ (id: 1) and Nearshore (id: 3) geographies
+    expect(fragment.properties.__geographyIds).toContain(1); // EEZ
+    expect(fragment.properties.__geographyIds).toContain(3); // Nearshore
+
+    // Should NOT be associated with Offshore (id: 2) geography
+    expect(fragment.properties.__geographyIds).not.toContain(2);
+
+    // Should have exactly 2 geography associations
+    expect(fragment.properties.__geographyIds).toHaveLength(2);
+
+    // Should be a valid polygon
+    expect(fragment.geometry.type).toBe("Polygon");
   });
 });
 

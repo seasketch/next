@@ -3,7 +3,13 @@
     "src/**/*.ts",
     "tasks/**/*.ts",
     "dist/**/*.js",
-    "../*/dist/**/*.js"
+    "../overlay-engine/dist/**/*.js",
+    "../geostats-types/dist/**/*.js",
+    "../map-tile-cache-calculator/dist/**/*.js",
+    "../mapbox-gl-esri-sources/dist/**/*.js",
+    "../metadata-parser/dist/**/*.js",
+    "../spatial-uploads-handler/dist/**/*.js",
+    "../vector-data-source/dist/**/*.js"
   ],
   "ext": "ts,js",
   "ignore": ["node_modules/**/*", "dist/**/*.map"],

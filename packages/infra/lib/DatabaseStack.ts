@@ -1,14 +1,19 @@
-import * as cdk from "@aws-cdk/core";
-import * as rds from "@aws-cdk/aws-rds";
-import * as ec2 from "@aws-cdk/aws-ec2";
-import * as iam from "@aws-cdk/aws-iam";
-import { Connections, ISecurityGroup, SecurityGroup } from "@aws-cdk/aws-ec2";
-import { Secret } from "@aws-cdk/aws-ecs";
-import { CustomResource } from "@aws-cdk/core";
-import * as logs from "@aws-cdk/aws-logs";
-import * as cr from "@aws-cdk/custom-resources";
-import * as lambda from "@aws-cdk/aws-lambda";
+import * as cdk from "aws-cdk-lib";
+import * as rds from "aws-cdk-lib/aws-rds";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import {
+  Connections,
+  ISecurityGroup,
+  SecurityGroup,
+} from "aws-cdk-lib/aws-ec2";
+import { Secret } from "aws-cdk-lib/aws-ecs";
+import { CustomResource } from "aws-cdk-lib";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as cr from "aws-cdk-lib/custom-resources";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as path from "path";
+import { Construct } from "constructs";
 
 /**
  * The DatabaseStack is responsible for creating an RDS Postgres instance and
@@ -20,7 +25,7 @@ export class DatabaseStack extends cdk.Stack {
   vpc: ec2.Vpc;
   instance: rds.DatabaseInstance;
   defaultSecurityGroup: ISecurityGroup;
-  constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
+  constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
     const vpc = new ec2.Vpc(this, "seasketchVPC", {});
@@ -50,7 +55,8 @@ export class DatabaseStack extends cdk.Stack {
       vpc,
       vpcSubnets: {
         // This is important!! Security group will not block connections
-        subnetType: ec2.SubnetType.PRIVATE,
+        // TODO: We may be able to save on costs by using PRIVATE_ISOLATED
+        subnetType: ec2.SubnetType.PRIVATE_WITH_EGRESS,
       },
       securityGroups: [this.defaultSecurityGroup],
       iamAuthentication: true,
@@ -121,7 +127,9 @@ export class DatabaseStack extends cdk.Stack {
         securityGroups: instance.connections.securityGroups,
         // should be more than ample
         timeout: cdk.Duration.seconds(30),
-        logRetention: logs.RetentionDays.ONE_DAY,
+        logGroup: new logs.LogGroup(this, "DatabaseStackLogs", {
+          retention: logs.RetentionDays.ONE_DAY,
+        }),
         initialPolicy: [
           new iam.PolicyStatement({
             actions: ["rds-db:connect"],
@@ -143,7 +151,9 @@ export class DatabaseStack extends cdk.Stack {
 
     const myProvider = new cr.Provider(this, "InitDBProvider", {
       onEventHandler: onEvent,
-      logRetention: logs.RetentionDays.ONE_MONTH,
+      logGroup: new logs.LogGroup(this, "DatabaseStackProviderLogs", {
+        retention: logs.RetentionDays.ONE_MONTH,
+      }),
     });
 
     const custom = new CustomResource(this, "InitDB", {

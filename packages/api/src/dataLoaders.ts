@@ -36,6 +36,31 @@ export function makeDataLoaders(pool: Pool) {
     verifyToken: async (token: string) => {
       return verify(pool, token, ISSUER);
     },
+    spatialMetricChunks: new DataLoader<number, any[]>((ids) =>
+      Promise.all(
+        ids.map(async (id) => {
+          const results = await pool.query(
+            `select *, ST_Envelope(bbox) as box from metric_work_chunks where spatial_metric_id = $1`,
+            [id]
+          );
+          return results.rows.map((row) => {
+            return {
+              id: parseInt(row.id),
+              state: row.state.toUpperCase(),
+              spatialMetricId: parseInt(row.spatial_metric_id),
+              errorMessage: row.error_message,
+              value: JSON.parse(row.value),
+              totalBytes: parseInt(row.total_bytes),
+              offsets: row.offsets.map((offset: string) => parseInt(offset)),
+              bbox: row.box.coordinates.map((coord: number) => coord),
+              executionEnvironment: row.execution_environment.toUpperCase(),
+              createdAt: new Date(row.created_at),
+              updatedAt: row.updated_at ? new Date(row.updated_at) : null,
+            };
+          });
+        })
+      )
+    ),
   };
 }
 

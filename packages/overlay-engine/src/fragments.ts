@@ -3,7 +3,7 @@ import {
   ClippingFn,
   ClippingLayerOption,
   clipToGeography,
-} from "./geographies";
+} from "./geographies/geographies";
 import { PreparedSketch } from "./utils/prepareSketch";
 import * as polygonClipping from "polygon-clipping";
 import { cleanCoords } from "./utils/cleanCoords";

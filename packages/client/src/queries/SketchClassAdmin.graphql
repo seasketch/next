@@ -420,6 +420,12 @@ query DraftReport($sketchClassId: Int!) {
         name
         translatedProps
       }
+      mySketches {
+        id
+        name
+        sketchClassId
+        createdAt
+      }
     }
   }
 }

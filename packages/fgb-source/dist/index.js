@@ -2253,17 +2253,24 @@ var FetchManager = class {
     if (inFlightRequest) {
       return inFlightRequest;
     }
-    const request = (async () => {
-      try {
-        const bytes3 = await this.fetchRangeFn(range);
+    const timeout = setTimeout(() => {
+      throw new Error("Request timed out");
+    }, 12e4);
+    const requestPromise = this.fetchRangeFn(range).then(
+      (bytes3) => {
+        clearTimeout(timeout);
         this.cache.set(cacheKey, bytes3);
-        return bytes3;
-      } finally {
         this.inFlightRequests.delete(cacheKey);
+        return bytes3;
+      },
+      (error) => {
+        console.error("error fetching range", error);
+        this.inFlightRequests.delete(cacheKey);
+        throw error;
       }
-    })();
-    this.inFlightRequests.set(cacheKey, request);
-    return request;
+    );
+    this.inFlightRequests.set(cacheKey, requestPromise);
+    return requestPromise;
   }
   /**
    * Default fetch implementation using the fetch API.
@@ -2285,17 +2292,33 @@ var FetchManager = class {
 function createQueryPlan(results, featureDataOffset, options) {
   results.sort((a, b) => a[0] - b[0]);
   if (results.length === 0) {
-    return [];
+    return {
+      requests: [],
+      bytes: 0,
+      features: 0
+    };
   } else if (results.length === 1) {
     const result = results[0];
-    return [
-      {
-        range: toRange(result, featureDataOffset),
-        offsets: [[0, result[1]]]
-      }
-    ];
+    return {
+      requests: [
+        {
+          range: toRange(result, featureDataOffset),
+          offsets: [[0, result[1]]]
+        }
+      ],
+      bytes: result[1] ? result[1] - result[0] : 0,
+      features: 1
+    };
   }
-  const ranges = [];
+  const plan = {
+    requests: [],
+    bytes: results.reduce((acc, [offset2, length2]) => {
+      const range = toRange([offset2, length2], featureDataOffset);
+      acc += range[1] ? range[1] - range[0] : 0;
+      return acc;
+    }, 0),
+    features: results.length
+  };
   let offset = 0;
   const [start, length] = results[0];
   let currentRange = {
@@ -2303,15 +2326,13 @@ function createQueryPlan(results, featureDataOffset, options) {
     offsets: [[0, length]]
   };
   offset = length;
-  ranges.push(currentRange);
-  const maxRangeSize = 1024 * 1024 * 10;
+  plan.requests.push(currentRange);
   const overfetchBytes = options.overfetchBytes ?? QUERY_PLAN_DEFAULTS.overfetchBytes;
   for (let i = 1; i < results.length; i++) {
     const [start2, length2] = results[i];
     const range = toRange([start2, length2], featureDataOffset);
     const distance = range[0] - currentRange.range[1] - 1;
-    const mergedRangeSize = range[1] - currentRange.range[0];
-    if (distance < overfetchBytes && mergedRangeSize < maxRangeSize && currentRange.offsets.length < 100) {
+    if (distance < overfetchBytes && currentRange.offsets.length < 1e3) {
       currentRange.range[1] = range[1];
       offset += distance;
       currentRange.offsets.push([offset, length2]);
@@ -2322,10 +2343,10 @@ function createQueryPlan(results, featureDataOffset, options) {
         offsets: [[0, length2]]
       };
       offset = length2;
-      ranges.push(currentRange);
+      plan.requests.push(currentRange);
     }
   }
-  return ranges;
+  return plan;
 }
 function toRange(offsetAndLength, featureDataOffset) {
   if (offsetAndLength[1] === null) {
@@ -2345,17 +2366,24 @@ async function* executeQueryPlan(plan, fetchRange, options = {}) {
   const pendingFetches = new Set(plan.map((_, i) => i));
   while (pendingFetches.size > 0) {
     const completedFetch = await Promise.race(
-      [...pendingFetches].map((i) => fetchPromises[i])
+      [...pendingFetches].map((i2) => fetchPromises[i2])
     );
     pendingFetches.delete(completedFetch.i);
+    delete fetchPromises[completedFetch.i];
     const { data, offsets } = completedFetch;
     const view = new DataView(data);
+    let i = 0;
     for (let [offset, length] of offsets) {
       if (length === null) {
         length = view.buffer.byteLength - offset;
       }
-      const featureView = new DataView(data, offset, length);
+      let featureView = new DataView(data, offset, length);
       yield [featureView, offset];
+      i++;
+      if (i % 10 === 0) {
+        process.nextTick(() => {
+        });
+      }
     }
   }
 }
@@ -2518,46 +2546,65 @@ var FlatGeobufSource = class {
       ...options,
       overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes
     };
-    let queryPlan = [];
     if (!Array.isArray(bbox)) {
       bbox = [bbox];
     }
+    const offsets = [];
     for (const b of bbox) {
       if (!this.index) {
         throw new Error("Spatial index not available");
       }
       const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
-      const plan = createQueryPlan(results, this.featureDataOffset, options);
-      for (const part of plan) {
-        const existing = queryPlan.find(
-          (p) => p.range[0] === part.range[0] && p.range[1] === part.range[1]
-        );
-        if (!existing) {
-          queryPlan.push(part);
-        }
+      for (const result of results) {
+        offsets.push(result);
       }
     }
-    let bytes3 = 0;
-    for (const { range } of queryPlan) {
-      bytes3 += range[1] ? range[1] - range[0] : 0;
-    }
+    const plan = createQueryPlan(offsets, this.featureDataOffset, options);
+    plan.requests.sort((a, b) => a.range[0] - b.range[0]);
     for await (const [data, offset] of executeQueryPlan(
-      queryPlan,
+      plan.requests,
       this.fetchManager.fetchRange.bind(this.fetchManager),
       options
     )) {
       if (options.warmCache) {
         continue;
       }
-      const bytes4 = new Uint8Array(data.buffer);
+      const bytes3 = new Uint8Array(data.buffer);
       const bytesAligned = new Uint8Array(data.byteLength);
       bytesAligned.set(
-        bytes4.slice(data.byteOffset, data.byteOffset + data.byteLength),
+        bytes3.slice(data.byteOffset, data.byteOffset + data.byteLength),
         0
       );
       const feature = parseFeatureData(offset, bytesAligned, this.header);
       yield feature;
     }
+  }
+  async countAndBytesForQuery(bbox) {
+    if (!this.index) {
+      throw new Error("Spatial index not available");
+    }
+    if (!Array.isArray(bbox)) {
+      bbox = [bbox];
+    }
+    let offsetsSet = /* @__PURE__ */ new Set();
+    let offsetAndLengths = [];
+    for (const b of bbox) {
+      const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
+      for (const result of results) {
+        const key = `${result[0]}-${result[1]}`;
+        if (!offsetsSet.has(key)) {
+          offsetsSet.add(key);
+          offsetAndLengths.push(result);
+        }
+      }
+    }
+    const plan = createQueryPlan(offsetAndLengths, this.featureDataOffset, {
+      overfetchBytes: 0
+    });
+    return {
+      bytes: plan.bytes,
+      features: plan.features
+    };
   }
   /**
    * Scan all features in the source. Does not use the spatial index, but
@@ -2604,7 +2651,8 @@ var FlatGeobufSource = class {
       const bb = new ByteBuffer(bytesAligned);
       bb.setPosition(SIZE_PREFIX_LEN2);
       yield {
-        properties: parseProperties2(bb, this.header.columns, offset)
+        properties: parseProperties2(bb, this.header.columns, offset),
+        getFeature: () => parseFeatureData(offset, bytesAligned, this.header)
       };
       offset += size + SIZE_PREFIX_LEN2;
     }

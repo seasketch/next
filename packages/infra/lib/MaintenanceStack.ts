@@ -1,18 +1,13 @@
-import * as cdk from "@aws-cdk/core";
-import * as iam from "@aws-cdk/aws-iam";
-import { DockerImageAsset } from "@aws-cdk/aws-ecr-assets";
+import * as cdk from "aws-cdk-lib";
+import * as ecs from "aws-cdk-lib/aws-ecs";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as rds from "aws-cdk-lib/aws-rds";
+import * as elasticache from "aws-cdk-lib/aws-elasticache";
 import * as path from "path";
-import * as ecs from "@aws-cdk/aws-ecs";
-import { IVpc } from "@aws-cdk/aws-ec2/lib/vpc";
-import {
-  Policy,
-  PolicyDocument,
-  PolicyStatement,
-  ServicePrincipal,
-} from "@aws-cdk/aws-iam";
-import { DatabaseInstance } from "@aws-cdk/aws-rds";
-import { CfnService } from "@aws-cdk/aws-ecs";
-import { CfnCacheCluster } from "@aws-cdk/aws-elasticache";
+import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
+import { IVpc } from "aws-cdk-lib/aws-ec2";
+
+import { Construct } from "constructs";
 
 /**
  * The MaintenanceStack sets up a "bastion" instance in ECS running within the
@@ -28,14 +23,14 @@ import { CfnCacheCluster } from "@aws-cdk/aws-elasticache";
 export class MaintenanceStack extends cdk.Stack {
   taskRole: iam.IRole;
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
       /* VPC used when creating the DB Stack */
       vpc: IVpc;
       /* Database instance is needed to grant connect privileges */
-      db: DatabaseInstance;
-      redis: CfnCacheCluster;
+      db: rds.DatabaseInstance;
+      redis: elasticache.CfnCacheCluster;
     }
   ) {
     super(scope, id, props);
@@ -52,11 +47,11 @@ export class MaintenanceStack extends cdk.Stack {
     });
 
     const role = new iam.Role(this, "MaintenanceRole", {
-      assumedBy: new ServicePrincipal("ecs-tasks.amazonaws.com"),
+      assumedBy: new iam.ServicePrincipal("ecs-tasks.amazonaws.com"),
       inlinePolicies: {
-        dbAccess: new PolicyDocument({
+        dbAccess: new iam.PolicyDocument({
           statements: [
-            new PolicyStatement({
+            new iam.PolicyStatement({
               actions: ["rds-db:connect"],
               effect: iam.Effect.ALLOW,
               // TODO: This policy might not be necessary.
@@ -120,10 +115,10 @@ export class MaintenanceStack extends cdk.Stack {
     props.db.grantConnect(taskDefinition.taskRole);
     this.taskRole = taskDefinition.taskRole;
     taskDefinition.taskRole.attachInlinePolicy(
-      new Policy(this, "DBAccess", {
-        document: new PolicyDocument({
+      new iam.Policy(this, "DBAccess", {
+        document: new iam.PolicyDocument({
           statements: [
-            new PolicyStatement({
+            new iam.PolicyStatement({
               actions: ["rds-db:connect"],
               effect: iam.Effect.ALLOW,
               // TODO: It would be nice to scope this down
@@ -145,6 +140,8 @@ export class MaintenanceStack extends cdk.Stack {
         cluster,
         taskDefinition,
         desiredCount: 1,
+        minHealthyPercent: 50,
+        maxHealthyPercent: 200,
       }
     );
 
@@ -153,7 +150,7 @@ export class MaintenanceStack extends cdk.Stack {
     // const cfnService = ecsService.node.defaultChild as CfnService;
     // doesn't work, see
     // https://github.com/aws/aws-cdk/issues/10666
-    const cfnService = ecsService.node.children[0] as CfnService;
+    const cfnService = ecsService.node.children[0] as ecs.CfnService;
     cfnService.addOverride("Properties.EnableExecuteCommand", "True");
   }
 }

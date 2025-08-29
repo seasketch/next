@@ -18,6 +18,7 @@ import { ReportTabs } from "../../reports/ReportTabs";
 import { ReportConfiguration } from "../../reports/cards/cards";
 import { ReportBody } from "../../reports/ReportBody";
 import { registerCards } from "../../reports/cards/cards";
+import { MetricSubjectFragment } from "overlay-engine";
 
 registerCards();
 
@@ -49,7 +50,9 @@ export default function SketchReportWindow({
   });
 
   const reportState = useReportState(
-    (data?.sketchClass?.report as any) || undefined
+    (data?.sketchClass?.report as any) || undefined,
+    data?.sketchClass?.id || 0,
+    data?.sketch?.id || 0
   );
 
   const filteredLanguages = useMemo(
@@ -115,20 +118,13 @@ export default function SketchReportWindow({
         {data?.sketchClass?.report && data?.sketch && (
           <ReportContext.Provider
             value={{
-              sketchClass:
-                data.sketchClass as unknown as SketchingDetailsFragment,
-              sketch: data.sketch,
               report: data?.sketchClass
                 ?.report as unknown as ReportConfiguration,
-              ...reportState,
               adminMode: false,
               isCollection:
                 data.sketchClass.geometryType === SketchGeometryType.Collection,
-              childSketchIds:
-                data.sketchClass.geometryType === SketchGeometryType.Collection
-                  ? []
-                  : [],
               geographies: data.sketchClass?.project?.geographies || [],
+              ...reportState,
             }}
           >
             <>

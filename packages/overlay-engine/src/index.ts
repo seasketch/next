@@ -8,7 +8,8 @@ export {
   clipSketchToPolygons,
   PolygonClipResult,
   clipToGeographies,
-} from "./geographies";
+} from "./geographies/geographies";
+export { calculateArea } from "./geographies/calculateArea";
 export { Cql2Query } from "./cql2";
 export {
   createFragments,
@@ -29,4 +30,7 @@ export {
   PresenceTableMetric,
   MetricTypeMap,
   subjectIsFragment,
+  subjectIsGeography,
+  MetricSubjectFragment,
+  MetricSubjectGeography,
 } from "./metrics/metrics";

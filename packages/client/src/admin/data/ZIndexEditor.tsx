@@ -27,7 +27,8 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
   const [updateZIndexes] = useUpdateZIndexesMutation({
     optimisticResponse: (data) => {
       let z = 0;
-      const layers: { id: number, zIndex: number, __typename: "DataLayer" }[] = [];
+      const layers: { id: number; zIndex: number; __typename: "DataLayer" }[] =
+        [];
       for (const id of data.dataLayerIds as number[]) {
         layers.push({ id, zIndex: z++, __typename: "DataLayer" });
       }
@@ -35,25 +36,25 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
         __typename: "Mutation",
         updateZIndexes: {
           __typename: "UpdateZIndexesPayload",
-          dataLayers: layers
-        }
-      }
-    }
+          dataLayers: layers,
+        },
+      };
+    },
   });
   const [updateRenderUnder] = useUpdateRenderUnderTypeMutation({
     optimisticResponse: (data) => {
       return {
         __typename: "Mutation",
         updateDataLayer: {
-          "__typename": "UpdateDataLayerPayload",
+          __typename: "UpdateDataLayerPayload",
           dataLayer: {
             __typename: "DataLayer",
             id: data.layerId,
-            renderUnder: data.renderUnder!
-          }
-        }
-      }
-    }
+            renderUnder: data.renderUnder!,
+          },
+        },
+      };
+    },
   });
   const { manager, layerStatesByTocStaticId } = useContext(MapContext);
   let layerLookup = useRef<{ [id: string]: DataLayerDetailsFragment }>({});
@@ -219,7 +220,7 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
                   renderUnder: underLabels
                     ? RenderUnderType.Labels
                     : RenderUnderType.None,
-                }
+                },
               });
             }
           }
@@ -287,19 +288,19 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
             buttons:
               !data.node.children && data.node.title !== t("Basemap Labels")
                 ? [
-                  <VisibilityCheckbox
-                    visibility={visible}
-                    id={data.node.stableId}
-                    disabled={false}
-                    onClick={() => {
-                      if (visible) {
-                        manager?.hideTocItems([data.node.stableId]);
-                      } else {
-                        manager?.showTocItems([data.node.stableId]);
-                      }
-                    }}
-                  />,
-                ]
+                    <VisibilityCheckbox
+                      visibility={visible}
+                      id={data.node.stableId}
+                      disabled={false}
+                      onClick={() => {
+                        if (visible) {
+                          manager?.hideTocItems([data.node.stableId]);
+                        } else {
+                          manager?.showTocItems([data.node.stableId]);
+                        }
+                      }}
+                    />,
+                  ]
                 : [],
           };
         }}

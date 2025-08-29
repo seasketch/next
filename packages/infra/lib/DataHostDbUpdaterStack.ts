@@ -3,23 +3,23 @@
  * Stacks are created in different regions to support different geographies
  * with data close to their users.
  */
-import * as cdk from "@aws-cdk/core";
-import * as iam from "@aws-cdk/aws-iam";
-import * as logs from "@aws-cdk/aws-logs";
-import * as lambda from "@aws-cdk/aws-lambda";
+import * as cdk from "aws-cdk-lib";
+import * as ec2 from "aws-cdk-lib/aws-ec2";
+import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as logs from "aws-cdk-lib/aws-logs";
+import * as rds from "aws-cdk-lib/aws-rds";
 import * as path from "path";
-import { Vpc } from "@aws-cdk/aws-ec2";
-import { DatabaseInstance } from "@aws-cdk/aws-rds";
-import { CfnOutput } from "@aws-cdk/core";
+import { Construct } from "constructs";
 
 export class DataHostDbUpdaterStack extends cdk.Stack {
   lambdaFunctionNameExport: "DataHostDbUpdaterLambda";
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
-      vpc: Vpc;
-      db: DatabaseInstance;
+      vpc: ec2.Vpc;
+      db: rds.DatabaseInstance;
     }
   ) {
     super(scope, id, props);
@@ -32,7 +32,9 @@ export class DataHostDbUpdaterStack extends cdk.Stack {
       vpc: props.vpc,
       // should be more than ample
       timeout: cdk.Duration.seconds(30),
-      logRetention: logs.RetentionDays.ONE_DAY,
+      logGroup: new logs.LogGroup(this, "DataHostDbUpdaterLogs", {
+        retention: logs.RetentionDays.ONE_DAY,
+      }),
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",
@@ -54,7 +56,7 @@ export class DataHostDbUpdaterStack extends cdk.Stack {
       ],
     });
     this.lambdaFunctionNameExport = "DataHostDbUpdaterLambda";
-    new CfnOutput(this, this.lambdaFunctionNameExport, {
+    new cdk.CfnOutput(this, this.lambdaFunctionNameExport, {
       value: onEvent.functionName,
       exportName: this.lambdaFunctionNameExport,
     });

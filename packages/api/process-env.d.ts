@@ -51,5 +51,8 @@ declare namespace NodeJS {
     PMTILES_SERVER_ZONE: string;
     R2_TILES_BUCKET: string;
     GOOGLE_MAPS_2D_TILE_API_KEY: string;
+    OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: string;
+    OVERLAY_WORKER_DEV_HANDLER?: string;
+    OVERLAY_WORKER_LAMBDA_ARN?: string;
   }
 }

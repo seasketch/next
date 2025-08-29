@@ -6,6 +6,16 @@ export type MetricType =
   | "presence_table"
   | "contextualized_mean";
 
+type MetricBase = {
+  type: MetricType;
+  subject: MetricSubjectFragment | MetricSubjectGeography;
+};
+
+type OverlayMetricBase = MetricBase & {
+  layerStableId: string;
+  groupBy: string;
+};
+
 export type MetricSubjectFragment = {
   hash: string;
   geographies: number[];
@@ -13,20 +23,17 @@ export type MetricSubjectFragment = {
 };
 
 export type MetricSubjectGeography = {
+  type: "geography";
   id: number;
 };
 
-export type TotalAreaMetric = {
+export type TotalAreaMetric = MetricBase & {
   type: "total_area";
-  subject: MetricSubjectFragment | MetricSubjectGeography;
   value: number;
 };
 
-export type OverlayAreaMetric = {
+export type OverlayAreaMetric = OverlayMetricBase & {
   type: "overlay_area";
-  subject: MetricSubjectFragment | MetricSubjectGeography;
-  layerStableId: string;
-  groupBy: string;
   value:
     | number
     | {
@@ -34,11 +41,8 @@ export type OverlayAreaMetric = {
       };
 };
 
-export type CountMetric = {
+export type CountMetric = OverlayMetricBase & {
   type: "count";
-  subject: MetricSubjectFragment | MetricSubjectGeography;
-  layerStableId: string;
-  groupBy: string;
   value:
     | number
     | {
@@ -46,11 +50,8 @@ export type CountMetric = {
       };
 };
 
-export type PresenceMetric = {
+export type PresenceMetric = OverlayMetricBase & {
   type: "presence";
-  subject: MetricSubjectFragment | MetricSubjectGeography;
-  layerStableId: string;
-  groupBy: string;
   value:
     | boolean
     | {
@@ -63,10 +64,8 @@ export type PresenceTableValue = {
   [attribute: string]: any;
 };
 
-export type PresenceTableMetric = {
+export type PresenceTableMetric = OverlayMetricBase & {
   type: "presence_table";
-  subject: MetricSubjectFragment | MetricSubjectGeography;
-  layerStableId: string;
   value: PresenceTableValue[];
   count: number;
 };
@@ -90,4 +89,10 @@ export function subjectIsFragment(
   subject: MetricSubjectFragment | MetricSubjectGeography
 ): subject is MetricSubjectFragment {
   return "hash" in subject;
+}
+
+export function subjectIsGeography(
+  subject: MetricSubjectFragment | MetricSubjectGeography
+): subject is MetricSubjectGeography {
+  return "id" in subject;
 }

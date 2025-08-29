@@ -253,34 +253,23 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       ...options,
       overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes,
     };
-    let queryPlan: QueryPlanRequest[] = [];
     if (!Array.isArray(bbox)) {
       bbox = [bbox];
     }
+    const offsets: OffsetAndLength[] = [];
     for (const b of bbox) {
       if (!this.index) {
         throw new Error("Spatial index not available");
       }
       const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
-      const plan = createQueryPlan(results, this.featureDataOffset, options);
-      for (const part of plan) {
-        // check if the range is already in the query plan
-        const existing = queryPlan.find(
-          (p) => p.range[0] === part.range[0] && p.range[1] === part.range[1]
-        );
-        if (!existing) {
-          // if not, add it to the query plan
-          queryPlan.push(part);
-        }
+      for (const result of results) {
+        offsets.push(result);
       }
     }
-    // calculate total bytes needed
-    let bytes = 0;
-    for (const { range } of queryPlan) {
-      bytes += range[1] ? range[1] - range[0] : 0;
-    }
+    const plan = createQueryPlan(offsets, this.featureDataOffset, options);
+    plan.requests.sort((a, b) => a.range[0] - b.range[0]);
     for await (const [data, offset] of executeQueryPlan(
-      queryPlan,
+      plan.requests,
       this.fetchManager.fetchRange.bind(this.fetchManager),
       options
     )) {
@@ -296,6 +285,34 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       const feature = parseFeatureData(offset, bytesAligned, this.header);
       yield feature as unknown as FeatureWithMetadata<T>;
     }
+  }
+
+  async countAndBytesForQuery(bbox: Envelope | Envelope[]) {
+    if (!this.index) {
+      throw new Error("Spatial index not available");
+    }
+    if (!Array.isArray(bbox)) {
+      bbox = [bbox];
+    }
+    let offsetsSet = new Set<string>();
+    let offsetAndLengths: OffsetAndLength[] = [];
+    for (const b of bbox) {
+      const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
+      for (const result of results) {
+        const key = `${result[0]}-${result[1]}`;
+        if (!offsetsSet.has(key)) {
+          offsetsSet.add(key);
+          offsetAndLengths.push(result);
+        }
+      }
+    }
+    const plan = createQueryPlan(offsetAndLengths, this.featureDataOffset, {
+      overfetchBytes: 0,
+    });
+    return {
+      bytes: plan.bytes,
+      features: plan.features,
+    };
   }
 
   /**
@@ -350,6 +367,12 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       __byteLength: number;
       __offset: number;
     };
+    getFeature: () => T & {
+      properties: GeoJsonProperties & {
+        __byteLength: number;
+        __offset: number;
+      };
+    };
   }> {
     /**
      * This method returns an async generator for feature properties only.
@@ -369,6 +392,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       bb.setPosition(SIZE_PREFIX_LEN);
       yield {
         properties: parseProperties(bb, this.header.columns, offset),
+        getFeature: () => parseFeatureData(offset, bytesAligned, this.header),
       };
       offset += size + SIZE_PREFIX_LEN;
     }

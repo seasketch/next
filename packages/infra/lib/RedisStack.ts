@@ -1,13 +1,14 @@
-import * as cdk from "@aws-cdk/core";
-import * as s3 from "@aws-cdk/aws-s3";
-import * as cache from "@aws-cdk/aws-elasticache";
-import { CfnDBInstance, DatabaseInstance } from "@aws-cdk/aws-rds";
-import { ISecurityGroup, IVpc, Peer, Port, Vpc } from "@aws-cdk/aws-ec2";
+import * as cdk from "aws-cdk-lib";
+import * as s3 from "aws-cdk-lib/aws-s3";
+import * as cache from "aws-cdk-lib/aws-elasticache";
+import { CfnDBInstance, DatabaseInstance } from "aws-cdk-lib/aws-rds";
+import { ISecurityGroup, IVpc, Peer, Port, Vpc } from "aws-cdk-lib/aws-ec2";
+import { Construct } from "constructs";
 
 export class RedisStack extends cdk.Stack {
   cluster: cache.CfnCacheCluster;
   constructor(
-    scope: cdk.Construct,
+    scope: Construct,
     id: string,
     props: cdk.StackProps & {
       db: DatabaseInstance;
@@ -19,7 +20,7 @@ export class RedisStack extends cdk.Stack {
     // The code that defines your stack goes here
     const subnet = new cache.CfnSubnetGroup(this, "CacheSubnet", {
       description: "subnet for production redis cache",
-      subnetIds: props.vpc.privateSubnets.map((s) => s.subnetId),
+      subnetIds: props.vpc.privateSubnets.map((s: any) => s.subnetId),
     });
     // @ts-ignore
     this.cluster = new cache.CfnCacheCluster(this, `RedisCluster`, {
