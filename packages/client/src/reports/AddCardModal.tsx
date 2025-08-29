@@ -3,6 +3,7 @@ import Modal from "../components/Modal";
 import { getAvailableCardTypes, getCardRegistration } from "./registerCard";
 import { ReportConfiguration } from "./cards/cards";
 import { CheckIcon } from "@heroicons/react/solid";
+import Badge from "../components/Badge";
 
 interface AddCardModalProps {
   isOpen: boolean;
@@ -72,13 +73,6 @@ export function AddCardModal({
                   onClose();
                 }}
               >
-                {/* Checkmark indicator for already used cards */}
-                {isAlreadyUsed && (
-                  <div className="absolute top-3 right-3 w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center shadow-sm">
-                    <CheckIcon className="w-3 h-3 text-white" />
-                  </div>
-                )}
-
                 <div className="flex items-center space-x-4">
                   <div className="flex-shrink-0 w-8 h-8 rounded overflow-hidden">
                     <IconComponent
@@ -87,17 +81,20 @@ export function AddCardModal({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-base font-medium text-gray-800">
-                      {registration.label}
+                    <div className="flex items-center space-x-2">
+                      <div className="text-base font-medium text-gray-800 flex-1">
+                        {registration.label}
+                      </div>
+                      {isAlreadyUsed && (
+                        <Badge variant="secondary" className="space-x-1">
+                          <span>{t("Added")}</span>
+                          <CheckIcon className="w-3 h-3" />
+                        </Badge>
+                      )}
                     </div>
                     <div className="text-sm text-gray-600 mt-1">
                       {registration.description}
                     </div>
-                    {isAlreadyUsed && (
-                      <div className="text-xs text-blue-600 mt-1">
-                        {t("Already in use")}
-                      </div>
-                    )}
                   </div>
                 </div>
               </div>
