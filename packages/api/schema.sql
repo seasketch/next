@@ -898,11 +898,12 @@ CREATE TYPE public.spatial_metric_state AS ENUM (
 --
 
 CREATE TYPE public.spatial_metric_type AS ENUM (
-    'area',
+    'total_area',
     'count',
     'presence',
     'presence_table',
-    'contextualized_mean'
+    'contextualized_mean',
+    'overlay_area'
 );
 
 
@@ -2124,8 +2125,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    enable_report_builder boolean DEFAULT false,
     custom_doc_link text,
+    enable_report_builder boolean DEFAULT false,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
@@ -10871,6 +10872,109 @@ COMMENT ON FUNCTION public.get_children_of_folder("folderId" integer) IS '@omit'
 
 
 --
+-- Name: get_fragment_hashes_for_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) RETURNS text[]
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+    fragment_hashes text[];
+    policy_passed boolean;
+    sketch_ids integer[];
+  begin
+    policy_passed := check_sketch_rls_policy(sketch_id);
+    if not policy_passed then
+      raise exception 'Permission denied';
+    end if;
+-- get ids of all children of the sketch, if it is a collection
+    -- initialize and add the sketch id to the list
+    sketch_ids := ARRAY[]::integer[];
+    sketch_ids := array_append(sketch_ids, sketch_id);
+    -- concatenate ids of all children of the sketch, if it is a collection
+    sketch_ids := array_cat(
+      sketch_ids,
+      coalesce((
+        SELECT get_child_sketches_recursive(sketch_id, 'sketch')
+      ), ARRAY[]::integer[])
+    );
+    select array_agg(fragment_hash) into fragment_hashes
+    from fragments
+    inner join sketch_fragments on sketch_fragments.fragment_hash = fragments.hash
+    where sketch_fragments.sketch_id = any(sketch_ids);
+    return fragment_hashes;
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_fragment_hashes_for_sketch(sketch_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) IS '@omit';
+
+
+--
+-- Name: get_fragment_ids_for_sketch_recursive(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_fragment_ids_for_sketch_recursive(sketch_id integer) RETURNS TABLE(hash text, sketches integer[], geographies integer[])
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    policy_passed boolean;
+    sketch_ids integer[];
+  begin
+    -- Check that the session can access the given sketch using RLS policy
+    policy_passed := check_sketch_rls_policy(sketch_id);
+    if not policy_passed then
+      raise exception 'Permission denied';
+    end if;
+
+    -- get ids of all children of the sketch, if it is a collection
+    -- initialize and add the sketch id to the list
+    sketch_ids := ARRAY[]::integer[];
+    sketch_ids := array_append(sketch_ids, sketch_id);
+    -- concatenate ids of all children of the sketch, if it is a collection
+    sketch_ids := array_cat(
+      sketch_ids,
+      coalesce((
+        SELECT get_child_sketches_recursive(sketch_id, 'sketch')
+      ), ARRAY[]::integer[])
+    );
+
+    return query
+    SELECT
+    fragments.hash,
+    ARRAY(
+      SELECT sketch_fragments.sketch_id
+      FROM sketch_fragments
+      WHERE sketch_fragments.fragment_hash = fragments.hash AND sketch_fragments.sketch_id = ANY(sketch_ids)
+    ) AS sketches,
+    ARRAY(
+      SELECT fragment_geographies.geography_id
+      FROM fragment_geographies
+      WHERE fragment_geographies.fragment_hash = fragments.hash) AS geographies
+    FROM fragments
+    WHERE
+    EXISTS (
+      SELECT 1
+      FROM sketch_fragments
+      WHERE sketch_fragments.fragment_hash = fragments.hash
+        AND sketch_fragments.sketch_id = ANY(sketch_ids)
+    );
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_fragment_ids_for_sketch_recursive(sketch_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_fragment_ids_for_sketch_recursive(sketch_id integer) IS '@omit';
+
+
+--
 -- Name: get_fragments_for_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -10947,6 +11051,265 @@ CREATE FUNCTION public.get_job_details(key text) RETURNS public.worker_job
     return details;
     end;
   $$;
+
+
+--
+-- Name: get_metrics_for_geography(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_metrics_for_geography(geography_id integer) RETURNS jsonb
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  begin
+    if not session_has_project_access((select project_id from project_geography where id = geography_id limit 1)) then
+      raise exception 'Permission denied';
+    end if;
+    return (
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', id,
+          'type', type,
+          'updatedAt', updated_at,
+          'createdAt', created_at,
+          'value', value,
+          'state', state,
+          'stableId', overlay_layer_stable_id,
+          'groupBy', overlay_group_by,
+          'includedProperties', included_properties,
+          'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
+          'errorMessage', error_message,
+          'progress', progress_percentage,
+          'jobKey', job_key
+        )
+      )
+      from spatial_metrics
+      where subject_geography_id = geography_id
+    );
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_metrics_for_geography(geography_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_metrics_for_geography(geography_id integer) IS '@omit';
+
+
+--
+-- Name: get_metrics_for_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS jsonb
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    policy_passed boolean;
+    hash_fragments text[];
+  begin
+    policy_passed := check_sketch_rls_policy(skid);
+    if not policy_passed then
+      raise exception 'Permission denied';
+    end if;
+    select array_agg(hash) into hash_fragments
+    from get_fragment_ids_for_sketch_recursive(skid);
+    return (
+      select jsonb_agg(
+        jsonb_build_object(
+          'id', id,
+          'type', type,
+          'updatedAt', updated_at,
+          'createdAt', created_at,
+          'value', value,
+          'state', state,
+          'stableId', overlay_layer_stable_id,
+          'groupBy', overlay_group_by,
+          'includedProperties', included_properties,
+          'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
+          'errorMessage', error_message,
+          'progress', progress_percentage,
+          'jobKey', job_key
+        )
+      )
+      from spatial_metrics
+      where subject_fragment_id = any(hash_fragments)
+      and subject_geography_id is null
+    );
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_metrics_for_sketch(skid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_metrics_for_sketch(skid integer) IS '@omit';
+
+
+--
+-- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.spatial_metrics (
+    id bigint NOT NULL,
+    subject_fragment_id text,
+    subject_geography_id integer,
+    type public.spatial_metric_type NOT NULL,
+    overlay_layer_stable_id text,
+    overlay_source_remote text,
+    overlay_group_by text,
+    included_properties text[],
+    value jsonb,
+    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    overlay_type public.metric_overlay_type,
+    progress_percentage integer DEFAULT 0 NOT NULL,
+    logs_url text,
+    logs_expires_at timestamp with time zone,
+    job_key text DEFAULT (gen_random_uuid())::text,
+    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
+);
+
+
+--
+-- Name: TABLE spatial_metrics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.spatial_metrics IS '@omit';
+
+
+--
+-- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, text, text, text[], public.metric_overlay_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text DEFAULT NULL::text, p_subject_geography_id integer DEFAULT NULL::integer, p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, p_overlay_source_remote text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type) RETURNS public.spatial_metrics
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+    metric spatial_metrics;
+    found_metric boolean := false;
+BEGIN
+    -- Validate that exactly one subject ID is provided and type is not null
+    IF (p_subject_fragment_id IS NULL AND p_subject_geography_id IS NULL) OR 
+       (p_subject_fragment_id IS NOT NULL AND p_subject_geography_id IS NOT NULL) THEN
+        RAISE EXCEPTION 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    END IF;
+    
+    IF p_type IS NULL THEN
+        RAISE EXCEPTION 'type parameter is required';
+    END IF;
+    
+    -- Try to find existing metric using comprehensive query that matches unique indexes
+    IF p_subject_fragment_id IS NOT NULL THEN
+        -- Fragment-based metric - check for existing record
+        SELECT * INTO metric
+        FROM spatial_metrics
+        WHERE subject_fragment_id = p_subject_fragment_id
+          AND type::text = p_type::text
+          AND COALESCE(overlay_layer_stable_id, '') = COALESCE(p_overlay_layer_stable_id, '')
+          AND COALESCE(overlay_source_remote, '') = COALESCE(p_overlay_source_remote, '')
+          AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
+          AND COALESCE(overlay_type::text, '') = COALESCE(p_overlay_type::text, '')
+        ORDER BY created_at DESC
+        LIMIT 1;
+        
+        found_metric := FOUND;
+    ELSE
+        -- Geography-based metric - check for existing record
+        SELECT * INTO metric
+        FROM spatial_metrics
+        WHERE subject_geography_id = p_subject_geography_id
+          AND type::text = p_type::text
+          AND COALESCE(overlay_layer_stable_id, '') = COALESCE(p_overlay_layer_stable_id, '')
+          AND COALESCE(overlay_source_remote, '') = COALESCE(p_overlay_source_remote, '')
+          AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
+          AND COALESCE(overlay_type::text, '') = COALESCE(p_overlay_type::text, '')
+        ORDER BY created_at DESC
+        LIMIT 1;
+        
+        found_metric := FOUND;
+    END IF;
+    
+    -- If found, return existing record
+    IF found_metric THEN
+        RETURN metric;
+    END IF;
+    
+    -- If not found, create new metric
+    INSERT INTO spatial_metrics (
+        subject_fragment_id,
+        subject_geography_id,
+        type,
+        overlay_layer_stable_id,
+        overlay_source_remote,
+        overlay_group_by,
+        included_properties,
+        overlay_type
+    ) VALUES (
+        p_subject_fragment_id,
+        p_subject_geography_id,
+        p_type,
+        p_overlay_layer_stable_id,
+        p_overlay_source_remote,
+        p_overlay_group_by,
+        p_included_properties,
+        p_overlay_type
+    ) RETURNING * INTO metric;
+    
+    RETURN metric;
+END;
+$$;
+
+
+--
+-- Name: get_or_create_spatial_metrics_for_fragments(text[], public.spatial_metric_type, text, text, text, text[], public.metric_overlay_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, p_overlay_source_remote text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type) RETURNS bigint[]
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+    fragment_hash text;
+    metric_row spatial_metrics;
+    metric_ids bigint[] := ARRAY[]::bigint[];
+BEGIN
+    IF p_type IS NULL THEN
+        RAISE EXCEPTION 'type parameter is required';
+    END IF;
+
+    IF p_subject_fragments IS NULL OR array_length(p_subject_fragments, 1) IS NULL THEN
+        RETURN metric_ids;
+    END IF;
+
+    FOREACH fragment_hash IN ARRAY p_subject_fragments LOOP
+        IF fragment_hash IS NULL THEN
+            CONTINUE;
+        END IF;
+        metric_row := get_or_create_spatial_metric(
+            p_subject_fragment_id => fragment_hash,
+            p_subject_geography_id => NULL,
+            p_type => p_type,
+            p_overlay_layer_stable_id => p_overlay_layer_stable_id,
+            p_overlay_source_remote => p_overlay_source_remote,
+            p_overlay_group_by => p_overlay_group_by,
+            p_included_properties => p_included_properties,
+            p_overlay_type => p_overlay_type
+        );
+        metric_ids := array_append(metric_ids, metric_row.id);
+    END LOOP;
+
+    RETURN metric_ids;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) IS '@omit';
 
 
 --
@@ -11139,6 +11502,66 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
+
+
+--
+-- Name: get_spatial_metric(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    policy_passed boolean;
+    subj_geography_id integer;
+    subj_fragment_id text;
+  begin
+    select subject_geography_id, subject_fragment_id into subj_geography_id, subj_fragment_id
+    from spatial_metrics
+    where id = metric_id;
+    if current_user not in ('graphile_worker', 'postgres') then
+      if subj_geography_id is not null then
+        if not session_has_project_access((select project_id from project_geography where id = subj_geography_id limit 1)) then
+          raise exception 'Permission denied';
+        end if;
+      else
+        policy_passed := check_sketch_rls_policy((select sketch_id from sketch_fragments where fragment_hash = subj_fragment_id limit 1));
+        if not policy_passed then
+          raise exception 'Permission denied';
+        end if;
+      end if;
+    end if;
+    return (
+      select jsonb_build_object(
+        'id', id,
+        'type', type,
+        'updatedAt', updated_at,
+        'createdAt', created_at,
+        'value', value,
+        'state', state,
+        'stableId', overlay_layer_stable_id,
+        'groupBy', overlay_group_by,
+        'includedProperties', included_properties,
+        'jobKey', job_key,
+        'subject', 
+        case when subject_geography_id is not null then
+          jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject')
+        else
+          jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
+        end,
+        'errorMessage', error_message,
+        'progress', progress_percentage
+      ) from spatial_metrics where id = metric_id
+    );
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_spatial_metric(metric_id bigint); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_spatial_metric(metric_id bigint) IS '@omit';
 
 
 --
@@ -13037,40 +13460,6 @@ CREATE FUNCTION public.project_geography_clipping_layers(geography public.projec
 
 COMMENT ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) IS '@simpleCollections only
 @description "Returns the clipping layers for a given geography."';
-
-
---
--- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.spatial_metrics (
-    id bigint NOT NULL,
-    subject_fragment_id text,
-    subject_geography_id integer,
-    type public.spatial_metric_type NOT NULL,
-    overlay_layer_stable_id text,
-    overlay_source_remote text,
-    overlay_group_by text,
-    included_properties text[],
-    value jsonb,
-    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
-    error_message text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    overlay_type public.metric_overlay_type NOT NULL,
-    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
-);
-
-
---
--- Name: project_geography_spatial_metrics(public.project_geography); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.project_geography_spatial_metrics(geography public.project_geography) RETURNS SETOF public.spatial_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
-    AS $$
-    select * from spatial_metrics where subject_geography_id = geography.id
-  $$;
 
 
 --
@@ -15340,6 +15729,28 @@ COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Co
 
 
 --
+-- Name: queue_calculate_spatial_metric_task(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.queue_calculate_spatial_metric_task() RETURNS trigger
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  begin
+    if NEW.state = 'queued' then
+      perform graphile_worker.add_job(
+        'calculateSpatialMetric',
+        json_build_object('metricId', NEW.id),
+        max_attempts := 1,
+        job_key := 'calculateSpatialMetric:' || NEW.id,
+        job_key_mode := 'replace'
+      );
+    end if;
+    return NEW;
+  end;
+  $$;
+
+
+--
 -- Name: record_global_activity(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15915,6 +16326,36 @@ CREATE FUNCTION public.reports_updated_at(r public.reports) RETURNS timestamp wi
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select max(updated_at) from report_tabs where report_id = r.id;
+  $$;
+
+
+--
+-- Name: retry_failed_spatial_metrics(bigint[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    metric spatial_metrics;
+    updated_metric_id bigint;
+    metric_id bigint;
+  begin
+    -- loop through the metric ids, and update the state to queued
+    foreach metric_id in array metric_ids loop
+      update spatial_metrics set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where id = metric_id returning id into updated_metric_id;
+      if updated_metric_id is not null then
+        perform graphile_worker.add_job(
+          'calculateSpatialMetric',
+          json_build_object('metricId', updated_metric_id),
+          max_attempts := 1,
+          job_key := 'calculateSpatialMetric:' || updated_metric_id,
+          job_key_mode := 'replace'
+        );
+      end if;
+    end loop;
+    return true;
+  end;
   $$;
 
 
@@ -16614,6 +17055,24 @@ CREATE FUNCTION public.session_can_access_form(fid integer) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.session_can_access_form(fid integer) IS '@omit';
+
+
+--
+-- Name: session_can_access_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.session_can_access_sketch(skid integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select check_sketch_rls_policy(skid);
+  $$;
+
+
+--
+-- Name: FUNCTION session_can_access_sketch(skid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.session_can_access_sketch(skid integer) IS '@omit';
 
 
 --
@@ -17464,6 +17923,35 @@ COMMENT ON FUNCTION public.sketches_child_properties(sketch public.sketches) IS 
 
 
 --
+-- Name: sketches_children(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_children(sketch public.sketches) RETURNS SETOF public.sketches
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    policy_passed boolean;
+  begin
+    policy_passed := check_sketch_rls_policy(sketch.id);
+    if not policy_passed then
+      raise exception 'Permission denied';
+    end if;
+    return query
+    select * from sketches
+    where
+      id = any(get_child_sketches_recursive(sketch.id, 'sketch'));
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_children(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_children(sketch public.sketches) IS '@simpleCollections only';
+
+
+--
 -- Name: sketches_filter_mvt_url(public.sketches); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -17588,14 +18076,55 @@ CREATE FUNCTION public.sketches_parent_collection(sketch public.sketches) RETURN
 
 
 --
--- Name: sketches_spatial_metrics(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+-- Name: sketches_related_fragments(public.sketches); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.sketches_spatial_metrics(sketch public.sketches) RETURNS SETOF public.spatial_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+CREATE FUNCTION public.sketches_related_fragments(sketch public.sketches) RETURNS TABLE(hash text, sketches integer[], geographies integer[])
+    LANGUAGE sql STABLE
     AS $$
-    select * from spatial_metrics where subject_fragment_id in (select fragment_hash from sketch_fragments where sketch_id = sketch.id)
+      select * from get_fragment_ids_for_sketch_recursive(sketch.id);
   $$;
+
+
+--
+-- Name: FUNCTION sketches_related_fragments(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_related_fragments(sketch public.sketches) IS '@simpleCollections only';
+
+
+--
+-- Name: sketches_siblings(public.sketches); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_siblings(sketch public.sketches) RETURNS SETOF public.sketches
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    policy_passed boolean;
+    coll_id integer;
+  begin
+    policy_passed := check_sketch_rls_policy(sketch.id);
+    if not policy_passed then
+      raise exception 'Permission denied';
+    end if;
+    
+
+    coll_id := coalesce(get_parent_collection_id(sketch),sketch.id);
+
+    return query
+    select * from sketches
+    where
+      id = any(get_child_sketches_recursive(coll_id, 'sketch'));
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_siblings(sketch public.sketches); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_siblings(sketch public.sketches) IS '@simpleCollections only';
 
 
 --
@@ -18595,6 +19124,23 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
+-- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = stableId
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$;
+
+
+--
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18907,6 +19453,36 @@ $$;
 --
 
 COMMENT ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) IS '@omit';
+
+
+--
+-- Name: trigger_geography_metric_subscription(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_geography_metric_subscription() RETURNS trigger
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    pid integer;
+    skid integer;
+  begin
+    if NEW.subject_geography_id is not null then
+      select project_id into pid from project_geography where id = NEW.subject_geography_id limit 1;
+      perform pg_notify(
+        'graphql:projects:' || pid || ':geography-metrics',
+        '{"metricId": ' || NEW.id || ', "geographyId": ' || NEW.subject_geography_id || ', "projectId": ' || pid || '}'
+      );
+    end if;
+    if NEW.subject_fragment_id is not null then
+      select sketch_id into skid from sketch_fragments where fragment_hash = NEW.subject_fragment_id limit 1;
+      perform pg_notify(
+        'graphql:sketches:' || skid || ':metrics',
+        '{"metricId": ' || NEW.id || ', "sketchId": ' || skid || '}'
+      );
+    end if;
+    return NEW;
+  end;
+  $$;
 
 
 --
@@ -20772,39 +21348,6 @@ JSON web key set table. Design guided by https://tools.ietf.org/html/rfc7517
 
 
 --
--- Name: metric_work_chunk; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.metric_work_chunk (
-    id bigint NOT NULL,
-    spatial_metric_id bigint,
-    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
-    error_message text,
-    value jsonb,
-    total_bytes bigint,
-    offsets bigint[],
-    bbox public.geometry(Polygon,4326),
-    execution_environment public.metric_execution_environment DEFAULT 'lambda'::public.metric_execution_environment NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: metric_work_chunk_id_seq; Type: SEQUENCE; Schema: public; Owner: -
---
-
-ALTER TABLE public.metric_work_chunk ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
-    SEQUENCE NAME public.metric_work_chunk_id_seq
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1
-);
-
-
---
 -- Name: offline_tile_settings; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -21894,14 +22437,6 @@ ALTER TABLE ONLY public.jwks
 
 ALTER TABLE ONLY public.map_data_requests
     ADD CONSTRAINT map_data_requests_pkey PRIMARY KEY ("interval", "timestamp");
-
-
---
--- Name: metric_work_chunk metric_work_chunk_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.metric_work_chunk
-    ADD CONSTRAINT metric_work_chunk_pkey PRIMARY KEY (id);
 
 
 --
@@ -23096,6 +23631,13 @@ CREATE INDEX sketches_user_id_sketch_class_id_idx ON public.sketches USING btree
 
 
 --
+-- Name: spatial_metrics_queued_created_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX spatial_metrics_queued_created_at_idx ON public.spatial_metrics USING btree (created_at) WHERE (state = 'queued'::public.spatial_metric_state);
+
+
+--
 -- Name: sprite_images_sprite_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -23614,6 +24156,13 @@ CREATE TRIGGER project_background_job_notify_subscriptions AFTER INSERT OR UPDAT
 
 
 --
+-- Name: spatial_metrics queue_calculate_spatial_metric_task_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER queue_calculate_spatial_metric_task_trigger AFTER INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.queue_calculate_spatial_metric_task();
+
+
+--
 -- Name: data_upload_outputs record_project_activity_on_delete; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -23751,6 +24300,13 @@ CREATE TRIGGER trig_create_sketch_class_acl AFTER INSERT ON public.sketch_classe
 --
 
 CREATE TRIGGER trig_create_table_of_contents_item_acl AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.create_table_of_contents_item_acl();
+
+
+--
+-- Name: spatial_metrics trigger_geography_metric_subscription_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_geography_metric_subscription_trigger AFTER UPDATE ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.trigger_geography_metric_subscription();
 
 
 --
@@ -24331,14 +24887,6 @@ ALTER TABLE ONLY public.map_bookmarks
 
 ALTER TABLE ONLY public.map_bookmarks
     ADD CONSTRAINT map_bookmarks_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
-
-
---
--- Name: metric_work_chunk metric_work_chunk_spatial_metric_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.metric_work_chunk
-    ADD CONSTRAINT metric_work_chunk_spatial_metric_id_fkey FOREIGN KEY (spatial_metric_id) REFERENCES public.spatial_metrics(id) ON DELETE CASCADE;
 
 
 --
@@ -25617,12 +26165,6 @@ ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
-
---
--- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -27384,17 +27926,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -30382,7 +30924,6 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -31193,6 +31734,22 @@ GRANT ALL ON FUNCTION public.get_children_of_folder("folderId" integer) TO anon;
 
 
 --
+-- Name: FUNCTION get_fragment_hashes_for_sketch(sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_fragment_ids_for_sketch_recursive(sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_fragment_ids_for_sketch_recursive(sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_fragment_ids_for_sketch_recursive(sketch_id integer) TO anon;
+
+
+--
 -- Name: FUNCTION get_fragments_for_sketch(sketch_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -31205,6 +31762,38 @@ GRANT ALL ON FUNCTION public.get_fragments_for_sketch(sketch_id integer) TO anon
 --
 
 REVOKE ALL ON FUNCTION public.get_job_details(key text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION get_metrics_for_geography(geography_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_metrics_for_geography(geography_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_metrics_for_geography(geography_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_metrics_for_sketch(skid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_metrics_for_sketch(skid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_metrics_for_sketch(skid integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) TO anon;
+
+
+--
+-- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) TO anon;
 
 
 --
@@ -31228,6 +31817,7 @@ GRANT ALL ON FUNCTION public.get_or_create_user_by_sub(_sub text, _email text, O
 --
 
 REVOKE ALL ON FUNCTION public.get_parent_collection_id(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_parent_collection_id(sketch public.sketches) TO anon;
 
 
 --
@@ -31266,6 +31856,14 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
+
+
+--
+-- Name: FUNCTION get_spatial_metric(metric_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_spatial_metric(metric_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_spatial_metric(metric_id bigint) TO anon;
 
 
 --
@@ -32779,14 +33377,6 @@ GRANT ALL ON FUNCTION public.project_geography_clipping_layers(geography public.
 
 
 --
--- Name: FUNCTION project_geography_spatial_metrics(geography public.project_geography); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.project_geography_spatial_metrics(geography public.project_geography) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.project_geography_spatial_metrics(geography public.project_geography) TO anon;
-
-
---
 -- Name: FUNCTION project_groups_member_count(g public.project_groups); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33231,6 +33821,13 @@ GRANT ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) TO s
 
 
 --
+-- Name: FUNCTION queue_calculate_spatial_metric_task(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.queue_calculate_spatial_metric_task() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION record_global_activity(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33415,6 +34012,14 @@ GRANT ALL ON FUNCTION public.reports_updated_at(r public.reports) TO anon;
 
 
 --
+-- Name: FUNCTION retry_failed_spatial_metrics(metric_ids bigint[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) TO anon;
+
+
+--
 -- Name: FUNCTION revoke_admin_access("projectId" integer, "userId" integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33552,6 +34157,14 @@ GRANT ALL ON FUNCTION public.send_project_invites("inviteIds" integer[]) TO seas
 
 REVOKE ALL ON FUNCTION public.session_can_access_form(fid integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.session_can_access_form(fid integer) TO anon;
+
+
+--
+-- Name: FUNCTION session_can_access_sketch(skid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.session_can_access_sketch(skid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.session_can_access_sketch(skid integer) TO anon;
 
 
 --
@@ -33793,6 +34406,14 @@ GRANT ALL ON FUNCTION public.sketches_child_properties(sketch public.sketches) T
 
 
 --
+-- Name: FUNCTION sketches_children(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_children(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_children(sketch public.sketches) TO anon;
+
+
+--
 -- Name: FUNCTION sketches_filter_mvt_url(s public.sketches); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33869,11 +34490,19 @@ GRANT ALL ON FUNCTION public.sketches_parent_collection(sketch public.sketches) 
 
 
 --
--- Name: FUNCTION sketches_spatial_metrics(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION sketches_related_fragments(sketch public.sketches); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.sketches_spatial_metrics(sketch public.sketches) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.sketches_spatial_metrics(sketch public.sketches) TO anon;
+REVOKE ALL ON FUNCTION public.sketches_related_fragments(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_related_fragments(sketch public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_siblings(sketch public.sketches); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_siblings(sketch public.sketches) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_siblings(sketch public.sketches) TO anon;
 
 
 --
@@ -37008,6 +37637,13 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
+-- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -37196,6 +37832,13 @@ REVOKE ALL ON FUNCTION public.translate(public.citext, public.citext, text) FROM
 
 REVOKE ALL ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION trigger_geography_metric_subscription(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_geography_metric_subscription() FROM PUBLIC;
 
 
 --
