@@ -213,7 +213,9 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
  * Starts a continuous message consumer that polls the queue
  */
 export async function startOverlayEngineWorkerMessageConsumer(pgPool: Pool) {
-  console.log("Starting overlay engine worker message consumer...");
+  console.log(
+    `Starting overlay engine worker message consumer on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}`
+  );
 
   // Start continuous polling
   while (true) {

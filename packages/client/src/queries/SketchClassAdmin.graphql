@@ -375,6 +375,18 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
+fragment ReportingLayerDetails on ReportingLayer {
+  stableId
+  title
+  tableOfContentsItemId
+  type
+  url
+  size
+  meta
+  mapboxGlStyles
+  groupBy
+}
+
 fragment ReportCardDetails on ReportCard {
   id
   position
@@ -384,6 +396,9 @@ fragment ReportCardDetails on ReportCard {
   tint
   icon
   body
+  reportingLayers {
+    ...ReportingLayerDetails
+  }
 }
 
 fragment ReportTabDetails on ReportTab {
@@ -487,6 +502,7 @@ mutation AddReportCard(
   $componentSettings: JSON!
   $cardType: String!
   $body: JSON!
+  $layers: [ReportLayerInputRecordInput!]!
 ) {
   addReportCard(
     input: {
@@ -494,6 +510,7 @@ mutation AddReportCard(
       componentSettings: $componentSettings
       cardType: $cardType
       body: $body
+      layers: $layers
     }
   ) {
     reportCard {
@@ -558,6 +575,15 @@ mutation PublishReport($sketchClassId: Int!) {
   publishReport(input: { sketchClassId: $sketchClassId }) {
     sketchClass {
       ...AdminSketchingDetails
+    }
+  }
+}
+
+query AvailableReportLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    availableReportLayers {
+      ...ReportingLayerDetails
     }
   }
 }

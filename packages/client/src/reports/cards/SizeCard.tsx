@@ -1,23 +1,20 @@
-import {
-  ReportCardConfiguration,
-  ReportCardProps,
-  useLocalizedCardSetting,
-} from "./cards";
+import { ReportCardConfiguration, ReportCardProps } from "./cards";
 import ReportCard from "../ReportCard";
 import {
   registerReportCardType,
   ReportCardConfigUpdateCallback,
 } from "../registerCard";
-import { lazy, useContext, useMemo } from "react";
+import { lazy, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { useMetrics } from "../hooks/useMetrics";
-import { FormLanguageContext } from "../../formElements/FormElement";
 import { useReportContext } from "../ReportContext";
 import Skeleton from "../../components/Skeleton";
 import { Trans } from "react-i18next";
 import { RulerSquareIcon } from "@radix-ui/react-icons";
 import LocalizedText from "../components/LocalizedText";
+import { useNumberFormatters } from "../hooks/useNumberFormatters";
+import { useUnits } from "../hooks/useUnits";
 
 // Admin component for configuring the card
 const SizeCardAdmin = lazy(() => import("./SizeCardAdmin"));
@@ -81,7 +78,6 @@ export function SizeCard({
   dragHandleProps?: any;
   onUpdate?: ReportCardConfigUpdateCallback;
 }) {
-  const langContext = useContext(FormLanguageContext);
   const reportContext = useReportContext();
   const allGeographyIds = useMemo(() => {
     return reportContext.geographies.map((g) => g.id);
@@ -89,7 +85,7 @@ export function SizeCard({
 
   const { t } = useTranslation("reports");
 
-  const unit = useLocalizedCardSetting(config, "unit", "km");
+  const unit = config.componentSettings?.unit ?? "km";
 
   const metrics = useMetrics({
     type: "total_area",
@@ -167,63 +163,11 @@ export function SizeCard({
     };
   }, [metrics.data, metrics.loading, reportContext.geographies]);
 
-  const convertAreaFromKm2 = useMemo(() => {
-    return (km2: number) => {
-      if (unit === "mi") return km2 / 2.59; // square miles per km²
-      if (unit === "acres") return km2 * 247.105381; // acres per km²
-      return km2; // km²
-    };
-  }, [unit]);
+  const { unitLabel, convertFromBase } = useUnits({ category: "area", unit });
 
-  const AreaFormatter = useMemo(() => {
-    return (km2Value: number) => {
-      const value = convertAreaFromKm2(km2Value);
-      if (value < 100) {
-        return new Intl.NumberFormat(langContext?.lang?.code, {
-          style: "decimal",
-          maximumFractionDigits: 2,
-          minimumFractionDigits: 0,
-        }).format(value);
-      } else {
-        return new Intl.NumberFormat(langContext?.lang?.code, {
-          style: "decimal",
-          maximumFractionDigits: 0,
-          minimumFractionDigits: 0,
-        }).format(value);
-      }
-    };
-  }, [convertAreaFromKm2, langContext?.lang?.code]);
+  const formatters = useNumberFormatters();
 
-  const unitLabel = useMemo(() => {
-    if (unit === "mi") return t("mi²");
-    if (unit === "acres") return t("acres");
-    return t("km²");
-  }, [unit, t]);
-
-  const PercentageFormatter = useMemo(() => {
-    return (value: number) => {
-      if (value === 0) {
-        return new Intl.NumberFormat(langContext?.lang?.code, {
-          style: "percent",
-          maximumFractionDigits: 0,
-          minimumFractionDigits: 0,
-        }).format(value);
-      }
-      if (value < 5) {
-        return new Intl.NumberFormat(langContext?.lang?.code, {
-          style: "percent",
-          maximumFractionDigits: 2,
-          minimumFractionDigits: 2,
-        }).format(value);
-      } else {
-        return new Intl.NumberFormat(langContext?.lang?.code, {
-          style: "percent",
-          maximumFractionDigits: 0,
-          minimumFractionDigits: 0,
-        }).format(value);
-      }
-    };
-  }, [langContext?.lang?.code]);
+  // unitLabel provided by useAreaUnit
 
   const showZeros = Boolean(
     config.componentSettings?.showZeroOverlapGeographies
@@ -259,7 +203,8 @@ export function SizeCard({
             <p>
               {t("This area is ")}
               <span className="tabular-nums text-base font-medium">
-                {AreaFormatter(sizeCardData.area)} {unitLabel}
+                {formatters.area(convertFromBase(sizeCardData.area))}{" "}
+                {unitLabel}
               </span>
               {sizeCardData.geographies.length > 0 && (
                 <>
@@ -270,11 +215,11 @@ export function SizeCard({
                         (g) => g.primary
                       );
                       if (primaryGeography) {
-                        return PercentageFormatter(
+                        return formatters.percent(
                           primaryGeography.overlap.fraction
                         );
                       }
-                      return PercentageFormatter(1);
+                      return formatters.percent(1);
                     })()}
                   </span>
                   {t(" of the ")}
@@ -296,8 +241,8 @@ export function SizeCard({
                 onUpdate={onUpdate}
                 secondaryGeographies={secondaryGeographies}
                 unitLabel={unitLabel}
-                AreaFormatter={AreaFormatter}
-                PercentageFormatter={PercentageFormatter}
+                AreaFormatter={(n) => formatters.area(convertFromBase(n))}
+                PercentageFormatter={(n) => formatters.percent(n)}
                 editable
               />
             ) : null}

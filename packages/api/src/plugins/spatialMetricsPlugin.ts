@@ -35,12 +35,22 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
     typeDefs: gql`
+
+      enum MetricSourceType {
+        FlatGeobuf
+        GeoJSON
+        GeoTIFF
+      }
+
+
       input SpatialMetricDependency {
         type: String!
         sketchId: Int
         includeSiblings: Boolean
         geographyIds: [Int!]
         stableId: String
+        sourceUrl: String
+        sourceType: MetricSourceType
         groupBy: String
         includedProperties: [String!]
       }
@@ -144,16 +154,17 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
               for (const geographyId of dep.geographyIds) {
                 // Ensure metric exists/updated for the geography
                 const result = await pgClient.query(
-                  `select (select get_or_create_spatial_metric($1, $2, $3::spatial_metric_type, $4, $5, $6, $7, $8)).id as id`,
+                  `select (select get_or_create_spatial_metric($1, $2, $3::spatial_metric_type, $4, $5, $6, $7, $8, $9)).id as id`,
                   [
                     null, // subject_fragment_id
                     geographyId, // subject_geography_id
-                    dep.type,
-                    dep.stableId,
-                    null,
-                    dep.groupBy,
-                    dep.includedProperties,
-                    null,
+                    dep.type, // type
+                    dep.stableId, // overlay_layer_stable_id
+                    dep.sourceUrl, // overlay_source_url
+                    dep.sourceType, // overlay_source_type
+                    dep.groupBy, // overlay_group_by
+                    dep.includedProperties, // included_properties
+                    null, // overlay_type
                   ]
                 );
                 geographyIds.push(geographyId);
@@ -177,15 +188,16 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
               }
 
               const results = await pgClient.query(
-                `select get_or_create_spatial_metrics_for_fragments($1::text[], $2::spatial_metric_type, $3::text, $4::text, $5::text, $6::text[], $7::metric_overlay_type) as ids`,
+                `select get_or_create_spatial_metrics_for_fragments($1::text[], $2::spatial_metric_type, $3::text, $4::text, $5::text, $6::text, $7::text[], $8::metric_overlay_type) as ids`,
                 [
-                  fids,
-                  dep.type,
-                  dep.stableId,
-                  null,
-                  dep.groupBy,
-                  dep.includedProperties,
-                  null,
+                  fids, // subject_fragments
+                  dep.type, // type
+                  dep.stableId, // overlay_layer_stable_id
+                  dep.sourceUrl, // overlay_source_url
+                  dep.sourceType, // overlay_source_type
+                  dep.groupBy, // overlay_group_by
+                  dep.includedProperties, // included_properties
+                  null, // overlay_type
                 ]
               );
               if (results.rows.length === 1) {
@@ -214,7 +226,13 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
           const spatialMetricIds: number[] = context.spatialMetricIds || [];
           const geographyIds: number[] = context.geographyIds || [];
 
-          const results: any[] = [];
+          // Fetch all metrics in a single query for performance
+          const { rows } = await pgClient.query(
+            `select get_spatial_metrics($1::bigint[]) as metrics`,
+            [spatialMetricIds]
+          );
+          const results: any[] = rows[0]?.metrics ?? [];
+          return results;
 
           // Fetch metrics for geographies using the new function
           for (const geographyId of geographyIds) {

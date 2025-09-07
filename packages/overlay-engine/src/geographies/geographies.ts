@@ -16,6 +16,8 @@ import {
 import area from "@turf/area";
 import { unionAtAntimeridian } from "../utils/unionAtAntimeridian";
 import { union } from "../utils/polygonClipping";
+import { SourceCache } from "fgb-source";
+import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 
@@ -621,5 +623,71 @@ export async function clipToGeographies(
   return {
     clipped: unionAtAntimeridian(clipped) as PreparedSketch["feature"],
     fragments,
+  };
+}
+
+export { calculateGeographyOverlap } from "./calculateOverlap";
+
+/**
+ * Initializes sources in a sourceCache for all clipping layers in a given
+ * geography, and calculates the intersection feature.
+ *
+ * @param geography - The geography to initialize sources for
+ * @param sourceCache - The source cache to use
+ */
+export async function initializeGeographySources(
+  geography: ClippingLayerOption[],
+  sourceCache: SourceCache,
+  helpers: GuaranteedOverlayWorkerHelpers
+) {
+  // first, start initialization of all sources. Later code can still await
+  // sourceCache.get, but the requests will already be resolved or in-flight
+  geography.map((layer) => {
+    sourceCache.get(layer.source, {
+      initialHeaderRequestLength: layer.headerSizeHint,
+    });
+  });
+
+  const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
+  const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
+  const intersectionFeatures = [] as Feature<Polygon | MultiPolygon>[];
+  let intersectionFeatureBytes = 0;
+  await Promise.all(
+    intersectionLayers.map(async (l) => {
+      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
+        l.source
+      );
+      helpers.log("Processing intersection layer");
+      for await (const {
+        properties,
+        getFeature,
+      } of source.getFeatureProperties()) {
+        if (evaluateCql2JSONQuery(l.cql2Query, properties)) {
+          intersectionFeatures.push(getFeature());
+          intersectionFeatureBytes += properties?.__byteLength || 0;
+        }
+      }
+      helpers.log("Completed intersection layer");
+      helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
+    })
+  );
+
+  const intersectionFeatureGeojson = {
+    type: "Feature",
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: union(
+        intersectionFeatures.map(
+          (f) => f.geometry.coordinates as polygonClipping.Geom
+        )
+      ),
+    },
+    properties: {},
+  } as Feature<MultiPolygon>;
+
+  return {
+    intersectionFeature: intersectionFeatureGeojson,
+    intersectionLayers,
+    differenceLayers,
   };
 }

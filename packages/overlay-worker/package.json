@@ -29,11 +29,15 @@
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.873.0",
+    "@types/geobuf": "^3.0.4",
+    "@types/geojson": "^7946.0.16",
     "@types/lodash.debounce": "^4.0.9",
     "dotenv": "^17.2.1",
     "fgb-source": "^1.0.0",
+    "geobuf": "^3.0.2",
     "lodash.debounce": "^4.0.8",
-    "overlay-engine": "^1.0.0"
+    "overlay-engine": "^1.0.0",
+    "pbf": "^4.0.1"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.119",

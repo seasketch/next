@@ -12,7 +12,7 @@ const sqs = new SQSClient({ region: process.env.AWS_REGION });
 // Tracks in-flight SQS send operations so they can be flushed later
 const pendingSendOperations = new Set<Promise<unknown>>();
 
-export async function sendMessage(msg: OverlayEngineWorkerMessage) {
+export function sendMessage(msg: OverlayEngineWorkerMessage) {
   const queueUrl = process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL;
   if (!queueUrl) {
     throw new Error("OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL is not set");
@@ -24,7 +24,7 @@ export async function sendMessage(msg: OverlayEngineWorkerMessage) {
   const sendPromise = sqs.send(command);
   pendingSendOperations.add(sendPromise);
   sendPromise.finally(() => pendingSendOperations.delete(sendPromise));
-  await sendPromise;
+  return sendPromise;
 }
 
 export async function sendResultMessage(jobKey: string, result: any) {
@@ -47,7 +47,7 @@ export async function sendProgressMessage(
     message,
     jobKey,
   };
-  await sendMessage(msg);
+  return sendMessage(msg);
 }
 
 export async function sendErrorMessage(jobKey: string, error: string) {

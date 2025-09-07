@@ -2,6 +2,11 @@ import { ReportCardIcon } from "../ReportCard";
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
+import { DataUploadOutputType } from "../../generated/graphql";
+import { Geostats } from "../../admin/data/GLStyleEditor/GeostatsModal";
+import { RasterInfo } from "@seasketch/geostats-types";
+import { SourceType } from "overlay-engine";
+import { AnyLayer } from "mapbox-gl";
 
 export type ProsemirrorBodyJSON = any;
 
@@ -9,7 +14,22 @@ export type ReportCardType =
   | "Attributes"
   | "TextBlock"
   | "Size"
-  | "PolygonOverlap";
+  | "OverlappingAreas";
+
+export type ReportingLayer = {
+  stableId: string;
+  title: string;
+  tableOfContentsItemId: number;
+  type: SourceType;
+  url: string;
+  size: number;
+  meta: Geostats | RasterInfo;
+  mapboxGlStyles: AnyLayer[];
+  /**
+   * Optionally, the field to group by.
+   */
+  groupBy?: string;
+};
 
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
@@ -57,6 +77,10 @@ export type ReportCardConfiguration<T> = {
    * The icon of the card.
    */
   icon?: ReportCardIcon;
+  /**
+   * The reporting layers of the card.
+   */
+  reportingLayers: ReportingLayer[];
 };
 
 export type ReportTabConfiguration = {
@@ -114,7 +138,7 @@ export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
 export function registerCards() {
   import("./SketchAttributesCard");
   import("./SizeCard");
-  import("./PolygonOverlapCard");
+  import("./OverlappingAreasCard");
   import("./TextBlockCard");
 }
 

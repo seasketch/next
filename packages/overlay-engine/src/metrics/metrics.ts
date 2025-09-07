@@ -12,7 +12,7 @@ type MetricBase = {
 };
 
 type OverlayMetricBase = MetricBase & {
-  layerStableId: string;
+  stableId: string;
   groupBy: string;
 };
 
@@ -96,3 +96,5 @@ export function subjectIsGeography(
 ): subject is MetricSubjectGeography {
   return "id" in subject;
 }
+
+export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";

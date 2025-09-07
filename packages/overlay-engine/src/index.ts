@@ -8,6 +8,7 @@ export {
   clipSketchToPolygons,
   PolygonClipResult,
   clipToGeographies,
+  calculateGeographyOverlap,
 } from "./geographies/geographies";
 export { calculateArea } from "./geographies/calculateArea";
 export { Cql2Query } from "./cql2";
@@ -19,6 +20,7 @@ export {
   GeographySettings,
   mergeTouchingFragments,
 } from "./fragments";
+export { calculateFragmentOverlap } from "./calculateFragmentOverlap";
 
 export {
   Metric,
@@ -33,4 +35,5 @@ export {
   subjectIsGeography,
   MetricSubjectFragment,
   MetricSubjectGeography,
+  SourceType,
 } from "./metrics/metrics";

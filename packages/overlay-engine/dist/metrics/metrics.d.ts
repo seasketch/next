@@ -4,7 +4,7 @@ type MetricBase = {
     subject: MetricSubjectFragment | MetricSubjectGeography;
 };
 type OverlayMetricBase = MetricBase & {
-    layerStableId: string;
+    stableId: string;
     groupBy: string;
 };
 export type MetricSubjectFragment = {
@@ -57,5 +57,6 @@ export type MetricTypeMap = {
 };
 export declare function subjectIsFragment(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
 export declare function subjectIsGeography(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
+export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
 export {};
 //# sourceMappingURL=metrics.d.ts.map

@@ -110,6 +110,8 @@ type LocalMetric = Metric & {
   errorMessage?: string;
   progress?: number;
   jobKey?: string;
+  stableId?: string;
+  groupBy?: string;
 };
 
 type LocalMetrics = LocalMetric[];

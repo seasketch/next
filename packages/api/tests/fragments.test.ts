@@ -1256,11 +1256,11 @@ describe("Integration tests", () => {
             collection.id
           );
           expect(collectionFragments.length).toBe(6);
-          await writeOutput(
-            "Two overlapping sketches in a collection produces multiple fragments",
-            "all fragments",
-            collectionFragments
-          );
+          // await writeOutput(
+          //   "Two overlapping sketches in a collection produces multiple fragments",
+          //   "all fragments",
+          //   collectionFragments
+          // );
           compareWithExpectedOutput(
             "Two overlapping sketches in a collection produces multiple fragments",
             "all fragments",
@@ -1365,14 +1365,14 @@ describe("Integration tests", () => {
             conn,
             collection.id
           );
-          await writeOutput(
-            "Creating a sketch with multiple overlaps with neighbor sketches in a collection produces multiple fragments",
-            "inputs",
-            {
-              type: "FeatureCollection",
-              features: [...existingInput, input],
-            }
-          );
+          // await writeOutput(
+          //   "Creating a sketch with multiple overlaps with neighbor sketches in a collection produces multiple fragments",
+          //   "inputs",
+          //   {
+          //     type: "FeatureCollection",
+          //     features: [...existingInput, input],
+          //   }
+          // );
           await writeOutput(
             "Creating a sketch with multiple overlaps with neighbor sketches in a collection produces multiple fragments",
             "all fragments",

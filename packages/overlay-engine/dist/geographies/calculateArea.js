@@ -9,6 +9,7 @@ const area_1 = __importDefault(require("@turf/area"));
 const polygonClipping_1 = require("../utils/polygonClipping");
 const simplify_1 = require("@turf/simplify");
 const containerIndex_1 = require("../utils/containerIndex");
+const geographies_1 = require("./geographies");
 const flatten_1 = __importDefault(require("@turf/flatten"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const bboxUtils_1 = require("../utils/bboxUtils");
@@ -35,43 +36,8 @@ async function calculateArea(geography, sourceCache, helpersOption) {
     var _a, _b;
     // Transform optional helpers into guaranteed interface with no-op functions for log and progress
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);
-    // first, start initialization of all sources. Later code can still await
-    // sourceCache.get, but the requests will already be resolved or in-flight
-    geography.map((layer) => {
-        sourceCache.get(layer.source, {
-            initialHeaderRequestLength: layer.headerSizeHint,
-        });
-    });
+    const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers);
     let progress = 0;
-    // first, fetch all intersection layers and union the features into a single
-    // multipolygon
-    helpers.log("Starting intersection layer processing");
-    helpers.progress(progress++, "Starting intersection layer processing");
-    const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
-    const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
-    const intersectionFeatures = [];
-    let intersectionFeatureBytes = 0;
-    await Promise.all(intersectionLayers.map(async (l) => {
-        const source = await sourceCache.get(l.source);
-        helpers.progress(progress++, "Processing intersection layer");
-        for await (const { properties, getFeature, } of source.getFeatureProperties()) {
-            if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {
-                intersectionFeatures.push(getFeature());
-                intersectionFeatureBytes += (properties === null || properties === void 0 ? void 0 : properties.__byteLength) || 0;
-            }
-        }
-        helpers.progress(progress++, "Completed intersection layer");
-        helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
-    }));
-    // create a single multipolygon from the intersection features
-    const intersectionFeatureGeojson = {
-        type: "Feature",
-        geometry: {
-            type: "MultiPolygon",
-            coordinates: (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates)),
-        },
-        properties: {},
-    };
     if (differenceLayers.length === 0) {
         helpers.progress(50, "No difference layers, calculating final area");
         return (0, area_1.default)(intersectionFeatureGeojson) / 1000000;
@@ -109,7 +75,6 @@ async function calculateArea(geography, sourceCache, helpersOption) {
             let i = 0;
             let fullyContainedFeatures = 0;
             let intersectingFeatures = 0;
-            let lastLoggedPercent = 0;
             let outsideFeatures = 0;
             const containerIndex = new containerIndex_1.ContainerIndex(simplified);
             if (helpers.logFeature) {
@@ -127,10 +92,7 @@ async function calculateArea(geography, sourceCache, helpersOption) {
                     (0, cql2_1.evaluateCql2JSONQuery)(layer.cql2Query, f.properties)) {
                     i++;
                     const percent = (i / features) * 100;
-                    if (percent - lastLoggedPercent > 1) {
-                        lastLoggedPercent = percent;
-                        helpers.progress(Math.round(percent) < 95 ? Math.round(percent) : 95, `Processing difference features: ${Math.round(percent)}%`);
-                    }
+                    helpers.progress(percent < 95 ? percent : 95, `Processing difference features: ${percent}%`);
                     const classification = containerIndex.classify(f);
                     if (helpers.logFeature) {
                         // Handle debugging callback for all classified features

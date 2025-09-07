@@ -36,9 +36,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.calculateGeographyOverlap = void 0;
 exports.clipToGeography = clipToGeography;
 exports.clipSketchToPolygons = clipSketchToPolygons;
 exports.clipToGeographies = clipToGeographies;
+exports.initializeGeographySources = initializeGeographySources;
 const cql2_1 = require("../cql2");
 const polygonClipping = __importStar(require("polygon-clipping"));
 const fragments_1 = require("../fragments");
@@ -492,6 +494,53 @@ async function clipToGeographies(preparedSketch, geographies, geographiesForClip
     return {
         clipped: (0, unionAtAntimeridian_1.unionAtAntimeridian)(clipped),
         fragments,
+    };
+}
+var calculateOverlap_1 = require("./calculateOverlap");
+Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, get: function () { return calculateOverlap_1.calculateGeographyOverlap; } });
+/**
+ * Initializes sources in a sourceCache for all clipping layers in a given
+ * geography, and calculates the intersection feature.
+ *
+ * @param geography - The geography to initialize sources for
+ * @param sourceCache - The source cache to use
+ */
+async function initializeGeographySources(geography, sourceCache, helpers) {
+    // first, start initialization of all sources. Later code can still await
+    // sourceCache.get, but the requests will already be resolved or in-flight
+    geography.map((layer) => {
+        sourceCache.get(layer.source, {
+            initialHeaderRequestLength: layer.headerSizeHint,
+        });
+    });
+    const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
+    const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
+    const intersectionFeatures = [];
+    let intersectionFeatureBytes = 0;
+    await Promise.all(intersectionLayers.map(async (l) => {
+        const source = await sourceCache.get(l.source);
+        helpers.log("Processing intersection layer");
+        for await (const { properties, getFeature, } of source.getFeatureProperties()) {
+            if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {
+                intersectionFeatures.push(getFeature());
+                intersectionFeatureBytes += (properties === null || properties === void 0 ? void 0 : properties.__byteLength) || 0;
+            }
+        }
+        helpers.log("Completed intersection layer");
+        helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
+    }));
+    const intersectionFeatureGeojson = {
+        type: "Feature",
+        geometry: {
+            type: "MultiPolygon",
+            coordinates: (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates)),
+        },
+        properties: {},
+    };
+    return {
+        intersectionFeature: intersectionFeatureGeojson,
+        intersectionLayers,
+        differenceLayers,
     };
 }
 //# sourceMappingURL=geographies.js.map

@@ -113,7 +113,7 @@ export default function ReportCard({
 
   return (
     <div
-      className={`relative rounded w-full shadow-sm ${getBackgroundClasses()} group ${
+      className={`transition-opacity opacity-100 relative rounded w-full shadow-sm ${getBackgroundClasses()} group ${
         isSelectedForEditing ? "ring-2 ring-opacity-80 ring-blue-500" : ""
       } ${
         isDisabled ? "opacity-60 pointer-events-none select-none" : ""

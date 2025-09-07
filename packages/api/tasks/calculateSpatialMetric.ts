@@ -5,9 +5,10 @@ import {
   Metric,
   MetricSubjectFragment,
   subjectIsFragment,
+  SourceType,
 } from "overlay-engine";
 import { MetricSubjectGeography } from "overlay-engine/src/metrics/metrics";
-import { OverlayWorkerPayload } from "overlay-worker";
+import { OverlayWorkerPayload, GeographySubjectPayload } from "overlay-worker";
 import AWS from "aws-sdk";
 
 export default async function calculateSpatialMetric(
@@ -23,7 +24,12 @@ export default async function calculateSpatialMetric(
       );
     });
   }, 10_000);
-  let metric: Metric & { id: number; jobKey: string };
+  let metric: Metric & {
+    id: number;
+    jobKey: string;
+    sourceUrl: string;
+    sourceType: SourceType;
+  };
   await helpers.withPgClient(async (client) => {
     const result = await client.query(
       `select get_spatial_metric($1) as metric`,
@@ -39,6 +45,7 @@ export default async function calculateSpatialMetric(
     }
     if (metric.type === "total_area") {
       if (subjectIsFragment(metric.subject)) {
+        // very simple to do, just ask postgis to calculate the area
         await helpers.withPgClient(async (client) => {
           return client.query(
             `update spatial_metrics set value = to_json(ST_AREA((select geometry from fragments where hash = $1)::geography) / 1000000)::jsonb, state = 'complete' where id = $2`,
@@ -46,30 +53,57 @@ export default async function calculateSpatialMetric(
           );
         });
       } else {
-        let clippingLayers: ClippingLayerOption[] = [];
-        const geographyId = metric.subject.id;
-        await helpers.withPgClient(async (client) => {
-          const results = await client.query(
-            `select (clipping_layers_for_geography($1)).*`,
-            [geographyId]
-          );
-          const geography = await client.query(
-            `select id, name from project_geography where id = $1`,
-            [geographyId]
-          );
-          const geographyName = geography.rows[0].name;
-          clippingLayers = results.rows.map((row) => parseClippingLayer(row));
-        });
-        const jobKey = metric.jobKey;
+        // ask overlay worker to calculate the area
+        const clippingLayers = await getClippingLayersForGeography(
+          metric.subject.id,
+          helpers
+        );
         await callOverlayWorker({
           type: "total_area",
-          jobKey: jobKey,
+          jobKey: metric.jobKey,
           subject: {
             type: "geography",
-            id: geographyId,
+            id: metric.subject.id,
             clippingLayers,
           },
         } as OverlayWorkerPayload);
+      }
+    } else if (metric.type === "overlay_area") {
+      if (!metric.stableId) {
+        throw new Error("overlay_area metrics must have a layerStableId");
+      }
+      // delegate to overlay worker
+      if (subjectIsFragment(metric.subject)) {
+        const geobuf = await getGeobufForFragment(metric.subject.hash, helpers);
+        await callOverlayWorker({
+          type: "overlay_area",
+          jobKey: metric.jobKey,
+          subject: {
+            hash: metric.subject.hash,
+            geobuf,
+          },
+          groupBy: metric.groupBy,
+          stableId: metric.stableId,
+          sourceUrl: metric.sourceUrl,
+          sourceType: metric.sourceType,
+        } as OverlayWorkerPayload);
+      } else {
+        const clippingLayers = await getClippingLayersForGeography(
+          metric.subject.id,
+          helpers
+        );
+        await callOverlayWorker({
+          type: "overlay_area",
+          jobKey: metric.jobKey,
+          subject: {
+            type: "geography",
+            id: metric.subject.id,
+            clippingLayers,
+          },
+          groupBy: metric.groupBy,
+          sourceUrl: metric.sourceUrl,
+          sourceType: metric.sourceType,
+        });
       }
     } else {
       throw new Error(`Unsupported metric type: ${metric.type}`);
@@ -87,13 +121,35 @@ export default async function calculateSpatialMetric(
   }
 }
 
+async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
+  return await helpers.withPgClient(async (client) => {
+    const result = await client.query(
+      `SELECT 
+        encode(ST_AsGeoBuf(fragments.*), 'base64') AS geobuf 
+      FROM fragments 
+      WHERE hash = $1 limit 1`,
+      [fragmentHash]
+    );
+    return result.rows[0].geobuf;
+  });
+}
+
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
   if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
+    console.log(
+      "Calling overlay worker dev handler",
+      process.env.OVERLAY_WORKER_DEV_HANDLER,
+      payload
+    );
     const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    return response.json();
+    const data = await response.json();
+    if (data.error) {
+      throw new Error(data.error);
+    }
+    return data;
   } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
     const lambda = new AWS.Lambda({
       region: process.env.AWS_REGION || "us-west-2",
@@ -130,4 +186,18 @@ function parseClippingLayer(clippingLayer: {
     op:
       clippingLayer.operation_type === "intersect" ? "INTERSECT" : "DIFFERENCE",
   };
+}
+async function getClippingLayersForGeography(
+  geographyId: number,
+  helpers: Helpers
+) {
+  let clippingLayers: ClippingLayerOption[] = [];
+  await helpers.withPgClient(async (client) => {
+    const results = await client.query(
+      `select (clipping_layers_for_geography($1)).*`,
+      [geographyId]
+    );
+    clippingLayers = results.rows.map((row) => parseClippingLayer(row));
+  });
+  return clippingLayers;
 }

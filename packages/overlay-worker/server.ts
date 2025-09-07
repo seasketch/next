@@ -55,4 +55,5 @@ console.log(`
 Server started.
 Set the following api server env var to use:
 OVERLAY_WORKER_DEV_HANDLER=http://localhost:${PORT}
+Listen for sqs messages on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}
 `);

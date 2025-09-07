@@ -287,7 +287,10 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
   }
 
-  async countAndBytesForQuery(bbox: Envelope | Envelope[]) {
+  async countAndBytesForQuery(
+    bbox: Envelope | Envelope[],
+    options?: QueryPlanOptions
+  ) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -306,12 +309,15 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         }
       }
     }
-    const plan = createQueryPlan(offsetAndLengths, this.featureDataOffset, {
-      overfetchBytes: 0,
-    });
+    const plan = createQueryPlan(
+      offsetAndLengths,
+      this.featureDataOffset,
+      options ?? {}
+    );
     return {
       bytes: plan.bytes,
       features: plan.features,
+      requests: plan.requests.length,
     };
   }
 

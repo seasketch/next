@@ -1,7 +1,10 @@
 import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
 import { MetricType } from "overlay-engine";
 import { ReactElement, FunctionComponent } from "react";
-import { SketchClassDetailsFragment } from "../generated/graphql";
+import {
+  DataUploadOutputType,
+  SketchClassDetailsFragment,
+} from "../generated/graphql";
 
 export type ReportCardConfigUpdateCallback = (
   update:
@@ -52,6 +55,9 @@ export interface ReportCardRegistration<T> {
   getExportData?: (settings: T, data: any) => any;
   requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
+  supportedReportingLayerTypes: DataUploadOutputType[];
+  minimumReportingLayerCount: number;
+  maximumReportingLayerCount?: number;
 }
 
 export const registeredCards: Map<
@@ -76,6 +82,9 @@ export interface RegisterReportCardConfig<T> {
   }>;
   requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
+  supportedReportingLayerTypes?: DataUploadOutputType[];
+  minimumReportingLayerCount?: number;
+  maximumReportingLayerCount?: number;
 }
 
 export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
@@ -93,6 +102,9 @@ export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
     icon: config.icon,
     requiredMetrics: config.requiredMetrics,
     order: config.order,
+    supportedReportingLayerTypes: config.supportedReportingLayerTypes || [],
+    minimumReportingLayerCount: config.minimumReportingLayerCount || 0,
+    maximumReportingLayerCount: config.maximumReportingLayerCount,
   });
 }
 

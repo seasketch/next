@@ -13,9 +13,6 @@ import {
   useProjectMetadataQuery,
   useMoveCardToTabMutation,
   usePublishReportMutation,
-  SketchTocDetailsFragment,
-  useSketchReportingDetailsQuery,
-  SketchGeometryType,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -28,6 +25,7 @@ import {
   registerCards,
   ReportCardType,
   ReportCardConfiguration,
+  ReportingLayer,
 } from "../../reports/cards/cards";
 import {
   getCardRegistration,
@@ -50,7 +48,7 @@ import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
-import { MetricSubjectFragment } from "overlay-engine";
+// MetricSubjectFragment imported elsewhere; remove unused import warnings
 import GeographyMetricsProgressIndicator from "./GeographyMetricsProgressIndicator";
 
 registerCards();
@@ -118,7 +116,7 @@ export default function SketchClassReportsAdmin({
       refetchQueries: [DraftReportDocument],
     });
 
-  const [addReportCard, addReportCardState] = useAddReportCardMutation({
+  const [addReportCard] = useAddReportCardMutation({
     awaitRefetchQueries: true,
     refetchQueries: [DraftReportDocument],
   });
@@ -133,12 +131,11 @@ export default function SketchClassReportsAdmin({
     awaitRefetchQueries: true,
   });
 
-  const [deleteCardMutation, deleteCardMutationState] =
-    useDeleteReportCardMutation({
-      onError,
-      refetchQueries: [DraftReportDocument],
-      awaitRefetchQueries: true,
-    });
+  const [deleteCardMutation] = useDeleteReportCardMutation({
+    onError,
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
+  });
 
   const [publishReport, publishReportState] = usePublishReportMutation({
     onError,
@@ -211,7 +208,11 @@ export default function SketchClassReportsAdmin({
     }
   };
 
-  const handleCardSelect = async (cardType: string) => {
+  const handleCardSelect = async (
+    cardType: string,
+    layers?: ReportingLayer[]
+  ) => {
+    // debug: card selection
     if (!reportState.selectedTab) {
       console.error("No selected tab");
       return;
@@ -223,15 +224,39 @@ export default function SketchClassReportsAdmin({
       return;
     }
 
+    let body = registration.defaultBody || {};
+    if (layers && layers.length === 1) {
+      body = {
+        type: "doc",
+        content: [
+          {
+            type: "reportTitle",
+            content: [
+              {
+                type: "text",
+                text: layers[0].title,
+              },
+            ],
+          },
+        ],
+      };
+    }
+
     try {
       await addReportCard({
         variables: {
           reportTabId: reportState.selectedTab.id,
           componentSettings: registration.defaultSettings,
           cardType: cardType,
-          body: registration.defaultBody || {},
+          body,
+          layers:
+            layers?.map((l) => ({
+              tocStableId: l.stableId as string,
+              groupBy: l.groupBy,
+            })) || [],
         },
       });
+      // If server requires a separate mutation to attach layers, that will be handled elsewhere.
       setAddCardModalOpen(false);
     } catch (error) {
       // Error is handled by onError
@@ -760,17 +785,32 @@ export default function SketchClassReportsAdmin({
                         {/* report tabs */}
                         <ReportTabs enableDragDrop={true} />
                         {/* report body */}
-                        <SortableReportBody
-                          selectedTab={reportState.selectedTab}
-                          selectedForEditing={reportState.selectedForEditing}
-                          localCardEdits={localCardEdits}
-                          onCardUpdate={handleCardUpdate}
-                          optimisticCardOrder={
-                            optimisticCardOrder[
-                              reportState.selectedTab?.id || 0
-                            ]
-                          }
-                        />
+                        <div className="relative">
+                          {draftReport.tabs?.map((tab) => {
+                            const isActive =
+                              tab.id === reportState.selectedTab?.id;
+                            return (
+                              <div
+                                key={tab.id}
+                                className={`absolute left-0 top-0 w-full ${
+                                  isActive ? "relative" : "-left-[10000px]"
+                                }`}
+                              >
+                                <SortableReportBody
+                                  selectedTab={tab}
+                                  selectedForEditing={
+                                    reportState.selectedForEditing
+                                  }
+                                  localCardEdits={localCardEdits}
+                                  onCardUpdate={handleCardUpdate}
+                                  optimisticCardOrder={
+                                    optimisticCardOrder[tab.id]
+                                  }
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
                         {/* Add Card Modal */}
                         {draftReport && (
                           <AddCardModal

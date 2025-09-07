@@ -1,7 +1,16 @@
-import { Metric, MetricTypeMap, subjectIsFragment } from "overlay-engine";
+import {
+  Metric,
+  MetricTypeMap,
+  SourceType,
+  subjectIsFragment,
+} from "overlay-engine";
 import { useReportContext } from "../ReportContext";
 import { useState, useEffect, useRef, useMemo } from "react";
-import { SpatialMetricState } from "../../generated/graphql";
+import {
+  MetricSourceType,
+  SpatialMetricDependency,
+  SpatialMetricState,
+} from "../../generated/graphql";
 import { useErrorBoundary } from "react-error-boundary";
 
 let idCounter = 0;
@@ -25,7 +34,17 @@ function createStableId() {
  */
 export function useMetrics<
   T extends keyof MetricTypeMap | Metric["type"]
->(options: { type: T; geographyIds?: number[]; includeSiblings?: boolean }) {
+>(options: {
+  type: T;
+  geographyIds?: number[];
+  includeSiblings?: boolean;
+  layers?: {
+    stableId: string;
+    groupBy?: string;
+    sourceUrl: string;
+    sourceType: SourceType;
+  }[];
+}) {
   const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
   const { showBoundary, resetBoundary } = useErrorBoundary();
@@ -38,19 +57,45 @@ export function useMetrics<
       return;
     }
 
-    // Create a dependency object that matches SpatialMetricDependency
-    const dependency = {
-      type: options.type,
-      sketchId: reportContext.sketch?.id,
-      geographyIds: options.geographyIds || [],
-      includeSiblings: options.includeSiblings || false,
-    };
+    if (Array.isArray(options.layers) && options.layers.length === 0) {
+      const e = new Error("No layers selected");
+      delete e.stack;
+      throw e;
+    }
 
-    reportContext.addMetricDependency(stableId, dependency);
+    const dependencies: SpatialMetricDependency[] = [];
+    // Create a dependency object that matches SpatialMetricDependency
+    if (Array.isArray(options.layers) && options.layers.length > 0) {
+      for (const layer of options.layers) {
+        dependencies.push({
+          type: options.type,
+          sketchId: reportContext.sketch?.id,
+          geographyIds: options.geographyIds || [],
+          includeSiblings: options.includeSiblings || false,
+          stableId: layer.stableId,
+          groupBy: layer.groupBy,
+          sourceUrl: layer.sourceUrl,
+          sourceType: convertSourceType(layer.sourceType),
+        });
+      }
+    } else {
+      dependencies.push({
+        type: options.type,
+        sketchId: reportContext.sketch?.id,
+        geographyIds: options.geographyIds || [],
+        includeSiblings: options.includeSiblings || false,
+      });
+    }
+
+    for (const dependency of dependencies) {
+      reportContext.addMetricDependency(stableId, dependency);
+    }
 
     // Cleanup function to remove the dependency when the component unmounts
     return () => {
-      reportContext.removeMetricDependency(stableId, dependency);
+      for (const dependency of dependencies) {
+        reportContext.removeMetricDependency(stableId, dependency);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -79,7 +124,18 @@ export function useMetrics<
           return false;
         }
       }
-      // TODO: check for matching stableId, groupBy, etc.
+      // check for matching stableId, groupBy, etc.
+      if (options.layers) {
+        // check that the metric matches one of the layers
+        const matchingLayer = options.layers.find((l) => {
+          return (
+            l.stableId === m.stableId && matchingGroupBy(l.groupBy, m.groupBy)
+          );
+        });
+        if (!matchingLayer) {
+          return false;
+        }
+      }
       return true;
     });
   }, [reportContext.metrics, fragmentIds, options]);
@@ -112,4 +168,33 @@ export function useMetrics<
       data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0,
     errors,
   };
+}
+
+function convertSourceType(sourceType: SourceType): MetricSourceType {
+  switch (sourceType.toUpperCase()) {
+    case "FLAT_GEOBUF":
+      return MetricSourceType.FlatGeobuf;
+    case "GEOJSON":
+      return MetricSourceType.GeoJson;
+    case "GEOTIFF":
+      return MetricSourceType.GeoTiff;
+    default:
+      throw new Error(`Unknown source type: ${sourceType}`);
+  }
+}
+
+function matchingGroupBy(
+  layerGroupBy: string | undefined | null,
+  metricGroupBy: string | undefined | null
+): boolean {
+  if (layerGroupBy === metricGroupBy) {
+    return true;
+  } else if (
+    Boolean(layerGroupBy) === false &&
+    Boolean(metricGroupBy) === false
+  ) {
+    return true;
+  } else {
+    return false;
+  }
 }

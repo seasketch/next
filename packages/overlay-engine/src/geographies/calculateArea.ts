@@ -6,7 +6,7 @@ import { union, intersection } from "../utils/polygonClipping";
 import { SourceCache } from "fgb-source";
 import { simplify } from "@turf/simplify";
 import { ContainerIndex } from "../utils/containerIndex";
-import { ClippingLayerOption } from "./geographies";
+import { ClippingLayerOption, initializeGeographySources } from "./geographies";
 import flatten from "@turf/flatten";
 import bbox from "@turf/bbox";
 import { bboxToEnvelope } from "../utils/bboxUtils";
@@ -43,57 +43,10 @@ export async function calculateArea(
   // Transform optional helpers into guaranteed interface with no-op functions for log and progress
   const helpers = guaranteeHelpers(helpersOption);
 
-  // first, start initialization of all sources. Later code can still await
-  // sourceCache.get, but the requests will already be resolved or in-flight
-  geography.map((layer) => {
-    sourceCache.get(layer.source, {
-      initialHeaderRequestLength: layer.headerSizeHint,
-    });
-  });
+  const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } =
+    await initializeGeographySources(geography, sourceCache, helpers);
 
   let progress = 0;
-
-  // first, fetch all intersection layers and union the features into a single
-  // multipolygon
-  helpers.log("Starting intersection layer processing");
-  helpers.progress(progress++, "Starting intersection layer processing");
-  const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
-  const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
-  const intersectionFeatures = [] as Feature<Polygon | MultiPolygon>[];
-  let intersectionFeatureBytes = 0;
-  await Promise.all(
-    intersectionLayers.map(async (l) => {
-      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
-        l.source
-      );
-      helpers.progress(progress++, "Processing intersection layer");
-      for await (const {
-        properties,
-        getFeature,
-      } of source.getFeatureProperties()) {
-        if (evaluateCql2JSONQuery(l.cql2Query, properties)) {
-          intersectionFeatures.push(getFeature());
-          intersectionFeatureBytes += properties?.__byteLength || 0;
-        }
-      }
-      helpers.progress(progress++, "Completed intersection layer");
-      helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
-    })
-  );
-
-  // create a single multipolygon from the intersection features
-  const intersectionFeatureGeojson = {
-    type: "Feature",
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: union(
-        intersectionFeatures.map(
-          (f) => f.geometry.coordinates as polygonClipping.Geom
-        )
-      ),
-    },
-    properties: {},
-  } as Feature<MultiPolygon>;
 
   if (differenceLayers.length === 0) {
     helpers.progress(50, "No difference layers, calculating final area");
@@ -143,7 +96,6 @@ export async function calculateArea(
       let i = 0;
       let fullyContainedFeatures = 0;
       let intersectingFeatures = 0;
-      let lastLoggedPercent = 0;
       let outsideFeatures = 0;
       const containerIndex = new ContainerIndex(simplified);
 
@@ -164,13 +116,10 @@ export async function calculateArea(
         ) {
           i++;
           const percent = (i / features) * 100;
-          if (percent - lastLoggedPercent > 1) {
-            lastLoggedPercent = percent;
-            helpers.progress(
-              Math.round(percent) < 95 ? Math.round(percent) : 95,
-              `Processing difference features: ${Math.round(percent)}%`
-            );
-          }
+          helpers.progress(
+            percent < 95 ? percent : 95,
+            `Processing difference features: ${percent}%`
+          );
           const classification = containerIndex.classify(f);
 
           if (helpers.logFeature) {

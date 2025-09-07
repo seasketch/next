@@ -1,4 +1,7 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = handler;
 exports.validatePayload = validatePayload;
@@ -8,24 +11,34 @@ const overlay_engine_1 = require("overlay-engine");
 const fgb_source_1 = require("fgb-source");
 const messaging_1 = require("./messaging");
 const ProgressNotifier_1 = require("./ProgressNotifier");
+const geobuf_1 = __importDefault(require("geobuf"));
+const pbf_1 = __importDefault(require("pbf"));
 const sourceCache = new fgb_source_1.SourceCache("128 mb");
 async function handler(payload) {
-    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 50, 200);
+    console.log("Overlay worker received payload", payload);
+    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 50, 500);
     await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString());
+    const helpers = {
+        progress: (progress, message) => {
+            return progressNotifier.notify(progress, message);
+        },
+        log: (message) => {
+            console.log(message);
+        },
+        time: (message) => {
+            console.time(message);
+        },
+        timeEnd: (message) => {
+            console.timeEnd(message);
+        },
+    };
     try {
         // Example of how to use the discriminated union with switch statements
         switch (payload.type) {
             case "total_area":
                 if (subjectIsGeography(payload.subject)) {
                     progressNotifier.notify(0, "Beginning area calculation");
-                    const area = await (0, overlay_engine_1.calculateArea)(payload.subject.clippingLayers, sourceCache, {
-                        progress: (progress) => {
-                            progressNotifier.notify(progress);
-                        },
-                        log: (message) => {
-                            console.log(message);
-                        },
-                    });
+                    const area = await (0, overlay_engine_1.calculateArea)(payload.subject.clippingLayers, sourceCache, helpers);
                     await (0, messaging_1.flushMessages)();
                     await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
                     return;
@@ -37,13 +50,46 @@ async function handler(payload) {
                     throw new Error("Unknown subject type. Must be geography or fragment.");
                 }
                 break;
+            case "overlay_area":
+                if (subjectIsGeography(payload.subject)) {
+                    progressNotifier.notify(0, "Beginning area calculation");
+                    const area = await (0, overlay_engine_1.calculateGeographyOverlap)(payload.subject.clippingLayers, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
+                    await (0, messaging_1.flushMessages)();
+                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
+                    return;
+                }
+                else {
+                    if ("geobuf" in payload.subject) {
+                        // payload.subject.geobuf is a base64 encoded string
+                        const buffer = Buffer.from(payload.subject.geobuf, "base64");
+                        let feature = geobuf_1.default.decode(new pbf_1.default(buffer));
+                        helpers.log(`decoded geobuf feature. ${buffer.byteLength} bytes`);
+                        if (feature.type === "FeatureCollection") {
+                            feature = feature.features[0];
+                        }
+                        if (feature.geometry.type !== "Polygon") {
+                            throw new Error("geobuf is not a GeoJSON Polygon.");
+                        }
+                        progressNotifier.notify(0, "Beginning overlay area calculation");
+                        await (0, messaging_1.flushMessages)();
+                        const area = await (0, overlay_engine_1.calculateFragmentOverlap)(feature, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
+                        await (0, messaging_1.flushMessages)();
+                        await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
+                        return;
+                    }
+                    else {
+                        throw new Error("Geobuf feature was not provided. Fetch-based workflows not suppored yet.");
+                    }
+                }
+                break;
             default:
                 throw new Error(`Unknown payload type: ${payload.type}`);
         }
     }
     catch (e) {
+        console.error(e);
         await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unknown error");
-        throw e;
+        // throw e;
     }
     finally {
         // Ensure any debounced progress sends and pending SQS sends are flushed
@@ -76,18 +122,19 @@ function validatePayload(data) {
         }
     }
     else {
-        if (typeof data.subject.hash !== "string" ||
-            !Array.isArray(data.subject.geographies) ||
-            !Array.isArray(data.subject.sketches)) {
-            throw new Error("Fragment subject must have hash, geographies array, and sketches array");
+        if (typeof data.subject.hash !== "string") {
+            throw new Error("Fragment subject must have hash id.");
         }
     }
     // Validate overlay-specific properties for metrics that need them
     if (data.type !== "total_area") {
-        if (!data.layerStableId || typeof data.layerStableId !== "string") {
-            throw new Error(`Payload type "${data.type}" must have layerStableId property`);
+        if (!data.sourceUrl || typeof data.sourceUrl !== "string") {
+            throw new Error(`Payload type "${data.type}" must have sourceUrl property`);
         }
-        if (!data.groupBy || typeof data.groupBy !== "string") {
+        if (!data.sourceType || typeof data.sourceType !== "string") {
+            throw new Error(`Payload type "${data.type}" must have sourceType property`);
+        }
+        if (data.groupBy && typeof data.groupBy !== "string") {
             throw new Error(`Payload type "${data.type}" must have groupBy property`);
         }
     }

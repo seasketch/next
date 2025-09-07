@@ -2579,7 +2579,7 @@ var FlatGeobufSource = class {
       yield feature;
     }
   }
-  async countAndBytesForQuery(bbox) {
+  async countAndBytesForQuery(bbox, options) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -2598,12 +2598,15 @@ var FlatGeobufSource = class {
         }
       }
     }
-    const plan = createQueryPlan(offsetAndLengths, this.featureDataOffset, {
-      overfetchBytes: 0
-    });
+    const plan = createQueryPlan(
+      offsetAndLengths,
+      this.featureDataOffset,
+      options ?? {}
+    );
     return {
       bytes: plan.bytes,
-      features: plan.features
+      features: plan.features,
+      requests: plan.requests.length
     };
   }
   /**

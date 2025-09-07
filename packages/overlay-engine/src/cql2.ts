@@ -56,7 +56,7 @@ export function evaluateCql2JSONQuery(
   properties: GeoJsonProperties
 ): boolean {
   if (query === null || query === undefined) {
-    throw new Error("Query cannot be null or undefined");
+    return true;
   }
   if (typeof query !== "object") {
     throw new Error(`Invalid query format: ${query}`);

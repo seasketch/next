@@ -299,9 +299,10 @@ declare class FlatGeobufSource<T = Feature> {
          */
         warmCache?: boolean;
     }): AsyncGenerator<FeatureWithMetadata<T>>;
-    countAndBytesForQuery(bbox: Envelope | Envelope[]): Promise<{
+    countAndBytesForQuery(bbox: Envelope | Envelope[], options?: QueryPlanOptions): Promise<{
         bytes: number;
         features: number;
+        requests: number;
     }>;
     /**
      * Scan all features in the source. Does not use the spatial index, but

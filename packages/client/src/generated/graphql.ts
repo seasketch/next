@@ -149,6 +149,7 @@ export type AddReportCardInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
+  layers?: Maybe<Array<Maybe<ReportLayerInputRecordInput>>>;
   reportTabId?: Maybe<Scalars['Int']>;
 };
 
@@ -1982,6 +1983,39 @@ export type CreateRemoteMvtSourcePayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+/** All input for the create `ReportCardLayer` mutation. */
+export type CreateReportCardLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `ReportCardLayer` to be created by this mutation. */
+  reportCardLayer: ReportCardLayerInput;
+};
+
+/** The output of our create `ReportCardLayer` mutation. */
+export type CreateReportCardLayerPayload = {
+  __typename?: 'CreateReportCardLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `ReportCardLayer` that was created by this mutation. */
+  reportCardLayer?: Maybe<ReportCardLayer>;
+  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
+  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
+};
+
+
+/** The output of our create `ReportCardLayer` mutation. */
+export type CreateReportCardLayerPayloadReportCardLayerEdgeArgs = {
+  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
+};
+
 /** All input for the create `Report` mutation. */
 export type CreateReportInput = {
   /**
@@ -3213,6 +3247,8 @@ export enum DataSourcesOrderBy {
 export type DataUploadOutput = Node & {
   __typename?: 'DataUploadOutput';
   createdAt: Scalars['Datetime'];
+  /** Reads a single `DataSource` that is related to this `DataUploadOutput`. */
+  dataSource?: Maybe<DataSource>;
   dataSourceId?: Maybe<Scalars['Int']>;
   filename: Scalars['String'];
   id: Scalars['Int'];
@@ -4265,6 +4301,51 @@ export type DeleteReportCardInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** All input for the `deleteReportCardLayerByNodeId` mutation. */
+export type DeleteReportCardLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `ReportCardLayer` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteReportCardLayer` mutation. */
+export type DeleteReportCardLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  reportCardId: Scalars['Int'];
+  tocStableId: Scalars['String'];
+};
+
+/** The output of our delete `ReportCardLayer` mutation. */
+export type DeleteReportCardLayerPayload = {
+  __typename?: 'DeleteReportCardLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedReportCardLayerNodeId?: Maybe<Scalars['ID']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `ReportCardLayer` that was deleted by this mutation. */
+  reportCardLayer?: Maybe<ReportCardLayer>;
+  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
+  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
+};
+
+
+/** The output of our delete `ReportCardLayer` mutation. */
+export type DeleteReportCardLayerPayloadReportCardLayerEdgeArgs = {
+  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 /** The output of our `deleteReportCard` mutation. */
@@ -6605,39 +6686,32 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
-/** All input for the `getOrCreateSpatialMetric` mutation. */
-export type GetOrCreateSpatialMetricInput = {
+export type GetOrCreateSpatialMetricsResults = {
+  __typename?: 'GetOrCreateSpatialMetricsResults';
+  metrics: Array<CompatibleSpatialMetric>;
+};
+
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  pIncludedProperties?: Maybe<Array<Maybe<Scalars['String']>>>;
-  pOverlayGroupBy?: Maybe<Scalars['String']>;
-  pOverlayLayerStableId?: Maybe<Scalars['String']>;
-  pOverlaySourceRemote?: Maybe<Scalars['String']>;
-  pOverlayType?: Maybe<MetricOverlayType>;
-  pSubjectFragmentId?: Maybe<Scalars['String']>;
-  pSubjectGeographyId?: Maybe<Scalars['Int']>;
-  pType?: Maybe<SpatialMetricType>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
 };
 
-/** The output of our `getOrCreateSpatialMetric` mutation. */
-export type GetOrCreateSpatialMetricPayload = {
-  __typename?: 'GetOrCreateSpatialMetricPayload';
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
-  spatialMetric?: Maybe<SpatialMetric>;
-};
-
-export type GetOrCreateSpatialMetricsResults = {
-  __typename?: 'GetOrCreateSpatialMetricsResults';
-  metrics: Array<CompatibleSpatialMetric>;
 };
 
 export type GoogleMapsTileApiSession = Node & {
@@ -7360,9 +7434,10 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
-export enum MetricOverlayType {
-  Raster = 'RASTER',
-  Vector = 'VECTOR'
+export enum MetricSourceType {
+  FlatGeobuf = 'FlatGeobuf',
+  GeoJson = 'GeoJSON',
+  GeoTiff = 'GeoTIFF'
 }
 
 export type MetricSubject = FragmentSubject | GeographySubject;
@@ -7537,6 +7612,8 @@ export type Mutation = {
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
   createReport?: Maybe<CreateReportPayload>;
+  /** Creates a single `ReportCardLayer`. */
+  createReportCardLayer?: Maybe<CreateReportCardLayerPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7653,6 +7730,10 @@ export type Mutation = {
   /** Deletes a single `Report` using its globally unique id. */
   deleteReportByNodeId?: Maybe<DeleteReportPayload>;
   deleteReportCard?: Maybe<DeleteReportCardPayload>;
+  /** Deletes a single `ReportCardLayer` using a unique key. */
+  deleteReportCardLayer?: Maybe<DeleteReportCardLayerPayload>;
+  /** Deletes a single `ReportCardLayer` using its globally unique id. */
+  deleteReportCardLayerByNodeId?: Maybe<DeleteReportCardLayerPayload>;
   deleteReportTab?: Maybe<DeleteReportTabPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
@@ -7717,7 +7798,6 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
-  getOrCreateSpatialMetric?: Maybe<GetOrCreateSpatialMetricPayload>;
   /** Create or update spatial metrics. */
   getOrCreateSpatialMetrics: GetOrCreateSpatialMetricsResults;
   /**
@@ -7726,6 +7806,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -7971,6 +8052,10 @@ export type Mutation = {
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
   updateReportCard?: Maybe<UpdateReportCardPayload>;
+  /** Updates a single `ReportCardLayer` using a unique key and a patch. */
+  updateReportCardLayer?: Maybe<UpdateReportCardLayerPayload>;
+  /** Updates a single `ReportCardLayer` using its globally unique id and a patch. */
+  updateReportCardLayerByNodeId?: Maybe<UpdateReportCardLayerPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -8368,6 +8453,12 @@ export type MutationCreateReportArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateReportCardLayerArgs = {
+  input: CreateReportCardLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateSketchArgs = {
   collectionId?: Maybe<Scalars['Int']>;
   folderId?: Maybe<Scalars['Int']>;
@@ -8724,6 +8815,18 @@ export type MutationDeleteReportCardArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportCardLayerArgs = {
+  input: DeleteReportCardLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteReportCardLayerByNodeIdArgs = {
+  input: DeleteReportCardLayerByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteReportTabArgs = {
   input: DeleteReportTabInput;
 };
@@ -8916,12 +9019,6 @@ export type MutationGetChildFoldersRecursiveArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetOrCreateSpatialMetricArgs = {
-  input: GetOrCreateSpatialMetricInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetOrCreateSpatialMetricsArgs = {
   inputs: Array<SpatialMetricDependency>;
 };
@@ -8942,6 +9039,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -9598,6 +9701,18 @@ export type MutationUpdateReportByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateReportCardArgs = {
   input: UpdateReportCardInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardLayerArgs = {
+  input: UpdateReportCardLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardLayerByNodeIdArgs = {
+  input: UpdateReportCardLayerByNodeIdInput;
 };
 
 
@@ -10291,6 +10406,8 @@ export type Project = Node & {
   admins?: Maybe<Array<User>>;
   /** Reads and enables pagination through a set of `ApiKey`. */
   apiKeysConnection: ApiKeysConnection;
+  /** Reads and enables pagination through a set of `ReportingLayer`. */
+  availableReportLayers?: Maybe<Array<ReportingLayer>>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -10548,6 +10665,16 @@ export type ProjectApiKeysConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ApiKeysOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectAvailableReportLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -11623,6 +11750,7 @@ export type Query = Node & {
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
+  getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
   getUnsplashPhotos: UnsplashSearchResult;
@@ -11702,6 +11830,11 @@ export type Query = Node & {
   report?: Maybe<Report>;
   /** Reads a single `Report` using its globally unique `ID`. */
   reportByNodeId?: Maybe<Report>;
+  reportCardLayer?: Maybe<ReportCardLayer>;
+  /** Reads a single `ReportCardLayer` using its globally unique `ID`. */
+  reportCardLayerByNodeId?: Maybe<ReportCardLayer>;
+  /** Reads and enables pagination through a set of `ReportCardLayer`. */
+  reportCardLayersConnection?: Maybe<ReportCardLayersConnection>;
   /** Reads and enables pagination through a set of `Report`. */
   reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
@@ -12252,6 +12385,12 @@ export type QueryGetRepresentativeColorsArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryGetStateForSpatialMetricArgs = {
+  metricId?: Maybe<Scalars['BigInt']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryGetSurveysArgs = {
   first?: Maybe<Scalars['Int']>;
   ids?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -12570,6 +12709,31 @@ export type QueryReportArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryReportByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportCardLayerArgs = {
+  reportCardId: Scalars['Int'];
+  tocStableId: Scalars['String'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportCardLayerByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryReportCardLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCardLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -13123,14 +13287,103 @@ export type ReportCard = Node & {
   componentSettings: Scalars['JSON'];
   icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
+  isDraft: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
+  /** Reads and enables pagination through a set of `ReportCardLayer`. */
+  reportCardLayersConnection: ReportCardLayersConnection;
+  /** Reads and enables pagination through a set of `ReportingLayer`. */
+  reportingLayers?: Maybe<Array<ReportingLayer>>;
   reportTabId: Scalars['Int'];
   tint?: Maybe<Scalars['String']>;
   type: Scalars['String'];
   updatedAt: Scalars['Datetime'];
 };
+
+
+export type ReportCardReportCardLayersConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCardLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
+};
+
+
+export type ReportCardReportingLayersArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+export type ReportCardLayer = Node & {
+  __typename?: 'ReportCardLayer';
+  groupBy?: Maybe<Scalars['String']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  reportCardId: Scalars['Int'];
+  tocStableId: Scalars['String'];
+};
+
+/**
+ * A condition to be used against `ReportCardLayer` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type ReportCardLayerCondition = {
+  /** Checks for equality with the object’s `reportCardId` field. */
+  reportCardId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `tocStableId` field. */
+  tocStableId?: Maybe<Scalars['String']>;
+};
+
+/** An input for mutations affecting `ReportCardLayer` */
+export type ReportCardLayerInput = {
+  groupBy?: Maybe<Scalars['String']>;
+  reportCardId: Scalars['Int'];
+  tocStableId: Scalars['String'];
+};
+
+/** Represents an update to a `ReportCardLayer`. Fields that are set will be updated. */
+export type ReportCardLayerPatch = {
+  groupBy?: Maybe<Scalars['String']>;
+  reportCardId?: Maybe<Scalars['Int']>;
+  tocStableId?: Maybe<Scalars['String']>;
+};
+
+/** A connection to a list of `ReportCardLayer` values. */
+export type ReportCardLayersConnection = {
+  __typename?: 'ReportCardLayersConnection';
+  /** A list of edges which contains the `ReportCardLayer` and cursor to aid in pagination. */
+  edges: Array<ReportCardLayersEdge>;
+  /** A list of `ReportCardLayer` objects. */
+  nodes: Array<ReportCardLayer>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ReportCardLayer` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ReportCardLayer` edge in the connection. */
+export type ReportCardLayersEdge = {
+  __typename?: 'ReportCardLayersEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ReportCardLayer` at the end of the edge. */
+  node: ReportCardLayer;
+};
+
+/** Methods to use when ordering `ReportCardLayer`. */
+export enum ReportCardLayersOrderBy {
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ReportCardIdAsc = 'REPORT_CARD_ID_ASC',
+  ReportCardIdDesc = 'REPORT_CARD_ID_DESC',
+  TocStableIdAsc = 'TOC_STABLE_ID_ASC',
+  TocStableIdDesc = 'TOC_STABLE_ID_DESC'
+}
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ReportCondition = {
@@ -13145,6 +13398,13 @@ export type ReportInput = {
   createdAt?: Maybe<Scalars['Datetime']>;
   projectId: Scalars['Int'];
   sketchClassId: Scalars['Int'];
+};
+
+/** An input for mutations affecting `ReportLayerInputRecord` */
+export type ReportLayerInputRecordInput = {
+  groupBy?: Maybe<Scalars['String']>;
+  reportCardId?: Maybe<Scalars['Int']>;
+  tocStableId?: Maybe<Scalars['String']>;
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -13174,6 +13434,20 @@ export type ReportTab = Node & {
 export type ReportTabCardsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+export type ReportingLayer = {
+  __typename?: 'ReportingLayer';
+  groupBy?: Maybe<Scalars['String']>;
+  mapboxGlStyles?: Maybe<Scalars['JSON']>;
+  meta?: Maybe<Scalars['JSON']>;
+  remote?: Maybe<Scalars['String']>;
+  size?: Maybe<Scalars['BigInt']>;
+  stableId?: Maybe<Scalars['String']>;
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+  type?: Maybe<DataUploadOutputType>;
+  url?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `Report` values. */
@@ -14108,36 +14382,14 @@ export enum SortByDirection {
   Desc = 'DESC'
 }
 
-export type SpatialMetric = Node & {
-  __typename?: 'SpatialMetric';
-  createdAt: Scalars['Datetime'];
-  errorMessage?: Maybe<Scalars['String']>;
-  id: Scalars['BigInt'];
-  includedProperties?: Maybe<Array<Maybe<Scalars['String']>>>;
-  jobKey?: Maybe<Scalars['String']>;
-  logsExpiresAt?: Maybe<Scalars['Datetime']>;
-  logsUrl?: Maybe<Scalars['String']>;
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
-  overlayGroupBy?: Maybe<Scalars['String']>;
-  overlayLayerStableId?: Maybe<Scalars['String']>;
-  overlaySourceRemote?: Maybe<Scalars['String']>;
-  overlayType?: Maybe<MetricOverlayType>;
-  progressPercentage: Scalars['Int'];
-  state: SpatialMetricState;
-  subjectFragmentId?: Maybe<Scalars['String']>;
-  subjectGeographyId?: Maybe<Scalars['Int']>;
-  type: SpatialMetricType;
-  updatedAt: Scalars['Datetime'];
-  value?: Maybe<Scalars['JSON']>;
-};
-
 export type SpatialMetricDependency = {
   geographyIds?: Maybe<Array<Scalars['Int']>>;
   groupBy?: Maybe<Scalars['String']>;
   includedProperties?: Maybe<Array<Scalars['String']>>;
   includeSiblings?: Maybe<Scalars['Boolean']>;
   sketchId?: Maybe<Scalars['Int']>;
+  sourceType?: Maybe<MetricSourceType>;
+  sourceUrl?: Maybe<Scalars['String']>;
   stableId?: Maybe<Scalars['String']>;
   type: Scalars['String'];
 };
@@ -14147,15 +14399,6 @@ export enum SpatialMetricState {
   Error = 'ERROR',
   Processing = 'PROCESSING',
   Queued = 'QUEUED'
-}
-
-export enum SpatialMetricType {
-  ContextualizedMean = 'CONTEXTUALIZED_MEAN',
-  Count = 'COUNT',
-  OverlayArea = 'OVERLAY_AREA',
-  Presence = 'PRESENCE',
-  PresenceTable = 'PRESENCE_TABLE',
-  TotalArea = 'TOTAL_AREA'
 }
 
 /**
@@ -16768,6 +17011,54 @@ export type UpdateReportCardInput = {
   componentSettings?: Maybe<Scalars['JSON']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
+};
+
+/** All input for the `updateReportCardLayerByNodeId` mutation. */
+export type UpdateReportCardLayerByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `ReportCardLayer` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `ReportCardLayer` being updated. */
+  patch: ReportCardLayerPatch;
+};
+
+/** All input for the `updateReportCardLayer` mutation. */
+export type UpdateReportCardLayerInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `ReportCardLayer` being updated. */
+  patch: ReportCardLayerPatch;
+  reportCardId: Scalars['Int'];
+  tocStableId: Scalars['String'];
+};
+
+/** The output of our update `ReportCardLayer` mutation. */
+export type UpdateReportCardLayerPayload = {
+  __typename?: 'UpdateReportCardLayerPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  /** The `ReportCardLayer` that was updated by this mutation. */
+  reportCardLayer?: Maybe<ReportCardLayer>;
+  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
+  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
+};
+
+
+/** The output of our update `ReportCardLayer` mutation. */
+export type UpdateReportCardLayerPayloadReportCardLayerEdgeArgs = {
+  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 /** The output of our `updateReportCard` mutation. */
@@ -21961,9 +22252,18 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type ReportingLayerDetailsFragment = (
+  { __typename?: 'ReportingLayer' }
+  & Pick<ReportingLayer, 'stableId' | 'title' | 'tableOfContentsItemId' | 'type' | 'url' | 'size' | 'meta' | 'mapboxGlStyles' | 'groupBy'>
+);
+
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
   & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+  & { reportingLayers?: Maybe<Array<(
+    { __typename?: 'ReportingLayer' }
+    & ReportingLayerDetailsFragment
+  )>> }
 );
 
 export type ReportTabDetailsFragment = (
@@ -22101,6 +22401,7 @@ export type AddReportCardMutationVariables = Exact<{
   componentSettings: Scalars['JSON'];
   cardType: Scalars['String'];
   body: Scalars['JSON'];
+  layers: Array<ReportLayerInputRecordInput> | ReportLayerInputRecordInput;
 }>;
 
 
@@ -22197,6 +22498,23 @@ export type PublishReportMutation = (
       { __typename?: 'SketchClass' }
       & AdminSketchingDetailsFragment
     )> }
+  )> }
+);
+
+export type AvailableReportLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type AvailableReportLayersQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { availableReportLayers?: Maybe<Array<(
+      { __typename?: 'ReportingLayer' }
+      & ReportingLayerDetailsFragment
+    )>> }
   )> }
 );
 
@@ -25628,6 +25946,19 @@ export const ReportContextSketchDetailsFragmentDoc = gql`
   }
 }
     `;
+export const ReportingLayerDetailsFragmentDoc = gql`
+    fragment ReportingLayerDetails on ReportingLayer {
+  stableId
+  title
+  tableOfContentsItemId
+  type
+  url
+  size
+  meta
+  mapboxGlStyles
+  groupBy
+}
+    `;
 export const ReportCardDetailsFragmentDoc = gql`
     fragment ReportCardDetails on ReportCard {
   id
@@ -25638,8 +25969,11 @@ export const ReportCardDetailsFragmentDoc = gql`
   tint
   icon
   body
+  reportingLayers {
+    ...ReportingLayerDetails
+  }
 }
-    `;
+    ${ReportingLayerDetailsFragmentDoc}`;
 export const ReportTabDetailsFragmentDoc = gql`
     fragment ReportTabDetails on ReportTab {
   id
@@ -25737,6 +26071,8 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
   errorMessage
   progress
   jobKey
+  stableId
+  groupBy
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
@@ -34231,9 +34567,9 @@ export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderRe
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
 export const AddReportCardDocument = gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!, $layers: [ReportLayerInputRecordInput!]!) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body, layers: $layers}
   ) {
     reportCard {
       id
@@ -34260,6 +34596,7 @@ export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutat
  *      componentSettings: // value for 'componentSettings'
  *      cardType: // value for 'cardType'
  *      body: // value for 'body'
+ *      layers: // value for 'layers'
  *   },
  * });
  */
@@ -34455,6 +34792,44 @@ export function usePublishReportMutation(baseOptions?: Apollo.MutationHookOption
 export type PublishReportMutationHookResult = ReturnType<typeof usePublishReportMutation>;
 export type PublishReportMutationResult = Apollo.MutationResult<PublishReportMutation>;
 export type PublishReportMutationOptions = Apollo.BaseMutationOptions<PublishReportMutation, PublishReportMutationVariables>;
+export const AvailableReportLayersDocument = gql`
+    query AvailableReportLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    availableReportLayers {
+      ...ReportingLayerDetails
+    }
+  }
+}
+    ${ReportingLayerDetailsFragmentDoc}`;
+
+/**
+ * __useAvailableReportLayersQuery__
+ *
+ * To run a query within a React component, call `useAvailableReportLayersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAvailableReportLayersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAvailableReportLayersQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useAvailableReportLayersQuery(baseOptions: Apollo.QueryHookOptions<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>(AvailableReportLayersDocument, options);
+      }
+export function useAvailableReportLayersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>(AvailableReportLayersDocument, options);
+        }
+export type AvailableReportLayersQueryHookResult = ReturnType<typeof useAvailableReportLayersQuery>;
+export type AvailableReportLayersLazyQueryHookResult = ReturnType<typeof useAvailableReportLayersLazyQuery>;
+export type AvailableReportLayersQueryResult = Apollo.QueryResult<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -38176,6 +38551,7 @@ export const namedOperations = {
     SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
     SketchClassGeographyEditorDetails: 'SketchClassGeographyEditorDetails',
     DraftReport: 'DraftReport',
+    AvailableReportLayers: 'AvailableReportLayers',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -38473,6 +38849,7 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    ReportingLayerDetails: 'ReportingLayerDetails',
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
