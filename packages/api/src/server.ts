@@ -574,6 +574,37 @@ app.use(
   }
 );
 
+app.use("/projects.geojson.json", async function (req, res, next) {
+  try {
+    const client = await loadersPool.connect();
+    const { rows } = await client.query(`
+      SELECT json_build_object(
+        'type', 'FeatureCollection',
+        'features', COALESCE(json_agg(
+          json_build_object(
+            'type', 'Feature',
+            'geometry', ST_AsGeoJSON(ST_Centroid(region))::json,
+            'properties', json_build_object(
+              'id', id,
+              'name', name,
+              'slug', slug
+            )
+          )
+        ), '[]'::json)
+      ) AS geojson
+      FROM projects
+      WHERE is_listed = true AND region IS NOT NULL
+    `);
+    res.header("Content-Type", "application/json");
+    res.send(rows[0].geojson);
+    res.end();
+    client.release();
+  } catch (e: any) {
+    res.status(500);
+    res.send(e.toString());
+  }
+});
+
 app.use("/sitemap.xml", async function (req, res, next) {
   try {
     const client = await loadersPool.connect();
