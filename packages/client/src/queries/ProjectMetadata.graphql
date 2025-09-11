@@ -86,3 +86,11 @@ query Me {
   }
   isMyEmailVerified
 }
+
+query WhereWeWork {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
+}

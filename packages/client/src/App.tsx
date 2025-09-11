@@ -20,6 +20,7 @@ import OfflineToastNotification from "./offline/OfflineToastNotification";
 import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNotification";
 import DeveloperApiPage from "./DeveloperAPIPage";
 import { Helmet } from "react-helmet";
+import LandingPage from "./homepage/LandingPage";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -89,6 +90,22 @@ function App() {
   const { user } = useAuth0();
   const { t } = useTranslation("homepage");
   const [error, setError] = useState<Error | null>(null);
+  const location = useLocation();
+  const isDarkRoutes =
+    location.pathname === "/" ||
+    location.pathname === "/about" ||
+    location.pathname === "/projects" ||
+    location.pathname === "/features" ||
+    location.pathname === "/partners" ||
+    location.pathname === "/api" ||
+    location.pathname === "/team" ||
+    location.pathname === "/signin" ||
+    location.pathname === "/authenticate" ||
+    location.pathname === "/account-settings" ||
+    location.pathname === "/submit-offline-surveys" ||
+    location.pathname === "/terms-of-use" ||
+    location.pathname === "/privacy-policy" ||
+    location.pathname === "/new-project";
   useEffect(() => {
     if (user) {
       Sentry.setUser({ email: user.email, id: user.sub });
@@ -97,7 +114,11 @@ function App() {
     }
   }, [user]);
   return (
-    <div className="App">
+    <div
+      className={
+        isDarkRoutes ? "min-h-screen bg-slate-950 text-slate-100" : "App"
+      }
+    >
       <HeadProvider>
         <Meta name="theme-color" content="#267588" />
         <Suspense
@@ -125,6 +146,9 @@ function App() {
                   "/submit-offline-surveys",
                   "/terms-of-use",
                   "/privacy-policy",
+                  "/uses/map-portal",
+                  "/uses/surveys",
+                  "/uses/planning",
                 ]}
                 exact
               >
@@ -177,6 +201,7 @@ function App() {
                 <Route exact path="/">
                   <OfflineResponsesToastNotification />
                   <LazyFullScreenOfflinePage />
+                  <LandingPage />
                   <div className="p-4 pb-12 bg-white">
                     <Helmet>
                       <title>SeaSketch</title>
@@ -185,7 +210,7 @@ function App() {
                         href={`https://www.seasketch.org/`}
                       />
                     </Helmet>
-                    <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
+                    {/* <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(
                         "SeaSketch Supports Collaborative Planning for our Oceans"
                       )}
@@ -198,9 +223,9 @@ function App() {
               information. SeaSketch is being used around the globe in small
               agency teams and large community-driven initiatives to make better
               management decisions every day.`)}
-                    </p>
+                    </p> */}
                   </div>
-                  <NewProjectCTA />
+                  {/* <NewProjectCTA /> */}
                 </Route>
                 <Route
                   exact
