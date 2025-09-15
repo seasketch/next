@@ -10404,6 +10404,7 @@ export type Project = Node & {
   basemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection: BasemapsConnection;
+  centerGeojson?: Maybe<Scalars['JSON']>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11831,6 +11832,8 @@ export type Query = Node & {
   reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
   searchOverlays?: Maybe<Array<SearchResult>>;
+  /** Reads and enables pagination through a set of `Project`. */
+  searchProjects?: Maybe<Array<Project>>;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
   sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
@@ -12749,6 +12752,14 @@ export type QuerySearchOverlaysArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  query?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySearchProjectsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
   query?: Maybe<Scalars['String']>;
 };
 
@@ -18122,6 +18133,19 @@ export type UpdateBodyFragment = (
   & Pick<FormElement, 'body'>
 );
 
+export type ProjectSearchQueryVariables = Exact<{
+  query: Scalars['String'];
+}>;
+
+
+export type ProjectSearchQuery = (
+  { __typename?: 'Query' }
+  & { searchProjects?: Maybe<Array<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'slug'>
+  )>> }
+);
+
 export type MySketchFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'postId' | 'sketchClassId' | 'bbox' | 'filterMvtUrl' | 'createdAt' | 'updatedAt'>
@@ -21805,7 +21829,7 @@ export type DataDownloadInfoQuery = (
 
 export type ProjectListItemFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured' | 'translatedProps'>
+  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured' | 'translatedProps' | 'centerGeojson'>
 );
 
 export type ProjectListingQueryVariables = Exact<{
@@ -25619,6 +25643,7 @@ export const ProjectListItemFragmentDoc = /*#__PURE__*/ gql`
   url
   isFeatured
   translatedProps
+  centerGeojson
 }
     `;
 export const ClippingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -26361,6 +26386,17 @@ export const UpdateProjectStorageBucketDocument = /*#__PURE__*/ gql`
         name
       }
     }
+  }
+}
+    `;
+export const ProjectSearchDocument = /*#__PURE__*/ gql`
+    query ProjectSearch($query: String!) {
+  searchProjects(query: $query) {
+    id
+    name
+    description
+    logoUrl
+    slug
   }
 }
     `;
@@ -30380,6 +30416,7 @@ export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
 export const namedOperations = {
   Query: {
     ProjectBucketSetting: 'ProjectBucketSetting',
+    ProjectSearch: 'ProjectSearch',
     MapboxAPIKeys: 'MapboxAPIKeys',
     APIKeys: 'APIKeys',
     GetAcl: 'GetAcl',

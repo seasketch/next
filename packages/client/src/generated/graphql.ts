@@ -10406,6 +10406,7 @@ export type Project = Node & {
   basemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection: BasemapsConnection;
+  centerGeojson?: Maybe<Scalars['JSON']>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11833,6 +11834,8 @@ export type Query = Node & {
   reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
   searchOverlays?: Maybe<Array<SearchResult>>;
+  /** Reads and enables pagination through a set of `Project`. */
+  searchProjects?: Maybe<Array<Project>>;
   sessionIsBannedFromPosting?: Maybe<Scalars['Boolean']>;
   sharedBasemaps?: Maybe<Basemap>;
   sketch?: Maybe<Sketch>;
@@ -12751,6 +12754,14 @@ export type QuerySearchOverlaysArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  query?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySearchProjectsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
   query?: Maybe<Scalars['String']>;
 };
 
@@ -18124,6 +18135,19 @@ export type UpdateBodyFragment = (
   & Pick<FormElement, 'body'>
 );
 
+export type ProjectSearchQueryVariables = Exact<{
+  query: Scalars['String'];
+}>;
+
+
+export type ProjectSearchQuery = (
+  { __typename?: 'Query' }
+  & { searchProjects?: Maybe<Array<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'name' | 'description' | 'logoUrl' | 'slug'>
+  )>> }
+);
+
 export type MySketchFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'name' | 'isCollection' | 'collectionId' | 'folderId' | 'timestamp' | 'sharedInForum' | 'postId' | 'sketchClassId' | 'bbox' | 'filterMvtUrl' | 'createdAt' | 'updatedAt'>
@@ -21807,7 +21831,7 @@ export type DataDownloadInfoQuery = (
 
 export type ProjectListItemFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured' | 'translatedProps'>
+  & Pick<Project, 'id' | 'logoUrl' | 'name' | 'slug' | 'description' | 'url' | 'isFeatured' | 'translatedProps' | 'centerGeojson'>
 );
 
 export type ProjectListingQueryVariables = Exact<{
@@ -25621,6 +25645,7 @@ export const ProjectListItemFragmentDoc = gql`
   url
   isFeatured
   translatedProps
+  centerGeojson
 }
     `;
 export const ClippingLayerDetailsFragmentDoc = gql`
@@ -26421,6 +26446,45 @@ export function useUpdateProjectStorageBucketMutation(baseOptions?: Apollo.Mutat
 export type UpdateProjectStorageBucketMutationHookResult = ReturnType<typeof useUpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationResult = Apollo.MutationResult<UpdateProjectStorageBucketMutation>;
 export type UpdateProjectStorageBucketMutationOptions = Apollo.BaseMutationOptions<UpdateProjectStorageBucketMutation, UpdateProjectStorageBucketMutationVariables>;
+export const ProjectSearchDocument = gql`
+    query ProjectSearch($query: String!) {
+  searchProjects(query: $query) {
+    id
+    name
+    description
+    logoUrl
+    slug
+  }
+}
+    `;
+
+/**
+ * __useProjectSearchQuery__
+ *
+ * To run a query within a React component, call `useProjectSearchQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectSearchQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectSearchQuery({
+ *   variables: {
+ *      query: // value for 'query'
+ *   },
+ * });
+ */
+export function useProjectSearchQuery(baseOptions: Apollo.QueryHookOptions<ProjectSearchQuery, ProjectSearchQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectSearchQuery, ProjectSearchQueryVariables>(ProjectSearchDocument, options);
+      }
+export function useProjectSearchLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectSearchQuery, ProjectSearchQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectSearchQuery, ProjectSearchQueryVariables>(ProjectSearchDocument, options);
+        }
+export type ProjectSearchQueryHookResult = ReturnType<typeof useProjectSearchQuery>;
+export type ProjectSearchLazyQueryHookResult = ReturnType<typeof useProjectSearchLazyQuery>;
+export type ProjectSearchQueryResult = Apollo.QueryResult<ProjectSearchQuery, ProjectSearchQueryVariables>;
 export const MapboxApiKeysDocument = gql`
     query MapboxAPIKeys($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -38436,6 +38500,7 @@ export type UserIsSuperuserQueryResult = Apollo.QueryResult<UserIsSuperuserQuery
 export const namedOperations = {
   Query: {
     ProjectBucketSetting: 'ProjectBucketSetting',
+    ProjectSearch: 'ProjectSearch',
     MapboxAPIKeys: 'MapboxAPIKeys',
     APIKeys: 'APIKeys',
     GetAcl: 'GetAcl',

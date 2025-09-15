@@ -21,10 +21,15 @@ const navigationLinks = [
     id: "nav-features",
   },
   {
-    to: "/partners",
-    label: "Funders & Partners",
-    id: "nav-partners",
+    to: "/case-studies",
+    label: "Case Studies",
+    id: "nav-case-studies",
   },
+  // {
+  //   to: "/#funders",
+  //   label: "Funders & Partners",
+  //   id: "nav-partners",
+  // },
   {
     to: "/team",
     label: "Team",
@@ -221,7 +226,7 @@ export default function Header() {
                                   key={f.to}
                                   id={f.id}
                                   role="menuitem"
-                                  className="group rounded-lg px-4 py-3 text-left hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
+                                  className="group rounded-lg px-4 py-3 text-left hover:bg:white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
                                   ref={(el) => {
                                     if (i === 0) firstFeatureRef.current = el;
                                     featureItemRefs.current[i] = el;
@@ -281,13 +286,17 @@ export default function Header() {
                         key={link.to}
                         exact={link.to === "/"}
                         to={link.to}
+                        onClick={() => {
+                          // set scroll position to top
+                          window.scrollTo(0, 0);
+                        }}
                         className={`
                       px-3 py-2 rounded-md text-sm font-medium text-slate-200
                     hover:text-white  focus:outline-none focus-visible:ring-1
                     
                     `}
                         id={link.id}
-                        activeClassName="bg-gray-900 text-white"
+                        // activeClassName="bg-gray-900 text-white"
                         activeStyle={{ color: "white" }}
                       >
                         {link.label}

@@ -1,7 +1,11 @@
 /* eslint-disable i18next/no-literal-string */
-import { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
+import { motion } from "framer-motion";
+import { EmblaCarouselType } from "embla-carousel";
 import useEmblaCarousel from "embla-carousel-react";
 import AutoScroll from "embla-carousel-auto-scroll";
+import WheelGesturesPlugin from "embla-carousel-wheel-gestures";
+import { Link } from "react-router-dom";
 
 export type Testimonial = {
   headshotSrc: string;
@@ -13,6 +17,8 @@ export type Testimonial = {
     additionalRoles?: string[];
   };
   quote: string;
+  caseStudyPath?: string;
+  caseStudyLabel?: string;
 };
 
 const TESTIMONIALS: Testimonial[] = [
@@ -27,6 +33,8 @@ const TESTIMONIALS: Testimonial[] = [
     },
     quote:
       "SeaSketch enabled collaboration across government, science, and communities in Brazil like no other tool could.",
+    caseStudyPath: "/case-studies/brazil",
+    caseStudyLabel: "Read about the Brazil project",
   },
   {
     headshotSrc: "/people/katheryn.jpg",
@@ -58,6 +66,8 @@ const TESTIMONIALS: Testimonial[] = [
     },
     quote:
       "SeaSketch is a user-friendly, interactive tool that empowers community members to map their ocean uses, even offline in remote areas. The data collected through SeaSketch has been invaluable for creating heat maps that guide fisheries management by communities and government alike",
+    caseStudyPath: "/case-studies/fsm",
+    caseStudyLabel: "Read about the FSM project",
   },
   {
     headshotSrc: "/people/hulwa.jpg",
@@ -68,6 +78,30 @@ const TESTIMONIALS: Testimonial[] = [
     },
     quote:
       "The Ocean Use Survey gave voice to thousands of Maldivians whose lives and livelihoods depend on the sea. With SeaSketch, we were able to capture this indigenous knowledge at a national scale for the first time, and turn it into a living resource of maps and interactive data that we, and others, can continue to analyze to inform decision making and ensure community perspectives shape ocean planning.",
+    caseStudyPath: "/case-studies/maldives",
+    caseStudyLabel: "Read about the Maldives project",
+  },
+  {
+    headshotSrc: "/people/catherine.jpeg",
+    person: {
+      name: "Catherine Paul",
+      affiliation: "Ministry of Fisheries and Ocean Resources, Kiribati",
+    },
+    quote:
+      "In just a few days, we went from scattered files to a national platform we can use for planning and decision-making. SeaSketch showed us that building a geoportal doesn’t have to take years—it can start today.",
+    caseStudyPath: "/case-studies/kiribati",
+    caseStudyLabel: "Read about the Kiribati project",
+  },
+  {
+    headshotSrc: "/people/adriano.jpeg",
+    person: {
+      name: "Adriano Quintela",
+      affiliation: "Blue Azores Initiative",
+    },
+    quote:
+      "SeaSketch helped empower our region to design the largest offshore MPA network in the North Atlantic - not just with scientific rigor, but with community voices guiding every boundary.",
+    caseStudyPath: "/case-studies/azores",
+    caseStudyLabel: "Read about the Azores project",
   },
 ];
 
@@ -104,21 +138,11 @@ export default function Testimonials() {
         stopOnInteraction: true,
         stopOnMouseEnter: true,
       }),
+      WheelGesturesPlugin(),
     ]
   );
-  const [activeIdx, setActiveIdx] = useState(0);
-
-  useEffect(() => {
-    if (!emblaApi) return;
-    const update = () => setActiveIdx(emblaApi.selectedScrollSnap());
-    update();
-    emblaApi.on("select", update);
-    emblaApi.on("reInit", update);
-    return () => {
-      emblaApi.off("select", update);
-      emblaApi.off("reInit", update);
-    };
-  }, [emblaApi]);
+  const { selectedIndex, scrollSnaps, onDotButtonClick } =
+    useDotButton(emblaApi);
 
   return (
     <section className="relative isolate overflow-hidden bg-slate-50">
@@ -127,7 +151,7 @@ export default function Testimonials() {
         <div className="absolute -bottom-20 -right-24 h-72 w-72 rounded-full bg-emerald-200/30 blur-3xl" />
         <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(0,0,0,0.04),transparent)]" />
       </div>
-      <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
+      <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="max-w-3xl">
           <span className="text-xs uppercase tracking-[0.2em] text-sky-700/80">
             What people are saying
@@ -146,15 +170,21 @@ export default function Testimonials() {
             className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] px-5"
             ref={emblaRef}
           >
-            <ul className="flex gap-0 space-x-5">
+            <ul className="flex gap-0 space-x-5 px-5">
               {TESTIMONIALS.map((t, i) => (
                 <li
                   key={t.person.name}
-                  className={`min-w-0 shrink-0 ${
-                    t.person.name === "Hulwa Khaleel" ? "w-128" : "w-96"
+                  className={`min-w-0 text-sm shrink-0 ${
+                    t.quote.length > 300
+                      ? "w-[540px]"
+                      : t.quote.length > 250
+                      ? "w-128"
+                      : t.quote.length > 200
+                      ? "w-[400px]"
+                      : "w-[360px]"
                   }`}
                 >
-                  <figure className="flex h-full flex-col justify-between rounded-none sm:rounded-3xl bg-white p-6 sm:p-8 ring-0 sm:ring-1 sm:ring-slate-200 shadow-sm ">
+                  <figure className="flex h-full flex-col justify-between sm:rounded-md bg-white rounded-none p-6 sm:p-8 ring-0 sm:ring-1 sm:ring-slate-200 shadow-md">
                     <blockquote className="text-slate-800">
                       <svg
                         aria-hidden
@@ -164,9 +194,19 @@ export default function Testimonials() {
                       >
                         <path d="M7.17 6A5.17 5.17 0 0 0 2 11.17V22h8.28v-8.28H7.17V11.3c0-1.13.92-2.05 2.05-2.05h1.06V6H7.17Zm9.66 0A5.17 5.17 0 0 0 11.66 11.17V22h8.28v-8.28h-3.11V11.3c0-1.13.92-2.05 2.05-2.05h1.06V6h-3.11Z" />
                       </svg>
-                      <p className="mt-3 text-base leading-7 select-none">
+                      <p className="mt-3 text-sm md:text-base leading-7 select-none">
                         {t.quote}
                       </p>
+                      {t.caseStudyPath && (
+                        <div className="mt-3">
+                          <a
+                            href={t.caseStudyPath}
+                            className="inline-flex items-center text-sm font-medium text-sky-700 hover:text-sky-800"
+                          >
+                            {(t.caseStudyLabel || "Read the case study") + " →"}
+                          </a>
+                        </div>
+                      )}
                     </blockquote>
                     <figcaption className="mt-6 flex items-center gap-4">
                       <img
@@ -193,23 +233,92 @@ export default function Testimonials() {
               ))}
             </ul>
           </div>
-
-          <div className="mt-6 flex items-center justify-center gap-2">
-            {TESTIMONIALS.map((_, i) => (
-              <button
-                key={i}
-                aria-label={`Go to testimonial ${i + 1}`}
-                onClick={() => emblaApi?.scrollTo(i)}
-                className={
-                  i === activeIdx
-                    ? "h-2.5 w-6 rounded-full bg-slate-700 transition-all"
-                    : "h-1.5 w-1.5 rounded-full bg-slate-300 hover:bg-slate-400 transition-colors"
-                }
-              />
-            ))}
+        </div>
+        <div className="embla__controls">
+          <div className="w-full pt-8 -mb-8">
+            <div className="flex items-center space-x-1 mx-auto justify-center">
+              {scrollSnaps.map((_, index) => (
+                <button
+                  className="flex items-center justify-center"
+                  onClick={() => onDotButtonClick(index)}
+                  key={index}
+                >
+                  <DotButton
+                    selected={index === selectedIndex}
+                    className="w-4 h-4 rounded-lg bg-gray-300 hover:bg-gray-400 transition-colors"
+                  />
+                </button>
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </section>
   );
 }
+
+type UseDotButtonType = {
+  selectedIndex: number;
+  scrollSnaps: number[];
+  onDotButtonClick: (index: number) => void;
+};
+
+export const useDotButton = (
+  emblaApi: EmblaCarouselType | undefined
+): UseDotButtonType => {
+  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [scrollSnaps, setScrollSnaps] = useState<number[]>([]);
+
+  const onDotButtonClick = useCallback(
+    (index: number) => {
+      if (!emblaApi) return;
+      emblaApi.scrollTo(index);
+    },
+    [emblaApi]
+  );
+
+  const onInit = useCallback((emblaApi: EmblaCarouselType) => {
+    setScrollSnaps(emblaApi.scrollSnapList());
+  }, []);
+
+  const onSelect = useCallback((emblaApi: EmblaCarouselType) => {
+    setSelectedIndex(emblaApi.selectedScrollSnap());
+  }, []);
+
+  useEffect(() => {
+    if (!emblaApi) return;
+
+    onInit(emblaApi);
+    onSelect(emblaApi);
+    emblaApi.on("reInit", onInit).on("reInit", onSelect).on("select", onSelect);
+  }, [emblaApi, onInit, onSelect]);
+
+  return {
+    selectedIndex,
+    scrollSnaps,
+    onDotButtonClick,
+  };
+};
+
+type DotButtonProps = {
+  className?: string;
+  selected?: boolean;
+};
+
+export const DotButton: React.FC<DotButtonProps> = ({
+  className,
+  selected,
+}) => {
+  return (
+    <motion.div
+      className={className}
+      initial={false}
+      animate={{ scale: selected ? 1 : 0.5 }}
+      transition={{
+        scale: selected
+          ? { type: "spring", stiffness: 600, damping: 18, bounce: 0.35 }
+          : { duration: 0.12, ease: "easeOut" },
+      }}
+    />
+  );
+};

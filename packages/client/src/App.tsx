@@ -4,7 +4,6 @@ import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
 import ProjectsPage from "./homepage/ProjectsPage";
 import Header from "./header/Header";
-import NewProjectCTA from "./homepage/NewProjectCTA";
 import NewProjectPage from "./homepage/NewProjectPage";
 import Spinner from "./components/Spinner";
 import { ProjectAccessGate } from "./auth/ProjectAccessGate";
@@ -21,6 +20,18 @@ import OfflineResponsesToastNotification from "./offline/OfflineResponsesToastNo
 import DeveloperApiPage from "./DeveloperAPIPage";
 import { Helmet } from "react-helmet";
 import LandingPage from "./homepage/LandingPage";
+import TeamPage from "./homepage/TeamPage";
+import {
+  CaseStudiesIndex,
+  AzoresCaseStudy,
+  BelizeCaseStudy,
+  BrazilCaseStudy,
+  CaliforniaCaseStudy,
+  FSMCaseStudy,
+  KiribatiCaseStudy,
+  MaldivesCaseStudy,
+} from "./homepage/caseStudies/caseStudies";
+import Footer from "./footer/Footer";
 
 const LazyProjectApp = React.lazy(
   () => import(/* webpackChunkName: "ProjectApp" */ "./projects/ProjectApp")
@@ -88,7 +99,7 @@ const LazySuperuserDashboard = React.lazy(
 
 function App() {
   const { user } = useAuth0();
-  const { t } = useTranslation("homepage");
+  useTranslation("homepage");
   const [error, setError] = useState<Error | null>(null);
   const location = useLocation();
   const isDarkRoutes =
@@ -113,6 +124,37 @@ function App() {
       Sentry.configureScope((scope) => scope.setUser(null));
     }
   }, [user]);
+
+  // Smooth-scroll to in-page anchors like /#funders
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace("#", "");
+      const el = document.getElementById(id);
+      if (el) {
+        // Wait for layout
+        requestAnimationFrame(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+        });
+      }
+    }
+  }, [location.pathname, location.hash]);
+
+  const frontOfTheHouse = [
+    "/signin",
+    "/projects",
+    "/new-project",
+    "/authenticate",
+    "/",
+    "/api",
+    "/team",
+    "/terms-of-use",
+    "/privacy-policy",
+    "/uses/map-portal",
+    "/uses/surveys",
+    "/uses/planning",
+    "/case-studies",
+    "/case-studies/*",
+  ];
   return (
     <div
       className={
@@ -134,22 +176,13 @@ function App() {
           <GlobalErrorHandlerContext.Provider value={{ error, setError }}>
             <ClientCacheManagerProvider>
               <AuthoritativeDomainPrompt />
+              <Route path={frontOfTheHouse} exact>
+                <Helmet>
+                  <html className="bg-black" />
+                </Helmet>
+              </Route>
               <Route
-                path={[
-                  "/signin",
-                  "/projects",
-                  "/new-project",
-                  "/authenticate",
-                  "/",
-                  "/api",
-                  "/team",
-                  "/submit-offline-surveys",
-                  "/terms-of-use",
-                  "/privacy-policy",
-                  "/uses/map-portal",
-                  "/uses/surveys",
-                  "/uses/planning",
-                ]}
+                path={[...frontOfTheHouse, "/submit-offline-surveys"]}
                 exact
               >
                 <Header />
@@ -171,10 +204,36 @@ function App() {
                 <Route exact path="/projects">
                   <ProjectsPage />
                 </Route>
+                <Route exact path="/case-studies">
+                  <CaseStudiesIndex />
+                </Route>
+                <Route exact path="/case-studies/azores">
+                  <AzoresCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/belize">
+                  <BelizeCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/brazil">
+                  <BrazilCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/california">
+                  <CaliforniaCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/fsm">
+                  <FSMCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/kiribati">
+                  <KiribatiCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/maldives">
+                  <MaldivesCaseStudy />
+                </Route>
                 <Route exact path="/api">
                   <DeveloperApiPage />
                 </Route>
-                <Route exact path="/team"></Route>
+                <Route exact path="/team">
+                  <TeamPage />
+                </Route>
                 <Route exact path="/terms-of-use">
                   <LazyTermsOfUse />
                 </Route>
@@ -202,15 +261,11 @@ function App() {
                   <OfflineResponsesToastNotification />
                   <LazyFullScreenOfflinePage />
                   <LandingPage />
-                  <div className="p-4 pb-12 bg-white">
-                    <Helmet>
-                      <title>SeaSketch</title>
-                      <link
-                        rel="canonical"
-                        href={`https://www.seasketch.org/`}
-                      />
-                    </Helmet>
-                    {/* <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
+                  <Helmet>
+                    <title>SeaSketch</title>
+                    <link rel="canonical" href={`https://www.seasketch.org/`} />
+                  </Helmet>
+                  {/* <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(
                         "SeaSketch Supports Collaborative Planning for our Oceans"
                       )}
@@ -224,7 +279,6 @@ function App() {
               agency teams and large community-driven initiatives to make better
               management decisions every day.`)}
                     </p> */}
-                  </div>
                   {/* <NewProjectCTA /> */}
                 </Route>
                 <Route
@@ -323,6 +377,9 @@ function App() {
                 </Route>
               </Switch>
               <GlobalErrorHandler />
+              <Route path={frontOfTheHouse} exact>
+                <Footer />
+              </Route>
             </ClientCacheManagerProvider>
           </GlobalErrorHandlerContext.Provider>
         </Suspense>

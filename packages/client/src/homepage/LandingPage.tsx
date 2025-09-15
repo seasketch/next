@@ -1,7 +1,9 @@
-import Badge from "../components/Badge";
+/* eslint-disable react/jsx-no-target-blank */
 import LightRays from "./LightRays";
 import Testimonials from "./Testimonials";
+import News from "./News";
 import WhereWeWork from "./WhereWeWork";
+import ProjectSearchBar from "./ProjectSearchBar";
 
 export type TrustedPartnerLogo = {
   alt: string;
@@ -44,6 +46,13 @@ const logos = [
 
 /* eslint-disable i18next/no-literal-string */
 export default function LandingPage() {
+  const waittLogo = logos.find((l) => l.alt === "Waitt Institute");
+  const otherLogos = logos.filter(
+    (l) =>
+      l.alt !== "Waitt Institute" &&
+      l.alt !== "Blue Prosperity Coalition" &&
+      l.alt !== "Oceano Azul"
+  );
   return (
     <>
       {/* <style>{`
@@ -60,7 +69,7 @@ export default function LandingPage() {
       {/* Header (glass, minimal) */}
 
       {/* <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/60 backdrop-blur supports-[backdrop-filter]:bg-slate-950/40">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           <a
             href="#home"
             aria-label="SeaSketch home"
@@ -119,7 +128,7 @@ export default function LandingPage() {
             raysSpeed={0.5}
             lightSpread={1}
             rayLength={1.2}
-            followMouse={true}
+            followMouse={false}
             mouseInfluence={0.05}
             noiseAmount={0.1}
             distortion={0.05}
@@ -150,7 +159,7 @@ export default function LandingPage() {
           <div className="absolute inset-0 bg-[radial-gradient(60%_60%_at_50%_0%,rgba(255,255,255,0.08),transparent)] animate-pulse-slow" />
         </div>
 
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-white leading-tight">
             <em className="italic">The</em> platform for{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300 block pb-2">
@@ -168,24 +177,7 @@ export default function LandingPage() {
           </p>
 
           {/* Command bar */}
-          <form
-            action="/projects"
-            className="mt-8 flex items-center justify-center"
-          >
-            <div className="flex w-full max-w-xl items-center rounded-2xl border border-white/10 bg-white/5 px-3 py-2 backdrop-blur">
-              <input
-                name="q"
-                placeholder="Search for a project…"
-                className="ml-2 flex-1 bg-transparent outline-none placeholder:text-slate-400 text-slate-100 focus:ring-0 border-none"
-              />
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-full px-5 py-2.5 text-sm font-medium ring-1 ring-inset ring-white/20 text-white hover:bg-white/10"
-              >
-                Search
-              </button>
-            </div>
-          </form>
+          <ProjectSearchBar />
 
           <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
             <a
@@ -205,8 +197,8 @@ export default function LandingPage() {
       </section>
 
       {/* Social proof ribbon */}
-      <section className="py-10 border-t border-white/10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="py-10 border-t border-white/10 border-t-cyan-500/25">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <p className="text-center text-xs uppercase tracking-[0.2em] text-slate-400">
             Trusted by governments, NGOs, and research institutions
           </p>
@@ -232,12 +224,69 @@ export default function LandingPage() {
               )),
             ]}
           </div>
+          {/* Awards (moved from impact band) */}
+          <div className="mt-8 flex items-center justify-center gap-6 px-4 text-slate-400">
+            <div
+              aria-hidden
+              className="h-10 w-12 md:h-6 md:w-8 bg-cyan-200/80"
+              style={{
+                WebkitMaskImage: "url(/Laurel.svg)",
+                maskImage: "url(/Laurel.svg)",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+              }}
+            />
+            <div className="text-sm leading-5  text-center space-y-1">
+              <div>
+                <a
+                  href="https://uplink.weforum.org/uplink/s/uplink-contribution/a012o00001pUVjCAAW/Visualizing%20and%20valuing%20ocean%20space%20more%20effectively"
+                  target="_blank"
+                  className=" hover:text-slate-500"
+                >
+                  Top Innovator, Ocean Data Challenge{" "}
+                  <span className="hidden md:inline">
+                    (UpLink, World Economic Forum, 2023)
+                  </span>
+                </a>
+              </div>
+              <div>
+                <a
+                  href="https://www.udall.gov/News/NewsArchive.aspx?Item=69"
+                  target="_blank"
+                  className=" hover:text-slate-500"
+                >
+                  Innovation & Technology in Environmental Conflict Resolution
+                  <span className="hidden md:inline">
+                    (U.S. Institute for Environmental Conflict Resolution, 2010)
+                  </span>
+                </a>
+              </div>
+            </div>
+            <div
+              aria-hidden
+              className="h-10 w-12 md:h-6 md:w-8 bg-cyan-200/80 transform scale-x-[-1]"
+              style={{
+                WebkitMaskImage: "url(/Laurel.svg)",
+                maskImage: "url(/Laurel.svg)",
+                WebkitMaskRepeat: "no-repeat",
+                maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center",
+                maskPosition: "center",
+                WebkitMaskSize: "contain",
+                maskSize: "contain",
+              }}
+            />
+          </div>
         </div>
       </section>
 
       {/* Use Cases: 3 alternating feature rows */}
       <section id="use-cases" className="py-16 bg-white text-slate-900">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="max-w-3xl">
             <span className="text-xs uppercase tracking-[0.2em] text-sky-700/80">
               Capabilities
@@ -353,9 +402,10 @@ export default function LandingPage() {
         </div>
       </section>
       <Testimonials />
+
       <section
         id="thirtyxthirty"
-        className="relative overflow-hidden py-20 bg-gradient-to-b from-slate-100 to-slate-300 text-slate-900 sm:px-12"
+        className="relative overflow-hidden py-20 bg-gradient-to-b from-slate-100 to-slate-300 text-slate-900 lg:py-24"
       >
         {/* Decorative background */}
         <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -365,7 +415,7 @@ export default function LandingPage() {
         </div>
 
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="max-w-3xl">
+          <div className="max-w-5xl">
             <span className="text-xs uppercase tracking-[0.2em] text-emerald-700/80">
               Vision
             </span>
@@ -381,14 +431,10 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="mt-12 grid gap-10 md:grid-cols-12 md:gap-12">
-            {/* Stepper */}
-            <div className="relative md:col-span-12">
-              <div
-                aria-hidden
-                className="absolute left-4 top-6 bottom-6 w-px bg-sky-200/70"
-              />
-              <ol className="space-y-6 text-sm">
+          <div className="mt-8 lg:mt-10">
+            {/* Mobile: centered vertical list, no outer rail */}
+            <div className="md:hidden">
+              <ol className="space-y-6 text-sm flex flex-col items-center">
                 {[
                   {
                     t: "Centralize Data",
@@ -411,8 +457,8 @@ export default function LandingPage() {
                     d: "Update datasets and revise plans to support adaptive management",
                   },
                 ].map((s, i) => (
-                  <li key={s.t} className="relative pl-8">
-                    <div className="rounded-2xl bg-white/70 ring-1 ring-slate-200 backdrop-blur px-6 py-3 flex items-center gap-4">
+                  <li key={s.t} className="w-full">
+                    <div className="rounded-2xl bg-white/70 ring-1 ring-slate-200 backdrop-blur px-6 py-3 flex items-center gap-4 w-full">
                       <span className="inline-block leading-none text-2xl md:text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-b from-blue-800/90 to-sky-600/60">
                         {i + 1}
                       </span>
@@ -427,6 +473,91 @@ export default function LandingPage() {
                         <p className="mt-1 text-slate-700">{s.d}</p>
                       </div>
                     </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {/* Desktop/Tablet: horizontal cards (hidden on xl for experimental stepper) */}
+            <ol className="hidden md:grid lg:hidden gap-4 sm:gap-6 grid-cols-1 md:grid-cols-3 lg:grid-cols-3 text-sm">
+              {[
+                {
+                  t: "Centralize Data",
+                  d: "Bring together critical data in the accessible, intuitive data portal",
+                },
+                {
+                  t: "Engage & Survey",
+                  d: "Gather essential spatial data with Ocean Use Surveys",
+                },
+                {
+                  t: "Co‑design Plans",
+                  d: "Collaboratively design and evaluate zones",
+                },
+                {
+                  t: "Publish & Share",
+                  d: "Communicate draft and finalized plans to stakeholders",
+                },
+                {
+                  t: "Monitor",
+                  d: "Update datasets and revise plans to support adaptive management",
+                },
+              ].map((s, i) => (
+                <li
+                  key={s.t}
+                  className="border border-black/5 shadow-sm rounded-2xl"
+                >
+                  <div className="h-full rounded-2xl bg-white/70  px-6 py-5 flex flex-col">
+                    <div className="flex items-center gap-3">
+                      <span className="inline-block leading-none text-lg lg:text-2xl font-semibold text-transparent bg-clip-text bg-gradient-to-b from-blue-800/90 to-sky-600/60">
+                        {i + 1}
+                      </span>
+                      <h3 className="text-base font-semibold text-slate-900">
+                        {s.t}
+                      </h3>
+                    </div>
+                    <p className="mt-3 text-slate-700 text-sm">{s.d}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+
+            {/* XL+: experimental non-card horizontal stepper */}
+            <div className="hidden lg:block relative mt-4 -ml-4">
+              <ol className="relative flex items-start justify-between text-sm">
+                {[
+                  {
+                    t: "Centralize Data",
+                    d: "Bring together critical data in the accessible, intuitive data portal",
+                  },
+                  {
+                    t: "Engage & Survey",
+                    d: "Gather essential spatial data with Ocean Use Surveys",
+                  },
+                  {
+                    t: "Co‑design Plans",
+                    d: "Collaboratively design and evaluate zones",
+                  },
+                  {
+                    t: "Publish & Share",
+                    d: "Communicate draft and finalized plans to stakeholders",
+                  },
+                  {
+                    t: "Monitor",
+                    d: "Update datasets and revise plans to support adaptive management",
+                  },
+                ].map((s, i) => (
+                  <li key={s.t} className="relative flex-1 flex flex-col px-2">
+                    <div className="relative inline-flex gap-2 px-2 z-10">
+                      <span className="inline-block leading-snug text-lg font-semibold text-transparent bg-clip-text bg-gradient-to-b from-blue-800/90 to-sky-600/60">
+                        {i + 1}
+                      </span>
+                      <h3 className="text-base font-semibold text-slate-900 whitespace-nowrap">
+                        {s.t}
+                      </h3>
+                    </div>
+                    <p className="mt-1 text-slate-600 text-sm leading-snug max-w-[32ch] pl-2">
+                      {s.d}
+                    </p>
                   </li>
                 ))}
               </ol>
@@ -470,7 +601,7 @@ export default function LandingPage() {
       />
 
       {/* Impact band */}
-      <section className="relative overflow-hidden py-20 bg-slate-900 text-slate-100">
+      <section className="relative overflow-hidden py-16 bg-slate-900 text-slate-100">
         {/* Subtle topo linework background */}
         <svg
           aria-hidden="true"
@@ -502,12 +633,12 @@ export default function LandingPage() {
             <path d="M -50 410 C 120 430, 360 395, 580 420 S 1000 430, 1250 415" />
           </g>
         </svg>
-        <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 md:grid-cols-5 gap-10 text-center">
             {[
               { n: "16", l: "years of innovation" },
-              { n: "100,000", l: "polygons drawn and analyzed" },
               { n: "20+", l: "countries" },
+              { n: "100,000", l: "polygons drawn and analyzed" },
               { n: "10+ million", l: "square kilometers of ocean evaluated" },
               { n: "10,000+", l: "map layers hosted" },
             ].map((s) => (
@@ -520,6 +651,208 @@ export default function LandingPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Funders & Partners */}
+      <section
+        id="funders"
+        className="relative overflow-hidden py-16 lg:py-20 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900"
+      >
+        {/* Decorative background */}
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-400/20 blur-3xl" />
+          <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-emerald-300/18 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(0,0,0,0.05),transparent)]" />
+        </div>
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="max-w-5xl">
+            <span className="text-xs uppercase tracking-[0.2em] text-sky-700/80">
+              Sustained by
+            </span>
+            <h2 className="mt-2 text-4xl font-semibold tracking-tight">
+              Funders & Partners
+            </h2>
+            <p className="mt-3 text-slate-700">
+              SeaSketch is sustained by philanthropic partners and project
+              sponsors who believe in collaborative ocean stewardship—and in
+              delivering 30×30 commitments with transparent, science‑based
+              processes.
+            </p>
+            <div className="mt-8 grid gap-6 md:grid-cols-12 items-stretch">
+              {/* Waitt left (first on mobile as well) */}
+              <div className="order-1 md:order-none md:col-span-4 md:row-span-2">
+                {waittLogo && (
+                  <a
+                    href={waittLogo.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-2xl ring-1 ring-slate-200 bg-white/80 p-6 hover:bg-white h-full"
+                  >
+                    <div
+                      className="h-24 sm:h-28 w-full"
+                      style={{
+                        background: `url(${waittLogo.src}) center center no-repeat`,
+                        backgroundSize: "contain",
+                      }}
+                      aria-label={waittLogo.alt}
+                    />
+                    <div className="mt-3 text-sm text-slate-600 text-center">
+                      Founding & sustaining partner
+                    </div>
+                  </a>
+                )}
+              </div>
+
+              {/* Small funders to the right in a single row */}
+              <div className="order-2 md:order-none md:col-span-8">
+                <div className="grid grid-cols-3 gap-4">
+                  {otherLogos.map((logo) => (
+                    <a
+                      key={logo.alt}
+                      href={logo.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="h-24 rounded-xl ring-1 ring-slate-200 bg-white p-4 flex items-center justify-center"
+                      aria-label={logo.alt}
+                      style={{
+                        background: `url(${logo.src}) center center no-repeat`,
+                        backgroundSize: "contain",
+                        backgroundOrigin: "content-box",
+                      }}
+                    >
+                      {""}
+                    </a>
+                  ))}
+                </div>
+              </div>
+
+              {/* CTA below the small funders, to the right of Waitt on desktop */}
+              <div className="order-3 md:order-none md:col-span-8 flex items-center">
+                <div className="hidden md:flex flex-wrap items-center gap-3 justify-center -mt-24 ">
+                  <a
+                    href="mailto:support@seasketch.org?subject=SeaSketch%20Funding%20Inquiry"
+                    className="inline-flex items-center rounded-full px-5 py-2.5 text-sm font-medium text-white bg-sky-400 hover:bg-sky-500"
+                  >
+                    Support our program
+                  </a>
+                </div>
+              </div>
+            </div>
+            {/* Mobile CTA */}
+            <div className="mt-6 flex flex-wrap items-center gap-3 md:hidden">
+              <a
+                href="mailto:support@seasketch.org?subject=SeaSketch%20Funding%20Inquiry"
+                className="inline-flex items-center rounded-full px-5 py-2.5 text-sm font-medium text-white bg-sky-400 hover:bg-sky-500"
+              >
+                Support our program
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+      <News />
+
+      {/* Next steps / CTA */}
+      <section
+        id="next-steps"
+        className="relative overflow-hidden bg-slate-50 text-slate-900"
+        aria-labelledby="get-involved-heading"
+      >
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-sky-300/20 blur-3xl" />
+          <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-emerald-300/20 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(60%_50%_at_50%_0%,rgba(0,0,0,0.04),transparent)]" />
+        </div>
+        <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16">
+          <div className="max-w-5xl">
+            <span className="text-xs uppercase tracking-[0.2em] text-sky-700/80">
+              Get Involved
+            </span>
+            <h2
+              id="get-involved-heading"
+              className="mt-2 text-4xl font-semibold tracking-tight"
+            >
+              Next Steps
+            </h2>
+          </div>
+
+          {/* Rows */}
+          <div className="mt-8 divide-y divide-slate-200 rounded-2xl bg-white/70 ring-1 ring-slate-200 overflow-hidden backdrop-blur">
+            {/* Stakeholders */}
+            <div className="grid gap-6 lg:grid-cols-12 items-center px-6 md:px-8 py-6">
+              <div className="md:col-span-6">
+                <h3 className="text-base font-semibold text-slate-900">
+                  For stakeholders
+                </h3>
+                <p className="mt-2 text-sm text-slate-700 max-w-prose">
+                  Find a SeaSketch project you would like to participate in.
+                </p>
+              </div>
+              <div className="lg:col-span-6 flex flex-wrap lg:flex-nowrap gap-3 lg:justify-end">
+                <a
+                  href="/projects"
+                  className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 whitespace-nowrap"
+                >
+                  Search for your project
+                </a>
+              </div>
+            </div>
+
+            {/* Practitioners */}
+            <div className="grid gap-6 lg:grid-cols-12 items-center px-6 md:px-8 py-6">
+              <div className="lg:col-span-6">
+                <h3 className="text-base font-semibold text-slate-900">
+                  For practitioners
+                </h3>
+                <p className="mt-2 text-sm text-slate-700 max-w-prose pr-2">
+                  Create a free project to support your work. Each project
+                  includes 1GB of data layer hosting.
+                </p>
+              </div>
+              <div className="lg:col-span-6 flex flex-wrap lg:flex-nowrap gap-3 lg:justify-end">
+                <a
+                  href="/new-project"
+                  className="inline-flex items-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500 whitespace-nowrap"
+                >
+                  Create a project
+                </a>
+                <a
+                  href="mailto:support@seasketch.org"
+                  className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 whitespace-nowrap"
+                >
+                  Request a demo
+                </a>
+                <a
+                  href="https://docs.seasketch.org"
+                  className="inline-flex items-center rounded-full px-4 py-2 text-sm font-medium ring-1 ring-inset ring-slate-300 text-slate-900 hover:bg-slate-100 whitespace-nowrap"
+                >
+                  Read the Docs
+                </a>
+              </div>
+            </div>
+
+            {/* Funders */}
+            <div className="grid gap-6 lg:grid-cols-12 items-center px-6 md:px-8 py-6">
+              <div className="lg:col-span-6">
+                <h3 className="text-base font-semibold text-slate-900">
+                  For funders
+                </h3>
+                <p className="mt-2 text-sm text-slate-700 max-w-prose">
+                  Support SeaSketch’s mission and help scale collaborative
+                  marine planning globally.
+                </p>
+              </div>
+              <div className="lg:col-span-6 flex flex-wrap lg:flex-nowrap gap-3 lg:justify-end">
+                <a
+                  href="mailto:support@seasketch.org?subject=SeaSketch%20Funding%20Inquiry"
+                  className="inline-flex items-center rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-400 whitespace-nowrap"
+                >
+                  Contact us
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>

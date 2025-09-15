@@ -41,7 +41,7 @@ export default function NewProjectPage() {
   const { isAuthenticated } = useAuth0();
   const { data, loading, error } = useMeQuery();
   return (
-    <main className="bg-gray-800 min-h-screen pt-12">
+    <main className="bg-gray-800 min-h-screen pt-12 text-black">
       <Helmet>
         <title>Create a SeaSketch Project</title>
         <meta
