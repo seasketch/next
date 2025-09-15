@@ -297,9 +297,12 @@ export default function ProjectSearchBar() {
                           <div className="font-medium text-left flex-none">
                             {p.name}
                           </div>
-                          {p.description && (
-                            <span className="text-slate-500 flex-1 truncate">
-                              {p.description}
+                          <span className="text-slate-500 flex-1 truncate">
+                            {p.description}
+                          </span>
+                          {activeIndex === -1 && idx === 0 && (
+                            <span className="text-slate-700 flex-none truncate place-self-end">
+                              ⌘-enter to open
                             </span>
                           )}
                         </Link>

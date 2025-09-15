@@ -8066,12 +8066,20 @@ select{
   border-color:rgb(226 232 240 / 0.1)
 }
 
+.place-self-end{
+  place-self:end
+}
+
 .self-end{
   align-self:flex-end
 }
 
 .self-center{
   align-self:center
+}
+
+.justify-self-end{
+  justify-self:end
 }
 
 .overflow-auto{
