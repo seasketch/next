@@ -24,7 +24,7 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
   const id = `${user.email || user.name} ${social ? `(${social})` : ""}`;
   return (
     <>
-      <div className="px-4 py-3">
+      <div className="px-4 py-3 text-gray-500">
         <p className="text-base md:text-sm leading-5">{t("Signed in as")}</p>
         <p
           title={id}
@@ -35,13 +35,13 @@ export default function ProfileContextMenu(props?: { itemClassName?: string }) {
       </div>
       <div className="border-t border-gray-100"></div>
       <div className="py-1">
-        <Link
+        {/* <Link
           to="/account-settings"
           className="block px-4 py-2 text-base md:text-sm leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900"
           role="menuitem"
         >
           {t("Account settings")}
-        </Link>
+        </Link> */}
         <a
           target="_blank"
           rel="nofollow"

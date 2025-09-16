@@ -33,7 +33,7 @@ const teamMembers: TeamMember[] = [
   {
     name: "Peter Menzies",
     role: "Spatial Analyst",
-    bio: `Peter was born and raised in Raleigh, North Carolina. His love for the mountains took him to Asheville, NC, located among the southern Appalachians, where he lived for almost 8 years before moving out to Santa Barbara. After completing a Masters in Data Science at UCSB, he was an Ocean Health Index Global Fellow before joining the Seasketch Team.`,
+    bio: `Peter, a spatial analyst and developer in the McClintock Lab, is responsible for Ocean Use Survey response analysis and monitoring dashboard development, SeaSketch geoprocessing report development, and cartography. After several years of ecology field work and environmental education in western North Carolina, Peter moved across the country to pursue a masters of environmental data science at UC Santa Barbara’s Bren School. Following graduation and a fellowship with NCEAS’s Ocean Health Index, Peter joined the McClintock Lab in late 2022.`,
     imageUrl:
       "https://images.squarespace-cdn.com/content/v1/55fb645de4b0ab77d50c4e49/2a392e3a-4b9b-4fd6-a1ea-5dff4689b255/Peter_NCEAS_headshot_v2.jpg?format=2500w",
   },

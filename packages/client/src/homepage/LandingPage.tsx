@@ -320,9 +320,9 @@ export default function LandingPage() {
                   style={{
                     background: "url(/bathy-bg.jpg) 70% 60% / cover no-repeat",
                     WebkitMaskImage:
-                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                      "radial-gradient(closest-side at 45% 50%, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 28%, rgba(0, 0, 0, 0.65) 34%, rgba(0, 0, 0, 0) 88%)",
                     maskImage:
-                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                      "radial-gradient(closest-side at 45% 50%, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 28%, rgba(0, 0, 0, 0.65) 34%, rgba(0, 0, 0, 0) 88%)",
                     WebkitMaskRepeat: "no-repeat",
                     maskRepeat: "no-repeat",
                   }}
@@ -352,12 +352,12 @@ export default function LandingPage() {
                 <li>Metadata and version management</li>
                 <li>Integrates with Esri and open-source services</li>
               </ul>
-              <a
+              {/* <a
                 href="/uses/map-portal"
                 className="mt-4 inline-block text-sm font-medium text-sky-700 hover:underline"
               >
                 Learn more →
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -376,9 +376,9 @@ export default function LandingPage() {
                     filter: "blur(4px)",
                     willChange: "filter",
                     WebkitMaskImage:
-                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                      "radial-gradient(closest-side at 42% 50%, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 12%, rgba(0, 0, 0, 0.65) 41%, rgba(0, 0, 0, 0) 90%)",
                     maskImage:
-                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                      "radial-gradient(closest-side at 42% 50%, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 12%, rgba(0, 0, 0, 0.65) 41%, rgba(0, 0, 0, 0) 90%)",
                     WebkitMaskRepeat: "no-repeat",
                     maskRepeat: "no-repeat",
                   }}
@@ -408,12 +408,12 @@ export default function LandingPage() {
                 <li>Offline data collection</li>
                 <li>Understand ocean uses by sector</li>
               </ul>
-              <a
+              {/* <a
                 href="/uses/surveys"
                 className="mt-4 inline-block text-sm font-medium text-sky-700 hover:underline"
               >
                 Learn more →
-              </a>
+              </a> */}
             </div>
           </div>
 
@@ -446,7 +446,7 @@ export default function LandingPage() {
             </div>
             <div className="md:col-span-6 z-10 md:backdrop-blur-sm md:p-5 md:border border-white/30 md:rounded-lg md:bg-white/20">
               <h3 className="text-2xl font-semibold">
-                Design and Evaluate Scenarios
+                Sketch and Evaluate Scenarios
               </h3>
               <p className="mt-2 text-slate-700">
                 Easy to use design and analysis tools empower stakeholders to
@@ -461,12 +461,12 @@ export default function LandingPage() {
                 <li>Online collaboration tools and discussion forums</li>
                 <li>Export products to GIS and Excel</li>
               </ul>
-              <a
+              {/* <a
                 href="/uses/planning"
                 className="mt-4 inline-block text-sm font-medium text-sky-700 hover:underline"
               >
                 Learn more →
-              </a>
+              </a> */}
             </div>
           </div>
         </div>

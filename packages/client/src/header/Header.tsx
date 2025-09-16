@@ -138,156 +138,30 @@ export default function Header() {
                 <div className="ml-10 flex items-baseline space-x-4">
                   {navigationLinks.map((link) =>
                     link.to === "/features" ? (
-                      <Popover.Root
-                        key={link.to}
-                        open={featuresOpen}
-                        onOpenChange={() => {}}
-                      >
-                        <Popover.Trigger asChild>
-                          <button
-                            className={`
-                              inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium text-slate-200
+                      <>
+                        {/*
+                        <Popover.Root key={link.to} open={featuresOpen} onOpenChange={() => {}}>
+                          ... existing dropdown content preserved for future use ...
+                        </Popover.Root>
+                        */}
+                        <a
+                          key={link.to}
+                          href="/#use-cases"
+                          className={`
+                              px-3 py-2 rounded-md text-sm font-medium text-slate-200
                               hover:text-white focus:outline-none focus-visible:ring-1
-                              focus:text-white
                             `}
-                            id={link.id}
-                            aria-haspopup="menu"
-                            aria-expanded={featuresOpen}
-                            aria-controls="features-menu"
-                            onKeyDown={(e) => {
-                              if (
-                                e.key === "Enter" ||
-                                e.key === " " ||
-                                e.key === "ArrowDown"
-                              ) {
-                                e.preventDefault();
-                                setFeaturesOpen(true);
-                                setOpenByKeyboard(true);
-                              } else if (e.key === "Escape") {
-                                setFeaturesOpen(false);
-                              }
-                            }}
-                            onMouseEnter={() => {
-                              if (hoverCloseTimeout.current) {
-                                window.clearTimeout(hoverCloseTimeout.current);
-                                hoverCloseTimeout.current = null;
-                              }
-                              setFeaturesOpen(true);
-                            }}
-                            onMouseLeave={() => {
-                              hoverCloseTimeout.current = window.setTimeout(
-                                () => setFeaturesOpen(false),
-                                120
-                              );
-                            }}
-                          >
-                            {link.label}
-                            <ChevronDownIcon aria-hidden className="h-4 w-4" />
-                          </button>
-                        </Popover.Trigger>
-                        <Popover.Portal>
-                          <Popover.Content
-                            sideOffset={8}
-                            align="start"
-                            className="z-50 w-96 rounded-xl border border-white/10 bg-slate-900/85 p-2 shadow-md backdrop-blur-md ring-1 ring-white/10 focus:outline-none"
-                            id="features-menu"
-                            role="menu"
-                            aria-labelledby={link.id}
-                            onOpenAutoFocus={(e) => {
-                              if (openByKeyboard) {
-                                e.preventDefault();
-                                requestAnimationFrame(() => {
-                                  firstFeatureRef.current?.focus();
-                                  setOpenByKeyboard(false);
-                                });
-                              }
-                            }}
-                            onEscapeKeyDown={() => setFeaturesOpen(false)}
-                            onPointerDownOutside={() => setFeaturesOpen(false)}
-                            onFocusOutside={() => setFeaturesOpen(false)}
-                            onMouseEnter={() => {
-                              if (hoverCloseTimeout.current) {
-                                window.clearTimeout(hoverCloseTimeout.current);
-                                hoverCloseTimeout.current = null;
-                              }
-                              setFeaturesOpen(true);
-                            }}
-                            onMouseLeave={() => {
-                              hoverCloseTimeout.current = window.setTimeout(
-                                () => setFeaturesOpen(false),
-                                120
-                              );
-                            }}
-                          >
-                            <div className="grid">
-                              {featureLinks.map((f, i) => (
-                                <Link
-                                  to={f.to}
-                                  key={f.to}
-                                  id={f.id}
-                                  role="menuitem"
-                                  className="group rounded-lg px-4 py-3 text-left hover:bg:white/10 focus:outline-none focus:ring-2 focus:ring-sky-500/50"
-                                  ref={(el) => {
-                                    if (i === 0) firstFeatureRef.current = el;
-                                    featureItemRefs.current[i] = el;
-                                  }}
-                                  onClick={() => {
-                                    if (hoverCloseTimeout.current) {
-                                      window.clearTimeout(
-                                        hoverCloseTimeout.current
-                                      );
-                                      hoverCloseTimeout.current = null;
-                                    }
-                                    setFeaturesOpen(false);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    const items = featureItemRefs.current;
-                                    const lastIndex = items.length - 1;
-                                    if (e.key === "ArrowDown") {
-                                      e.preventDefault();
-                                      const next = i === lastIndex ? 0 : i + 1;
-                                      items[next]?.focus();
-                                    } else if (e.key === "ArrowUp") {
-                                      e.preventDefault();
-                                      const prev = i === 0 ? lastIndex : i - 1;
-                                      items[prev]?.focus();
-                                    } else if (e.key === "Home") {
-                                      e.preventDefault();
-                                      items[0]?.focus();
-                                    } else if (e.key === "End") {
-                                      e.preventDefault();
-                                      items[lastIndex]?.focus();
-                                    } else if (e.key === "Escape") {
-                                      e.preventDefault();
-                                      setFeaturesOpen(false);
-                                    } else if (e.key === " ") {
-                                      e.preventDefault();
-                                      (
-                                        e.currentTarget as HTMLAnchorElement
-                                      ).click();
-                                    }
-                                  }}
-                                >
-                                  <div className="text-sm font-bold text-white">
-                                    {f.label}
-                                  </div>
-                                  <div className="mt-1 text-sm text-slate-300">
-                                    {f.description}
-                                  </div>
-                                </Link>
-                              ))}
-                            </div>
-                            {/* <Popover.Arrow className="fill-slate-900/95" /> */}
-                          </Popover.Content>
-                        </Popover.Portal>
-                      </Popover.Root>
+                          id={link.id}
+                        >
+                          {link.label}
+                        </a>
+                      </>
                     ) : (
                       <NavLink
                         key={link.to}
                         exact={link.to === "/"}
                         to={link.to}
                         onClick={() => {
-                          // set scroll position to top
                           window.scrollTo(0, 0);
                         }}
                         className={`
@@ -296,7 +170,6 @@ export default function Header() {
                     
                     `}
                         id={link.id}
-                        // activeClassName="bg-gray-900 text-white"
                         activeStyle={{ color: "white" }}
                       >
                         {link.label}
@@ -359,18 +232,29 @@ export default function Header() {
             profileModalOpen ? "md:hidden" : "hidden"
           } bg-white absolute top left w-full h-content shadow-xl z-10 pt-2`}
         >
-          {navigationLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              exact={link.to === "/"}
-              to={link.to}
-              id={`modal-` + link.id}
-              className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold
+          {navigationLinks.map((link) =>
+            link.to === "/features" ? (
+              <a
+                key={link.to}
+                href="/#use-cases"
+                id={`modal-` + link.id}
+                className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold`}
+              >
+                {link.label}
+              </a>
+            ) : (
+              <NavLink
+                key={link.to}
+                exact={link.to === "/"}
+                to={link.to}
+                id={`modal-` + link.id}
+                className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold
                     `}
-            >
-              {link.label}
-            </NavLink>
-          ))}
+              >
+                {link.label}
+              </NavLink>
+            )
+          )}
 
           {<div className="border-t border-gray-100 mt-2"></div>}
 
