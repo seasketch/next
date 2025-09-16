@@ -281,7 +281,7 @@ export default function ProjectSearchBar() {
                           }}
                           className={`flex items-center text-left px-4 py-3 space-x-2 ${
                             idx === activeIndex
-                              ? "bg-white/10"
+                              ? "bg-blue-600 text-white"
                               : "hover:bg-white/10"
                           }`}
                           onClick={() => setIsOpen(false)}
@@ -297,12 +297,17 @@ export default function ProjectSearchBar() {
                           <div className="font-medium text-left flex-none">
                             {p.name}
                           </div>
-                          <span className="text-slate-500 flex-1 truncate">
+                          <span className="opacity-70 flex-1 truncate">
                             {p.description}
                           </span>
                           {activeIndex === -1 && idx === 0 && (
-                            <span className="text-slate-700 flex-none truncate place-self-end">
-                              ⌘-enter to open
+                            <span className="text-slate-700 flex-none truncate place-self-end outline px-1 outline-slate-700/50 rounded-sm shadow-md">
+                              ⌘-Enter
+                            </span>
+                          )}
+                          {activeIndex === idx && (
+                            <span className="text-slate-700 flex-none truncate place-self-end outline px-1 outline-slate-700/50 rounded-sm shadow-md">
+                              Enter
                             </span>
                           )}
                         </Link>

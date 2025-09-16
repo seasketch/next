@@ -4,7 +4,6 @@ import { useMediaQuery } from "beautiful-react-hooks";
 import React, { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router-dom";
-import Button from "../components/Button";
 import Skeleton from "../components/Skeleton";
 import { useProjectListingQuery } from "../generated/graphql";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
@@ -117,18 +116,27 @@ export default function ProjectsPage() {
                 caseStudyPath: cs.caseStudyPath,
               });
             }
+            // Sort: items with caseStudy first, then by name (case-insensitive)
+            items.sort((a, b) => {
+              const aHas = !!a.caseStudyPath;
+              const bHas = !!b.caseStudyPath;
+              if (aHas !== bHas) return aHas ? -1 : 1;
+              return a.name.localeCompare(b.name, undefined, {
+                sensitivity: "base",
+              });
+            });
             if (items.length === 0 && loading) return null;
             if (items.length === 0) return null;
             return (
               <div className="px-0">
                 <div className="flex items-center justify-between mb-2">
                   <h2
-                    className="text-lg font-semibold tracking-tight text-slate-100 px-4 sm:px-6 lg:px-8"
+                    className="text-lg xl:text-2xl font-semibold tracking-tight text-slate-100 px-4 sm:px-6 lg:px-8"
                     style={{
                       textShadow: "0 0 10px rgba(0, 0, 0, 0.5)",
                     }}
                   >
-                    Featured Projects
+                    Where we work
                   </h2>
                 </div>
                 <div className="overflow-x-auto pb-2 px-4 ">
