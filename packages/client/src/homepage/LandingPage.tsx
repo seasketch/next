@@ -285,8 +285,16 @@ export default function LandingPage() {
       </section>
 
       {/* Use Cases: 3 alternating feature rows */}
-      <section id="use-cases" className="py-16 bg-white text-slate-900">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      <section
+        id="use-cases"
+        className="py-16 bg-white text-slate-900"
+        style={{
+          maxWidth: "100vw",
+          overflowX: "hidden",
+          overflowY: "hidden",
+        }}
+      >
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 overflow-x-hidden sm:overflow-x-visible">
           <div className="max-w-3xl">
             <span className="text-xs uppercase tracking-[0.2em] text-sky-700/80">
               Capabilities
@@ -302,8 +310,25 @@ export default function LandingPage() {
 
           {/* Row 1 */}
           <div className="mt-14 grid items-center gap-10 md:grid-cols-12">
-            <div className="md:col-span-6">
-              <div className="aspect-[4/3] rounded-3xl  grid place-items-center text-xs text-slate-500">
+            <div className="md:col-span-6 relative">
+              <div
+                aria-hidden
+                className="absolute inset-0 z-0 left-24 opacity-60 sm:left-0 sm:opacity-100"
+              >
+                <div
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[170%]"
+                  style={{
+                    background: "url(/bathy-bg.jpg) 70% 60% / cover no-repeat",
+                    WebkitMaskImage:
+                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                    maskImage:
+                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                    WebkitMaskRepeat: "no-repeat",
+                    maskRepeat: "no-repeat",
+                  }}
+                />
+              </div>
+              <div className="aspect-[4/3] rounded-3xl  grid place-items-center text-xs text-slate-500 relative z-10">
                 <img
                   src="/map-portal-screenshot.png"
                   alt="Map Portal"
@@ -311,7 +336,7 @@ export default function LandingPage() {
                 />
               </div>
             </div>
-            <div className="md:col-span-6">
+            <div className="md:col-span-6 z-10 md:backdrop-blur-sm md:p-5 md:border border-white/30 md:rounded-lg md:bg-white/20">
               <h3 className="text-2xl font-semibold">
                 Publish Your Map Portal
               </h3>
@@ -321,11 +346,10 @@ export default function LandingPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-slate-700">
                 <li>Upload and host vector or raster data</li>
-                <li>
-                  Create beautiful maps with our easy to use cartography tools
-                </li>
-                <li>Role‑based access & sharing</li>
-                <li>Metadata and version control</li>
+                <li>10 GB storage included</li>
+                <li>Easily create beautiful maps with our cartography tools</li>
+                <li>Role‑based access control</li>
+                <li>Metadata and version management</li>
                 <li>Integrates with Esri and open-source services</li>
               </ul>
               <a
@@ -339,12 +363,34 @@ export default function LandingPage() {
 
           {/* Row 2 */}
           <div className="mt-14 grid items-center gap-10 md:grid-cols-12">
-            <div className="md:order-2 md:col-span-6">
-              <div className="aspect-[4/3] rounded-3xl bg-gradient-to-br from-emerald-50 to-slate-50 ring-1 ring-slate-200 grid place-items-center text-xs text-slate-500">
-                Surveys image
+            <div className="md:order-2 md:col-span-6 relative">
+              <div
+                aria-hidden
+                className="absolute inset-0 z-0 left-24 opacity-60 sm:left-0 sm:opacity-100"
+              >
+                <div
+                  className="absolute left-3/4 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[200%]"
+                  style={{
+                    background:
+                      "url(/caseStudies/maldives-2.jpg) 80% 60% / cover no-repeat",
+                    filter: "blur(4px)",
+                    willChange: "filter",
+                    WebkitMaskImage:
+                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                    maskImage:
+                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 50%, rgba(0,0,0,0) 90%)",
+                    WebkitMaskRepeat: "no-repeat",
+                    maskRepeat: "no-repeat",
+                  }}
+                />
               </div>
+              <img
+                src="/survey-mobile.png"
+                alt="Map Portal"
+                className="relative z-10 w-full h-full object-contain max-h-96"
+              />
             </div>
-            <div className="md:order-1 md:col-span-6">
+            <div className="md:order-1 md:col-span-6 z-10 md:backdrop-blur-sm md:p-5 md:border border-white/30 md:rounded-lg md:bg-white/20">
               <h3 className="text-2xl font-semibold">
                 Conduct Ocean Use Surveys
               </h3>
@@ -354,6 +400,7 @@ export default function LandingPage() {
               </p>
               <ul className="mt-4 space-y-2 text-sm text-slate-700">
                 <li>Advanced survey builder</li>
+                <li>Works on desktop and mobile devices</li>
                 <li>
                   Multi-language capable with built-in support for right-to-left
                   languages
@@ -372,12 +419,32 @@ export default function LandingPage() {
 
           {/* Row 3 */}
           <div className="mt-14 grid items-center gap-10 md:grid-cols-12">
-            <div className="md:col-span-6">
-              <div className="aspect-[4/3] rounded-3xl bg-gradient-to-br from-indigo-50 to-slate-50 ring-1 ring-slate-200 grid place-items-center text-xs text-slate-500">
-                Participatory Planning
+            <div className="md:col-span-6 relative">
+              <div
+                aria-hidden
+                className="absolute inset-0 z-0 left-10 opacity-60 sm:left-0 sm:opacity-100"
+              >
+                <div
+                  className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[170%]"
+                  style={{
+                    background:
+                      "url(/sketching-bg3.jpg) 70% 60% / cover no-repeat",
+                    WebkitMaskImage:
+                      "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0) 90%)",
+                    maskImage:
+                      "radial-gradient(closest-side at 48% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0) 90%)",
+                    WebkitMaskRepeat: "no-repeat",
+                    maskRepeat: "no-repeat",
+                  }}
+                />
               </div>
+              <img
+                src="/reports-square.png"
+                alt="Report"
+                className="relative z-10 w-full h-full object-cover rounded-lg shadow-lg overflow-hidden border border-black/5 border-r-black/10 border-b-black/10"
+              />
             </div>
-            <div className="md:col-span-6">
+            <div className="md:col-span-6 z-10 md:backdrop-blur-sm md:p-5 md:border border-white/30 md:rounded-lg md:bg-white/20">
               <h3 className="text-2xl font-semibold">
                 Design and Evaluate Scenarios
               </h3>
@@ -386,10 +453,13 @@ export default function LandingPage() {
                 effectively participate in a science-driven planning process.
               </p>
               <ul className="mt-4 space-y-2 text-sm text-slate-700">
-                <li>Scenario design & sketching</li>
-                <li>Powerful spatial overlay analysis tools</li>
+                <li>
+                  Scenario design & sketching using intuitive digitizing tools
+                </li>
+                <li>Powerful spatial overlay analysis engine</li>
                 <li>Fast, intuitive reports on progress towards objectives</li>
                 <li>Online collaboration tools and discussion forums</li>
+                <li>Export products to GIS and Excel</li>
               </ul>
               <a
                 href="/uses/planning"
@@ -808,7 +878,7 @@ export default function LandingPage() {
                 </h3>
                 <p className="mt-2 text-sm text-slate-700 max-w-prose pr-2">
                   Create a free project to support your work. Each project
-                  includes 1GB of data layer hosting.
+                  includes 10 GB of storage for map layers.
                 </p>
               </div>
               <div className="lg:col-span-6 flex flex-wrap lg:flex-nowrap gap-3 lg:justify-end">
