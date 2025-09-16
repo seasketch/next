@@ -27,13 +27,13 @@ const logos = [
     url: "https://tnc.org",
   },
 
-  {
-    title: "NOAA",
-    src: "/logos/NOAA.svg",
-    url: "https://www.noaa.gov",
-    // bigger: true,
-    className: "-mt-1",
-  },
+  // {
+  //   title: "NOAA",
+  //   src: "/logos/NOAA.svg",
+  //   url: "https://www.noaa.gov",
+  //   // bigger: true,
+  //   className: "-mt-1",
+  // },
 ];
 
 export default function NewProjectPage() {

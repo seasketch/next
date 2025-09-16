@@ -13,7 +13,7 @@ export default function AzoresCaseStudy() {
       <TopHeroImage
         title="Case Study: Blue Azores"
         subtitle="A vision-driven marine protection strategy in the Azores"
-        imageUrl="https://static.wixstatic.com/media/087887_0e08e1813e4649259651974c13d0bbe9~mv2.png/v1/fill/w_1480,h_982,al_c,q_90,usm_0.66_1.00_0.01,enc_avif,quality_auto/087887_0e08e1813e4649259651974c13d0bbe9~mv2.png"
+        imageUrl="/caseStudies/blue_azores_dia2-167.jpg"
         projectUrl="https://www.seasketch.org/azores/app"
         projectLabel="Open Blue Azores on SeaSketch"
         featureTitle="Features Used"

@@ -57,7 +57,8 @@ export default function TeamPage() {
         <div className="relative mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-semibold tracking-tight">Our Team</h1>
           <p className="mt-2 text-slate-700">
-            Our team of technologists and practitioners.
+            Meet our team of technologists and practitioners based at the
+            University of California, Santa Barbara.
           </p>
 
           <div className="mt-10 divide-y divide-slate-200">
