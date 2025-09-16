@@ -26,7 +26,7 @@ const teamMembers: TeamMember[] = [
   {
     name: "Abby Meyer",
     role: "Geospatial Developer",
-    bio: `As a spatial analyst and developer for SeaSketch, Abby is responsible for translating the analytical needs of clients to the geoprocessing reports produced within SeaSketch. Shealso serves as the liason between the Sustainable Fisheries Group and SeaSketch, helping to integrate the data and models produced within each organization. Abby has a background in software development and ecosystems modeling research having completed a B.S.E. in Computer Science Engineering with a minor in Climate Science and Impacts Engineering from the University of Michigan.`,
+    bio: `As a spatial analyst and developer for SeaSketch, Abby is responsible for translating the analytical needs of clients to the geoprocessing reports produced within SeaSketch. Abby has a background in software development and ecosystems modeling research having completed a B.S.E. in Computer Science Engineering with a minor in Climate Science and Impacts Engineering from the University of Michigan.`,
     imageUrl:
       "https://images.squarespace-cdn.com/content/v1/55fb645de4b0ab77d50c4e49/04e01495-9963-4903-bb34-1d326a62d919/Abby+Meyer+Portrait.jpg?format=2500w",
   },
