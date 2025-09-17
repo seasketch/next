@@ -161,7 +161,7 @@ export default function LandingPage() {
 
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-16 md:py-24 text-center">
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-white leading-tight">
-            <em className="italic">The</em> platform for{" "}
+            <span className="">The</span> platform for{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-300 block pb-2">
               Marine Spatial Planning
             </span>
