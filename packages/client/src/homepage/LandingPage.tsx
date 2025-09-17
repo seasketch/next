@@ -39,7 +39,7 @@ const logos = [
   },
   {
     alt: "California Ocean Protection Council",
-    src: "/logos/OPC.png",
+    src: "/logos/opc.png",
     url: "https://opc.ca.gov/",
   },
 ] as TrustedPartnerLogo[];
