@@ -27,21 +27,28 @@ const logos = [
     url: "https://tnc.org",
   },
 
-  {
-    title: "NOAA",
-    src: "/logos/NOAA.svg",
-    url: "https://www.noaa.gov",
-    // bigger: true,
-    className: "-mt-1",
-  },
-];
+  // {
+  //   title: "NOAA",
+  //   src: "/logos/NOAA.svg",
+  //   url: "https://www.noaa.gov",
+  //   // bigger: true,
+  //   className: "-mt-1",
+  // },
+] as {
+  title: string;
+  src: string;
+  url: string;
+  bigger?: boolean;
+  smaller?: boolean;
+  className?: string;
+}[];
 
 export default function NewProjectPage() {
   const { t } = useTranslation("frontpage");
   const { isAuthenticated } = useAuth0();
   const { data, loading, error } = useMeQuery();
   return (
-    <main className="bg-gray-800 min-h-screen pt-12">
+    <main className="bg-gray-800 min-h-screen pt-12 text-black">
       <Helmet>
         <title>Create a SeaSketch Project</title>
         <meta

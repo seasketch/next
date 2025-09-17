@@ -16,6 +16,7 @@
 @import "./admin/prosemirror-image.css";
 @import "./offline/DataCachingSlider.css";
 @import "./admin/surveys/IndeterminantLoadingBar.css";
+@import "./homepage/homepage.css";
 
 @tailwind base;
 

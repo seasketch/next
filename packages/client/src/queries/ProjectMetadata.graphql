@@ -86,3 +86,21 @@ query Me {
   }
   isMyEmailVerified
 }
+
+query WhereWeWork {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
+}
+
+query ProjectSearch($query: String!) {
+  searchProjects(query: $query) {
+    id
+    name
+    description
+    logoUrl
+    slug
+  }
+}

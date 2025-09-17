@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import * as Popover from "@radix-ui/react-popover";
+import { ChevronDownIcon } from "@radix-ui/react-icons";
 import logo from "./seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
 import { Link, NavLink } from "react-router-dom";
@@ -7,10 +9,76 @@ import ProfileContextMenu from "./ProfileContextMenu";
 import ProfileControl from "./ProfileControl";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
+const navigationLinks = [
+  {
+    to: "/projects",
+    label: "Projects",
+    id: "nav-projects",
+  },
+  {
+    to: "/features",
+    label: "Features",
+    id: "nav-features",
+  },
+  {
+    to: "/case-studies",
+    label: "Case Studies",
+    id: "nav-case-studies",
+  },
+  // {
+  //   to: "/#funders",
+  //   label: "Funders & Partners",
+  //   id: "nav-partners",
+  // },
+  {
+    to: "/team",
+    label: "Team",
+    id: "nav-team",
+  },
+  // {
+  //   to: "/api",
+  //   label: t("Developer API"),
+  //   id: "nav-api",
+  // },
+  // {
+  //   to: "/team",
+  //   label: t("Team"),
+  //   id: "nav-team",
+  // },
+];
+
+const featureLinks = [
+  {
+    to: "/uses/map-portal",
+    label: "Map Portal",
+    description:
+      "Publish, explore, and share authoritative ocean data. Create a common picture of your ocean environment.",
+    id: "nav-map-portal",
+  },
+  {
+    to: "/uses/surveys",
+    label: "Ocean Use Surveys",
+    description: "Gather essential spatial data with Ocean Use Surveys",
+    id: "nav-surveys",
+  },
+  {
+    to: "/uses/planning",
+    label: "Planning Tools",
+    description:
+      "Design and evaluate scenarios, including MPAs and Ocean Uses.",
+    id: "nav-planning",
+  },
+];
+
 export default function Header() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
   const { t } = useTranslation("nav");
   const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [featuresOpen, setFeaturesOpen] = useState(false);
+  const hoverCloseTimeout = useRef<number | null>(null);
+  const [openByKeyboard, setOpenByKeyboard] = useState(false);
+  const firstFeatureRef = useRef<HTMLAnchorElement | null>(null);
+  const featureItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const currentProjectQuery = useCurrentProjectMetadata();
 
   const handleDocumentClick = useCallback(
@@ -27,30 +95,15 @@ export default function Header() {
     };
   });
 
-  const navigationLinks = [
-    {
-      to: "/",
-      label: t("About"),
-      id: "nav-about",
-    },
-    {
-      to: "/projects",
-      label: t("Projects"),
-      id: "nav-projects",
-    },
-    {
-      to: "/api",
-      label: t("Developer API"),
-      id: "nav-api",
-    },
-    // {
-    //   to: "/team",
-    //   label: t("Team"),
-    //   id: "nav-team",
-    // },
-  ];
+  useEffect(() => {
+    if (featuresOpen && openByKeyboard && firstFeatureRef.current) {
+      firstFeatureRef.current.focus();
+      setOpenByKeyboard(false);
+    }
+  }, [featuresOpen, openByKeyboard]);
+
   return (
-    <nav className="bg-gray-800">
+    <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/80">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center">
@@ -83,23 +136,46 @@ export default function Header() {
             <div className="hidden md:block">
               {
                 <div className="ml-10 flex items-baseline space-x-4">
-                  {navigationLinks.map((link) => (
-                    <NavLink
-                      key={link.to}
-                      exact={link.to === "/"}
-                      to={link.to}
-                      className={`
-                      px-3 py-2 rounded-md text-sm font-medium text-gray-300
-                    hover:text-white hover:bg-gray-700 focus:outline-none 
-                    focus:text-white focus:bg-gray-700
+                  {navigationLinks.map((link) =>
+                    link.to === "/features" ? (
+                      <>
+                        {/*
+                        <Popover.Root key={link.to} open={featuresOpen} onOpenChange={() => {}}>
+                          ... existing dropdown content preserved for future use ...
+                        </Popover.Root>
+                        */}
+                        <a
+                          key={link.to}
+                          href="/#use-cases"
+                          className={`
+                              px-3 py-2 rounded-md text-sm font-medium text-slate-200
+                              hover:text-white focus:outline-none focus-visible:ring-1
+                            `}
+                          id={link.id}
+                        >
+                          {link.label}
+                        </a>
+                      </>
+                    ) : (
+                      <NavLink
+                        key={link.to}
+                        exact={link.to === "/"}
+                        to={link.to}
+                        onClick={() => {
+                          window.scrollTo(0, 0);
+                        }}
+                        className={`
+                      px-3 py-2 rounded-md text-sm font-medium text-slate-200
+                    hover:text-white  focus:outline-none focus-visible:ring-1
+                    
                     `}
-                      id={link.id}
-                      activeClassName="bg-gray-900 text-white"
-                      activeStyle={{ color: "white" }}
-                    >
-                      {link.label}
-                    </NavLink>
-                  ))}
+                        id={link.id}
+                        activeStyle={{ color: "white" }}
+                      >
+                        {link.label}
+                      </NavLink>
+                    )
+                  )}
                 </div>
               }
             </div>
@@ -156,18 +232,29 @@ export default function Header() {
             profileModalOpen ? "md:hidden" : "hidden"
           } bg-white absolute top left w-full h-content shadow-xl z-10 pt-2`}
         >
-          {navigationLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              exact={link.to === "/"}
-              to={link.to}
-              id={`modal-` + link.id}
-              className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold
+          {navigationLinks.map((link) =>
+            link.to === "/features" ? (
+              <a
+                key={link.to}
+                href="/#use-cases"
+                id={`modal-` + link.id}
+                className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold`}
+              >
+                {link.label}
+              </a>
+            ) : (
+              <NavLink
+                key={link.to}
+                exact={link.to === "/"}
+                to={link.to}
+                id={`modal-` + link.id}
+                className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold
                     `}
-            >
-              {link.label}
-            </NavLink>
-          ))}
+              >
+                {link.label}
+              </NavLink>
+            )
+          )}
 
           {<div className="border-t border-gray-100 mt-2"></div>}
 
@@ -184,7 +271,7 @@ export default function Header() {
                   appState: {
                     returnTo: window.location.pathname,
                   },
-                  
+
                   authorizationParams: {
                     redirectUri: `${window.location.protocol}//${window.location.host}/authenticate`,
                   },
@@ -196,6 +283,6 @@ export default function Header() {
           )}
         </div>
       }
-    </nav>
+    </header>
   );
 }
