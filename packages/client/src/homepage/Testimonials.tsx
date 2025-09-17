@@ -181,7 +181,7 @@ export default function Testimonials() {
               {TESTIMONIALS.map((t, i) => (
                 <li
                   key={t.person.name}
-                  className={`min-w-0 text-sm shrink-0 ${
+                  className={`max-w-sm sm:max-w-none min-w-0 text-sm shrink-0 ${
                     t.quote.length > 300
                       ? "w-[540px]"
                       : t.quote.length > 250

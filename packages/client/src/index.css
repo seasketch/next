@@ -13091,6 +13091,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
     max-width:20rem
   }
 
+  .sm\:max-w-none{
+    max-width:none
+  }
+
   .sm\:flex-1{
     flex:1 1 0%
   }
