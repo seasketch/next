@@ -259,7 +259,7 @@ export default function ProjectSearchBar() {
                   <ul
                     id={listboxId}
                     role="listbox"
-                    className="max-h-80 overflow-auto divide-y divide-white/5"
+                    className="max-h-80 overflow-y-auto overflow-x-hidden divide-y divide-white/5"
                   >
                     {loading && results.length === 0 && (
                       <li className="px-4 py-3 text-sm text-slate-300">
