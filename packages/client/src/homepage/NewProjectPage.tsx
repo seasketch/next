@@ -34,7 +34,14 @@ const logos = [
   //   // bigger: true,
   //   className: "-mt-1",
   // },
-];
+] as {
+  title: string;
+  src: string;
+  url: string;
+  bigger?: boolean;
+  smaller?: boolean;
+  className?: string;
+}[];
 
 export default function NewProjectPage() {
   const { t } = useTranslation("frontpage");
