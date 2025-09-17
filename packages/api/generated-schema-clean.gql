@@ -11526,6 +11526,7 @@ type Project implements Node {
     """The method to use when ordering `Basemap`."""
     orderBy: [BasemapsOrderBy!] = [PRIMARY_KEY_ASC]
   ): BasemapsConnection!
+  centerGeojson: JSON
 
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
@@ -13641,6 +13642,16 @@ type Query implements Node {
     projectId: Int
     query: String
   ): [SearchResult!]
+
+  """Reads and enables pagination through a set of `Project`."""
+  searchProjects(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+    query: String
+  ): [Project!]
   sessionIsBannedFromPosting(pid: Int): Boolean
   sharedBasemaps: Basemap
   sketch(id: Int!): Sketch
