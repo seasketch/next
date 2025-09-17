@@ -77,7 +77,7 @@ export default function KiribatiCaseStudy() {
         quote="In just a few days, we went from scattered files to a national platform we can use for planning and decision-making. SeaSketch showed us that building a geoportal doesn’t have to take years—it can start today."
         author="Catherine Paul"
         affiliation="Ministry of Fisheries and Ocean Resources, Kiribati"
-        headshotSrc="/people/catherine.jpeg"
+        headshotSrc="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/f2592a25-20d6-4b01-4cd3-5981d41b6700/thumbnail"
       />
 
       <Section title="Process & Workflow">

@@ -64,7 +64,7 @@ export default function BrazilCaseStudy() {
         quote="SeaSketch’s survey tools and planning tools with intuitive sketching and real-time feedback give all stakeholders a voice in drafting marine spatial plans."
         author="Marinez Scherer, Ph.D."
         affiliation="Special Envoy for the Ocean, COP30"
-        headshotSrc="/people/marinez.jpg"
+        headshotSrc="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/a9c4e662-db48-4873-d2d2-ed39e271ee00/thumbnail"
       />
 
       <Section title="Role of SeaSketch">

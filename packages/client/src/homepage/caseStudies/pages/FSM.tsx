@@ -109,7 +109,7 @@ export default function FSMCaseStudy() {
         quote="SeaSketch is a user-friendly, interactive tool that empowers community members to map their ocean uses, even offline in remote areas. The data collected through SeaSketch has been invaluable for creating heat maps that guide fisheries management by communities and government alike."
         author="Tazmin Falan"
         affiliation="Blue Prosperity Micronesia"
-        headshotSrc="/people/tazmin.jpg"
+        headshotSrc="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/c95d9456-b8eb-4d8f-ae1b-9bb1edc79d00/thumbnail"
       />
 
       <Section title="Process & Workflow">

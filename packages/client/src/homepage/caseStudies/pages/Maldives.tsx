@@ -113,7 +113,7 @@ export default function MaldivesCaseStudy() {
         quote="The Ocean Use Survey gave voice to thousands of Maldivians whose lives and livelihoods depend on the sea. With SeaSketch, we were able to capture this indigenous knowledge at a national scale for the first time, and turn it into a living resource of maps and interactive data that we, and others, can continue to analyze to inform decision making and ensure community perspectives shape ocean planning."
         author="Hulwa Khaleel"
         affiliation="Lead Coordinator, Noo Raajje OUS"
-        headshotSrc="/people/hulwa.jpg"
+        headshotSrc="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/f37c657b-96d2-4861-6365-45a6367e8300/thumbnail"
       />
 
       <Section title="Impact and Significance">

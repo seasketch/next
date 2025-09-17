@@ -6,37 +6,37 @@ const studies = [
   {
     to: "/case-studies/azores",
     title: "Blue Azores",
-    img: "/caseStudies/azores-hero.png",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/cf32b2eb-bef7-435d-0740-8dfc7b66e900/hthumb",
   },
   {
     to: "/case-studies/belize",
     title: "Belize",
-    img: "/caseStudies/belize-hero.jpg",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/d48986b0-11bc-429b-bae8-f079d5af2e00/hthumb",
   },
   {
     to: "/case-studies/brazil",
     title: "Brazil",
-    img: "/caseStudies/brazil-hero.jpg",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/86de74b7-1d03-4292-59c6-c19bc4bde500/hthumb",
   },
   {
     to: "/case-studies/california",
     title: "California",
-    img: "/caseStudies/california-hero.png",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/7366c87c-9ca6-492c-ced1-faf980719b00/hthumb",
   },
   {
     to: "/case-studies/fsm",
     title: "Federated States of Micronesia",
-    img: "/caseStudies/fsm-hero.jpg",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/52aa1af7-b3f7-486e-b91d-aec08bd66400/hthumb",
   },
   {
     to: "/case-studies/kiribati",
     title: "Kiribati",
-    img: "/caseStudies/kiribati-hero.jpg",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/9f34a0cf-732a-4a70-7cb6-45b126ab8e00/hthumb",
   },
   {
     to: "/case-studies/maldives",
     title: "Maldives",
-    img: "/caseStudies/maldives-hero.jpg",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/bb5eab11-75d2-4918-d8ac-f40b713cd900/hthumb",
   },
 ];
 

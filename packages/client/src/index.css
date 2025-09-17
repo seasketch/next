@@ -9481,6 +9481,10 @@ select{
   background-color:rgb(15 23 42 / 0.9)
 }
 
+.bg-slate-900\/50{
+  background-color:rgb(15 23 42 / 0.5)
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -13879,6 +13883,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
     left:0.5rem
   }
 
+  .md\:right-4{
+    right:1rem
+  }
+
+  .md\:top-4{
+    top:1rem
+  }
+
   .md\:order-1{
     order:1
   }
@@ -14350,6 +14362,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .md\:text-4xl{
     font-size:2.25rem;
     line-height:2.5rem
+  }
+
+  .md\:text-xs{
+    font-size:0.75rem;
+    line-height:1rem
   }
 
   .md\:leading-5{

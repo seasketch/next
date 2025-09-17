@@ -23,7 +23,8 @@ export type Testimonial = {
 
 const TESTIMONIALS: Testimonial[] = [
   {
-    headshotSrc: "/people/marinez.jpg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/a9c4e662-db48-4873-d2d2-ed39e271ee00/thumbnail",
     person: {
       name: "Marinez Scherer",
       degrees: ["Ph.D."],
@@ -37,7 +38,8 @@ const TESTIMONIALS: Testimonial[] = [
     caseStudyLabel: "Read about the Brazil project",
   },
   {
-    headshotSrc: "/people/katheryn.jpg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/bc1c9ae6-95f0-496b-6d4e-6b7afd419d00/thumbnail",
     person: {
       name: "Kathryn Mengerink",
       degrees: ["J.D.", "Ph.D."],
@@ -48,7 +50,8 @@ const TESTIMONIALS: Testimonial[] = [
       "SeaSketch represents the best of what technology can offer to ocean governance—open, inclusive, and grounded in real-world needs.",
   },
   {
-    headshotSrc: "/people/joanna.jpg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/829c5443-7af4-4f6a-ccde-8bcc5488ff00/thumbnail",
     person: {
       name: "Joanna Smith",
       degrees: ["Ph.D.", "RPBio"],
@@ -59,7 +62,8 @@ const TESTIMONIALS: Testimonial[] = [
       "SeaSketch makes it possible for governments, stakeholders, communities, and conservation organisations to work from a common platform for spatial data. It’s one of the most powerful tools we have for ecosystem-based marine planning.",
   },
   {
-    headshotSrc: "/people/tazmin.jpg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/c95d9456-b8eb-4d8f-ae1b-9bb1edc79d00/thumbnail",
     person: {
       name: "Tazmin Falan",
       affiliation: "Blue Prosperity Micronesia",
@@ -70,7 +74,8 @@ const TESTIMONIALS: Testimonial[] = [
     caseStudyLabel: "Read about the FSM project",
   },
   {
-    headshotSrc: "/people/hulwa.jpg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/f37c657b-96d2-4861-6365-45a6367e8300/thumbnail",
     person: {
       name: "Hulwa Khaleel",
       title: "Lead Coordinator",
@@ -82,7 +87,8 @@ const TESTIMONIALS: Testimonial[] = [
     caseStudyLabel: "Read about the Maldives project",
   },
   {
-    headshotSrc: "/people/catherine.jpeg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/f2592a25-20d6-4b01-4cd3-5981d41b6700/thumbnail",
     person: {
       name: "Catherine Paul",
       affiliation: "Ministry of Fisheries and Ocean Resources, Kiribati",
@@ -93,7 +99,8 @@ const TESTIMONIALS: Testimonial[] = [
     caseStudyLabel: "Read about the Kiribati project",
   },
   {
-    headshotSrc: "/people/adriano.jpeg",
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/d519a37f-22b7-40f2-e998-6f9539be8000/thumbnail",
     person: {
       name: "Adriano Quintela",
       affiliation: "Blue Azores Initiative",

@@ -318,7 +318,8 @@ export default function LandingPage() {
                 <div
                   className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[170%]"
                   style={{
-                    background: "url(/bathy-bg.jpg) 70% 60% / cover no-repeat",
+                    background:
+                      "url(https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/921c060a-f3d1-4e53-f5ca-01cf03373200/hthumb) 70% 60% / cover no-repeat",
                     WebkitMaskImage:
                       "radial-gradient(closest-side at 45% 50%, rgb(0, 0, 0) 0%, rgb(0, 0, 0) 28%, rgba(0, 0, 0, 0.65) 34%, rgba(0, 0, 0, 0) 88%)",
                     maskImage:
@@ -330,7 +331,7 @@ export default function LandingPage() {
               </div>
               <div className="aspect-[4/3] rounded-3xl  grid place-items-center text-xs text-slate-500 relative z-10">
                 <img
-                  src="/map-portal-screenshot.png"
+                  src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/7309c20f-ae8c-4b87-c748-724c71a9be00/hthumb"
                   alt="Map Portal"
                   className="w-full h-full object-cover"
                 />
@@ -372,7 +373,7 @@ export default function LandingPage() {
                   className="absolute left-3/4 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[200%]"
                   style={{
                     background:
-                      "url(/caseStudies/maldives-2.jpg) 80% 60% / cover no-repeat",
+                      "url(https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/14f66672-b33f-4d6c-4738-232138835300/hthumb) 80% 60% / cover no-repeat",
                     filter: "blur(4px)",
                     willChange: "filter",
                     WebkitMaskImage:
@@ -385,7 +386,7 @@ export default function LandingPage() {
                 />
               </div>
               <img
-                src="/survey-mobile.png"
+                src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/902e86c5-8372-4e7c-dd14-f5978c92bd00/hlarge"
                 alt="Map Portal"
                 className="relative z-10 w-full h-full object-contain max-h-96"
               />
@@ -428,7 +429,7 @@ export default function LandingPage() {
                   className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[170%]"
                   style={{
                     background:
-                      "url(/sketching-bg3.jpg) 70% 60% / cover no-repeat",
+                      "url(https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/49341eb7-5ac5-4f7a-44a9-32ce5e2cab00/hlarge) 70% 60% / cover no-repeat",
                     WebkitMaskImage:
                       "radial-gradient(closest-side at 42% 50%, rgba(0,0,0,1) 0%, rgba(0,0,0,1) 35%, rgba(0,0,0,0.65) 60%, rgba(0,0,0,0) 90%)",
                     maskImage:
@@ -439,7 +440,7 @@ export default function LandingPage() {
                 />
               </div>
               <img
-                src="/reports-square.png"
+                src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/c9452e46-bf89-4d66-ca1f-f21b5ad8d400/hthumb"
                 alt="Report"
                 className="relative z-10 w-full h-full object-cover rounded-lg shadow-lg overflow-hidden border border-black/5 border-r-black/10 border-b-black/10"
               />

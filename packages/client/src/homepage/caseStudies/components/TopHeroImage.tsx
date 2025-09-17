@@ -10,6 +10,7 @@ export interface TopHeroImageProps {
   projectLabel?: string;
   featureTitle?: string;
   featureItems?: FeatureCardItem[];
+  imageCredit?: string;
 }
 
 export default function TopHeroImage(props: TopHeroImageProps) {
@@ -21,6 +22,7 @@ export default function TopHeroImage(props: TopHeroImageProps) {
     projectLabel,
     featureTitle,
     featureItems,
+    imageCredit,
   } = props;
   return (
     <section className="relative w-full overflow-hidden">
@@ -33,6 +35,13 @@ export default function TopHeroImage(props: TopHeroImageProps) {
             objectPosition: "25% 25%",
           }}
         />
+        {imageCredit ? (
+          <div className="absolute right-2 top-2 md:right-4 md:top-4">
+            <div className="rounded bg-slate-900/50 px-2 py-1 text-[11px] md:text-xs text-white/90">
+              {imageCredit}
+            </div>
+          </div>
+        ) : null}
         {/* Base soft overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 via-slate-950/30 to-slate-900/10" />
         {/* Deepen bottom for readability of horizontal features */}

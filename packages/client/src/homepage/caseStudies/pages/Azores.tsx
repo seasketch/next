@@ -13,7 +13,8 @@ export default function AzoresCaseStudy() {
       <TopHeroImage
         title="Case Study: Blue Azores"
         subtitle="A vision-driven marine protection strategy in the Azores"
-        imageUrl="/caseStudies/blue_azores_dia2-167.jpg"
+        imageUrl="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/cf32b2eb-bef7-435d-0740-8dfc7b66e900/hlarge"
+        imageCredit="Photo: Andy Mann"
         projectUrl="https://www.seasketch.org/azores/app"
         projectLabel="Open Blue Azores on SeaSketch"
         featureTitle="Features Used"
@@ -78,7 +79,7 @@ export default function AzoresCaseStudy() {
         quote="SeaSketch helped empower our region to design the largest offshore MPA network in the North Atlantic - not just with scientific rigor, but with community voices guiding every boundary."
         author="Adriano Quintela"
         affiliation="Blue Azores Initiative"
-        headshotSrc="/people/adriano.jpeg"
+        headshotSrc="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/d519a37f-22b7-40f2-e998-6f9539be8000/thumbnail"
       />
 
       <Section title="Role of SeaSketch">
@@ -112,6 +113,14 @@ export default function AzoresCaseStudy() {
             planning scenarios.
           </li>
         </ul>
+      </Section>
+
+      <Section title="">
+        <img
+          src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/ef2527bd-d9a6-4cf1-7461-eda96b7ad000/hlarge"
+          alt="Azores MPA network"
+          className="w-full h-auto "
+        />
       </Section>
 
       <Section title="Process & workflow">
