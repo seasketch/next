@@ -16,7 +16,7 @@ const pbf_1 = __importDefault(require("pbf"));
 const sourceCache = new fgb_source_1.SourceCache("128 mb");
 async function handler(payload) {
     console.log("Overlay worker received payload", payload);
-    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 50, 500);
+    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 1000);
     await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString());
     const helpers = {
         progress: (progress, message) => {

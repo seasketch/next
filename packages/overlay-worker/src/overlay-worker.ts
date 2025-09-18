@@ -26,7 +26,7 @@ const sourceCache = new SourceCache("128 mb");
 
 export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker received payload", payload);
-  const progressNotifier = new ProgressNotifier(payload.jobKey, 50, 500);
+  const progressNotifier = new ProgressNotifier(payload.jobKey, 1000);
   await sendBeginMessage(payload.jobKey, "/test", new Date().toISOString());
   const helpers = {
     progress: (progress: number, message?: string) => {

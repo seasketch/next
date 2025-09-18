@@ -10,7 +10,7 @@ export class ProgressNotifier {
   private message?: string;
   private sendMessage = () => {};
 
-  constructor(jobKey: string, debounceMs: number, maxWaitMs: number) {
+  constructor(jobKey: string, maxWaitMs: number) {
     this.messageLastSent = new Date().getTime();
     this.maxWaitMs = maxWaitMs;
     this.jobKey = jobKey;
@@ -20,22 +20,43 @@ export class ProgressNotifier {
     let sendNotification = false;
 
     // only send notification if one of these criteria are met:
-    // 1. the progress message has changed
-    if (message !== this.message) {
-      sendNotification = true;
-    }
-    // 2. it has been more than maxWaitMs since the last notification
+    // 1. it has been more than maxWaitMs since the last notification
     if (Date.now() - (this.messageLastSent || 0) > this.maxWaitMs) {
+      // console.log(
+      //   "exceeded max wait",
+      //   Date.now(),
+      //   this.messageLastSent,
+      //   this.maxWaitMs,
+      //   Date.now() - (this.messageLastSent || 0)
+      // );
       sendNotification = true;
     }
-    // 3. The progress has increased by 10% or more since the last notification
-    if (progress > this.lastNotifiedProgress * 1.1) {
+    // 2. The progress has increased by 10% or more since the last notification
+    if (progress > this.lastNotifiedProgress + 5) {
+      // console.log(
+      //   "progress increased beyond threshold",
+      //   progress,
+      //   this.lastNotifiedProgress
+      // );
       sendNotification = true;
     }
 
+    // if (sendNotification) {
+    //   console.log(
+    //     "send notification",
+    //     Date.now(),
+    //     this.messageLastSent,
+    //     this.maxWaitMs,
+
+    //     progress,
+    //     this.lastNotifiedProgress
+    //   );
+    // }
     this.progress = progress;
     this.message = message;
     if (sendNotification) {
+      this.lastNotifiedProgress = this.progress;
+      this.messageLastSent = new Date().getTime();
       return this.sendNotification();
     } else {
       return Promise.resolve();
@@ -43,10 +64,11 @@ export class ProgressNotifier {
   }
 
   async sendNotification() {
-    this.lastNotifiedProgress = this.progress;
-    this.messageLastSent = new Date().getTime();
     await sendProgressMessage(this.jobKey, this.progress, this.message).then(
-      (response) => {}
+      (response) => {
+        // noop
+        let noop = 1 + 2;
+      }
     );
     return;
   }

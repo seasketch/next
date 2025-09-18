@@ -154,7 +154,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
               break;
             case "progress":
               await pgPool.query(
-                `update spatial_metrics set state = 'processing', updated_at = now(), progress_percentage = $1 where job_key = $2 and state != 'complete' and state != 'error' and progress_percentage < $1`,
+                `update spatial_metrics set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1) where job_key = $2 and state != 'complete' and state != 'error'`,
                 [Math.round(consolidatedMessage.progress), jobKey]
               );
               break;

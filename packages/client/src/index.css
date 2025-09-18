@@ -4662,6 +4662,10 @@ select{
   left:-0.75rem
 }
 
+.-left-\[10000px\]{
+  left:-10000px
+}
+
 .-right-0{
   right:-0px
 }
@@ -5016,10 +5020,6 @@ select{
 
 .top-full{
   top:100%
-}
-
-.-left-\[10000px\]{
-  left:-10000px
 }
 
 .isolate{
@@ -5715,6 +5715,10 @@ select{
   height:3rem
 }
 
+.h-128{
+  height:32rem
+}
+
 .h-14{
   height:3.5rem
 }
@@ -5847,10 +5851,6 @@ select{
   height:100vh
 }
 
-.h-128{
-  height:32rem
-}
-
 .max-h-128{
   max-height:32rem
 }
@@ -5919,6 +5919,10 @@ select{
   min-height:6rem
 }
 
+.min-h-72{
+  min-height:18rem
+}
+
 .min-h-\[64px\]{
   min-height:64px
 }
@@ -5929,10 +5933,6 @@ select{
 
 .min-h-screen{
   min-height:100vh
-}
-
-.min-h-72{
-  min-height:18rem
 }
 
 .\!w-\[340px\]{
@@ -6562,6 +6562,12 @@ select{
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
+.scale-50{
+  --tw-scale-x:.5;
+  --tw-scale-y:.5;
+  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+}
+
 .scale-75{
   --tw-scale-x:.75;
   --tw-scale-y:.75;
@@ -6577,12 +6583,6 @@ select{
 .scale-95{
   --tw-scale-x:.95;
   --tw-scale-y:.95;
-  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-}
-
-.scale-50{
-  --tw-scale-x:.5;
-  --tw-scale-y:.5;
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
@@ -8496,6 +8496,10 @@ select{
   padding-right:1rem
 }
 
+.pr-40{
+  padding-right:10rem
+}
+
 .pr-5{
   padding-right:1.25rem
 }
@@ -8566,10 +8570,6 @@ select{
 
 .pt-8{
   padding-top:2rem
-}
-
-.pr-40{
-  padding-right:10rem
 }
 
 .text-left{
@@ -8771,6 +8771,11 @@ select{
 
 .tracking-wider{
   letter-spacing:0.05em
+}
+
+.\!text-black{
+  --tw-text-opacity:1 !important;
+  color:rgb(0 0 0 / var(--tw-text-opacity, 1)) !important
 }
 
 .text-black{
@@ -9025,9 +9030,18 @@ select{
   color:rgb(127 29 29 / var(--tw-text-opacity, 1))
 }
 
+.text-red-950{
+  --tw-text-opacity:1;
+  color:rgb(69 10 10 / var(--tw-text-opacity, 1))
+}
+
 .text-secondary-500{
   --tw-text-opacity:1;
   color:rgb(31 41 55 / var(--tw-text-opacity, 1))
+}
+
+.text-transparent{
+  color:transparent
 }
 
 .text-white{
@@ -9076,20 +9090,6 @@ select{
 .text-yellow-900{
   --tw-text-opacity:1;
   color:rgb(120 53 15 / var(--tw-text-opacity, 1))
-}
-
-.text-transparent{
-  color:transparent
-}
-
-.\!text-black{
-  --tw-text-opacity:1 !important;
-  color:rgb(0 0 0 / var(--tw-text-opacity, 1)) !important
-}
-
-.text-red-950{
-  --tw-text-opacity:1;
-  color:rgb(69 10 10 / var(--tw-text-opacity, 1))
 }
 
 .text-opacity-80{
@@ -9880,16 +9880,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   padding-top:1rem !important
 }
 
-.selection\:text-white *::selection{
-  --tw-text-opacity:1;
-  color:rgb(255 255 255 / var(--tw-text-opacity, 1))
-}
-
-.selection\:text-white::selection{
-  --tw-text-opacity:1;
-  color:rgb(255 255 255 / var(--tw-text-opacity, 1))
-}
-
 .placeholder\:text-gray-400::placeholder{
   --tw-text-opacity:1;
   color:rgb(156 163 175 / var(--tw-text-opacity, 1))
@@ -9950,6 +9940,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:rgb(209 213 219 / var(--tw-border-opacity, 1))
 }
 
+.hover\:border-gray-400:hover{
+  --tw-border-opacity:1;
+  border-color:rgb(156 163 175 / var(--tw-border-opacity, 1))
+}
+
 .hover\:border-gray-500:hover{
   --tw-border-opacity:1;
   border-color:rgb(107 114 128 / var(--tw-border-opacity, 1))
@@ -9957,11 +9952,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:border-transparent:hover{
   border-color:transparent
-}
-
-.hover\:border-gray-400:hover{
-  --tw-border-opacity:1;
-  border-color:rgb(156 163 175 / var(--tw-border-opacity, 1))
 }
 
 .hover\:border-opacity-100:hover{
@@ -10691,11 +10681,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(31 41 55 / var(--tw-text-opacity, 1))
 }
 
-.active\:text-white:active{
-  --tw-text-opacity:1;
-  color:rgb(255 255 255 / var(--tw-text-opacity, 1))
-}
-
 .active\:opacity-100:active{
   opacity:1
 }
@@ -10775,11 +10760,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .group:hover .group-hover\:text-gray-900{
   --tw-text-opacity:1;
   color:rgb(17 24 39 / var(--tw-text-opacity, 1))
-}
-
-.group:hover .group-hover\:text-white{
-  --tw-text-opacity:1;
-  color:rgb(255 255 255 / var(--tw-text-opacity, 1))
 }
 
 .group:hover .group-hover\:opacity-100{

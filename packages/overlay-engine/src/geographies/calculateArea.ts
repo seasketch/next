@@ -116,7 +116,7 @@ export async function calculateArea(
         ) {
           i++;
           const percent = (i / features) * 100;
-          helpers.progress(
+          await helpers.progress(
             percent < 95 ? percent : 95,
             `Processing difference features: ${percent}%`
           );

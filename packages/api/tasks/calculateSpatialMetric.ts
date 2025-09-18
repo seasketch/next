@@ -147,7 +147,7 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
     });
     const data = await response.json();
     if (data.error) {
-      throw new Error(data.error);
+      throw new Error(`Overlay worker dev handler error: ${data.error}`);
     }
     return data;
   } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
@@ -158,13 +158,17 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
       },
     });
 
-    const res = await lambda
-      .invoke({
-        FunctionName: process.env.OVERLAY_WORKER_LAMBDA_ARN,
-        InvocationType: "Event", // Async invocation
-        Payload: JSON.stringify(payload),
-      })
-      .promise();
+    try {
+      await lambda
+        .invoke({
+          FunctionName: process.env.OVERLAY_WORKER_LAMBDA_ARN,
+          InvocationType: "Event", // Async invocation
+          Payload: JSON.stringify(payload),
+        })
+        .promise();
+    } catch (e) {
+      throw new Error(`Overlay worker lambda error: ${e}`);
+    }
   } else {
     throw new Error(
       "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented."
