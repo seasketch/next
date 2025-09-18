@@ -22754,7 +22754,10 @@ export type ReportContextSketchClassDetailsFragment = (
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps'>
     )> }
-  )> }
+  )>, clippingGeographies: Array<Maybe<(
+    { __typename?: 'Geography' }
+    & Pick<Geography, 'id'>
+  )>> }
 );
 
 export type SketchReportingDetailsQueryVariables = Exact<{
@@ -25996,6 +25999,9 @@ export const ReportContextSketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
       name
       translatedProps
     }
+  }
+  clippingGeographies {
+    id
   }
 }
     ${LogicRuleDetailsFragmentDoc}

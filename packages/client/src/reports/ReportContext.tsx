@@ -315,7 +315,12 @@ export function useReportState(
     useGetOrCreateSpatialMetricsMutation();
 
   useEffect(() => {
-    if (currentMetricDependencies.length > 0) {
+    if (
+      currentMetricDependencies.length > 0 &&
+      mutationState.loading === false &&
+      mutationState.called === false
+    ) {
+      // check if there are any dependencies that have not already been fetched
       getOrCreateSpatialMetrics({
         variables: {
           dependencies: currentMetricDependencies,

@@ -18,7 +18,7 @@ import { isRasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
 import { useMetrics } from "../hooks/useMetrics";
 import { useReportContext } from "../ReportContext";
-import { subjectIsFragment } from "overlay-engine";
+import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { extractColorsForCategories } from "../utils/colors";
 import { AnyLayer } from "mapbox-gl";
@@ -127,8 +127,27 @@ export function OverlappingAreasCard({
   }, [overlayMetrics.data]);
 
   const items = useMemo(() => {
-    const items: { title: string; value?: number; color?: string }[] = [];
+    const items: {
+      title: string;
+      value?: number;
+      color?: string;
+      percentage?: number;
+    }[] = [];
+    const sketchClassPrimaryGeographyId =
+      reportContext.sketchClass?.clippingGeographies?.[0]?.id;
+
     for (const layer of reportingLayers) {
+      // get the geography-level total for this layer
+      const geographyMetric = sketchClassPrimaryGeographyId
+        ? (overlayMetrics.data || []).find(
+            (m) =>
+              subjectIsGeography(m.subject) &&
+              m.subject.id === sketchClassPrimaryGeographyId &&
+              m.type === "overlay_area" &&
+              m.groupBy === layer.groupBy
+          )
+        : null;
+
       if (layer.groupBy) {
         // get values for groupBy
         if (!isRasterInfo(layer.meta)) {
@@ -148,11 +167,17 @@ export function OverlappingAreasCard({
           );
           const values = Object.keys(attr.values);
           for (const value of values) {
+            const geographyTotal = (geographyMetric?.value as any)?.[value];
             const area = sumSketchOverlaysByClass?.[layer.stableId]?.[value];
             if (area && area > 0) {
-              items.push({ title: value, value: area, color: colors[value] });
+              items.push({
+                title: value,
+                value: area,
+                color: colors[value],
+                percentage: geographyTotal ? area / geographyTotal : undefined,
+              });
             } else if (config.componentSettings?.showZeroOverlapCategories) {
-              items.push({ title: value, color: colors[value] });
+              items.push({ title: value, color: colors[value], percentage: 0 });
             }
           }
         } else {
@@ -162,8 +187,13 @@ export function OverlappingAreasCard({
         }
       } else {
         const area = sumSketchOverlaysByClass?.[layer.stableId]?.["*"];
+        const geographyTotal = (geographyMetric?.value as any)?.["*"];
         if (area && area > 0) {
-          items.push({ title: layer.title, value: area });
+          items.push({
+            title: layer.title,
+            value: area,
+            percentage: geographyTotal ? area / geographyTotal : undefined,
+          });
         } else if (config.componentSettings?.showZeroOverlapCategories) {
           items.push({ title: layer.title });
         }
@@ -232,6 +262,15 @@ export function OverlappingAreasCard({
                     </>
                   )}
                 </div>
+                {typeof item.percentage === "number" && (
+                  <div className="tabular-nums">
+                    {overlayMetrics.loading ? (
+                      <Skeleton className="w-10 h-4" />
+                    ) : (
+                      <>{formatters.percent(item.percentage)}</>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           {!overlayMetrics.loading && items.length === 0 && (

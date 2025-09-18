@@ -252,6 +252,9 @@ fragment ReportContextSketchClassDetails on SketchClass {
       translatedProps
     }
   }
+  clippingGeographies {
+    id
+  }
 }
 
 query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
