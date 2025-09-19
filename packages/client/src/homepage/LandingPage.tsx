@@ -372,8 +372,7 @@ export default function LandingPage() {
                 <div
                   className="absolute left-3/4 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[250%] h-[200%]"
                   style={{
-                    background:
-                      "url(https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/14f66672-b33f-4d6c-4738-232138835300/hthumb) 80% 60% / cover no-repeat",
+                    background: `url("https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/5c2ee749-4796-4b64-3273-0647d6efb000/hlarge") -95% 40% / contain no-repeat`,
                     filter: "blur(4px)",
                     willChange: "filter",
                     WebkitMaskImage:

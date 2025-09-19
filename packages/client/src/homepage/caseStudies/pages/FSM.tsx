@@ -124,7 +124,7 @@ export default function FSMCaseStudy() {
             <strong>Rollout by State:</strong>&nbsp;SeaSketch surveys were
             conducted and use maps were created for the state of Kosrae. Surveys
             were conducted on the main island of Yap, and engagement with the
-            outer-islands of Yap is currently ongoing.
+            remote neighboring islands is currently ongoing.
           </li>
           <li>
             <strong>Digital Mapping:</strong>&nbsp;Participants used laptops to
@@ -179,6 +179,22 @@ export default function FSMCaseStudy() {
             the nation.
           </li>
         </ul>
+      </Section>
+
+      <Section title="">
+        <p>
+          Blue Prosperity Micronesia (BPM) is a program to support the
+          sustainable growth of marine resources in the Federated States of
+          Micronesia (FSM). This program is government-led, with the goal to
+          optimize ocean uses, protect 30% of FSM’s waters, strengthen fisheries
+          management, and support the development of marine industries.
+        </p>
+        <p>
+          The BPM Ocean Use Survey in Yap is led by a working group consisting
+          of members representing the Council of Pilung, Council of Tamol, Yap
+          State Government, Blue Prosperity Micronesia, Micronesia Conservation
+          Trust, Waitt Institute, and SeaSketch.
+        </p>
       </Section>
 
       <ScreenshotCarousel

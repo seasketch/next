@@ -38,8 +38,9 @@ export default function MaldivesCaseStudy() {
             livelihoods, and cultural identity. With a vast Exclusive Economic
             Zone of 923,000 km² and increasing pressures from fisheries,
             tourism, shipping, and climate change, the Government of Maldives
-            launched Noo Raajj - a nationwide initiative to protect ocean
-            ecosystems while ensuring sustainable use of marine resources.
+            and the Blue Prosperity coalition launched Noo Raajje - a nationwide
+            initiative to protect ocean ecosystems while ensuring sustainable
+            use of marine resources.
           </p>
           <p>
             At the heart of this effort was the recognition that effective
@@ -130,8 +131,8 @@ export default function MaldivesCaseStudy() {
           </li>
           <li>
             <strong>Transparency:</strong>&nbsp;Making survey results publicly
-            accessible helped foster trust and buy-in for the Noo Raajje
-            process.
+            accessible helped foster trust and buy-in for the Marine Spatial
+            Planning process.
           </li>
           <li>
             <strong>Global First:</strong>&nbsp;At the time, it stood as one of
@@ -145,7 +146,7 @@ export default function MaldivesCaseStudy() {
         <div className="space-y-6">
           <figure>
             <img
-              src="/caseStudies/maldives-2.jpg"
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/5c2ee749-4796-4b64-3273-0647d6efb000/hlarge"
               alt="Most surveys were conducted one-on-one between a facilitator and stakeholder."
               className="w-full h-auto rounded-md border border-slate-200"
             />
