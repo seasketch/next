@@ -3269,6 +3269,7 @@ export enum DataUploadOutputType {
   NetCdf = 'NET_CDF',
   Pmtiles = 'PMTILES',
   Png = 'PNG',
+  ReportingFlatgeobufV1 = 'REPORTING_FLATGEOBUF_V1',
   Xmlmetadata = 'XMLMETADATA',
   ZippedShapefile = 'ZIPPED_SHAPEFILE'
 }

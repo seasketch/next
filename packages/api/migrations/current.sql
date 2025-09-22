@@ -705,3 +705,73 @@ CREATE OR REPLACE FUNCTION public.get_spatial_metrics(metric_ids bigint[]) RETUR
 grant execute on function get_spatial_metrics to anon;
 
 comment on function get_spatial_metrics is '@omit';
+
+-- Update data_upload_output_type enum
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_enum e ON e.enumtypid = t.oid
+    WHERE t.typname = 'data_upload_output_type'
+      AND e.enumlabel = 'ReportingFlatgeobufV1'
+  ) THEN
+    ALTER TYPE public.data_upload_output_type ADD VALUE 'ReportingFlatgeobufV1';
+  END IF;
+END $$;
+
+create table if not exists source_processing_jobs (
+  job_key text primary key default gen_random_uuid()::text,
+  progress_percentage integer not null default 0,
+  progress_message text,
+  state spatial_metric_state not null default 'queued',
+  error_message text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  logs_url text,
+  logs_expires_at timestamptz,
+  data_source_id integer not null references data_sources(id) on delete cascade
+);
+
+create index if not exists source_processing_jobs_data_source_id_idx on public.source_processing_jobs (data_source_id);
+
+create index if not exists source_processing_jobs_updated_at_idx on public.source_processing_jobs (updated_at);
+
+alter table spatial_metrics add column if not exists source_processing_job_dependency text references source_processing_jobs(job_key) on delete cascade;
+
+CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    metric spatial_metrics;
+    updated_metric_id bigint;
+    metric_id bigint;
+    job_dep text;
+  begin
+    -- loop through the metric ids, and update the state to queued
+    foreach metric_id in array metric_ids loop
+      update spatial_metrics set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where id = metric_id returning id into updated_metric_id;
+      if updated_metric_id is not null then
+        -- if this metric depends on a source_processing_job, restart it first
+        select source_processing_job_dependency into job_dep from spatial_metrics where id = updated_metric_id;
+        if job_dep is not null then
+          update source_processing_jobs
+          set state = 'queued',
+              error_message = null,
+              progress_percentage = 0,
+              progress_message = null,
+              updated_at = now()
+          where job_key = job_dep;
+        end if;
+        perform graphile_worker.add_job(
+          'calculateSpatialMetric',
+          json_build_object('metricId', updated_metric_id),
+          max_attempts := 1,
+          job_key := 'calculateSpatialMetric:' || updated_metric_id,
+          job_key_mode := 'replace'
+        );
+      end if;
+    end loop;
+    return true;
+  end;
+  $$;

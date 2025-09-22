@@ -17,6 +17,7 @@ import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 import { SQSStack } from "../lib/SQSStack";
 import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
+import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -172,6 +173,14 @@ const overlayWorker = new OverlayWorkerLambdaStack(
     env,
     devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
+  }
+);
+
+const subdivideWorker = new SubdivideWorkerLambdaStack(
+  app,
+  "SeaSketchSubdivideWorker",
+  {
+    env,
   }
 );
 
