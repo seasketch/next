@@ -263,7 +263,7 @@ export function OverlappingAreasCard({
                   )}
                 </div>
                 {typeof item.percentage === "number" && (
-                  <div className="tabular-nums">
+                  <div className="tabular-nums w-16 text-right">
                     {overlayMetrics.loading ? (
                       <Skeleton className="w-10 h-4" />
                     ) : (

@@ -61,6 +61,7 @@ export default async function calculateSpatialMetric(
         await callOverlayWorker({
           type: "total_area",
           jobKey: metric.jobKey,
+          queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
           subject: {
             type: "geography",
             id: metric.subject.id,
@@ -86,6 +87,7 @@ export default async function calculateSpatialMetric(
           stableId: metric.stableId,
           sourceUrl: metric.sourceUrl,
           sourceType: metric.sourceType,
+          queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
         } as OverlayWorkerPayload);
       } else {
         const clippingLayers = await getClippingLayersForGeography(
@@ -103,6 +105,7 @@ export default async function calculateSpatialMetric(
           groupBy: metric.groupBy,
           sourceUrl: metric.sourceUrl,
           sourceType: metric.sourceType,
+          queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
         });
       }
     } else {
@@ -136,11 +139,7 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
 
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
   if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
-    console.log(
-      "Calling overlay worker dev handler",
-      process.env.OVERLAY_WORKER_DEV_HANDLER,
-      payload
-    );
+    console.log("Calling overlay worker dev handler", payload);
     const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -151,6 +150,7 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
     }
     return data;
   } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
+    console.log("Calling production overlay worker lambda", payload);
     const lambda = new AWS.Lambda({
       region: process.env.AWS_REGION || "us-west-2",
       httpOptions: {

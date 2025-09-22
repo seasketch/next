@@ -170,7 +170,7 @@ const overlayWorker = new OverlayWorkerLambdaStack(
   "SeaSketchOverlayWorker",
   {
     env,
-    devQueue: sqs.devOverlayEngineWorkerQueue,
+    devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
   }
 );

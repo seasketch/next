@@ -92,7 +92,7 @@ async function calculateArea(geography, sourceCache, helpersOption) {
                     (0, cql2_1.evaluateCql2JSONQuery)(layer.cql2Query, f.properties)) {
                     i++;
                     const percent = (i / features) * 100;
-                    await helpers.progress(percent < 95 ? percent : 95, `Processing difference features: ${percent}%`);
+                    helpers.progress(percent < 95 ? percent : 95, `Processing difference features: ${percent}%`);
                     const classification = containerIndex.classify(f);
                     if (helpers.logFeature) {
                         // Handle debugging callback for all classified features

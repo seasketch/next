@@ -10,7 +10,9 @@ export function equalIntervalBuckets(
   const breaks = equalIntervalBreaks(data, numBuckets);
   breaks.pop();
 
-  return breaksToBuckets(max || Math.max(...data), breaks, data, fraction);
+  max = max !== undefined ? max : Math.max(...data);
+
+  return breaksToBuckets(max, breaks, data, fraction);
 }
 
 export function quantileBuckets(

@@ -3,6 +3,7 @@ export type OverlayWorkerMessageType = "result" | "error" | "progress" | "begin"
 export type OverlayEngineWorkerBaseMessage = {
     type: OverlayWorkerMessageType;
     jobKey: string;
+    queueUrl: string;
 };
 export type OverlayEngineWorkerResultMessage = OverlayEngineWorkerBaseMessage & {
     type: "result";
@@ -60,6 +61,7 @@ export type OverlayWorkerPayload = {
     } ? Omit<R, "subject"> & {
         jobKey: string;
         subject: Omit<EnhanceSubject<S>, "geographies" | "sketches">;
+        queueUrl: string;
     } : never : never;
 }[keyof MetricTypeMap];
 export type OverlayWorkerResponse = {

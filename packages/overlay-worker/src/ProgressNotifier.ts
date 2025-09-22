@@ -8,12 +8,14 @@ export class ProgressNotifier {
   private messageLastSent?: number;
   private maxWaitMs: number;
   private message?: string;
+  private queueUrl: string;
   private sendMessage = () => {};
 
-  constructor(jobKey: string, maxWaitMs: number) {
+  constructor(jobKey: string, maxWaitMs: number, queueUrl: string) {
     this.messageLastSent = new Date().getTime();
     this.maxWaitMs = maxWaitMs;
     this.jobKey = jobKey;
+    this.queueUrl = queueUrl;
   }
 
   notify(progress: number, message?: string) {
@@ -64,12 +66,15 @@ export class ProgressNotifier {
   }
 
   async sendNotification() {
-    await sendProgressMessage(this.jobKey, this.progress, this.message).then(
-      (response) => {
-        // noop
-        let noop = 1 + 2;
-      }
-    );
+    await sendProgressMessage(
+      this.jobKey,
+      this.progress,
+      this.queueUrl,
+      this.message
+    ).then((response) => {
+      // noop
+      let noop = 1 + 2;
+    });
     return;
   }
 

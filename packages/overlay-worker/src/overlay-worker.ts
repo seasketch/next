@@ -18,7 +18,7 @@ import {
   flushMessages,
 } from "./messaging";
 import { ProgressNotifier } from "./ProgressNotifier";
-import geobuf from "geobuf";
+import * as geobuf from "geobuf";
 import Pbf from "pbf";
 import { Feature, FeatureCollection, Polygon } from "geojson";
 
@@ -26,8 +26,17 @@ const sourceCache = new SourceCache("128 mb");
 
 export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker received payload", payload);
-  const progressNotifier = new ProgressNotifier(payload.jobKey, 1000);
-  await sendBeginMessage(payload.jobKey, "/test", new Date().toISOString());
+  const progressNotifier = new ProgressNotifier(
+    payload.jobKey,
+    1000,
+    payload.queueUrl
+  );
+  await sendBeginMessage(
+    payload.jobKey,
+    "/test",
+    new Date().toISOString(),
+    payload.queueUrl
+  );
   const helpers = {
     progress: (progress: number, message?: string) => {
       return progressNotifier.notify(progress, message);
@@ -54,7 +63,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
             helpers
           );
           await flushMessages();
-          await sendResultMessage(payload.jobKey, area);
+          await sendResultMessage(payload.jobKey, area, payload.queueUrl);
           return;
         } else if (subjectIsFragment(payload.subject)) {
           throw new Error(
@@ -78,7 +87,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
             helpers
           );
           await flushMessages();
-          await sendResultMessage(payload.jobKey, area);
+          await sendResultMessage(payload.jobKey, area, payload.queueUrl);
           return;
         } else {
           if ("geobuf" in payload.subject) {
@@ -109,7 +118,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
               helpers
             );
             await flushMessages();
-            await sendResultMessage(payload.jobKey, area);
+            await sendResultMessage(payload.jobKey, area, payload.queueUrl);
             return;
           } else {
             throw new Error(
@@ -125,7 +134,8 @@ export default async function handler(payload: OverlayWorkerPayload) {
     console.error(e);
     await sendErrorMessage(
       payload.jobKey,
-      e instanceof Error ? e.message : "Unknown error"
+      e instanceof Error ? e.message : "Unknown error",
+      payload.queueUrl
     );
     // throw e;
   } finally {

@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -11,13 +44,13 @@ const overlay_engine_1 = require("overlay-engine");
 const fgb_source_1 = require("fgb-source");
 const messaging_1 = require("./messaging");
 const ProgressNotifier_1 = require("./ProgressNotifier");
-const geobuf_1 = __importDefault(require("geobuf"));
+const geobuf = __importStar(require("geobuf"));
 const pbf_1 = __importDefault(require("pbf"));
 const sourceCache = new fgb_source_1.SourceCache("128 mb");
 async function handler(payload) {
     console.log("Overlay worker received payload", payload);
-    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 1000);
-    await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString());
+    const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 1000, payload.queueUrl);
+    await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString(), payload.queueUrl);
     const helpers = {
         progress: (progress, message) => {
             return progressNotifier.notify(progress, message);
@@ -40,7 +73,7 @@ async function handler(payload) {
                     progressNotifier.notify(0, "Beginning area calculation");
                     const area = await (0, overlay_engine_1.calculateArea)(payload.subject.clippingLayers, sourceCache, helpers);
                     await (0, messaging_1.flushMessages)();
-                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
+                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl);
                     return;
                 }
                 else if (subjectIsFragment(payload.subject)) {
@@ -55,14 +88,14 @@ async function handler(payload) {
                     progressNotifier.notify(0, "Beginning area calculation");
                     const area = await (0, overlay_engine_1.calculateGeographyOverlap)(payload.subject.clippingLayers, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
                     await (0, messaging_1.flushMessages)();
-                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
+                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl);
                     return;
                 }
                 else {
                     if ("geobuf" in payload.subject) {
                         // payload.subject.geobuf is a base64 encoded string
                         const buffer = Buffer.from(payload.subject.geobuf, "base64");
-                        let feature = geobuf_1.default.decode(new pbf_1.default(buffer));
+                        let feature = geobuf.decode(new pbf_1.default(buffer));
                         helpers.log(`decoded geobuf feature. ${buffer.byteLength} bytes`);
                         if (feature.type === "FeatureCollection") {
                             feature = feature.features[0];
@@ -74,7 +107,7 @@ async function handler(payload) {
                         await (0, messaging_1.flushMessages)();
                         const area = await (0, overlay_engine_1.calculateFragmentOverlap)(feature, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
                         await (0, messaging_1.flushMessages)();
-                        await (0, messaging_1.sendResultMessage)(payload.jobKey, area);
+                        await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl);
                         return;
                     }
                     else {
@@ -88,7 +121,7 @@ async function handler(payload) {
     }
     catch (e) {
         console.error(e);
-        await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unknown error");
+        await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unknown error", payload.queueUrl);
         // throw e;
     }
     finally {

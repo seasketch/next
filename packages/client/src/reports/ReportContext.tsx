@@ -314,12 +314,18 @@ export function useReportState(
   const [getOrCreateSpatialMetrics, mutationState] =
     useGetOrCreateSpatialMetricsMutation();
 
+  const [
+    previouslyFetchedMetricDependencies,
+    setPreviouslyFetchedMetricDependencies,
+  ] = useState<string>("");
+
   useEffect(() => {
+    const stringifiedDependencies = JSON.stringify(currentMetricDependencies);
     if (
       currentMetricDependencies.length > 0 &&
-      mutationState.loading === false &&
-      mutationState.called === false
+      stringifiedDependencies !== previouslyFetchedMetricDependencies
     ) {
+      setPreviouslyFetchedMetricDependencies(stringifiedDependencies);
       // check if there are any dependencies that have not already been fetched
       getOrCreateSpatialMetrics({
         variables: {

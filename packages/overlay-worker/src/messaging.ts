@@ -13,9 +13,9 @@ const sqs = new SQSClient({ region: process.env.AWS_REGION });
 const pendingSendOperations = new Set<Promise<unknown>>();
 
 export function sendMessage(msg: OverlayEngineWorkerMessage) {
-  const queueUrl = process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL;
+  const queueUrl = msg.queueUrl;
   if (!queueUrl) {
-    throw new Error("OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL is not set");
+    throw new Error("Payload is missing queueUrl");
   }
   const command = new SendMessageCommand({
     QueueUrl: queueUrl,
@@ -27,11 +27,16 @@ export function sendMessage(msg: OverlayEngineWorkerMessage) {
   return sendPromise;
 }
 
-export async function sendResultMessage(jobKey: string, result: any) {
+export async function sendResultMessage(
+  jobKey: string,
+  result: any,
+  queueUrl: string
+) {
   const msg: OverlayEngineWorkerResultMessage = {
     type: "result",
     result,
     jobKey,
+    queueUrl,
   };
   await sendMessage(msg);
 }
@@ -39,6 +44,7 @@ export async function sendResultMessage(jobKey: string, result: any) {
 export async function sendProgressMessage(
   jobKey: string,
   progress: number,
+  queueUrl: string,
   message?: string
 ) {
   const msg: OverlayEngineWorkerProgressMessage = {
@@ -46,15 +52,21 @@ export async function sendProgressMessage(
     progress,
     message,
     jobKey,
+    queueUrl,
   };
   return sendMessage(msg);
 }
 
-export async function sendErrorMessage(jobKey: string, error: string) {
+export async function sendErrorMessage(
+  jobKey: string,
+  error: string,
+  queueUrl: string
+) {
   const msg: OverlayEngineWorkerErrorMessage = {
     type: "error",
     error,
     jobKey,
+    queueUrl,
   };
   await sendMessage(msg);
 }
@@ -62,13 +74,15 @@ export async function sendErrorMessage(jobKey: string, error: string) {
 export async function sendBeginMessage(
   jobKey: string,
   logfileUrl: string,
-  logsExpiresAt: string
+  logsExpiresAt: string,
+  queueUrl: string
 ) {
   const msg: OverlayEngineWorkerBeginMessage = {
     type: "begin",
     logfileUrl,
     logsExpiresAt,
     jobKey,
+    queueUrl,
   };
   await sendMessage(msg);
 }

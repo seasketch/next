@@ -18,7 +18,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
     scope: Construct,
     id: string,
     props: cdk.StackProps & {
-      devQueue: sqs.IQueue;
+      devQueues?: sqs.IQueue[];
       productionQueue: sqs.IQueue;
     }
   ) {
@@ -50,7 +50,10 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
         new iam.PolicyStatement({
           actions: ["sqs:SendMessage", "sqs:GetQueueAttributes"],
           effect: iam.Effect.ALLOW,
-          resources: [props.devQueue.queueArn, props.productionQueue.queueArn],
+          resources: [
+            ...(props.devQueues || []).map((q) => q.queueArn),
+            props.productionQueue.queueArn,
+          ],
         }),
       ],
     });
