@@ -30,6 +30,7 @@ import {
   FSMCaseStudy,
   KiribatiCaseStudy,
   MaldivesCaseStudy,
+  NavukavuCaseStudy,
 } from "./homepage/caseStudies/caseStudies";
 import Footer from "./footer/Footer";
 
@@ -227,6 +228,9 @@ function App() {
                 </Route>
                 <Route exact path="/case-studies/maldives">
                   <MaldivesCaseStudy />
+                </Route>
+                <Route exact path="/case-studies/navukavu">
+                  <NavukavuCaseStudy />
                 </Route>
                 <Route exact path="/api">
                   <DeveloperApiPage />

@@ -38,6 +38,11 @@ const studies = [
     title: "Maldives",
     img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/bb5eab11-75d2-4918-d8ac-f40b713cd900/hthumb",
   },
+  {
+    to: "/case-studies/navukavu",
+    title: "Vanua Navakavu, Fiji",
+    img: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/5841afd7-7f7d-4283-4fb9-765afa1cdd00/hthumb",
+  },
 ];
 
 export default function CaseStudiesIndex() {

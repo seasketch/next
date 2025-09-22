@@ -110,6 +110,19 @@ const TESTIMONIALS: Testimonial[] = [
     caseStudyPath: "/case-studies/azores",
     caseStudyLabel: "Read about the Azores project",
   },
+  {
+    headshotSrc:
+      "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/38959bc3-71c9-4045-c450-3d0f701a9400/thumbnail",
+    person: {
+      name: "David Dawai",
+      title: "Survey Facilitator",
+      affiliation: "Vanua Navakavu Ocean Use Survey",
+    },
+    quote:
+      "In just one week of training, I was able to confidently facilitate an Ocean Use Survey in Navukavu using SeaSketch. It was remarkable to see how quickly the tools empowered our team and how engaged the community became in mapping their knowledge and priorities. This experience showed me how practical and powerful participatory mapping can be for shaping the future of our ocean.",
+    caseStudyPath: "/case-studies/navukavu",
+    caseStudyLabel: "Read about the Navukavu project",
+  },
 ];
 
 function formatPersonLine(t: Testimonial) {

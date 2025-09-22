@@ -6,3 +6,4 @@ export { default as CaliforniaCaseStudy } from "./pages/California";
 export { default as FSMCaseStudy } from "./pages/FSM";
 export { default as KiribatiCaseStudy } from "./pages/Kiribati";
 export { default as MaldivesCaseStudy } from "./pages/Maldives";
+export { default as NavukavuCaseStudy } from "./pages/Navukavu";
