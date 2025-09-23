@@ -9,17 +9,17 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props: cdk.StackProps) {
     super(scope, id, props);
 
-    const fn = new lambda.DockerImageFunction(this, "SubdivideWorker", {
-      functionName: "SubdivideWorker",
+    const fn = new lambda.DockerImageFunction(this, "SubdivisionWorker", {
+      functionName: "SubdivisionWorker",
       code: lambda.DockerImageCode.fromImageAsset(
         path.join(__dirname, "../../subdivide-worker"),
         {}
       ),
       timeout: cdk.Duration.minutes(15),
-      logGroup: new logs.LogGroup(this, "SubdivideWorkerLogs", {
+      logGroup: new logs.LogGroup(this, "SubdivisionWorkerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),
-      memorySize: 4096,
+      memorySize: 8192,
       environment: {
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || "",
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "",

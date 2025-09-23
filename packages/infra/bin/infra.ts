@@ -178,7 +178,7 @@ const overlayWorker = new OverlayWorkerLambdaStack(
 
 const subdivideWorker = new SubdivideWorkerLambdaStack(
   app,
-  "SeaSketchSubdivideWorker",
+  "SeaSketchSubdivisionWorker",
   {
     env,
   }
