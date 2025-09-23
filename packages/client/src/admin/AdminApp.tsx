@@ -33,7 +33,6 @@ export default function AdminApp() {
   const { slug } = useParams<{ slug: string }>();
   const { data } = useCurrentProjectMetadata();
   const { alert } = useDialog();
-
   const history = useHistory();
   const { t } = useTranslation("admin");
 

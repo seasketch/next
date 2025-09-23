@@ -194,6 +194,7 @@ export function SizeCard({
       className="pb-2"
       tint={config.tint}
       icon={config.icon}
+      metrics={metrics.data}
     >
       <div>
         {metrics.loading ? (

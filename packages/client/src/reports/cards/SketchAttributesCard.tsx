@@ -71,6 +71,7 @@ export function SketchAttributesCard({
       onUpdate={onUpdate}
       backgroundTint={nameOnly ? "yellow" : undefined}
       config={config}
+      metrics={[]}
     >
       {nameOnly ? (
         <>

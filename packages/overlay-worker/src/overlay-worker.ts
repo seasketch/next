@@ -76,6 +76,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
         }
         break;
       case "overlay_area":
+        if (!payload.sourceUrl) {
+          throw new Error("sourceUrl is required for overlay_area");
+        }
         if (subjectIsGeography(payload.subject)) {
           progressNotifier.notify(0, "Beginning area calculation");
           const area = await calculateGeographyOverlap(
@@ -126,7 +129,6 @@ export default async function handler(payload: OverlayWorkerPayload) {
             );
           }
         }
-        break;
       default:
         throw new Error(`Unknown payload type: ${payload.type}`);
     }

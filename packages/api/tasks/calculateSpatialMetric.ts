@@ -7,9 +7,15 @@ import {
   subjectIsFragment,
   SourceType,
 } from "overlay-engine";
-import { MetricSubjectGeography } from "overlay-engine/src/metrics/metrics";
-import { OverlayWorkerPayload, GeographySubjectPayload } from "overlay-worker";
+import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
+
+const lambda = new AWS.Lambda({
+  region: process.env.AWS_REGION || "us-west-2",
+  httpOptions: {
+    timeout: 120000,
+  },
+});
 
 export default async function calculateSpatialMetric(
   payload: { metricId: number },
@@ -24,25 +30,9 @@ export default async function calculateSpatialMetric(
       );
     });
   }, 10_000);
-  let metric: Metric & {
-    id: number;
-    jobKey: string;
-    sourceUrl: string;
-    sourceType: SourceType;
-  };
-  await helpers.withPgClient(async (client) => {
-    const result = await client.query(
-      `select get_spatial_metric($1) as metric`,
-      [payload.metricId]
-    );
-    metric = result.rows[0].metric;
-  });
 
   try {
-    // @ts-ignore
-    if (metric === undefined) {
-      throw new Error(`Metric not found: ${payload.metricId}`);
-    }
+    const metric = await getSpatialMetric(payload.metricId, helpers);
     if (metric.type === "total_area") {
       if (subjectIsFragment(metric.subject)) {
         // very simple to do, just ask postgis to calculate the area
@@ -70,43 +60,62 @@ export default async function calculateSpatialMetric(
         } as OverlayWorkerPayload);
       }
     } else if (metric.type === "overlay_area") {
-      if (!metric.stableId) {
-        throw new Error("overlay_area metrics must have a layerStableId");
-      }
-      // delegate to overlay worker
-      if (subjectIsFragment(metric.subject)) {
-        const geobuf = await getGeobufForFragment(metric.subject.hash, helpers);
-        await callOverlayWorker({
-          type: "overlay_area",
-          jobKey: metric.jobKey,
-          subject: {
-            hash: metric.subject.hash,
-            geobuf,
-          },
-          groupBy: metric.groupBy,
-          stableId: metric.stableId,
-          sourceUrl: metric.sourceUrl,
-          sourceType: metric.sourceType,
-          queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
-        } as OverlayWorkerPayload);
-      } else {
-        const clippingLayers = await getClippingLayersForGeography(
-          metric.subject.id,
+      // first, check if dependent data source have been processed (subdivided)
+      if (!metric.sourceUrl) {
+        // return;
+        const canonicalSource = await getCanonicalDataSource(
+          metric.stableId,
           helpers
         );
-        await callOverlayWorker({
-          type: "overlay_area",
-          jobKey: metric.jobKey,
-          subject: {
-            type: "geography",
-            id: metric.subject.id,
-            clippingLayers,
-          },
-          groupBy: metric.groupBy,
-          sourceUrl: metric.sourceUrl,
-          sourceType: metric.sourceType,
-          queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
-        });
+        console.log("canonicalSourceUrl", canonicalSource.sourceUrl);
+        await assignSubdivisionJob(
+          canonicalSource.sourceUrl,
+          canonicalSource.sourceId,
+          metric.id,
+          helpers
+        );
+      } else {
+        if (!metric.stableId) {
+          throw new Error("overlay_area metrics must have a layerStableId");
+        }
+        // delegate to overlay worker
+        if (subjectIsFragment(metric.subject)) {
+          const geobuf = await getGeobufForFragment(
+            metric.subject.hash,
+            helpers
+          );
+          await callOverlayWorker({
+            type: "overlay_area",
+            jobKey: metric.jobKey,
+            subject: {
+              hash: metric.subject.hash,
+              geobuf,
+            },
+            groupBy: metric.groupBy,
+            stableId: metric.stableId,
+            sourceUrl: metric.sourceUrl,
+            sourceType: metric.sourceType,
+            queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+          } as OverlayWorkerPayload);
+        } else {
+          const clippingLayers = await getClippingLayersForGeography(
+            metric.subject.id,
+            helpers
+          );
+          await callOverlayWorker({
+            type: "overlay_area",
+            jobKey: metric.jobKey,
+            subject: {
+              type: "geography",
+              id: metric.subject.id,
+              clippingLayers,
+            },
+            groupBy: metric.groupBy,
+            sourceUrl: metric.sourceUrl,
+            sourceType: metric.sourceType,
+            queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+          });
+        }
       }
     } else {
       throw new Error(`Unsupported metric type: ${metric.type}`);
@@ -151,12 +160,6 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
     return data;
   } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
     console.log("Calling production overlay worker lambda", payload);
-    const lambda = new AWS.Lambda({
-      region: process.env.AWS_REGION || "us-west-2",
-      httpOptions: {
-        timeout: 120000,
-      },
-    });
 
     try {
       await lambda
@@ -204,4 +207,108 @@ async function getClippingLayersForGeography(
     clippingLayers = results.rows.map((row) => parseClippingLayer(row));
   });
   return clippingLayers;
+}
+
+function getSpatialMetric(metricId: number, helpers: Helpers) {
+  return helpers.withPgClient(async (client) => {
+    const result = await client.query(
+      `select get_spatial_metric($1) as metric`,
+      [metricId]
+    );
+    if (result.rows.length === 0 || !result.rows[0].metric) {
+      throw new Error(`Metric not found: ${metricId}`);
+    }
+    return result.rows[0].metric as Metric & {
+      id: number;
+      jobKey: string;
+      sourceUrl: string;
+      sourceType: SourceType;
+      stableId: string;
+    };
+  });
+}
+
+function getCanonicalDataSource(stableId: string, helpers: Helpers) {
+  return helpers.withPgClient(async (client) => {
+    const result = await client.query(
+      `
+        select
+          o.url,
+          o.data_source_id
+        from
+          data_upload_outputs o
+        where
+          o.data_source_id = (
+            select
+              data_source_id
+            from
+              data_layers
+            where
+              id = (
+              select data_layer_id from table_of_contents_items where stable_id = $1 and is_draft = true
+            )
+          )
+        order by case when o.type = 'FlatGeobuf' then 0 else 1 end
+        limit 1
+        `,
+      [stableId]
+    );
+    if (result.rows.length === 0) {
+      throw new Error(
+        `Canonical source URL not found for stable ID: ${stableId}`
+      );
+    }
+    return {
+      sourceUrl: result.rows[0].url as string,
+      sourceId: result.rows[0].data_source_id as number,
+    };
+  });
+}
+
+async function assignSubdivisionJob(
+  sourceUrl: string,
+  sourceId: number,
+  metricId: number,
+  helpers: Helpers
+) {
+  if (!process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
+    throw new Error("SUBDIVISION_WORKER_LAMBDA_ARN is not set");
+  }
+  const arn = process.env.SUBDIVISION_WORKER_LAMBDA_ARN;
+  await helpers.withPgClient(async (client) => {
+    const existingJob = await client.query(
+      `select job_key from source_processing_jobs where data_source_id = $1`,
+      [sourceId]
+    );
+    if (existingJob.rows.length > 0) {
+      await client.query(
+        `update spatial_metrics set source_processing_job_dependency = $1 where id = $2`,
+        [existingJob.rows[0].job_key, metricId]
+      );
+      return;
+    } else {
+      const result = await client.query(
+        `
+        insert into source_processing_jobs (data_source_id, project_id) values ($1, (select project_id from data_sources where id = $1)) returning *
+        `,
+        [sourceId]
+      );
+      console.log(
+        `Calling lambda with payload: { url: ${sourceUrl}, jobKey: ${result.rows[0].job_key} }`
+      );
+      await lambda
+        .invoke({
+          FunctionName: arn,
+          InvocationType: "Event",
+          Payload: JSON.stringify({
+            url: sourceUrl,
+            jobKey: result.rows[0].job_key,
+          }),
+        })
+        .promise();
+    }
+  });
+  // throw new Error(
+  //   "Source URL is not available. Need to trigger subdivision worker. Currently unimplemented."
+  // );
 }

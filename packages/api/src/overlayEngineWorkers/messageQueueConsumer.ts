@@ -148,7 +148,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
               break;
             case "error":
               await pgPool.query(
-                `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where job_key = $2 and state = 'processing'`,
+                `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where job_key = $2 and (state = 'processing' or state = 'queued')`,
                 [consolidatedMessage.error, jobKey]
               );
               break;

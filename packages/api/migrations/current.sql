@@ -125,7 +125,8 @@ create type public.reporting_layer as (
   size bigint,
   meta jsonb,
   mapbox_gl_styles jsonb,
-  group_by text
+  group_by text,
+  processing_job_id text
 );
 
 drop function if exists report_cards_layers cascade;
@@ -135,29 +136,40 @@ RETURNS SETOF reporting_layer
 LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
 COST 1 ROWS 1
 AS $$
+  with upload_outputs as (
+    select 
+      data_source_id,
+      type,
+      url,
+      remote,
+      size,
+      case when type = 'ReportingFlatgeobufV1' then true else false end as is_report_ready
+    from data_upload_outputs
+    where type in ('ReportingFlatgeobufV1', 'FlatGeobuf', 'GeoJSON', 'GeoTIFF')
+    order by case type when 'ReportingFlatgeobufV1' then 0 else 1 end
+  )
   select
     t.stable_id,
     t.title,
     t.id as table_of_contents_item_id,
     o.type,
-    o.url,
-    o.remote,
+    case o.is_report_ready when true then o.url else null end,
+    case o.is_report_ready when true then o.remote else null end,
     o.size,
     ds.geostats,
     dl.mapbox_gl_styles,
-    rcl.group_by
+    rcl.group_by,
+    spj.job_key as processing_job_id
   from table_of_contents_items t
   join data_layers dl on dl.id = t.data_layer_id
-  join data_upload_outputs o on o.data_source_id = dl.data_source_id
+  left join upload_outputs o on o.data_source_id = dl.data_source_id
   join data_sources ds on ds.id = dl.data_source_id
   join report_card_layers rcl on rcl.toc_stable_id = t.stable_id and rcl.report_card_id = rc.id
+  left join source_processing_jobs spj on spj.data_source_id = dl.data_source_id
   where t.stable_id in (
     select toc_stable_id from report_card_layers where report_card_id = rc.id
   )
     and t.is_draft = rc.is_draft
-    -- and o.is_original = false
-    and o.type in ('FlatGeobuf','GeoJSON', 'GeoTIFF')
-  order by case o.type when 'FlatGeobuf' then 0 else 1 end
   limit 1;
 $$;
 
@@ -362,20 +374,22 @@ as $$
         t.title,
         t.id as table_of_contents_item_id,
         o.type,
-        o.url,
+        case o.type when 'ReportingFlatgeobufV1' then o.url else null end,
         o.remote,
         o.size,
         ds.geostats,
         dl.mapbox_gl_styles,
-        null as group_by
+        null as group_by,
+        spj.job_key as processing_job_id
       from table_of_contents_items t
       inner join data_layers dl on dl.id = t.data_layer_id
       inner join data_upload_outputs o on o.data_source_id = dl.data_source_id
       inner join data_sources ds on ds.id = dl.data_source_id
+      left join source_processing_jobs spj on spj.data_source_id = dl.data_source_id
       where t.id in (
         select id from table_of_contents_items where project_id = project.id and data_layer_id is not null and is_draft = true and data_source_type(data_layer_id) in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster')
-      ) and t.is_draft = true and o.type in ('FlatGeobuf','GeoJSON', 'GeoTIFF')
-      order by t.id, case o.type when 'FlatGeobuf' then 0 when 'GeoJSON' then 1 else 2 end
+      ) and t.is_draft = true and o.type in ('ReportingFlatgeobufV1','FlatGeobuf','GeoJSON', 'GeoTIFF')
+      order by t.id, case o.type when 'ReportingFlatgeobufV1' then 0 when 'FlatGeobuf' then 1 when 'GeoJSON' then 2 else 3 end
       ;
     else
       raise exception 'You are not authorized to view available report layers';
@@ -720,6 +734,8 @@ BEGIN
   END IF;
 END $$;
 
+drop table if exists source_processing_jobs cascade;
+
 create table if not exists source_processing_jobs (
   job_key text primary key default gen_random_uuid()::text,
   progress_percentage integer not null default 0,
@@ -730,7 +746,8 @@ create table if not exists source_processing_jobs (
   updated_at timestamptz not null default now(),
   logs_url text,
   logs_expires_at timestamptz,
-  data_source_id integer not null references data_sources(id) on delete cascade
+  data_source_id integer not null references data_sources(id) on delete cascade,
+  project_id integer not null references projects(id) on delete cascade
 );
 
 create index if not exists source_processing_jobs_data_source_id_idx on public.source_processing_jobs (data_source_id);
@@ -761,7 +778,7 @@ CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint
               progress_percentage = 0,
               progress_message = null,
               updated_at = now()
-          where job_key = job_dep;
+          where job_key = job_dep and state = 'error';
         end if;
         perform graphile_worker.add_job(
           'calculateSpatialMetric',
@@ -775,3 +792,13 @@ CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint
     return true;
   end;
   $$;
+
+alter table data_upload_outputs add column if not exists fgb_header_size integer;
+
+DROP TRIGGER IF EXISTS validate_spatial_metrics_constraints_trigger ON public.spatial_metrics;
+DROP FUNCTION IF EXISTS public.validate_spatial_metrics_constraints;
+
+-- Add unique constraint to ensure only one job per data_source_id
+ALTER TABLE public.source_processing_jobs 
+ADD CONSTRAINT source_processing_jobs_data_source_id_unique UNIQUE (data_source_id);
+

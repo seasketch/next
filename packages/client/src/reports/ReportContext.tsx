@@ -22,6 +22,7 @@ import { ReportConfiguration } from "./cards/cards";
 import { Metric, MetricSubjectFragment } from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 export interface ReportContextState {
   /**
@@ -98,11 +99,12 @@ export interface ReportContextState {
   sketch?: ReportContextSketchDetailsFragment;
   sketchClass?: ReportContextSketchClassDetailsFragment;
   metrics: LocalMetrics;
+  userIsAdmin: boolean;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
 
-type LocalMetric = Metric & {
+export type LocalMetric = Metric & {
   id: number;
   state: SpatialMetricState;
   createdAt: Date;
@@ -125,6 +127,7 @@ export function useReportState(
   selectedSketchId: number | null,
   initialSelectedTabId?: number
 ) {
+  const projectMetadata = useCurrentProjectMetadata();
   const [selectedTabId, setSelectedTabId] = useState<number>(
     initialSelectedTabId || report?.tabs?.[0]?.id || 0
   );
@@ -312,7 +315,9 @@ export function useReportState(
   }, [metricDependencies]);
 
   const [getOrCreateSpatialMetrics, mutationState] =
-    useGetOrCreateSpatialMetricsMutation();
+    useGetOrCreateSpatialMetricsMutation({
+      onError: onError,
+    });
 
   const [
     previouslyFetchedMetricDependencies,
@@ -363,6 +368,7 @@ export function useReportState(
         ?.relatedFragments as MetricSubjectFragment[]) || [],
     loading: sketchReportingDetails.loading,
     metrics,
+    userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
   };
 }
 

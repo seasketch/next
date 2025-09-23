@@ -3248,6 +3248,7 @@ export type DataUploadOutput = Node & {
   /** Reads a single `DataSource` that is related to this `DataUploadOutput`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId?: Maybe<Scalars['Int']>;
+  fgbHeaderSize?: Maybe<Scalars['Int']>;
   filename: Scalars['String'];
   id: Scalars['Int'];
   isCustomUpload?: Maybe<Scalars['Boolean']>;
@@ -6690,29 +6691,6 @@ export type GetOrCreateSpatialMetricsResults = {
   metrics: Array<CompatibleSpatialMetric>;
 };
 
-/** All input for the `getPublishedCardIdFromDraft` mutation. */
-export type GetPublishedCardIdFromDraftInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  draftReportCardId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `getPublishedCardIdFromDraft` mutation. */
-export type GetPublishedCardIdFromDraftPayload = {
-  __typename?: 'GetPublishedCardIdFromDraftPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7805,7 +7783,6 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
-  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -9038,12 +9015,6 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetPublishedCardIdFromDraftArgs = {
-  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -13451,6 +13422,7 @@ export type ReportingLayer = {
   groupBy?: Maybe<Scalars['String']>;
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   meta?: Maybe<Scalars['JSON']>;
+  processingJobId?: Maybe<Scalars['String']>;
   remote?: Maybe<Scalars['String']>;
   size?: Maybe<Scalars['BigInt']>;
   stableId?: Maybe<Scalars['String']>;
@@ -22264,7 +22236,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
 
 export type ReportingLayerDetailsFragment = (
   { __typename?: 'ReportingLayer' }
-  & Pick<ReportingLayer, 'stableId' | 'title' | 'tableOfContentsItemId' | 'type' | 'url' | 'size' | 'meta' | 'mapboxGlStyles' | 'groupBy'>
+  & Pick<ReportingLayer, 'stableId' | 'title' | 'tableOfContentsItemId' | 'type' | 'url' | 'size' | 'meta' | 'mapboxGlStyles' | 'groupBy' | 'processingJobId'>
 );
 
 export type ReportCardDetailsFragment = (
@@ -25970,6 +25942,7 @@ export const ReportingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
   meta
   mapboxGlStyles
   groupBy
+  processingJobId
 }
     `;
 export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`

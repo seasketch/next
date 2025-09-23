@@ -4,14 +4,13 @@ import {
   SourceType,
   subjectIsFragment,
 } from "overlay-engine";
-import { useReportContext } from "../ReportContext";
+import { LocalMetric, useReportContext } from "../ReportContext";
 import { useState, useEffect, useRef, useMemo } from "react";
 import {
   MetricSourceType,
   SpatialMetricDependency,
   SpatialMetricState,
 } from "../../generated/graphql";
-import { useErrorBoundary } from "react-error-boundary";
 
 let idCounter = 0;
 
@@ -45,9 +44,7 @@ export function useMetrics<
     sourceType: SourceType;
   }[];
 }) {
-  const [loading, setLoading] = useState(true);
   const reportContext = useReportContext();
-  const { showBoundary, resetBoundary } = useErrorBoundary();
 
   // Create a stable numeric ID that never changes for this hook instance
   const stableId = useRef(createStableId()).current;
@@ -55,12 +52,6 @@ export function useMetrics<
   useEffect(() => {
     if (!reportContext.sketch?.id) {
       return;
-    }
-
-    if (Array.isArray(options.layers) && options.layers.length === 0) {
-      const e = new Error("No layers selected");
-      delete e.stack;
-      throw e;
     }
 
     const dependencies: SpatialMetricDependency[] = [];
@@ -144,27 +135,15 @@ export function useMetrics<
     const errors = data
       .filter((m) => m.state === SpatialMetricState.Error)
       .map((m) => m.errorMessage || "Unknown error");
+
     return errors;
   }, [data]);
 
-  if (errors.length > 0) {
-    const e = new Error(`Error fetching ${options.type} metrics`);
-    // @ts-ignore
-    e.errorMessages = errors;
-    // @ts-ignore
-    e.failedMetrics = data
-      .filter((m) => m.state === SpatialMetricState.Error)
-      .map((m) => m.id);
-    // This trick hides the create-react-app error overlay in development mode
-    // https://github.com/facebook/create-react-app/issues/6530#issuecomment-768517453
-    delete e.stack;
-    showBoundary(e);
-  }
-
   return {
-    data: data as unknown as MetricTypeMap[T][],
+    data: data as unknown as MetricTypeMap[T][] &
+      Pick<LocalMetric, "id" | "state" | "errorMessage">[],
     loading:
-      data.length === 0 ||
+      // data.length === 0 ||
       data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0,
     errors,
   };

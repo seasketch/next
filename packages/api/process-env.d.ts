@@ -54,5 +54,6 @@ declare namespace NodeJS {
     OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: string;
     OVERLAY_WORKER_DEV_HANDLER?: string;
     OVERLAY_WORKER_LAMBDA_ARN?: string;
+    SUBDIVISION_WORKER_LAMBDA_ARN?: string;
   }
 }

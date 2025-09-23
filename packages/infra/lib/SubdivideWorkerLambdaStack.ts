@@ -12,7 +12,7 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
     const fn = new lambda.DockerImageFunction(this, "SubdivisionWorker", {
       functionName: "SubdivisionWorker",
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(__dirname, "../../subdivide-worker"),
+        path.join(__dirname, "../../subdivision-worker"),
         {}
       ),
       timeout: cdk.Duration.minutes(15),

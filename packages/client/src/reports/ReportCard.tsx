@@ -4,7 +4,7 @@ import {
   getCardComponent,
   ReportCardConfigUpdateCallback,
 } from "./registerCard";
-import { useReportContext } from "./ReportContext";
+import { LocalMetric, useReportContext } from "./ReportContext";
 import {
   InfoCircledIcon,
   ExclamationTriangleIcon,
@@ -13,13 +13,23 @@ import {
 } from "@radix-ui/react-icons";
 import { TrashIcon } from "@heroicons/react/outline";
 import { FormLanguageContext } from "../formElements/FormElement";
-import { useContext, useCallback, useEffect, Component, useState } from "react";
+import {
+  useContext,
+  useCallback,
+  useEffect,
+  Component,
+  useState,
+  useMemo,
+} from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
-import { useRetryFailedSpatialMetricsMutation } from "../generated/graphql";
+import {
+  SpatialMetricState,
+  useRetryFailedSpatialMetricsMutation,
+} from "../generated/graphql";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -32,6 +42,7 @@ export type ReportCardComponentProps = {
   cardId?: number; // ID of the card for edit functionality
   onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
+  metrics: Pick<LocalMetric, "id" | "state" | "errorMessage">[];
 };
 
 // Icon mapping for named icons (no color classes, will inherit from parent)
@@ -51,6 +62,7 @@ export default function ReportCard({
   onUpdate,
   config,
   className,
+  metrics,
 }: ReportCardComponentProps & {
   config: ReportCardConfiguration<any>;
 }) {
@@ -59,6 +71,33 @@ export default function ReportCard({
     useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
+
+  const { errors, failedMetrics } = useMemo(() => {
+    const errors = {} as { [key: string]: number };
+    const failedMetrics = [] as number[];
+    for (const metric of metrics) {
+      if (metric.state === SpatialMetricState.Error) {
+        let errorMessage = metric.errorMessage || "Unknown error";
+        if (errorMessage in errors) {
+          errors[errorMessage]++;
+        } else {
+          errors[errorMessage] = 1;
+        }
+        failedMetrics.push(metric.id);
+      }
+    }
+    return { errors, failedMetrics };
+  }, [metrics]);
+
+  const [retry, retryState] = useRetryFailedSpatialMetricsMutation({
+    variables: {
+      metricIds: failedMetrics,
+    },
+  });
+
+  if (Object.keys(errors).length > 0) {
+    tint = "text-red-500";
+  }
 
   const handleBodyUpdate = useCallback(
     (newBody: any) => {
@@ -87,6 +126,9 @@ export default function ReportCard({
   );
 
   const getBackgroundClasses = () => {
+    if (Object.keys(errors).length > 0) {
+      return "bg-red-50 border border-red-500/10";
+    }
     switch (backgroundTint) {
       case "blue":
         return "bg-blue-50 border border-blue-500/10";
@@ -176,11 +218,46 @@ export default function ReportCard({
           />
         )}
       </div>
-      {children && (
-        <>
-          <div className="p-4 text-sm pt-0">{children}</div>
-        </>
-      )}
+
+      <div className="p-4 text-sm pt-0 pb-1">
+        {Object.keys(errors).length > 0 ? (
+          <>
+            <p>
+              <Trans ns="sketching">
+                There was a problem calculating metrics for this card.
+              </Trans>
+            </p>
+            <ul className="list-disc pl-4 pt-2">
+              {Object.entries(errors).map(([msg, count]) => (
+                <li key={msg}>
+                  {msg}{" "}
+                  {count > 1 && (
+                    <Badge variant="error">
+                      {count}
+                      {t("x")}
+                    </Badge>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {failedMetrics.length && (
+              <div className="mt-2">
+                <Button
+                  onClick={() => {
+                    retry();
+                  }}
+                  label={t("Retry calculations")}
+                  small
+                  disabled={retryState.loading}
+                  loading={retryState.loading}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 }
@@ -205,6 +282,10 @@ export function ReportCardFactory({
         cardId={config.id}
         onUpdate={onUpdate}
         config={config}
+        metrics={[]}
+        backgroundTint="red"
+        tint="text-red-500"
+        icon="error"
       >
         <div>
           <p>{t("Unknown Card Type: {{cardType}}", { cardType })}</p>
@@ -213,119 +294,11 @@ export function ReportCardFactory({
     );
   }
   return (
-    <ErrorBoundary
-      fallbackRender={(props) => (
-        <ErrorFallback
-          {...props}
-          config={config}
-          onUpdate={onUpdate}
-          dragHandleProps={dragHandleProps}
-          cardId={config.id}
-          error={props.error}
-        />
-      )}
-    >
-      <CardComponent
-        config={config}
-        dragHandleProps={dragHandleProps}
-        cardId={config.id}
-        onUpdate={onUpdate}
-      />
-    </ErrorBoundary>
-  );
-}
-
-function ErrorFallback({
-  config,
-  onUpdate,
-  dragHandleProps,
-  cardId,
-  error,
-}: {
-  config: ReportCardConfiguration<any>;
-  onUpdate?: ReportCardConfigUpdateCallback;
-  dragHandleProps?: any;
-  cardId?: number;
-  error: any;
-}) {
-  const { t } = useTranslation("sketching");
-  const reportContext = useReportContext();
-  const { resetBoundary } = useErrorBoundary();
-
-  const [didMount, setDidMount] = useState(false);
-
-  useEffect(() => {
-    if (didMount) {
-      resetBoundary();
-    } else {
-      setDidMount(true);
-    }
-  }, [reportContext.metrics]);
-
-  const errors = {} as { [key: string]: number };
-  if ("errorMessages" in error && Array.isArray(error.errorMessages)) {
-    for (const msg of error.errorMessages) {
-      if (msg in errors) {
-        errors[msg]++;
-      } else {
-        errors[msg] = 1;
-      }
-    }
-  }
-
-  const [retry, retryState] = useRetryFailedSpatialMetricsMutation({
-    variables: {
-      metricIds: error.failedMetrics || [],
-    },
-  });
-
-  return (
-    <ReportCard
+    <CardComponent
       config={config}
-      backgroundTint="red"
-      tint="text-red-500"
+      dragHandleProps={dragHandleProps}
       cardId={config.id}
       onUpdate={onUpdate}
-      dragHandleProps={dragHandleProps}
-      key={config.id}
-    >
-      {Object.keys(errors).length > 0 ? (
-        <>
-          <p>
-            <Trans ns="sketching">
-              There was a problem calculating metrics for this card.
-            </Trans>
-          </p>
-          <ul className="list-disc pl-4 pt-2">
-            {Object.entries(errors).map(([msg, count]) => (
-              <li key={msg}>
-                {msg}{" "}
-                {count > 1 && (
-                  <Badge variant="error">
-                    {count}
-                    {t("x")}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-          {error.failedMetrics?.length && (
-            <div className="mt-2">
-              <Button
-                onClick={() => {
-                  retry();
-                }}
-                label={t("Retry calculations")}
-                small
-                disabled={retryState.loading}
-                loading={retryState.loading}
-              />
-            </div>
-          )}
-        </>
-      ) : (
-        <p>{error.message}</p>
-      )}
-    </ReportCard>
+    />
   );
 }

@@ -33,19 +33,19 @@ export function AddCardModal({
 
   const availableCardTypes = getAvailableCardTypes();
 
-  const [step, setStep] = useState<"chooseType" | "chooseLayers">("chooseType");
-  const [selectedType, setSelectedType] = useState<string | null>(null);
-  const [selectedLayerStableIds, setSelectedLayerStableIds] = useState<
-    string[]
-  >([]);
-  const [groupByByStableId, setGroupByByStableId] = useState<
-    Record<string, string | undefined>
-  >({});
+  const [modalState, setModalState] = useState({
+    step: "chooseType" as "chooseType" | "chooseLayers",
+    selectedType: null as string | null,
+    selectedLayerStableIds: [] as string[],
+    groupByByStableId: {} as Record<string, string | undefined>,
+  });
   const [availableLayers, setAvailableLayers] = useState<ReportingLayer[]>([]);
 
   const registration = useMemo(() => {
-    return selectedType ? getCardRegistration(selectedType as any) : null;
-  }, [selectedType]);
+    return modalState.selectedType
+      ? getCardRegistration(modalState.selectedType as any)
+      : null;
+  }, [modalState.selectedType]);
 
   function withGroupBy(layer: any, groupBy?: string) {
     if (!groupBy) return layer;
@@ -58,10 +58,13 @@ export function AddCardModal({
   // Always start on type selection when modal opens
   useEffect(() => {
     if (isOpen) {
-      setStep("chooseType");
-      setSelectedType(null);
-      setSelectedLayerStableIds([]);
-      setGroupByByStableId({});
+      setModalState({
+        step: "chooseType",
+        selectedType: null,
+        selectedLayerStableIds: [],
+        groupByByStableId: {},
+      });
+      setAvailableLayers([]);
     }
   }, [isOpen]);
 
@@ -85,7 +88,7 @@ export function AddCardModal({
       footerClassName="border-t"
       zeroPadding={true}
       footer={
-        step === "chooseType"
+        modalState.step === "chooseType"
           ? [
               {
                 label: t("Cancel"),
@@ -97,9 +100,12 @@ export function AddCardModal({
               {
                 label: t("Back"),
                 onClick: () => {
-                  setStep("chooseType");
-                  setSelectedType(null);
-                  setSelectedLayerStableIds([]);
+                  setModalState((prev) => ({
+                    ...prev,
+                    step: "chooseType",
+                    selectedType: null,
+                    selectedLayerStableIds: [],
+                  }));
                 },
                 variant: "secondary",
               },
@@ -107,22 +113,27 @@ export function AddCardModal({
                 label: t("Add"),
                 variant: "primary",
                 onClick: () => {
-                  if (!selectedType) return;
+                  if (!modalState.selectedType) return;
                   const allLayers = availableLayers || [];
                   const selectedLayers: ReportingLayer[] = allLayers
                     .filter((l) =>
-                      selectedLayerStableIds.includes(l.stableId as string)
+                      modalState.selectedLayerStableIds.includes(
+                        l.stableId as string
+                      )
                     )
                     .map((l) =>
-                      withGroupBy(l, groupByByStableId[l.stableId as string])
+                      withGroupBy(
+                        l,
+                        modalState.groupByByStableId[l.stableId as string]
+                      )
                     ) as any;
-                  onSelect(selectedType, selectedLayers);
+                  onSelect(modalState.selectedType, selectedLayers);
                   onClose();
                 },
                 disabled: (() => {
                   const min = registration?.minimumReportingLayerCount || 0;
                   const max = registration?.maximumReportingLayerCount;
-                  const count = selectedLayerStableIds.length;
+                  const count = modalState.selectedLayerStableIds.length;
                   if (count < min) return true;
                   if (typeof max === "number" && count > max) return true;
                   return false;
@@ -132,7 +143,7 @@ export function AddCardModal({
       }
     >
       <div className="w-128">
-        {step === "chooseType" ? (
+        {modalState.step === "chooseType" ? (
           <div className="space-y-4 flex flex-col">
             <p className="text-sm text-gray-500 flex-none px-6">
               {t("Choose a card type to add to the current tab.")}
@@ -151,8 +162,11 @@ export function AddCardModal({
                     onClick={() => {
                       const reg = getCardRegistration(cardType);
                       if (reg && reg.minimumReportingLayerCount > 0) {
-                        setSelectedType(cardType);
-                        setStep("chooseLayers");
+                        setModalState((prev) => ({
+                          ...prev,
+                          selectedType: cardType,
+                          step: "chooseLayers",
+                        }));
                       } else {
                         onSelect(cardType, []);
                         onClose();
@@ -211,11 +225,27 @@ export function AddCardModal({
         ) : (
           <LayerSelectionStep
             registration={registration}
-            selectedLayerStableIds={selectedLayerStableIds}
-            setSelectedLayerStableIds={setSelectedLayerStableIds}
-            groupByByStableId={groupByByStableId}
-            setGroupByByStableId={setGroupByByStableId}
-            onAvailableLayersChange={(layers) => setAvailableLayers(layers)}
+            selectedLayerStableIds={modalState.selectedLayerStableIds}
+            setSelectedLayerStableIds={(value) =>
+              setModalState((prev) => ({
+                ...prev,
+                selectedLayerStableIds:
+                  typeof value === "function"
+                    ? value(prev.selectedLayerStableIds)
+                    : value,
+              }))
+            }
+            groupByByStableId={modalState.groupByByStableId}
+            setGroupByByStableId={(value) =>
+              setModalState((prev) => ({
+                ...prev,
+                groupByByStableId:
+                  typeof value === "function"
+                    ? value(prev.groupByByStableId)
+                    : value,
+              }))
+            }
+            onAvailableLayersChange={setAvailableLayers}
           />
         )}
       </div>

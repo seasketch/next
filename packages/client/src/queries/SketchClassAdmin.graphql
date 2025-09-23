@@ -385,6 +385,7 @@ fragment ReportingLayerDetails on ReportingLayer {
   meta
   mapboxGlStyles
   groupBy
+  processingJobId
 }
 
 fragment ReportCardDetails on ReportCard {

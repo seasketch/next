@@ -1,5 +1,6 @@
 import { Context } from "aws-lambda";
 import handler, { validatePayload } from "./overlay-worker";
+import { sendErrorMessage } from "./messaging";
 
 export const lambdaHandler = async (
   event: any,
@@ -12,10 +13,24 @@ export const lambdaHandler = async (
 
   console.log(`Starting job ${payload.jobKey}`);
 
+  console.log("Payload", payload);
   // Validate the payload
   try {
     validatePayload(payload);
   } catch (e) {
+    if (
+      typeof payload === "object" &&
+      "jobKey" in payload &&
+      "queueUrl" in payload
+    ) {
+      await sendErrorMessage(
+        payload.jobKey,
+        e instanceof Error ? e.message : "OverlayWorkerPayloadValidationError",
+        payload.queueUrl
+      );
+    }
+
+    console.error(e);
     return {
       statusCode: 400,
       body: JSON.stringify({

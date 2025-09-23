@@ -37,6 +37,7 @@ export function TextBlockCard({
       onUpdate={onUpdate}
       config={config}
       className="pb-2"
+      metrics={[]}
     />
   );
 }

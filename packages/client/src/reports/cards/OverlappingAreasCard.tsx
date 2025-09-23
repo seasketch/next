@@ -11,7 +11,10 @@ import {
   ShadowNoneIcon,
   ValueNoneIcon,
 } from "@radix-ui/react-icons";
-import { DataUploadOutputType } from "../../generated/graphql";
+import {
+  DataUploadOutputType,
+  SpatialMetricState,
+} from "../../generated/graphql";
 import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
 import { isRasterInfo } from "@seasketch/geostats-types";
@@ -218,6 +221,7 @@ export function OverlappingAreasCard({
       className="pb-2"
       tint={config.tint}
       icon={config.icon}
+      metrics={overlayMetrics.data}
     >
       <div>
         {config.reportingLayers.length === 0 && (

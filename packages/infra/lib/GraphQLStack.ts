@@ -37,6 +37,7 @@ export class GraphQLStack extends cdk.Stack {
       spatialUploadsHandlerArn: string;
       overlayWorkerArn: string;
       uploadHandler: lambda.DockerImageFunction;
+      subdivisionWorkerLambdaArn: string;
     }
   ) {
     super(scope, id, props);
@@ -171,6 +172,7 @@ export class GraphQLStack extends cdk.Stack {
             PMTILES_SERVER_ZONE: process.env.PMTILES_SERVER_ZONE,
             GOOGLE_MAPS_2D_TILE_API_KEY:
               process.env.GOOGLE_MAPS_2D_TILE_API_KEY,
+            SUBDIVISION_WORKER_LAMBDA_ARN: props.subdivisionWorkerLambdaArn,
           },
           containerPort: 3857,
         },
