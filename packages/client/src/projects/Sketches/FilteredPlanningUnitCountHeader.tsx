@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { Trans } from "react-i18next";
 import { FilterInputServiceContext } from "../../formElements/FilterInputContext";
 import Spinner from "../../components/Spinner";
+import * as Slider from "@radix-ui/react-slider";
 
 const NumberFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 1,
@@ -59,6 +60,38 @@ export default function FilteredPlanningUnitCountHeader() {
           )}
         </div>
       )}
+      <div className={`w-full items-center py-1 pb-2 px-4`}>
+        <h3 className="text-sm font-medium">
+          <div>
+            <Trans ns="sketching">Cell Layer Opacity</Trans>{" "}
+            {Math.round(context.opacity * 100)}%
+          </div>
+          <span className="text-xs text-gray-500">
+            <Trans ns="sketching">
+              Adjust the opacity if needed to better see layers underneath.
+            </Trans>
+          </span>
+        </h3>
+        <Slider.Root
+          className="relative flex h-5 w-full touch-none select-none items-center"
+          value={[context.opacity]}
+          onValueChange={(e) => {
+            context.setOpacity(e[0]);
+          }}
+          defaultValue={[1]}
+          max={1}
+          min={0}
+          step={0.05}
+        >
+          <Slider.Track className="relative h-[3px] grow rounded-full bg-gray-200">
+            <Slider.Range className="absolute h-full rounded-full bg-blue-500" />
+          </Slider.Track>
+          <Slider.Thumb
+            className="block size-5 rounded-full bg-blue-500 shadow focus:outline-none"
+            aria-label="Volume"
+          />
+        </Slider.Root>
+      </div>
     </div>
   );
 }

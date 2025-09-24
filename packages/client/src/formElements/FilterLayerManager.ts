@@ -80,6 +80,7 @@ export class FilterLayerManager {
   private currentLayerCount = 0;
   // eslint-disable-next-line i18next/no-literal-string
   private layerId = `filter-layer-${Math.random().toString(36).substring(7)}`;
+  opacity = 1;
 
   constructor(
     location: string,
@@ -192,6 +193,10 @@ export class FilterLayerManager {
           id: newLayerId,
           ...LayerTemplate,
           source: newLayerId,
+          paint: {
+            ...LayerTemplate.paint,
+            "fill-opacity": LayerTemplate.paint["fill-opacity"] * this.opacity,
+          },
         } as FillLayer);
 
         map.on("sourcedata", () => {
@@ -255,6 +260,24 @@ export class FilterLayerManager {
       }
     }
   }
+
+  setOpacity = (opacity: number) => {
+    if (opacity > 1 || opacity < 0) {
+      throw new Error("Opacity should be between 0 and 1");
+    }
+    this.opacity = opacity;
+    const currentLayerId = `${this.layerId}-${this.currentLayerCount}`;
+    const currentLayer = this.mapContext.map?.getLayer(
+      currentLayerId
+    ) as FillLayer;
+    if (currentLayer && this.mapContext.map) {
+      this.mapContext.map.setPaintProperty(
+        currentLayerId,
+        "fill-opacity",
+        opacity * LayerTemplate.paint["fill-opacity"]
+      );
+    }
+  };
 
   debouncedRemoveStaleLayers = debounce(this.removeStaleLayers, 10);
 }
