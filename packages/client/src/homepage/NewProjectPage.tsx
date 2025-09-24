@@ -27,6 +27,12 @@ const logos = [
     url: "https://tnc.org",
   },
 
+  {
+    title: "The Government of Brazil",
+    src: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/81facf3b-bac7-41d2-53d8-a63af8f6e200/thumbnail",
+    url: "https://www.gov.br/",
+  },
+
   // {
   //   title: "NOAA",
   //   src: "/logos/NOAA.svg",
@@ -104,9 +110,12 @@ export default function NewProjectPage() {
                 {t("Trusted by")}
               </p>
               <div className="mt-5 w-full sm:mx-auto sm:max-w-lg lg:ml-0">
-                <div className="flex flex-wrap justify-between items-center">
+                <div className="flex flex-nowrap items-center space-x-3">
                   {logos.map((user) => (
-                    <div key={user.title} className="flex justify-center px-1">
+                    <div
+                      key={user.title}
+                      className="flex justify-center px-1 flex-shrink-0 max-w-28 sm:max-w-none"
+                    >
                       <a href={user.url}>
                         <img
                           style={{

@@ -17,11 +17,11 @@ const logos = [
     src: "/logos/waitt.webp",
     url: "https://www.waittinstitute.org/",
   },
-  {
-    alt: "Blue Prosperity Coalition",
-    src: "/logos/BPCLogo3.png",
-    url: "https://www.blueprosperity.org/",
-  },
+  // {
+  //   alt: "Blue Prosperity Coalition",
+  //   src: "/logos/BPCLogo3.png",
+  //   url: "https://www.blueprosperity.org/",
+  // },
   {
     alt: "The Nature Conservancy",
     src: "/logos/tnc.svg",
@@ -31,6 +31,11 @@ const logos = [
     alt: "Oceans 5",
     src: "/logos/oceans-5.png",
     url: "https://oceans5.org/",
+  },
+  {
+    alt: "The Government of Brazil",
+    src: "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/81facf3b-bac7-41d2-53d8-a63af8f6e200/thumbnail",
+    url: "https://www.gov.br/",
   },
   {
     alt: "Oceano Azul",
