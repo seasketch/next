@@ -58,10 +58,16 @@ export async function createApiKey(
  */
 export async function verify(
   apiKeyToken: string,
-  client: DBClient
+  client: DBClient,
+  maxAge?: string
 ): Promise<false | { projectId: number; createdBy: number; label: string }> {
   try {
-    const verified = await jwks.verify(client, apiKeyToken, `seasketch.org`);
+    const verified = await jwks.verify(
+      client,
+      apiKeyToken,
+      `seasketch.org`,
+      maxAge
+    );
     const claims = decode(apiKeyToken);
     if (verified && claims && typeof claims === "object") {
       if (!claims.id) {

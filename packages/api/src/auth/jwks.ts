@@ -159,7 +159,8 @@ export async function getPublicKey(client: DBClient, kid: string) {
 export async function verify<Claims>(
   client: DBClient,
   token: string,
-  issuer: string | string[]
+  issuer: string | string[],
+  maxAge?: string
 ): Promise<Claims & JWTClaims> {
   const getKey = async (
     header: jwt.JwtHeader,
@@ -183,7 +184,7 @@ export async function verify<Claims>(
       getKey,
       {
         algorithms: ["RS256"],
-        maxAge: "90 days",
+        maxAge: maxAge || "90 days",
         issuer: issuerArray as [string, ...string[]],
       },
       (err: jwt.VerifyErrors | null, token: any) => {
