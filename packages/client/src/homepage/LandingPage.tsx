@@ -12,16 +12,16 @@ export type TrustedPartnerLogo = {
 };
 
 const logos = [
-  {
-    alt: "Waitt Institute",
-    src: "/logos/waitt.webp",
-    url: "https://www.waittinstitute.org/",
-  },
   // {
-  //   alt: "Blue Prosperity Coalition",
-  //   src: "/logos/BPCLogo3.png",
-  //   url: "https://www.blueprosperity.org/",
+  //   alt: "Waitt Institute",
+  //   src: "/logos/waitt.webp",
+  //   url: "https://www.waittinstitute.org/",
   // },
+  {
+    alt: "Blue Prosperity Coalition",
+    src: "/logos/BPCLogo3.png",
+    url: "https://www.blueprosperity.org/",
+  },
   {
     alt: "The Nature Conservancy",
     src: "/logos/tnc.svg",
