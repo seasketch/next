@@ -921,6 +921,7 @@ export type CompatibleSpatialMetric = {
   includedProperties?: Maybe<Array<Scalars['String']>>;
   jobKey?: Maybe<Scalars['String']>;
   progress?: Maybe<Scalars['Int']>;
+  sourceProcessingJobDependency?: Maybe<Scalars['String']>;
   stableId?: Maybe<Scalars['String']>;
   state: SpatialMetricState;
   subject: MetricSubject;
@@ -2762,6 +2763,13 @@ export type DataSource = Node & {
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
   scheme?: Maybe<TileScheme>;
+  /** Reads a single `SourceProcessingJob` that is related to this `DataSource`. */
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
+  /**
+   * Reads and enables pagination through a set of `SourceProcessingJob`.
+   * @deprecated Please use sourceProcessingJob instead
+   */
+  sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
   supportsDynamicLayers: Scalars['Boolean'];
   /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
@@ -2862,6 +2870,24 @@ export type DataSourceQuotaUsedArgs = {
 export type DataSourceRelatedTableOfContentsItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceSourceProcessingJobsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SourceProcessingJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SourceProcessingJobsOrderBy>>;
 };
 
 export enum DataSourceImportTypes {
@@ -10549,6 +10575,10 @@ export type Project = Node & {
   sketchGeometryToken?: Maybe<Scalars['String']>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
+  /** Reads and enables pagination through a set of `SourceProcessingJob`. */
+  sourceProcessingJobs?: Maybe<Array<SourceProcessingJob>>;
+  /** Reads and enables pagination through a set of `SourceProcessingJob`. */
+  sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
   supportedLanguages: Array<Maybe<Scalars['String']>>;
@@ -10912,6 +10942,31 @@ export type ProjectSketchClassesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSourceProcessingJobsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSourceProcessingJobsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SourceProcessingJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SourceProcessingJobsOrderBy>>;
 };
 
 
@@ -11828,6 +11883,12 @@ export type Query = Node & {
   sketchFolderByNodeId?: Maybe<SketchFolder>;
   /** Reads and enables pagination through a set of `SketchFolder`. */
   sketchFoldersConnection?: Maybe<SketchFoldersConnection>;
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
+  sourceProcessingJobByDataSourceId?: Maybe<SourceProcessingJob>;
+  /** Reads a single `SourceProcessingJob` using its globally unique `ID`. */
+  sourceProcessingJobByNodeId?: Maybe<SourceProcessingJob>;
+  /** Reads and enables pagination through a set of `SourceProcessingJob`. */
+  sourceProcessingJobsConnection?: Maybe<SourceProcessingJobsConnection>;
   sprite?: Maybe<Sprite>;
   /** Reads a single `Sprite` using its globally unique `ID`. */
   spriteByNodeId?: Maybe<Sprite>;
@@ -12801,6 +12862,36 @@ export type QuerySketchFoldersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobArgs = {
+  jobKey: Scalars['String'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobByDataSourceIdArgs = {
+  dataSourceId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SourceProcessingJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SourceProcessingJobsOrderBy>>;
 };
 
 
@@ -14366,6 +14457,86 @@ export enum SortByDirection {
   Desc = 'DESC'
 }
 
+export type SourceProcessingJob = Node & {
+  __typename?: 'SourceProcessingJob';
+  createdAt: Scalars['Datetime'];
+  /** Reads a single `DataSource` that is related to this `SourceProcessingJob`. */
+  dataSource?: Maybe<DataSource>;
+  dataSourceId: Scalars['Int'];
+  errorMessage?: Maybe<Scalars['String']>;
+  jobKey: Scalars['String'];
+  logsExpiresAt?: Maybe<Scalars['Datetime']>;
+  logsUrl?: Maybe<Scalars['String']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  progressMessage?: Maybe<Scalars['String']>;
+  progressPercentage: Scalars['Int'];
+  /** Reads a single `Project` that is related to this `SourceProcessingJob`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  state: SpatialMetricState;
+  updatedAt: Scalars['Datetime'];
+};
+
+/**
+ * A condition to be used against `SourceProcessingJob` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type SourceProcessingJobCondition = {
+  /** Checks for equality with the object’s `dataSourceId` field. */
+  dataSourceId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `jobKey` field. */
+  jobKey?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `updatedAt` field. */
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
+
+export type SourceProcessingJobSubscriptionPayload = {
+  __typename?: 'SourceProcessingJobSubscriptionPayload';
+  job: SourceProcessingJob;
+  jobKey: Scalars['String'];
+  projectId: Scalars['Int'];
+};
+
+/** A connection to a list of `SourceProcessingJob` values. */
+export type SourceProcessingJobsConnection = {
+  __typename?: 'SourceProcessingJobsConnection';
+  /** A list of edges which contains the `SourceProcessingJob` and cursor to aid in pagination. */
+  edges: Array<SourceProcessingJobsEdge>;
+  /** A list of `SourceProcessingJob` objects. */
+  nodes: Array<SourceProcessingJob>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SourceProcessingJob` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `SourceProcessingJob` edge in the connection. */
+export type SourceProcessingJobsEdge = {
+  __typename?: 'SourceProcessingJobsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `SourceProcessingJob` at the end of the edge. */
+  node: SourceProcessingJob;
+};
+
+/** Methods to use when ordering `SourceProcessingJob`. */
+export enum SourceProcessingJobsOrderBy {
+  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
+  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
+  JobKeyAsc = 'JOB_KEY_ASC',
+  JobKeyDesc = 'JOB_KEY_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC',
+  UpdatedAtAsc = 'UPDATED_AT_ASC',
+  UpdatedAtDesc = 'UPDATED_AT_DESC'
+}
+
 export type SpatialMetricDependency = {
   geographyIds?: Maybe<Array<Scalars['Int']>>;
   groupBy?: Maybe<Scalars['String']>;
@@ -14380,6 +14551,7 @@ export type SpatialMetricDependency = {
 
 export enum SpatialMetricState {
   Complete = 'COMPLETE',
+  DependencyNotReady = 'DEPENDENCY_NOT_READY',
   Error = 'ERROR',
   Processing = 'PROCESSING',
   Queued = 'QUEUED'
@@ -14507,6 +14679,7 @@ export type Subscription = {
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
   sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
+  sourceProcessingJobs?: Maybe<SourceProcessingJobSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
@@ -14535,6 +14708,12 @@ export type SubscriptionGeographyMetricsArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionSketchMetricsArgs = {
   sketchId: Scalars['Int'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionSourceProcessingJobsArgs = {
+  projectId: Scalars['Int'];
 };
 
 
@@ -22502,6 +22681,27 @@ export type AvailableReportLayersQuery = (
   )> }
 );
 
+export type SourceProcessingJobDetailsFragment = (
+  { __typename?: 'SourceProcessingJob' }
+  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt'>
+);
+
+export type SourceProcessingJobsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type SourceProcessingJobsQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & { sourceProcessingJobs?: Maybe<Array<(
+      { __typename?: 'SourceProcessingJob' }
+      & SourceProcessingJobDetailsFragment
+    )>> }
+  )> }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
@@ -22838,7 +23038,7 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceProcessingJobDependency'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
@@ -25838,6 +26038,15 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const SourceProcessingJobDetailsFragmentDoc = gql`
+    fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+}
+    `;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -26064,6 +26273,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
   jobKey
   stableId
   groupBy
+  sourceProcessingJobDependency
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
@@ -34821,6 +35031,43 @@ export function useAvailableReportLayersLazyQuery(baseOptions?: Apollo.LazyQuery
 export type AvailableReportLayersQueryHookResult = ReturnType<typeof useAvailableReportLayersQuery>;
 export type AvailableReportLayersLazyQueryHookResult = ReturnType<typeof useAvailableReportLayersLazyQuery>;
 export type AvailableReportLayersQueryResult = Apollo.QueryResult<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>;
+export const SourceProcessingJobsDocument = gql`
+    query SourceProcessingJobs($projectId: Int!) {
+  project(id: $projectId) {
+    sourceProcessingJobs {
+      ...SourceProcessingJobDetails
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+
+/**
+ * __useSourceProcessingJobsQuery__
+ *
+ * To run a query within a React component, call `useSourceProcessingJobsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSourceProcessingJobsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSourceProcessingJobsQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useSourceProcessingJobsQuery(baseOptions: Apollo.QueryHookOptions<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>(SourceProcessingJobsDocument, options);
+      }
+export function useSourceProcessingJobsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>(SourceProcessingJobsDocument, options);
+        }
+export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourceProcessingJobsQuery>;
+export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
+export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -38543,6 +38790,7 @@ export const namedOperations = {
     SketchClassGeographyEditorDetails: 'SketchClassGeographyEditorDetails',
     DraftReport: 'DraftReport',
     AvailableReportLayers: 'AvailableReportLayers',
+    SourceProcessingJobs: 'SourceProcessingJobs',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -38844,6 +39092,7 @@ export const namedOperations = {
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
+    SourceProcessingJobDetails: 'SourceProcessingJobDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

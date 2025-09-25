@@ -322,6 +322,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   jobKey
   stableId
   groupBy
+  sourceProcessingJobDependency
 }
 
 mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {

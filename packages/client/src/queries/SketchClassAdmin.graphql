@@ -588,3 +588,19 @@ query AvailableReportLayers($slug: String!) {
     }
   }
 }
+
+fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+}
+
+query SourceProcessingJobs($projectId: Int!) {
+  project(id: $projectId) {
+    sourceProcessingJobs {
+      ...SourceProcessingJobDetails
+    }
+  }
+}

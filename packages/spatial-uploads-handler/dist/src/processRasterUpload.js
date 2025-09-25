@@ -135,9 +135,13 @@ async function createPMTiles(path, logger, workingDirectory, jobId, layerName, p
             "-co",
             "BLOCKSIZE=512",
             "-co",
-            "RESAMPLING=NEAREST",
+            "RESAMPLING=CUBIC",
             "-co",
             `NAME=${layerName}`,
+            // `-co`,
+            // `TILE_FORMAT=webp`,
+            // `-co`,
+            // `QUALITY=100`,
             path,
             mbtilesPath,
         ],
@@ -171,9 +175,9 @@ async function createPMTiles(path, logger, workingDirectory, jobId, layerName, p
             "gdaladdo",
             [
                 "-r",
-                presentation === geostats_types_1.SuggestedRasterPresentation.rgb
-                    ? "cubic"
-                    : "nearest",
+                // presentation === SuggestedRasterPresentation.rgb
+                "cubic",
+                // : "nearest",
                 mbtilesPath,
                 ...overviews.map((o) => o.toString()),
             ],

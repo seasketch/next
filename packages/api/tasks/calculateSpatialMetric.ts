@@ -277,14 +277,21 @@ async function assignSubdivisionJob(
   const arn = process.env.SUBDIVISION_WORKER_LAMBDA_ARN;
   await helpers.withPgClient(async (client) => {
     const existingJob = await client.query(
-      `select job_key from source_processing_jobs where data_source_id = $1`,
+      `select job_key, state from source_processing_jobs where data_source_id = $1`,
       [sourceId]
     );
     if (existingJob.rows.length > 0) {
-      await client.query(
-        `update spatial_metrics set source_processing_job_dependency = $1 where id = $2`,
-        [existingJob.rows[0].job_key, metricId]
-      );
+      if (existingJob.rows[0].state === "complete") {
+        await client.query(
+          `update spatial_metrics set source_processing_job_dependency = $1 where id = $2`,
+          [existingJob.rows[0].job_key, metricId]
+        );
+      } else {
+        await client.query(
+          `update spatial_metrics set state = 'dependency_not_ready', source_processing_job_dependency = $1 where id = $2`,
+          [existingJob.rows[0].job_key, metricId]
+        );
+      }
       return;
     } else {
       const result = await client.query(
@@ -292,6 +299,10 @@ async function assignSubdivisionJob(
         insert into source_processing_jobs (data_source_id, project_id) values ($1, (select project_id from data_sources where id = $1)) returning *
         `,
         [sourceId]
+      );
+      await client.query(
+        `update spatial_metrics set state = 'dependency_not_ready', source_processing_job_dependency = $1 where id = $2`,
+        [result.rows[0].job_key, metricId]
       );
       console.log(
         `Calling lambda with payload: { url: ${sourceUrl}, jobKey: ${result.rows[0].job_key} }`

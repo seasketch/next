@@ -31,6 +31,14 @@ const sketchMetricTopicFromContext = async (args: any, context: any) => {
   }
 };
 
+const sourceProcessingJobTopicFromContext = async (args: any, context: any) => {
+  if (args.projectId) {
+    return `graphql:projects:${args.projectId}:sourceProcessingJobs`;
+  } else {
+    throw new Error("You must specify projectId");
+  }
+};
+
 const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
@@ -81,6 +89,7 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
         errorMessage: String
         progress: Int
         jobKey: String
+        sourceProcessingJobDependency: String
       }
 
       type GetOrCreateSpatialMetricsResults {
@@ -109,6 +118,11 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
         metric: CompatibleSpatialMetric
       }
 
+      type SourceProcessingJobSubscriptionPayload {
+        projectId: Int!
+        jobKey: String!
+        job: SourceProcessingJob!
+      }
 
       extend type Subscription {
         geographyMetrics(projectId: Int!): GeographyMetricSubscriptionPayload @pgSubscription(topic: ${embed(
@@ -116,6 +130,9 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
         )})
         sketchMetrics(sketchId: Int!): SketchMetricSubscriptionPayload @pgSubscription(topic: ${embed(
           sketchMetricTopicFromContext
+        )})
+        sourceProcessingJobs(projectId: Int!): SourceProcessingJobSubscriptionPayload @pgSubscription(topic: ${embed(
+          sourceProcessingJobTopicFromContext
         )})
       }
 
@@ -317,6 +334,24 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
             __typename: "CompatibleSpatialMetric",
             ...result.rows[0].metric,
           };
+        },
+      },
+      SourceProcessingJobSubscriptionPayload: {
+        async job(
+          event,
+          args,
+          context,
+          { graphile: { selectGraphQLResultFromTable } }
+        ) {
+          const rows = await selectGraphQLResultFromTable(
+            sql.fragment`source_processing_jobs`,
+            (tableAlias, sqlBuilder) => {
+              return sqlBuilder.where(
+                sql.fragment`${tableAlias}.job_key = ${sql.value(event.jobKey)}`
+              );
+            }
+          );
+          return rows[0];
         },
       },
     },

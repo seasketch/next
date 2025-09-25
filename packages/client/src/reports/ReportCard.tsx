@@ -30,6 +30,8 @@ import {
   SpatialMetricState,
   useRetryFailedSpatialMetricsMutation,
 } from "../generated/graphql";
+import Skeleton from "../components/Skeleton";
+import ReportMetricsProgressDetails from "./ReportMetricsProgressDetails";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -43,6 +45,7 @@ export type ReportCardComponentProps = {
   onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
   metrics: Pick<LocalMetric, "id" | "state" | "errorMessage">[];
+  skeleton?: React.ReactNode;
 };
 
 // Icon mapping for named icons (no color classes, will inherit from parent)
@@ -63,6 +66,7 @@ export default function ReportCard({
   config,
   className,
   metrics,
+  skeleton,
 }: ReportCardComponentProps & {
   config: ReportCardConfiguration<any>;
 }) {
@@ -72,8 +76,10 @@ export default function ReportCard({
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
 
-  const { errors, failedMetrics } = useMemo(() => {
+  const { errors, failedMetrics, loading } = useMemo(() => {
+    console.log("metrics", metrics);
     const errors = {} as { [key: string]: number };
+    let loading = false;
     const failedMetrics = [] as number[];
     for (const metric of metrics) {
       if (metric.state === SpatialMetricState.Error) {
@@ -84,9 +90,11 @@ export default function ReportCard({
           errors[errorMessage] = 1;
         }
         failedMetrics.push(metric.id);
+      } else if (metric.state !== SpatialMetricState.Complete) {
+        loading = true;
       }
     }
-    return { errors, failedMetrics };
+    return { errors, failedMetrics, loading };
   }, [metrics]);
 
   const [retry, retryState] = useRetryFailedSpatialMetricsMutation({
@@ -152,6 +160,20 @@ export default function ReportCard({
   ) {
     localizedBody = alternateLanguageSettings[langContext.lang.code].body;
   }
+
+  const isReady = !loading && !Object.keys(errors).length;
+
+  const loadingSkeleton = useMemo(() => {
+    if (skeleton) {
+      return skeleton;
+    }
+    return (
+      <div className="w-full space-y-1">
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-3/4 h-4" />
+      </div>
+    );
+  }, [skeleton]);
 
   return (
     <div
@@ -220,7 +242,7 @@ export default function ReportCard({
       </div>
 
       <div className="p-4 text-sm pt-0 pb-1">
-        {Object.keys(errors).length > 0 ? (
+        {Object.keys(errors).length > 0 && (
           <>
             <p>
               <Trans ns="sketching">
@@ -254,9 +276,15 @@ export default function ReportCard({
               </div>
             )}
           </>
-        ) : (
-          children
         )}
+        {isReady && children}
+        {adminMode && !isReady && (
+          <ReportMetricsProgressDetails
+            metricIds={metrics.map((m) => m.id)}
+            skeleton={loadingSkeleton}
+          />
+        )}
+        {!adminMode && loading && loadingSkeleton}
       </div>
     </div>
   );

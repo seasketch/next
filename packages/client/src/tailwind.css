@@ -197,16 +197,21 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
 }
 
 .seasketch-skeleton {
-  background: linear-gradient(-100deg, #f0f0f0 0%, #fafafa 50%, #f0f0f0 100%);
+  background: linear-gradient(
+    -100deg,
+    transparent,
+    rgba(0, 0, 0, 0.03),
+    rgba(20, 0, 180, 0.055)
+  );
   background-size: 400% 400%;
-  animation: pulse 1.2s ease-in-out infinite;
+  animation: pulse 1.3s ease-in-out infinite;
 
   @keyframes pulse {
     0% {
       background-position: 0% 0%;
     }
     100% {
-      background-position: -135% 0%;
+      background-position: -155% 0%;
     }
   }
 }

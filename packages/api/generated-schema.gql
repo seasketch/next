@@ -1070,6 +1070,7 @@ type CompatibleSpatialMetric {
   includedProperties: [String!]
   jobKey: String
   progress: Int
+  sourceProcessingJobDependency: String
   stableId: String
   state: SpatialMetricState!
   subject: MetricSubject!
@@ -3195,6 +3196,40 @@ type DataSource implements Node {
   coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
   """
   scheme: TileScheme
+
+  """
+  Reads a single `SourceProcessingJob` that is related to this `DataSource`.
+  """
+  sourceProcessingJob: SourceProcessingJob
+
+  """Reads and enables pagination through a set of `SourceProcessingJob`."""
+  sourceProcessingJobsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SourceProcessingJobCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SourceProcessingJob`."""
+    orderBy: [SourceProcessingJobsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SourceProcessingJobsConnection! @deprecated(reason: "Please use sourceProcessingJob instead")
 
   """
   ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.
@@ -12070,6 +12105,44 @@ type Project implements Node {
   """
   slug: String!
 
+  """Reads and enables pagination through a set of `SourceProcessingJob`."""
+  sourceProcessingJobs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SourceProcessingJob!]
+
+  """Reads and enables pagination through a set of `SourceProcessingJob`."""
+  sourceProcessingJobsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SourceProcessingJobCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SourceProcessingJob`."""
+    orderBy: [SourceProcessingJobsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SourceProcessingJobsConnection!
+
   """Reads and enables pagination through a set of `Sprite`."""
   sprites(
     """Only read the first `n` values of the set."""
@@ -13854,6 +13927,45 @@ type Query implements Node {
     """The method to use when ordering `SketchFolder`."""
     orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchFoldersConnection
+  sourceProcessingJob(jobKey: String!): SourceProcessingJob
+  sourceProcessingJobByDataSourceId(dataSourceId: Int!): SourceProcessingJob
+
+  """Reads a single `SourceProcessingJob` using its globally unique `ID`."""
+  sourceProcessingJobByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `SourceProcessingJob`.
+    """
+    nodeId: ID!
+  ): SourceProcessingJob
+
+  """Reads and enables pagination through a set of `SourceProcessingJob`."""
+  sourceProcessingJobsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: SourceProcessingJobCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `SourceProcessingJob`."""
+    orderBy: [SourceProcessingJobsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SourceProcessingJobsConnection
   sprite(id: Int!): Sprite
 
   """Reads a single `Sprite` using its globally unique `ID`."""
@@ -15600,6 +15712,102 @@ enum SortByDirection {
   DESC
 }
 
+type SourceProcessingJob implements Node {
+  createdAt: Datetime!
+
+  """
+  Reads a single `DataSource` that is related to this `SourceProcessingJob`.
+  """
+  dataSource: DataSource
+  dataSourceId: Int!
+  errorMessage: String
+  jobKey: String!
+  logsExpiresAt: Datetime
+  logsUrl: String
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  progressMessage: String
+  progressPercentage: Int!
+
+  """
+  Reads a single `Project` that is related to this `SourceProcessingJob`.
+  """
+  project: Project
+  projectId: Int!
+  state: SpatialMetricState!
+  updatedAt: Datetime!
+}
+
+"""
+A condition to be used against `SourceProcessingJob` object types. All fields
+are tested for equality and combined with a logical ‘and.’
+"""
+input SourceProcessingJobCondition {
+  """Checks for equality with the object’s `dataSourceId` field."""
+  dataSourceId: Int
+
+  """Checks for equality with the object’s `jobKey` field."""
+  jobKey: String
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+
+  """Checks for equality with the object’s `updatedAt` field."""
+  updatedAt: Datetime
+}
+
+"""A connection to a list of `SourceProcessingJob` values."""
+type SourceProcessingJobsConnection {
+  """
+  A list of edges which contains the `SourceProcessingJob` and cursor to aid in pagination.
+  """
+  edges: [SourceProcessingJobsEdge!]!
+
+  """A list of `SourceProcessingJob` objects."""
+  nodes: [SourceProcessingJob!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `SourceProcessingJob` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `SourceProcessingJob` edge in the connection."""
+type SourceProcessingJobsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SourceProcessingJob` at the end of the edge."""
+  node: SourceProcessingJob!
+}
+
+"""Methods to use when ordering `SourceProcessingJob`."""
+enum SourceProcessingJobsOrderBy {
+  DATA_SOURCE_ID_ASC
+  DATA_SOURCE_ID_DESC
+  JOB_KEY_ASC
+  JOB_KEY_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+  UPDATED_AT_ASC
+  UPDATED_AT_DESC
+}
+
+type SourceProcessingJobSubscriptionPayload {
+  job: SourceProcessingJob!
+  jobKey: String!
+  projectId: Int!
+}
+
 input SpatialMetricDependency {
   geographyIds: [Int!]
   groupBy: String
@@ -15614,6 +15822,7 @@ input SpatialMetricDependency {
 
 enum SpatialMetricState {
   COMPLETE
+  DEPENDENCY_NOT_READY
   ERROR
   PROCESSING
   QUEUED
@@ -15763,6 +15972,7 @@ type Subscription {
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
   sketchMetrics(sketchId: Int!): SketchMetricSubscriptionPayload
+  sourceProcessingJobs(projectId: Int!): SourceProcessingJobSubscriptionPayload
 
   """Triggered when a project's draft table of contents status changes"""
   updatedDraftTableOfContentsStatus(slug: String!): ProjectDraftTableOfContentsStatusPayload

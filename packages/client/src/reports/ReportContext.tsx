@@ -11,12 +11,14 @@ import {
   ReportContextSketchClassDetailsFragment,
   ReportContextSketchDetailsFragment,
   Sketch,
+  SourceProcessingJobDetailsFragment,
   SpatialMetricDependency,
   SpatialMetricState,
   useGeographyMetricSubscriptionSubscription,
   useGetOrCreateSpatialMetricsMutation,
   useSketchMetricSubscriptionSubscription,
   useSketchReportingDetailsQuery,
+  useSourceProcessingJobsQuery,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 import { Metric, MetricSubjectFragment } from "overlay-engine";
@@ -100,6 +102,7 @@ export interface ReportContextState {
   sketchClass?: ReportContextSketchClassDetailsFragment;
   metrics: LocalMetrics;
   userIsAdmin: boolean;
+  sourceProcessingJobs: SourceProcessingJobDetailsFragment[];
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -114,6 +117,7 @@ export type LocalMetric = Metric & {
   jobKey?: string;
   stableId?: string;
   groupBy?: string;
+  sourceProcessingJobDependency?: string;
 };
 
 type LocalMetrics = LocalMetric[];
@@ -134,6 +138,13 @@ export function useReportState(
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
+
+  const sourceProcessingJobsQuery = useSourceProcessingJobsQuery({
+    variables: {
+      projectId: projectMetadata.data?.project?.id!,
+    },
+    skip: !projectMetadata.data?.project?.id,
+  });
 
   const [metrics, setMetrics] = useState<LocalMetrics>([]);
 
@@ -369,6 +380,8 @@ export function useReportState(
     loading: sketchReportingDetails.loading,
     metrics,
     userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
+    sourceProcessingJobs:
+      sourceProcessingJobsQuery.data?.project?.sourceProcessingJobs || [],
   };
 }
 

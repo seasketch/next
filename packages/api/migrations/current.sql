@@ -444,7 +444,8 @@ CREATE OR REPLACE FUNCTION public.get_metrics_for_geography(geography_id integer
           'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
           'errorMessage', error_message,
           'progress', progress_percentage,
-          'jobKey', job_key
+          'jobKey', job_key,
+          'sourceProcessingJobDependency', source_processing_job_dependency
         )
       )
       from spatial_metrics
@@ -484,7 +485,8 @@ CREATE OR REPLACE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS j
           'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
           'errorMessage', error_message,
           'progress', progress_percentage,
-          'jobKey', job_key
+          'jobKey', job_key,
+          'sourceProcessingJobDependency', source_processing_job_dependency
         )
       )
       from spatial_metrics
@@ -695,7 +697,8 @@ CREATE OR REPLACE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS j
           jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
         end,
         'errorMessage', error_message,
-        'progress', progress_percentage
+        'progress', progress_percentage,
+        'sourceProcessingJobDependency', source_processing_job_dependency
       ) from spatial_metrics where id = metric_id
     );
   end;
@@ -754,6 +757,8 @@ create index if not exists source_processing_jobs_data_source_id_idx on public.s
 
 create index if not exists source_processing_jobs_updated_at_idx on public.source_processing_jobs (updated_at);
 
+create index if not exists source_processing_jobs_project_id_idx on public.source_processing_jobs (project_id);
+
 alter table spatial_metrics add column if not exists source_processing_job_dependency text references source_processing_jobs(job_key) on delete cascade;
 
 CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS boolean
@@ -801,4 +806,64 @@ DROP FUNCTION IF EXISTS public.validate_spatial_metrics_constraints;
 -- Add unique constraint to ensure only one job per data_source_id
 ALTER TABLE public.source_processing_jobs 
 ADD CONSTRAINT source_processing_jobs_data_source_id_unique UNIQUE (data_source_id);
+
+-- Add dependency_not_ready enum value to spatial_metric_state
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_type t
+    JOIN pg_enum e ON e.enumtypid = t.oid
+    WHERE t.typname = 'spatial_metric_state'
+      AND e.enumlabel = 'dependency_not_ready'
+  ) THEN
+    ALTER TYPE public.spatial_metric_state ADD VALUE 'dependency_not_ready';
+  END IF;
+END $$;
+
+grant select on source_processing_jobs to seasketch_user;
+
+alter table source_processing_jobs enable row level security;
+
+create policy source_processing_jobs_select on source_processing_jobs for select using (session_is_admin(project_id));
+
+create or replace function projects_source_processing_jobs(p projects)
+returns setof source_processing_jobs
+language plpgsql
+security definer
+stable
+as $$
+  begin
+    if session_is_admin(p.id) != true then
+      raise 'Permission denied';
+    end if;
+  return query select * from source_processing_jobs where project_id = p.id;
+  end;
+$$;
+
+grant execute on function projects_source_processing_jobs to seasketch_user;
+comment on function projects_source_processing_jobs is '@simpleCollections only';
+
+-- Create trigger function to notify GraphQL subscriptions when source processing jobs are updated
+CREATE OR REPLACE FUNCTION public.trigger_source_processing_job_subscription()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  STABLE
+  AS $$
+  BEGIN
+    -- Notify GraphQL subscription for source processing job updates
+    PERFORM pg_notify(
+      'graphql:projects:' || NEW.project_id || ':sourceProcessingJobs',
+      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || '}'
+    );
+    RETURN NEW;
+  END;
+  $$;
+
+-- Create trigger to call the subscription function when source_processing_jobs are updated
+CREATE TRIGGER trigger_source_processing_job_subscription_trigger
+  AFTER UPDATE ON public.source_processing_jobs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trigger_source_processing_job_subscription();
 
