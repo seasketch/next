@@ -27,6 +27,7 @@ import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import {
+  SourceProcessingJobsDocument,
   SpatialMetricState,
   useRetryFailedSpatialMetricsMutation,
 } from "../generated/graphql";
@@ -101,6 +102,7 @@ export default function ReportCard({
     variables: {
       metricIds: failedMetrics,
     },
+    refetchQueries: [SourceProcessingJobsDocument],
   });
 
   if (Object.keys(errors).length > 0) {

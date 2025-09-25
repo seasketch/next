@@ -12,6 +12,7 @@ import {
   ReportContextSketchDetailsFragment,
   Sketch,
   SourceProcessingJobDetailsFragment,
+  SourceProcessingJobsDocument,
   SpatialMetricDependency,
   SpatialMetricState,
   useGeographyMetricSubscriptionSubscription,
@@ -347,6 +348,7 @@ export function useReportState(
         variables: {
           dependencies: currentMetricDependencies,
         },
+        refetchQueries: [SourceProcessingJobsDocument],
       }).then((results) => {
         setMetrics((prev) => {
           return updateMetricsList(
