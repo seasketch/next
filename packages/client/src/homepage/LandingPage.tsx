@@ -12,11 +12,11 @@ export type TrustedPartnerLogo = {
 };
 
 const logos = [
-  // {
-  //   alt: "Waitt Institute",
-  //   src: "/logos/waitt.webp",
-  //   url: "https://www.waittinstitute.org/",
-  // },
+  {
+    alt: "Waitt Institute",
+    src: "/logos/waitt.webp",
+    url: "https://www.waittinstitute.org/",
+  },
   {
     alt: "Blue Prosperity Coalition",
     src: "/logos/BPCLogo3.png",
@@ -56,7 +56,8 @@ export default function LandingPage() {
     (l) =>
       l.alt !== "Waitt Institute" &&
       l.alt !== "Blue Prosperity Coalition" &&
-      l.alt !== "Oceano Azul"
+      l.alt !== "Oceano Azul" &&
+      l.alt !== "The Government of Brazil"
   );
   return (
     <>
@@ -209,24 +210,26 @@ export default function LandingPage() {
           </p>
           <div className="mt-6 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-8 items-center opacity-80">
             {[
-              ...logos.map((logo) => (
-                <div className="group flex items-center justify-center hover:grayscale-0 grayscale">
-                  <a
-                    className="w-32 h-12 flex items-center"
-                    href={logo.url}
-                    key={logo.alt}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      filter: "contrast(0.3) brightness(1.5)",
-                      background: `url(${logo.src}) center center no-repeat`,
-                      backgroundSize: "contain",
-                    }}
-                  >
-                    {""}
-                  </a>
-                </div>
-              )),
+              ...logos
+                .filter((l) => l.alt !== "Waitt Institute")
+                .map((logo) => (
+                  <div className="group flex items-center justify-center hover:grayscale-0 grayscale">
+                    <a
+                      className="w-32 h-12 flex items-center"
+                      href={logo.url}
+                      key={logo.alt}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        filter: "contrast(0.3) brightness(1.5)",
+                        background: `url(${logo.src}) center center no-repeat`,
+                        backgroundSize: "contain",
+                      }}
+                    >
+                      {""}
+                    </a>
+                  </div>
+                )),
             ]}
           </div>
           {/* Awards (moved from impact band) */}
