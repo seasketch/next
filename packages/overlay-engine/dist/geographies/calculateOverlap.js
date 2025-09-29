@@ -89,7 +89,13 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                         differenceGeoms.push(differenceFeature.geometry.coordinates);
                     }
                 }
-                intersection = clipping.difference(intersection, ...differenceGeoms);
+                if (differenceGeoms.length > 0) {
+                    console.log("difference geoms", differenceGeoms.length);
+                    intersection = clipping.difference(intersection, ...differenceGeoms);
+                }
+                else {
+                    console.log("no difference geoms");
+                }
             }
         }
         const area = (0, area_1.default)({

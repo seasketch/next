@@ -160,7 +160,10 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
     }
     return data;
   } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
-    console.log("Calling production overlay worker lambda", payload);
+    console.log(
+      "Calling production overlay worker lambda",
+      JSON.stringify(payload)
+    );
 
     try {
       await lambda
