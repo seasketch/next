@@ -84,6 +84,9 @@ async function handler(payload) {
                 }
                 break;
             case "overlay_area":
+                if (!payload.sourceUrl) {
+                    throw new Error("sourceUrl is required for overlay_area");
+                }
                 if (subjectIsGeography(payload.subject)) {
                     progressNotifier.notify(0, "Beginning area calculation");
                     const area = await (0, overlay_engine_1.calculateGeographyOverlap)(payload.subject.clippingLayers, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
@@ -114,7 +117,6 @@ async function handler(payload) {
                         throw new Error("Geobuf feature was not provided. Fetch-based workflows not suppored yet.");
                     }
                 }
-                break;
             default:
                 throw new Error(`Unknown payload type: ${payload.type}`);
         }

@@ -74,7 +74,9 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
 
     if (response.Messages && response.Messages.length > 0) {
       // Parse all messages first
-      const parsedMessages: OverlayEngineWorkerMessage[] = [];
+      const parsedMessages: (OverlayEngineWorkerMessage & {
+        origin?: string;
+      })[] = [];
       const allReceiptHandles: string[] = []; // Store all receipt handles for deletion
 
       for (const message of response.Messages) {
@@ -83,9 +85,9 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             if (message.ReceiptHandle) {
               allReceiptHandles.push(message.ReceiptHandle);
             }
-            const parsedMessage: OverlayEngineWorkerMessage = JSON.parse(
-              message.Body
-            );
+            const parsedMessage: OverlayEngineWorkerMessage & {
+              origin?: string;
+            } = JSON.parse(message.Body);
 
             if (parsedMessage.jobKey) {
               parsedMessages.push(parsedMessage);
@@ -133,12 +135,75 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
       }
 
       // Consolidate messages by jobKey
-      const consolidatedMessages = consolidateMessagesByJobKey(parsedMessages);
+      const consolidatedMessages = consolidateMessagesByJobKey(
+        parsedMessages as any
+      );
 
       // Process consolidated messages
       for (const [jobKey, consolidatedMessage] of consolidatedMessages) {
         try {
-          // Process the consolidated message based on its type
+          // Route by origin: overlay (default) vs subdivision
+          const origin = (consolidatedMessage as any).origin || "overlay";
+          if (origin === "subdivision") {
+            switch (consolidatedMessage.type) {
+              case "begin":
+                await pgPool.query(
+                  `update source_processing_jobs set state = 'processing', updated_at = now() where job_key = $1 and state = 'queued'`,
+                  [jobKey]
+                );
+                break;
+              case "progress":
+                await pgPool.query(
+                  `update source_processing_jobs set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), progress_message = $3 where job_key = $2 and state != 'complete' and state != 'error'`,
+                  [
+                    Math.round((consolidatedMessage as any).progress || 0),
+                    jobKey,
+                    (consolidatedMessage as any).message || null,
+                  ]
+                );
+                break;
+              case "error":
+                await pgPool.query(
+                  `update source_processing_jobs set state = 'error', error_message = $1, updated_at = now() where job_key = $2 and (state = 'processing' or state = 'queued')`,
+                  [(consolidatedMessage as any).error, jobKey]
+                );
+                break;
+              case "result": {
+                // Expect { object: { publicUrl?, bucket, key, size, filename } }
+                const res = (consolidatedMessage as any).result || {};
+                const obj = res.object || {};
+                // Fetch job so we know data_source_id and project_id
+                const jobQ = await pgPool.query(
+                  `select data_source_id, project_id from source_processing_jobs where job_key = $1`,
+                  [jobKey]
+                );
+                if (jobQ.rows.length > 0) {
+                  const { data_source_id, project_id } = jobQ.rows[0];
+                  const url =
+                    obj.publicUrl || `https://uploads.seasketch.org/${obj.key}`;
+                  const remote = `r2://${obj.bucket}/${obj.key}`;
+                  const size = obj.size || 0;
+                  const filename = obj.filename || obj.key || "output.fgb";
+                  await pgPool.query(
+                    `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename)
+                     values ($1, 'ReportingFlatgeobufV1', $2, $3, $4, $5, false, $6, $4)
+                    `,
+                    [data_source_id, remote, size, filename, url, project_id]
+                  );
+                  await pgPool.query(
+                    `update source_processing_jobs set state = 'complete', updated_at = now(), progress_percentage = 100, error_message = null where job_key = $1`,
+                    [jobKey]
+                  );
+                }
+                break;
+              }
+              default:
+                break;
+            }
+            continue;
+          }
+
+          // Process overlay engine worker messages (existing behavior)
           switch (consolidatedMessage.type) {
             case "result":
               await pgPool.query(

@@ -159,6 +159,7 @@ const SpatialMetricsPlugin = makeExtendSchemaPlugin((build) => {
           );
           const parentCollectionId = rows.rows[0].get_parent_collection_id;
           for (const dep of inputs) {
+            console.log("dep", dep);
             if (
               !dep.sketchId &&
               (!dep.geographyIds || dep.geographyIds.length === 0)

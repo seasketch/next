@@ -157,6 +157,8 @@ function convertSourceType(sourceType: SourceType): MetricSourceType {
       return MetricSourceType.GeoJson;
     case "GEOTIFF":
       return MetricSourceType.GeoTiff;
+    case "REPORTING_FLATGEOBUF_V1":
+      return MetricSourceType.FlatGeobuf;
     default:
       throw new Error(`Unknown source type: ${sourceType}`);
   }

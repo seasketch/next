@@ -9,6 +9,7 @@ import {
 } from "overlay-engine";
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
+import { v4 as uuid } from "uuid";
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -271,6 +272,7 @@ async function assignSubdivisionJob(
   metricId: number,
   helpers: Helpers
 ) {
+  console.log("assign subdivision job", sourceUrl, sourceId, metricId);
   if (!process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
     throw new Error("SUBDIVISION_WORKER_LAMBDA_ARN is not set");
   }
@@ -291,6 +293,8 @@ async function assignSubdivisionJob(
           `update spatial_metrics set state = 'dependency_not_ready', source_processing_job_dependency = $1 where id = $2`,
           [existingJob.rows[0].job_key, metricId]
         );
+        const existingJobState = existingJob.rows[0].state;
+        console.log("existingJobState", existingJobState);
       }
       return;
     } else {
@@ -304,17 +308,27 @@ async function assignSubdivisionJob(
         `update spatial_metrics set state = 'dependency_not_ready', source_processing_job_dependency = $1 where id = $2`,
         [result.rows[0].job_key, metricId]
       );
-      console.log(
-        `Calling lambda with payload: { url: ${sourceUrl}, jobKey: ${result.rows[0].job_key} }`
+
+      const slugResults = await client.query(
+        `select slug from projects where id = (select project_id from data_sources where id = $1)`,
+        [sourceId]
       );
+      const slug = slugResults.rows[0].slug;
+
+      const objectKey = `projects/${slug}/subdivided/${sourceId}-${uuid()}.fgb`;
+      const payload = {
+        url: sourceUrl,
+        jobKey: result.rows[0].job_key,
+        key: objectKey,
+        queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+      };
+      console.log(`Calling lambda with payload: ${JSON.stringify(payload)}`);
+      console.log("invoke lambda");
       await lambda
         .invoke({
           FunctionName: arn,
           InvocationType: "Event",
-          Payload: JSON.stringify({
-            url: sourceUrl,
-            jobKey: result.rows[0].job_key,
-          }),
+          Payload: JSON.stringify(payload),
         })
         .promise();
     }

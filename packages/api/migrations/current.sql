@@ -769,6 +769,7 @@ CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint
     updated_metric_id bigint;
     metric_id bigint;
     job_dep text;
+    existing_job_state spatial_metric_state;
   begin
     -- loop through the metric ids, and update the state to queued
     foreach metric_id in array metric_ids loop
@@ -777,13 +778,10 @@ CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint
         -- if this metric depends on a source_processing_job, restart it first
         select source_processing_job_dependency into job_dep from spatial_metrics where id = updated_metric_id;
         if job_dep is not null then
-          update source_processing_jobs
-          set state = 'queued',
-              error_message = null,
-              progress_percentage = 0,
-              progress_message = null,
-              updated_at = now()
-          where job_key = job_dep and state = 'error';
+          select state into existing_job_state from source_processing_jobs where job_key = job_dep;
+          if existing_job_state = 'error' then
+            delete from source_processing_jobs where job_key = job_dep;
+          end if;
         end if;
         perform graphile_worker.add_job(
           'calculateSpatialMetric',
@@ -863,7 +861,67 @@ CREATE OR REPLACE FUNCTION public.trigger_source_processing_job_subscription()
 
 -- Create trigger to call the subscription function when source_processing_jobs are updated
 CREATE TRIGGER trigger_source_processing_job_subscription_trigger
-  AFTER UPDATE ON public.source_processing_jobs
+  AFTER UPDATE OR INSERT ON public.source_processing_jobs
   FOR EACH ROW
   EXECUTE FUNCTION public.trigger_source_processing_job_subscription();
 
+
+create or replace function source_processing_jobs_layer_title(job source_processing_jobs)
+returns text
+language sql
+security definer
+stable
+as $$
+    select title from table_of_contents_items where data_layer_id = (select id from data_layers where data_source_id = job.data_source_id) limit 1;
+$$;
+
+grant execute on function source_processing_jobs_layer_title to anon;
+
+-- Create trigger function to queue calculateSpatialMetric jobs when source processing jobs complete
+CREATE OR REPLACE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  AS $$
+  DECLARE
+    metric_record RECORD;
+    completed_source_url text;
+  BEGIN
+    IF NEW.state = 'complete' AND (OLD.state IS NULL OR OLD.state != 'complete') THEN
+      -- get the completed source url
+      select url into completed_source_url from data_upload_outputs where type = 'ReportingFlatgeobufV1' and data_source_id = NEW.data_source_id limit 1;
+      if completed_source_url is null then
+        raise exception 'Completed source url not found';
+      end if;
+      -- Find all spatial_metrics that depend on this source processing job
+      FOR metric_record IN 
+        SELECT id 
+        FROM spatial_metrics 
+        WHERE source_processing_job_dependency = NEW.job_key
+      LOOP
+        -- update the spatial_metrics with the completed source url
+        update spatial_metrics set overlay_source_url = completed_source_url, state = 'queued' where id = metric_record.id;
+        -- Queue a calculateSpatialMetric job for each dependent metric
+        PERFORM graphile_worker.add_job(
+          'calculateSpatialMetric',
+          json_build_object('metricId', metric_record.id),
+          max_attempts := 1,
+          job_key := 'calculateSpatialMetric:' || metric_record.id,
+          job_key_mode := 'replace'
+        );
+      END LOOP;
+    END IF;
+    IF NEW.state = 'error' AND (OLD.state IS NULL OR OLD.state != 'error') THEN
+      -- update the spatial_metrics with the error message
+      update spatial_metrics set state = 'error', error_message = 'Error processing source dependency.' where source_processing_job_dependency = NEW.job_key;
+    END IF;
+    
+    RETURN NEW;
+  END;
+  $$;
+
+-- Create trigger to call the function when source_processing_jobs are updated
+CREATE TRIGGER trigger_queue_spatial_metrics_on_source_complete_trigger
+  AFTER UPDATE ON public.source_processing_jobs
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete();

@@ -181,6 +181,8 @@ const subdivideWorker = new SubdivideWorkerLambdaStack(
   "SeaSketchSubdivisionWorker",
   {
     env,
+    devQueues: sqs.devOverlayEngineWorkerQueues,
+    productionQueue: sqs.productionOverlayEngineWorkerQueue,
   }
 );
 

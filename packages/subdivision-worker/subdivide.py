@@ -161,7 +161,6 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
     total_nodes = 0
     total_features = 0
     batch = []
-    start_time = time.perf_counter()
     with fiona.open(input_file, "r") as src:
         schema = src.schema.copy()
         schema['geometry'] = 'Polygon'
@@ -177,6 +176,12 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
         # Geodesic calculator (input is always EPSG:4326)
         geod = Geod(ellps="WGS84")
 
+        total_nodes_in_dataset = int(0)  # Explicit 64-bit integer for large datasets
+        for feature in src:
+          total_nodes_in_dataset += count_nodes(feature['geometry'])
+
+        cumulative_processed_nodes = int(0)
+
         def geodesic_area_sqkm(geom_geojson):
             geom = shape(geom_geojson)
             area_m2 = geod.geometry_area_perimeter(geom)[0]
@@ -187,19 +192,28 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
           pbar = None if progress_callback is not None else tqdm(total=total_features, desc="Processing features")
           if progress_callback is not None:
             try:
-              progress_callback('processing_start', 0, total_features)
+              progress_callback('processing_start', 0, total_nodes_in_dataset)
             except Exception:
               pass
           # batching doesn't seem to help, even though the fiona docs suggest
           # it should. Maybe the flatgeobuf driver doesn't work well with 
           # batching?
-          def write(feature):
+          def write(feature, is_split=False):
             # Compute area and add to properties before batching
             geom_geojson = feature['geometry']
             area_val = geodesic_area_sqkm(geom_geojson)
             props = dict(feature['properties'])
             props['__area'] = area_val
             batch.append({'geometry': geom_geojson, 'properties': props})
+            nonlocal cumulative_processed_nodes
+            cumulative_processed_nodes += count_nodes(feature['geometry'])
+            if is_split:
+              cumulative_processed_nodes -= 1
+            if progress_callback is not None:
+              try:
+                progress_callback('processing', cumulative_processed_nodes, total_nodes_in_dataset)
+              except Exception:
+                pass
             if len(batch) > 5000:
               dst.writerecords(batch)
               batch.clear()
@@ -221,18 +235,18 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
                 nonlocal nodes_processed
                 nodes_processed += f_node_count
                 nonlocal update_total
-                write(feature)
+                write(feature, True)
                 # print(f_node_count / total_node_count)
                 if pbar is not None:
                   amount = f_node_count / node_count
                   update_total += amount
                   if update_total < 1.0:
                     pbar.update(amount)
-                if progress_callback is not None:
-                  try:
-                    progress_callback('processing', nodes_processed, total_features)
-                  except Exception:
-                    pass
+                # if progress_callback is not None:
+                #   try:
+                #     progress_callback('processing', nodes_processed, total_features)
+                #   except Exception:
+                #     pass
 
               if adjusted_geom['type'] == 'MultiPolygon':
                 for coords in adjusted_geom['coordinates']:
@@ -248,11 +262,11 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
                 )
                 subdivide_and_write_feature(adj_feature, writeSubdividedFeature, max_nodes)
               big_poly_indexes[str(i)] = True
-              if progress_callback is not None:
-                try:
-                  progress_callback('processing', i, total_features)
-                except Exception:
-                  pass
+              # if progress_callback is not None:
+              #   try:
+              #     progress_callback('processing', i, total_features)
+              #   except Exception:
+              #     pass
             else:
               if pbar is not None:
                 pbar.set_postfix({"Task": "Analyzing small features"})
@@ -274,11 +288,11 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
                 write({'geometry': geom_geojson, 'properties': props})
               if pbar is not None:
                 pbar.update(1)
-              if progress_callback is not None:
-                try:
-                  progress_callback('processing', i + 1, total_features)
-                except Exception:
-                  pass
+              # if progress_callback is not None:
+              #   try:
+              #     progress_callback('processing', i + 1, total_features)
+              #   except Exception:
+              #     pass
             i += 1
           if pbar is not None:
             try:

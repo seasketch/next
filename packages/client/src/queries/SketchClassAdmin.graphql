@@ -595,11 +595,22 @@ fragment SourceProcessingJobDetails on SourceProcessingJob {
   progressPercentage
   progressMessage
   createdAt
+  layerTitle
+  errorMessage
 }
 
 query SourceProcessingJobs($projectId: Int!) {
   project(id: $projectId) {
     sourceProcessingJobs {
+      ...SourceProcessingJobDetails
+    }
+  }
+}
+
+subscription SourceProcessingJobsSubscription($projectId: Int!) {
+  sourceProcessingJobs(projectId: $projectId) {
+    jobKey
+    job {
       ...SourceProcessingJobDetails
     }
   }

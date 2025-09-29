@@ -27,7 +27,6 @@ import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import {
-  SourceProcessingJobsDocument,
   SpatialMetricState,
   useRetryFailedSpatialMetricsMutation,
 } from "../generated/graphql";
@@ -78,7 +77,6 @@ export default function ReportCard({
   const { alternateLanguageSettings } = config;
 
   const { errors, failedMetrics, loading } = useMemo(() => {
-    console.log("metrics", metrics);
     const errors = {} as { [key: string]: number };
     let loading = false;
     const failedMetrics = [] as number[];
@@ -102,7 +100,6 @@ export default function ReportCard({
     variables: {
       metricIds: failedMetrics,
     },
-    refetchQueries: [SourceProcessingJobsDocument],
   });
 
   if (Object.keys(errors).length > 0) {
@@ -244,7 +241,7 @@ export default function ReportCard({
       </div>
 
       <div className="p-4 text-sm pt-0 pb-1">
-        {Object.keys(errors).length > 0 && (
+        {/* {Object.keys(errors).length > 0 && (
           <>
             <p>
               <Trans ns="sketching">
@@ -278,7 +275,7 @@ export default function ReportCard({
               </div>
             )}
           </>
-        )}
+        )} */}
         {isReady && children}
         {adminMode && !isReady && (
           <ReportMetricsProgressDetails

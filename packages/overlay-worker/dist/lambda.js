@@ -35,16 +35,24 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.lambdaHandler = void 0;
 const overlay_worker_1 = __importStar(require("./overlay-worker"));
+const messaging_1 = require("./messaging");
 const lambdaHandler = async (event, context) => {
     let payload;
     // For direct lambda invocation, the event is the payload directly
     payload = event;
     console.log(`Starting job ${payload.jobKey}`);
+    console.log("Payload", payload);
     // Validate the payload
     try {
         (0, overlay_worker_1.validatePayload)(payload);
     }
     catch (e) {
+        if (typeof payload === "object" &&
+            "jobKey" in payload &&
+            "queueUrl" in payload) {
+            await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "OverlayWorkerPayloadValidationError", payload.queueUrl);
+        }
+        console.error(e);
         return {
             statusCode: 400,
             body: JSON.stringify({

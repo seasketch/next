@@ -842,7 +842,7 @@ export default function SketchClassReportsAdmin({
             {/* right sidebar */}
             <div className="w-0 bg-white flex-none border-l shadow"></div>
             {/* bottom right geography metrics indicator */}
-            <GeographyMetricsProgressIndicator />
+            {/* <GeographyMetricsProgressIndicator /> */}
           </div>
 
           {/* Footer */}

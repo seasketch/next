@@ -20,6 +20,7 @@ import {
   useSketchMetricSubscriptionSubscription,
   useSketchReportingDetailsQuery,
   useSourceProcessingJobsQuery,
+  useSourceProcessingJobsSubscriptionSubscription,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 import { Metric, MetricSubjectFragment } from "overlay-engine";
@@ -145,6 +146,58 @@ export function useReportState(
       projectId: projectMetadata.data?.project?.id!,
     },
     skip: !projectMetadata.data?.project?.id,
+  });
+
+  useSourceProcessingJobsSubscriptionSubscription({
+    variables: {
+      projectId: projectMetadata.data?.project?.id!,
+    },
+    skip: !projectMetadata.data?.project?.id,
+    onData: ({ data, client }) => {
+      const updatedJob = data.data?.sourceProcessingJobs?.job;
+      if (updatedJob) {
+        // update apollo cache of sourceProcessingJobsQuery to make sure any new
+        // jobs are included
+        try {
+          const variables = {
+            projectId: projectMetadata.data!.project!.id!,
+          };
+          const existing = client.readQuery({
+            query: SourceProcessingJobsDocument,
+            variables,
+          }) as {
+            project?: {
+              __typename?: string;
+              sourceProcessingJobs?: SourceProcessingJobDetailsFragment[];
+            };
+          } | null;
+
+          if (existing?.project) {
+            const jobs = existing.project.sourceProcessingJobs || [];
+            const index = jobs.findIndex((j) => j.jobKey === updatedJob.jobKey);
+            const newJobs =
+              index === -1
+                ? [...jobs, updatedJob]
+                : jobs.map((j) =>
+                    j.jobKey === updatedJob.jobKey ? updatedJob : j
+                  );
+
+            client.writeQuery({
+              query: SourceProcessingJobsDocument,
+              variables,
+              data: {
+                project: {
+                  ...existing.project,
+                  sourceProcessingJobs: newJobs,
+                },
+              },
+            });
+          }
+        } catch (e) {
+          // ignore cache read/write errors
+        }
+      }
+    },
   });
 
   const [metrics, setMetrics] = useState<LocalMetrics>([]);
@@ -348,7 +401,7 @@ export function useReportState(
         variables: {
           dependencies: currentMetricDependencies,
         },
-        refetchQueries: [SourceProcessingJobsDocument],
+        // refetchQueries: [SourceProcessingJobsDocument],
       }).then((results) => {
         setMetrics((prev) => {
           return updateMetricsList(

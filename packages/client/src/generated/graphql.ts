@@ -6719,6 +6719,29 @@ export type GetOrCreateSpatialMetricsResults = {
   metrics: Array<CompatibleSpatialMetric>;
 };
 
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7811,6 +7834,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -9043,6 +9067,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -14465,6 +14495,7 @@ export type SourceProcessingJob = Node & {
   dataSourceId: Scalars['Int'];
   errorMessage?: Maybe<Scalars['String']>;
   jobKey: Scalars['String'];
+  layerTitle?: Maybe<Scalars['String']>;
   logsExpiresAt?: Maybe<Scalars['Datetime']>;
   logsUrl?: Maybe<Scalars['String']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -22683,7 +22714,7 @@ export type AvailableReportLayersQuery = (
 
 export type SourceProcessingJobDetailsFragment = (
   { __typename?: 'SourceProcessingJob' }
-  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt'>
+  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt' | 'layerTitle' | 'errorMessage'>
 );
 
 export type SourceProcessingJobsQueryVariables = Exact<{
@@ -22699,6 +22730,23 @@ export type SourceProcessingJobsQuery = (
       { __typename?: 'SourceProcessingJob' }
       & SourceProcessingJobDetailsFragment
     )>> }
+  )> }
+);
+
+export type SourceProcessingJobsSubscriptionSubscriptionVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type SourceProcessingJobsSubscriptionSubscription = (
+  { __typename?: 'Subscription' }
+  & { sourceProcessingJobs?: Maybe<(
+    { __typename?: 'SourceProcessingJobSubscriptionPayload' }
+    & Pick<SourceProcessingJobSubscriptionPayload, 'jobKey'>
+    & { job: (
+      { __typename?: 'SourceProcessingJob' }
+      & SourceProcessingJobDetailsFragment
+    ) }
   )> }
 );
 
@@ -26045,6 +26093,8 @@ export const SourceProcessingJobDetailsFragmentDoc = gql`
   progressPercentage
   progressMessage
   createdAt
+  layerTitle
+  errorMessage
 }
     `;
 export const SketchFolderDetailsFragmentDoc = gql`
@@ -35068,6 +35118,39 @@ export function useSourceProcessingJobsLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourceProcessingJobsQuery>;
 export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
 export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
+export const SourceProcessingJobsSubscriptionDocument = gql`
+    subscription SourceProcessingJobsSubscription($projectId: Int!) {
+  sourceProcessingJobs(projectId: $projectId) {
+    jobKey
+    job {
+      ...SourceProcessingJobDetails
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+
+/**
+ * __useSourceProcessingJobsSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useSourceProcessingJobsSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useSourceProcessingJobsSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSourceProcessingJobsSubscriptionSubscription({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useSourceProcessingJobsSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<SourceProcessingJobsSubscriptionSubscription, SourceProcessingJobsSubscriptionSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<SourceProcessingJobsSubscriptionSubscription, SourceProcessingJobsSubscriptionSubscriptionVariables>(SourceProcessingJobsSubscriptionDocument, options);
+      }
+export type SourceProcessingJobsSubscriptionSubscriptionHookResult = ReturnType<typeof useSourceProcessingJobsSubscriptionSubscription>;
+export type SourceProcessingJobsSubscriptionSubscriptionResult = Apollo.SubscriptionResult<SourceProcessingJobsSubscriptionSubscription>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -39009,6 +39092,7 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
+    SourceProcessingJobsSubscription: 'SourceProcessingJobsSubscription',
     GeographyMetricSubscription: 'GeographyMetricSubscription',
     SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
