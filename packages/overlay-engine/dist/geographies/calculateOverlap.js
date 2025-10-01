@@ -45,6 +45,7 @@ const bboxUtils_1 = require("../utils/bboxUtils");
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
 async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
+    let differenceReferences = 0;
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);
     if (sourceType !== "FlatGeobuf") {
         throw new Error(`Unsupported source type: ${sourceType}`);
@@ -84,6 +85,7 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                 let differenceGeoms = [];
                 const featureEnvelope = (0, bboxUtils_1.bboxToEnvelope)((0, bbox_1.bbox)(feature.geometry));
                 for await (const differenceFeature of diffLayer.source.getFeaturesAsync(featureEnvelope)) {
+                    differenceReferences++;
                     if (!diffLayer.cql2Query ||
                         (0, cql2_1.evaluateCql2JSONQuery)(diffLayer.cql2Query, differenceFeature.properties)) {
                         differenceGeoms.push(differenceFeature.geometry.coordinates);
@@ -117,6 +119,7 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
             }
         }
     }
+    console.log("difference references", differenceReferences);
     return areaByClassId;
 }
 //# sourceMappingURL=calculateOverlap.js.map

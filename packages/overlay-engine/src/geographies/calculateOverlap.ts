@@ -17,6 +17,7 @@ export async function calculateGeographyOverlap(
   groupBy?: string,
   helpersOption?: OverlayWorkerHelpers
 ) {
+  let differenceReferences = 0;
   const helpers = guaranteeHelpers(helpersOption);
   if (sourceType !== "FlatGeobuf") {
     throw new Error(`Unsupported source type: ${sourceType}`);
@@ -82,6 +83,7 @@ export async function calculateGeographyOverlap(
         for await (const differenceFeature of diffLayer.source.getFeaturesAsync(
           featureEnvelope
         )) {
+          differenceReferences++;
           if (
             !diffLayer.cql2Query ||
             evaluateCql2JSONQuery(
@@ -123,5 +125,6 @@ export async function calculateGeographyOverlap(
     }
   }
 
+  console.log("difference references", differenceReferences);
   return areaByClassId;
 }

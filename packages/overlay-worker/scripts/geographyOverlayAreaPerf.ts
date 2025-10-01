@@ -36,7 +36,23 @@ const payload = {
     "https://sqs.us-west-2.amazonaws.com/196230260133/seasketch-dev-overlay-engine-worker-queue-1",
 };
 
-const sourceCache = new SourceCache("128 mb");
+let fetchCount = 0;
+let cumulativeFetchTime = 0;
+
+const sourceCache = new SourceCache("512 mb", {
+  fetchRangeFn: (key, range) => {
+    // console.log("fetching", key, range);
+    fetchCount++;
+    const startTime = performance.now();
+    return fetch(key, {
+      headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
+    }).then((response) => {
+      const endTime = performance.now();
+      cumulativeFetchTime += endTime - startTime;
+      return response.arrayBuffer();
+    });
+  },
+});
 
 calculateGeographyOverlap(
   payload.subject.clippingLayers as ClippingLayerOption[],
@@ -52,4 +68,9 @@ calculateGeographyOverlap(
       console.log(progress, message);
     },
   }
-).then(console.log);
+)
+  .then(console.log)
+  .then(() => {
+    console.log("fetch count", fetchCount);
+    console.log("cumulative fetch time", cumulativeFetchTime);
+  });
