@@ -168,8 +168,9 @@ export class SourceCache {
     options?: CreateSourceOptions
   ): Promise<FlatGeobufSource<T>> {
     // Check cache first
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
+    const cached = this.cache.get(key);
+    if (cached) {
+      return cached;
     }
 
     // Check for in-flight request
@@ -182,6 +183,10 @@ export class SourceCache {
     const mergedOptions: CreateSourceOptions = {
       ...this.defaultOptions,
       ...options,
+      maxCacheSize:
+        options?.maxCacheSize ||
+        this.defaultOptions?.maxCacheSize ||
+        this.sizeLimitBytes / 4,
     };
 
     // Create new request

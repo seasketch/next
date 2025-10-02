@@ -16,6 +16,10 @@ type CacheStats = {
     maxSize: number;
     /** Number of requests currently in flight */
     inFlightRequests: number;
+    /** Number of cache hits. Reset by clearCache() */
+    cacheHits: number;
+    /** Number of cache misses. Reset by clearCache() */
+    cacheMisses: number;
 };
 
 /**
@@ -85,6 +89,10 @@ declare class RTreeIndex {
      * @private
      */
     private getNodeData;
+    /**
+     * Returns the byte offset (relative to feature data start) of the last feature.
+     */
+    getLastFeatureOffset(): number;
 }
 /**
  * Details about the structure of a packed R-tree index.
@@ -207,6 +215,11 @@ type CreateSourceOptions = {
      * Use this to control how aggressively ranges are merged.
      */
     overfetchBytes?: ByteSize;
+    /**
+     * Page size to use for internal page-cached range fetching. Defaults to 5MB.
+     * Accepts a number of bytes or a string like "5MB".
+     */
+    pageSize?: ByteSize;
 };
 /**
  * FlatGeobuf data source class. Provides methods to query features from a
@@ -243,11 +256,17 @@ declare class FlatGeobufSource<T = Feature> {
      * Should not be called directly. Instead initialize using createSource(),
      * which will generate the necessary metadata and spatial index.
      */
-    constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize);
+    constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize, fileByteLength?: number, pageSize?: ByteSize);
     /**
      * Get cache statistics
      */
     get cacheStats(): CacheStats;
+    /**
+     * Prefetch and cache all pages needed for features intersecting the envelope.
+     * This uses getFeaturesAsync with warmCache:true under the hood to trigger
+     * range fetches without parsing or yielding features.
+     */
+    prefetch(bbox: Envelope | Envelope[], options?: QueryPlanOptions): Promise<void>;
     /**
      * Clear the feature data cache
      */

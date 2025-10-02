@@ -42,6 +42,14 @@ describe("SourceCache", () => {
 
       expect(source1).toBe(source2);
     });
+
+    it("should returns the same source instance even if requests are not awaited", async () => {
+      const source1 = sourceCache.get(TEST_URL1);
+      const source2 = sourceCache.get(TEST_URL1);
+      const sources = await Promise.all([source1, source2]);
+
+      expect(sources[0]).toBe(sources[1]);
+    });
   });
 
   describe("Fetch Range Function", () => {
@@ -258,14 +266,23 @@ describe("SourceCache", () => {
       });
 
       // Load first source
-      const source1 = await smallCache.get(TEST_URL1, { fetchRangeFn });
+      const source1 = await smallCache.get(TEST_URL1, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
       const firstFetchCount = fetchCount;
 
       // Load second source, which should evict the first
-      const source2 = await smallCache.get(TEST_URL2, { fetchRangeFn });
+      const source2 = await smallCache.get(TEST_URL2, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
 
       // Try to get the first source again - should trigger a new fetch
-      const source1Again = await smallCache.get(TEST_URL1, { fetchRangeFn });
+      const source1Again = await smallCache.get(TEST_URL1, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
 
       // Verify that source1 was evicted and re-fetched
       expect(source1).not.toBe(source1Again);
@@ -302,24 +319,39 @@ describe("SourceCache", () => {
       const smallCache = new SourceCache("12mb");
 
       // Load first source
-      const source1 = await smallCache.get(TEST_URL1, { fetchRangeFn });
+      const source1 = await smallCache.get(TEST_URL1, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
       const firstFetchCount = fetchCount;
 
       // Load second source
-      const source2 = await smallCache.get(TEST_URL2, { fetchRangeFn });
+      const source2 = await smallCache.get(TEST_URL2, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
 
       // Access source2 again to make it most recently used
-      await smallCache.get(TEST_URL2, { fetchRangeFn });
+      await smallCache.get(TEST_URL2, { fetchRangeFn, maxCacheSize: "5MB" });
 
       // Load a third source, which should evict source1 (not source2)
-      const source3 = await smallCache.get(TEST_URL3, { fetchRangeFn });
+      const source3 = await smallCache.get(TEST_URL3, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
 
       // Try to get source2 again - should still be cached
-      const source2Again = await smallCache.get(TEST_URL2, { fetchRangeFn });
+      const source2Again = await smallCache.get(TEST_URL2, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
       expect(source2).toBe(source2Again);
 
       // Try to get source1 again - should be evicted and re-fetched
-      const source1Again = await smallCache.get(TEST_URL1, { fetchRangeFn });
+      const source1Again = await smallCache.get(TEST_URL1, {
+        fetchRangeFn,
+        maxCacheSize: "5MB",
+      });
       expect(source1).not.toBe(source1Again);
     });
   });

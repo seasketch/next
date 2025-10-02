@@ -61,11 +61,29 @@ const lambdaHandler = async (event, context) => {
             }),
         };
     }
-    // Process the overlay calculation asynchronously
-    // Note: In a real Lambda environment, you might want to use SQS or other async mechanisms
-    // For now, we'll process it synchronously but this could be enhanced
-    await (0, overlay_worker_1.default)(payload);
-    return;
+    // Process the overlay calculation
+    // Wrap to catch any unexpected errors and report via sendErrorMessage
+    try {
+        await (0, overlay_worker_1.default)(payload);
+        await (0, messaging_1.flushMessages)();
+        return;
+    }
+    catch (e) {
+        try {
+            if (typeof payload === "object" &&
+                payload &&
+                "jobKey" in payload &&
+                "queueUrl" in payload) {
+                await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unhandled error", payload.queueUrl);
+                await (0, messaging_1.flushMessages)();
+            }
+        }
+        catch (sendErr) {
+            console.error("Failed to send error message", sendErr);
+        }
+        console.error(e);
+        return;
+    }
     // return {
     //   statusCode: 200,
     //   body: JSON.stringify({

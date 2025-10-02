@@ -33,10 +33,15 @@ export const QUERY_PLAN_DEFAULTS = {
  * Default size of the feature data cache in bytes.
  * This can be overridden when creating a source.
  */
-export const DEFAULT_CACHE_SIZE = 5 * 1024 * 1024; // 5MB
+export const DEFAULT_CACHE_SIZE = 16 * 1024 * 1024; // 16MB
 
 /**
  * Whether to validate feature data size prefixes against actual sizes.
  * This is useful for debugging but should be disabled in production.
  */
 export const VALIDATE_FEATURE_DATA = false;
+
+/**
+ * Default page size for paged range fetching and caching.
+ */
+export const PAGE_SIZE = 5 * 1024 * 1024; // 5MB

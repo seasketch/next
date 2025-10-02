@@ -23,7 +23,11 @@ export class ProgressNotifier {
 
     // only send notification if one of these criteria are met:
     // 1. it has been more than maxWaitMs since the last notification
-    if (Date.now() - (this.messageLastSent || 0) > this.maxWaitMs) {
+    if (
+      (Math.round(progress) > Math.round(this.lastNotifiedProgress) &&
+        Date.now() - (this.messageLastSent || 0) > this.maxWaitMs) ||
+      Date.now() - (this.messageLastSent || 0) > this.maxWaitMs * 5
+    ) {
       // console.log(
       //   "exceeded max wait",
       //   Date.now(),

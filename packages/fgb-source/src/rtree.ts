@@ -165,6 +165,15 @@ export default class RTreeIndex {
       isLeaf: index >= this.details.levels[this.details.levels.length - 2],
     };
   }
+
+  /**
+   * Returns the byte offset (relative to feature data start) of the last feature.
+   */
+  getLastFeatureOffset(): number {
+    const lastIndex = this.details.numNodes - 1;
+    const node = this.getNodeData(lastIndex);
+    return Number(node.offset);
+  }
 }
 
 /**

@@ -46,9 +46,11 @@ const messaging_1 = require("./messaging");
 const ProgressNotifier_1 = require("./ProgressNotifier");
 const geobuf = __importStar(require("geobuf"));
 const pbf_1 = __importDefault(require("pbf"));
-const sourceCache = new fgb_source_1.SourceCache("128 mb");
+const sourceCache = new fgb_source_1.SourceCache("1GB", {
+    maxCacheSize: "150MB",
+});
 async function handler(payload) {
-    console.log("Overlay worker received payload", payload);
+    console.log("Overlay worker (v2) received payload", payload);
     const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 1000, payload.queueUrl);
     await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString(), payload.queueUrl);
     const helpers = {

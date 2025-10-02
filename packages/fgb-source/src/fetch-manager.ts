@@ -1,5 +1,5 @@
 import { LRUCache } from "lru-cache";
-import { DEFAULT_CACHE_SIZE } from "./constants";
+import { DEFAULT_CACHE_SIZE, PAGE_SIZE } from "./constants";
 
 export type FetchRangeFn = (
   range: [number, number | null]
@@ -18,20 +18,41 @@ export type CacheStats = {
   maxSize: number;
   /** Number of requests currently in flight */
   inFlightRequests: number;
+  /** Number of cache hits. Reset by clearCache() */
+  cacheHits: number;
+  /** Number of cache misses. Reset by clearCache() */
+  cacheMisses: number;
 };
 
 /**
  * Manages fetching and caching of byte ranges from a source.
  */
 export class FetchManager {
-  private cache: LRUCache<string, ArrayBuffer>;
-  private inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
+  /** Page cache keyed by page index */
+  private pageCache: LRUCache<number, ArrayBuffer>;
+  /** In-flight page requests keyed by page index */
+  private inFlightPageRequests = new Map<number, Promise<ArrayBuffer>>();
+  /** In-flight assembled range requests keyed by "start-end" */
+  private inFlightRangeRequests = new Map<string, Promise<ArrayBuffer>>();
+  /** Underlying range fetch function or default fetch via URL */
   private fetchRangeFn: FetchRangeFn;
+  /** If provided, used by default fetch implementation */
   private url?: string;
+  /** Feature data section starting byte offset (absolute in file) */
+  private featureDataOffset: number;
+  /** Optional total file size in bytes (absolute). If unknown, undefined */
+  private fileByteLength?: number;
+  /** Page size in bytes for caching and fetching */
+  private pageSize: number;
+  private cacheHits = 0;
+  private cacheMisses = 0;
 
   constructor(
     urlOrFetchRangeFn: string | FetchRangeFn,
-    maxCacheSize: number = DEFAULT_CACHE_SIZE
+    maxCacheSize: number = DEFAULT_CACHE_SIZE,
+    featureDataOffset: number = 0,
+    fileByteLength?: number,
+    pageSize: number = PAGE_SIZE
   ) {
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
@@ -40,7 +61,11 @@ export class FetchManager {
       this.fetchRangeFn = urlOrFetchRangeFn;
     }
 
-    this.cache = new LRUCache({
+    this.featureDataOffset = featureDataOffset;
+    this.fileByteLength = fileByteLength;
+    this.pageSize = pageSize;
+
+    this.pageCache = new LRUCache({
       maxSize: maxCacheSize,
       sizeCalculation: (value) => value.byteLength,
       updateAgeOnGet: true,
@@ -52,10 +77,13 @@ export class FetchManager {
    */
   get cacheStats(): CacheStats {
     return {
-      count: this.cache.size,
-      calculatedSize: this.cache.calculatedSize,
-      maxSize: this.cache.maxSize,
-      inFlightRequests: this.inFlightRequests.size,
+      count: this.pageCache.size,
+      calculatedSize: this.pageCache.calculatedSize,
+      maxSize: this.pageCache.maxSize,
+      inFlightRequests:
+        this.inFlightPageRequests.size + this.inFlightRangeRequests.size,
+      cacheHits: this.cacheHits,
+      cacheMisses: this.cacheMisses,
     };
   }
 
@@ -63,8 +91,11 @@ export class FetchManager {
    * Clear the feature data cache
    */
   clearCache() {
-    this.cache.clear();
-    this.inFlightRequests.clear();
+    this.pageCache.clear();
+    this.inFlightPageRequests.clear();
+    this.inFlightRangeRequests.clear();
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
   }
 
   /**
@@ -78,46 +109,83 @@ export class FetchManager {
    * @throws Error if source is misconfigured
    */
   async fetchRange(range: [number, number | null]): Promise<ArrayBuffer> {
-    // Generate cache key from range
-    const cacheKey = `${range[0]}-${range[1] ?? ""}`;
+    const [requestedStart, requestedEndNullable] = range;
+    const rangeKey = `${requestedStart}-${requestedEndNullable ?? ""}`;
 
-    // Check cache first
-    const cached = this.cache.get(cacheKey);
-    if (cached) {
-      return cached;
+    // If the exact same range request is already in flight, reuse it
+    const existingRangeRequest = this.inFlightRangeRequests.get(rangeKey);
+    if (existingRangeRequest) {
+      this.cacheHits++;
+      return existingRangeRequest;
     }
 
-    // Check for in-flight request
-    const inFlightRequest = this.inFlightRequests.get(cacheKey);
-    if (inFlightRequest) {
-      return inFlightRequest;
+    // If end is null and we do not know the file size, fall back to direct fetch
+    if (requestedEndNullable === null && this.fileByteLength === undefined) {
+      this.cacheMisses++;
+      const timeout = setTimeout(() => {
+        throw new Error("Request timed out");
+      }, 60000);
+      const directPromise = this.fetchRangeFn(range).then(
+        (bytes) => {
+          clearTimeout(timeout);
+          this.inFlightRangeRequests.delete(rangeKey);
+          return bytes;
+        },
+        (error) => {
+          this.inFlightRangeRequests.delete(rangeKey);
+          throw error;
+        }
+      );
+      this.inFlightRangeRequests.set(rangeKey, directPromise);
+      return directPromise;
     }
 
-    // Add a timeout to the request
-    const timeout = setTimeout(() => {
-      throw new Error("Request timed out");
-    }, 120000);
+    const requestedEnd =
+      requestedEndNullable !== null
+        ? requestedEndNullable
+        : (this.fileByteLength as number) - 1;
 
-    // Create new request promise
-    const requestPromise = this.fetchRangeFn(range).then(
-      (bytes) => {
-        // cancel the timeout
-        clearTimeout(timeout);
-        // Store in cache
-        this.cache.set(cacheKey, bytes);
-        this.inFlightRequests.delete(cacheKey);
-        return bytes;
-      },
-      (error) => {
-        console.error("error fetching range", error);
-        this.inFlightRequests.delete(cacheKey);
-        throw error;
-      }
+    // Map requested range to page indices relative to feature data offset
+    const firstPageIndex = Math.max(
+      0,
+      Math.floor((requestedStart - this.featureDataOffset) / this.pageSize)
+    );
+    const lastPageIndex = Math.max(
+      firstPageIndex,
+      Math.floor((requestedEnd - this.featureDataOffset) / this.pageSize)
     );
 
-    // Store request in in-flight map
-    this.inFlightRequests.set(cacheKey, requestPromise);
-    return requestPromise;
+    const assemblePromise = (async () => {
+      const pages: Array<{ index: number; data: ArrayBuffer }> = [];
+      for (let i = firstPageIndex; i <= lastPageIndex; i++) {
+        const data = await this.fetchPage(i);
+        pages.push({ index: i, data });
+      }
+
+      // Assemble the requested slice from the fetched pages
+      const totalLength = requestedEnd - requestedStart + 1;
+      const output = new Uint8Array(totalLength);
+      let writeOffset = 0;
+
+      for (const { index, data } of pages) {
+        const pageStart = this.featureDataOffset + index * this.pageSize;
+        const pageEndExclusive = pageStart + this.pageSize;
+        const sliceStart = Math.max(requestedStart, pageStart);
+        const sliceEndExclusive = Math.min(requestedEnd + 1, pageEndExclusive);
+        const offsetInPage = sliceStart - pageStart;
+        const length = sliceEndExclusive - sliceStart;
+        if (length <= 0) continue;
+        const src = new Uint8Array(data, offsetInPage, length);
+        output.set(src, writeOffset);
+        writeOffset += length;
+      }
+
+      this.inFlightRangeRequests.delete(rangeKey);
+      return output.buffer;
+    })();
+
+    this.inFlightRangeRequests.set(rangeKey, assemblePromise);
+    return assemblePromise;
   }
 
   /**
@@ -135,5 +203,56 @@ export class FetchManager {
       },
     });
     return response.arrayBuffer();
+  }
+
+  /** Fetch a full page by index, using cache and in-flight deduping */
+  private async fetchPage(pageIndex: number): Promise<ArrayBuffer> {
+    const cached = this.pageCache.get(pageIndex);
+    if (cached) {
+      this.cacheHits++;
+      return cached;
+    }
+
+    const inFlight = this.inFlightPageRequests.get(pageIndex);
+    if (inFlight) {
+      this.cacheHits++;
+      return inFlight;
+    }
+
+    this.cacheMisses++;
+    console.log(
+      "cache miss - fetchPage",
+      pageIndex,
+      this.pageSize,
+      this.fileByteLength
+    );
+
+    const pageStart = this.featureDataOffset + pageIndex * this.pageSize;
+    let pageEndInclusive = pageStart + this.pageSize - 1;
+    if (
+      this.fileByteLength !== undefined &&
+      pageEndInclusive > this.fileByteLength - 1
+    ) {
+      pageEndInclusive = this.fileByteLength - 1;
+    }
+
+    const timeout = setTimeout(() => {
+      throw new Error("Request timed out");
+    }, 60000);
+
+    const promise = this.fetchRangeFn([pageStart, pageEndInclusive]).then(
+      (bytes) => {
+        clearTimeout(timeout);
+        this.pageCache.set(pageIndex, bytes);
+        this.inFlightPageRequests.delete(pageIndex);
+        return bytes;
+      },
+      (error) => {
+        this.inFlightPageRequests.delete(pageIndex);
+        throw error;
+      }
+    );
+    this.inFlightPageRequests.set(pageIndex, promise);
+    return promise;
   }
 }

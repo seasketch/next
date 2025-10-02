@@ -336,5 +336,6 @@ registerReportCardType({
   supportedReportingLayerTypes: [
     DataUploadOutputType.GeoJson,
     DataUploadOutputType.FlatGeobuf,
+    DataUploadOutputType.ReportingFlatgeobufV1,
   ],
 });

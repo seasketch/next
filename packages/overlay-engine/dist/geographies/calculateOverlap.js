@@ -44,13 +44,61 @@ const bbox_1 = require("@turf/bbox");
 const bboxUtils_1 = require("../utils/bboxUtils");
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
+const simplify_1 = __importDefault(require("@turf/simplify"));
+const containerIndex_1 = require("../utils/containerIndex");
+const layers = {
+    bboxes: {
+        name: "outer-polygon-edge-box",
+        geometryType: "Polygon",
+        fields: { category: "string" },
+    },
+    classifiedSourceFeatures: {
+        name: "classified-source-features",
+        geometryType: "Polygon",
+        fields: { category: "string" },
+    },
+    outerPolygonIntersectionResults: {
+        name: "outer-polygon-intersection-results",
+        geometryType: "MultiPolygon",
+        fields: { category: "string" },
+    },
+    allDifferenceFeatures: {
+        name: "all-difference-features",
+        geometryType: "Polygon",
+        fields: { offset: "number" },
+    },
+    finalProductFeatures: {
+        name: "final-product-features",
+        geometryType: "MultiPolygon",
+        fields: {},
+    },
+};
 async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
+    var _a, _b, _c;
     let differenceReferences = 0;
+    const loggedDifferenceFeatures = new Set();
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);
     if (sourceType !== "FlatGeobuf") {
         throw new Error(`Unsupported source type: ${sourceType}`);
     }
-    const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers);
+    // start source prefetching
+    sourceCache.get(sourceUrl);
+    const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers, {
+        pageSize: "16MB",
+    });
+    const simplified = (0, simplify_1.default)(intersectionFeatureGeojson, {
+        tolerance: 0.002,
+    });
+    const outerPolygonContainerIndex = new containerIndex_1.ContainerIndex(simplified);
+    if (helpers.logFeature) {
+        const bboxPolygons = outerPolygonContainerIndex.getBBoxPolygons();
+        for (const f of bboxPolygons.features) {
+            helpers.logFeature(layers.bboxes, {
+                ...f,
+                properties: { category: "outer-polygon-edge-box" },
+            });
+        }
+    }
     const differenceSources = await Promise.all(differenceLayers.map(async (layer) => {
         const diffSource = await sourceCache.get(layer.source);
         return {
@@ -58,6 +106,15 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
             source: diffSource,
         };
     }));
+    // difference layers often include the osm land layer, which is very large.
+    // to optimize performance, start fetching pages from the difference layers
+    // for every page that intersects the geography. Afterwards,
+    // feature-by-feature calculations can be performed.
+    const env = (0, bboxUtils_1.bboxToEnvelope)((0, bbox_1.bbox)(intersectionFeatureGeojson));
+    helpers.log("prefetching difference sources");
+    for (const differenceSource of differenceSources) {
+        differenceSource.source.prefetch(env);
+    }
     helpers.log("initialized geography sources");
     let progress = 0;
     let featuresProcessed = 0;
@@ -79,7 +136,37 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
         featuresProcessed++;
         const percent = (featuresProcessed / estimate.features) * 100;
         await helpers.progress(percent, `Processing features: (${featuresProcessed}/${estimate.features})`);
-        let intersection = clipping.intersection(intersectionGeom, feature.geometry.coordinates);
+        let hasChanged = false;
+        let intersection;
+        const classification = outerPolygonContainerIndex.classify(feature);
+        if (helpers.logFeature) {
+            helpers.logFeature(layers.classifiedSourceFeatures, {
+                ...feature,
+                properties: {
+                    category: classification,
+                },
+            });
+        }
+        if (classification === "outside") {
+            continue;
+        }
+        else if (classification === "mixed") {
+            hasChanged = true;
+            intersection = clipping.intersection(intersectionGeom, feature.geometry.coordinates);
+            if (helpers.logFeature) {
+                helpers.logFeature(layers.outerPolygonIntersectionResults, {
+                    ...feature,
+                    properties: { category: "outer-polygon-intersection-results" },
+                    geometry: {
+                        type: "MultiPolygon",
+                        coordinates: intersection,
+                    },
+                });
+            }
+        }
+        else {
+            intersection = feature.geometry.coordinates;
+        }
         if (differenceSources.length > 0) {
             for (const diffLayer of differenceSources) {
                 let differenceGeoms = [];
@@ -88,26 +175,61 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                     differenceReferences++;
                     if (!diffLayer.cql2Query ||
                         (0, cql2_1.evaluateCql2JSONQuery)(diffLayer.cql2Query, differenceFeature.properties)) {
+                        if (helpers.logFeature &&
+                            !loggedDifferenceFeatures.has(`${differenceSources.indexOf(diffLayer)}-${(_a = differenceFeature.properties) === null || _a === void 0 ? void 0 : _a.__offset}`)) {
+                            helpers.logFeature(layers.allDifferenceFeatures, {
+                                ...differenceFeature,
+                                properties: {
+                                    offset: ((_b = differenceFeature.properties) === null || _b === void 0 ? void 0 : _b.__offset) || 0,
+                                },
+                            });
+                        }
                         differenceGeoms.push(differenceFeature.geometry.coordinates);
                     }
                 }
                 if (differenceGeoms.length > 0) {
-                    console.log("difference geoms", differenceGeoms.length);
+                    // console.log("difference geoms", differenceGeoms.length);
+                    hasChanged = true;
                     intersection = clipping.difference(intersection, ...differenceGeoms);
                 }
                 else {
-                    console.log("no difference geoms");
+                    // console.log("no difference geoms");
                 }
             }
         }
-        const area = (0, area_1.default)({
-            type: "Feature",
-            properties: {},
-            geometry: {
-                type: "MultiPolygon",
-                coordinates: intersection,
-            },
-        }) / 1000000;
+        if (helpers.logFeature) {
+            if (hasChanged) {
+                helpers.logFeature(layers.finalProductFeatures, {
+                    type: "Feature",
+                    properties: {},
+                    geometry: {
+                        type: "MultiPolygon",
+                        // @ts-ignore
+                        coordinates: intersection,
+                    },
+                });
+            }
+            else {
+                helpers.logFeature(layers.finalProductFeatures, {
+                    ...feature,
+                });
+            }
+        }
+        let area = 0;
+        if (hasChanged) {
+            area =
+                (0, area_1.default)({
+                    type: "Feature",
+                    properties: {},
+                    geometry: {
+                        type: "MultiPolygon",
+                        coordinates: intersection,
+                    },
+                }) / 1000000;
+        }
+        else {
+            area = ((_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__area) || (0, area_1.default)(feature) / 1000000;
+        }
         areaByClassId["*"] += area;
         if (groupBy) {
             const classKey = feature.properties[groupBy];
@@ -119,7 +241,6 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
             }
         }
     }
-    console.log("difference references", differenceReferences);
     return areaByClassId;
 }
 //# sourceMappingURL=calculateOverlap.js.map

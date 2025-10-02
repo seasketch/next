@@ -505,12 +505,13 @@ Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, 
  * @param geography - The geography to initialize sources for
  * @param sourceCache - The source cache to use
  */
-async function initializeGeographySources(geography, sourceCache, helpers) {
+async function initializeGeographySources(geography, sourceCache, helpers, sourceOptions) {
     // first, start initialization of all sources. Later code can still await
     // sourceCache.get, but the requests will already be resolved or in-flight
     geography.map((layer) => {
         sourceCache.get(layer.source, {
             initialHeaderRequestLength: layer.headerSizeHint,
+            ...sourceOptions,
         });
     });
     const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
@@ -518,7 +519,7 @@ async function initializeGeographySources(geography, sourceCache, helpers) {
     const intersectionFeatures = [];
     let intersectionFeatureBytes = 0;
     await Promise.all(intersectionLayers.map(async (l) => {
-        const source = await sourceCache.get(l.source);
+        const source = await sourceCache.get(l.source, sourceOptions);
         helpers.log("Processing intersection layer");
         for await (const { properties, getFeature, } of source.getFeatureProperties()) {
             if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {

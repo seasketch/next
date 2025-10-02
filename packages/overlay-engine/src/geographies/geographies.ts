@@ -16,7 +16,7 @@ import {
 import area from "@turf/area";
 import { unionAtAntimeridian } from "../utils/unionAtAntimeridian";
 import { union } from "../utils/polygonClipping";
-import { SourceCache } from "fgb-source";
+import { CreateSourceOptions, SourceCache } from "fgb-source";
 import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
@@ -638,13 +638,15 @@ export { calculateGeographyOverlap } from "./calculateOverlap";
 export async function initializeGeographySources(
   geography: ClippingLayerOption[],
   sourceCache: SourceCache,
-  helpers: GuaranteedOverlayWorkerHelpers
+  helpers: GuaranteedOverlayWorkerHelpers,
+  sourceOptions?: CreateSourceOptions
 ) {
   // first, start initialization of all sources. Later code can still await
   // sourceCache.get, but the requests will already be resolved or in-flight
   geography.map((layer) => {
     sourceCache.get(layer.source, {
       initialHeaderRequestLength: layer.headerSizeHint,
+      ...sourceOptions,
     });
   });
 
@@ -655,7 +657,8 @@ export async function initializeGeographySources(
   await Promise.all(
     intersectionLayers.map(async (l) => {
       const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
-        l.source
+        l.source,
+        sourceOptions
       );
       helpers.log("Processing intersection layer");
       for await (const {

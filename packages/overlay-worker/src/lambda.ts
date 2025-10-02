@@ -1,6 +1,6 @@
 import { Context } from "aws-lambda";
 import handler, { validatePayload } from "./overlay-worker";
-import { sendErrorMessage } from "./messaging";
+import { sendErrorMessage, flushMessages } from "./messaging";
 
 export const lambdaHandler = async (
   event: any,
@@ -40,11 +40,33 @@ export const lambdaHandler = async (
     };
   }
 
-  // Process the overlay calculation asynchronously
-  // Note: In a real Lambda environment, you might want to use SQS or other async mechanisms
-  // For now, we'll process it synchronously but this could be enhanced
-  await handler(payload);
-  return;
+  // Process the overlay calculation
+  // Wrap to catch any unexpected errors and report via sendErrorMessage
+  try {
+    await handler(payload);
+    await flushMessages();
+    return;
+  } catch (e) {
+    try {
+      if (
+        typeof payload === "object" &&
+        payload &&
+        "jobKey" in payload &&
+        "queueUrl" in payload
+      ) {
+        await sendErrorMessage(
+          payload.jobKey,
+          e instanceof Error ? e.message : "Unhandled error",
+          (payload as any).queueUrl
+        );
+        await flushMessages();
+      }
+    } catch (sendErr) {
+      console.error("Failed to send error message", sendErr);
+    }
+    console.error(e);
+    return;
+  }
   // return {
   //   statusCode: 200,
   //   body: JSON.stringify({

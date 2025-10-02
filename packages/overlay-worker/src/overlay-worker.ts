@@ -22,10 +22,12 @@ import * as geobuf from "geobuf";
 import Pbf from "pbf";
 import { Feature, FeatureCollection, Polygon } from "geojson";
 
-const sourceCache = new SourceCache("128 mb");
+const sourceCache = new SourceCache("1GB", {
+  maxCacheSize: "150MB",
+});
 
 export default async function handler(payload: OverlayWorkerPayload) {
-  console.log("Overlay worker received payload", payload);
+  console.log("Overlay worker (v2) received payload", payload);
   const progressNotifier = new ProgressNotifier(
     payload.jobKey,
     1000,

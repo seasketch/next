@@ -2,7 +2,7 @@ import { Feature, MultiPolygon, Polygon } from "geojson";
 import { PreparedSketch } from "../utils/prepareSketch";
 import { Cql2Query } from "../cql2";
 import { FragmentResult, GeographySettings, SketchFragment } from "../fragments";
-import { SourceCache } from "fgb-source";
+import { CreateSourceOptions, SourceCache } from "fgb-source";
 import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 /**
@@ -208,7 +208,7 @@ export { calculateGeographyOverlap } from "./calculateOverlap";
  * @param geography - The geography to initialize sources for
  * @param sourceCache - The source cache to use
  */
-export declare function initializeGeographySources(geography: ClippingLayerOption[], sourceCache: SourceCache, helpers: GuaranteedOverlayWorkerHelpers): Promise<{
+export declare function initializeGeographySources(geography: ClippingLayerOption[], sourceCache: SourceCache, helpers: GuaranteedOverlayWorkerHelpers, sourceOptions?: CreateSourceOptions): Promise<{
     intersectionFeature: Feature<MultiPolygon, import("geojson").GeoJsonProperties>;
     intersectionLayers: ClippingLayerOption[];
     differenceLayers: ClippingLayerOption[];

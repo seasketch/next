@@ -101,6 +101,14 @@ var RTreeIndex = class {
       isLeaf: index >= this.details.levels[this.details.levels.length - 2]
     };
   }
+  /**
+   * Returns the byte offset (relative to feature data start) of the last feature.
+   */
+  getLastFeatureOffset() {
+    const lastIndex = this.details.numNodes - 1;
+    const node = this.getNodeData(lastIndex);
+    return Number(node.offset);
+  }
 };
 function calculatePackedRTreeDetails(featureCount, indexNodeSize) {
   const nodeSize = Math.min(Math.max(+indexNodeSize, 2), 65535);
@@ -2197,19 +2205,28 @@ var QUERY_PLAN_DEFAULTS = {
   overfetchBytes: 500 * 1024
   // 500KB
 };
-var DEFAULT_CACHE_SIZE = 5 * 1024 * 1024;
+var DEFAULT_CACHE_SIZE = 16 * 1024 * 1024;
+var PAGE_SIZE = 5 * 1024 * 1024;
 
 // src/fetch-manager.ts
 var FetchManager = class {
-  constructor(urlOrFetchRangeFn, maxCacheSize = DEFAULT_CACHE_SIZE) {
-    this.inFlightRequests = /* @__PURE__ */ new Map();
+  constructor(urlOrFetchRangeFn, maxCacheSize = DEFAULT_CACHE_SIZE, featureDataOffset = 0, fileByteLength, pageSize = PAGE_SIZE) {
+    /** In-flight page requests keyed by page index */
+    this.inFlightPageRequests = /* @__PURE__ */ new Map();
+    /** In-flight assembled range requests keyed by "start-end" */
+    this.inFlightRangeRequests = /* @__PURE__ */ new Map();
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
       this.fetchRangeFn = this.defaultFetchRange;
     } else {
       this.fetchRangeFn = urlOrFetchRangeFn;
     }
-    this.cache = new lruCache.LRUCache({
+    this.featureDataOffset = featureDataOffset;
+    this.fileByteLength = fileByteLength;
+    this.pageSize = pageSize;
+    this.pageCache = new lruCache.LRUCache({
       maxSize: maxCacheSize,
       sizeCalculation: (value) => value.byteLength,
       updateAgeOnGet: true
@@ -2220,18 +2237,23 @@ var FetchManager = class {
    */
   get cacheStats() {
     return {
-      count: this.cache.size,
-      calculatedSize: this.cache.calculatedSize,
-      maxSize: this.cache.maxSize,
-      inFlightRequests: this.inFlightRequests.size
+      count: this.pageCache.size,
+      calculatedSize: this.pageCache.calculatedSize,
+      maxSize: this.pageCache.maxSize,
+      inFlightRequests: this.inFlightPageRequests.size + this.inFlightRangeRequests.size,
+      cacheHits: this.cacheHits,
+      cacheMisses: this.cacheMisses
     };
   }
   /**
    * Clear the feature data cache
    */
   clearCache() {
-    this.cache.clear();
-    this.inFlightRequests.clear();
+    this.pageCache.clear();
+    this.inFlightPageRequests.clear();
+    this.inFlightRangeRequests.clear();
+    this.cacheHits = 0;
+    this.cacheMisses = 0;
   }
   /**
    * Fetch a byte range from the source.
@@ -2244,33 +2266,67 @@ var FetchManager = class {
    * @throws Error if source is misconfigured
    */
   async fetchRange(range) {
-    const cacheKey = `${range[0]}-${range[1] ?? ""}`;
-    const cached = this.cache.get(cacheKey);
-    if (cached) {
-      return cached;
+    const [requestedStart, requestedEndNullable] = range;
+    const rangeKey = `${requestedStart}-${requestedEndNullable ?? ""}`;
+    const existingRangeRequest = this.inFlightRangeRequests.get(rangeKey);
+    if (existingRangeRequest) {
+      this.cacheHits++;
+      return existingRangeRequest;
     }
-    const inFlightRequest = this.inFlightRequests.get(cacheKey);
-    if (inFlightRequest) {
-      return inFlightRequest;
+    if (requestedEndNullable === null && this.fileByteLength === void 0) {
+      this.cacheMisses++;
+      const timeout = setTimeout(() => {
+        throw new Error("Request timed out");
+      }, 6e4);
+      const directPromise = this.fetchRangeFn(range).then(
+        (bytes3) => {
+          clearTimeout(timeout);
+          this.inFlightRangeRequests.delete(rangeKey);
+          return bytes3;
+        },
+        (error) => {
+          this.inFlightRangeRequests.delete(rangeKey);
+          throw error;
+        }
+      );
+      this.inFlightRangeRequests.set(rangeKey, directPromise);
+      return directPromise;
     }
-    const timeout = setTimeout(() => {
-      throw new Error("Request timed out");
-    }, 12e4);
-    const requestPromise = this.fetchRangeFn(range).then(
-      (bytes3) => {
-        clearTimeout(timeout);
-        this.cache.set(cacheKey, bytes3);
-        this.inFlightRequests.delete(cacheKey);
-        return bytes3;
-      },
-      (error) => {
-        console.error("error fetching range", error);
-        this.inFlightRequests.delete(cacheKey);
-        throw error;
-      }
+    const requestedEnd = requestedEndNullable !== null ? requestedEndNullable : this.fileByteLength - 1;
+    const firstPageIndex = Math.max(
+      0,
+      Math.floor((requestedStart - this.featureDataOffset) / this.pageSize)
     );
-    this.inFlightRequests.set(cacheKey, requestPromise);
-    return requestPromise;
+    const lastPageIndex = Math.max(
+      firstPageIndex,
+      Math.floor((requestedEnd - this.featureDataOffset) / this.pageSize)
+    );
+    const assemblePromise = (async () => {
+      const pages = [];
+      for (let i = firstPageIndex; i <= lastPageIndex; i++) {
+        const data = await this.fetchPage(i);
+        pages.push({ index: i, data });
+      }
+      const totalLength = requestedEnd - requestedStart + 1;
+      const output = new Uint8Array(totalLength);
+      let writeOffset = 0;
+      for (const { index, data } of pages) {
+        const pageStart = this.featureDataOffset + index * this.pageSize;
+        const pageEndExclusive = pageStart + this.pageSize;
+        const sliceStart = Math.max(requestedStart, pageStart);
+        const sliceEndExclusive = Math.min(requestedEnd + 1, pageEndExclusive);
+        const offsetInPage = sliceStart - pageStart;
+        const length = sliceEndExclusive - sliceStart;
+        if (length <= 0) continue;
+        const src = new Uint8Array(data, offsetInPage, length);
+        output.set(src, writeOffset);
+        writeOffset += length;
+      }
+      this.inFlightRangeRequests.delete(rangeKey);
+      return output.buffer;
+    })();
+    this.inFlightRangeRequests.set(rangeKey, assemblePromise);
+    return assemblePromise;
   }
   /**
    * Default fetch implementation using the fetch API.
@@ -2285,6 +2341,48 @@ var FetchManager = class {
       }
     });
     return response.arrayBuffer();
+  }
+  /** Fetch a full page by index, using cache and in-flight deduping */
+  async fetchPage(pageIndex) {
+    const cached = this.pageCache.get(pageIndex);
+    if (cached) {
+      this.cacheHits++;
+      return cached;
+    }
+    const inFlight = this.inFlightPageRequests.get(pageIndex);
+    if (inFlight) {
+      this.cacheHits++;
+      return inFlight;
+    }
+    this.cacheMisses++;
+    console.log(
+      "cache miss - fetchPage",
+      pageIndex,
+      this.pageSize,
+      this.fileByteLength
+    );
+    const pageStart = this.featureDataOffset + pageIndex * this.pageSize;
+    let pageEndInclusive = pageStart + this.pageSize - 1;
+    if (this.fileByteLength !== void 0 && pageEndInclusive > this.fileByteLength - 1) {
+      pageEndInclusive = this.fileByteLength - 1;
+    }
+    const timeout = setTimeout(() => {
+      throw new Error("Request timed out");
+    }, 6e4);
+    const promise = this.fetchRangeFn([pageStart, pageEndInclusive]).then(
+      (bytes3) => {
+        clearTimeout(timeout);
+        this.pageCache.set(pageIndex, bytes3);
+        this.inFlightPageRequests.delete(pageIndex);
+        return bytes3;
+      },
+      (error) => {
+        this.inFlightPageRequests.delete(pageIndex);
+        throw error;
+      }
+    );
+    this.inFlightPageRequests.set(pageIndex, promise);
+    return promise;
   }
 };
 
@@ -2467,7 +2565,7 @@ var FlatGeobufSource = class {
    * Should not be called directly. Instead initialize using createSource(),
    * which will generate the necessary metadata and spatial index.
    */
-  constructor(urlOrFetchRangeFn, header, index, featureDataOffset, maxCacheSize = DEFAULT_CACHE_SIZE, overfetchBytes) {
+  constructor(urlOrFetchRangeFn, header, index, featureDataOffset, maxCacheSize = DEFAULT_CACHE_SIZE, overfetchBytes, fileByteLength, pageSize) {
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
     } else {
@@ -2478,7 +2576,10 @@ var FlatGeobufSource = class {
     this.featureDataOffset = featureDataOffset;
     this.fetchManager = new FetchManager(
       urlOrFetchRangeFn,
-      parseByteSize(maxCacheSize)
+      parseByteSize(maxCacheSize),
+      this.featureDataOffset,
+      fileByteLength,
+      parseByteSize(pageSize)
     );
     this.overfetchBytes = parseByteSize(overfetchBytes);
   }
@@ -2487,6 +2588,22 @@ var FlatGeobufSource = class {
    */
   get cacheStats() {
     return this.fetchManager.cacheStats;
+  }
+  /**
+   * Prefetch and cache all pages needed for features intersecting the envelope.
+   * This uses getFeaturesAsync with warmCache:true under the hood to trigger
+   * range fetches without parsing or yielding features.
+   */
+  async prefetch(bbox, options) {
+    const warmOptions = {
+      ...QUERY_PLAN_DEFAULTS,
+      ...options,
+      overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes,
+      // @ts-ignore - extend with warmCache flag for internal use
+      warmCache: true
+    };
+    for await (const _ of this.getFeaturesAsync(bbox, warmOptions)) {
+    }
   }
   /**
    * Clear the feature data cache
@@ -2666,6 +2783,7 @@ async function createSource(urlOrKey, options) {
   const maxCacheSize = parseByteSize(options?.maxCacheSize);
   const initialHeaderRequestLength = parseByteSize(options?.initialHeaderRequestLength) ?? HEADER_FETCH_SIZE;
   const overfetchBytes = parseByteSize(options?.overfetchBytes);
+  const pageSize = parseByteSize(options?.pageSize);
   const fetchRange = fetchRangeFnOption && typeof fetchRangeFnOption === "function" ? (range) => {
     return fetchRangeFnOption(urlOrKey, range);
   } : (range) => {
@@ -2702,13 +2820,28 @@ async function createSource(urlOrKey, options) {
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
+  let fileByteLength = void 0;
+  try {
+    const lastFeatureOffset = index.getLastFeatureOffset();
+    const lastFeaturePrefixAbs = indexOffset + indexSize + lastFeatureOffset;
+    const sizePrefixBuf = await fetchRange([
+      lastFeaturePrefixAbs,
+      lastFeaturePrefixAbs + SIZE_PREFIX_LEN2 - 1
+    ]);
+    const sizeView = new DataView(sizePrefixBuf);
+    const lastFeatureSize = sizeView.getUint32(0, true);
+    fileByteLength = lastFeaturePrefixAbs + SIZE_PREFIX_LEN2 + lastFeatureSize;
+  } catch (e2) {
+  }
   const source = new FlatGeobufSource(
     fetchRange,
     header,
     index,
     indexOffset + indexSize,
     maxCacheSize,
-    overfetchBytes
+    overfetchBytes,
+    fileByteLength,
+    pageSize
   );
   return source;
 }
@@ -2803,8 +2936,9 @@ var SourceCache = class {
    * ```
    */
   async get(key, options) {
-    if (this.cache.has(key)) {
-      return this.cache.get(key);
+    const cached = this.cache.get(key);
+    if (cached) {
+      return cached;
     }
     const inFlightRequest = this.inFlightRequests.get(key);
     if (inFlightRequest) {
@@ -2812,7 +2946,8 @@ var SourceCache = class {
     }
     const mergedOptions = {
       ...this.defaultOptions,
-      ...options
+      ...options,
+      maxCacheSize: options?.maxCacheSize || this.defaultOptions?.maxCacheSize || this.sizeLimitBytes / 4
     };
     const request = (async () => {
       try {

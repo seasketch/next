@@ -102,6 +102,11 @@ export type CreateSourceOptions = {
    * Use this to control how aggressively ranges are merged.
    */
   overfetchBytes?: ByteSize;
+  /**
+   * Page size to use for internal page-cached range fetching. Defaults to 5MB.
+   * Accepts a number of bytes or a string like "5MB".
+   */
+  pageSize?: ByteSize;
 };
 
 /**
@@ -157,7 +162,9 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     index: RTreeIndex,
     featureDataOffset: number,
     maxCacheSize: ByteSize = DEFAULT_CACHE_SIZE,
-    overfetchBytes?: ByteSize
+    overfetchBytes?: ByteSize,
+    fileByteLength?: number,
+    pageSize?: ByteSize
   ) {
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
@@ -169,7 +176,10 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     this.featureDataOffset = featureDataOffset;
     this.fetchManager = new FetchManager(
       urlOrFetchRangeFn,
-      parseByteSize(maxCacheSize)
+      parseByteSize(maxCacheSize),
+      this.featureDataOffset,
+      fileByteLength,
+      parseByteSize(pageSize)
     );
     this.overfetchBytes = parseByteSize(overfetchBytes);
   }
@@ -179,6 +189,29 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
    */
   get cacheStats() {
     return this.fetchManager.cacheStats;
+  }
+
+  /**
+   * Prefetch and cache all pages needed for features intersecting the envelope.
+   * This uses getFeaturesAsync with warmCache:true under the hood to trigger
+   * range fetches without parsing or yielding features.
+   */
+  async prefetch(
+    bbox: Envelope | Envelope[],
+    options?: QueryPlanOptions
+  ): Promise<void> {
+    const warmOptions = {
+      ...QUERY_PLAN_DEFAULTS,
+      ...options,
+      overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes,
+      // @ts-ignore - extend with warmCache flag for internal use
+      warmCache: true,
+    } as QueryPlanOptions & { warmCache: true };
+
+    // Drain the async iterator to ensure all range requests are issued
+    for await (const _ of this.getFeaturesAsync(bbox, warmOptions)) {
+      // no-op: warmCache prevents yielding
+    }
   }
 
   /**
@@ -426,6 +459,7 @@ export async function createSource<
   const initialHeaderRequestLength =
     parseByteSize(options?.initialHeaderRequestLength) ?? HEADER_FETCH_SIZE;
   const overfetchBytes = parseByteSize(options?.overfetchBytes);
+  const pageSize = parseByteSize(options?.pageSize);
   const fetchRange =
     fetchRangeFnOption && typeof fetchRangeFnOption === "function"
       ? (range: [number, number | null]) => {
@@ -477,13 +511,30 @@ export async function createSource<
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
+  // Try to determine total file size using last feature offset + size prefix
+  let fileByteLength: number | undefined = undefined;
+  try {
+    const lastFeatureOffset = index.getLastFeatureOffset();
+    const lastFeaturePrefixAbs = indexOffset + indexSize + lastFeatureOffset;
+    const sizePrefixBuf = await fetchRange([
+      lastFeaturePrefixAbs,
+      lastFeaturePrefixAbs + SIZE_PREFIX_LEN - 1,
+    ]);
+    const sizeView = new DataView(sizePrefixBuf);
+    const lastFeatureSize = sizeView.getUint32(0, true);
+    fileByteLength = lastFeaturePrefixAbs + SIZE_PREFIX_LEN + lastFeatureSize;
+  } catch (e) {
+    // If this fails (e.g., server doesn't support small range), proceed without file size
+  }
   const source = new FlatGeobufSource<T>(
     fetchRange,
     header,
     index,
     indexOffset + indexSize,
     maxCacheSize,
-    overfetchBytes
+    overfetchBytes,
+    fileByteLength,
+    pageSize
   );
   return source;
 }
