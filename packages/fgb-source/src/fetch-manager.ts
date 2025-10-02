@@ -220,12 +220,6 @@ export class FetchManager {
     }
 
     this.cacheMisses++;
-    console.log(
-      "cache miss - fetchPage",
-      pageIndex,
-      this.pageSize,
-      this.fileByteLength
-    );
 
     const pageStart = this.featureDataOffset + pageIndex * this.pageSize;
     let pageEndInclusive = pageStart + this.pageSize - 1;
@@ -236,6 +230,14 @@ export class FetchManager {
       pageEndInclusive = this.fileByteLength - 1;
     }
 
+    console.log(
+      "cache miss - fetchPage",
+      pageIndex,
+      this.pageSize,
+      this.fileByteLength,
+      `range=${pageStart}-${pageEndInclusive}`
+    );
+
     const timeout = setTimeout(() => {
       throw new Error("Request timed out");
     }, 60000);
@@ -243,6 +245,11 @@ export class FetchManager {
     const promise = this.fetchRangeFn([pageStart, pageEndInclusive]).then(
       (bytes) => {
         clearTimeout(timeout);
+        console.log(
+          `saving page ${pageIndex} buffer. Remaining flight requests: ${
+            this.inFlightPageRequests.size - 1
+          }`
+        );
         this.pageCache.set(pageIndex, bytes);
         this.inFlightPageRequests.delete(pageIndex);
         return bytes;

@@ -167,12 +167,37 @@ export default class RTreeIndex {
   }
 
   /**
+   * Returns the byte offsets of all features in the index.
+   * @returns Array of byte offsets
+   */
+  getFeatureOffsets() {
+    console.log("getFeatureOffsets", this.details.numNodes);
+    const offsets: number[] = [];
+    for (let i = 0; i < this.details.numNodes; i++) {
+      const offset = Number(
+        this.view.getBigUint64(i * NODE_ITEM_BYTE_LENGTH + 32, true)
+      );
+      offsets.push(offset);
+    }
+    return offsets;
+  }
+
+  /**
    * Returns the byte offset (relative to feature data start) of the last feature.
    */
   getLastFeatureOffset(): number {
     const lastIndex = this.details.numNodes - 1;
     const node = this.getNodeData(lastIndex);
     return Number(node.offset);
+  }
+
+  /**
+   * Returns the byte offset (relative to feature data start) of the first feature.
+   * This is determined by finding the first leaf node in the R-tree.
+   */
+  getFirstLeafNode() {
+    const firstLeafIndex = this.details.levels[this.details.levels.length - 2];
+    return this.getNodeData(firstLeafIndex);
   }
 }
 

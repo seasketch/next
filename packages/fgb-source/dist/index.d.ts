@@ -90,9 +90,26 @@ declare class RTreeIndex {
      */
     private getNodeData;
     /**
+     * Returns the byte offsets of all features in the index.
+     * @returns Array of byte offsets
+     */
+    getFeatureOffsets(): number[];
+    /**
      * Returns the byte offset (relative to feature data start) of the last feature.
      */
     getLastFeatureOffset(): number;
+    /**
+     * Returns the byte offset (relative to feature data start) of the first feature.
+     * This is determined by finding the first leaf node in the R-tree.
+     */
+    getFirstLeafNode(): {
+        minX: number;
+        minY: number;
+        maxX: number;
+        maxY: number;
+        offset: number;
+        isLeaf: boolean;
+    };
 }
 /**
  * Details about the structure of a packed R-tree index.
@@ -252,6 +269,7 @@ declare class FlatGeobufSource<T = Feature> {
     private fetchManager;
     /** Amount of space allowed between features before splitting requests */
     private overfetchBytes?;
+    private pages;
     /**
      * Should not be called directly. Instead initialize using createSource(),
      * which will generate the necessary metadata and spatial index.
@@ -357,6 +375,7 @@ declare class FlatGeobufSource<T = Feature> {
             };
         };
     }>;
+    private getPagePlan;
 }
 /**
  * Create a FlatGeobufSource from a URL or a custom fetchRange function. The

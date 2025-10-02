@@ -191,7 +191,7 @@ export async function* executeQueryPlan(
       // This ensures pending fetch promises can complete their cleanup without blocking
       if (i % 10 === 0) {
         process.nextTick(() => {});
-        // await new Promise((resolve) => setTimeout(resolve, 0));
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
   }

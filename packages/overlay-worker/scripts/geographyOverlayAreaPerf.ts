@@ -5,13 +5,25 @@ import {
   FieldDefinition,
 } from "overlay-engine/dist/utils/debuggingFgbWriter";
 import { OverlayWorkerLogFeatureLayerConfig } from "overlay-engine/dist/utils/helpers";
+import { setGlobalDispatcher, Agent, fetch } from "undici";
+
+// Create one agent per container at module load
+const agent = new Agent({
+  keepAliveTimeout: 30_000, // how long to keep idle sockets
+  keepAliveMaxTimeout: 60_000,
+  connections: 50, // max sockets total (tune as needed)
+});
+setGlobalDispatcher(agent);
+
+const cliProgress = require("cli-progress");
 
 // Reef-associated bioregions
-// const subdividedSource = "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
+const subdividedSource =
+  "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
 
 // ACA Geomorphic Cropped
-const subdividedSource =
-  "https://uploads.seasketch.org/projects/cburt/subdivided/117-00f805f7-caf0-489f-9d44-c3e266027e81.fgb";
+// const subdividedSource =
+//   "https://uploads.seasketch.org/projects/cburt/subdivided/117-00f805f7-caf0-489f-9d44-c3e266027e81.fgb";
 
 // Fiji EEZ, including complex shoreline clipping
 const geography = [
@@ -96,32 +108,39 @@ function getDebugWriter(
 
 // CLI progress bar (assumes cli-progress is installed)
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const cliProgress = require("cli-progress");
-const progressBar = new cliProgress.SingleBar(
-  {
-    format: "Processing |{bar}| {percentage}% | {value}/{total} | {message}",
-    hideCursor: true,
-    clearOnComplete: true,
-  },
-  cliProgress.Presets.shades_classic
-);
-progressBar.start(100, 0, { message: "Initializing" });
+
+let progressBar: any = null;
+
+function getOrCreateProgressBar() {
+  if (!progressBar) {
+    progressBar = new cliProgress.SingleBar(
+      {
+        format:
+          "Processing |{bar}| {percentage}% | {value}/{total} | {message}",
+        hideCursor: true,
+        clearOnComplete: true,
+      },
+      cliProgress.Presets.shades_classic
+    );
+    progressBar.start(100, 0, { message: "Initializing" });
+  }
+  return progressBar;
+}
 
 const sourceCache = new SourceCache("1GB", {
-  fetchRangeFn: (key, range) => {
+  fetchRangeFn: (url, range) => {
     // console.log("fetching", key, range);
     fetchCount++;
-    const startTime = performance.now();
-    return fetch(key, {
+    return fetch(url, {
       headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
     }).then((response) => {
-      const endTime = performance.now();
-      cumulativeFetchTime += endTime - startTime;
       return response.arrayBuffer();
     });
   },
-  maxCacheSize: "150MB",
+  maxCacheSize: "256MB",
 });
+
+let lastlogged = performance.now();
 
 calculateGeographyOverlap(
   payload.subject.clippingLayers as ClippingLayerOption[],
@@ -156,37 +175,44 @@ calculateGeographyOverlap(
       }
     },
     progress: async (progress, message) => {
-      const percent = Math.max(0, Math.min(100, Math.round(progress)));
-      progressBar.update(percent, { message: message || "" });
+      if (performance.now() - lastlogged > 100) {
+        lastlogged = performance.now();
+        console.log(`${progress}% - ${message}`);
+      }
+      // console.log(`${progress}% - ${message}`);
+      // const progressBar = getOrCreateProgressBar();
+      // const percent = Math.max(0, Math.min(100, Math.round(progress)));
+      // progressBar.update(percent, { message: message || "" });
     },
   }
 )
   .then(console.log)
   .then(async () => {
-    progressBar.update(100, { message: "Done" });
-    progressBar.stop();
-    console.log("fetch count", fetchCount);
-    console.log("cumulative fetch time", cumulativeFetchTime);
+    // progressBar.update(100, { message: "Done" });
+    // progressBar.stop();
     const source = await sourceCache.get(geography[0].source);
     console.log("cache stats");
     console.log(source.cacheStats);
-    // Close debugging writers
-    const closePromises: Promise<void>[] = [];
-    debugWriters.forEach((entry, name) => {
-      closePromises.push(
-        entry.writer
-          .close()
-          .then(() => {
-            console.log(`wrote debug layer '${name}' to ${entry.path}`);
-          })
-          .catch(() => {})
-      );
-    });
-    await Promise.all(closePromises);
+    await closeDebugWriters();
   })
   .catch((err) => {
     try {
       progressBar.stop();
+      closeDebugWriters().then(() => {
+        throw err;
+      });
     } catch (_) {}
     throw err;
   });
+
+async function closeDebugWriters() {
+  const closePromises: Promise<void>[] = [];
+  debugWriters.forEach((entry, name) => {
+    closePromises.push(
+      entry.writer.close().then(() => {
+        console.log(`wrote debug layer '${name}' to ${entry.path}`);
+      })
+    );
+  });
+  await Promise.all(closePromises);
+}

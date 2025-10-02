@@ -641,11 +641,12 @@ export async function initializeGeographySources(
   helpers: GuaranteedOverlayWorkerHelpers,
   sourceOptions?: CreateSourceOptions
 ) {
+  console.log("initializing geography sources", sourceOptions);
   // first, start initialization of all sources. Later code can still await
   // sourceCache.get, but the requests will already be resolved or in-flight
-  geography.map((layer) => {
-    sourceCache.get(layer.source, {
-      initialHeaderRequestLength: layer.headerSizeHint,
+  geography.map((clippingLayer) => {
+    sourceCache.get(clippingLayer.source, {
+      initialHeaderRequestLength: clippingLayer.headerSizeHint,
       ...sourceOptions,
     });
   });

@@ -72,6 +72,11 @@ const layers = {
         geometryType: "MultiPolygon",
         fields: {},
     },
+    differenceLayerIntesectionState: {
+        name: "difference-layer-intersection-state",
+        geometryType: "Polygon",
+        fields: { category: "string" },
+    },
 };
 async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
     var _a, _b, _c;
@@ -81,10 +86,13 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
     if (sourceType !== "FlatGeobuf") {
         throw new Error(`Unsupported source type: ${sourceType}`);
     }
+    console.log("prefetch source layer of interest");
     // start source prefetching
-    sourceCache.get(sourceUrl);
+    sourceCache.get(sourceUrl, {
+        pageSize: "4MB",
+    });
     const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers, {
-        pageSize: "16MB",
+        pageSize: "4MB",
     });
     const simplified = (0, simplify_1.default)(intersectionFeatureGeojson, {
         tolerance: 0.002,
@@ -132,6 +140,7 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
     for await (const feature of source.getFeaturesAsync(envelope)) {
         if (featuresProcessed === 0) {
             helpers.timeEnd("time to first feature");
+            helpers.log("starting processing of first source feature");
         }
         featuresProcessed++;
         const percent = (featuresProcessed / estimate.features) * 100;
@@ -167,10 +176,10 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
         else {
             intersection = feature.geometry.coordinates;
         }
+        let differenceGeoms = [];
+        const featureEnvelope = (0, bboxUtils_1.bboxToEnvelope)((0, bbox_1.bbox)(feature.geometry));
         if (differenceSources.length > 0) {
             for (const diffLayer of differenceSources) {
-                let differenceGeoms = [];
-                const featureEnvelope = (0, bboxUtils_1.bboxToEnvelope)((0, bbox_1.bbox)(feature.geometry));
                 for await (const differenceFeature of diffLayer.source.getFeaturesAsync(featureEnvelope)) {
                     differenceReferences++;
                     if (!diffLayer.cql2Query ||
@@ -187,16 +196,25 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                         differenceGeoms.push(differenceFeature.geometry.coordinates);
                     }
                 }
-                if (differenceGeoms.length > 0) {
-                    // console.log("difference geoms", differenceGeoms.length);
-                    hasChanged = true;
-                    // intersection = clipping.difference(intersection, ...differenceGeoms);
-                    continue;
-                }
-                else {
-                    // console.log("no difference geoms");
-                }
             }
+        }
+        if (differenceGeoms.length > 0) {
+            // console.log("difference geoms", differenceGeoms.length);
+            hasChanged = true;
+            intersection = clipping.difference(intersection, ...differenceGeoms);
+            // continue;
+        }
+        else {
+            // console.log("no difference geoms");
+        }
+        if (helpers.logFeature) {
+            helpers.logFeature(layers.differenceLayerIntesectionState, {
+                type: "Feature",
+                properties: {
+                    category: hasChanged ? "would-clip" : "no-intersection-w-diff",
+                },
+                geometry: feature.geometry,
+            });
         }
         if (helpers.logFeature) {
             if (hasChanged) {

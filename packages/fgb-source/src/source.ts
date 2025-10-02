@@ -151,6 +151,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   private fetchManager: FetchManager;
   /** Amount of space allowed between features before splitting requests */
   private overfetchBytes?: number;
+  private pages: number[];
 
   /**
    * Should not be called directly. Instead initialize using createSource(),
@@ -173,6 +174,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
     this.header = header;
     this.index = index;
+
     this.featureDataOffset = featureDataOffset;
     this.fetchManager = new FetchManager(
       urlOrFetchRangeFn,
@@ -182,6 +184,22 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       parseByteSize(pageSize)
     );
     this.overfetchBytes = parseByteSize(overfetchBytes);
+    const offsets = this.index.getFeatureOffsets();
+    const pages: number[] = [0];
+    const pageSizeLimit = parseByteSize(pageSize || "1MB")!;
+    let pageBytes = 0;
+    let currentOffset = 0;
+    for (let i = 0; i < offsets.length; i++) {
+      const offset = offsets[i];
+      pageBytes += offset - currentOffset;
+      currentOffset = offset;
+      if (pageBytes > pageSizeLimit) {
+        pages.push(offset);
+        pageBytes = 0;
+      }
+    }
+    this.pages = pages;
+    console.log("pages", pageSizeLimit, pages.length);
   }
 
   /**
@@ -211,6 +229,8 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     // Drain the async iterator to ensure all range requests are issued
     for await (const _ of this.getFeaturesAsync(bbox, warmOptions)) {
       // no-op: warmCache prevents yielding
+      // wait for next tick
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 
@@ -299,6 +319,14 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         offsets.push(result);
       }
     }
+    console.log(
+      "pagePlan",
+      this.getPagePlan(offsets).map((p) => ({
+        pageIndex: p.pageIndex,
+        features: p.offsetsAndLengths.length,
+        range: `${p.range[0]}-${p.range[1]}`,
+      }))
+    );
     const plan = createQueryPlan(offsets, this.featureDataOffset, options);
     plan.requests.sort((a, b) => a.range[0] - b.range[0]);
     for await (const [data, offset] of executeQueryPlan(
@@ -436,7 +464,65 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       offset += size + SIZE_PREFIX_LEN;
     }
   }
+
+  private getPagePlan(offsets: OffsetAndLength[]) {
+    const pagePlan: PagePlan[] = [];
+    // sort offsets in ascending order
+    const sortedOffsets = offsets.sort((a, b) => a[0] - b[0]);
+    // first, figure out the first page from the first offset
+    const currentOffset = sortedOffsets[0];
+    let currentPageIndex = 0;
+    while (this.pages[currentPageIndex] <= currentOffset[0]) {
+      currentPageIndex++;
+    }
+    currentPageIndex--;
+    let currentPage: PagePlan = {
+      pageIndex: currentPageIndex,
+      range: [
+        this.pages[currentPageIndex],
+        this.pages[currentPageIndex + 1] || null,
+      ],
+      offsetsAndLengths: [currentOffset],
+    };
+    console.log("first page", currentPage, sortedOffsets[0]);
+    for (const offset of sortedOffsets.slice(1)) {
+      if (offset[0] >= currentPage.range[1]!) {
+        const lastOffset =
+          currentPage.offsetsAndLengths[
+            currentPage.offsetsAndLengths.length - 1
+          ];
+        currentPage.range[1] = lastOffset[1]
+          ? lastOffset[0] + lastOffset[1]
+          : null;
+        pagePlan.push(currentPage);
+        while (this.pages[currentPageIndex] < offset[0]) {
+          currentPageIndex++;
+        }
+        currentPage = {
+          pageIndex: currentPageIndex,
+          range: [
+            this.pages[currentPageIndex],
+            this.pages[currentPageIndex + 1] || null,
+          ],
+          offsetsAndLengths: [offset],
+        };
+      } else {
+        currentPage.offsetsAndLengths.push(offset);
+      }
+    }
+    const lastOffset =
+      currentPage.offsetsAndLengths[currentPage.offsetsAndLengths.length - 1];
+    currentPage.range[1] = lastOffset[1] ? lastOffset[0] + lastOffset[1] : null;
+    pagePlan.push(currentPage);
+    return pagePlan;
+  }
 }
+
+type PagePlan = {
+  pageIndex: number;
+  range: [number, number | null];
+  offsetsAndLengths: OffsetAndLength[];
+};
 
 /**
  * Create a FlatGeobufSource from a URL or a custom fetchRange function. The
@@ -471,6 +557,7 @@ export async function createSource<
           }).then((response) => response.arrayBuffer());
         };
 
+  console.log("fetching header");
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
 
   const view = new DataView(headerData);
@@ -526,6 +613,7 @@ export async function createSource<
   } catch (e) {
     // If this fails (e.g., server doesn't support small range), proceed without file size
   }
+  console.log("fetched header and index. creating source.");
   const source = new FlatGeobufSource<T>(
     fetchRange,
     header,

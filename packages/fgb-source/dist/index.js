@@ -102,12 +102,35 @@ var RTreeIndex = class {
     };
   }
   /**
+   * Returns the byte offsets of all features in the index.
+   * @returns Array of byte offsets
+   */
+  getFeatureOffsets() {
+    console.log("getFeatureOffsets", this.details.numNodes);
+    const offsets = [];
+    for (let i = 0; i < this.details.numNodes; i++) {
+      const offset = Number(
+        this.view.getBigUint64(i * NODE_ITEM_BYTE_LENGTH + 32, true)
+      );
+      offsets.push(offset);
+    }
+    return offsets;
+  }
+  /**
    * Returns the byte offset (relative to feature data start) of the last feature.
    */
   getLastFeatureOffset() {
     const lastIndex = this.details.numNodes - 1;
     const node = this.getNodeData(lastIndex);
     return Number(node.offset);
+  }
+  /**
+   * Returns the byte offset (relative to feature data start) of the first feature.
+   * This is determined by finding the first leaf node in the R-tree.
+   */
+  getFirstLeafNode() {
+    const firstLeafIndex = this.details.levels[this.details.levels.length - 2];
+    return this.getNodeData(firstLeafIndex);
   }
 };
 function calculatePackedRTreeDetails(featureCount, indexNodeSize) {
@@ -2355,23 +2378,27 @@ var FetchManager = class {
       return inFlight;
     }
     this.cacheMisses++;
-    console.log(
-      "cache miss - fetchPage",
-      pageIndex,
-      this.pageSize,
-      this.fileByteLength
-    );
     const pageStart = this.featureDataOffset + pageIndex * this.pageSize;
     let pageEndInclusive = pageStart + this.pageSize - 1;
     if (this.fileByteLength !== void 0 && pageEndInclusive > this.fileByteLength - 1) {
       pageEndInclusive = this.fileByteLength - 1;
     }
+    console.log(
+      "cache miss - fetchPage",
+      pageIndex,
+      this.pageSize,
+      this.fileByteLength,
+      `range=${pageStart}-${pageEndInclusive}`
+    );
     const timeout = setTimeout(() => {
       throw new Error("Request timed out");
     }, 6e4);
     const promise = this.fetchRangeFn([pageStart, pageEndInclusive]).then(
       (bytes3) => {
         clearTimeout(timeout);
+        console.log(
+          `saving page ${pageIndex} buffer. Remaining flight requests: ${this.inFlightPageRequests.size - 1}`
+        );
         this.pageCache.set(pageIndex, bytes3);
         this.inFlightPageRequests.delete(pageIndex);
         return bytes3;
@@ -2481,6 +2508,7 @@ async function* executeQueryPlan(plan, fetchRange, options = {}) {
       if (i % 10 === 0) {
         process.nextTick(() => {
         });
+        await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
   }
@@ -2582,6 +2610,22 @@ var FlatGeobufSource = class {
       parseByteSize(pageSize)
     );
     this.overfetchBytes = parseByteSize(overfetchBytes);
+    const offsets = this.index.getFeatureOffsets();
+    const pages = [0];
+    const pageSizeLimit = parseByteSize(pageSize || "1MB");
+    let pageBytes = 0;
+    let currentOffset = 0;
+    for (let i = 0; i < offsets.length; i++) {
+      const offset = offsets[i];
+      pageBytes += offset - currentOffset;
+      currentOffset = offset;
+      if (pageBytes > pageSizeLimit) {
+        pages.push(offset);
+        pageBytes = 0;
+      }
+    }
+    this.pages = pages;
+    console.log("pages", pageSizeLimit, pages.length);
   }
   /**
    * Get cache statistics
@@ -2603,6 +2647,7 @@ var FlatGeobufSource = class {
       warmCache: true
     };
     for await (const _ of this.getFeaturesAsync(bbox, warmOptions)) {
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
   /**
@@ -2676,6 +2721,14 @@ var FlatGeobufSource = class {
         offsets.push(result);
       }
     }
+    console.log(
+      "pagePlan",
+      this.getPagePlan(offsets).map((p) => ({
+        pageIndex: p.pageIndex,
+        features: p.offsetsAndLengths.length,
+        range: `${p.range[0]}-${p.range[1]}`
+      }))
+    );
     const plan = createQueryPlan(offsets, this.featureDataOffset, options);
     plan.requests.sort((a, b) => a.range[0] - b.range[0]);
     for await (const [data, offset] of executeQueryPlan(
@@ -2777,6 +2830,49 @@ var FlatGeobufSource = class {
       offset += size + SIZE_PREFIX_LEN2;
     }
   }
+  getPagePlan(offsets) {
+    const pagePlan = [];
+    const sortedOffsets = offsets.sort((a, b) => a[0] - b[0]);
+    const currentOffset = sortedOffsets[0];
+    let currentPageIndex = 0;
+    while (this.pages[currentPageIndex] <= currentOffset[0]) {
+      currentPageIndex++;
+    }
+    currentPageIndex--;
+    let currentPage = {
+      pageIndex: currentPageIndex,
+      range: [
+        this.pages[currentPageIndex],
+        this.pages[currentPageIndex + 1] || null
+      ],
+      offsetsAndLengths: [currentOffset]
+    };
+    console.log("first page", currentPage, sortedOffsets[0]);
+    for (const offset of sortedOffsets.slice(1)) {
+      if (offset[0] >= currentPage.range[1]) {
+        const lastOffset2 = currentPage.offsetsAndLengths[currentPage.offsetsAndLengths.length - 1];
+        currentPage.range[1] = lastOffset2[1] ? lastOffset2[0] + lastOffset2[1] : null;
+        pagePlan.push(currentPage);
+        while (this.pages[currentPageIndex] < offset[0]) {
+          currentPageIndex++;
+        }
+        currentPage = {
+          pageIndex: currentPageIndex,
+          range: [
+            this.pages[currentPageIndex],
+            this.pages[currentPageIndex + 1] || null
+          ],
+          offsetsAndLengths: [offset]
+        };
+      } else {
+        currentPage.offsetsAndLengths.push(offset);
+      }
+    }
+    const lastOffset = currentPage.offsetsAndLengths[currentPage.offsetsAndLengths.length - 1];
+    currentPage.range[1] = lastOffset[1] ? lastOffset[0] + lastOffset[1] : null;
+    pagePlan.push(currentPage);
+    return pagePlan;
+  }
 };
 async function createSource(urlOrKey, options) {
   const fetchRangeFnOption = options?.fetchRangeFn;
@@ -2791,6 +2887,7 @@ async function createSource(urlOrKey, options) {
       headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` }
     }).then((response) => response.arrayBuffer());
   };
+  console.log("fetching header");
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
   const view = new DataView(headerData);
   for (let i = 0; i < MAGIC_BYTES.length; i++) {
@@ -2833,6 +2930,7 @@ async function createSource(urlOrKey, options) {
     fileByteLength = lastFeaturePrefixAbs + SIZE_PREFIX_LEN2 + lastFeatureSize;
   } catch (e2) {
   }
+  console.log("fetched header and index. creating source.");
   const source = new FlatGeobufSource(
     fetchRange,
     header,

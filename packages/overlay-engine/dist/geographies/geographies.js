@@ -506,11 +506,12 @@ Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, 
  * @param sourceCache - The source cache to use
  */
 async function initializeGeographySources(geography, sourceCache, helpers, sourceOptions) {
+    console.log("initializing geography sources", sourceOptions);
     // first, start initialization of all sources. Later code can still await
     // sourceCache.get, but the requests will already be resolved or in-flight
-    geography.map((layer) => {
-        sourceCache.get(layer.source, {
-            initialHeaderRequestLength: layer.headerSizeHint,
+    geography.map((clippingLayer) => {
+        sourceCache.get(clippingLayer.source, {
+            initialHeaderRequestLength: clippingLayer.headerSizeHint,
             ...sourceOptions,
         });
     });

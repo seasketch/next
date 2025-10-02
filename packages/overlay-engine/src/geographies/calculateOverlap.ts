@@ -41,6 +41,11 @@ const layers: Record<string, OverlayWorkerLogFeatureLayerConfig> = {
     geometryType: "MultiPolygon",
     fields: {},
   },
+  differenceLayerIntesectionState: {
+    name: "difference-layer-intersection-state",
+    geometryType: "Polygon",
+    fields: { category: "string" },
+  },
 };
 
 export async function calculateGeographyOverlap(
@@ -58,12 +63,15 @@ export async function calculateGeographyOverlap(
     throw new Error(`Unsupported source type: ${sourceType}`);
   }
 
+  console.log("prefetch source layer of interest");
   // start source prefetching
-  sourceCache.get<Feature<Polygon | MultiPolygon>>(sourceUrl);
+  sourceCache.get<Feature<Polygon | MultiPolygon>>(sourceUrl, {
+    pageSize: "4MB",
+  });
 
   const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } =
     await initializeGeographySources(geography, sourceCache, helpers, {
-      pageSize: "16MB",
+      pageSize: "4MB",
     });
 
   const simplified = simplify(intersectionFeatureGeojson, {
@@ -132,6 +140,7 @@ export async function calculateGeographyOverlap(
   for await (const feature of source.getFeaturesAsync(envelope)) {
     if (featuresProcessed === 0) {
       helpers.timeEnd("time to first feature");
+      helpers.log("starting processing of first source feature");
     }
     featuresProcessed++;
     const percent = (featuresProcessed / estimate.features) * 100;
@@ -173,10 +182,10 @@ export async function calculateGeographyOverlap(
       intersection = feature.geometry.coordinates as clipping.Geom;
     }
 
+    let differenceGeoms = [] as clipping.Geom[];
+    const featureEnvelope = bboxToEnvelope(bbox(feature.geometry));
     if (differenceSources.length > 0) {
       for (const diffLayer of differenceSources) {
-        let differenceGeoms = [] as clipping.Geom[];
-        const featureEnvelope = bboxToEnvelope(bbox(feature.geometry));
         for await (const differenceFeature of diffLayer.source.getFeaturesAsync(
           featureEnvelope
         )) {
@@ -208,15 +217,24 @@ export async function calculateGeographyOverlap(
             );
           }
         }
-        if (differenceGeoms.length > 0) {
-          // console.log("difference geoms", differenceGeoms.length);
-          hasChanged = true;
-          // intersection = clipping.difference(intersection, ...differenceGeoms);
-          continue;
-        } else {
-          // console.log("no difference geoms");
-        }
       }
+    }
+    if (differenceGeoms.length > 0) {
+      // console.log("difference geoms", differenceGeoms.length);
+      hasChanged = true;
+      intersection = clipping.difference(intersection, ...differenceGeoms);
+      // continue;
+    } else {
+      // console.log("no difference geoms");
+    }
+    if (helpers.logFeature) {
+      helpers.logFeature(layers.differenceLayerIntesectionState, {
+        type: "Feature",
+        properties: {
+          category: hasChanged ? "would-clip" : "no-intersection-w-diff",
+        },
+        geometry: feature.geometry,
+      });
     }
     if (helpers.logFeature) {
       if (hasChanged) {
