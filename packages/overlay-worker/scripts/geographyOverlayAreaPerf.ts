@@ -7,8 +7,11 @@ import {
 import { OverlayWorkerLogFeatureLayerConfig } from "overlay-engine/dist/utils/helpers";
 
 // Reef-associated bioregions
+// const subdividedSource = "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
+
+// ACA Geomorphic Cropped
 const subdividedSource =
-  "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
+  "https://uploads.seasketch.org/projects/cburt/subdivided/117-00f805f7-caf0-489f-9d44-c3e266027e81.fgb";
 
 // Fiji EEZ, including complex shoreline clipping
 const geography = [
@@ -130,28 +133,28 @@ calculateGeographyOverlap(
     log: (message) => {
       console.log(message);
     },
-    // logFeature: (layer, feature) => {
-    //   const entry = getDebugWriter(layer);
-    //   if (!entry) return;
-    //   try {
-    //     // Coerce boolean properties to string when needed to match the schema
-    //     const properties = { ...(feature.properties || {}) } as Record<
-    //       string,
-    //       any
-    //     >;
-    //     for (const [key, t] of Object.entries(layer.fields)) {
-    //       if (t === "boolean" && typeof properties[key] === "boolean") {
-    //         properties[key] = properties[key] ? "true" : "false";
-    //       } else if (t === "number" && typeof properties[key] === "string") {
-    //         const n = Number(properties[key]);
-    //         if (!Number.isNaN(n)) properties[key] = n;
-    //       }
-    //     }
-    //     entry.writer.addFeature({ ...feature, properties });
-    //   } catch (_) {
-    //     // ignore feature write errors
-    //   }
-    // },
+    logFeature: (layer, feature) => {
+      const entry = getDebugWriter(layer);
+      if (!entry) return;
+      try {
+        // Coerce boolean properties to string when needed to match the schema
+        const properties = { ...(feature.properties || {}) } as Record<
+          string,
+          any
+        >;
+        for (const [key, t] of Object.entries(layer.fields)) {
+          if (t === "boolean" && typeof properties[key] === "boolean") {
+            properties[key] = properties[key] ? "true" : "false";
+          } else if (t === "number" && typeof properties[key] === "string") {
+            const n = Number(properties[key]);
+            if (!Number.isNaN(n)) properties[key] = n;
+          }
+        }
+        entry.writer.addFeature({ ...feature, properties });
+      } catch (_) {
+        // ignore feature write errors
+      }
+    },
     progress: async (progress, message) => {
       const percent = Math.max(0, Math.min(100, Math.round(progress)));
       progressBar.update(percent, { message: message || "" });

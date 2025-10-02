@@ -211,7 +211,8 @@ export async function calculateGeographyOverlap(
         if (differenceGeoms.length > 0) {
           // console.log("difference geoms", differenceGeoms.length);
           hasChanged = true;
-          intersection = clipping.difference(intersection, ...differenceGeoms);
+          // intersection = clipping.difference(intersection, ...differenceGeoms);
+          continue;
         } else {
           // console.log("no difference geoms");
         }

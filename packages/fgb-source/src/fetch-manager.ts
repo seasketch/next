@@ -124,7 +124,7 @@ export class FetchManager {
       this.cacheMisses++;
       const timeout = setTimeout(() => {
         throw new Error("Request timed out");
-      }, 60000);
+      }, 60000 * 5);
       const directPromise = this.fetchRangeFn(range).then(
         (bytes) => {
           clearTimeout(timeout);
