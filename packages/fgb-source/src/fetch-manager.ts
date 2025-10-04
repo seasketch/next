@@ -230,7 +230,7 @@ export class FetchManager {
       pageEndInclusive = this.fileByteLength - 1;
     }
 
-    console.log(
+    console.trace(
       "cache miss - fetchPage",
       pageIndex,
       this.pageSize,

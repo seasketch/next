@@ -37,6 +37,7 @@
     "fgb-source": "^1.0.0",
     "geobuf": "^3.0.2",
     "lodash.debounce": "^4.0.8",
+    "lru-cache": "^11.2.2",
     "overlay-engine": "^1.0.0",
     "pbf": "^4.0.1",
     "undici": "^7.16.0"

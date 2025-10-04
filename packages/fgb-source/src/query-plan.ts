@@ -1,5 +1,5 @@
 import { FetchRangeFn } from "./fetch-manager";
-import { OffsetAndLength } from "./rtree";
+import { FeatureReference } from "./rtree";
 import {
   SIZE_PREFIX_LEN,
   VALIDATE_FEATURE_DATA,
@@ -13,7 +13,7 @@ export type QueryPlanRequest = {
   /** Byte range to fetch [start, end] */
   range: [number, number | null];
   /** Offsets of features within the range [offset, length][] */
-  offsets: [number, number | null][];
+  offsets: FeatureReference[];
 };
 
 export type QueryPlan = {
@@ -37,7 +37,7 @@ export type QueryPlanOptions = {
  * while maintaining feature order.
  */
 export function createQueryPlan(
-  results: OffsetAndLength[],
+  results: FeatureReference[],
   featureDataOffset: number,
   options: QueryPlanOptions
 ): QueryPlan {
@@ -56,7 +56,7 @@ export function createQueryPlan(
       requests: [
         {
           range: toRange(result, featureDataOffset),
-          offsets: [[0, result[1]]],
+          offsets: [[0, result[1], result[2]]],
         },
       ],
       bytes: result[1] ? result[1] - result[0] : 0,
@@ -67,18 +67,18 @@ export function createQueryPlan(
   // Group results into ranges that can be fetched in a single request
   const plan: QueryPlan = {
     requests: [],
-    bytes: results.reduce((acc, [offset, length]) => {
-      const range = toRange([offset, length], featureDataOffset);
+    bytes: results.reduce((acc, [offset, length, bbox]) => {
+      const range = toRange([offset, length, bbox], featureDataOffset);
       acc += range[1] ? range[1] - range[0] : 0;
       return acc;
     }, 0),
     features: results.length,
   };
   let offset = 0;
-  const [start, length] = results[0];
+  const [start, length, bbox] = results[0];
   let currentRange: QueryPlanRequest = {
-    range: toRange([start, length], featureDataOffset),
-    offsets: [[0, length!]],
+    range: toRange([start, length, bbox], featureDataOffset),
+    offsets: [[0, length!, bbox]],
   };
   offset = length!;
   plan.requests.push(currentRange);
@@ -87,8 +87,8 @@ export function createQueryPlan(
     options.overfetchBytes ?? QUERY_PLAN_DEFAULTS.overfetchBytes;
 
   for (let i = 1; i < results.length; i++) {
-    const [start, length] = results[i];
-    const range = toRange([start, length], featureDataOffset);
+    const [start, length, bbox] = results[i];
+    const range = toRange([start, length, bbox], featureDataOffset);
     const distance = range[0] - currentRange.range[1]! - 1;
 
     // Merge ranges if:
@@ -99,13 +99,13 @@ export function createQueryPlan(
       // merge the ranges and add to existing request
       currentRange.range[1] = range[1];
       offset += distance;
-      currentRange.offsets.push([offset, length]);
+      currentRange.offsets.push([offset, length, bbox]);
       offset += length!;
     } else {
       // add a new request
       currentRange = {
         range,
-        offsets: [[0, length!]],
+        offsets: [[0, length!, bbox]],
       };
       offset = length!;
       plan.requests.push(currentRange);
@@ -123,7 +123,7 @@ export function createQueryPlan(
  * @returns [number, number | null]
  */
 function toRange(
-  offsetAndLength: OffsetAndLength,
+  offsetAndLength: FeatureReference,
   featureDataOffset: number
 ): [number, number | null] {
   if (offsetAndLength[1] === null) {

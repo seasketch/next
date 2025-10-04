@@ -89,10 +89,10 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
     console.log("prefetch source layer of interest");
     // start source prefetching
     sourceCache.get(sourceUrl, {
-        pageSize: "4MB",
+        pageSize: "10MB",
     });
     const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers, {
-        pageSize: "4MB",
+        pageSize: "10MB",
     });
     const simplified = (0, simplify_1.default)(intersectionFeatureGeojson, {
         tolerance: 0.002,
@@ -114,6 +114,7 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
             source: diffSource,
         };
     }));
+    // throw new Error("stop");
     // difference layers often include the osm land layer, which is very large.
     // to optimize performance, start fetching pages from the difference layers
     // for every page that intersects the geography. Afterwards,
@@ -137,6 +138,11 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
     const areaByClassId = { "*": 0 };
     const intersectionGeom = intersectionFeatureGeojson.geometry
         .coordinates;
+    const geomsForClipping = {
+        totalGeometryBytes: 0,
+        sourceFeatures: [],
+        differenceFeatures: [],
+    };
     for await (const feature of source.getFeaturesAsync(envelope)) {
         if (featuresProcessed === 0) {
             helpers.timeEnd("time to first feature");
@@ -200,8 +206,8 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
         }
         if (differenceGeoms.length > 0) {
             // console.log("difference geoms", differenceGeoms.length);
-            hasChanged = true;
-            intersection = clipping.difference(intersection, ...differenceGeoms);
+            // hasChanged = true;
+            // intersection = clipping.difference(intersection, ...differenceGeoms);
             // continue;
         }
         else {

@@ -21,10 +21,17 @@ function sendMessage(msg) {
     });
     const sendPromise = sqs.send(command);
     pendingSendOperations.add(sendPromise);
-    sendPromise.finally(() => pendingSendOperations.delete(sendPromise));
+    sendPromise
+        .then((v) => {
+        if (msg.type === "result") {
+            console.log("result message sent", v);
+        }
+    })
+        .finally(() => pendingSendOperations.delete(sendPromise));
     return sendPromise;
 }
 async function sendResultMessage(jobKey, result, queueUrl) {
+    console.log("sending result message", result);
     const msg = {
         type: "result",
         result,

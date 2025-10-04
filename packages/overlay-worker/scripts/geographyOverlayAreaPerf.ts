@@ -5,15 +5,23 @@ import {
   FieldDefinition,
 } from "overlay-engine/dist/utils/debuggingFgbWriter";
 import { OverlayWorkerLogFeatureLayerConfig } from "overlay-engine/dist/utils/helpers";
-import { setGlobalDispatcher, Agent, fetch } from "undici";
+import {
+  setGlobalDispatcher,
+  fetch,
+  interceptors,
+  getGlobalDispatcher,
+} from "undici";
+import { LRUCache } from "lru-cache";
 
-// Create one agent per container at module load
-const agent = new Agent({
-  keepAliveTimeout: 30_000, // how long to keep idle sockets
-  keepAliveMaxTimeout: 60_000,
-  connections: 50, // max sockets total (tune as needed)
+const cache = new LRUCache<string, ArrayBuffer>({
+  maxSize: 1000 * 1024 * 64, // 64 MB
+  sizeCalculation: (value, key) => {
+    return value.byteLength;
+  },
 });
-setGlobalDispatcher(agent);
+
+// Set the global dispatcher to use our caching client
+// setGlobalDispatcher(client);
 
 const cliProgress = require("cli-progress");
 
@@ -49,7 +57,7 @@ const payload = {
     id: 54,
     clippingLayers: geography,
   },
-  groupBy: "Name",
+  groupBy: "class",
   sourceUrl: subdividedSource,
   sourceType: "FlatGeobuf",
   queueUrl:
@@ -129,13 +137,29 @@ function getOrCreateProgressBar() {
 
 const sourceCache = new SourceCache("1GB", {
   fetchRangeFn: (url, range) => {
-    // console.log("fetching", key, range);
+    // console.log("fetching", url, range);
     fetchCount++;
-    return fetch(url, {
-      headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
-    }).then((response) => {
-      return response.arrayBuffer();
-    });
+    const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
+    // console.time(cacheKey);
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      // console.timeEnd(cacheKey);
+      return Promise.resolve(cached);
+    } else {
+      console.log("cache miss", cacheKey);
+      return fetch(url, {
+        headers: {
+          Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+        },
+      })
+        .then((response) => response.arrayBuffer())
+        .then((buffer) => {
+          // console.timeEnd(cacheKey);
+          cache.set(cacheKey, buffer);
+          // console.log("response", response.headers.get("x-cache-status"));
+          return buffer;
+        });
+    }
   },
   maxCacheSize: "256MB",
 });
@@ -147,33 +171,34 @@ calculateGeographyOverlap(
   sourceCache,
   subdividedSource,
   "FlatGeobuf",
+  // "class",
   "Name",
   {
     log: (message) => {
       console.log(message);
     },
-    logFeature: (layer, feature) => {
-      const entry = getDebugWriter(layer);
-      if (!entry) return;
-      try {
-        // Coerce boolean properties to string when needed to match the schema
-        const properties = { ...(feature.properties || {}) } as Record<
-          string,
-          any
-        >;
-        for (const [key, t] of Object.entries(layer.fields)) {
-          if (t === "boolean" && typeof properties[key] === "boolean") {
-            properties[key] = properties[key] ? "true" : "false";
-          } else if (t === "number" && typeof properties[key] === "string") {
-            const n = Number(properties[key]);
-            if (!Number.isNaN(n)) properties[key] = n;
-          }
-        }
-        entry.writer.addFeature({ ...feature, properties });
-      } catch (_) {
-        // ignore feature write errors
-      }
-    },
+    // logFeature: (layer, feature) => {
+    //   const entry = getDebugWriter(layer);
+    //   if (!entry) return;
+    //   try {
+    //     // Coerce boolean properties to string when needed to match the schema
+    //     const properties = { ...(feature.properties || {}) } as Record<
+    //       string,
+    //       any
+    //     >;
+    //     for (const [key, t] of Object.entries(layer.fields)) {
+    //       if (t === "boolean" && typeof properties[key] === "boolean") {
+    //         properties[key] = properties[key] ? "true" : "false";
+    //       } else if (t === "number" && typeof properties[key] === "string") {
+    //         const n = Number(properties[key]);
+    //         if (!Number.isNaN(n)) properties[key] = n;
+    //       }
+    //     }
+    //     entry.writer.addFeature({ ...feature, properties });
+    //   } catch (_) {
+    //     // ignore feature write errors
+    //   }
+    // },
     progress: async (progress, message) => {
       if (performance.now() - lastlogged > 100) {
         lastlogged = performance.now();
@@ -193,6 +218,10 @@ calculateGeographyOverlap(
     const source = await sourceCache.get(geography[0].source);
     console.log("cache stats");
     console.log(source.cacheStats);
+    console.log(`fetchCount: ${fetchCount}`);
+    console.log(
+      `cache size: ${cache.size} entries. ${cache.calculatedSize} bytes.`
+    );
     await closeDebugWriters();
   })
   .catch((err) => {

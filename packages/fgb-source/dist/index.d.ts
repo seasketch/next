@@ -23,10 +23,20 @@ type CacheStats = {
 };
 
 /**
- * Byte offsets to fetch feature data from the fgb file, as [offset, length].
+ * Byte offsets to fetch feature data from the fgb file, as [offset, length,
+ * bbox].
  * The length is null if the feature is the last in the file.
  */
-type OffsetAndLength = [number, number | null];
+type FeatureReference = [
+    number,
+    number | null,
+    [
+        number,
+        number,
+        number,
+        number
+    ]
+];
 /**
  * RTreeIndex provides spatial indexing for FlatGeobuf files.
  *
@@ -80,7 +90,7 @@ declare class RTreeIndex {
      * @param maxY - Maximum Y coordinate of the search box
      * @returns Promise resolving to array of [offset, length] tuples
      */
-    search(minX: number, minY: number, maxX: number, maxY: number): Promise<OffsetAndLength[]>;
+    search(minX: number, minY: number, maxX: number, maxY: number): FeatureReference[];
     /**
      * Get the data for a node at the specified index.
      *
@@ -258,7 +268,7 @@ declare class FlatGeobufSource<T = Feature> {
     /** Url for fgb, unless fetchRangeFn is specified  */
     private url?;
     /** Custom method provided to createSource used to fetch fgb byte ranges */
-    private fetchRangeFn?;
+    private fetchRangeFn;
     /** fgb header metadata */
     header: HeaderMeta;
     /** Spatial index for bounding box queries */
@@ -275,6 +285,7 @@ declare class FlatGeobufSource<T = Feature> {
      * which will generate the necessary metadata and spatial index.
      */
     constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize, fileByteLength?: number, pageSize?: ByteSize);
+    private defaultFetchRange;
     /**
      * Get cache statistics
      */
@@ -307,6 +318,14 @@ declare class FlatGeobufSource<T = Feature> {
      * Geometry type of the source.
      */
     get geometryType(): keyof typeof GeometryType;
+    search(bbox: Envelope | Envelope[]): {
+        pages: PageRequestPlan[];
+        requests: number;
+        estimatedBytes: {
+            requested: number;
+            features: number;
+        };
+    };
     /**
      * Get features within a bounding box. Features are streamed to minimize
      * memory usage. Each feature is deserialized to GeoJSON before being yielded.
@@ -329,12 +348,13 @@ declare class FlatGeobufSource<T = Feature> {
      * }
      * ```
      */
-    getFeaturesAsync(bbox: Envelope | Envelope[], options?: QueryPlanOptions & {
+    getFeaturesAsync(bbox: Envelope | Envelope[], options?: {
         /**
          * If set true, the cache will be warmed by fetching all features in the
          * bounding box. These features are not parsed or yielded.
          */
         warmCache?: boolean;
+        queryPlan?: QueryPlan;
     }): AsyncGenerator<FeatureWithMetadata<T>>;
     countAndBytesForQuery(bbox: Envelope | Envelope[], options?: QueryPlanOptions): Promise<{
         bytes: number;
@@ -363,6 +383,11 @@ declare class FlatGeobufSource<T = Feature> {
             __offset: number;
         };
     }>;
+    /**
+     * This method returns an async generator for feature properties only.
+     * This is useful for performance when you only need the properties of features.
+     * It avoids parsing geometry data, which can be expensive.
+     */
     getFeatureProperties(): AsyncGenerator<{
         properties: GeoJsonProperties & {
             __byteLength: number;
@@ -375,8 +400,21 @@ declare class FlatGeobufSource<T = Feature> {
             };
         };
     }>;
-    private getPagePlan;
+    private getQueryPlan;
 }
+type PageRequestPlan = {
+    pageIndex: number;
+    range: [number, number | null];
+    features: FeatureReference[];
+};
+type QueryPlan = {
+    pages: PageRequestPlan[];
+    requests: number;
+    estimatedBytes: {
+        requested: number;
+        features: number;
+    };
+};
 /**
  * Create a FlatGeobufSource from a URL or a custom fetchRange function. The
  * Promise will not be resolved until the source is fully initialized, loading

@@ -23,7 +23,13 @@ export function sendMessage(msg: OverlayEngineWorkerMessage) {
   });
   const sendPromise = sqs.send(command);
   pendingSendOperations.add(sendPromise);
-  sendPromise.finally(() => pendingSendOperations.delete(sendPromise));
+  sendPromise
+    .then((v) => {
+      if (msg.type === "result") {
+        console.log("result message sent", v);
+      }
+    })
+    .finally(() => pendingSendOperations.delete(sendPromise));
   return sendPromise;
 }
 
@@ -32,6 +38,7 @@ export async function sendResultMessage(
   result: any,
   queueUrl: string
 ) {
+  console.log("sending result message", result);
   const msg: OverlayEngineWorkerResultMessage = {
     type: "result",
     result,

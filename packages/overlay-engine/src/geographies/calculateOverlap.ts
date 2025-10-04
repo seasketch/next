@@ -66,12 +66,12 @@ export async function calculateGeographyOverlap(
   console.log("prefetch source layer of interest");
   // start source prefetching
   sourceCache.get<Feature<Polygon | MultiPolygon>>(sourceUrl, {
-    pageSize: "4MB",
+    pageSize: "10MB",
   });
 
   const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } =
     await initializeGeographySources(geography, sourceCache, helpers, {
-      pageSize: "4MB",
+      pageSize: "10MB",
     });
 
   const simplified = simplify(intersectionFeatureGeojson, {
@@ -101,6 +101,8 @@ export async function calculateGeographyOverlap(
       };
     })
   );
+
+  // throw new Error("stop");
 
   // difference layers often include the osm land layer, which is very large.
   // to optimize performance, start fetching pages from the difference layers
@@ -136,6 +138,12 @@ export async function calculateGeographyOverlap(
 
   const intersectionGeom = intersectionFeatureGeojson.geometry
     .coordinates as clipping.Geom;
+
+  const geomsForClipping = {
+    totalGeometryBytes: 0,
+    sourceFeatures: [] as clipping.Geom[],
+    differenceFeatures: [] as clipping.Geom[],
+  };
 
   for await (const feature of source.getFeaturesAsync(envelope)) {
     if (featuresProcessed === 0) {
@@ -221,8 +229,8 @@ export async function calculateGeographyOverlap(
     }
     if (differenceGeoms.length > 0) {
       // console.log("difference geoms", differenceGeoms.length);
-      hasChanged = true;
-      intersection = clipping.difference(intersection, ...differenceGeoms);
+      // hasChanged = true;
+      // intersection = clipping.difference(intersection, ...differenceGeoms);
       // continue;
     } else {
       // console.log("no difference geoms");

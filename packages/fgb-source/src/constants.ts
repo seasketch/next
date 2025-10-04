@@ -39,7 +39,7 @@ export const DEFAULT_CACHE_SIZE = 16 * 1024 * 1024; // 16MB
  * Whether to validate feature data size prefixes against actual sizes.
  * This is useful for debugging but should be disabled in production.
  */
-export const VALIDATE_FEATURE_DATA = false;
+export const VALIDATE_FEATURE_DATA = true;
 
 /**
  * Default page size for paged range fetching and caching.
