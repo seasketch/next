@@ -103,7 +103,7 @@ export class SourceCache {
     this.cache = new LRUCache({
       maxSize: this.sizeLimitBytes,
       sizeCalculation: (source, key) => {
-        const size = source.indexSizeBytes + source.cacheStats.maxSize;
+        const size = source.indexSizeBytes;
         return size;
       },
       dispose: (value, key, reason) => {
@@ -190,18 +190,16 @@ export class SourceCache {
     };
 
     // Create new request
-    const request = (async () => {
-      try {
-        const source = await createSource<T>(key, mergedOptions);
+    const request = createSource<T>(key, mergedOptions)
+      .then((source) => {
         this.cache.set(key, source);
         return source;
-      } finally {
-        // Clean up in-flight request map
+      })
+      .catch((e) => {
+        console.log("caught error in source cache get", key);
         this.inFlightRequests.delete(key);
-      }
-    })();
-
-    // Store request in in-flight map
+        throw e;
+      });
     this.inFlightRequests.set(key, request);
     return request;
   }

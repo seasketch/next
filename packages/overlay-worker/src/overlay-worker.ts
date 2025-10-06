@@ -26,10 +26,12 @@ import { LRUCache } from "lru-cache";
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
   // allowH2: true,
+  // 10 second timeout for body
+  bodyTimeout: 10 * 1000,
 });
 
 const cache = new LRUCache<string, ArrayBuffer>({
-  maxSize: 1000 * 1024 * 64, // 64 MB
+  maxSize: 1000 * 1024 * 128, // 128 MB
   sizeCalculation: (value, key) => {
     return value.byteLength;
   },
@@ -45,14 +47,14 @@ const sourceCache = new SourceCache("1GB", {
     const cached = cache.get(cacheKey);
     if (cached) {
       // console.timeEnd(cacheKey);
-      console.log("cache hit", cacheKey);
+      // console.log("cache hit", cacheKey);
       return Promise.resolve(cached);
     } else if (inFlightRequests.has(cacheKey)) {
-      console.log("in-flight request hit", cacheKey);
+      // console.log("in-flight request hit", cacheKey);
       return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
     } else {
-      console.log("cache miss", cacheKey);
-      const request = pool
+      // console.log("cache miss", cacheKey);
+      return pool
         .request({
           path: url.replace("https://uploads.seasketch.org", ""),
           method: "GET",
@@ -60,18 +62,31 @@ const sourceCache = new SourceCache("1GB", {
             Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
           },
         })
-        .then((response) => response.body.arrayBuffer())
+        .then(async (response) => {
+          const buffer = await response.body.arrayBuffer();
+          // console.log("fetched", cacheKey, buffer.byteLength);
+          return buffer;
+        })
         .then((buffer) => {
           // console.timeEnd(cacheKey);
           cache.set(cacheKey, buffer);
           // console.log("response", response.headers.get("x-cache-status"));
           return buffer;
         })
-        .finally(() => {
-          inFlightRequests.delete(cacheKey);
+        .catch((e) => {
+          console.log("rethrowing error for", cacheKey);
+          // rethrow error with enhanced error message consisting of url, range, and original error message
+          throw new Error(
+            `${e.message}. ${url} range=${range[0]}-${
+              range[1] ? range[1] : ""
+            }: ${e.message}`
+          );
         });
-      inFlightRequests.set(cacheKey, request);
-      return request;
+      // .finally(() => {
+      //   inFlightRequests.delete(cacheKey);
+      // });
+      // inFlightRequests.set(cacheKey, request);
+      // return request;
     }
   },
   maxCacheSize: "256MB",

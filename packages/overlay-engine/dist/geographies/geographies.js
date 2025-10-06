@@ -507,19 +507,17 @@ Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, 
  */
 async function initializeGeographySources(geography, sourceCache, helpers, sourceOptions) {
     console.log("initializing geography sources", sourceOptions);
-    // first, start initialization of all sources. Later code can still await
-    // sourceCache.get, but the requests will already be resolved or in-flight
-    geography.map((clippingLayer) => {
-        sourceCache
-            .get(clippingLayer.source, {
-            initialHeaderRequestLength: clippingLayer.headerSizeHint,
-            ...sourceOptions,
-        })
-            .catch((e) => {
-            console.log("error initializing geography source", clippingLayer.source);
-            console.error(e);
-        });
-    });
+    // Kick off prefetches and capture any errors for later propagation.
+    const prefetchResults = geography.map((clippingLayer) => sourceCache
+        .get(clippingLayer.source, {
+        initialHeaderRequestLength: clippingLayer.headerSizeHint,
+        ...sourceOptions,
+    })
+        .then(() => ({ ok: true }))
+        .catch((error) => {
+        console.error("console.error - error initializing geography source", clippingLayer.source);
+        return { ok: false, error };
+    }));
     const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
     const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
     const intersectionFeatures = [];
@@ -536,6 +534,12 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
         helpers.log("Completed intersection layer");
         helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
     }));
+    // If any prefetch failed, propagate the first error now via awaited control flow
+    for (const r of await Promise.all(prefetchResults)) {
+        if (!r.ok) {
+            throw r.error;
+        }
+    }
     const intersectionFeatureGeojson = {
         type: "Feature",
         geometry: {

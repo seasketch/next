@@ -44,7 +44,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
       entry: path.join(__dirname, "../../overlay-worker/src/index.ts"),
       handler: "lambdaHandler",
       runtime: lambda.Runtime.NODEJS_22_X,
-      timeout: cdk.Duration.minutes(1),
+      timeout: cdk.Duration.minutes(2),
       logGroup: new logs.LogGroup(this, "OverlayWorkerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),

@@ -165,7 +165,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     featureDataOffset: number,
     maxCacheSize: ByteSize = DEFAULT_CACHE_SIZE,
     overfetchBytes?: ByteSize,
-    fileByteLength?: number,
     pageSize?: ByteSize
   ) {
     if (typeof urlOrFetchRangeFn === "string") {
@@ -179,13 +178,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     this.index = index;
 
     this.featureDataOffset = featureDataOffset;
-    // this.fetchManager = new FetchManager(
-    //   urlOrFetchRangeFn,
-    //   parseByteSize(maxCacheSize),
-    //   this.featureDataOffset,
-    //   fileByteLength,
-    //   parseByteSize(pageSize)
-    // );
     this.overfetchBytes = parseByteSize(overfetchBytes);
     const offsets = this.index.getFeatureOffsets();
 
@@ -228,20 +220,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   }
 
   /**
-   * Get cache statistics
-   */
-  get cacheStats() {
-    return {
-      count: 0,
-      calculatedSize: 0,
-      maxSize: 0,
-      inFlightRequests: 0,
-      cacheHits: 0,
-      cacheMisses: 0,
-    };
-  }
-
-  /**
    * Prefetch and cache all pages needed for features intersecting the envelope.
    * This uses getFeaturesAsync with warmCache:true under the hood to trigger
    * range fetches without parsing or yielding features.
@@ -254,15 +232,9 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     })) {
       // no-op: warmCache prevents yielding
       // wait for next tick
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      // await new Promise((resolve) => setTimeout(resolve, 0));
+      // console.log("prefetched", f);
     }
-  }
-
-  /**
-   * Clear the feature data cache
-   */
-  clearCache() {
-    // this.fetchManager.clearCache();
   }
 
   /**
@@ -641,21 +613,6 @@ export async function createSource<
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
-  // Try to determine total file size using last feature offset + size prefix
-  let fileByteLength: number | undefined = undefined;
-  try {
-    const lastFeatureOffset = index.getLastFeatureOffset();
-    const lastFeaturePrefixAbs = indexOffset + indexSize + lastFeatureOffset;
-    const sizePrefixBuf = await fetchRange([
-      lastFeaturePrefixAbs,
-      lastFeaturePrefixAbs + SIZE_PREFIX_LEN - 1,
-    ]);
-    const sizeView = new DataView(sizePrefixBuf);
-    const lastFeatureSize = sizeView.getUint32(0, true);
-    fileByteLength = lastFeaturePrefixAbs + SIZE_PREFIX_LEN + lastFeatureSize;
-  } catch (e) {
-    // If this fails (e.g., server doesn't support small range), proceed without file size
-  }
   // console.log("fetched header and index. creating source.");
   const source = new FlatGeobufSource<T>(
     fetchRange,
@@ -664,7 +621,6 @@ export async function createSource<
     indexOffset + indexSize,
     maxCacheSize,
     overfetchBytes,
-    fileByteLength,
     pageSize
   );
   return source;
@@ -680,6 +636,7 @@ export async function* executeQueryPlan2(
 > {
   // Bounded concurrency with safe rejection handling to avoid unhandled rejections
   const startFetch = (i: number) => {
+    // console.log("startFetch", plan[i].pageIndex, plan[i].range);
     const { range, features, pageIndex } = plan[i];
     return fetchRange(range)
       .then((data) => ({
@@ -690,7 +647,10 @@ export async function* executeQueryPlan2(
         i,
         range,
       }))
-      .catch((error) => ({ ok: false as const, error, i }));
+      .catch((error) => {
+        console.log("error inside startFetch", i, error);
+        return { ok: false as const, error, i, pageIndex };
+      });
   };
 
   const inFlight = new Map<
@@ -704,27 +664,35 @@ export async function* executeQueryPlan2(
           i: number;
           range: [number, number | null];
         }
-      | { ok: false; error: unknown; i: number }
+      | { ok: false; error: unknown; i: number; pageIndex: number }
     >
   >();
+  const pagesInFlight = new Set<number>();
 
   let nextToStart = 0;
   const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
+  // console.log("initial startFetch kickoff");
   while (nextToStart < plan.length && inFlight.size < limit) {
+    pagesInFlight.add(plan[nextToStart].pageIndex);
     inFlight.set(nextToStart, startFetch(nextToStart));
     nextToStart++;
   }
 
   while (inFlight.size > 0) {
+    // console.log("waiting for pages to fetch", [...pagesInFlight]);
     const winner = await Promise.race(inFlight.values());
     inFlight.delete(winner.i);
+    pagesInFlight.delete(winner.pageIndex);
 
     if (nextToStart < plan.length) {
+      // console.log("starting next fetch within while loop", nextToStart);
+      pagesInFlight.add(plan[nextToStart].pageIndex);
       inFlight.set(nextToStart, startFetch(nextToStart));
       nextToStart++;
     }
 
     if (!("ok" in winner) || winner.ok === false) {
+      console.log("error in winner", winner);
       // Ensure no unhandled rejections from remaining in-flight requests
       await Promise.allSettled(Array.from(inFlight.values()));
       throw "error" in winner ? winner.error : new Error("Unknown fetch error");
@@ -741,6 +709,7 @@ export async function* executeQueryPlan2(
     //     data.byteLength
     //   }. Last ref = ${features[features.length - 1]}`
     // );
+    // console.log("processing features of page", pageIndex);
     for (let [offset, length, bbox] of features) {
       // console.log(`parsing feature ${offset} ${length}`);
       const adjustedOffset = offset - range[0] + featureDataOffset;
@@ -762,12 +731,13 @@ export async function* executeQueryPlan2(
       i++;
       // Yield control to event loop after each feature to allow other promises to resolve
       // This ensures pending fetch promises can complete their cleanup without blocking
-      if (i % 1000 === 0) {
+      if (i % 100 === 0) {
         process.nextTick(() => {});
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }
     // console.log(`finished parsing page ${pageIndex}`);
+    // console.log("finished processing features of page", pageIndex);
   }
 }
 

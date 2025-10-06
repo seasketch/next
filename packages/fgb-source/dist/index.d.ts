@@ -265,29 +265,14 @@ declare class FlatGeobufSource<T = Feature> {
      * Should not be called directly. Instead initialize using createSource(),
      * which will generate the necessary metadata and spatial index.
      */
-    constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize, fileByteLength?: number, pageSize?: ByteSize);
+    constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize, pageSize?: ByteSize);
     private defaultFetchRange;
-    /**
-     * Get cache statistics
-     */
-    get cacheStats(): {
-        count: number;
-        calculatedSize: number;
-        maxSize: number;
-        inFlightRequests: number;
-        cacheHits: number;
-        cacheMisses: number;
-    };
     /**
      * Prefetch and cache all pages needed for features intersecting the envelope.
      * This uses getFeaturesAsync with warmCache:true under the hood to trigger
      * range fetches without parsing or yielding features.
      */
     prefetch(bbox: Envelope | Envelope[]): Promise<void>;
-    /**
-     * Clear the feature data cache
-     */
-    clearCache(): void;
     /**
      * Bounds of the source, as determined from the spatial index.
      */

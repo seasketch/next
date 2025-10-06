@@ -74,6 +74,7 @@ const lambdaHandler = async (event, context) => {
                 payload &&
                 "jobKey" in payload &&
                 "queueUrl" in payload) {
+                console.log("Attempting to send error message", e);
                 await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unhandled error", payload.queueUrl);
                 await (0, messaging_1.flushMessages)();
             }
@@ -81,6 +82,7 @@ const lambdaHandler = async (event, context) => {
         catch (sendErr) {
             console.error("Failed to send error message", sendErr);
         }
+        console.log("Final error log");
         console.error(e);
         return;
     }
@@ -93,4 +95,7 @@ const lambdaHandler = async (event, context) => {
     // };
 };
 exports.lambdaHandler = lambdaHandler;
+process.on("unhandledRejection", (reason, promise) => {
+    console.log("Unhandled rejection", reason, promise);
+});
 //# sourceMappingURL=lambda.js.map

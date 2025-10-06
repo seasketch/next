@@ -209,7 +209,7 @@ export { calculateGeographyOverlap } from "./calculateOverlap";
  * @param sourceCache - The source cache to use
  */
 export declare function initializeGeographySources(geography: ClippingLayerOption[], sourceCache: SourceCache, helpers: GuaranteedOverlayWorkerHelpers, sourceOptions?: CreateSourceOptions): Promise<{
-    intersectionFeature: Feature<MultiPolygon, import("geojson").GeoJsonProperties>;
+    intersectionFeature: Feature<MultiPolygon>;
     intersectionLayers: ClippingLayerOption[];
     differenceLayers: ClippingLayerOption[];
 }>;

@@ -54,6 +54,7 @@ export const lambdaHandler = async (
         "jobKey" in payload &&
         "queueUrl" in payload
       ) {
+        console.log("Attempting to send error message", e);
         await sendErrorMessage(
           payload.jobKey,
           e instanceof Error ? e.message : "Unhandled error",
@@ -64,6 +65,7 @@ export const lambdaHandler = async (
     } catch (sendErr) {
       console.error("Failed to send error message", sendErr);
     }
+    console.log("Final error log");
     console.error(e);
     return;
   }
@@ -75,3 +77,7 @@ export const lambdaHandler = async (
   //   }),
   // };
 };
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.log("Unhandled rejection", reason, promise);
+});

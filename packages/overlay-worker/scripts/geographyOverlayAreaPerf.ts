@@ -5,11 +5,17 @@ import {
   FieldDefinition,
 } from "overlay-engine/dist/utils/debuggingFgbWriter";
 import { OverlayWorkerLogFeatureLayerConfig } from "overlay-engine/dist/utils/helpers";
-import { fetch } from "undici";
+import { fetch, Pool } from "undici";
 import { LRUCache } from "lru-cache";
 
+const pool = new Pool(`https://uploads.seasketch.org`, {
+  // allowH2: true,
+  // 10 second timeout for body
+  bodyTimeout: 10 * 1000,
+});
+
 const cache = new LRUCache<string, ArrayBuffer>({
-  maxSize: 1000 * 1024 * 64, // 64 MB
+  maxSize: 1000 * 1024 * 24, // 64 MB
   sizeCalculation: (value, key) => {
     return value.byteLength;
   },
@@ -24,12 +30,12 @@ const cliProgress = require("cli-progress");
 // const subdividedSource =
 // "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
 
-const subdividedSource =
-  "https://uploads.seasketch.org/projects/cburt/subdivided/131-04d8a3a3-7ea7-43c8-baa5-40dfb484b994.fgb";
+// const subdividedSource =
+// "https://uploads.seasketch.org/projects/cburt/subdivided/131-04d8a3a3-7ea7-43c8-baa5-40dfb484b994.fgb";
 
 // ACA Geomorphic Cropped
-// const subdividedSource =
-//   "https://uploads.seasketch.org/projects/cburt/subdivided/117-00f805f7-caf0-489f-9d44-c3e266027e81.fgb";
+const subdividedSource =
+  "https://uploads.seasketch.org/projects/cburt/subdivided/117-00f805f7-caf0-489f-9d44-c3e266027e81.fgb";
 
 // Fiji EEZ, including complex shoreline clipping
 const geography = [
@@ -130,18 +136,54 @@ const sourceCache = new SourceCache("1GB", {
       return Promise.resolve(cached);
     } else {
       console.log("cache miss", cacheKey);
-      return fetch(url, {
-        headers: {
-          Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-        },
-      })
-        .then((response) => response.arrayBuffer())
+      return pool
+        .request({
+          path: url.replace("https://uploads.seasketch.org", ""),
+          method: "GET",
+          headers: {
+            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+          },
+        })
+        .then((response) => response.body.arrayBuffer())
         .then((buffer) => {
-          // console.timeEnd(cacheKey);
           cache.set(cacheKey, buffer);
-          // console.log("response", response.headers.get("x-cache-status"));
           return buffer;
+        })
+        .catch((e) => {
+          throw new Error(
+            `Error fetching ${url} range=${range[0]}-${
+              range[1] ? range[1] : ""
+            }: ${e.message}`
+          );
         });
+
+      // fetch(url, {
+      //   headers: {
+      //     Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+      //   },
+      // })
+      //   .then((response) => response.arrayBuffer())
+      //   // .then((b) => {
+      //   //   if (Math.random() < 0.5 && range[0] > 100000) {
+      //   //     throw new Error(`Terminated! ${url} ${range[0]} ${range[1]}`);
+      //   //   }
+      //   //   return b;
+      //   // })
+      //   .then((buffer) => {
+      //     // console.timeEnd(cacheKey);
+      //     cache.set(cacheKey, buffer);
+      //     // console.log("response", response.headers.get("x-cache-status"));
+      //     return buffer;
+      //   })
+      //   .catch((e) => {
+      //     // rethrow error with enhanced error message consisting of url, range, and original error message
+      //     throw new Error(
+      //       `Error fetching ${url} range=${range[0]}-${
+      //         range[1] ? range[1] : ""
+      //       }: ${e.message}`
+      //     );
+      //   })
+      // );
     }
   },
   maxCacheSize: "256MB",
@@ -200,20 +242,26 @@ calculateGeographyOverlap(
     // progressBar.stop();
     const source = await sourceCache.get(geography[0].source);
     console.log("cache stats");
-    console.log(source.cacheStats);
     console.log(`fetchCount: ${fetchCount}`);
     console.log(
       `cache size: ${cache.size} entries. ${cache.calculatedSize} bytes.`
     );
     await closeDebugWriters();
   })
-  .catch((err) => {
+  .catch(async (err) => {
+    // Ensure progress/cleanup complete before surfacing error
     try {
-      progressBar.stop();
-      closeDebugWriters().then(() => {
-        throw err;
-      });
+      if (progressBar) {
+        progressBar.stop();
+      }
     } catch (_) {}
+    try {
+      await closeDebugWriters();
+    } catch (_) {}
+    console.log("Error caught. Would create sqs message in real worker.");
+    // Ensure non-zero exit while letting outer runner see the message
+    process.exitCode = 1;
+    // Re-throw to produce stack trace for local runs
     throw err;
   });
 
@@ -228,3 +276,7 @@ async function closeDebugWriters() {
   });
   await Promise.all(closePromises);
 }
+
+// process.on("unhandledRejection", (reason, promise) => {
+//   console.error("Unhandled promise rejection:", reason);
+// });

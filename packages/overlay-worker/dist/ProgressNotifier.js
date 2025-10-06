@@ -15,39 +15,19 @@ class ProgressNotifier {
     }
     notify(progress, message) {
         let sendNotification = false;
+        const timeSinceLastSent = Date.now() - (this.messageLastSent || 0);
+        const exceedsMaxWait = timeSinceLastSent > this.maxWaitMs;
         // only send notification if one of these criteria are met:
         // 1. it has been more than maxWaitMs since the last notification
         if ((Math.round(progress) > Math.round(this.lastNotifiedProgress) &&
-            Date.now() - (this.messageLastSent || 0) > this.maxWaitMs) ||
-            Date.now() - (this.messageLastSent || 0) > this.maxWaitMs * 5) {
-            // console.log(
-            //   "exceeded max wait",
-            //   Date.now(),
-            //   this.messageLastSent,
-            //   this.maxWaitMs,
-            //   Date.now() - (this.messageLastSent || 0)
-            // );
+            exceedsMaxWait) ||
+            timeSinceLastSent > this.maxWaitMs * 5) {
             sendNotification = true;
         }
         // 2. The progress has increased by 10% or more since the last notification
         if (progress > this.lastNotifiedProgress + 5) {
-            // console.log(
-            //   "progress increased beyond threshold",
-            //   progress,
-            //   this.lastNotifiedProgress
-            // );
             sendNotification = true;
         }
-        // if (sendNotification) {
-        //   console.log(
-        //     "send notification",
-        //     Date.now(),
-        //     this.messageLastSent,
-        //     this.maxWaitMs,
-        //     progress,
-        //     this.lastNotifiedProgress
-        //   );
-        // }
         this.progress = progress;
         this.message = message;
         if (sendNotification) {

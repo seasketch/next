@@ -87,19 +87,16 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
         throw new Error(`Unsupported source type: ${sourceType}`);
     }
     console.log("prefetch source layer of interest");
-    // start source prefetching
-    sourceCache
+    // Start source prefetching and capture the result without creating
+    // unhandled rejections. We'll check this later and propagate if needed.
+    const prefetchResultPromise = sourceCache
         .get(sourceUrl, {
-        pageSize: "10MB",
+        pageSize: "5MB",
     })
-        .then((source) => {
-        console.log("prefetched source");
-    })
-        .catch(() => {
-        console.log("error prefetching source", sourceUrl);
-    });
+        .then(() => ({ ok: true }))
+        .catch((error) => ({ ok: false, error }));
     const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers, {
-        pageSize: "10MB",
+        pageSize: "5MB",
     });
     const simplified = (0, simplify_1.default)(intersectionFeatureGeojson, {
         tolerance: 0.002,
@@ -112,6 +109,14 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                 ...f,
                 properties: { category: "outer-polygon-edge-box" },
             });
+        }
+    }
+    // If prefetch failed, surface the error through the awaited path so the
+    // caller's try/catch or .catch() reliably observes it.
+    {
+        const prefetchResult = await prefetchResultPromise;
+        if (!prefetchResult.ok) {
+            throw prefetchResult.error;
         }
     }
     const differenceSources = await Promise.all(differenceLayers.map(async (layer) => {
@@ -133,9 +138,8 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
     // connection terminations on lambda (and it will eventually), then somehow
     // those terminated range requests will get jammed up in a cache somewhere
     // (likely in AWS's network stack) and just repeatedly fail. If you wait, the
-    // same code will work again eventually.
-    // Oh, and just for fun, these errors never seem to bubble up the promise
-    // chain properly so the system just hangs. :(
+    // same code will work again eventually. I just don't think the network stack
+    // likes repeated identical range requests.
     //
     // for (const differenceSource of differenceSources) {
     //   differenceSource.source
@@ -226,8 +230,8 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
         }
         if (differenceGeoms.length > 0) {
             // console.log("difference geoms", differenceGeoms.length);
-            // hasChanged = true;
-            // intersection = clipping.difference(intersection, ...differenceGeoms);
+            hasChanged = true;
+            intersection = clipping.difference(intersection, ...differenceGeoms);
             // continue;
         }
         else {

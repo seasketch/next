@@ -2384,7 +2384,7 @@ var FlatGeobufSource = class {
    * Should not be called directly. Instead initialize using createSource(),
    * which will generate the necessary metadata and spatial index.
    */
-  constructor(urlOrFetchRangeFn, header, index, featureDataOffset, maxCacheSize = DEFAULT_CACHE_SIZE, overfetchBytes, fileByteLength, pageSize) {
+  constructor(urlOrFetchRangeFn, header, index, featureDataOffset, maxCacheSize = DEFAULT_CACHE_SIZE, overfetchBytes, pageSize) {
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
       this.fetchRangeFn = this.defaultFetchRange;
@@ -2424,19 +2424,6 @@ var FlatGeobufSource = class {
     return response.arrayBuffer();
   }
   /**
-   * Get cache statistics
-   */
-  get cacheStats() {
-    return {
-      count: 0,
-      calculatedSize: 0,
-      maxSize: 0,
-      inFlightRequests: 0,
-      cacheHits: 0,
-      cacheMisses: 0
-    };
-  }
-  /**
    * Prefetch and cache all pages needed for features intersecting the envelope.
    * This uses getFeaturesAsync with warmCache:true under the hood to trigger
    * range fetches without parsing or yielding features.
@@ -2446,13 +2433,7 @@ var FlatGeobufSource = class {
     for await (const f of this.getFeaturesAsync(bbox, {
       warmCache: true
     })) {
-      await new Promise((resolve) => setTimeout(resolve, 0));
     }
-  }
-  /**
-   * Clear the feature data cache
-   */
-  clearCache() {
   }
   /**
    * Bounds of the source, as determined from the spatial index.
@@ -2700,19 +2681,6 @@ async function createSource(urlOrKey, options) {
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
-  let fileByteLength = void 0;
-  try {
-    const lastFeatureOffset = index.getLastFeatureOffset();
-    const lastFeaturePrefixAbs = indexOffset + indexSize + lastFeatureOffset;
-    const sizePrefixBuf = await fetchRange([
-      lastFeaturePrefixAbs,
-      lastFeaturePrefixAbs + SIZE_PREFIX_LEN2 - 1
-    ]);
-    const sizeView = new DataView(sizePrefixBuf);
-    const lastFeatureSize = sizeView.getUint32(0, true);
-    fileByteLength = lastFeaturePrefixAbs + SIZE_PREFIX_LEN2 + lastFeatureSize;
-  } catch (e2) {
-  }
   const source = new FlatGeobufSource(
     fetchRange,
     header,
@@ -2720,7 +2688,6 @@ async function createSource(urlOrKey, options) {
     indexOffset + indexSize,
     maxCacheSize,
     overfetchBytes,
-    fileByteLength,
     pageSize
   );
   return source;
@@ -2735,23 +2702,31 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
       pageIndex,
       i,
       range
-    })).catch((error) => ({ ok: false, error, i }));
+    })).catch((error) => {
+      console.log("error inside startFetch", i, error);
+      return { ok: false, error, i, pageIndex };
+    });
   };
   const inFlight = /* @__PURE__ */ new Map();
+  const pagesInFlight = /* @__PURE__ */ new Set();
   let nextToStart = 0;
   const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
   while (nextToStart < plan.length && inFlight.size < limit) {
+    pagesInFlight.add(plan[nextToStart].pageIndex);
     inFlight.set(nextToStart, startFetch(nextToStart));
     nextToStart++;
   }
   while (inFlight.size > 0) {
     const winner = await Promise.race(inFlight.values());
     inFlight.delete(winner.i);
+    pagesInFlight.delete(winner.pageIndex);
     if (nextToStart < plan.length) {
+      pagesInFlight.add(plan[nextToStart].pageIndex);
       inFlight.set(nextToStart, startFetch(nextToStart));
       nextToStart++;
     }
     if (!("ok" in winner) || winner.ok === false) {
+      console.log("error in winner", winner);
       await Promise.allSettled(Array.from(inFlight.values()));
       throw "error" in winner ? winner.error : new Error("Unknown fetch error");
     }
@@ -2764,17 +2739,9 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
         length = view.buffer.byteLength - adjustedOffset;
       }
       let featureView = new DataView(data, adjustedOffset, length);
-      {
-        const size = featureView.getUint32(0, true);
-        if (size !== length - SIZE_PREFIX_LEN2) {
-          throw new Error(
-            `Feature data size mismatch: expected ${length}, size prefix was ${size}`
-          );
-        }
-      }
       yield [featureView, offset, length, bbox];
       i++;
-      if (i % 1e3 === 0) {
+      if (i % 100 === 0) {
         process.nextTick(() => {
         });
         await new Promise((resolve) => setTimeout(resolve, 0));
@@ -2841,7 +2808,7 @@ var SourceCache = class {
     this.cache = new lruCache.LRUCache({
       maxSize: this.sizeLimitBytes,
       sizeCalculation: (source, key) => {
-        const size2 = source.indexSizeBytes + source.cacheStats.maxSize;
+        const size2 = source.indexSizeBytes;
         return size2;
       },
       dispose: (value, key, reason) => {
@@ -2914,15 +2881,14 @@ var SourceCache = class {
       ...options,
       maxCacheSize: options?.maxCacheSize || this.defaultOptions?.maxCacheSize || this.sizeLimitBytes / 4
     };
-    const request = (async () => {
-      try {
-        const source = await createSource(key, mergedOptions);
-        this.cache.set(key, source);
-        return source;
-      } finally {
-        this.inFlightRequests.delete(key);
-      }
-    })();
+    const request = createSource(key, mergedOptions).then((source) => {
+      this.cache.set(key, source);
+      return source;
+    }).catch((e2) => {
+      console.log("caught error in source cache get", key);
+      this.inFlightRequests.delete(key);
+      throw e2;
+    });
     this.inFlightRequests.set(key, request);
     return request;
   }
