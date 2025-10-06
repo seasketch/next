@@ -2,26 +2,6 @@ import { GeometryType } from 'flatgeobuf/lib/mjs/generic.js';
 import { Feature, GeoJsonProperties, Geometry } from 'geojson';
 import { HeaderMeta } from 'flatgeobuf';
 
-type FetchRangeFn = (range: [number, number | null]) => Promise<ArrayBuffer>;
-/**
- * Statistics about the LRU cache and in-flight requests.
- * Used to monitor cache performance and memory usage.
- */
-type CacheStats = {
-    /** Current number of items in the cache */
-    count: number;
-    /** Total size of cached items in bytes */
-    calculatedSize: number;
-    /** Maximum size of the cache which stores feature data in bytes */
-    maxSize: number;
-    /** Number of requests currently in flight */
-    inFlightRequests: number;
-    /** Number of cache hits. Reset by clearCache() */
-    cacheHits: number;
-    /** Number of cache misses. Reset by clearCache() */
-    cacheMisses: number;
-};
-
 /**
  * Byte offsets to fetch feature data from the fgb file, as [offset, length,
  * bbox].
@@ -157,6 +137,8 @@ interface PackedRTreeDetails {
     levels: number[];
 }
 
+type FetchRangeFn = (range: [number, number | null]) => Promise<ArrayBuffer>;
+
 /**
  * Options for query planning and execution.
  */
@@ -276,7 +258,6 @@ declare class FlatGeobufSource<T = Feature> {
     /** offset from the start of the fgb to the first feature data byte */
     private featureDataOffset;
     /** Manages fetching and caching of byte ranges */
-    private fetchManager;
     /** Amount of space allowed between features before splitting requests */
     private overfetchBytes?;
     private pages;
@@ -289,13 +270,20 @@ declare class FlatGeobufSource<T = Feature> {
     /**
      * Get cache statistics
      */
-    get cacheStats(): CacheStats;
+    get cacheStats(): {
+        count: number;
+        calculatedSize: number;
+        maxSize: number;
+        inFlightRequests: number;
+        cacheHits: number;
+        cacheMisses: number;
+    };
     /**
      * Prefetch and cache all pages needed for features intersecting the envelope.
      * This uses getFeaturesAsync with warmCache:true under the hood to trigger
      * range fetches without parsing or yielding features.
      */
-    prefetch(bbox: Envelope | Envelope[], options?: QueryPlanOptions): Promise<void>;
+    prefetch(bbox: Envelope | Envelope[]): Promise<void>;
     /**
      * Clear the feature data cache
      */

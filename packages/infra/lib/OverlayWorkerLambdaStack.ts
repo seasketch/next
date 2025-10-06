@@ -26,16 +26,25 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
 
     this.fn = new NodejsFunction(this, "OverlayWorker", {
       functionName: "OverlayWorker",
+      projectRoot: path.join(__dirname, "../../overlay-worker"),
+      depsLockFilePath: path.join(
+        __dirname,
+        "../../overlay-worker/package-lock.json"
+      ),
       bundling: {
         minify: false,
-        target: "es2020",
+        target: "node22",
         sourceMap: true,
         keepNames: true,
+        platform: "node",
+        esbuildVersion: "0.21.5",
+        externalModules: ["undici"],
+        nodeModules: ["undici", "@aws-sdk/client-sqs"],
       },
       entry: path.join(__dirname, "../../overlay-worker/src/index.ts"),
       handler: "lambdaHandler",
       runtime: lambda.Runtime.NODEJS_22_X,
-      timeout: cdk.Duration.minutes(15),
+      timeout: cdk.Duration.minutes(1),
       logGroup: new logs.LogGroup(this, "OverlayWorkerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),

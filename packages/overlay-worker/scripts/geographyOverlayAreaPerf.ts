@@ -5,12 +5,7 @@ import {
   FieldDefinition,
 } from "overlay-engine/dist/utils/debuggingFgbWriter";
 import { OverlayWorkerLogFeatureLayerConfig } from "overlay-engine/dist/utils/helpers";
-import {
-  setGlobalDispatcher,
-  fetch,
-  interceptors,
-  getGlobalDispatcher,
-} from "undici";
+import { fetch } from "undici";
 import { LRUCache } from "lru-cache";
 
 const cache = new LRUCache<string, ArrayBuffer>({
@@ -26,8 +21,11 @@ const cache = new LRUCache<string, ArrayBuffer>({
 const cliProgress = require("cli-progress");
 
 // Reef-associated bioregions
+// const subdividedSource =
+// "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
+
 const subdividedSource =
-  "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
+  "https://uploads.seasketch.org/projects/cburt/subdivided/131-04d8a3a3-7ea7-43c8-baa5-40dfb484b994.fgb";
 
 // ACA Geomorphic Cropped
 // const subdividedSource =
@@ -38,7 +36,7 @@ const geography = [
   {
     cql2Query: null,
     source:
-      "https://uploads.seasketch.org/projects/superuser/public/5dee67d7-83ea-4755-be22-afefc22cbee3.fgb",
+      "https://uploads.seasketch.org/projects/superuser/public/8a1adc53-7e67-436a-9b19-3318b8b14ad2.fgb",
     op: "DIFFERENCE",
   },
   {
@@ -48,21 +46,6 @@ const geography = [
     op: "INTERSECT",
   },
 ];
-
-const payload = {
-  type: "overlay_area",
-  jobKey: "ddf54573-ae36-4faf-bed0-3adfa532b13b",
-  subject: {
-    type: "geography",
-    id: 54,
-    clippingLayers: geography,
-  },
-  groupBy: "class",
-  sourceUrl: subdividedSource,
-  sourceType: "FlatGeobuf",
-  queueUrl:
-    "https://sqs.us-west-2.amazonaws.com/196230260133/seasketch-dev-overlay-engine-worker-queue-1",
-};
 
 let fetchCount = 0;
 let cumulativeFetchTime = 0;
@@ -167,7 +150,7 @@ const sourceCache = new SourceCache("1GB", {
 let lastlogged = performance.now();
 
 calculateGeographyOverlap(
-  payload.subject.clippingLayers as ClippingLayerOption[],
+  geography as ClippingLayerOption[],
   sourceCache,
   subdividedSource,
   "FlatGeobuf",

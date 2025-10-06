@@ -65,9 +65,16 @@ export async function calculateGeographyOverlap(
 
   console.log("prefetch source layer of interest");
   // start source prefetching
-  sourceCache.get<Feature<Polygon | MultiPolygon>>(sourceUrl, {
-    pageSize: "10MB",
-  });
+  sourceCache
+    .get<Feature<Polygon | MultiPolygon>>(sourceUrl, {
+      pageSize: "10MB",
+    })
+    .then((source) => {
+      console.log("prefetched source");
+    })
+    .catch(() => {
+      console.log("error prefetching source", sourceUrl);
+    });
 
   const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } =
     await initializeGeographySources(geography, sourceCache, helpers, {
@@ -111,20 +118,35 @@ export async function calculateGeographyOverlap(
 
   const env = bboxToEnvelope(bbox(intersectionFeatureGeojson));
 
-  helpers.log("prefetching difference sources");
-  for (const differenceSource of differenceSources) {
-    differenceSource.source.prefetch(env);
-  }
+  // helpers.log("prefetching difference sources");
+  // TODO: Work towards enabling this, or at least understanding why it happens.
+  // Uncommenting this won't always cause issues, but if it does cause
+  // connection terminations on lambda (and it will eventually), then somehow
+  // those terminated range requests will get jammed up in a cache somewhere
+  // (likely in AWS's network stack) and just repeatedly fail. If you wait, the
+  // same code will work again eventually.
+  // Oh, and just for fun, these errors never seem to bubble up the promise
+  // chain properly so the system just hangs. :(
+  //
+  // for (const differenceSource of differenceSources) {
+  //   differenceSource.source
+  //     .prefetch(env)
+  //     .then(() => {
+  //       console.log("prefetched difference source for", env);
+  //     })
+  //     .catch((error) => {
+  //       console.log("error prefetching difference source for", env);
+  //       console.error(error);
+  //     });
+  // }
 
   helpers.log("initialized geography sources");
   let progress = 0;
 
   let featuresProcessed = 0;
-  helpers.time("initializing layer source");
   const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
     sourceUrl
   );
-  helpers.timeEnd("initializing layer source");
 
   const envelope = bboxToEnvelope(bbox(intersectionFeatureGeojson));
   const estimate = await source.countAndBytesForQuery(envelope);
@@ -132,7 +154,6 @@ export async function calculateGeographyOverlap(
     `Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}, requests: ${estimate.requests}`
   );
   helpers.progress(progress, `Processing ${estimate.features} features`);
-  helpers.time("time to first feature");
 
   const areaByClassId: { [classId: string]: number } = { "*": 0 };
 
@@ -147,7 +168,6 @@ export async function calculateGeographyOverlap(
 
   for await (const feature of source.getFeaturesAsync(envelope)) {
     if (featuresProcessed === 0) {
-      helpers.timeEnd("time to first feature");
       helpers.log("starting processing of first source feature");
     }
     featuresProcessed++;

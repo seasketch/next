@@ -153,7 +153,7 @@ function convertSourceType(sourceType: SourceType): MetricSourceType {
   switch (sourceType.toUpperCase()) {
     case "FLAT_GEOBUF":
       return MetricSourceType.FlatGeobuf;
-    case "GEOJSON":
+    case "GEO_JSON":
       return MetricSourceType.GeoJson;
     case "GEOTIFF":
       return MetricSourceType.GeoTiff;

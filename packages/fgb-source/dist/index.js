@@ -1,7 +1,7 @@
 'use strict';
 
-var lruCache = require('lru-cache');
 var bytes = require('bytes');
+var lruCache = require('lru-cache');
 
 function _interopDefault (e) { return e && e.__esModule ? e : { default: e }; }
 
@@ -2232,189 +2232,6 @@ var QUERY_PLAN_DEFAULTS = {
   // 500KB
 };
 var DEFAULT_CACHE_SIZE = 16 * 1024 * 1024;
-var PAGE_SIZE = 5 * 1024 * 1024;
-
-// src/fetch-manager.ts
-var FetchManager = class {
-  constructor(urlOrFetchRangeFn, maxCacheSize = DEFAULT_CACHE_SIZE, featureDataOffset = 0, fileByteLength, pageSize = PAGE_SIZE) {
-    /** In-flight page requests keyed by page index */
-    this.inFlightPageRequests = /* @__PURE__ */ new Map();
-    /** In-flight assembled range requests keyed by "start-end" */
-    this.inFlightRangeRequests = /* @__PURE__ */ new Map();
-    this.cacheHits = 0;
-    this.cacheMisses = 0;
-    if (typeof urlOrFetchRangeFn === "string") {
-      this.url = urlOrFetchRangeFn;
-      this.fetchRangeFn = this.defaultFetchRange;
-    } else {
-      this.fetchRangeFn = urlOrFetchRangeFn;
-    }
-    this.featureDataOffset = featureDataOffset;
-    this.fileByteLength = fileByteLength;
-    this.pageSize = pageSize;
-    this.pageCache = new lruCache.LRUCache({
-      maxSize: maxCacheSize,
-      sizeCalculation: (value) => value.byteLength,
-      updateAgeOnGet: true
-    });
-  }
-  /**
-   * Get cache statistics
-   */
-  get cacheStats() {
-    return {
-      count: this.pageCache.size,
-      calculatedSize: this.pageCache.calculatedSize,
-      maxSize: this.pageCache.maxSize,
-      inFlightRequests: this.inFlightPageRequests.size + this.inFlightRangeRequests.size,
-      cacheHits: this.cacheHits,
-      cacheMisses: this.cacheMisses
-    };
-  }
-  /**
-   * Clear the feature data cache
-   */
-  clearCache() {
-    this.pageCache.clear();
-    this.inFlightPageRequests.clear();
-    this.inFlightRangeRequests.clear();
-    this.cacheHits = 0;
-    this.cacheMisses = 0;
-  }
-  /**
-   * Fetch a byte range from the source.
-   *
-   * The result is cached using an LRU cache to minimize network requests.
-   *
-   * @param range - [start (number), end (number | null)] byte range to fetch.
-   *                End may be null to indicate the end of the file.
-   * @returns Promise resolving to the fetched data as ArrayBuffer
-   * @throws Error if source is misconfigured
-   */
-  async fetchRange(range) {
-    const [requestedStart, requestedEndNullable] = range;
-    const rangeKey = `${requestedStart}-${requestedEndNullable ?? ""}`;
-    const existingRangeRequest = this.inFlightRangeRequests.get(rangeKey);
-    if (existingRangeRequest) {
-      this.cacheHits++;
-      return existingRangeRequest;
-    }
-    if (requestedEndNullable === null && this.fileByteLength === void 0) {
-      this.cacheMisses++;
-      const timeout = setTimeout(() => {
-        throw new Error("Request timed out");
-      }, 6e4 * 5);
-      const directPromise = this.fetchRangeFn(range).then(
-        (bytes3) => {
-          clearTimeout(timeout);
-          this.inFlightRangeRequests.delete(rangeKey);
-          return bytes3;
-        },
-        (error) => {
-          this.inFlightRangeRequests.delete(rangeKey);
-          throw error;
-        }
-      );
-      this.inFlightRangeRequests.set(rangeKey, directPromise);
-      return directPromise;
-    }
-    const requestedEnd = requestedEndNullable !== null ? requestedEndNullable : this.fileByteLength - 1;
-    const firstPageIndex = Math.max(
-      0,
-      Math.floor((requestedStart - this.featureDataOffset) / this.pageSize)
-    );
-    const lastPageIndex = Math.max(
-      firstPageIndex,
-      Math.floor((requestedEnd - this.featureDataOffset) / this.pageSize)
-    );
-    const assemblePromise = (async () => {
-      const pages = [];
-      for (let i = firstPageIndex; i <= lastPageIndex; i++) {
-        const data = await this.fetchPage(i);
-        pages.push({ index: i, data });
-      }
-      const totalLength = requestedEnd - requestedStart + 1;
-      const output = new Uint8Array(totalLength);
-      let writeOffset = 0;
-      for (const { index, data } of pages) {
-        const pageStart = this.featureDataOffset + index * this.pageSize;
-        const pageEndExclusive = pageStart + this.pageSize;
-        const sliceStart = Math.max(requestedStart, pageStart);
-        const sliceEndExclusive = Math.min(requestedEnd + 1, pageEndExclusive);
-        const offsetInPage = sliceStart - pageStart;
-        const length = sliceEndExclusive - sliceStart;
-        if (length <= 0) continue;
-        const src = new Uint8Array(data, offsetInPage, length);
-        output.set(src, writeOffset);
-        writeOffset += length;
-      }
-      this.inFlightRangeRequests.delete(rangeKey);
-      return output.buffer;
-    })();
-    this.inFlightRangeRequests.set(rangeKey, assemblePromise);
-    return assemblePromise;
-  }
-  /**
-   * Default fetch implementation using the fetch API.
-   */
-  async defaultFetchRange(range) {
-    if (!this.url) {
-      throw new Error("Misconfiguration: fetchRange called without url");
-    }
-    const response = await fetch(this.url, {
-      headers: {
-        Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`
-      }
-    });
-    return response.arrayBuffer();
-  }
-  /** Fetch a full page by index, using cache and in-flight deduping */
-  async fetchPage(pageIndex) {
-    const cached = this.pageCache.get(pageIndex);
-    if (cached) {
-      this.cacheHits++;
-      return cached;
-    }
-    const inFlight = this.inFlightPageRequests.get(pageIndex);
-    if (inFlight) {
-      this.cacheHits++;
-      return inFlight;
-    }
-    this.cacheMisses++;
-    const pageStart = this.featureDataOffset + pageIndex * this.pageSize;
-    let pageEndInclusive = pageStart + this.pageSize - 1;
-    if (this.fileByteLength !== void 0 && pageEndInclusive > this.fileByteLength - 1) {
-      pageEndInclusive = this.fileByteLength - 1;
-    }
-    console.trace(
-      "cache miss - fetchPage",
-      pageIndex,
-      this.pageSize,
-      this.fileByteLength,
-      `range=${pageStart}-${pageEndInclusive}`
-    );
-    const timeout = setTimeout(() => {
-      throw new Error("Request timed out");
-    }, 6e4);
-    const promise = this.fetchRangeFn([pageStart, pageEndInclusive]).then(
-      (bytes3) => {
-        clearTimeout(timeout);
-        console.log(
-          `saving page ${pageIndex} buffer. Remaining flight requests: ${this.inFlightPageRequests.size - 1}`
-        );
-        this.pageCache.set(pageIndex, bytes3);
-        this.inFlightPageRequests.delete(pageIndex);
-        return bytes3;
-      },
-      (error) => {
-        this.inFlightPageRequests.delete(pageIndex);
-        throw error;
-      }
-    );
-    this.inFlightPageRequests.set(pageIndex, promise);
-    return promise;
-  }
-};
 
 // src/query-plan.ts
 function createQueryPlan(results, featureDataOffset, options) {
@@ -2577,13 +2394,6 @@ var FlatGeobufSource = class {
     this.header = header;
     this.index = index;
     this.featureDataOffset = featureDataOffset;
-    this.fetchManager = new FetchManager(
-      urlOrFetchRangeFn,
-      parseByteSize(maxCacheSize),
-      this.featureDataOffset,
-      fileByteLength,
-      parseByteSize(pageSize)
-    );
     this.overfetchBytes = parseByteSize(overfetchBytes);
     const offsets = this.index.getFeatureOffsets();
     const pages = [this.featureDataOffset];
@@ -2617,22 +2427,25 @@ var FlatGeobufSource = class {
    * Get cache statistics
    */
   get cacheStats() {
-    return this.fetchManager.cacheStats;
+    return {
+      count: 0,
+      calculatedSize: 0,
+      maxSize: 0,
+      inFlightRequests: 0,
+      cacheHits: 0,
+      cacheMisses: 0
+    };
   }
   /**
    * Prefetch and cache all pages needed for features intersecting the envelope.
    * This uses getFeaturesAsync with warmCache:true under the hood to trigger
    * range fetches without parsing or yielding features.
    */
-  async prefetch(bbox, options) {
-    const warmOptions = {
-      ...QUERY_PLAN_DEFAULTS,
-      ...options,
-      overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes,
-      // @ts-ignore - extend with warmCache flag for internal use
+  async prefetch(bbox) {
+    console.log("prefetching", bbox);
+    for await (const f of this.getFeaturesAsync(bbox, {
       warmCache: true
-    };
-    for await (const _ of this.getFeaturesAsync(bbox, warmOptions)) {
+    })) {
       await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
@@ -2640,7 +2453,6 @@ var FlatGeobufSource = class {
    * Clear the feature data cache
    */
   clearCache() {
-    this.fetchManager.clearCache();
   }
   /**
    * Bounds of the source, as determined from the spatial index.
@@ -2714,7 +2526,8 @@ var FlatGeobufSource = class {
     for await (const [data, offset, length, bbox2] of executeQueryPlan2(
       queryPlan.pages,
       this.fetchRangeFn,
-      this.featureDataOffset
+      this.featureDataOffset,
+      3
     )) {
       if (options?.warmCache) {
         continue;
@@ -2912,19 +2725,37 @@ async function createSource(urlOrKey, options) {
   );
   return source;
 }
-async function* executeQueryPlan2(plan, fetchRange, featureDataOffset) {
-  const fetchPromises = plan.map(async ({ range, features, pageIndex }, i) => {
-    const data = await fetchRange(range);
-    return { data, features, pageIndex, i, range };
-  });
-  const pendingFetches = new Set(plan.map((_, i) => i));
-  while (pendingFetches.size > 0) {
-    const completedFetch = await Promise.race(
-      [...pendingFetches].map((i2) => fetchPromises[i2])
-    );
-    pendingFetches.delete(completedFetch.i);
-    delete fetchPromises[completedFetch.i];
-    const { data, pageIndex, features, range } = completedFetch;
+async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcurrency = 8) {
+  const startFetch = (i) => {
+    const { range, features, pageIndex } = plan[i];
+    return fetchRange(range).then((data) => ({
+      ok: true,
+      data,
+      features,
+      pageIndex,
+      i,
+      range
+    })).catch((error) => ({ ok: false, error, i }));
+  };
+  const inFlight = /* @__PURE__ */ new Map();
+  let nextToStart = 0;
+  const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
+  while (nextToStart < plan.length && inFlight.size < limit) {
+    inFlight.set(nextToStart, startFetch(nextToStart));
+    nextToStart++;
+  }
+  while (inFlight.size > 0) {
+    const winner = await Promise.race(inFlight.values());
+    inFlight.delete(winner.i);
+    if (nextToStart < plan.length) {
+      inFlight.set(nextToStart, startFetch(nextToStart));
+      nextToStart++;
+    }
+    if (!("ok" in winner) || winner.ok === false) {
+      await Promise.allSettled(Array.from(inFlight.values()));
+      throw "error" in winner ? winner.error : new Error("Unknown fetch error");
+    }
+    const { data, pageIndex, features, range } = winner;
     const view = new DataView(data);
     let i = 0;
     for (let [offset, length, bbox] of features) {

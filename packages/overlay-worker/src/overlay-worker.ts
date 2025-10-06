@@ -21,9 +21,60 @@ import { ProgressNotifier } from "./ProgressNotifier";
 import * as geobuf from "geobuf";
 import Pbf from "pbf";
 import { Feature, FeatureCollection, Polygon } from "geojson";
+import { fetch, Client, Pool } from "undici";
+import { LRUCache } from "lru-cache";
+
+const pool = new Pool(`https://uploads.seasketch.org`, {
+  // allowH2: true,
+});
+
+const cache = new LRUCache<string, ArrayBuffer>({
+  maxSize: 1000 * 1024 * 64, // 64 MB
+  sizeCalculation: (value, key) => {
+    return value.byteLength;
+  },
+});
+
+const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
 
 const sourceCache = new SourceCache("1GB", {
-  maxCacheSize: "150MB",
+  fetchRangeFn: (url, range) => {
+    // console.log("fetching", url, range);
+    const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
+    // console.time(cacheKey);
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      // console.timeEnd(cacheKey);
+      console.log("cache hit", cacheKey);
+      return Promise.resolve(cached);
+    } else if (inFlightRequests.has(cacheKey)) {
+      console.log("in-flight request hit", cacheKey);
+      return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
+    } else {
+      console.log("cache miss", cacheKey);
+      const request = pool
+        .request({
+          path: url.replace("https://uploads.seasketch.org", ""),
+          method: "GET",
+          headers: {
+            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+          },
+        })
+        .then((response) => response.body.arrayBuffer())
+        .then((buffer) => {
+          // console.timeEnd(cacheKey);
+          cache.set(cacheKey, buffer);
+          // console.log("response", response.headers.get("x-cache-status"));
+          return buffer;
+        })
+        .finally(() => {
+          inFlightRequests.delete(cacheKey);
+        });
+      inFlightRequests.set(cacheKey, request);
+      return request;
+    }
+  },
+  maxCacheSize: "256MB",
 });
 
 export default async function handler(payload: OverlayWorkerPayload) {
@@ -135,6 +186,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
         throw new Error(`Unknown payload type: ${payload.type}`);
     }
   } catch (e) {
+    console.log("caught error in overlay worker", e);
     console.error(e);
     await sendErrorMessage(
       payload.jobKey,

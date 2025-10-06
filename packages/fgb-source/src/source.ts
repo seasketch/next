@@ -11,7 +11,7 @@ import {
 } from "geojson";
 import { HeaderMeta } from "flatgeobuf";
 import { fromByteBuffer } from "flatgeobuf/lib/mjs/header-meta.js";
-import { FetchManager, FetchRangeFn } from "./fetch-manager";
+import { FetchRangeFn } from "./fetch-manager";
 import {
   createQueryPlan,
   executeQueryPlan,
@@ -149,7 +149,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   /** offset from the start of the fgb to the first feature data byte */
   private featureDataOffset: number;
   /** Manages fetching and caching of byte ranges */
-  private fetchManager: FetchManager;
+  // private fetchManager: FetchManager;
   /** Amount of space allowed between features before splitting requests */
   private overfetchBytes?: number;
   private pages: number[];
@@ -179,13 +179,13 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     this.index = index;
 
     this.featureDataOffset = featureDataOffset;
-    this.fetchManager = new FetchManager(
-      urlOrFetchRangeFn,
-      parseByteSize(maxCacheSize),
-      this.featureDataOffset,
-      fileByteLength,
-      parseByteSize(pageSize)
-    );
+    // this.fetchManager = new FetchManager(
+    //   urlOrFetchRangeFn,
+    //   parseByteSize(maxCacheSize),
+    //   this.featureDataOffset,
+    //   fileByteLength,
+    //   parseByteSize(pageSize)
+    // );
     this.overfetchBytes = parseByteSize(overfetchBytes);
     const offsets = this.index.getFeatureOffsets();
 
@@ -231,7 +231,14 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
    * Get cache statistics
    */
   get cacheStats() {
-    return this.fetchManager.cacheStats;
+    return {
+      count: 0,
+      calculatedSize: 0,
+      maxSize: 0,
+      inFlightRequests: 0,
+      cacheHits: 0,
+      cacheMisses: 0,
+    };
   }
 
   /**
@@ -239,20 +246,12 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
    * This uses getFeaturesAsync with warmCache:true under the hood to trigger
    * range fetches without parsing or yielding features.
    */
-  async prefetch(
-    bbox: Envelope | Envelope[],
-    options?: QueryPlanOptions
-  ): Promise<void> {
-    const warmOptions = {
-      ...QUERY_PLAN_DEFAULTS,
-      ...options,
-      overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes,
-      // @ts-ignore - extend with warmCache flag for internal use
-      warmCache: true,
-    } as QueryPlanOptions & { warmCache: true };
-
+  async prefetch(bbox: Envelope | Envelope[]): Promise<void> {
+    console.log("prefetching", bbox);
     // Drain the async iterator to ensure all range requests are issued
-    for await (const _ of this.getFeaturesAsync(bbox, warmOptions)) {
+    for await (const f of this.getFeaturesAsync(bbox, {
+      warmCache: true,
+    })) {
       // no-op: warmCache prevents yielding
       // wait for next tick
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -263,7 +262,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
    * Clear the feature data cache
    */
   clearCache() {
-    this.fetchManager.clearCache();
+    // this.fetchManager.clearCache();
   }
 
   /**
@@ -367,7 +366,8 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     for await (const [data, offset, length, bbox] of executeQueryPlan2(
       queryPlan.pages,
       this.fetchRangeFn,
-      this.featureDataOffset
+      this.featureDataOffset,
+      3
     )) {
       if (options?.warmCache) {
         continue;
@@ -673,32 +673,64 @@ export async function createSource<
 export async function* executeQueryPlan2(
   plan: PageRequestPlan[],
   fetchRange: FetchRangeFn,
-  featureDataOffset: number
+  featureDataOffset: number,
+  maxConcurrency: number = 8
 ): AsyncGenerator<
   [globalThis.DataView, number, number, [number, number, number, number]]
 > {
-  // Start all fetch requests in parallel and map them to their respective plan index
-  const fetchPromises = plan.map(async ({ range, features, pageIndex }, i) => {
-    const data = await fetchRange(range);
-    // console.log("fetched page", pageIndex, range, data);
-    return { data, features, pageIndex, i, range };
-  });
+  // Bounded concurrency with safe rejection handling to avoid unhandled rejections
+  const startFetch = (i: number) => {
+    const { range, features, pageIndex } = plan[i];
+    return fetchRange(range)
+      .then((data) => ({
+        ok: true as const,
+        data,
+        features,
+        pageIndex,
+        i,
+        range,
+      }))
+      .catch((error) => ({ ok: false as const, error, i }));
+  };
 
-  // Use Promise.race to yield data as soon as each fetch is ready
-  const pendingFetches = new Set(plan.map((_, i) => i));
+  const inFlight = new Map<
+    number,
+    Promise<
+      | {
+          ok: true;
+          data: ArrayBuffer;
+          features: PageRequestPlan["features"];
+          pageIndex: number;
+          i: number;
+          range: [number, number | null];
+        }
+      | { ok: false; error: unknown; i: number }
+    >
+  >();
 
-  while (pendingFetches.size > 0) {
-    // Wait for the next fetch to complete
-    const completedFetch = await Promise.race(
-      [...pendingFetches].map((i: number) => fetchPromises[i])
-    );
+  let nextToStart = 0;
+  const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
+  while (nextToStart < plan.length && inFlight.size < limit) {
+    inFlight.set(nextToStart, startFetch(nextToStart));
+    nextToStart++;
+  }
 
-    // Remove the completed fetch from the pending set
-    pendingFetches.delete(completedFetch.i);
-    delete fetchPromises[completedFetch.i];
+  while (inFlight.size > 0) {
+    const winner = await Promise.race(inFlight.values());
+    inFlight.delete(winner.i);
 
-    // Process the completed fetch
-    const { data, pageIndex, features, range } = completedFetch;
+    if (nextToStart < plan.length) {
+      inFlight.set(nextToStart, startFetch(nextToStart));
+      nextToStart++;
+    }
+
+    if (!("ok" in winner) || winner.ok === false) {
+      // Ensure no unhandled rejections from remaining in-flight requests
+      await Promise.allSettled(Array.from(inFlight.values()));
+      throw "error" in winner ? winner.error : new Error("Unknown fetch error");
+    }
+
+    const { data, pageIndex, features, range } = winner;
     const view = new DataView(data);
 
     let i = 0;
@@ -720,24 +752,9 @@ export async function* executeQueryPlan2(
       if (VALIDATE_FEATURE_DATA) {
         const size = featureView.getUint32(0, true);
         if (size !== length - SIZE_PREFIX_LEN) {
-          // console.log(
-          //   "create dataview",
-          //   `page=${pageIndex}`,
-          //   `range=${range[0]}-${range[1]}`,
-          //   `expected byte-length=${
-          //     range[1] ? range[1] - range[0] : "unknown"
-          //   }. Got ${data.byteLength}.`,
-          //   `offset=${offset}`,
-          //   `adjusted offset=${adjustedOffset}`,
-          //   `length=${length}`,
-          //   `i=${i}`,
-          //   `features=${features.length}`
-          // );
           throw new Error(
             `Feature data size mismatch: expected ${length}, size prefix was ${size}`
           );
-        } else {
-          // console.log("Valid Feature!!", featureView);
         }
       }
       yield [featureView, offset, length, bbox];

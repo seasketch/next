@@ -645,10 +645,18 @@ export async function initializeGeographySources(
   // first, start initialization of all sources. Later code can still await
   // sourceCache.get, but the requests will already be resolved or in-flight
   geography.map((clippingLayer) => {
-    sourceCache.get(clippingLayer.source, {
-      initialHeaderRequestLength: clippingLayer.headerSizeHint,
-      ...sourceOptions,
-    });
+    sourceCache
+      .get(clippingLayer.source, {
+        initialHeaderRequestLength: clippingLayer.headerSizeHint,
+        ...sourceOptions,
+      })
+      .catch((e) => {
+        console.log(
+          "error initializing geography source",
+          clippingLayer.source
+        );
+        console.error(e);
+      });
   });
 
   const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
