@@ -29,7 +29,7 @@ export async function calculateFragmentOverlap(
     sourceUrl
   );
   helpers.timeEnd("initializing source");
-  const estimate = await source.countAndBytesForQuery(envelope);
+  const estimate = await source.search(envelope);
   helpers.log(
     `Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}`
   );

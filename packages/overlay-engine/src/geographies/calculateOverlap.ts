@@ -1,4 +1,4 @@
-import { SourceCache } from "fgb-source";
+import { FeatureReference, FeatureWithMetadata, SourceCache } from "fgb-source";
 import { ClippingLayerOption, initializeGeographySources } from "./geographies";
 import { SourceType } from "../metrics/metrics";
 import {
@@ -6,7 +6,7 @@ import {
   OverlayWorkerHelpers,
   OverlayWorkerLogFeatureLayerConfig,
 } from "../utils/helpers";
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, GeoJsonProperties, MultiPolygon, Polygon } from "geojson";
 import { evaluateCql2JSONQuery } from "../cql2";
 import { bbox } from "@turf/bbox";
 import { bboxToEnvelope, splitBBoxAntimeridian } from "../utils/bboxUtils";
@@ -16,40 +16,42 @@ import simplify from "@turf/simplify";
 import { ContainerIndex } from "../utils/containerIndex";
 import fs from "fs";
 import isValid from "@turf/boolean-valid";
+import { union } from "union-subdivided-polygons";
 
 const layers: Record<string, OverlayWorkerLogFeatureLayerConfig> = {
-  bboxes: {
-    name: "outer-polygon-edge-box",
-    geometryType: "Polygon",
-    fields: { category: "string" },
-  },
-  classifiedSourceFeatures: {
-    name: "classified-source-features",
-    geometryType: "Polygon",
-    fields: { category: "string" },
-  },
-  outerPolygonIntersectionResults: {
-    name: "outer-polygon-intersection-results",
+  batchedDifferenceFeatures: {
+    name: "batched-difference-features",
     geometryType: "MultiPolygon",
-    fields: { category: "string" },
+    fields: {
+      id: "number",
+    },
   },
-  allDifferenceFeatures: {
-    name: "all-difference-features",
-    geometryType: "Polygon",
-    fields: { offset: "number" },
-  },
-  finalProductFeatures: {
-    name: "final-product-features",
+  batchedOriginalFeatures: {
+    name: "batched-original-features",
     geometryType: "MultiPolygon",
-    fields: {},
+    fields: {
+      id: "number",
+      category: "string",
+    },
   },
-  differenceLayerIntesectionState: {
-    name: "difference-layer-intersection-state",
+  batchedJoinedFeatures: {
+    name: "batched-joined-features",
     geometryType: "Polygon",
-    fields: { category: "string" },
+    fields: {
+      id: "number",
+      category: "string",
+    },
   },
-  batchedFeatures: {
-    name: "batched-features",
+  batchedDiffProducts: {
+    name: "batched-diff-products",
+    geometryType: "MultiPolygon",
+    fields: {
+      id: "number",
+      category: "string",
+    },
+  },
+  unbatchedFeatures: {
+    name: "unbatched-features",
     geometryType: "MultiPolygon",
     fields: {
       id: "number",
@@ -85,7 +87,6 @@ export async function calculateGeographyOverlap(
     throw new Error(`Unsupported source type: ${sourceType}`);
   }
 
-  console.log("prefetch source layer of interest");
   // // Start source prefetching and capture the result without creating
   // // unhandled rejections. We'll check this later and propagate if needed.
   // const prefetchResultPromise: Promise<
@@ -108,16 +109,6 @@ export async function calculateGeographyOverlap(
 
   const outerPolygonContainerIndex = new ContainerIndex(simplified);
 
-  if (helpers.logFeature) {
-    const bboxPolygons = outerPolygonContainerIndex.getBBoxPolygons();
-    for (const f of bboxPolygons.features) {
-      helpers.logFeature(layers.bboxes, {
-        ...f,
-        properties: { category: "outer-polygon-edge-box" },
-      });
-    }
-  }
-
   // If prefetch failed, surface the error through the awaited path so the
   // caller's try/catch or .catch() reliably observes it.
   // {
@@ -138,6 +129,7 @@ export async function calculateGeographyOverlap(
       return {
         cql2Query: layer.cql2Query,
         source: diffSource,
+        layerId: layer.source,
       };
     })
   );
@@ -181,7 +173,7 @@ export async function calculateGeographyOverlap(
   );
 
   const envelope = bboxToEnvelope(bbox(intersectionFeatureGeojson));
-  const estimate = await source.countAndBytesForQuery(envelope);
+  const estimate = await source.search(envelope);
   helpers.log(
     `Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}`
   );
@@ -195,12 +187,13 @@ export async function calculateGeographyOverlap(
   ) {
     let area = feature.properties?.__area || 0;
     if (hasChanged) {
-      area = calcArea(feature) / 1_000_000;
+      area = calcArea(feature) * 1e-6;
     }
     areaByClassId["*"] += area;
     if (groupBy && feature.properties) {
       const classKey = feature.properties[groupBy];
       if (classKey !== undefined) {
+        areaByClassId[classKey] = areaByClassId[classKey] || 0;
         areaByClassId[classKey] += area;
       }
     }
@@ -209,225 +202,143 @@ export async function calculateGeographyOverlap(
   const intersectionGeom = intersectionFeatureGeojson.geometry
     .coordinates as clipping.Geom;
 
-  let batchedFeatures = [] as Feature<Polygon | MultiPolygon>[];
-  let batchBBox = [Infinity, Infinity, -Infinity, -Infinity] as [
-    number,
-    number,
-    number,
-    number
-  ];
-  let batchBytes = 0;
+  const batch = new DifferenceClippingBatch(
+    differenceLayers.map((d) => d.source)
+  );
 
   async function processBatch() {
-    console.log(
-      `processing batch #${batchedFeaturesId++}`,
-      batchedFeatures.length,
-      batchBBox,
-      batchBytes + " bytes"
+    const refscount = Object.values(batch.offsets).reduce(
+      (acc, curr) => acc + curr.length,
+      0
     );
-    console.time(`processing batch #${batchedFeaturesId}`);
-    const combinedMultiPolygon = [] as clipping.Geom[];
-    for (const feature of batchedFeatures.filter(
-      (f) => f.properties?.class === "Outer Reef Flat"
-    )) {
-      if (feature.geometry.type === "Polygon") {
-        combinedMultiPolygon.push(
-          feature.geometry.coordinates as clipping.Geom
-        );
-      } else {
-        for (const poly of feature.geometry.coordinates as clipping.Geom[]) {
-          combinedMultiPolygon.push(poly);
-        }
-      }
-    }
+    console.log(
+      `processing batch #${batch.id}`,
+      batch.features.length,
+      batch.bytes + " bytes",
+      `${refscount} offsets`
+    );
 
-    if (helpers.logFeature) {
-      helpers.logFeature(layers.batchedFeatures, {
-        type: "Feature",
-        properties: { id: batchedFeaturesId, category: "batched-features" },
-        geometry: {
-          type: "MultiPolygon",
-          // @ts-ignore
-          coordinates: combinedMultiPolygon,
-        },
-      });
-    }
-
-    if (
-      false &&
-      !isValid({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "MultiPolygon",
-          coordinates: combinedMultiPolygon,
-        },
-      })
-    ) {
-      console.log(
-        isValid({
-          type: "Feature",
-          properties: {},
-          geometry: {
-            type: "MultiPolygon",
-            coordinates: combinedMultiPolygon,
-          },
-        })
-      );
-      fs.writeFileSync(
-        `/Users/cburt/Downloads/invalid-multipolygon.json`,
-        JSON.stringify(
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "MultiPolygon",
-              coordinates: combinedMultiPolygon,
-            },
-          },
-          null,
-          2
-        )
-      );
-      throw new Error("Invalid combined multi polygon");
-    }
-
-    const diffMultiPolygon = [] as clipping.Geom;
+    const diffGeoms = [] as clipping.Geom[];
 
     for (const diffSource of differenceSources) {
-      for await (const diffFeature of diffSource.source.getFeaturesAsync(
-        bboxToEnvelope(batchBBox)
-      )) {
-        if (
-          diffSource.cql2Query &&
-          !evaluateCql2JSONQuery(diffSource.cql2Query, diffFeature.properties)
-        ) {
-          continue;
-        }
-        if (diffFeature.geometry.type === "Polygon") {
-          diffMultiPolygon.push(
-            // @ts-ignore
-            diffFeature.geometry.coordinates
-          );
-        } else {
-          for (const poly of diffFeature.geometry.coordinates) {
-            // @ts-ignore
-            diffMultiPolygon.push(poly);
+      const refs = batch.offsets[diffSource.layerId];
+      const queryPlan = diffSource.source.getQueryPlan(refs);
+      if (refs.length > 0) {
+        for await (const diffFeature of diffSource.source.getFeaturesAsync(
+          bboxToEnvelope(batch.bbox),
+          {
+            queryPlan,
           }
+        )) {
+          if (
+            diffSource.cql2Query &&
+            !evaluateCql2JSONQuery(diffSource.cql2Query, diffFeature.properties)
+          ) {
+            continue;
+          }
+          diffGeoms.push(diffFeature.geometry.coordinates as clipping.Geom);
         }
       }
     }
 
-    if (
-      false &&
-      !isValid({
-        type: "Feature",
-        properties: {},
-        geometry: {
-          type: "MultiPolygon",
-          coordinates: diffMultiPolygon,
-        },
-      })
-    ) {
-      console.log(
-        isValid({
+    if (helpers.logFeature) {
+      for (const geom of diffGeoms) {
+        helpers.logFeature(layers.batchedDifferenceFeatures, {
           type: "Feature",
-          properties: {},
+          properties: { id: batch.id, category: "difference-layer" },
           geometry: {
-            type: "MultiPolygon",
-            coordinates: diffMultiPolygon,
+            type: "Polygon",
+            // @ts-ignore
+            coordinates: geom,
           },
-        })
-      );
-      fs.writeFileSync(
-        `/Users/cburt/Downloads/invalid-diff-multipolygon.json`,
-        JSON.stringify(
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "MultiPolygon",
-              coordinates: diffMultiPolygon,
-            },
-          },
-          null,
-          2
-        )
-      );
-      throw new Error("Invalid difference multi polygon");
+        });
+      }
     }
 
     if (helpers.logFeature) {
-      helpers.logFeature(layers.batchedFeatures, {
-        type: "Feature",
-        properties: { category: "diff", id: batchedFeaturesId },
-        geometry: {
-          type: "MultiPolygon",
-          // @ts-ignore
-          coordinates: diffMultiPolygon,
-        },
-      });
+      for (const feature of batch.features) {
+        helpers.logFeature(layers.batchedOriginalFeatures, {
+          ...feature,
+          properties: {
+            id: feature.properties?.__offset,
+            category: feature.properties?.[groupBy || ""] || "original-feature",
+          },
+        });
+      }
     }
 
-    try {
-      const newFeature = {
+    const groupedGeoms = groupGeomsByClassKey(batch.features, groupBy);
+
+    if (helpers.logFeature) {
+      for (const classKey in groupedGeoms) {
+        if (groupedGeoms[classKey].length === 0) {
+          continue;
+        }
+        for (const geom of groupedGeoms[classKey]) {
+          const f = {
+            type: "Feature",
+            properties: { id: batch.id, category: classKey + `-joined` },
+            geometry: {
+              type: "Polygon",
+              // @ts-ignore
+              coordinates: geom,
+            },
+          } as Feature<Polygon>;
+          helpers.logFeature(layers.batchedJoinedFeatures, f);
+        }
+      }
+    }
+
+    if (groupBy) {
+      for (const classKey in groupedGeoms) {
+        if (classKey === "*") {
+          continue;
+        }
+        const product = {
+          type: "Feature",
+          properties: {
+            id: batch.id,
+            [groupBy]: classKey,
+          },
+          geometry: {
+            type: "MultiPolygon",
+            // coordinates: groupedGeoms[classKey],
+            coordinates: clipping.difference(
+              groupedGeoms[classKey] as clipping.Geom,
+              ...diffGeoms
+            ),
+          },
+        } as Feature<Polygon | MultiPolygon>;
+        // if (!isValid(product)) {
+        //   throw new Error("Invalid product");
+        // }
+        if (helpers.logFeature) {
+          helpers.logFeature(layers.batchedDiffProducts, {
+            ...product,
+            properties: {
+              id: batch.id,
+              category: classKey + `-diffed`,
+            },
+          });
+        }
+        addFeatureToTotals(product, true);
+      }
+    } else {
+      const product = {
         type: "Feature",
         properties: {},
         geometry: {
           type: "MultiPolygon",
-          // @ts-ignore
           coordinates: clipping.difference(
-            combinedMultiPolygon as clipping.Geom,
-            // @ts-ignore
-            ...diffMultiPolygon
+            groupedGeoms["*"] as clipping.Geom,
+            ...diffGeoms
           ),
         },
       } as Feature<Polygon | MultiPolygon>;
-      console.log("New Feature Area: ", calcArea(newFeature) / 1_000_000);
-
-      addFeatureToTotals(newFeature, true);
-
-      batchedFeatures = [];
-      batchBBox = [Infinity, Infinity, -Infinity, -Infinity];
-      batchBytes = 0;
-      console.timeEnd(`processing batch #${batchedFeaturesId}`);
-    } catch (error) {
-      console.error(`Error processing batch ${batchedFeaturesId}: `, error);
-      fs.writeFileSync(
-        `/Users/cburt/Downloads/batch-${batchedFeaturesId}.json`,
-        JSON.stringify(
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "MultiPolygon",
-              coordinates: combinedMultiPolygon as clipping.Geom,
-            },
-          },
-          null,
-          2
-        )
-      );
-      fs.writeFileSync(
-        `/Users/cburt/Downloads/batch-${batchedFeaturesId}-diff.json`,
-        JSON.stringify(
-          {
-            type: "Feature",
-            properties: {},
-            geometry: {
-              type: "MultiPolygon",
-              coordinates: diffMultiPolygon,
-            },
-          },
-          null,
-          2
-        )
-      );
-      throw error;
+      addFeatureToTotals(product, true);
     }
-    batchedFeatures = [];
-    batchBBox = [Infinity, Infinity, -Infinity, -Infinity];
-    batchBytes = 0;
+
+    batch.reset();
   }
 
   for await (const feature of source.getFeaturesAsync(envelope)) {
@@ -444,14 +355,6 @@ export async function calculateGeographyOverlap(
     let hasChanged = false;
     let intersection: clipping.Geom;
     const classification = outerPolygonContainerIndex.classify(feature);
-    if (helpers.logFeature) {
-      helpers.logFeature(layers.classifiedSourceFeatures, {
-        ...feature,
-        properties: {
-          category: classification,
-        },
-      });
-    }
     if (classification === "outside") {
       // This feature is completely outside the geography, so we can skip it.
       continue;
@@ -459,22 +362,12 @@ export async function calculateGeographyOverlap(
       // This feature is partially within the geography, so we need to perform
       // a clipping operation.
       hasChanged = true;
+      // clipping always results in a MultiPolygon
+      feature.geometry.type = "MultiPolygon";
       feature.geometry.coordinates = clipping.intersection(
         intersectionGeom,
         feature.geometry.coordinates as clipping.Geom
       );
-      // clipping always results in a MultiPolygon
-      feature.geometry.type = "MultiPolygon";
-      if (helpers.logFeature) {
-        helpers.logFeature(layers.outerPolygonIntersectionResults, {
-          ...feature,
-          properties: { category: "outer-polygon-intersection-results" },
-          geometry: {
-            type: "MultiPolygon",
-            coordinates: feature.geometry.coordinates,
-          },
-        });
-      }
     } else {
       // This feature is entirely within the geography, so we can skip clipping
       // but still need to check the difference layer(s), then count it's
@@ -484,119 +377,32 @@ export async function calculateGeographyOverlap(
     const bboxes = splitBBoxAntimeridian(bbox(feature.geometry));
     const splitEnvelopes = bboxes.map(bboxToEnvelope);
 
-    if (splitEnvelopes.length > 1) {
-      throw new Error("Split envelopes should not be greater than 1");
-    }
-
-    let hits = 0;
+    let hasHits = false;
     for (const diffLayer of differenceSources) {
-      const matches = diffLayer.source.countAndBytesForQuery(splitEnvelopes);
+      const matches = diffLayer.source.search(splitEnvelopes);
       if (matches.features > 0) {
-        hits += matches.features;
-        if (batchBytes + matches.bytes > CLIPPING_BATCH_SIZE) {
-          await processBatch();
-        }
-
-        // If the combined bbox crosses the antimeridian, process the batch
-        if (
-          splitBBoxAntimeridian(
-            combineBBoxes(
-              batchBBox,
-              bboxes[0] as [number, number, number, number]
-            )
-          ).length > 1
-        ) {
-          await processBatch();
-        }
-
-        batchBytes += matches.bytes;
-        batchBBox = combineBBoxes(
-          batchBBox,
-          bboxes[0] as [number, number, number, number]
-        );
-        if (isValid(feature)) {
-          batchedFeatures.push(feature);
-        } else {
-          console.log(isValid(feature));
-          throw new Error("Invalid feature");
-        }
-      } else {
-        addFeatureToTotals(feature, hasChanged);
+        batch.addDifferenceFeatureReferences(diffLayer.layerId, matches.refs);
+        hasHits = true;
       }
     }
-
-    // let differenceGeoms = [] as clipping.Geom[];
-    // if (differenceSources.length > 0) {
-    //   for (const diffLayer of differenceSources) {
-    //     for await (const differenceFeature of diffLayer.source.getFeaturesAsync(
-    //       splitEnvelopes
-    //     )) {
-    //       differenceReferences++;
-    //       if (
-    //         !diffLayer.cql2Query ||
-    //         evaluateCql2JSONQuery(
-    //           diffLayer.cql2Query,
-    //           differenceFeature.properties
-    //         )
-    //       ) {
-    //         if (
-    //           helpers.logFeature &&
-    //           !loggedDifferenceFeatures.has(
-    //             `${differenceSources.indexOf(diffLayer)}-${
-    //               differenceFeature.properties?.__offset
-    //             }`
-    //           )
-    //         ) {
-    //           helpers.logFeature(layers.allDifferenceFeatures, {
-    //             ...differenceFeature,
-    //             properties: {
-    //               offset: differenceFeature.properties?.__offset || 0,
-    //             },
-    //           });
-    //         }
-    //         differenceGeoms.push(
-    //           differenceFeature.geometry.coordinates as clipping.Geom
-    //         );
-    //       }
-    //     }
-    //   }
-    // }
-    // if (differenceGeoms.length > 0) {
-    //   hasChanged = true;
-    //   feature.geometry.coordinates = clipping.difference(
-    //     feature.geometry.coordinates as clipping.Geom,
-    //     ...differenceGeoms
-    //   );
-    // } else {
-    //   // no difference geoms to process
-    // }
-    // if (helpers.logFeature) {
-    //   helpers.logFeature(layers.differenceLayerIntesectionState, {
-    //     type: "Feature",
-    //     properties: {
-    //       category: hasChanged ? "would-clip" : "no-intersection-w-diff",
-    //     },
-    //     geometry: feature.geometry,
-    //   });
-    // }
-    // if (helpers.logFeature) {
-    //   if (hasChanged) {
-    //     helpers.logFeature(layers.finalProductFeatures, {
-    //       type: "Feature",
-    //       properties: {},
-    //       geometry: {
-    //         type: "MultiPolygon",
-    //         // @ts-ignore
-    //         coordinates: feature.geometry.coordinates,
-    //       },
-    //     });
-    //   } else {
-    //     helpers.logFeature(layers.finalProductFeatures, {
-    //       ...feature,
-    //     });
-    //   }
-    // }
-    // addFeatureToTotals(feature, hasChanged);
+    if (hasHits) {
+      batch.addFeature(feature);
+      if (batch.bytes >= CLIPPING_BATCH_SIZE) {
+        await processBatch();
+      }
+    } else {
+      if (helpers.logFeature) {
+        helpers.logFeature(layers.unbatchedFeatures, {
+          ...feature,
+          properties: {
+            id: feature.properties?.__offset,
+            category:
+              feature.properties?.[groupBy || ""] || "unbatched-feature",
+          },
+        });
+      }
+      addFeatureToTotals(feature, hasChanged);
+    }
   }
 
   await processBatch();
@@ -614,4 +420,96 @@ function combineBBoxes(
     Math.max(bboxA[2], bboxB[2]),
     Math.max(bboxA[3], bboxB[3]),
   ];
+}
+
+class DifferenceClippingBatch {
+  id: number;
+  features: Feature<Polygon | MultiPolygon>[];
+  offsets: { [sourceId: string]: FeatureReference[] };
+  offsetIds: { [sourceId: string]: Set<number> };
+  bbox: [number, number, number, number];
+  bytes: number;
+  layerIds: string[];
+
+  constructor(layerIds: string[]) {
+    this.id = batchedFeaturesId++;
+    this.features = [];
+    this.offsets = layerIds.reduce((l, id) => ({ ...l, [id]: [] }), {}) as {
+      [sourceId: string]: FeatureReference[];
+    };
+    this.offsetIds = layerIds.reduce(
+      (l, id) => ({ ...l, [id]: new Set<number>() }),
+      {}
+    ) as { [sourceId: string]: Set<number> };
+    this.bbox = [Infinity, Infinity, -Infinity, -Infinity];
+    this.layerIds = layerIds;
+    this.bytes = 0;
+  }
+
+  reset() {
+    this.features = [];
+    this.bbox = [Infinity, Infinity, -Infinity, -Infinity];
+    this.bytes = 0;
+    this.id = batchedFeaturesId++;
+    this.offsets = this.layerIds.reduce(
+      (l, id) => ({ ...l, [id]: [] }),
+      {}
+    ) as { [sourceId: string]: FeatureReference[] };
+  }
+
+  addFeature(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>) {
+    this.features.push(feature as unknown as Feature<Polygon | MultiPolygon>);
+    this.bytes += feature.properties?.__byteLength || 0;
+    this.bbox = combineBBoxes(
+      this.bbox,
+      feature.bbox as [number, number, number, number]
+    );
+  }
+
+  addDifferenceFeatureReferences(layerId: string, refs: FeatureReference[]) {
+    for (const ref of refs) {
+      if (!this.offsetIds[layerId].has(ref[0])) {
+        this.offsets[layerId].push(ref);
+        this.offsetIds[layerId].add(ref[0]);
+        this.bytes += ref[1] || 0;
+      }
+    }
+  }
+}
+
+function groupGeomsByClassKey(
+  features: Feature<Polygon | MultiPolygon>[],
+  groupBy?: string
+) {
+  const geoms = {
+    "*": [] as clipping.Geom[],
+  } as { [key: string]: clipping.Geom[] };
+
+  for (const feature of features) {
+    const area = calcArea(feature) * 1e-6;
+    if (groupBy) {
+      const classKey = feature.properties?.[groupBy];
+      if (classKey) {
+        if (!(classKey in geoms)) {
+          geoms[classKey] = [];
+        }
+        if (feature.geometry.type === "Polygon") {
+          geoms[classKey].push(feature.geometry.coordinates as clipping.Geom);
+        } else {
+          for (const poly of feature.geometry.coordinates) {
+            geoms[classKey].push(poly as clipping.Geom);
+          }
+        }
+      }
+    } else {
+      if (feature.geometry.type === "Polygon") {
+        geoms["*"].push(feature.geometry.coordinates as clipping.Geom);
+      } else {
+        for (const poly of feature.geometry.coordinates) {
+          geoms["*"].push(poly as clipping.Geom);
+        }
+      }
+    }
+  }
+  return geoms;
 }

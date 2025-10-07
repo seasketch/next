@@ -87,7 +87,7 @@ export async function calculateArea(
       );
       helpers.progress(progress++, "Fetched difference layer source");
       helpers.log("Counting bytes and features for query");
-      const { bytes, features } = await source.countAndBytesForQuery(envelopes);
+      const { bytes, features } = await source.search(envelopes);
       helpers.log(
         `Bytes: ${bytes}, Features: ${features}, Envelopes: ${envelopes.length}`
       );

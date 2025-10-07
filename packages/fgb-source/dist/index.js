@@ -2379,7 +2379,7 @@ var FlatGeobufSource = class {
   get geometryType() {
     return GeometryType[this.header.geometryType];
   }
-  search(bbox) {
+  createPlan(bbox) {
     if (!Array.isArray(bbox)) {
       bbox = [bbox];
     }
@@ -2423,7 +2423,7 @@ var FlatGeobufSource = class {
    * ```
    */
   async *getFeaturesAsync(bbox, options) {
-    const queryPlan = options?.queryPlan ?? this.search(bbox);
+    const queryPlan = options?.queryPlan ?? this.createPlan(bbox);
     for await (const [data, offset, length, bbox2] of executeQueryPlan2(
       queryPlan.pages,
       this.fetchRangeFn,
@@ -2443,7 +2443,7 @@ var FlatGeobufSource = class {
       yield feature;
     }
   }
-  countAndBytesForQuery(bbox) {
+  search(bbox) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -2467,7 +2467,8 @@ var FlatGeobufSource = class {
         (acc, [offset, length]) => acc + (length ? length : 0),
         0
       ),
-      features: offsetAndLengths.length
+      features: offsetAndLengths.length,
+      refs: offsetAndLengths
     };
   }
   /**
@@ -2659,8 +2660,6 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
       yield [featureView, offset, length, bbox];
       i++;
       if (i % 100 === 0) {
-        process.nextTick(() => {
-        });
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }

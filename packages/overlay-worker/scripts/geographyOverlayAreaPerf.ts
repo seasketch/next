@@ -202,28 +202,29 @@ calculateGeographyOverlap(
     log: (message) => {
       console.log(message);
     },
-    logFeature: (layer, feature) => {
-      const entry = getDebugWriter(layer);
-      if (!entry) return;
-      try {
-        // Coerce boolean properties to string when needed to match the schema
-        const properties = { ...(feature.properties || {}) } as Record<
-          string,
-          any
-        >;
-        for (const [key, t] of Object.entries(layer.fields)) {
-          if (t === "boolean" && typeof properties[key] === "boolean") {
-            properties[key] = properties[key] ? "true" : "false";
-          } else if (t === "number" && typeof properties[key] === "string") {
-            const n = Number(properties[key]);
-            if (!Number.isNaN(n)) properties[key] = n;
-          }
-        }
-        entry.writer.addFeature({ ...feature, properties });
-      } catch (_) {
-        // ignore feature write errors
-      }
-    },
+    // logFeature: (layer, feature) => {
+    //   const entry = getDebugWriter(layer);
+    //   if (!entry) return;
+    //   try {
+    //     // Coerce boolean properties to string when needed to match the schema
+    //     const properties = { ...(feature.properties || {}) } as Record<
+    //       string,
+    //       any
+    //     >;
+    //     for (const [key, t] of Object.entries(layer.fields)) {
+    //       if (t === "boolean" && typeof properties[key] === "boolean") {
+    //         properties[key] = properties[key] ? "true" : "false";
+    //       } else if (t === "number" && typeof properties[key] === "string") {
+    //         const n = Number(properties[key]);
+    //         if (!Number.isNaN(n)) properties[key] = n;
+    //       }
+    //     }
+    //     entry.writer.addFeature({ ...feature, properties });
+    //   } catch (e) {
+    //     console.error("error writing feature", e);
+    //     // ignore feature write errors
+    //   }
+    // },
     progress: async (progress, message) => {
       if (performance.now() - lastlogged > 100) {
         lastlogged = performance.now();

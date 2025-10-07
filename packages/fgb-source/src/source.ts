@@ -264,7 +264,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     return GeometryType[this.header.geometryType] as keyof typeof GeometryType;
   }
 
-  search(bbox: Envelope | Envelope[]) {
+  createPlan(bbox: Envelope | Envelope[]) {
     if (!Array.isArray(bbox)) {
       bbox = [bbox];
     }
@@ -320,7 +320,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       queryPlan?: QueryPlan;
     }
   ): AsyncGenerator<FeatureWithMetadata<T>> {
-    const queryPlan = options?.queryPlan ?? this.search(bbox);
+    const queryPlan = options?.queryPlan ?? this.createPlan(bbox);
     // console.log(
     //   "pagePlan",
     //   pagePlan.map((p) => ({
@@ -355,7 +355,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
   }
 
-  countAndBytesForQuery(bbox: Envelope | Envelope[]) {
+  search(bbox: Envelope | Envelope[]) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -380,6 +380,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         0
       ),
       features: offsetAndLengths.length,
+      refs: offsetAndLengths,
     };
   }
 
@@ -465,7 +466,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
   }
 
-  private getQueryPlan(refs: FeatureReference[]) {
+  getQueryPlan(refs: FeatureReference[]) {
     const pageRequests: PageRequestPlan[] = [];
     // sort offsets in ascending order
     const sortedRefs = refs.sort((a, b) => a[0] - b[0]);
@@ -726,7 +727,7 @@ export async function* executeQueryPlan2(
       // Yield control to event loop after each feature to allow other promises to resolve
       // This ensures pending fetch promises can complete their cleanup without blocking
       if (i % 100 === 0) {
-        process.nextTick(() => {});
+        // process.nextTick(() => {});
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }

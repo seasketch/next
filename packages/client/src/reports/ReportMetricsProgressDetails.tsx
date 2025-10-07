@@ -98,7 +98,7 @@ export default function ReportMetricsProgressDetails({
                   title={job.layerTitle || job.jobKey}
                   state={job.state}
                   progress={job.progressPercentage}
-                  tooltip={job.errorMessage}
+                  tooltip={job.errorMessage || undefined}
                   // tooltip={job.progressMessage || undefined}
                 />
               ))}

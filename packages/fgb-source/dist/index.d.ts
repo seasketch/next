@@ -281,7 +281,7 @@ declare class FlatGeobufSource<T = Feature> {
      * Geometry type of the source.
      */
     get geometryType(): keyof typeof GeometryType;
-    search(bbox: Envelope | Envelope[]): {
+    createPlan(bbox: Envelope | Envelope[]): {
         pages: PageRequestPlan[];
         requests: number;
         estimatedBytes: {
@@ -319,9 +319,10 @@ declare class FlatGeobufSource<T = Feature> {
         warmCache?: boolean;
         queryPlan?: QueryPlan;
     }): AsyncGenerator<FeatureWithMetadata<T>>;
-    countAndBytesForQuery(bbox: Envelope | Envelope[]): {
+    search(bbox: Envelope | Envelope[]): {
         bytes: number;
         features: number;
+        refs: FeatureReference[];
     };
     /**
      * Scan all features in the source. Does not use the spatial index, but
@@ -362,7 +363,14 @@ declare class FlatGeobufSource<T = Feature> {
             };
         };
     }>;
-    private getQueryPlan;
+    getQueryPlan(refs: FeatureReference[]): {
+        pages: PageRequestPlan[];
+        requests: number;
+        estimatedBytes: {
+            requested: number;
+            features: number;
+        };
+    };
 }
 type PageRequestPlan = {
     pageIndex: number;
@@ -508,4 +516,4 @@ declare class SourceCache {
     get<T = Feature<Geometry, GeoJsonProperties>>(key: string, options?: CreateSourceOptions): Promise<FlatGeobufSource<T>>;
 }
 
-export { type CreateSourceOptions, type FetchRangeByKeyFn, type FetchRangeFn, FlatGeobufSource, type PackedRTreeDetails, SourceCache, type SourceCacheOptions, createSource };
+export { type CreateSourceOptions, type FeatureReference, type FeatureWithMetadata, type FetchRangeByKeyFn, type FetchRangeFn, FlatGeobufSource, type PackedRTreeDetails, SourceCache, type SourceCacheOptions, createSource };

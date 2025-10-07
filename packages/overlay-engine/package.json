@@ -58,6 +58,7 @@
     "polygon-clipping": "^0.15.7",
     "rbush": "3",
     "robust-point-in-polygon": "^1.0.3",
-    "robust-segment-intersect": "^1.0.1"
+    "robust-segment-intersect": "^1.0.1",
+    "union-subdivided-polygons": "^0.9.1"
   }
 }
