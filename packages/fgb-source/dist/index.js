@@ -2217,93 +2217,6 @@ function parseProperties(e2, r2) {
   return a;
 }
 
-// src/constants.ts
-var VERSION = 3;
-var MAGIC_BYTES = [102, 103, 98, VERSION, 102, 103, 98, 0];
-var SIZE_PREFIX_LEN2 = 4;
-var HEADER_FETCH_SIZE = 8192 * 4;
-var QUERY_PLAN_DEFAULTS = {
-  /**
-   * Amount of space allowed between features before splitting requests.
-   * If features are closer together than this, they will be fetched in a
-   * single request to minimize network overhead.
-   */
-  overfetchBytes: 500 * 1024
-  // 500KB
-};
-var DEFAULT_CACHE_SIZE = 16 * 1024 * 1024;
-
-// src/query-plan.ts
-function createQueryPlan(results, featureDataOffset, options) {
-  results.sort((a, b) => a[0] - b[0]);
-  if (results.length === 0) {
-    return {
-      requests: [],
-      bytes: 0,
-      features: 0
-    };
-  } else if (results.length === 1) {
-    const result = results[0];
-    return {
-      requests: [
-        {
-          range: toRange(result, featureDataOffset),
-          offsets: [[0, result[1], result[2]]]
-        }
-      ],
-      bytes: result[1] ? result[1] - result[0] : 0,
-      features: 1
-    };
-  }
-  const plan = {
-    requests: [],
-    bytes: results.reduce((acc, [offset2, length2, bbox2]) => {
-      const range = toRange([offset2, length2, bbox2], featureDataOffset);
-      acc += range[1] ? range[1] - range[0] : 0;
-      return acc;
-    }, 0),
-    features: results.length
-  };
-  let offset = 0;
-  const [start, length, bbox] = results[0];
-  let currentRange = {
-    range: toRange([start, length, bbox], featureDataOffset),
-    offsets: [[0, length, bbox]]
-  };
-  offset = length;
-  plan.requests.push(currentRange);
-  const overfetchBytes = options.overfetchBytes ?? QUERY_PLAN_DEFAULTS.overfetchBytes;
-  for (let i = 1; i < results.length; i++) {
-    const [start2, length2, bbox2] = results[i];
-    const range = toRange([start2, length2, bbox2], featureDataOffset);
-    const distance = range[0] - currentRange.range[1] - 1;
-    if (distance < overfetchBytes && currentRange.offsets.length < 1e3) {
-      currentRange.range[1] = range[1];
-      offset += distance;
-      currentRange.offsets.push([offset, length2, bbox2]);
-      offset += length2;
-    } else {
-      currentRange = {
-        range,
-        offsets: [[0, length2, bbox2]]
-      };
-      offset = length2;
-      plan.requests.push(currentRange);
-    }
-  }
-  return plan;
-}
-function toRange(offsetAndLength, featureDataOffset) {
-  if (offsetAndLength[1] === null) {
-    return [featureDataOffset + offsetAndLength[0], null];
-  } else {
-    return [
-      featureDataOffset + offsetAndLength[0],
-      featureDataOffset + offsetAndLength[0] + offsetAndLength[1] - 1
-    ];
-  }
-}
-
 // node_modules/flatgeobuf/lib/mjs/geojson/geometry.js
 function fromGeometry(t, o2) {
   let n2 = o2;
@@ -2348,6 +2261,13 @@ function fromFeature(t, o2, m) {
   let p = m.columns;
   return { type: "Feature", id: t, geometry: fromGeometry(o2.geometry(), m.geometryType), properties: parseProperties(o2, p) };
 }
+
+// src/constants.ts
+var VERSION = 3;
+var MAGIC_BYTES = [102, 103, 98, VERSION, 102, 103, 98, 0];
+var SIZE_PREFIX_LEN2 = 4;
+var HEADER_FETCH_SIZE = 8192 * 4;
+var DEFAULT_CACHE_SIZE = 16 * 1024 * 1024;
 function validateFeatureData(view, size) {
   view.getUint32(0, true);
 }
@@ -2523,7 +2443,7 @@ var FlatGeobufSource = class {
       yield feature;
     }
   }
-  async countAndBytesForQuery(bbox, options) {
+  countAndBytesForQuery(bbox) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -2533,7 +2453,7 @@ var FlatGeobufSource = class {
     let offsetsSet = /* @__PURE__ */ new Set();
     let offsetAndLengths = [];
     for (const b of bbox) {
-      const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
+      const results = this.index.search(b.minX, b.minY, b.maxX, b.maxY);
       for (const result of results) {
         const key = `${result[0]}-${result[1]}`;
         if (!offsetsSet.has(key)) {
@@ -2542,15 +2462,12 @@ var FlatGeobufSource = class {
         }
       }
     }
-    const plan = createQueryPlan(
-      offsetAndLengths,
-      this.featureDataOffset,
-      options ?? {}
-    );
     return {
-      bytes: plan.bytes,
-      features: plan.features,
-      requests: plan.requests.length
+      bytes: offsetAndLengths.reduce(
+        (acc, [offset, length]) => acc + (length ? length : 0),
+        0
+      ),
+      features: offsetAndLengths.length
     };
   }
   /**

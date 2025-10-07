@@ -355,10 +355,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
   }
 
-  async countAndBytesForQuery(
-    bbox: Envelope | Envelope[],
-    options?: QueryPlanOptions
-  ) {
+  countAndBytesForQuery(bbox: Envelope | Envelope[]) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -368,7 +365,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     let offsetsSet = new Set<string>();
     let offsetAndLengths: FeatureReference[] = [];
     for (const b of bbox) {
-      const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
+      const results = this.index.search(b.minX, b.minY, b.maxX, b.maxY);
       for (const result of results) {
         const key = `${result[0]}-${result[1]}`;
         if (!offsetsSet.has(key)) {
@@ -377,15 +374,12 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         }
       }
     }
-    const plan = createQueryPlan(
-      offsetAndLengths,
-      this.featureDataOffset,
-      options ?? {}
-    );
     return {
-      bytes: plan.bytes,
-      features: plan.features,
-      requests: plan.requests.length,
+      bytes: offsetAndLengths.reduce(
+        (acc, [offset, length]) => acc + (length ? length : 0),
+        0
+      ),
+      features: offsetAndLengths.length,
     };
   }
 

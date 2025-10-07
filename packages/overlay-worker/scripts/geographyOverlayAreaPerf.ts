@@ -31,7 +31,7 @@ const cliProgress = require("cli-progress");
 // "https://uploads.seasketch.org/projects/cburt/subdivided/149-90348c09-93c0-4957-ab07-615c0abf6099.fgb";
 
 // const subdividedSource =
-// "https://uploads.seasketch.org/projects/cburt/subdivided/131-04d8a3a3-7ea7-43c8-baa5-40dfb484b994.fgb";
+//   "https://uploads.seasketch.org/projects/cburt/subdivided/131-04d8a3a3-7ea7-43c8-baa5-40dfb484b994.fgb";
 
 // ACA Geomorphic Cropped
 const subdividedSource =
@@ -196,34 +196,34 @@ calculateGeographyOverlap(
   sourceCache,
   subdividedSource,
   "FlatGeobuf",
-  // "class",
-  "Name",
+  "class",
+  // "Name",
   {
     log: (message) => {
       console.log(message);
     },
-    // logFeature: (layer, feature) => {
-    //   const entry = getDebugWriter(layer);
-    //   if (!entry) return;
-    //   try {
-    //     // Coerce boolean properties to string when needed to match the schema
-    //     const properties = { ...(feature.properties || {}) } as Record<
-    //       string,
-    //       any
-    //     >;
-    //     for (const [key, t] of Object.entries(layer.fields)) {
-    //       if (t === "boolean" && typeof properties[key] === "boolean") {
-    //         properties[key] = properties[key] ? "true" : "false";
-    //       } else if (t === "number" && typeof properties[key] === "string") {
-    //         const n = Number(properties[key]);
-    //         if (!Number.isNaN(n)) properties[key] = n;
-    //       }
-    //     }
-    //     entry.writer.addFeature({ ...feature, properties });
-    //   } catch (_) {
-    //     // ignore feature write errors
-    //   }
-    // },
+    logFeature: (layer, feature) => {
+      const entry = getDebugWriter(layer);
+      if (!entry) return;
+      try {
+        // Coerce boolean properties to string when needed to match the schema
+        const properties = { ...(feature.properties || {}) } as Record<
+          string,
+          any
+        >;
+        for (const [key, t] of Object.entries(layer.fields)) {
+          if (t === "boolean" && typeof properties[key] === "boolean") {
+            properties[key] = properties[key] ? "true" : "false";
+          } else if (t === "number" && typeof properties[key] === "string") {
+            const n = Number(properties[key]);
+            if (!Number.isNaN(n)) properties[key] = n;
+          }
+        }
+        entry.writer.addFeature({ ...feature, properties });
+      } catch (_) {
+        // ignore feature write errors
+      }
+    },
     progress: async (progress, message) => {
       if (performance.now() - lastlogged > 100) {
         lastlogged = performance.now();

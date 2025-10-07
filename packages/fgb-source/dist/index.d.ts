@@ -140,16 +140,6 @@ interface PackedRTreeDetails {
 type FetchRangeFn = (range: [number, number | null]) => Promise<ArrayBuffer>;
 
 /**
- * Options for query planning and execution.
- */
-type QueryPlanOptions = {
-    /** Maximum number of bytes to overfetch when merging ranges */
-    overfetchBytes?: number;
-    /** Skip validation of feature data size prefixes */
-    skipValidation?: boolean;
-};
-
-/**
  * Feature with additional metadata from the FlatGeobuf file.
  */
 type FeatureWithMetadata<T = Feature> = T & {
@@ -329,11 +319,10 @@ declare class FlatGeobufSource<T = Feature> {
         warmCache?: boolean;
         queryPlan?: QueryPlan;
     }): AsyncGenerator<FeatureWithMetadata<T>>;
-    countAndBytesForQuery(bbox: Envelope | Envelope[], options?: QueryPlanOptions): Promise<{
+    countAndBytesForQuery(bbox: Envelope | Envelope[]): {
         bytes: number;
         features: number;
-        requests: number;
-    }>;
+    };
     /**
      * Scan all features in the source. Does not use the spatial index, but
      * rather fetches the entire feature data section and iterates through it.

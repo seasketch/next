@@ -56,7 +56,7 @@ async function calculateFragmentOverlap(fragment, sourceCache, sourceUrl, source
     const source = await sourceCache.get(sourceUrl);
     helpers.timeEnd("initializing source");
     const estimate = await source.countAndBytesForQuery(envelope);
-    helpers.log(`Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}, requests: ${estimate.requests}`);
+    helpers.log(`Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}`);
     helpers.progress(0, `Processing ${estimate.features} features`);
     helpers.time("time to first feature");
     for await (const feature of source.getFeaturesAsync(envelope)) {
