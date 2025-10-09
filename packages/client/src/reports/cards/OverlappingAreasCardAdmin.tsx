@@ -7,7 +7,7 @@ import { useCardLocalizedStringAdmin } from "./cards";
 import Switch from "../../components/Switch";
 
 type AdminConfig = ReportCardConfiguration<{
-  unit?: "km" | "mi" | "acres";
+  unit?: "km" | "mi" | "acres" | "ha";
   showZeroOverlapCategories?: boolean;
   sortBy?: "overlap" | "name";
 }>;
@@ -55,6 +55,7 @@ export default function OverlappingAreasCardAdmin({
             <option value="km">{t("km²")}</option>
             <option value="mi">{t("mi²")}</option>
             <option value="acres">{t("acres")}</option>
+            <option value="ha">{t("hectares")}</option>
           </select>
         </div>
       </div>

@@ -129,7 +129,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                 : message.type === "result"
                 ? message.result
                 : ""
-            }`
+            } ${message.type === "progress" ? message.message : ""}`
           )
         );
       }

@@ -33,7 +33,7 @@ export type OverlappingAreasCardConfiguration = ReportCardConfiguration<{
    * The unit of measurement to display the area in.
    * @default "km"
    */
-  unit?: "km" | "mi" | "acres";
+  unit?: "km" | "mi" | "acres" | "ha";
   /**
    * When true, the list will include categories with 0 area.
    * When false, categories with zero overlap are hidden.

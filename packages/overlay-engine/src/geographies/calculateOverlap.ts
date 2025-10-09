@@ -477,7 +477,7 @@ class DifferenceClippingBatch {
   }
 }
 
-function groupGeomsByClassKey(
+export function groupGeomsByClassKey(
   features: Feature<Polygon | MultiPolygon>[],
   groupBy?: string
 ) {

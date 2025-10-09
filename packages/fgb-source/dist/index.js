@@ -2659,7 +2659,7 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
       let featureView = new DataView(data, adjustedOffset, length);
       yield [featureView, offset, length, bbox];
       i++;
-      if (i % 100 === 0) {
+      if (i % 1e3 === 0) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }

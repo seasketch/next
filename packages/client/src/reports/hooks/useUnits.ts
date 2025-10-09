@@ -5,7 +5,7 @@ export type UnitCategory = "area" | "length";
 
 // For backwards-compatibility with existing component settings, area units use
 // "km" to mean km² and "mi" to mean mi²
-export type AreaDisplayUnit = "km" | "mi" | "acres";
+export type AreaDisplayUnit = "km" | "mi" | "acres" | "ha";
 
 export type LengthDisplayUnit = "km" | "mi" | "nm" | "m";
 
@@ -25,7 +25,9 @@ export function useUnits(
 
   // Resolve both paths so hooks aren't conditional
   const resolvedAreaUnit = useMemo<AreaDisplayUnit>(() => {
-    return providedAreaUnit === "mi" || providedAreaUnit === "acres"
+    return providedAreaUnit === "mi" ||
+      providedAreaUnit === "acres" ||
+      providedAreaUnit === "ha"
       ? providedAreaUnit
       : "km";
   }, [providedAreaUnit]);
@@ -41,6 +43,7 @@ export function useUnits(
     if (isArea) {
       if (resolvedAreaUnit === "mi") return t("mi²");
       if (resolvedAreaUnit === "acres") return t("acres");
+      if (resolvedAreaUnit === "ha") return t("hectares");
       return t("km²");
     }
     if (resolvedLengthUnit === "mi") return t("miles");
@@ -55,6 +58,7 @@ export function useUnits(
       return (km2: number) => {
         if (resolvedAreaUnit === "mi") return km2 / 2.59; // square miles per km²
         if (resolvedAreaUnit === "acres") return km2 * 247.105381; // acres per km²
+        if (resolvedAreaUnit === "ha") return km2 * 100; // hectares per km²
         return km2; // km²
       };
     }
