@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
 import { getAvailableCardTypes, getCardRegistration } from "./registerCard";
-import { ReportConfiguration, ReportingLayer } from "./cards/cards";
+import { ReportConfiguration } from "./cards/cards";
 import { CheckIcon, SearchIcon } from "@heroicons/react/solid";
 import { CheckIcon as RadixCheckIcon } from "@radix-ui/react-icons";
 import AttributeSelect from "../admin/data/styleEditor/AttributeSelect";
@@ -12,14 +12,20 @@ import * as RadixCheckbox from "@radix-ui/react-checkbox";
 import Badge from "../components/Badge";
 import { useParams } from "react-router-dom";
 import {
-  DataUploadOutputType,
+  DataSourceTypes,
+  ReportingLayerDetailsFragment,
+  TableOfContentsItem,
   useAvailableReportLayersQuery,
 } from "../generated/graphql";
 
+type LayerSelection = {
+  layer: ReportingLayerDetailsFragment;
+  groupBy: string | undefined;
+};
 interface AddCardModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (cardType: string, layers: ReportingLayer[]) => void;
+  onSelect: (cardType: string, layers: LayerSelection[]) => void;
   report?: ReportConfiguration;
 }
 
@@ -36,10 +42,8 @@ export function AddCardModal({
   const [modalState, setModalState] = useState({
     step: "chooseType" as "chooseType" | "chooseLayers",
     selectedType: null as string | null,
-    selectedLayerStableIds: [] as string[],
-    groupByByStableId: {} as Record<string, string | undefined>,
+    selectedLayers: [] as LayerSelection[],
   });
-  const [availableLayers, setAvailableLayers] = useState<ReportingLayer[]>([]);
 
   const registration = useMemo(() => {
     return modalState.selectedType
@@ -47,24 +51,14 @@ export function AddCardModal({
       : null;
   }, [modalState.selectedType]);
 
-  function withGroupBy(layer: any, groupBy?: string) {
-    if (!groupBy) return layer;
-    return {
-      ...layer,
-      groupBy,
-    } as ReportingLayer;
-  }
-
   // Always start on type selection when modal opens
   useEffect(() => {
     if (isOpen) {
       setModalState({
         step: "chooseType",
         selectedType: null,
-        selectedLayerStableIds: [],
-        groupByByStableId: {},
+        selectedLayers: [],
       });
-      setAvailableLayers([]);
     }
   }, [isOpen]);
 
@@ -104,7 +98,7 @@ export function AddCardModal({
                     ...prev,
                     step: "chooseType",
                     selectedType: null,
-                    selectedLayerStableIds: [],
+                    selectedLayers: [],
                   }));
                 },
                 variant: "secondary",
@@ -114,26 +108,13 @@ export function AddCardModal({
                 variant: "primary",
                 onClick: () => {
                   if (!modalState.selectedType) return;
-                  const allLayers = availableLayers || [];
-                  const selectedLayers: ReportingLayer[] = allLayers
-                    .filter((l) =>
-                      modalState.selectedLayerStableIds.includes(
-                        l.stableId as string
-                      )
-                    )
-                    .map((l) =>
-                      withGroupBy(
-                        l,
-                        modalState.groupByByStableId[l.stableId as string]
-                      )
-                    ) as any;
-                  onSelect(modalState.selectedType, selectedLayers);
+                  onSelect(modalState.selectedType, modalState.selectedLayers);
                   onClose();
                 },
                 disabled: (() => {
                   const min = registration?.minimumReportingLayerCount || 0;
                   const max = registration?.maximumReportingLayerCount;
-                  const count = modalState.selectedLayerStableIds.length;
+                  const count = modalState.selectedLayers.length;
                   if (count < min) return true;
                   if (typeof max === "number" && count > max) return true;
                   return false;
@@ -225,27 +206,16 @@ export function AddCardModal({
         ) : (
           <LayerSelectionStep
             registration={registration}
-            selectedLayerStableIds={modalState.selectedLayerStableIds}
-            setSelectedLayerStableIds={(value) =>
+            selectedLayers={modalState.selectedLayers}
+            setSelectedLayers={(value) =>
               setModalState((prev) => ({
                 ...prev,
-                selectedLayerStableIds:
+                selectedLayers:
                   typeof value === "function"
-                    ? value(prev.selectedLayerStableIds)
+                    ? value(prev.selectedLayers)
                     : value,
               }))
             }
-            groupByByStableId={modalState.groupByByStableId}
-            setGroupByByStableId={(value) =>
-              setModalState((prev) => ({
-                ...prev,
-                groupByByStableId:
-                  typeof value === "function"
-                    ? value(prev.groupByByStableId)
-                    : value,
-              }))
-            }
-            onAvailableLayersChange={setAvailableLayers}
           />
         )}
       </div>
@@ -253,8 +223,8 @@ export function AddCardModal({
   );
 }
 
-function getCategoricalAttributesForLayer(layer: any) {
-  const meta = layer?.meta as any;
+function getCategoricalAttributesForLayer(layer: TableOfContentsItem) {
+  const meta = layer?.dataLayer?.dataSource?.geostats;
   const layers: GeostatsLayer[] | undefined =
     meta && isGeostatsLayer(meta)
       ? [meta as GeostatsLayer]
@@ -269,23 +239,16 @@ function getCategoricalAttributesForLayer(layer: any) {
 
 interface LayerSelectionStepProps {
   registration: ReturnType<typeof getCardRegistration> | null;
-  selectedLayerStableIds: string[];
-  setSelectedLayerStableIds: React.Dispatch<React.SetStateAction<string[]>>;
-  groupByByStableId: Record<string, string | undefined>;
-  setGroupByByStableId: React.Dispatch<
-    React.SetStateAction<Record<string, string | undefined>>
-  >;
-  onAvailableLayersChange: (layers: ReportingLayer[]) => void;
+  selectedLayers: LayerSelection[];
+  setSelectedLayers: React.Dispatch<React.SetStateAction<LayerSelection[]>>;
 }
 
 function LayerSelectionStep({
   registration,
-  selectedLayerStableIds,
-  setSelectedLayerStableIds,
-  groupByByStableId,
-  setGroupByByStableId,
-  onAvailableLayersChange,
-}: LayerSelectionStepProps) {
+  selectedLayers,
+  setSelectedLayers,
+}: // onAvailableLayersChange,
+LayerSelectionStepProps) {
   const { t } = useTranslation("admin:sketching");
   const { slug } = useParams<{ slug: string }>();
   const { data, loading } = useAvailableReportLayersQuery({
@@ -294,10 +257,10 @@ function LayerSelectionStep({
   });
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const allLayers = (data?.projectBySlug?.availableReportLayers || []) as any;
-    onAvailableLayersChange(allLayers as ReportingLayer[]);
-  }, [data, onAvailableLayersChange]);
+  // useEffect(() => {
+  //   const allLayers = (data?.projectBySlug?.availableReportLayers || []) as any;
+  //   onAvailableLayersChange(allLayers as LayerSelection[]);
+  // }, [data, onAvailableLayersChange]);
 
   return (
     <div className="flex flex-col">
@@ -337,10 +300,10 @@ function LayerSelectionStep({
               const allLayers =
                 data?.projectBySlug?.availableReportLayers || [];
               const supported = (registration?.supportedReportingLayerTypes ||
-                []) as DataUploadOutputType[];
+                []) as DataSourceTypes[];
               const filtered = allLayers.filter((l) =>
                 supported.length > 0
-                  ? supported.includes(l.type as DataUploadOutputType)
+                  ? l.dataSourceType && supported.includes(l.dataSourceType)
                   : true
               );
               const searched = filtered.filter((l) =>
@@ -357,14 +320,17 @@ function LayerSelectionStep({
               }
               const max = registration?.maximumReportingLayerCount;
               const isMaxed =
-                typeof max === "number" && selectedLayerStableIds.length >= max;
+                typeof max === "number" && selectedLayers.length >= max;
               return searched.map((layer) => {
-                const sid = layer.stableId!;
-                const checked = selectedLayerStableIds.includes(sid);
+                const sid = layer.id!;
+                const selected = selectedLayers.find(
+                  (s) => s.layer.tableOfContentsItemId === sid
+                );
+                const checked = !!selected;
                 const disableCheck = !checked && isMaxed;
                 return (
                   <div
-                    key={layer.tableOfContentsItemId!}
+                    key={layer.id!}
                     role="button"
                     className={`flex items-center space-x-3 rounded px-3 py-2 cursor-pointer border relative ${
                       checked
@@ -374,18 +340,36 @@ function LayerSelectionStep({
                     onClick={(e) => {
                       e.preventDefault();
                       if (disableCheck) return;
-                      setSelectedLayerStableIds((prev) => {
-                        const exists = prev.includes(sid);
+                      setSelectedLayers((prev) => {
+                        const exists = prev.find(
+                          (s) => s.layer.tableOfContentsItemId === sid
+                        );
                         if (exists) {
-                          return prev.filter((id) => id !== sid);
+                          return prev.filter(
+                            (s) => s.layer.tableOfContentsItemId !== sid
+                          );
                         } else {
                           if (typeof max === "number" && prev.length >= max) {
                             return prev;
                           }
+                          const reportLayer: ReportingLayerDetailsFragment = {
+                            __typename: "ReportCardLayer",
+                            tableOfContentsItemId: sid,
+                            groupBy: undefined,
+                            tableOfContentsItem: {
+                              __typename: "TableOfContentsItem",
+                              id: sid,
+                              title: layer.title,
+                              dataSourceType: layer.dataSourceType,
+                            },
+                          } as any;
                           if (typeof max === "number" && max === 1) {
-                            return [sid];
+                            return [{ layer: reportLayer, groupBy: undefined }];
                           }
-                          return [...prev, sid];
+                          return [
+                            ...prev,
+                            { layer: reportLayer, groupBy: undefined },
+                          ];
                         }
                       });
                     }}
@@ -402,22 +386,68 @@ function LayerSelectionStep({
                       onCheckedChange={(val) => {
                         if (disableCheck) return;
                         const next = val === true;
-                        setSelectedLayerStableIds((prev) => {
-                          const exists = prev.includes(sid);
+                        setSelectedLayers((prev) => {
+                          const exists = prev.find(
+                            (s) => s.layer.tableOfContentsItemId === sid
+                          );
                           if (next) {
                             if (exists) return prev;
                             if (typeof max === "number" && prev.length >= max) {
                               if (max === 1) {
-                                return [sid];
+                                const reportLayer: ReportingLayerDetailsFragment =
+                                  {
+                                    __typename: "ReportCardLayer",
+                                    tableOfContentsItemId: sid,
+                                    groupBy: undefined,
+                                    tableOfContentsItem: {
+                                      __typename: "TableOfContentsItem",
+                                      id: sid,
+                                      title: layer.title,
+                                      dataSourceType: layer.dataSourceType,
+                                    },
+                                  } as any;
+                                return [
+                                  { layer: reportLayer, groupBy: undefined },
+                                ];
                               }
                               return prev;
                             }
                             if (typeof max === "number" && max === 1) {
-                              return [sid];
+                              const reportLayer: ReportingLayerDetailsFragment =
+                                {
+                                  __typename: "ReportCardLayer",
+                                  tableOfContentsItemId: sid,
+                                  groupBy: undefined,
+                                  tableOfContentsItem: {
+                                    __typename: "TableOfContentsItem",
+                                    id: sid,
+                                    title: layer.title,
+                                    dataSourceType: layer.dataSourceType,
+                                  },
+                                } as any;
+                              return [
+                                { layer: reportLayer, groupBy: undefined },
+                              ];
                             }
-                            return [...prev, sid];
+                            const reportLayer: ReportingLayerDetailsFragment = {
+                              __typename: "ReportCardLayer",
+                              tableOfContentsItemId: sid,
+                              groupBy: undefined,
+                              tableOfContentsItem: {
+                                __typename: "TableOfContentsItem",
+                                id: sid,
+                                title: layer.title,
+                                dataSourceType: layer.dataSourceType,
+                              },
+                            } as any;
+                            return [
+                              ...prev,
+                              { layer: reportLayer, groupBy: undefined },
+                            ];
                           } else {
-                            return prev.filter((id) => id !== sid);
+                            return prev.filter(
+                              (s) => s.layer.tableOfContentsItemId !== sid
+                            );
                           }
                         });
                       }}
@@ -447,18 +477,23 @@ function LayerSelectionStep({
                         </span>
                         <AttributeSelect
                           appearance="light"
-                          attributes={getCategoricalAttributesForLayer(layer)}
+                          attributes={getCategoricalAttributesForLayer(
+                            layer as TableOfContentsItem
+                          )}
                           includeNone={true}
                           placeholder={t("None")}
                           placeholderDescription={t(
                             "Analyze all features as a group"
                           )}
-                          value={groupByByStableId[sid]}
+                          value={selected?.groupBy}
                           onChange={(value) =>
-                            setGroupByByStableId((prev) => ({
-                              ...prev,
-                              [sid]: value,
-                            }))
+                            setSelectedLayers((prev) =>
+                              prev.map((s) =>
+                                s.layer.tableOfContentsItemId === sid
+                                  ? { ...s, groupBy: value }
+                                  : s
+                              )
+                            )
                           }
                         />
                       </div>

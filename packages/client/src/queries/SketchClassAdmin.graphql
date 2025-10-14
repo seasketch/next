@@ -375,17 +375,31 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
-fragment ReportingLayerDetails on ReportingLayer {
-  stableId
-  title
+fragment ReportingLayerDetails on ReportCardLayer {
   tableOfContentsItemId
-  type
-  url
-  size
-  meta
-  mapboxGlStyles
   groupBy
-  processingJobId
+  processedOutput {
+    url
+    size
+    type
+  }
+  tableOfContentsItem {
+    id
+    title
+    dataSourceType
+    dataLayer {
+      id
+      mapboxGlStyles
+      dataSource {
+        id
+        geostats
+        type
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
 }
 
 fragment ReportCardDetails on ReportCard {
@@ -397,7 +411,7 @@ fragment ReportCardDetails on ReportCard {
   tint
   icon
   body
-  reportingLayers {
+  reportingLayers: reportCardLayers {
     ...ReportingLayerDetails
   }
 }
@@ -429,6 +443,11 @@ query DraftReport($sketchClassId: Int!) {
     report {
       createdAt
     }
+  }
+}
+
+query DraftReportDebuggingMaterials($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
     project {
       id
       geographies {
@@ -436,12 +455,12 @@ query DraftReport($sketchClassId: Int!) {
         name
         translatedProps
       }
-      mySketches {
-        id
-        name
-        sketchClassId
-        createdAt
-      }
+    }
+    mySketches {
+      id
+      name
+      sketchClassId
+      createdAt
     }
   }
 }
@@ -584,7 +603,17 @@ query AvailableReportLayers($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     availableReportLayers {
-      ...ReportingLayerDetails
+      title
+      id
+      dataSourceType
+      dataLayer {
+        id
+        mapboxGlStyles
+        dataSource {
+          id
+          geostats
+        }
+      }
     }
   }
 }
@@ -613,5 +642,16 @@ subscription SourceProcessingJobsSubscription($projectId: Int!) {
     job {
       ...SourceProcessingJobDetails
     }
+  }
+}
+
+mutation RecalculateSpatialMetrics(
+  $metricIds: [BigInt!]!
+  $preprocessSources: Boolean!
+) {
+  recalculateSpatialMetrics(
+    input: { metricIds: $metricIds, preprocessSources: $preprocessSources }
+  ) {
+    boolean
   }
 }

@@ -13,6 +13,8 @@ import {
   useProjectMetadataQuery,
   useMoveCardToTabMutation,
   usePublishReportMutation,
+  useDraftReportDebuggingMaterialsQuery,
+  ReportingLayerDetailsFragment,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -25,7 +27,6 @@ import {
   registerCards,
   ReportCardType,
   ReportCardConfiguration,
-  ReportingLayer,
 } from "../../reports/cards/cards";
 import {
   getCardRegistration,
@@ -70,9 +71,17 @@ export default function SketchClassReportsAdmin({
     onError,
   });
 
+  const { data: debuggingMaterialsData } =
+    useDraftReportDebuggingMaterialsQuery({
+      variables: {
+        sketchClassId: sketchClass.id,
+      },
+      onError,
+    });
+
   const sketchesForDemonstration = useMemo(() => {
     const sketches =
-      data?.sketchClass?.project?.mySketches?.filter(
+      debuggingMaterialsData?.sketchClass?.mySketches?.filter(
         (sketch) => sketch.sketchClassId === sketchClass.id
       ) || [];
 
@@ -82,7 +91,7 @@ export default function SketchClassReportsAdmin({
       const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA; // Most recent first
     });
-  }, [data, sketchClass.id]);
+  }, [debuggingMaterialsData, sketchClass.id]);
 
   const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
 
@@ -210,8 +219,19 @@ export default function SketchClassReportsAdmin({
 
   const handleCardSelect = async (
     cardType: string,
-    layers?: ReportingLayer[]
+    selection?: {
+      layer: ReportingLayerDetailsFragment;
+      groupBy: string | undefined;
+    }[]
   ) => {
+    console.log(selection, cardType);
+    if (
+      !selection?.length ||
+      typeof selection[0].layer.tableOfContentsItemId !== "number"
+    ) {
+      console.error("Invalid selection");
+      return;
+    }
     // debug: card selection
     if (!reportState.selectedTab) {
       console.error("No selected tab");
@@ -225,7 +245,7 @@ export default function SketchClassReportsAdmin({
     }
 
     let body = registration.defaultBody || {};
-    if (layers && layers.length === 1) {
+    if (selection && selection.length === 1) {
       body = {
         type: "doc",
         content: [
@@ -234,7 +254,8 @@ export default function SketchClassReportsAdmin({
             content: [
               {
                 type: "text",
-                text: layers[0].title,
+                text:
+                  selection[0].layer.tableOfContentsItem?.title || "Untitled",
               },
             ],
           },
@@ -250,11 +271,12 @@ export default function SketchClassReportsAdmin({
           cardType: cardType,
           body,
           layers:
-            layers?.map((l) => ({
-              tocStableId: l.stableId as string,
+            selection?.map((l) => ({
+              tableOfContentsItemId: l.layer.tableOfContentsItemId,
               groupBy: l.groupBy,
             })) || [],
         },
+        onError,
       });
       // If server requires a separate mutation to attach layers, that will be handled elsewhere.
       setAddCardModalOpen(false);
@@ -433,7 +455,8 @@ export default function SketchClassReportsAdmin({
         ...reportState,
         deleteCard: handleDeleteCard,
         isCollection: false,
-        geographies: data?.sketchClass?.project?.geographies || [],
+        geographies:
+          debuggingMaterialsData?.sketchClass?.project?.geographies || [],
       }}
     >
       <FormLanguageContext.Provider
@@ -870,7 +893,7 @@ function AdminFactory({
   return <Component config={config} onUpdate={onUpdate} />;
 }
 
-function collectReportCardTitle(body: any) {
+export function collectReportCardTitle(body: any) {
   if (
     body.type === "doc" &&
     "content" in body &&

@@ -1071,7 +1071,7 @@ type CompatibleSpatialMetric {
   jobKey: String
   progress: Int
   sourceProcessingJobDependency: String
-  stableId: String
+  sourceUrl: String
   state: SpatialMetricState!
   subject: MetricSubject!
   type: String!
@@ -2276,8 +2276,13 @@ type CreateReportCardLayerPayload {
   """An edge for our `ReportCardLayer`. May be used by Relay 1."""
   reportCardLayerEdge(
     """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ReportCardLayersOrderBy!] = [NATURAL]
   ): ReportCardLayersEdge
+
+  """
+  Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`.
+  """
+  tableOfContentsItem: TableOfContentsItem
 }
 
 """All input for the create `Report` mutation."""
@@ -5042,55 +5047,6 @@ input DeleteReportCardInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-}
-
-"""All input for the `deleteReportCardLayerByNodeId` mutation."""
-input DeleteReportCardLayerByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `ReportCardLayer` to be deleted.
-  """
-  nodeId: ID!
-}
-
-"""All input for the `deleteReportCardLayer` mutation."""
-input DeleteReportCardLayerInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  reportCardId: Int!
-  tocStableId: String!
-}
-
-"""The output of our delete `ReportCardLayer` mutation."""
-type DeleteReportCardLayerPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  deletedReportCardLayerNodeId: ID
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """The `ReportCardLayer` that was deleted by this mutation."""
-  reportCardLayer: ReportCardLayer
-
-  """An edge for our `ReportCardLayer`. May be used by Relay 1."""
-  reportCardLayerEdge(
-    """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportCardLayersEdge
 }
 
 """The output of our `deleteReportCard` mutation."""
@@ -9546,22 +9502,6 @@ type Mutation {
     """
     input: DeleteReportCardInput!
   ): DeleteReportCardPayload
-
-  """Deletes a single `ReportCardLayer` using a unique key."""
-  deleteReportCardLayer(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteReportCardLayerInput!
-  ): DeleteReportCardLayerPayload
-
-  """Deletes a single `ReportCardLayer` using its globally unique id."""
-  deleteReportCardLayerByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteReportCardLayerByNodeIdInput!
-  ): DeleteReportCardLayerPayload
   deleteReportTab(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9970,6 +9910,12 @@ type Mutation {
     """
     input: PublishTableOfContentsInput!
   ): PublishTableOfContentsPayload
+  recalculateSpatialMetrics(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RecalculateSpatialMetricsInput!
+  ): RecalculateSpatialMetricsPayload
 
   """
   Remove a group from a given access control list. Must be an administrator.
@@ -10729,24 +10675,6 @@ type Mutation {
     """
     input: UpdateReportCardInput!
   ): UpdateReportCardPayload
-
-  """Updates a single `ReportCardLayer` using a unique key and a patch."""
-  updateReportCardLayer(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateReportCardLayerInput!
-  ): UpdateReportCardLayerPayload
-
-  """
-  Updates a single `ReportCardLayer` using its globally unique id and a patch.
-  """
-  updateReportCardLayerByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateReportCardLayerByNodeIdInput!
-  ): UpdateReportCardLayerPayload
 
   """
   If preprocessing is enabled,
@@ -11652,14 +11580,14 @@ type Project implements Node {
     orderBy: [ApiKeysOrderBy!] = [PRIMARY_KEY_ASC]
   ): ApiKeysConnection!
 
-  """Reads and enables pagination through a set of `ReportingLayer`."""
+  """Reads and enables pagination through a set of `TableOfContentsItem`."""
   availableReportLayers(
     """Only read the first `n` values of the set."""
     first: Int
 
     """Skip the first `n` values."""
     offset: Int
-  ): [ReportingLayer!]
+  ): [TableOfContentsItem!]
 
   """Reads and enables pagination through a set of `Basemap`."""
   basemaps(
@@ -13252,6 +13180,7 @@ type Query implements Node {
     """The method to use when ordering `EmailNotificationPreference`."""
     orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
   ): EmailNotificationPreferencesConnection
+  extensionToSourceType(url: String): String
   extractSpriteIds(t: String): [Int]
   fileUpload(id: UUID!): FileUpload
 
@@ -13809,15 +13738,6 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Report`."""
     nodeId: ID!
   ): Report
-  reportCardLayer(reportCardId: Int!, tocStableId: String!): ReportCardLayer
-
-  """Reads a single `ReportCardLayer` using its globally unique `ID`."""
-  reportCardLayerByNodeId(
-    """
-    The globally unique `ID` to be used in selecting a single `ReportCardLayer`.
-    """
-    nodeId: ID!
-  ): ReportCardLayer
 
   """Reads and enables pagination through a set of `ReportCardLayer`."""
   reportCardLayersConnection(
@@ -13845,7 +13765,7 @@ type Query implements Node {
     offset: Int
 
     """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [PRIMARY_KEY_ASC]
+    orderBy: [ReportCardLayersOrderBy!] = [NATURAL]
   ): ReportCardLayersConnection
 
   """Reads and enables pagination through a set of `Report`."""
@@ -14269,6 +14189,33 @@ enum RasterDemEncoding {
   TERRARIUM
 }
 
+"""All input for the `recalculateSpatialMetrics` mutation."""
+input RecalculateSpatialMetricsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  metricIds: [BigInt]
+  preprocessSources: Boolean
+}
+
+"""The output of our `recalculateSpatialMetrics` mutation."""
+type RecalculateSpatialMetricsPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `removeGroupFromAcl` mutation."""
 input RemoveGroupFromAclInput {
   aclId: Int
@@ -14492,13 +14439,7 @@ type ReportCard implements Node {
   position: Int!
 
   """Reads and enables pagination through a set of `ReportCardLayer`."""
-  reportCardLayersConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
+  reportCardLayers(
     """
     A condition to be used in determining which values should be returned by the collection.
     """
@@ -14507,18 +14448,12 @@ type ReportCard implements Node {
     """Only read the first `n` values of the set."""
     first: Int
 
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
+    """Skip the first `n` values."""
     offset: Int
 
     """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportCardLayersConnection!
+    orderBy: [ReportCardLayersOrderBy!]
+  ): [ReportCardLayer!]!
 
   """Reads and enables pagination through a set of `ReportingLayer`."""
   reportingLayers(
@@ -14534,15 +14469,16 @@ type ReportCard implements Node {
   updatedAt: Datetime!
 }
 
-type ReportCardLayer implements Node {
+type ReportCardLayer {
   groupBy: String
+  processedOutput: DataUploadOutput
+  reportCardId: Int!
 
   """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`.
   """
-  nodeId: ID!
-  reportCardId: Int!
-  tocStableId: String!
+  tableOfContentsItem: TableOfContentsItem
+  tableOfContentsItemId: Int!
 }
 
 """
@@ -14553,24 +14489,15 @@ input ReportCardLayerCondition {
   """Checks for equality with the object’s `reportCardId` field."""
   reportCardId: Int
 
-  """Checks for equality with the object’s `tocStableId` field."""
-  tocStableId: String
+  """Checks for equality with the object’s `tableOfContentsItemId` field."""
+  tableOfContentsItemId: Int
 }
 
 """An input for mutations affecting `ReportCardLayer`"""
 input ReportCardLayerInput {
   groupBy: String
   reportCardId: Int!
-  tocStableId: String!
-}
-
-"""
-Represents an update to a `ReportCardLayer`. Fields that are set will be updated.
-"""
-input ReportCardLayerPatch {
-  groupBy: String
-  reportCardId: Int
-  tocStableId: String
+  tableOfContentsItemId: Int!
 }
 
 """A connection to a list of `ReportCardLayer` values."""
@@ -14604,12 +14531,10 @@ type ReportCardLayersEdge {
 """Methods to use when ordering `ReportCardLayer`."""
 enum ReportCardLayersOrderBy {
   NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
   REPORT_CARD_ID_ASC
   REPORT_CARD_ID_DESC
-  TOC_STABLE_ID_ASC
-  TOC_STABLE_ID_DESC
+  TABLE_OF_CONTENTS_ITEM_ID_ASC
+  TABLE_OF_CONTENTS_ITEM_ID_DESC
 }
 
 """
@@ -14628,13 +14553,10 @@ type ReportingLayer {
   mapboxGlStyles: JSON
   meta: JSON
   processingJobId: String
-  remote: String
-  size: BigInt
-  stableId: String
+  sourceProcessingJob: SourceProcessingJob
   tableOfContentsItemId: Int
   title: String
-  type: DataUploadOutputType
-  url: String
+  type: String
 }
 
 """An input for mutations affecting `Report`"""
@@ -14648,7 +14570,7 @@ input ReportInput {
 input ReportLayerInputRecordInput {
   groupBy: String
   reportCardId: Int
-  tocStableId: String
+  tableOfContentsItemId: Int
 }
 
 """
@@ -15440,6 +15362,15 @@ type SketchClass implements Node {
   """
   mapboxGlStyle: JSON
 
+  """Reads and enables pagination through a set of `Sketch`."""
+  mySketches(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Sketch!]
+
   """Label chosen by project admins that is shown to users."""
   name: String!
 
@@ -15846,9 +15777,8 @@ input SpatialMetricDependency {
   includedProperties: [String!]
   includeSiblings: Boolean
   sketchId: Int
-  sourceType: MetricSourceType
+  sourceProcessingJobDependency: String
   sourceUrl: String
-  stableId: String
   type: String!
 }
 
@@ -16759,6 +16689,23 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
+
+  """Reads and enables pagination through a set of `ReportCardLayer`."""
+  reportCardLayers(
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ReportCardLayerCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+
+    """The method to use when ordering `ReportCardLayer`."""
+    orderBy: [ReportCardLayersOrderBy!]
+  ): [ReportCardLayer!]!
 
   """
   If set, children of this folder will appear as radio options so that only one may be toggle at a time
@@ -18996,64 +18943,6 @@ input UpdateReportCardInput {
   componentSettings: JSON
   icon: String
   tint: String
-}
-
-"""All input for the `updateReportCardLayerByNodeId` mutation."""
-input UpdateReportCardLayerByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `ReportCardLayer` to be updated.
-  """
-  nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `ReportCardLayer` being updated.
-  """
-  patch: ReportCardLayerPatch!
-}
-
-"""All input for the `updateReportCardLayer` mutation."""
-input UpdateReportCardLayerInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  An object where the defined keys will be set on the `ReportCardLayer` being updated.
-  """
-  patch: ReportCardLayerPatch!
-  reportCardId: Int!
-  tocStableId: String!
-}
-
-"""The output of our update `ReportCardLayer` mutation."""
-type UpdateReportCardLayerPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """The `ReportCardLayer` that was updated by this mutation."""
-  reportCardLayer: ReportCardLayer
-
-  """An edge for our `ReportCardLayer`. May be used by Relay 1."""
-  reportCardLayerEdge(
-    """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportCardLayersEdge
 }
 
 """The output of our `updateReportCard` mutation."""

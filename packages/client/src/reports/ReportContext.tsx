@@ -11,14 +11,16 @@ import {
   ReportContextSketchClassDetailsFragment,
   ReportContextSketchDetailsFragment,
   Sketch,
+  SketchReportingDetailsDocument,
   SourceProcessingJobDetailsFragment,
   SourceProcessingJobsDocument,
   SpatialMetricDependency,
   SpatialMetricState,
   useGeographyMetricSubscriptionSubscription,
   useGetOrCreateSpatialMetricsMutation,
+  useRecalculateSpatialMetricsMutation,
   useSketchMetricSubscriptionSubscription,
-  useSketchReportingDetailsQuery,
+  useReportSketchDetailsQuery,
   useSourceProcessingJobsQuery,
   useSourceProcessingJobsSubscriptionSubscription,
 } from "../generated/graphql";
@@ -105,6 +107,7 @@ export interface ReportContextState {
   metrics: LocalMetrics;
   userIsAdmin: boolean;
   sourceProcessingJobs: SourceProcessingJobDetailsFragment[];
+  recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -117,9 +120,9 @@ export type LocalMetric = Metric & {
   errorMessage?: string;
   progress?: number;
   jobKey?: string;
-  stableId?: string;
   groupBy?: string;
   sourceProcessingJobDependency?: string;
+  sourceUrl?: string;
 };
 
 type LocalMetrics = LocalMetric[];
@@ -213,14 +216,18 @@ export function useReportState(
     };
 
   const onError = useGlobalErrorHandler();
-  const sketchReportingDetails = useSketchReportingDetailsQuery({
+  const reportSketchDetails = useReportSketchDetailsQuery({
     variables: {
       id: selectedSketchId!,
-      sketchClassId,
     },
     skip: !selectedSketchId,
     onError,
   });
+
+  const [recalculateMutation, recalculateState] =
+    useRecalculateSpatialMetricsMutation({
+      onError: onError,
+    });
 
   useEffect(() => {
     if (selectedSketchId) {
@@ -396,6 +403,7 @@ export function useReportState(
       stringifiedDependencies !== previouslyFetchedMetricDependencies
     ) {
       setPreviouslyFetchedMetricDependencies(stringifiedDependencies);
+      console.log("fetching spatial metrics", currentMetricDependencies);
       // check if there are any dependencies that have not already been fetched
       getOrCreateSpatialMetrics({
         variables: {
@@ -413,6 +421,35 @@ export function useReportState(
     }
   }, [currentMetricDependencies, setMetrics, getOrCreateSpatialMetrics]);
 
+  const recalculate = useCallback(
+    (metricIds: number[], preprocessSources?: boolean) => {
+      recalculateMutation({
+        variables: {
+          metricIds,
+          preprocessSources: preprocessSources || false,
+        },
+        refetchQueries: [SketchReportingDetailsDocument],
+        awaitRefetchQueries: true,
+        onCompleted: () => {
+          getOrCreateSpatialMetrics({
+            variables: {
+              dependencies: currentMetricDependencies,
+            },
+            // refetchQueries: [SourceProcessingJobsDocument],
+          }).then((results) => {
+            setMetrics((prev) => {
+              return updateMetricsList(
+                prev,
+                results.data?.getOrCreateSpatialMetrics?.metrics || []
+              );
+            });
+          });
+        },
+      });
+    },
+    [recalculateMutation, getOrCreateSpatialMetrics, currentMetricDependencies]
+  );
+
   return {
     selectedTabId,
     setSelectedTabId,
@@ -423,20 +460,21 @@ export function useReportState(
     removeMetricDependency,
     metricDependencies: currentMetricDependencies,
     selectedSketchId,
-    sketch: sketchReportingDetails.data
+    sketch: reportSketchDetails.data
       ?.sketch as ReportContextSketchDetailsFragment,
-    sketchClass: sketchReportingDetails.data
+    sketchClass: reportSketchDetails.data?.sketch
       ?.sketchClass as ReportContextSketchClassDetailsFragment,
-    childSketches: sketchReportingDetails.data?.sketch?.children || [],
-    siblingSketches: sketchReportingDetails.data?.sketch?.siblings || [],
+    childSketches: reportSketchDetails.data?.sketch?.children || [],
+    siblingSketches: reportSketchDetails.data?.sketch?.siblings || [],
     relatedFragments:
-      (sketchReportingDetails.data?.sketch
+      (reportSketchDetails.data?.sketch
         ?.relatedFragments as MetricSubjectFragment[]) || [],
-    loading: sketchReportingDetails.loading,
+    loading: reportSketchDetails.loading,
     metrics,
     userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
     sourceProcessingJobs:
       sourceProcessingJobsQuery.data?.project?.sourceProcessingJobs || [],
+    recalculate,
   };
 }
 

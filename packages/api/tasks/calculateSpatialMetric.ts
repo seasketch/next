@@ -61,24 +61,10 @@ export default async function calculateSpatialMetric(
         } as OverlayWorkerPayload);
       }
     } else if (metric.type === "overlay_area") {
-      // first, check if dependent data source have been processed (subdivided)
+      // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
-        // return;
-        const canonicalSource = await getCanonicalDataSource(
-          metric.stableId,
-          helpers
-        );
-        console.log("canonicalSourceUrl", canonicalSource.sourceUrl);
-        await assignSubdivisionJob(
-          canonicalSource.sourceUrl,
-          canonicalSource.sourceId,
-          metric.id,
-          helpers
-        );
+        return;
       } else {
-        if (!metric.stableId) {
-          throw new Error("overlay_area metrics must have a layerStableId");
-        }
         // delegate to overlay worker
         if (subjectIsFragment(metric.subject)) {
           const geobuf = await getGeobufForFragment(
@@ -93,7 +79,6 @@ export default async function calculateSpatialMetric(
               geobuf,
             },
             groupBy: metric.groupBy,
-            stableId: metric.stableId,
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
@@ -227,7 +212,6 @@ function getSpatialMetric(metricId: number, helpers: Helpers) {
       jobKey: string;
       sourceUrl: string;
       sourceType: SourceType;
-      stableId: string;
     };
   });
 }
@@ -269,74 +253,4 @@ function getCanonicalDataSource(stableId: string, helpers: Helpers) {
   });
 }
 
-async function assignSubdivisionJob(
-  sourceUrl: string,
-  sourceId: number,
-  metricId: number,
-  helpers: Helpers
-) {
-  console.log("assign subdivision job", sourceUrl, sourceId, metricId);
-  if (!process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
-    throw new Error("SUBDIVISION_WORKER_LAMBDA_ARN is not set");
-  }
-  const arn = process.env.SUBDIVISION_WORKER_LAMBDA_ARN;
-  await helpers.withPgClient(async (client) => {
-    const existingJob = await client.query(
-      `select job_key, state from source_processing_jobs where data_source_id = $1`,
-      [sourceId]
-    );
-    if (existingJob.rows.length > 0) {
-      if (existingJob.rows[0].state === "complete") {
-        await client.query(
-          `update spatial_metrics set source_processing_job_dependency = $1 where id = $2`,
-          [existingJob.rows[0].job_key, metricId]
-        );
-      } else {
-        await client.query(
-          `update spatial_metrics set state = 'dependency_not_ready', source_processing_job_dependency = $1 where id = $2`,
-          [existingJob.rows[0].job_key, metricId]
-        );
-        const existingJobState = existingJob.rows[0].state;
-        console.log("existingJobState", existingJobState);
-      }
-      return;
-    } else {
-      const result = await client.query(
-        `
-        insert into source_processing_jobs (data_source_id, project_id) values ($1, (select project_id from data_sources where id = $1)) returning *
-        `,
-        [sourceId]
-      );
-      await client.query(
-        `update spatial_metrics set state = 'dependency_not_ready', source_processing_job_dependency = $1 where id = $2`,
-        [result.rows[0].job_key, metricId]
-      );
-
-      const slugResults = await client.query(
-        `select slug from projects where id = (select project_id from data_sources where id = $1)`,
-        [sourceId]
-      );
-      const slug = slugResults.rows[0].slug;
-
-      const objectKey = `projects/${slug}/subdivided/${sourceId}-${uuid()}.fgb`;
-      const payload = {
-        url: sourceUrl,
-        jobKey: result.rows[0].job_key,
-        key: objectKey,
-        queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
-      };
-      console.log(`Calling lambda with payload: ${JSON.stringify(payload)}`);
-      console.log("invoke lambda");
-      await lambda
-        .invoke({
-          FunctionName: arn,
-          InvocationType: "Event",
-          Payload: JSON.stringify(payload),
-        })
-        .promise();
-    }
-  });
-  // throw new Error(
-  //   "Source URL is not available. Need to trigger subdivision worker. Currently unimplemented."
-  // );
-}
+// assignSubdivisionJob removed. Preprocessing is handled by preprocessSource task and DB triggers.

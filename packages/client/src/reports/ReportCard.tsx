@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards/cards";
 import {
   getCardComponent,
@@ -10,28 +10,22 @@ import {
   ExclamationTriangleIcon,
   CrossCircledIcon,
   Pencil1Icon,
+  TrashIcon,
+  ReloadIcon,
 } from "@radix-ui/react-icons";
-import { TrashIcon } from "@heroicons/react/outline";
+import ReportCardActionMenu from "./components/ReportCardActionMenu";
+import Modal from "../components/Modal";
 import { FormLanguageContext } from "../formElements/FormElement";
-import {
-  useContext,
-  useCallback,
-  useEffect,
-  Component,
-  useState,
-  useMemo,
-} from "react";
+import { useContext, useCallback, useState, useMemo } from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
-import { ErrorBoundary, useErrorBoundary } from "react-error-boundary";
-import Badge from "../components/Badge";
-import Button from "../components/Button";
-import {
-  SpatialMetricState,
-  useRetryFailedSpatialMetricsMutation,
-} from "../generated/graphql";
+import { SpatialMetricState } from "../generated/graphql";
 import Skeleton from "../components/Skeleton";
 import ReportMetricsProgressDetails from "./ReportMetricsProgressDetails";
+import { subjectIsFragment } from "overlay-engine";
+import ReportCardLoadingIndicator from "./components/ReportCardLoadingIndicator";
+import { CalculatorIcon } from "@heroicons/react/outline";
+import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -44,7 +38,7 @@ export type ReportCardComponentProps = {
   cardId?: number; // ID of the card for edit functionality
   onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
-  metrics: Pick<LocalMetric, "id" | "state" | "errorMessage">[];
+  metrics: Pick<LocalMetric, "id" | "state" | "errorMessage" | "subject">[];
   skeleton?: React.ReactNode;
 };
 
@@ -71,12 +65,17 @@ export default function ReportCard({
   config: ReportCardConfiguration<any>;
 }) {
   const { t } = useTranslation("admin:sketching");
-  const { adminMode, selectedForEditing, setSelectedForEditing, deleteCard } =
-    useReportContext();
+  const {
+    adminMode,
+    selectedForEditing,
+    setSelectedForEditing,
+    deleteCard,
+    recalculate,
+  } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
 
-  const { errors, failedMetrics, loading } = useMemo(() => {
+  let { errors, failedMetrics, loading } = useMemo(() => {
     const errors = {} as { [key: string]: number };
     let loading = false;
     const failedMetrics = [] as number[];
@@ -95,12 +94,6 @@ export default function ReportCard({
     }
     return { errors, failedMetrics, loading };
   }, [metrics]);
-
-  const [retry, retryState] = useRetryFailedSpatialMetricsMutation({
-    variables: {
-      metricIds: failedMetrics,
-    },
-  });
 
   if (Object.keys(errors).length > 0) {
     tint = "text-red-500";
@@ -159,6 +152,7 @@ export default function ReportCard({
   ) {
     localizedBody = alternateLanguageSettings[langContext.lang.code].body;
   }
+  // loading = true;
 
   const isReady = !loading && !Object.keys(errors).length;
 
@@ -170,9 +164,16 @@ export default function ReportCard({
       <div className="w-full space-y-1">
         <Skeleton className="w-full h-4" />
         <Skeleton className="w-3/4 h-4" />
+        <Skeleton className="w-4/5 h-4" />
       </div>
     );
   }, [skeleton]);
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [recalcOpen, setRecalcOpen] = useState(false);
+  const [recomputePreprocessed, setRecomputePreprocessed] = useState(false);
+  const [recomputeTotals, setRecomputeTotals] = useState(false);
+  const [showCalcDetails, setShowCalcDetails] = useState(false);
 
   return (
     <div
@@ -191,32 +192,71 @@ export default function ReportCard({
           )}
         </div>
       </div>
+      {loading && (
+        <button
+          type="button"
+          className="absolute top-[14px] right-[16px]"
+          onClick={() => setShowCalcDetails(true)}
+          title={t("Calculation Details")}
+        >
+          <ReportCardLoadingIndicator
+            className=""
+            display={true}
+            metrics={metrics}
+          />
+        </button>
+      )}
       <div className="absolute right-2 top-2">
         <div>
-          {adminMode && !selectedForEditing && cardId && (
-            <div className="flex-1 ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex items-center space-x-1 justify-end">
-              {deleteCard && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    deleteCard(cardId);
-                  }}
-                  className="text-gray-400 hover:text-gray-600 p-1 rounded"
-                  title={t("Delete card")}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              )}
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setSelectedForEditing(cardId);
-                }}
-                className="text-gray-400 hover:text-gray-600 p-1 rounded"
-                title={t("Edit card")}
+          {!loading && adminMode && !selectedForEditing && cardId && (
+            <div
+              className={`flex-1 ml-auto transition-opacity flex items-center justify-end ${
+                menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}
+            >
+              <ReportCardActionMenu
+                open={menuOpen}
+                onOpenChange={setMenuOpen}
+                label={t("Card actions")}
               >
-                <Pencil1Icon className="w-4 h-4" />
-              </button>
+                {adminMode && (
+                  <>
+                    <ReportCardActionMenu.Item
+                      onSelect={() => setShowCalcDetails(true)}
+                      icon={<CalculatorIcon className="h-4 w-4" />}
+                    >
+                      {t("Calculation details")}
+                    </ReportCardActionMenu.Item>
+                    <ReportCardActionMenu.Item
+                      icon={<ReloadIcon className="h-4 w-4" />}
+                      onSelect={() => {
+                        setRecalcOpen(true);
+                      }}
+                    >
+                      {t("Recalculate")}
+                    </ReportCardActionMenu.Item>
+                    <ReportCardActionMenu.Item
+                      icon={<Pencil1Icon className="h-4 w-4" />}
+                      onSelect={() => {
+                        setSelectedForEditing(cardId!);
+                      }}
+                    >
+                      {t("Edit card")}
+                    </ReportCardActionMenu.Item>
+                    {deleteCard && (
+                      <ReportCardActionMenu.Item
+                        icon={<TrashIcon className="h-4 w-4" />}
+                        variant="danger"
+                        onSelect={() => {
+                          deleteCard(cardId!);
+                        }}
+                      >
+                        {t("Delete card")}
+                      </ReportCardActionMenu.Item>
+                    )}
+                  </>
+                )}
+              </ReportCardActionMenu>
             </div>
           )}
         </div>
@@ -277,14 +317,118 @@ export default function ReportCard({
           </>
         )} */}
         {isReady && children}
-        {adminMode && !isReady && (
+        {/* {adminMode && !isReady && (
           <ReportMetricsProgressDetails
             metricIds={metrics.map((m) => m.id)}
             skeleton={loadingSkeleton}
           />
+        )} */}
+        {loading && (
+          <div className="relative">
+            <div>{loadingSkeleton}</div>
+          </div>
         )}
-        {!adminMode && loading && loadingSkeleton}
       </div>
+
+      {recalcOpen && (
+        <Modal
+          open
+          onRequestClose={() => setRecalcOpen(false)}
+          title={t("Recalculate results")}
+          disableBackdropClick={false}
+          footerClassName="bg-gray-100 border-t"
+          footer={[
+            {
+              label: t("Cancel"),
+              onClick: () => setRecalcOpen(false),
+              variant: "secondary",
+            },
+            {
+              label: t("Recalculate"),
+              onClick: () => {
+                const metricsToRecalculate = [] as number[];
+                for (const metric of metrics) {
+                  if (subjectIsFragment(metric.subject) || recomputeTotals) {
+                    metricsToRecalculate.push(metric.id);
+                  }
+                }
+                // Placeholder for future implementation
+                console.log(`recalculate metrics`, {
+                  recomputePreprocessed,
+                  recomputeTotals,
+                  metricsToRecalculate,
+                });
+
+                recalculate(metricsToRecalculate, recomputePreprocessed);
+                setRecalcOpen(false);
+              },
+              variant: "danger",
+            },
+          ]}
+        >
+          <div className="space-y-4 mb-4">
+            <p className="text-sm">
+              {t(
+                "This will recompute all metrics for this card. Depending on data size, this may take some time. If you choose to recreate optimized layers, this will delete the cache of any related metrics."
+              )}
+            </p>
+            <label className="flex items-center space-x-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded outline-none ring-0 active:ring-0 focus:ring-0 focus-visible:ring-2"
+                checked={recomputePreprocessed}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setRecomputePreprocessed(checked);
+                  if (checked) {
+                    setRecomputeTotals(true);
+                  }
+                }}
+              />
+              <span>{t("Recreate optimized layers")}</span>
+            </label>
+            <label className="flex items-center space-x-2 text-sm">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded outline-none ring-0 active:ring-0 focus:ring-0 focus-visible:ring-2 disabled:opacity-50"
+                checked={recomputeTotals}
+                onChange={(e) => setRecomputeTotals(e.target.checked)}
+                disabled={recomputePreprocessed}
+              />
+              <span>{t("Recalculate geography totals (slow)")}</span>
+            </label>
+          </div>
+        </Modal>
+      )}
+
+      {showCalcDetails && (
+        <Modal
+          open
+          onRequestClose={() => setShowCalcDetails(false)}
+          title={
+            <div>
+              <span className="text-gray-500 block text-base">
+                {collectReportCardTitle(config.body)}
+              </span>
+              <span>{t("Data Sources and Calculations")}</span>
+            </div>
+          }
+          disableBackdropClick={false}
+          footer={[
+            {
+              label: t("Close"),
+              onClick: () => setShowCalcDetails(false),
+              variant: "secondary",
+            },
+          ]}
+        >
+          <ReportMetricsProgressDetails
+            metricIds={metrics.map((m) => m.id)}
+            skeleton={loadingSkeleton}
+            config={config}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

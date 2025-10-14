@@ -341,6 +341,9 @@ export async function calculateGeographyOverlap(
     batch.reset();
   }
 
+  const clippingBatchSize =
+    estimate.bytes < 1024 * 1024 ? estimate.bytes / 4 : CLIPPING_BATCH_SIZE;
+
   for await (const feature of source.getFeaturesAsync(envelope)) {
     if (featuresProcessed === 0) {
       helpers.log("starting processing of first source feature");
@@ -387,7 +390,7 @@ export async function calculateGeographyOverlap(
     }
     if (hasHits) {
       batch.addFeature(feature);
-      if (batch.bytes >= CLIPPING_BATCH_SIZE) {
+      if (batch.bytes >= clippingBatchSize) {
         await processBatch();
       }
     } else {

@@ -12,12 +12,13 @@ import {
   ValueNoneIcon,
 } from "@radix-ui/react-icons";
 import {
+  DataSourceTypes,
   DataUploadOutputType,
   SpatialMetricState,
 } from "../../generated/graphql";
 import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
-import { isRasterInfo } from "@seasketch/geostats-types";
+import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
 import { useMetrics } from "../hooks/useMetrics";
 import { useReportContext } from "../ReportContext";
@@ -82,12 +83,7 @@ export function OverlappingAreasCard({
   const overlayMetrics = useMetrics({
     type: "overlay_area",
     geographyIds: allGeographyIds,
-    layers: reportingLayers.map((l) => ({
-      stableId: l.stableId,
-      groupBy: l.groupBy,
-      sourceUrl: l.url,
-      sourceType: l.type,
-    })),
+    layers: reportingLayers,
   });
 
   const sumSketchOverlaysByClass = useMemo(() => {
@@ -151,27 +147,43 @@ export function OverlappingAreasCard({
           )
         : null;
 
+      const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+      if (!meta) {
+        throw new Error(
+          `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
+        );
+      }
       if (layer.groupBy) {
         // get values for groupBy
-        if (!isRasterInfo(layer.meta)) {
-          const geostats = layer.meta.layers[0];
+        if (!isRasterInfo(meta)) {
+          const geostats = meta.layers[0] as GeostatsLayer;
           const attr = geostats.attributes.find(
             (a) => a.attribute === layer.groupBy
           );
           if (!attr) {
             throw new Error(
-              `Group by attribute ${layer.groupBy} not found in layer ${layer.title}`
+              `Group by attribute ${layer.groupBy} not found in layer ${
+                layer.tableOfContentsItem?.title || "Untitled"
+              }`
+            );
+          }
+          if (!layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles) {
+            throw new Error(
+              `Layer ${
+                layer.tableOfContentsItem?.title || "Untitled"
+              } has no mapboxGL styles`
             );
           }
           const colors = extractColorsForCategories(
             Object.keys(attr.values),
             attr,
-            layer.mapboxGlStyles as AnyLayer[]
+            layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
           );
           const values = Object.keys(attr.values);
           for (const value of values) {
             const geographyTotal = (geographyMetric?.value as any)?.[value];
-            const area = sumSketchOverlaysByClass?.[layer.stableId]?.[value];
+            const area =
+              sumSketchOverlaysByClass?.[layer.tableOfContentsItemId]?.[value];
             if (area && area > 0) {
               items.push({
                 title: value,
@@ -189,16 +201,17 @@ export function OverlappingAreasCard({
           );
         }
       } else {
-        const area = sumSketchOverlaysByClass?.[layer.stableId]?.["*"];
+        const area =
+          sumSketchOverlaysByClass?.[layer.tableOfContentsItemId]?.["*"];
         const geographyTotal = (geographyMetric?.value as any)?.["*"];
         if (area && area > 0) {
           items.push({
-            title: layer.title,
+            title: layer.tableOfContentsItem?.title || "Untitled",
             value: area,
             percentage: geographyTotal ? area / geographyTotal : undefined,
           });
         } else if (config.componentSettings?.showZeroOverlapCategories) {
-          items.push({ title: layer.title });
+          items.push({ title: layer.tableOfContentsItem?.title || "Untitled" });
         }
       }
     }
@@ -222,6 +235,13 @@ export function OverlappingAreasCard({
       tint={config.tint}
       icon={config.icon}
       metrics={overlayMetrics.data}
+      skeleton={
+        <div className="w-full space-y-1">
+          <Skeleton className="w-full h-4" />
+          <Skeleton className="w-3/4 h-4" />
+          <Skeleton className="w-4/5 h-4" />
+        </div>
+      }
     >
       <div>
         {config.reportingLayers.length === 0 && (
@@ -230,11 +250,6 @@ export function OverlappingAreasCard({
           </Warning>
         )}
         <div>
-          {overlayMetrics.loading && (
-            <div>
-              <Skeleton className="w-full h-4" />
-            </div>
-          )}
           {!overlayMetrics.loading &&
             items.length > 0 &&
             items.map((item) => (
@@ -334,8 +349,7 @@ registerReportCardType({
   order: 2,
   minimumReportingLayerCount: 1,
   supportedReportingLayerTypes: [
-    DataUploadOutputType.GeoJson,
-    DataUploadOutputType.FlatGeobuf,
-    DataUploadOutputType.ReportingFlatgeobufV1,
+    DataSourceTypes.SeasketchVector,
+    DataSourceTypes.SeasketchMvt,
   ],
 });

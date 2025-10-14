@@ -5,36 +5,20 @@ alter table report_cards add column if not exists is_draft boolean not null defa
 drop table if exists report_card_layers cascade;
 -- Create join table linking report cards to TOC items by stable_id
 CREATE TABLE IF NOT EXISTS public.report_card_layers (
-  report_card_id integer NOT NULL,
-  toc_stable_id text NOT NULL,
+  report_card_id integer NOT NULL references report_cards(id) on delete cascade,
+  table_of_contents_item_id integer NOT NULL references table_of_contents_items(id) on delete cascade,
   group_by text
 );
+CREATE INDEX IF NOT EXISTS report_card_layers_table_of_contents_item_id_idx
+  ON public.report_card_layers (table_of_contents_item_id);
+CREATE UNIQUE INDEX IF NOT EXISTS report_card_layers_unique_report_card_id_table_of_contents_item_id_idx
+  ON public.report_card_layers (report_card_id, table_of_contents_item_id);
 
--- Add primary key constraint if missing
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint
-    WHERE conname = 'report_card_layers_pkey'
-  ) THEN
-    ALTER TABLE public.report_card_layers
-      ADD CONSTRAINT report_card_layers_pkey PRIMARY KEY (report_card_id, toc_stable_id);
-  END IF;
-END $$;
+COMMENT ON CONSTRAINT report_card_layers_table_of_contents_item_id_fkey
+  ON public.report_card_layers IS E'@simpleCollections only';
 
--- FK to report_cards with ON DELETE CASCADE (handles cleanup when a report_card is deleted)
-DO $$ BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'report_card_layers_report_card_id_fkey'
-  ) THEN
-    ALTER TABLE public.report_card_layers
-      ADD CONSTRAINT report_card_layers_report_card_id_fkey
-      FOREIGN KEY (report_card_id) REFERENCES public.report_cards(id) ON DELETE CASCADE;
-  END IF;
-END $$;
-
--- Index to efficiently find layers by stable_id
-CREATE INDEX IF NOT EXISTS report_card_layers_toc_stable_id_idx
-  ON public.report_card_layers (toc_stable_id);
+COMMENT ON CONSTRAINT report_card_layers_report_card_id_fkey
+  ON public.report_card_layers IS E'@simpleCollections only';
 
 -- Validation trigger: ensure referenced stable_id exists, and refers to an allowed data source type
 CREATE OR REPLACE FUNCTION public.before_insert_or_update_report_card_layers()
@@ -46,10 +30,10 @@ BEGIN
     FROM public.report_cards rc
     JOIN public.report_tabs rtab ON rtab.id = rc.report_tab_id
     JOIN public.reports r ON r.id = rtab.report_id
-    JOIN public.table_of_contents_items t ON t.stable_id = NEW.toc_stable_id AND t.project_id = r.project_id
+    JOIN public.table_of_contents_items t ON t.id = NEW.table_of_contents_item_id AND t.project_id = r.project_id
     WHERE rc.id = NEW.report_card_id
   ) THEN
-    RAISE EXCEPTION 'Invalid toc_stable_id %: no matching TOC item in the same project as the report card', NEW.toc_stable_id;
+    RAISE EXCEPTION 'Invalid table of contents item id %: no matching TOC item in the same project as the report card', NEW.table_of_contents_item_id;
   END IF;
 
   -- Validate data source type is allowed for at least one matching TOC item with a data layer, in same project
@@ -58,12 +42,12 @@ BEGIN
     FROM public.report_cards rc
     JOIN public.report_tabs rtab ON rtab.id = rc.report_tab_id
     JOIN public.reports r ON r.id = rtab.report_id
-    JOIN public.table_of_contents_items t ON t.stable_id = NEW.toc_stable_id AND t.project_id = r.project_id
+    JOIN public.table_of_contents_items t ON t.id = NEW.table_of_contents_item_id AND t.project_id = r.project_id
     WHERE rc.id = NEW.report_card_id
       AND t.data_layer_id IS NOT NULL
       AND public.data_source_type(t.data_layer_id) IN ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster')
   ) THEN
-    RAISE EXCEPTION 'toc_stable_id % does not reference a supported data layer type in the same project', NEW.toc_stable_id;
+    RAISE EXCEPTION 'table of contents item id % does not reference a supported data layer type in the same project', NEW.table_of_contents_item_id;
   END IF;
 
   RETURN NEW;
@@ -75,54 +59,22 @@ CREATE TRIGGER before_insert_or_update_report_card_layers_trigger
   BEFORE INSERT OR UPDATE ON public.report_card_layers
   FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_report_card_layers();
 
--- Draft-only cascade: when a draft TOC item is deleted, remove join records for draft report cards only
-CREATE OR REPLACE FUNCTION public.after_delete_toc_items_cascade_report_card_layers()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
-BEGIN
-  IF OLD.is_draft THEN
-    DELETE FROM public.report_card_layers rcl
-    USING public.report_cards rc,
-          public.report_tabs rtab,
-          public.reports r
-    WHERE rcl.toc_stable_id = OLD.stable_id
-      AND rc.id = rcl.report_card_id
-      AND rc.is_draft = true;
-  END IF;
-  RETURN NULL;
-END
-$$;
-
-DROP TRIGGER IF EXISTS toc_items_report_card_layers_draft_cascade ON public.table_of_contents_items;
-CREATE TRIGGER toc_items_report_card_layers_draft_cascade
-  AFTER DELETE ON public.table_of_contents_items
-  FOR EACH ROW EXECUTE FUNCTION public.after_delete_toc_items_cascade_report_card_layers();
 
 grant all on public.report_card_layers to seasketch_user;
-alter table public.report_card_layers enable row level security;
+alter table public.report_card_layers disable row level security;
 
 drop policy if exists report_card_layers_select on report_card_layers;
 drop policy if exists report_card_layers_admin on report_card_layers;
 
-create policy report_card_layers_select on report_card_layers for select using (
-  session_has_project_access((select project_id from table_of_contents_items where stable_id = toc_stable_id limit 1))
-);
-
-create policy report_card_layers_admin on report_card_layers for all to seasketch_user using (
-  session_is_admin((select project_id from table_of_contents_items where stable_id = toc_stable_id limit 1))
-);
 
 drop function if exists report_card_is_draft;
 
 drop type if exists public.report_card_layer cascade;
 drop type if exists public.reporting_layer cascade;
 create type public.reporting_layer as (
-  stable_id text,
-  title text,
   table_of_contents_item_id integer,
-  type data_upload_output_type,
-  url text,
-  remote text,
-  size bigint,
+  title text,
+  type text,
   meta jsonb,
   mapbox_gl_styles jsonb,
   group_by text,
@@ -136,38 +88,21 @@ RETURNS SETOF reporting_layer
 LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
 COST 1 ROWS 1
 AS $$
-  with upload_outputs as (
-    select 
-      data_source_id,
-      type,
-      url,
-      remote,
-      size,
-      case when type = 'ReportingFlatgeobufV1' then true else false end as is_report_ready
-    from data_upload_outputs
-    where type in ('ReportingFlatgeobufV1', 'FlatGeobuf', 'GeoJSON', 'GeoTIFF')
-    order by case type when 'ReportingFlatgeobufV1' then 0 else 1 end
-  )
   select
-    t.stable_id,
-    t.title,
     t.id as table_of_contents_item_id,
-    o.type,
-    case o.is_report_ready when true then o.url else null end,
-    case o.is_report_ready when true then o.remote else null end,
-    o.size,
+    t.title,
+    t.data_source_type,
     ds.geostats,
     dl.mapbox_gl_styles,
     rcl.group_by,
     spj.job_key as processing_job_id
   from table_of_contents_items t
   join data_layers dl on dl.id = t.data_layer_id
-  left join upload_outputs o on o.data_source_id = dl.data_source_id
   join data_sources ds on ds.id = dl.data_source_id
-  join report_card_layers rcl on rcl.toc_stable_id = t.stable_id and rcl.report_card_id = rc.id
+  join report_card_layers rcl on rcl.table_of_contents_item_id = t.id and rcl.report_card_id = rc.id
   left join source_processing_jobs spj on spj.data_source_id = dl.data_source_id
-  where t.stable_id in (
-    select toc_stable_id from report_card_layers where report_card_id = rc.id
+  where t.id in (
+    select table_of_contents_item_id from report_card_layers where report_card_id = rc.id
   )
     and t.is_draft = rc.is_draft
   limit 1;
@@ -295,7 +230,7 @@ drop function if exists add_report_card(integer, jsonb, text, jsonb);
 drop function if exists add_report_card(integer, jsonb, text, jsonb, report_layer_input[]);
 drop type if exists report_layer_input cascade;
 create type report_layer_input as (
-  toc_stable_id text,
+  table_of_contents_item_id integer,
   report_card_id integer,
   group_by text
 );
@@ -337,10 +272,10 @@ CREATE OR REPLACE FUNCTION public.add_report_card(report_tab_id integer, compone
           add_report_card.body
         ) returning * into new_card;
 
-        insert into report_card_layers (report_card_id, toc_stable_id, group_by)
+        insert into report_card_layers (report_card_id, table_of_contents_item_id, group_by)
         select 
           new_card.id,
-          layer.toc_stable_id,
+          layer.table_of_contents_item_id,
           layer.group_by
         from unnest(add_report_card.layers) as layer;
         return new_card;
@@ -359,8 +294,44 @@ drop index if exists data_upload_outputs_lookup_idx;
 
 drop function if exists available_report_layers;
 drop function if exists projects_available_report_layers;
+-- create or replace function projects_available_report_layers(project projects)
+-- returns setof reporting_layer
+-- language plpgsql
+-- stable
+-- security definer
+-- as $$
+--   declare
+--     toc_item_ids integer[];
+--   begin
+--     if session_is_admin(project.id) then
+--       return query select distinct on (t.id)
+--         t.title,
+--         t.id as table_of_contents_item_id,
+--         o.type,
+--         case o.type when 'ReportingFlatgeobufV1' then o.url else null end,
+--         o.remote,
+--         o.size,
+--         ds.geostats,
+--         dl.mapbox_gl_styles,
+--         null as group_by,
+--         spj.job_key as processing_job_id
+--       from table_of_contents_items t
+--       inner join data_layers dl on dl.id = t.data_layer_id
+--       inner join data_upload_outputs o on o.data_source_id = dl.data_source_id
+--       inner join data_sources ds on ds.id = dl.data_source_id
+--       left join source_processing_jobs spj on spj.data_source_id = dl.data_source_id
+--       where t.id in (
+--         select id from table_of_contents_items where project_id = project.id and data_layer_id is not null and is_draft = true and data_source_type(data_layer_id) in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster')
+--       ) and t.is_draft = true and o.type in ('ReportingFlatgeobufV1','FlatGeobuf','GeoJSON', 'GeoTIFF')
+--       order by t.id, case o.type when 'ReportingFlatgeobufV1' then 0 when 'FlatGeobuf' then 1 when 'GeoJSON' then 2 else 3 end
+--       ;
+--     else
+--       raise exception 'You are not authorized to view available report layers';
+--     end if;
+--   end;
+-- $$;
 create or replace function projects_available_report_layers(project projects)
-returns setof reporting_layer
+returns setof table_of_contents_items
 language plpgsql
 stable
 security definer
@@ -369,28 +340,7 @@ as $$
     toc_item_ids integer[];
   begin
     if session_is_admin(project.id) then
-      return query select distinct on (t.id)
-        t.stable_id,
-        t.title,
-        t.id as table_of_contents_item_id,
-        o.type,
-        case o.type when 'ReportingFlatgeobufV1' then o.url else null end,
-        o.remote,
-        o.size,
-        ds.geostats,
-        dl.mapbox_gl_styles,
-        null as group_by,
-        spj.job_key as processing_job_id
-      from table_of_contents_items t
-      inner join data_layers dl on dl.id = t.data_layer_id
-      inner join data_upload_outputs o on o.data_source_id = dl.data_source_id
-      inner join data_sources ds on ds.id = dl.data_source_id
-      left join source_processing_jobs spj on spj.data_source_id = dl.data_source_id
-      where t.id in (
-        select id from table_of_contents_items where project_id = project.id and data_layer_id is not null and is_draft = true and data_source_type(data_layer_id) in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster')
-      ) and t.is_draft = true and o.type in ('ReportingFlatgeobufV1','FlatGeobuf','GeoJSON', 'GeoTIFF')
-      order by t.id, case o.type when 'ReportingFlatgeobufV1' then 0 when 'FlatGeobuf' then 1 when 'GeoJSON' then 2 else 3 end
-      ;
+      return query select * from table_of_contents_items where data_source_type in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster') and is_draft = true;
     else
       raise exception 'You are not authorized to view available report layers';
     end if;
@@ -436,9 +386,8 @@ CREATE OR REPLACE FUNCTION public.get_metrics_for_geography(geography_id integer
           'createdAt', created_at,
           'value', value,
           'state', state,
-          'stableId', overlay_layer_stable_id,
           'sourceUrl', overlay_source_url,
-          'sourceType', overlay_source_type,
+          'sourceType', extension_to_source_type(overlay_source_url),
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
           'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
@@ -477,9 +426,8 @@ CREATE OR REPLACE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS j
           'createdAt', created_at,
           'value', value,
           'state', state,
-          'stableId', overlay_layer_stable_id,
           'sourceUrl', overlay_source_url,
-          'sourceType', overlay_source_type,
+          'sourceType', extension_to_source_type(overlay_source_url),
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
           'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
@@ -502,12 +450,11 @@ drop function if exists get_or_create_spatial_metrics_for_fragments;
 CREATE FUNCTION public.get_or_create_spatial_metric(
   p_subject_fragment_id text DEFAULT NULL::text, 
   p_subject_geography_id integer DEFAULT NULL::integer, 
-  p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, 
+  p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type,
   p_overlay_source_url text DEFAULT NULL::text, 
-  p_overlay_source_type text DEFAULT NULL::text, 
   p_overlay_group_by text DEFAULT NULL::text, 
-  p_included_properties text[] DEFAULT NULL::text[], 
-  p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type
+  p_included_properties text[] DEFAULT NULL::text[],
+  p_source_processing_job_dependency text DEFAULT NULL::text
   ) RETURNS public.spatial_metrics
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
@@ -524,6 +471,10 @@ BEGIN
     IF p_type IS NULL THEN
         RAISE EXCEPTION 'type parameter is required';
     END IF;
+
+    IF p_source_processing_job_dependency IS NULL AND p_overlay_source_url IS NULL AND p_type <> 'total_area' THEN
+        RAISE EXCEPTION 'source_processing_job_dependency or overlay_source_url is required for non-total_area metrics';
+    END IF;
     
     -- Try to find existing metric using comprehensive query that matches unique indexes
     IF p_subject_fragment_id IS NOT NULL THEN
@@ -532,10 +483,8 @@ BEGIN
         FROM spatial_metrics
         WHERE subject_fragment_id = p_subject_fragment_id
           AND type::text = p_type::text
-          AND COALESCE(overlay_layer_stable_id, '') = COALESCE(p_overlay_layer_stable_id, '')
           AND COALESCE(overlay_source_url, '') = COALESCE(p_overlay_source_url, '')
           AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
-          AND COALESCE(overlay_type::text, '') = COALESCE(p_overlay_type::text, '')
         ORDER BY created_at DESC
         LIMIT 1;
         
@@ -546,10 +495,8 @@ BEGIN
         FROM spatial_metrics
         WHERE subject_geography_id = p_subject_geography_id
           AND type::text = p_type::text
-          AND COALESCE(overlay_layer_stable_id, '') = COALESCE(p_overlay_layer_stable_id, '')
           AND COALESCE(overlay_source_url, '') = COALESCE(p_overlay_source_url, '')
           AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
-          AND COALESCE(overlay_type::text, '') = COALESCE(p_overlay_type::text, '')
         ORDER BY created_at DESC
         LIMIT 1;
         
@@ -566,22 +513,16 @@ BEGIN
         subject_fragment_id,
         subject_geography_id,
         type,
-        overlay_layer_stable_id,
         overlay_source_url,
-        overlay_source_type,
         overlay_group_by,
-        included_properties,
-        overlay_type
+        included_properties
     ) VALUES (
         p_subject_fragment_id,
         p_subject_geography_id,
         p_type,
-        p_overlay_layer_stable_id,
         p_overlay_source_url,
-        p_overlay_source_type,
         p_overlay_group_by,
-        p_included_properties,
-        p_overlay_type
+        p_included_properties
     ) RETURNING * INTO metric;
     
     RETURN metric;
@@ -591,12 +532,10 @@ $$;
 CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(
   p_subject_fragments text[], 
   p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type,
-  p_overlay_layer_stable_id text DEFAULT NULL::text,
   p_overlay_source_url text DEFAULT NULL::text,
-  p_overlay_source_type text DEFAULT NULL::text,
   p_overlay_group_by text DEFAULT NULL::text,
   p_included_properties text[] DEFAULT NULL::text[],
-  p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type
+  p_source_processing_job_dependency text DEFAULT NULL::text
   ) RETURNS bigint[]
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
@@ -613,6 +552,10 @@ BEGIN
         RETURN metric_ids;
     END IF;
 
+    IF p_source_processing_job_dependency IS NULL AND p_overlay_source_url IS NULL AND p_type <> 'total_area' THEN
+        RAISE EXCEPTION 'source_processing_job_dependency or overlay_source_url is required for non-total_area metrics';
+    END IF;
+
     FOREACH fragment_hash IN ARRAY p_subject_fragments LOOP
         IF fragment_hash IS NULL THEN
             CONTINUE;
@@ -621,12 +564,10 @@ BEGIN
             p_subject_fragment_id => fragment_hash,
             p_subject_geography_id => NULL,
             p_type => p_type,
-            p_overlay_layer_stable_id => p_overlay_layer_stable_id,
             p_overlay_source_url => p_overlay_source_url,
-            p_overlay_source_type => p_overlay_source_type,
             p_overlay_group_by => p_overlay_group_by,
             p_included_properties => p_included_properties,
-            p_overlay_type => p_overlay_type
+            p_source_processing_job_dependency => p_source_processing_job_dependency
         );
         metric_ids := array_append(metric_ids, metric_row.id);
     END LOOP;
@@ -652,6 +593,23 @@ create or replace function get_state_for_spatial_metric(metric_id bigint) return
     $$;
 
 grant execute on function get_state_for_spatial_metric to anon;
+
+drop function if exists extension_to_source_type;
+create or replace function extension_to_source_type(url text) returns text
+  language sql
+  stable
+  as $$
+    with base as (
+      select split_part(url, '?', 1) as base
+    ), parts as (
+      select string_to_array(base, '.') as parts from base
+    ), ext as (
+      select lower(parts[array_length(parts, 1)]) as ext from parts
+    )
+    select case when ext = 'fgb' then 'FlatGeobuf' when ext = 'geojson' then 'GeoJSON' when ext in ('tif','tiff') then 'GeoTIFF' else null end from ext;
+  $$;
+
+grant execute on function extension_to_source_type to anon;
 
 CREATE OR REPLACE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
     LANGUAGE plpgsql STABLE SECURITY DEFINER
@@ -684,9 +642,8 @@ CREATE OR REPLACE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS j
         'createdAt', created_at,
         'value', value,
         'state', state,
-        'stableId', overlay_layer_stable_id,
         'sourceUrl', overlay_source_url,
-        'sourceType', overlay_source_type,
+        'sourceType', extension_to_source_type(overlay_source_url),
         'groupBy', overlay_group_by,
         'includedProperties', included_properties,
         'jobKey', job_key,
@@ -760,6 +717,22 @@ create index if not exists source_processing_jobs_updated_at_idx on public.sourc
 create index if not exists source_processing_jobs_project_id_idx on public.source_processing_jobs (project_id);
 
 alter table spatial_metrics add column if not exists source_processing_job_dependency text references source_processing_jobs(job_key) on delete cascade;
+
+-- Require a source URL or dependency for non-total_area metrics
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'spatial_metrics_requires_source_or_dependency'
+  ) THEN
+    ALTER TABLE public.spatial_metrics
+      ADD CONSTRAINT spatial_metrics_requires_source_or_dependency
+      CHECK (
+        type = 'total_area'
+        OR overlay_source_url IS NOT NULL
+        OR source_processing_job_dependency IS NOT NULL
+      ) NOT VALID;
+  END IF;
+END $$;
 
 CREATE OR REPLACE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
@@ -925,3 +898,210 @@ CREATE TRIGGER trigger_queue_spatial_metrics_on_source_complete_trigger
   AFTER UPDATE ON public.source_processing_jobs
   FOR EACH ROW
   EXECUTE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete();
+
+drop function if exists recalculate_spatial_metrics;
+create or replace function recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean)
+returns boolean
+language plpgsql
+security definer
+as $$
+  declare
+    metric_id bigint;
+    source_id integer;
+    stableid text;
+  begin
+    if nullif(current_setting('session.user_id', true), '') is null then
+      raise exception 'User not authenticated';
+    end if;
+    foreach metric_id in array metric_ids loop
+      if preprocess_sources then
+        select overlay_layer_stable_id into stableid from spatial_metrics where id = metric_id;
+        select data_source_id into source_id from data_layers where id = (
+          select data_layer_id from table_of_contents_items where table_of_contents_items.stable_id = stableid and is_draft = true
+        );
+        if source_id is not null then
+          delete from source_processing_jobs where data_source_id = source_id;
+          delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1';
+        end if;
+      end if;
+      delete from spatial_metrics where id = metric_id and (subject_fragment_id is not null or session_is_admin((select project_id from project_geography where id = spatial_metrics.subject_geography_id limit 1)));
+    end loop;
+    return true;
+  end;
+$$;
+
+grant execute on function recalculate_spatial_metrics to seasketch_user;
+
+alter table spatial_metrics drop column if exists overlay_layer_stable_id;
+alter table spatial_metrics drop column if exists overlay_source_type;
+alter table spatial_metrics drop column if exists overlay_type;
+
+
+
+create or replace function reporting_layer_source_processing_job(l reporting_layer)
+  returns source_processing_jobs
+  language sql
+  security definer
+  stable
+  as $$
+    select * from source_processing_jobs where job_key = l.processing_job_id limit 1;
+  $$;
+
+grant execute on function reporting_layer_source_processing_job to anon;
+
+create index if not exists source_processing_jobs_job_key_idx on public.source_processing_jobs (job_key);
+
+CREATE OR REPLACE FUNCTION public.sketch_classes_my_sketches(sk sketch_classes) RETURNS SETOF public.sketches
+    LANGUAGE sql STABLE
+    AS $$
+    select
+      *
+    from
+      sketches
+    where
+      it_me(user_id) and sketch_class_id = sk.id
+  $$;
+
+grant execute on function sketch_classes_my_sketches to seasketch_user;
+
+comment on function sketch_classes_my_sketches is '@simpleCollections only';
+
+
+CREATE OR REPLACE FUNCTION public.session_has_project_access(pid integer) RETURNS boolean
+    LANGUAGE sql STABLE 
+    SECURITY DEFINER
+    PARALLEL SAFE
+    AS $$
+    -- Here we give access if the project is public, if the session is an admin,
+    -- or if the session belongs to an approved participant
+    select exists(
+      select
+        1
+      from 
+        projects 
+      where 
+        projects.id = pid and 
+        access_control = 'public'
+    ) or 
+    session_is_admin(pid) or 
+    session_is_approved_participant(pid) or  
+    -- session has a survey invite token with matching projectId
+    exists(
+      select
+        1
+      from
+        survey_invites
+      inner join
+        surveys
+      on
+        surveys.id = survey_invites.survey_id
+      where
+        surveys.project_id = pid and 
+        (
+          survey_invites.user_id = nullif(current_setting('session.user_id', TRUE), '')::int or
+          (
+            survey_invites.email = nullif(current_setting('session.canonical_email', TRUE), '') and
+            current_setting('session.email_verified', true) = 'true'
+          ) or
+          survey_invites.email = nullif(current_setting('session.survey_invite_email', TRUE), '')
+        )            
+    )
+  $$;
+
+
+CREATE OR REPLACE FUNCTION public._session_has_toc_access(item_id integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    PARALLEL SAFE
+    AS $$
+WITH toc AS (
+  SELECT id, path
+  FROM table_of_contents_items
+  WHERE id = item_id AND NOT is_draft
+),
+parents AS (
+  SELECT parent.id
+  FROM table_of_contents_items parent, toc
+  WHERE parent.path @> toc.path AND NOT parent.is_draft
+),
+acls AS (
+  SELECT acl.id
+  FROM access_control_lists acl
+  JOIN parents p ON p.id = acl.table_of_contents_item_id
+  WHERE acl.type != 'public'
+)
+SELECT
+  COALESCE(bool_and(session_on_acl(id)), EXISTS (SELECT 1 FROM toc))
+FROM acls;
+$$;
+
+CREATE INDEX IF NOT EXISTS rcl_report_card_id_only
+  ON public.report_card_layers (report_card_id);
+
+ALTER ROLE seasketch_user SET jit = off;
+ALTER ROLE anon SET jit = off;
+ALTER ROLE graphile SET jit = off;
+ALTER ROLE seasketch_superuser SET jit = off;
+
+drop function if exists table_of_contents_items_report_layer_output;
+
+drop function if exists reporting_layers_processed_output;
+create or replace function report_card_layers_processed_output(layer report_card_layers)
+  returns data_upload_outputs
+  language sql
+  security definer
+  stable
+  as $$
+    select * from data_upload_outputs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = layer.table_of_contents_item_id)) and type = 'ReportingFlatgeobufV1' limit 1;
+  $$;
+
+grant execute on function report_card_layers_processed_output to anon;
+
+-- Trigger to ensure a preprocess job exists for report card layers without processed output
+CREATE OR REPLACE FUNCTION public.trigger_queue_preprocess_source_on_rcl()
+  RETURNS trigger
+  LANGUAGE plpgsql
+  SECURITY DEFINER
+  AS $$
+  DECLARE
+    existing_output_id integer;
+    ds_id integer;
+  BEGIN
+    -- Determine data source id for the referenced TOC item
+    SELECT data_source_id INTO ds_id
+    FROM data_layers
+    WHERE id = (
+      SELECT data_layer_id
+      FROM table_of_contents_items
+      WHERE id = NEW.table_of_contents_item_id
+    );
+
+    -- If we can't resolve a data source, do nothing
+    IF ds_id IS NULL THEN
+      raise notice 'No data source found for table of contents item %', NEW.table_of_contents_item_id;
+      RETURN NEW;
+    END IF;
+
+    -- Check for an existing processed reporting output
+
+    select id into existing_output_id from data_upload_outputs where data_source_id = ds_id and type = 'ReportingFlatgeobufV1' limit 1;
+
+    -- If none exists, enqueue a preprocess job for this data source
+    IF existing_output_id IS NULL THEN
+      raise notice 'Enqueuing preprocess job for data source %', ds_id;
+      PERFORM graphile_worker.add_job(
+        'preprocessSource',
+        json_build_object('dataSourceId', ds_id),
+        max_attempts := 1,
+        job_key := 'preprocessSource:' || ds_id::text,
+        job_key_mode := 'replace'
+      );
+    END IF;
+    return new;
+  END;
+  $$;
+
+DROP TRIGGER IF EXISTS trigger_queue_preprocess_source_on_rcl_trigger ON public.report_card_layers;
+CREATE TRIGGER trigger_queue_preprocess_source_on_rcl_trigger
+  AFTER INSERT OR UPDATE ON public.report_card_layers
+  FOR EACH ROW
+  EXECUTE FUNCTION public.trigger_queue_preprocess_source_on_rcl();

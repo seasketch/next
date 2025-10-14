@@ -1,13 +1,8 @@
-import {
-  Metric,
-  MetricTypeMap,
-  SourceType,
-  subjectIsFragment,
-} from "overlay-engine";
+import { Metric, MetricTypeMap, subjectIsFragment } from "overlay-engine";
 import { LocalMetric, useReportContext } from "../ReportContext";
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import {
-  MetricSourceType,
+  ReportingLayerDetailsFragment,
   SpatialMetricDependency,
   SpatialMetricState,
 } from "../../generated/graphql";
@@ -37,12 +32,7 @@ export function useMetrics<
   type: T;
   geographyIds?: number[];
   includeSiblings?: boolean;
-  layers?: {
-    stableId: string;
-    groupBy?: string;
-    sourceUrl: string;
-    sourceType: SourceType;
-  }[];
+  layers?: ReportingLayerDetailsFragment[];
 }) {
   const reportContext = useReportContext();
 
@@ -63,10 +53,12 @@ export function useMetrics<
           sketchId: reportContext.sketch?.id,
           geographyIds: options.geographyIds || [],
           includeSiblings: options.includeSiblings || false,
-          stableId: layer.stableId,
           groupBy: layer.groupBy,
-          sourceUrl: layer.sourceUrl,
-          sourceType: convertSourceType(layer.sourceType),
+          sourceUrl: layer.processedOutput?.url,
+          sourceProcessingJobDependency: layer.processedOutput?.url
+            ? undefined
+            : layer.tableOfContentsItem?.dataLayer?.dataSource
+                ?.sourceProcessingJob?.jobKey,
         });
       }
     } else {
@@ -101,6 +93,7 @@ export function useMetrics<
     return reportContext.relatedFragments.map((f) => f.hash);
   }, [reportContext.relatedFragments]);
 
+  console.log("reportContext.metrics", reportContext.metrics);
   const data = useMemo(() => {
     return reportContext.metrics.filter((m) => {
       if (m.type !== options.type) {
@@ -120,7 +113,10 @@ export function useMetrics<
         // check that the metric matches one of the layers
         const matchingLayer = options.layers.find((l) => {
           return (
-            l.stableId === m.stableId && matchingGroupBy(l.groupBy, m.groupBy)
+            (l.processedOutput?.url === m.sourceUrl ||
+              l.tableOfContentsItem?.dataLayer?.dataSource?.sourceProcessingJob
+                ?.jobKey === m.sourceProcessingJobDependency) &&
+            matchingGroupBy(l.groupBy, m.groupBy)
           );
         });
         if (!matchingLayer) {
@@ -139,29 +135,18 @@ export function useMetrics<
     return errors;
   }, [data]);
 
+  const loading = useMemo(() => {
+    return (
+      data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0
+    );
+  }, [data]);
+  console.log("data", data, loading);
   return {
     data: data as unknown as MetricTypeMap[T][] &
-      Pick<LocalMetric, "id" | "state" | "errorMessage">[],
-    loading:
-      // data.length === 0 ||
-      data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0,
+      Pick<LocalMetric, "id" | "state" | "errorMessage" | "subject">[],
+    loading,
     errors,
   };
-}
-
-function convertSourceType(sourceType: SourceType): MetricSourceType {
-  switch (sourceType.toUpperCase()) {
-    case "FLAT_GEOBUF":
-      return MetricSourceType.FlatGeobuf;
-    case "GEO_JSON":
-      return MetricSourceType.GeoJson;
-    case "GEOTIFF":
-      return MetricSourceType.GeoTiff;
-    case "REPORTING_FLATGEOBUF_V1":
-      return MetricSourceType.FlatGeobuf;
-    default:
-      throw new Error(`Unknown source type: ${sourceType}`);
-  }
 }
 
 function matchingGroupBy(

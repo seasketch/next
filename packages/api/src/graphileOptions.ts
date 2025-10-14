@@ -64,6 +64,9 @@ export default function graphileOptions(): PostGraphileOptions {
     dynamicJson: true,
     setofFunctionsContainNulls: false,
     bodySizeLimit: "3mb",
+    pgSettings: {
+      jit: "off",
+    },
     pluginHook,
     appendPlugins: [
       PgSimplifyInflectorPlugin,

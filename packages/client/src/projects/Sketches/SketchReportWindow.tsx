@@ -39,8 +39,6 @@ export default function SketchReportWindow({
   reportingAccessToken?: string | null;
   onClick?: (metaKey: boolean, id: number) => void;
 }) {
-  const mapContext = useContext(MapContext);
-  const token = useAccessToken();
   const { data, loading } = useSketchReportingDetailsQuery({
     variables: {
       id: sketchId,

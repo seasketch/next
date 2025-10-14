@@ -3,11 +3,13 @@ import { SpatialMetricState } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import {
   CheckboxIcon,
+  CheckCircledIcon,
   ClockIcon,
   ExclamationTriangleIcon,
   PlayIcon,
 } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { CheckCircleIcon } from "@heroicons/react/solid";
 
 export default function ReportTaskLineItem({
   title,
@@ -22,7 +24,7 @@ export default function ReportTaskLineItem({
 }) {
   return (
     <li className="flex items-center">
-      <span className="flex-1 truncate">{title}</span>
+      <span className="flex-1 truncate text-base">{title}</span>
       <span className="ml-2 text-sm text-gray-600">
         {tooltip ? (
           <Tooltip.Root delayDuration={100}>
@@ -45,7 +47,7 @@ export default function ReportTaskLineItem({
           <StateIcon state={state} />
         )}
       </span>
-      {typeof progress === "number" ? (
+      {typeof progress === "number" && state !== SpatialMetricState.Complete ? (
         <span className="ml-2 text-sm text-gray-600">{progress}%</span>
       ) : null}
     </li>
@@ -74,7 +76,7 @@ function StateIcon({ state }: { state: SpatialMetricState }) {
     case SpatialMetricState.Queued:
       return <PlayIcon className="text-blue-500" />;
     case SpatialMetricState.Complete:
-      return <CheckboxIcon />;
+      return <CheckCircleIcon className="text-green-700 w-5 h-5" />;
     case SpatialMetricState.Error:
       return <ExclamationTriangleIcon className="text-red-700" />;
     case SpatialMetricState.DependencyNotReady:

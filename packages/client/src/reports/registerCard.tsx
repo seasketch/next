@@ -2,6 +2,7 @@ import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
 import { MetricType } from "overlay-engine";
 import { ReactElement, FunctionComponent } from "react";
 import {
+  DataSourceTypes,
   DataUploadOutputType,
   SketchClassDetailsFragment,
 } from "../generated/graphql";
@@ -55,7 +56,7 @@ export interface ReportCardRegistration<T> {
   getExportData?: (settings: T, data: any) => any;
   requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
-  supportedReportingLayerTypes: DataUploadOutputType[];
+  supportedReportingLayerTypes: DataSourceTypes[];
   minimumReportingLayerCount: number;
   maximumReportingLayerCount?: number;
 }
@@ -82,7 +83,7 @@ export interface RegisterReportCardConfig<T> {
   }>;
   requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
-  supportedReportingLayerTypes?: DataUploadOutputType[];
+  supportedReportingLayerTypes?: DataSourceTypes[];
   minimumReportingLayerCount?: number;
   maximumReportingLayerCount?: number;
 }

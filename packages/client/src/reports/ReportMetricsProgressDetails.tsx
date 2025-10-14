@@ -10,6 +10,7 @@ import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import Button from "../components/Button";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { ReportCardConfiguration } from "./cards/cards";
 
 enum DisplayState {
   FRAGMENTS,
@@ -19,9 +20,11 @@ enum DisplayState {
 export default function ReportMetricsProgressDetails({
   metricIds,
   skeleton,
+  config,
 }: {
   metricIds: number[];
   skeleton: React.ReactNode;
+  config: ReportCardConfiguration<any>;
 }) {
   const { t } = useTranslation("sketching");
   const reportContext = useReportContext();
@@ -75,14 +78,38 @@ export default function ReportMetricsProgressDetails({
     },
   });
 
-  if (state.displayState === DisplayState.FRAGMENTS) {
-    return <>{skeleton}</>;
-  }
+  // if (state.displayState === DisplayState.FRAGMENTS) {
+  //   return <>{skeleton}</>;
+  // }
 
   return (
     <Tooltip.Provider>
-      <div className="space-y-2 p-4 my-5 border bg-white">
-        {state.sourceProcessingJobs.length > 0 && (
+      <div className="space-y-2 bg-white">
+        {config.reportingLayers?.length > 0 && (
+          <div>
+            <h3 className="text-sm font-medium">
+              {t("Optimized Overlay Layers")}
+            </h3>
+            <p className="text-sm text-gray-500">
+              <Trans ns="sketching">
+                SeaSketch creates optimized layers for processing. These only
+                need to be generated once, or whenever a source layer is
+                updated.
+              </Trans>
+            </p>
+            <ul className="space-y-0.5 py-2">
+              {config.reportingLayers.map((layer) => (
+                <ReportTaskLineItem
+                  key={layer.tableOfContentsItemId}
+                  title={layer.tableOfContentsItem?.title || "Untitled"}
+                  state={SpatialMetricState.Complete}
+                  progress={100}
+                />
+              ))}
+            </ul>
+          </div>
+        )}
+        {/* {state.sourceProcessingJobs.length > 0 && (
           <div>
             <h3 className="text-sm font-medium">{t("Data Preprocessing")}</h3>
             <p className="text-sm text-gray-500">
@@ -104,7 +131,7 @@ export default function ReportMetricsProgressDetails({
               ))}
             </ul>
           </div>
-        )}
+        )} */}
         {state.geographyMetrics.length > 0 && (
           <div>
             <h3 className="text-sm font-medium">{t("Geography Metrics")}</h3>
@@ -121,10 +148,14 @@ export default function ReportMetricsProgressDetails({
               {state.geographyMetrics.map((metric) => (
                 <ReportTaskLineItem
                   key={metric.id}
-                  title={nameForGeography(
-                    metric.subject as { type: "geography"; id: number },
-                    reportContext.geographies
-                  )}
+                  title={
+                    nameForGeography(
+                      metric.subject as { type: "geography"; id: number },
+                      reportContext.geographies
+                    ) +
+                    " " +
+                    metric.type
+                  }
                   state={metric.state}
                   progress={metric.progress || null}
                   tooltip={metric.errorMessage}

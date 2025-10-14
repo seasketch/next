@@ -2,7 +2,12 @@ import { ReportCardIcon } from "../ReportCard";
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
-import { DataUploadOutputType } from "../../generated/graphql";
+import {
+  DataSourceTypes,
+  DataUploadOutputType,
+  ReportingLayerDetailsFragment,
+  SpatialMetricState,
+} from "../../generated/graphql";
 import { Geostats } from "../../admin/data/GLStyleEditor/GeostatsModal";
 import { RasterInfo } from "@seasketch/geostats-types";
 import { SourceType } from "overlay-engine";
@@ -15,21 +20,6 @@ export type ReportCardType =
   | "TextBlock"
   | "Size"
   | "OverlappingAreas";
-
-export type ReportingLayer = {
-  stableId: string;
-  title: string;
-  tableOfContentsItemId: number;
-  type: SourceType;
-  url: string;
-  size: number;
-  meta: Geostats | RasterInfo;
-  mapboxGlStyles: AnyLayer[];
-  /**
-   * Optionally, the field to group by.
-   */
-  groupBy?: string;
-};
 
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
@@ -80,7 +70,7 @@ export type ReportCardConfiguration<T> = {
   /**
    * The reporting layers of the card.
    */
-  reportingLayers: ReportingLayer[];
+  reportingLayers: ReportingLayerDetailsFragment[];
 };
 
 export type ReportTabConfiguration = {
