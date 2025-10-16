@@ -41,7 +41,7 @@ export default function FullScreenOfflineNavigation() {
     return null;
   }
   return (
-    <div className="w-full h-screen bg-gray-100 absolute top-0 overflow-y-auto">
+    <div className="w-full h-screen bg-gray-100 top-0 overflow-y-auto z-50 fixed">
       <CenteredCardListLayout>
         <Card>
           <div className="flex-shrink-0 flex items-center text-lg text-black ml-auto mr-auto justify-center">
