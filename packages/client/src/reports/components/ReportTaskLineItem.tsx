@@ -13,11 +13,13 @@ import { CheckCircleIcon } from "@heroicons/react/solid";
 
 export default function ReportTaskLineItem({
   title,
+  description,
   state,
   progress,
   tooltip,
 }: {
   title: React.ReactNode;
+  description?: React.ReactNode;
   state: SpatialMetricState;
   progress?: number | null;
   tooltip?: string;
@@ -25,6 +27,9 @@ export default function ReportTaskLineItem({
   return (
     <li className="flex items-center">
       <span className="flex-1 truncate text-base">{title}</span>
+      {description && (
+        <span className="ml-2 text-xs text-gray-500">{description}</span>
+      )}
       <span className="ml-2 text-sm text-gray-600">
         {tooltip ? (
           <Tooltip.Root delayDuration={100}>

@@ -2,6 +2,7 @@
 
 alter table report_cards add column if not exists is_draft boolean not null default true;
 
+delete from report_cards where id in (select report_card_id from report_card_layers);
 drop table if exists report_card_layers cascade;
 -- Create join table linking report cards to TOC items by stable_id
 CREATE TABLE IF NOT EXISTS public.report_card_layers (
@@ -908,20 +909,27 @@ as $$
   declare
     metric_id bigint;
     source_id integer;
-    stableid text;
+    source_url text;
   begin
     if nullif(current_setting('session.user_id', true), '') is null then
       raise exception 'User not authenticated';
     end if;
     foreach metric_id in array metric_ids loop
       if preprocess_sources then
-        select overlay_layer_stable_id into stableid from spatial_metrics where id = metric_id;
-        select data_source_id into source_id from data_layers where id = (
-          select data_layer_id from table_of_contents_items where table_of_contents_items.stable_id = stableid and is_draft = true
-        );
-        if source_id is not null then
-          delete from source_processing_jobs where data_source_id = source_id;
-          delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1';
+        select overlay_source_url into source_url from spatial_metrics where id = metric_id;
+        if source_url is not null then
+          for source_id in (select data_source_id from data_upload_outputs where url = source_url and type = 'ReportingFlatgeobufV1') loop
+            delete from source_processing_jobs where data_source_id = source_id;
+            delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1';
+            -- trigger preprocessSource job for this data source
+            perform graphile_worker.add_job(
+              'preprocessSource',
+              json_build_object('dataSourceId', source_id),
+              max_attempts := 1,
+              job_key := 'preprocessSource:' || source_id::text,
+              job_key_mode := 'replace'
+            );
+          end loop;
         end if;
       end if;
       delete from spatial_metrics where id = metric_id and (subject_fragment_id is not null or session_is_admin((select project_id from project_geography where id = spatial_metrics.subject_geography_id limit 1)));

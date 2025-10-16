@@ -345,7 +345,7 @@ export default function ReportCard({
             },
             {
               label: t("Recalculate"),
-              onClick: () => {
+              onClick: async () => {
                 const metricsToRecalculate = [] as number[];
                 for (const metric of metrics) {
                   if (subjectIsFragment(metric.subject) || recomputeTotals) {
@@ -359,7 +359,7 @@ export default function ReportCard({
                   metricsToRecalculate,
                 });
 
-                recalculate(metricsToRecalculate, recomputePreprocessed);
+                await recalculate(metricsToRecalculate, recomputePreprocessed);
                 setRecalcOpen(false);
               },
               variant: "danger",

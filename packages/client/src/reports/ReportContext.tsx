@@ -23,6 +23,7 @@ import {
   useReportSketchDetailsQuery,
   useSourceProcessingJobsQuery,
   useSourceProcessingJobsSubscriptionSubscription,
+  DraftReportDocument,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 import { Metric, MetricSubjectFragment } from "overlay-engine";
@@ -227,6 +228,8 @@ export function useReportState(
   const [recalculateMutation, recalculateState] =
     useRecalculateSpatialMetricsMutation({
       onError: onError,
+      refetchQueries: [DraftReportDocument],
+      awaitRefetchQueries: true,
     });
 
   useEffect(() => {
@@ -423,12 +426,12 @@ export function useReportState(
 
   const recalculate = useCallback(
     (metricIds: number[], preprocessSources?: boolean) => {
-      recalculateMutation({
+      return recalculateMutation({
         variables: {
           metricIds,
           preprocessSources: preprocessSources || false,
         },
-        refetchQueries: [SketchReportingDetailsDocument],
+        refetchQueries: [SketchReportingDetailsDocument, DraftReportDocument],
         awaitRefetchQueries: true,
         onCompleted: () => {
           getOrCreateSpatialMetrics({

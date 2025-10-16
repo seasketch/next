@@ -1,5 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import { LocalMetric, useReportContext } from "./ReportContext";
+import bytes from "bytes";
 import { useMemo } from "react";
 import {
   Geography,
@@ -98,14 +99,36 @@ export default function ReportMetricsProgressDetails({
               </Trans>
             </p>
             <ul className="space-y-0.5 py-2">
-              {config.reportingLayers.map((layer) => (
-                <ReportTaskLineItem
-                  key={layer.tableOfContentsItemId}
-                  title={layer.tableOfContentsItem?.title || "Untitled"}
-                  state={SpatialMetricState.Complete}
-                  progress={100}
-                />
-              ))}
+              {config.reportingLayers.map((layer) => {
+                const state =
+                  layer.tableOfContentsItem?.dataLayer?.dataSource
+                    ?.sourceProcessingJob?.state || SpatialMetricState.Error;
+                return (
+                  <ReportTaskLineItem
+                    key={layer.tableOfContentsItemId}
+                    title={layer.tableOfContentsItem?.title || "Untitled"}
+                    description={
+                      state === SpatialMetricState.Complete &&
+                      layer.processedOutput
+                        ? t(
+                            `Created ${bytes(
+                              parseInt(layer.processedOutput.size)
+                            )} optimized layer`
+                          )
+                        : ""
+                    }
+                    state={state}
+                    progress={
+                      state === SpatialMetricState.Complete ? 100 : null
+                    }
+                    tooltip={
+                      state === SpatialMetricState.Error
+                        ? `Source processing job is missing`
+                        : undefined
+                    }
+                  />
+                );
+              })}
             </ul>
           </div>
         )}

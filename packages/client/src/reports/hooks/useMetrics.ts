@@ -93,7 +93,6 @@ export function useMetrics<
     return reportContext.relatedFragments.map((f) => f.hash);
   }, [reportContext.relatedFragments]);
 
-  console.log("reportContext.metrics", reportContext.metrics);
   const data = useMemo(() => {
     return reportContext.metrics.filter((m) => {
       if (m.type !== options.type) {
@@ -140,7 +139,6 @@ export function useMetrics<
       data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0
     );
   }, [data]);
-  console.log("data", data, loading);
   return {
     data: data as unknown as MetricTypeMap[T][] &
       Pick<LocalMetric, "id" | "state" | "errorMessage" | "subject">[],
