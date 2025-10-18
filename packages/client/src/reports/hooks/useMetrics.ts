@@ -1,20 +1,12 @@
 import { Metric, MetricTypeMap, subjectIsFragment } from "overlay-engine";
-import { LocalMetric, useReportContext } from "../ReportContext";
+import { useReportContext } from "../ReportContext";
 import { useEffect, useRef, useMemo } from "react";
 import {
+  CompatibleSpatialMetricDetailsFragment,
+  OverlaySourceDetailsFragment,
   ReportingLayerDetailsFragment,
-  SpatialMetricDependency,
   SpatialMetricState,
 } from "../../generated/graphql";
-
-let idCounter = 0;
-
-function createStableId() {
-  if (idCounter === Number.MAX_SAFE_INTEGER) {
-    idCounter = 0;
-  }
-  return idCounter++;
-}
 
 /**
  * useMetrics provides an interface for Report Cards to request the data they
@@ -36,129 +28,83 @@ export function useMetrics<
 }) {
   const reportContext = useReportContext();
 
-  // Create a stable numeric ID that never changes for this hook instance
-  const stableId = useRef(createStableId()).current;
-
-  useEffect(() => {
-    if (!reportContext.sketch?.id) {
-      return;
-    }
-
-    const dependencies: SpatialMetricDependency[] = [];
-    // Create a dependency object that matches SpatialMetricDependency
-    if (Array.isArray(options.layers) && options.layers.length > 0) {
-      for (const layer of options.layers) {
-        dependencies.push({
-          type: options.type,
-          sketchId: reportContext.sketch?.id,
-          geographyIds: options.geographyIds || [],
-          includeSiblings: options.includeSiblings || false,
-          groupBy: layer.groupBy,
-          sourceUrl: layer.processedOutput?.url,
-          sourceProcessingJobDependency: layer.processedOutput?.url
-            ? undefined
-            : layer.tableOfContentsItem?.dataLayer?.dataSource
-                ?.sourceProcessingJob?.jobKey,
-        });
+  const state = useMemo(() => {
+    console.time("useMetrics state calculation");
+    const sources = new Set<OverlaySourceDetailsFragment>();
+    const metrics: CompatibleSpatialMetricDetailsFragment[] = [];
+    let loading = false;
+    let errors: string[] = [];
+    const fragmentIds = reportContext.relatedFragments.map((f) => f.hash);
+    for (const metric of reportContext.metrics) {
+      if (metric.type !== options.type) {
+        continue;
       }
-    } else {
-      dependencies.push({
-        type: options.type,
-        sketchId: reportContext.sketch?.id,
-        geographyIds: options.geographyIds || [],
-        includeSiblings: options.includeSiblings || false,
-      });
-    }
-
-    for (const dependency of dependencies) {
-      reportContext.addMetricDependency(stableId, dependency);
-    }
-
-    // Cleanup function to remove the dependency when the component unmounts
-    return () => {
-      for (const dependency of dependencies) {
-        reportContext.removeMetricDependency(stableId, dependency);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    options.type,
-    options.geographyIds,
-    options.includeSiblings,
-    stableId,
-    reportContext.sketch?.id,
-  ]);
-
-  const fragmentIds = useMemo(() => {
-    return reportContext.relatedFragments.map((f) => f.hash);
-  }, [reportContext.relatedFragments]);
-
-  const data = useMemo(() => {
-    return reportContext.metrics.filter((m) => {
-      if (m.type !== options.type) {
-        return false;
-      }
-      if (subjectIsFragment(m.subject)) {
-        if (!fragmentIds.includes(m.subject.hash)) {
-          return false;
+      if (subjectIsFragment(metric.subject)) {
+        if (!fragmentIds.includes(metric.subject.hash)) {
+          continue;
         }
       } else {
-        if (!(options.geographyIds || []).includes(m.subject.id)) {
-          return false;
+        if (!(options.geographyIds || []).includes(metric.subject.id)) {
+          continue;
         }
       }
-      // check for matching stableId, groupBy, etc.
-      if (options.layers) {
-        // check that the metric matches one of the layers
-        const matchingLayer = options.layers.find((l) => {
-          return (
-            (l.processedOutput?.url === m.sourceUrl ||
-              l.tableOfContentsItem?.dataLayer?.dataSource?.sourceProcessingJob
-                ?.jobKey === m.sourceProcessingJobDependency) &&
-            matchingGroupBy(l.groupBy, m.groupBy)
-          );
-        });
+      let relatedSource: OverlaySourceDetailsFragment | null = null;
+      if (metric.sourceProcessingJobDependency) {
+        relatedSource =
+          reportContext.overlaySources.find(
+            (s) =>
+              s.sourceProcessingJob.jobKey ===
+              metric.sourceProcessingJobDependency
+          ) || null;
+      } else if (metric.sourceUrl) {
+        relatedSource =
+          reportContext.overlaySources.find(
+            (s) => s.sourceUrl === metric.sourceUrl
+          ) || null;
+      }
+      if (relatedSource && options.layers) {
+        // check that the source is related to one of the layers
+        const matchingLayer = options.layers.find(
+          (l) =>
+            l.tableOfContentsItemId === relatedSource.tableOfContentsItemId &&
+            (l.groupBy || "") === (metric.groupBy || "")
+        );
         if (!matchingLayer) {
-          return false;
+          continue;
         }
+      } else if (!relatedSource && options.layers) {
+        continue;
       }
-      return true;
-    });
-  }, [reportContext.metrics, fragmentIds, options]);
+      // It's a match! Add it to the list.
+      metrics.push(metric);
+      if (relatedSource) {
+        sources.add(relatedSource);
+      }
+      if (
+        metric.state === SpatialMetricState.Queued ||
+        metric.state === SpatialMetricState.Processing
+      ) {
+        loading = true;
+      }
+      if (metric.state === SpatialMetricState.Error) {
+        errors.push(metric.errorMessage || "Unknown error");
+      }
+    }
+    console.timeEnd("useMetrics state calculation");
+    return {
+      data: metrics,
+      sources: Array.from(sources),
+      loading,
+      errors,
+    };
+  }, [
+    reportContext.metrics,
+    reportContext.overlaySources,
+    options.type,
+    options.geographyIds,
+    options.layers,
+    reportContext.relatedFragments,
+  ]);
 
-  const errors = useMemo(() => {
-    const errors = data
-      .filter((m) => m.state === SpatialMetricState.Error)
-      .map((m) => m.errorMessage || "Unknown error");
-
-    return errors;
-  }, [data]);
-
-  const loading = useMemo(() => {
-    return (
-      data.filter((m) => m.state !== SpatialMetricState.Complete).length > 0
-    );
-  }, [data]);
-  return {
-    data: data as unknown as MetricTypeMap[T][] &
-      Pick<LocalMetric, "id" | "state" | "errorMessage" | "subject">[],
-    loading,
-    errors,
-  };
-}
-
-function matchingGroupBy(
-  layerGroupBy: string | undefined | null,
-  metricGroupBy: string | undefined | null
-): boolean {
-  if (layerGroupBy === metricGroupBy) {
-    return true;
-  } else if (
-    Boolean(layerGroupBy) === false &&
-    Boolean(metricGroupBy) === false
-  ) {
-    return true;
-  } else {
-    return false;
-  }
+  return state;
 }

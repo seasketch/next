@@ -1,13 +1,20 @@
 import { Trans, useTranslation } from "react-i18next";
-import { LocalMetric, useReportContext } from "./ReportContext";
+import { useReportContext } from "./ReportContext";
 import bytes from "bytes";
 import { useMemo } from "react";
 import {
+  CompatibleSpatialMetric,
   Geography,
+  OverlaySourceDetailsFragment,
   SpatialMetricState,
   useRetryFailedSpatialMetricsMutation,
 } from "../generated/graphql";
-import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
+import {
+  MetricSubjectFragment,
+  MetricSubjectGeography,
+  subjectIsFragment,
+  subjectIsGeography,
+} from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import Button from "../components/Button";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -31,25 +38,37 @@ export default function ReportMetricsProgressDetails({
   const reportContext = useReportContext();
 
   const state = useMemo(() => {
-    const geographyMetrics: LocalMetric[] = [];
-    const fragmentMetrics: LocalMetric[] = [];
-    const relatedSourceProcessingJobs = new Set<string>();
+    const geographyMetrics: CompatibleSpatialMetric[] = [];
+    const fragmentMetrics: CompatibleSpatialMetric[] = [];
+    const relatedOverlaySources = new Set<OverlaySourceDetailsFragment>();
     const failedMetrics = [] as number[];
 
     for (const metric of reportContext.metrics) {
       if (metricIds.includes(metric.id)) {
-        if (subjectIsGeography(metric.subject)) {
+        if (
+          subjectIsGeography(
+            metric.subject as MetricSubjectFragment | MetricSubjectGeography
+          )
+        ) {
           geographyMetrics.push(metric);
         } else {
           fragmentMetrics.push(metric);
         }
         if (metric.sourceProcessingJobDependency) {
-          const sourceProcessingJob = reportContext.sourceProcessingJobs.find(
-            (j) => j.jobKey === metric.sourceProcessingJobDependency
+          const relatedOverlaySource = reportContext.overlaySources.find(
+            (s) =>
+              s.sourceProcessingJob.jobKey ===
+              metric.sourceProcessingJobDependency
           );
-          if (sourceProcessingJob) {
-            relatedSourceProcessingJobs.add(sourceProcessingJob.jobKey);
+          if (relatedOverlaySource) {
+            relatedOverlaySources.add(relatedOverlaySource);
           }
+          // const sourceProcessingJob = reportContext.sourceProcessingJobs.find(
+          //   (j) => j.jobKey === metric.sourceProcessingJobDependency
+          // );
+          // if (sourceProcessingJob) {
+          //   relatedSourceProcessingJobs.add(sourceProcessingJob.jobKey);
+          // }
         }
         if (metric.state === SpatialMetricState.Error) {
           failedMetrics.push(metric.id);
@@ -58,20 +77,21 @@ export default function ReportMetricsProgressDetails({
     }
 
     return {
-      displayState:
-        geographyMetrics.length > 0 || relatedSourceProcessingJobs.size > 0
-          ? DisplayState.PREPROCESSING
-          : DisplayState.FRAGMENTS,
+      // displayState:
+      //   geographyMetrics.length > 0 || relatedSourceProcessingJobs.size > 0
+      //     ? DisplayState.PREPROCESSING
+      //     : DisplayState.FRAGMENTS,
       geographyMetrics,
       fragmentMetrics,
-      sourceProcessingJobs: Array.from(relatedSourceProcessingJobs)
-        .map((jobKey) =>
-          reportContext.sourceProcessingJobs.find((j) => j.jobKey === jobKey)
-        )
-        .filter((j) => j !== undefined),
+      relatedOverlaySources: Array.from(relatedOverlaySources),
+      // sourceProcessingJobs: Array.from(relatedSourceProcessingJobs)
+      //   .map((jobKey) =>
+      //     reportContext.sourceProcessingJobs.find((j) => j.jobKey === jobKey)
+      //   )
+      //   .filter((j) => j !== undefined),
       failedMetrics,
     };
-  }, [metricIds, reportContext.metrics, reportContext.sourceProcessingJobs]);
+  }, [metricIds, reportContext.metrics]);
 
   const [retry, retryState] = useRetryFailedSpatialMetricsMutation({
     variables: {
@@ -86,7 +106,7 @@ export default function ReportMetricsProgressDetails({
   return (
     <Tooltip.Provider>
       <div className="space-y-2 bg-white">
-        {config.reportingLayers?.length > 0 && (
+        {state.relatedOverlaySources.length > 0 && (
           <div>
             <h3 className="text-sm font-medium">
               {t("Optimized Overlay Layers")}
@@ -99,32 +119,30 @@ export default function ReportMetricsProgressDetails({
               </Trans>
             </p>
             <ul className="space-y-0.5 py-2">
-              {config.reportingLayers.map((layer) => {
-                const state =
-                  layer.tableOfContentsItem?.dataLayer?.dataSource
-                    ?.sourceProcessingJob?.state || SpatialMetricState.Error;
+              {state.relatedOverlaySources.map((layer) => {
                 return (
                   <ReportTaskLineItem
                     key={layer.tableOfContentsItemId}
                     title={layer.tableOfContentsItem?.title || "Untitled"}
                     description={
-                      state === SpatialMetricState.Complete &&
-                      layer.processedOutput
+                      layer.sourceProcessingJob.state ===
+                        SpatialMetricState.Complete && layer.sourceUrl
                         ? t(
                             `Created ${bytes(
-                              parseInt(layer.processedOutput.size)
+                              parseInt(layer.output?.size || "0")
                             )} optimized layer`
                           )
                         : ""
                     }
-                    state={state}
+                    state={layer.sourceProcessingJob.state}
                     progress={
-                      state === SpatialMetricState.Complete ? 100 : null
+                      layer.sourceProcessingJob.state ===
+                      SpatialMetricState.Complete
+                        ? 100
+                        : layer.sourceProcessingJob.progressPercentage
                     }
                     tooltip={
-                      state === SpatialMetricState.Error
-                        ? `Source processing job is missing`
-                        : undefined
+                      layer.sourceProcessingJob.errorMessage || undefined
                     }
                   />
                 );
@@ -181,7 +199,7 @@ export default function ReportMetricsProgressDetails({
                   }
                   state={metric.state}
                   progress={metric.progress || null}
-                  tooltip={metric.errorMessage}
+                  tooltip={metric.errorMessage || undefined}
                 />
               ))}
             </ul>
@@ -219,7 +237,7 @@ export default function ReportMetricsProgressDetails({
                   }
                   state={metric.state}
                   progress={metric.progress || null}
-                  tooltip={metric.errorMessage}
+                  tooltip={metric.errorMessage || undefined}
                 />
               ))}
             </ul>

@@ -1063,8 +1063,10 @@ input CommunityGuidelinePatch {
 }
 
 type CompatibleSpatialMetric {
+  completedAt: Datetime
   createdAt: Datetime!
   errorMessage: String
+  eta: Datetime
   groupBy: String
   id: BigInt!
   includedProperties: [String!]
@@ -1072,6 +1074,7 @@ type CompatibleSpatialMetric {
   progress: Int
   sourceProcessingJobDependency: String
   sourceUrl: String
+  startedAt: Datetime
   state: SpatialMetricState!
   subject: MetricSubject!
   type: String!
@@ -8589,12 +8592,6 @@ type MergeTranslatedPropsPayload {
   query: Query
 }
 
-enum MetricSourceType {
-  FlatGeobuf
-  GeoJSON
-  GeoTIFF
-}
-
 union MetricSubject = FragmentSubject | GeographySubject
 
 """All input for the `modifySurveyAnswers` mutation."""
@@ -9745,9 +9742,6 @@ type Mutation {
     """
     input: GetChildFoldersRecursiveInput!
   ): GetChildFoldersRecursivePayload
-
-  """Create or update spatial metrics."""
-  getOrCreateSpatialMetrics(inputs: [SpatialMetricDependency!]!): GetOrCreateSpatialMetricsResults!
 
   """
   Use to create new sprites. If an existing sprite in the database for this
@@ -14401,6 +14395,16 @@ type ReorderReportTabsPayload {
 
 type Report implements Node {
   createdAt: Datetime!
+  dependencies(sketchId: Int): ReportOverlayDependencies!
+
+  """Reads and enables pagination through a set of `Geography`."""
+  geographies(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [Geography!]
   id: Int!
 
   """
@@ -14571,6 +14575,24 @@ input ReportLayerInputRecordInput {
   groupBy: String
   reportCardId: Int
   tableOfContentsItemId: Int
+}
+
+type ReportOverlayDependencies {
+  metrics: [CompatibleSpatialMetric!]!
+  overlaySources: [ReportOverlaySource!]!
+  ready: Boolean!
+}
+
+type ReportOverlaySource {
+  geostats: JSON!
+  mapboxGlStyles: JSON!
+  output: DataUploadOutput
+  outputId: Int!
+  sourceProcessingJob: SourceProcessingJob!
+  sourceProcessingJobId: String!
+  sourceUrl: String
+  tableOfContentsItem: TableOfContentsItem!
+  tableOfContentsItemId: Int!
 }
 
 """
@@ -15675,6 +15697,7 @@ enum SortByDirection {
 }
 
 type SourceProcessingJob implements Node {
+  completedAt: Datetime
   createdAt: Datetime!
 
   """
@@ -15682,7 +15705,9 @@ type SourceProcessingJob implements Node {
   """
   dataSource: DataSource
   dataSourceId: Int!
+  dataUploadOutputId: Int
   errorMessage: String
+  eta: Datetime
   jobKey: String!
   layerTitle: String
   logsExpiresAt: Datetime
@@ -15700,6 +15725,7 @@ type SourceProcessingJob implements Node {
   """
   project: Project
   projectId: Int!
+  startedAt: Datetime
   state: SpatialMetricState!
   updatedAt: Datetime!
 }
@@ -15769,17 +15795,6 @@ type SourceProcessingJobSubscriptionPayload {
   job: SourceProcessingJob!
   jobKey: String!
   projectId: Int!
-}
-
-input SpatialMetricDependency {
-  geographyIds: [Int!]
-  groupBy: String
-  includedProperties: [String!]
-  includeSiblings: Boolean
-  sketchId: Int
-  sourceProcessingJobDependency: String
-  sourceUrl: String
-  type: String!
 }
 
 enum SpatialMetricState {

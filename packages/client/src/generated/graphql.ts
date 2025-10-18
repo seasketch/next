@@ -914,8 +914,10 @@ export type CommunityGuidelinePatch = {
 
 export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
+  completedAt?: Maybe<Scalars['Datetime']>;
   createdAt: Scalars['Datetime'];
   errorMessage?: Maybe<Scalars['String']>;
+  eta?: Maybe<Scalars['Datetime']>;
   groupBy?: Maybe<Scalars['String']>;
   id: Scalars['BigInt'];
   includedProperties?: Maybe<Array<Scalars['String']>>;
@@ -923,6 +925,7 @@ export type CompatibleSpatialMetric = {
   progress?: Maybe<Scalars['Int']>;
   sourceProcessingJobDependency?: Maybe<Scalars['String']>;
   sourceUrl?: Maybe<Scalars['String']>;
+  startedAt?: Maybe<Scalars['Datetime']>;
   state: SpatialMetricState;
   subject: MetricSubject;
   type: Scalars['String'];
@@ -7419,12 +7422,6 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
-export enum MetricSourceType {
-  FlatGeobuf = 'FlatGeobuf',
-  GeoJson = 'GeoJSON',
-  GeoTiff = 'GeoTIFF'
-}
-
 export type MetricSubject = FragmentSubject | GeographySubject;
 
 /** All input for the `modifySurveyAnswers` mutation. */
@@ -7779,8 +7776,6 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
-  /** Create or update spatial metrics. */
-  getOrCreateSpatialMetrics: GetOrCreateSpatialMetricsResults;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -8981,12 +8976,6 @@ export type MutationGenerateOfflineTilePackageArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetChildFoldersRecursiveArgs = {
   input: GetChildFoldersRecursiveInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetOrCreateSpatialMetricsArgs = {
-  inputs: Array<SpatialMetricDependency>;
 };
 
 
@@ -13313,6 +13302,9 @@ export type ReorderReportTabsPayload = {
 export type Report = Node & {
   __typename?: 'Report';
   createdAt: Scalars['Datetime'];
+  dependencies: ReportOverlayDependencies;
+  /** Reads and enables pagination through a set of `Geography`. */
+  geographies?: Maybe<Array<Geography>>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -13323,6 +13315,17 @@ export type Report = Node & {
   /** Reads and enables pagination through a set of `ReportTab`. */
   tabs?: Maybe<Array<ReportTab>>;
   updatedAt?: Maybe<Scalars['Datetime']>;
+};
+
+
+export type ReportDependenciesArgs = {
+  sketchId?: Maybe<Scalars['Int']>;
+};
+
+
+export type ReportGeographiesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -13445,6 +13448,26 @@ export type ReportLayerInputRecordInput = {
   groupBy?: Maybe<Scalars['String']>;
   reportCardId?: Maybe<Scalars['Int']>;
   tableOfContentsItemId?: Maybe<Scalars['Int']>;
+};
+
+export type ReportOverlayDependencies = {
+  __typename?: 'ReportOverlayDependencies';
+  metrics: Array<CompatibleSpatialMetric>;
+  overlaySources: Array<ReportOverlaySource>;
+  ready: Scalars['Boolean'];
+};
+
+export type ReportOverlaySource = {
+  __typename?: 'ReportOverlaySource';
+  geostats: Scalars['JSON'];
+  mapboxGlStyles: Scalars['JSON'];
+  output?: Maybe<DataUploadOutput>;
+  outputId: Scalars['Int'];
+  sourceProcessingJob: SourceProcessingJob;
+  sourceProcessingJobId: Scalars['String'];
+  sourceUrl?: Maybe<Scalars['String']>;
+  tableOfContentsItem: TableOfContentsItem;
+  tableOfContentsItemId: Scalars['Int'];
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -14431,11 +14454,14 @@ export enum SortByDirection {
 
 export type SourceProcessingJob = Node & {
   __typename?: 'SourceProcessingJob';
+  completedAt?: Maybe<Scalars['Datetime']>;
   createdAt: Scalars['Datetime'];
   /** Reads a single `DataSource` that is related to this `SourceProcessingJob`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
+  dataUploadOutputId?: Maybe<Scalars['Int']>;
   errorMessage?: Maybe<Scalars['String']>;
+  eta?: Maybe<Scalars['Datetime']>;
   jobKey: Scalars['String'];
   layerTitle?: Maybe<Scalars['String']>;
   logsExpiresAt?: Maybe<Scalars['Datetime']>;
@@ -14447,6 +14473,7 @@ export type SourceProcessingJob = Node & {
   /** Reads a single `Project` that is related to this `SourceProcessingJob`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  startedAt?: Maybe<Scalars['Datetime']>;
   state: SpatialMetricState;
   updatedAt: Scalars['Datetime'];
 };
@@ -14509,17 +14536,6 @@ export enum SourceProcessingJobsOrderBy {
   UpdatedAtAsc = 'UPDATED_AT_ASC',
   UpdatedAtDesc = 'UPDATED_AT_DESC'
 }
-
-export type SpatialMetricDependency = {
-  geographyIds?: Maybe<Array<Scalars['Int']>>;
-  groupBy?: Maybe<Scalars['String']>;
-  includedProperties?: Maybe<Array<Scalars['String']>>;
-  includeSiblings?: Maybe<Scalars['Boolean']>;
-  sketchId?: Maybe<Scalars['Int']>;
-  sourceProcessingJobDependency?: Maybe<Scalars['String']>;
-  sourceUrl?: Maybe<Scalars['String']>;
-  type: Scalars['String'];
-};
 
 export enum SpatialMetricState {
   Complete = 'COMPLETE',
@@ -22667,7 +22683,7 @@ export type AvailableReportLayersQuery = (
 
 export type SourceProcessingJobDetailsFragment = (
   { __typename?: 'SourceProcessingJob' }
-  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt' | 'layerTitle' | 'errorMessage'>
+  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt' | 'errorMessage'>
 );
 
 export type SourceProcessingJobsQueryVariables = Exact<{
@@ -22714,6 +22730,59 @@ export type RecalculateSpatialMetricsMutation = (
   & { recalculateSpatialMetrics?: Maybe<(
     { __typename?: 'RecalculateSpatialMetricsPayload' }
     & Pick<RecalculateSpatialMetricsPayload, 'boolean'>
+  )> }
+);
+
+export type OverlaySourceDetailsFragment = (
+  { __typename?: 'ReportOverlaySource' }
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & { tableOfContentsItem: (
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'title'>
+  ), sourceProcessingJob: (
+    { __typename?: 'SourceProcessingJob' }
+    & SourceProcessingJobDetailsFragment
+  ), output?: Maybe<(
+    { __typename?: 'DataUploadOutput' }
+    & Pick<DataUploadOutput, 'size' | 'url'>
+  )> }
+);
+
+export type ReportContextQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled'>
+      & ReportContextSketchClassDetailsFragment
+    )> }
+    & ReportContextSketchDetailsFragment
+  )>, report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { tabs?: Maybe<Array<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )>>, geographies?: Maybe<Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'translatedProps'>
+    )>>, dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { overlaySources: Array<(
+        { __typename?: 'ReportOverlaySource' }
+        & OverlaySourceDetailsFragment
+      )>, metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricDetailsFragment
+      )> }
+    ) }
   )> }
 );
 
@@ -22990,6 +23059,7 @@ export type ReportContextSketchClassDetailsFragment = (
 
 export type SketchReportingDetailsQueryVariables = Exact<{
   id: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
 }>;
 
 
@@ -22998,23 +23068,14 @@ export type SketchReportingDetailsQuery = (
   & { sketch?: Maybe<(
     { __typename?: 'Sketch' }
     & ReportContextSketchDetailsFragment
-  )> }
-);
-
-export type ReportSketchDetailsQueryVariables = Exact<{
-  id: Scalars['Int'];
-}>;
-
-
-export type ReportSketchDetailsQuery = (
-  { __typename?: 'Query' }
-  & { sketch?: Maybe<(
-    { __typename?: 'Sketch' }
-    & { sketchClass?: Maybe<(
-      { __typename?: 'SketchClass' }
-      & ReportContextSketchClassDetailsFragment
+  )>, sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & ReportDetailsFragment
     )> }
-    & ReportContextSketchDetailsFragment
+    & ReportContextSketchClassDetailsFragment
   )> }
 );
 
@@ -23075,22 +23136,6 @@ export type CompatibleSpatialMetricDetailsFragment = (
 export type MinimalSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
   & Pick<CompatibleSpatialMetric, 'id' | 'updatedAt' | 'state' | 'value' | 'errorMessage' | 'progress'>
-);
-
-export type GetOrCreateSpatialMetricsMutationVariables = Exact<{
-  dependencies: Array<SpatialMetricDependency> | SpatialMetricDependency;
-}>;
-
-
-export type GetOrCreateSpatialMetricsMutation = (
-  { __typename?: 'Mutation' }
-  & { getOrCreateSpatialMetrics: (
-    { __typename?: 'GetOrCreateSpatialMetricsResults' }
-    & { metrics: Array<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  ) }
 );
 
 export type GeographyMetricSubscriptionSubscriptionVariables = Exact<{
@@ -26074,7 +26119,6 @@ export const SourceProcessingJobDetailsFragmentDoc = gql`
   progressPercentage
   progressMessage
   createdAt
-  layerTitle
   errorMessage
 }
     `;
@@ -26142,6 +26186,24 @@ export const ReportDetailsFragmentDoc = gql`
   }
 }
     ${ReportTabDetailsFragmentDoc}`;
+export const OverlaySourceDetailsFragmentDoc = gql`
+    fragment OverlaySourceDetails on ReportOverlaySource {
+  tableOfContentsItemId
+  tableOfContentsItem {
+    title
+  }
+  geostats
+  mapboxGlStyles
+  sourceProcessingJob {
+    ...SourceProcessingJobDetails
+  }
+  sourceUrl
+  output {
+    size
+    url
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -35231,6 +35293,72 @@ export function useRecalculateSpatialMetricsMutation(baseOptions?: Apollo.Mutati
 export type RecalculateSpatialMetricsMutationHookResult = ReturnType<typeof useRecalculateSpatialMetricsMutation>;
 export type RecalculateSpatialMetricsMutationResult = Apollo.MutationResult<RecalculateSpatialMetricsMutation>;
 export type RecalculateSpatialMetricsMutationOptions = Apollo.BaseMutationOptions<RecalculateSpatialMetricsMutation, RecalculateSpatialMetricsMutationVariables>;
+export const ReportContextDocument = gql`
+    query ReportContext($reportId: Int!, $sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+  report(id: $reportId) {
+    id
+    tabs {
+      ...ReportTabDetails
+    }
+    geographies {
+      id
+      name
+      translatedProps
+    }
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+    }
+  }
+}
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}
+${ReportTabDetailsFragmentDoc}
+${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useReportContextQuery__
+ *
+ * To run a query within a React component, call `useReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportContextQuery({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useReportContextQuery(baseOptions: Apollo.QueryHookOptions<ReportContextQuery, ReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReportContextQuery, ReportContextQueryVariables>(ReportContextDocument, options);
+      }
+export function useReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportContextQuery, ReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReportContextQuery, ReportContextQueryVariables>(ReportContextDocument, options);
+        }
+export type ReportContextQueryHookResult = ReturnType<typeof useReportContextQuery>;
+export type ReportContextLazyQueryHookResult = ReturnType<typeof useReportContextLazyQuery>;
+export type ReportContextQueryResult = Apollo.QueryResult<ReportContextQuery, ReportContextQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -35570,12 +35698,23 @@ export type UpdateTocItemsParentMutationHookResult = ReturnType<typeof useUpdate
 export type UpdateTocItemsParentMutationResult = Apollo.MutationResult<UpdateTocItemsParentMutation>;
 export type UpdateTocItemsParentMutationOptions = Apollo.BaseMutationOptions<UpdateTocItemsParentMutation, UpdateTocItemsParentMutationVariables>;
 export const SketchReportingDetailsDocument = gql`
-    query SketchReportingDetails($id: Int!) {
+    query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
   sketch(id: $id) {
     ...ReportContextSketchDetails
   }
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    report {
+      ...ReportDetails
+    }
+  }
 }
-    ${ReportContextSketchDetailsFragmentDoc}`;
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}
+${ReportDetailsFragmentDoc}`;
 
 /**
  * __useSketchReportingDetailsQuery__
@@ -35590,6 +35729,7 @@ export const SketchReportingDetailsDocument = gql`
  * const { data, loading, error } = useSketchReportingDetailsQuery({
  *   variables: {
  *      id: // value for 'id'
+ *      sketchClassId: // value for 'sketchClassId'
  *   },
  * });
  */
@@ -35604,45 +35744,6 @@ export function useSketchReportingDetailsLazyQuery(baseOptions?: Apollo.LazyQuer
 export type SketchReportingDetailsQueryHookResult = ReturnType<typeof useSketchReportingDetailsQuery>;
 export type SketchReportingDetailsLazyQueryHookResult = ReturnType<typeof useSketchReportingDetailsLazyQuery>;
 export type SketchReportingDetailsQueryResult = Apollo.QueryResult<SketchReportingDetailsQuery, SketchReportingDetailsQueryVariables>;
-export const ReportSketchDetailsDocument = gql`
-    query ReportSketchDetails($id: Int!) {
-  sketch(id: $id) {
-    ...ReportContextSketchDetails
-    sketchClass {
-      ...ReportContextSketchClassDetails
-    }
-  }
-}
-    ${ReportContextSketchDetailsFragmentDoc}
-${ReportContextSketchClassDetailsFragmentDoc}`;
-
-/**
- * __useReportSketchDetailsQuery__
- *
- * To run a query within a React component, call `useReportSketchDetailsQuery` and pass it any options that fit your needs.
- * When your component renders, `useReportSketchDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useReportSketchDetailsQuery({
- *   variables: {
- *      id: // value for 'id'
- *   },
- * });
- */
-export function useReportSketchDetailsQuery(baseOptions: Apollo.QueryHookOptions<ReportSketchDetailsQuery, ReportSketchDetailsQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<ReportSketchDetailsQuery, ReportSketchDetailsQueryVariables>(ReportSketchDetailsDocument, options);
-      }
-export function useReportSketchDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportSketchDetailsQuery, ReportSketchDetailsQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<ReportSketchDetailsQuery, ReportSketchDetailsQueryVariables>(ReportSketchDetailsDocument, options);
-        }
-export type ReportSketchDetailsQueryHookResult = ReturnType<typeof useReportSketchDetailsQuery>;
-export type ReportSketchDetailsLazyQueryHookResult = ReturnType<typeof useReportSketchDetailsLazyQuery>;
-export type ReportSketchDetailsQueryResult = Apollo.QueryResult<ReportSketchDetailsQuery, ReportSketchDetailsQueryVariables>;
 export const CopyTocItemDocument = gql`
     mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
   copySketchTocItem(id: $id, type: $type) {
@@ -35688,41 +35789,6 @@ export function useCopyTocItemMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CopyTocItemMutationHookResult = ReturnType<typeof useCopyTocItemMutation>;
 export type CopyTocItemMutationResult = Apollo.MutationResult<CopyTocItemMutation>;
 export type CopyTocItemMutationOptions = Apollo.BaseMutationOptions<CopyTocItemMutation, CopyTocItemMutationVariables>;
-export const GetOrCreateSpatialMetricsDocument = gql`
-    mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {
-  getOrCreateSpatialMetrics(inputs: $dependencies) {
-    metrics {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-export type GetOrCreateSpatialMetricsMutationFn = Apollo.MutationFunction<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>;
-
-/**
- * __useGetOrCreateSpatialMetricsMutation__
- *
- * To run a mutation, you first call `useGetOrCreateSpatialMetricsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useGetOrCreateSpatialMetricsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [getOrCreateSpatialMetricsMutation, { data, loading, error }] = useGetOrCreateSpatialMetricsMutation({
- *   variables: {
- *      dependencies: // value for 'dependencies'
- *   },
- * });
- */
-export function useGetOrCreateSpatialMetricsMutation(baseOptions?: Apollo.MutationHookOptions<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>(GetOrCreateSpatialMetricsDocument, options);
-      }
-export type GetOrCreateSpatialMetricsMutationHookResult = ReturnType<typeof useGetOrCreateSpatialMetricsMutation>;
-export type GetOrCreateSpatialMetricsMutationResult = Apollo.MutationResult<GetOrCreateSpatialMetricsMutation>;
-export type GetOrCreateSpatialMetricsMutationOptions = Apollo.BaseMutationOptions<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>;
 export const GeographyMetricSubscriptionDocument = gql`
     subscription GeographyMetricSubscription($projectId: Int!) {
   geographyMetrics(projectId: $projectId) {
@@ -38986,10 +39052,10 @@ export const namedOperations = {
     DraftReportDebuggingMaterials: 'DraftReportDebuggingMaterials',
     AvailableReportLayers: 'AvailableReportLayers',
     SourceProcessingJobs: 'SourceProcessingJobs',
+    ReportContext: 'ReportContext',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
-    ReportSketchDetails: 'ReportSketchDetails',
     Surveys: 'Surveys',
     SurveyById: 'SurveyById',
     SurveyFormEditorDetails: 'SurveyFormEditorDetails',
@@ -39147,7 +39213,6 @@ export const namedOperations = {
     RenameFolder: 'RenameFolder',
     UpdateTocItemsParent: 'UpdateTocItemsParent',
     CopyTocItem: 'CopyTocItem',
-    GetOrCreateSpatialMetrics: 'GetOrCreateSpatialMetrics',
     RetryFailedSpatialMetrics: 'RetryFailedSpatialMetrics',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
@@ -39291,6 +39356,7 @@ export const namedOperations = {
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
     SourceProcessingJobDetails: 'SourceProcessingJobDetails',
+    OverlaySourceDetails: 'OverlaySourceDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

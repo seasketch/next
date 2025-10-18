@@ -55,8 +55,8 @@ export type MetricTypeMap = {
     presence: PresenceMetric;
     presence_table: PresenceTableMetric;
 };
-export declare function subjectIsFragment(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
-export declare function subjectIsGeography(subject: MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
+export declare function subjectIsFragment(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
+export declare function subjectIsGeography(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
 export {};
 //# sourceMappingURL=metrics.d.ts.map

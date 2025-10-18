@@ -86,13 +86,13 @@ export type MetricTypeMap = {
 };
 
 export function subjectIsFragment(
-  subject: MetricSubjectFragment | MetricSubjectGeography
+  subject: any | MetricSubjectFragment | MetricSubjectGeography
 ): subject is MetricSubjectFragment {
   return "hash" in subject;
 }
 
 export function subjectIsGeography(
-  subject: MetricSubjectFragment | MetricSubjectGeography
+  subject: any | MetricSubjectFragment | MetricSubjectGeography
 ): subject is MetricSubjectGeography {
   return "id" in subject;
 }

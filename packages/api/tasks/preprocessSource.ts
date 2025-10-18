@@ -10,10 +10,10 @@ const lambda = new AWS.Lambda({
 });
 
 export default async function preprocessSource(
-  payload: { dataSourceId: number },
+  payload: { jobKey: string },
   helpers: Helpers
 ) {
-  const { dataSourceId } = payload;
+  const { jobKey } = payload;
 
   if (!process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
     throw new Error("SUBDIVISION_WORKER_LAMBDA_ARN is not set");
@@ -22,32 +22,23 @@ export default async function preprocessSource(
   const arn = process.env.SUBDIVISION_WORKER_LAMBDA_ARN;
 
   await helpers.withPgClient(async (client) => {
-    const existingJob = await client.query(
-      `select job_key, state from source_processing_jobs where data_source_id = $1`,
-      [dataSourceId]
+    const existingJobQ = await client.query(
+      `select job_key, state, data_source_id from source_processing_jobs where job_key = $1`,
+      [jobKey]
     );
 
-    if (existingJob.rows.length > 0) {
-      const state: string = existingJob.rows[0].state;
-      if (state === "queued" || state === "running" || state === "complete") {
-        // Job already in progress or finished; nothing to do
-        return;
-      }
-      if (state === "error") {
-        await client.query(
-          `delete from source_processing_jobs where data_source_id = $1`,
-          [dataSourceId]
-        );
-      }
+    const existingJob = existingJobQ?.rows?.[0];
+
+    if (!existingJob) {
+      throw new Error(`Source processing job not found for jobKey: ${jobKey}`);
+    } else if (existingJob.state !== "queued") {
+      console.log(
+        `Source processing job is already in progress for jobKey: ${jobKey}`
+      );
+      return;
     }
 
-    // Create a new source processing job
-    const result = await client.query(
-      `insert into source_processing_jobs (data_source_id, project_id) values ($1, (select project_id from data_sources where id = $1)) returning *`,
-      [dataSourceId]
-    );
-
-    const jobKey: string = result.rows[0].job_key;
+    const dataSourceId = existingJob.data_source_id;
 
     const slugResults = await client.query(
       `select slug from projects where id = (select project_id from data_sources where id = $1)`,
@@ -91,5 +82,10 @@ export default async function preprocessSource(
         Payload: JSON.stringify(payloadForLambda),
       })
       .promise();
+
+    await client.query(
+      `update source_processing_jobs set state = 'processing' where job_key = $1`,
+      [jobKey]
+    );
   });
 }

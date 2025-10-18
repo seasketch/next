@@ -254,17 +254,17 @@ fragment ReportContextSketchClassDetails on SketchClass {
   }
 }
 
-query SketchReportingDetails($id: Int!) {
+query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
   sketch(id: $id) {
     ...ReportContextSketchDetails
   }
-}
-
-query ReportSketchDetails($id: Int!) {
-  sketch(id: $id) {
-    ...ReportContextSketchDetails
-    sketchClass {
-      ...ReportContextSketchClassDetails
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    geoprocessingClientName
+    geoprocessingClientUrl
+    geoprocessingProjectUrl
+    report {
+      ...ReportDetails
     }
   }
 }
@@ -331,14 +331,6 @@ fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
   value
   errorMessage
   progress
-}
-
-mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {
-  getOrCreateSpatialMetrics(inputs: $dependencies) {
-    metrics {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
 }
 
 subscription GeographyMetricSubscription($projectId: Int!) {

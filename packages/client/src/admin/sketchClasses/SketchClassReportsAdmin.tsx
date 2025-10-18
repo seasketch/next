@@ -49,8 +49,6 @@ import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
-// MetricSubjectFragment imported elsewhere; remove unused import warnings
-import GeographyMetricsProgressIndicator from "./GeographyMetricsProgressIndicator";
 
 registerCards();
 
@@ -224,6 +222,10 @@ export default function SketchClassReportsAdmin({
       groupBy: string | undefined;
     }[]
   ) => {
+    if (!reportState) {
+      console.error("No report state");
+      return;
+    }
     console.log(selection, cardType);
     if (
       !selection?.length ||
@@ -286,7 +288,7 @@ export default function SketchClassReportsAdmin({
   };
 
   const handleCancelEditing = () => {
-    reportState.setSelectedForEditing(null);
+    reportState?.setSelectedForEditing(null);
     setLocalCardEdits(null);
   };
 
@@ -298,7 +300,7 @@ export default function SketchClassReportsAdmin({
           prevState: ReportCardConfiguration<any>
         ) => ReportCardConfiguration<any>)
   ) => {
-    if (reportState.selectedForEditing === cardId) {
+    if (reportState?.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
         const baseState = (prevState ||
           selectedCardForEditing) as ReportCardConfiguration<any> | null;
@@ -335,7 +337,7 @@ export default function SketchClassReportsAdmin({
 
     if (!localCardEdits) {
       // cancel
-      reportState.setSelectedForEditing(null);
+      reportState?.setSelectedForEditing(null);
       setLocalCardEdits(null);
       return;
     }
@@ -358,7 +360,7 @@ export default function SketchClassReportsAdmin({
       });
 
       // Clear local edits and exit editing mode on successful save
-      reportState.setSelectedForEditing(null);
+      reportState?.setSelectedForEditing(null);
       setLocalCardEdits(null);
     } catch (error) {
       // Error is handled by onError
@@ -367,7 +369,7 @@ export default function SketchClassReportsAdmin({
 
   // Handle navigation blocking when editing
   useEffect(() => {
-    if (!reportState.selectedForEditing) return;
+    if (!reportState?.selectedForEditing) return;
 
     const message = t(
       "You have unsaved changes to a report card. Are you sure you want to leave?"
@@ -389,7 +391,7 @@ export default function SketchClassReportsAdmin({
       window.removeEventListener("beforeunload", handleBeforeUnload);
       unblock();
     };
-  }, [reportState.selectedForEditing, history, t]);
+  }, [reportState?.selectedForEditing, history, t]);
 
   if (!loading && !draftReport) {
     if (
@@ -435,7 +437,7 @@ export default function SketchClassReportsAdmin({
     new Date(data?.sketchClass?.draftReport?.updatedAt) >=
       new Date(data?.sketchClass?.report?.createdAt);
 
-  const selectedCardForEditing = reportState.selectedForEditing
+  const selectedCardForEditing = reportState?.selectedForEditing
     ? reportState.selectedTab?.cards.find(
         (card) => card.id === reportState.selectedForEditing
       )
@@ -447,16 +449,15 @@ export default function SketchClassReportsAdmin({
     ...(localCardEdits || {}),
   } as ReportCardConfiguration<any>;
 
+  if (!reportState) {
+    return <div>{t("Loading...")}</div>;
+  }
   return (
     <ReportContext.Provider
       value={{
-        report: draftReport as unknown as ReportConfiguration,
         adminMode: true,
         ...reportState,
         deleteCard: handleDeleteCard,
-        isCollection: false,
-        geographies:
-          debuggingMaterialsData?.sketchClass?.project?.geographies || [],
       }}
     >
       <FormLanguageContext.Provider
@@ -622,10 +623,6 @@ export default function SketchClassReportsAdmin({
                     primary
                   />
                 </div>
-              </div>
-            ) : reportState.loading ? (
-              <div className="flex-1 p-8 pt-16">
-                <Spinner />
               </div>
             ) : (
               <DragDropContext

@@ -5,17 +5,8 @@ import {
   ReportCardConfigUpdateCallback,
 } from "../registerCard";
 import { Trans } from "react-i18next";
-import {
-  InfoCircledIcon,
-  LayersIcon,
-  ShadowNoneIcon,
-  ValueNoneIcon,
-} from "@radix-ui/react-icons";
-import {
-  DataSourceTypes,
-  DataUploadOutputType,
-  SpatialMetricState,
-} from "../../generated/graphql";
+import { LayersIcon, ValueNoneIcon } from "@radix-ui/react-icons";
+import { DataSourceTypes } from "../../generated/graphql";
 import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
@@ -86,20 +77,26 @@ export function OverlappingAreasCard({
     layers: reportingLayers,
   });
 
+  console.log(
+    "overlayMetrics",
+    reportingLayers[0].tableOfContentsItem?.title,
+    overlayMetrics
+  );
+
   const sumSketchOverlaysByClass = useMemo(() => {
     let layers: { [layer: string]: { [classKey: string]: number } } = {};
     if (overlayMetrics.data) {
       for (const metric of overlayMetrics.data) {
         if (subjectIsFragment(metric.subject)) {
-          if (!(metric.stableId in layers)) {
-            layers[metric.stableId] = {};
+          if (!(metric.sourceUrl! in layers)) {
+            layers[metric.sourceUrl!] = {};
           }
           let key =
             !metric.groupBy && typeof metric.value === "number"
               ? "*"
-              : metric.groupBy;
-          if (!(key in layers[metric.stableId])) {
-            layers[metric.stableId][key] = 0;
+              : metric.groupBy || "*";
+          if (!(key in layers[metric.sourceUrl!])) {
+            layers[metric.sourceUrl!][key] = 0;
           }
           if (
             metric.groupBy &&
@@ -107,15 +104,15 @@ export function OverlappingAreasCard({
             typeof metric.value === "object"
           ) {
             for (const valKey of Object.keys(metric.value)) {
-              if (!(valKey in layers[metric.stableId])) {
-                layers[metric.stableId][valKey] = 0;
+              if (!(valKey in layers[metric.sourceUrl!])) {
+                layers[metric.sourceUrl!][valKey] = 0;
               }
-              layers[metric.stableId][valKey] += (
+              layers[metric.sourceUrl!][valKey] += (
                 metric.value as { [groupBy: string]: number }
               )[valKey];
             }
           } else {
-            layers[metric.stableId][key] += metric.value as number;
+            layers[metric.sourceUrl!][key] += metric.value as number;
           }
         }
       }

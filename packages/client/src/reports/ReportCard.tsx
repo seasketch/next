@@ -4,7 +4,7 @@ import {
   getCardComponent,
   ReportCardConfigUpdateCallback,
 } from "./registerCard";
-import { LocalMetric, useReportContext } from "./ReportContext";
+import { useReportContext } from "./ReportContext";
 import {
   InfoCircledIcon,
   ExclamationTriangleIcon,
@@ -19,7 +19,10 @@ import { FormLanguageContext } from "../formElements/FormElement";
 import { useContext, useCallback, useState, useMemo } from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
-import { SpatialMetricState } from "../generated/graphql";
+import {
+  CompatibleSpatialMetricDetailsFragment,
+  SpatialMetricState,
+} from "../generated/graphql";
 import Skeleton from "../components/Skeleton";
 import ReportMetricsProgressDetails from "./ReportMetricsProgressDetails";
 import { subjectIsFragment } from "overlay-engine";
@@ -38,7 +41,7 @@ export type ReportCardComponentProps = {
   cardId?: number; // ID of the card for edit functionality
   onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
-  metrics: Pick<LocalMetric, "id" | "state" | "errorMessage" | "subject">[];
+  metrics: CompatibleSpatialMetricDetailsFragment[];
   skeleton?: React.ReactNode;
 };
 

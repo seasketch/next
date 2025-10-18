@@ -341,7 +341,7 @@ as $$
     toc_item_ids integer[];
   begin
     if session_is_admin(project.id) then
-      return query select * from table_of_contents_items where data_source_type in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster') and is_draft = true;
+      return query select * from table_of_contents_items where data_source_type in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster') and is_draft = true and project_id = project.id;
     else
       raise exception 'You are not authorized to view available report layers';
     end if;
@@ -446,142 +446,6 @@ CREATE OR REPLACE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS j
   $$;
 
 drop function if exists get_or_create_spatial_metric;
-drop function if exists get_or_create_spatial_metrics_for_fragments;
-
-CREATE FUNCTION public.get_or_create_spatial_metric(
-  p_subject_fragment_id text DEFAULT NULL::text, 
-  p_subject_geography_id integer DEFAULT NULL::integer, 
-  p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type,
-  p_overlay_source_url text DEFAULT NULL::text, 
-  p_overlay_group_by text DEFAULT NULL::text, 
-  p_included_properties text[] DEFAULT NULL::text[],
-  p_source_processing_job_dependency text DEFAULT NULL::text
-  ) RETURNS public.spatial_metrics
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-    metric spatial_metrics;
-    found_metric boolean := false;
-BEGIN
-    -- Validate that exactly one subject ID is provided and type is not null
-    IF (p_subject_fragment_id IS NULL AND p_subject_geography_id IS NULL) OR 
-       (p_subject_fragment_id IS NOT NULL AND p_subject_geography_id IS NOT NULL) THEN
-        RAISE EXCEPTION 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
-    END IF;
-    
-    IF p_type IS NULL THEN
-        RAISE EXCEPTION 'type parameter is required';
-    END IF;
-
-    IF p_source_processing_job_dependency IS NULL AND p_overlay_source_url IS NULL AND p_type <> 'total_area' THEN
-        RAISE EXCEPTION 'source_processing_job_dependency or overlay_source_url is required for non-total_area metrics';
-    END IF;
-    
-    -- Try to find existing metric using comprehensive query that matches unique indexes
-    IF p_subject_fragment_id IS NOT NULL THEN
-        -- Fragment-based metric - check for existing record
-        SELECT * INTO metric
-        FROM spatial_metrics
-        WHERE subject_fragment_id = p_subject_fragment_id
-          AND type::text = p_type::text
-          AND COALESCE(overlay_source_url, '') = COALESCE(p_overlay_source_url, '')
-          AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
-        ORDER BY created_at DESC
-        LIMIT 1;
-        
-        found_metric := FOUND;
-    ELSE
-        -- Geography-based metric - check for existing record
-        SELECT * INTO metric
-        FROM spatial_metrics
-        WHERE subject_geography_id = p_subject_geography_id
-          AND type::text = p_type::text
-          AND COALESCE(overlay_source_url, '') = COALESCE(p_overlay_source_url, '')
-          AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
-        ORDER BY created_at DESC
-        LIMIT 1;
-        
-        found_metric := FOUND;
-    END IF;
-    
-    -- If found, return existing record
-    IF found_metric THEN
-        RETURN metric;
-    END IF;
-    
-    -- If not found, create new metric
-    INSERT INTO spatial_metrics (
-        subject_fragment_id,
-        subject_geography_id,
-        type,
-        overlay_source_url,
-        overlay_group_by,
-        included_properties
-    ) VALUES (
-        p_subject_fragment_id,
-        p_subject_geography_id,
-        p_type,
-        p_overlay_source_url,
-        p_overlay_group_by,
-        p_included_properties
-    ) RETURNING * INTO metric;
-    
-    RETURN metric;
-END;
-$$;
-
-CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(
-  p_subject_fragments text[], 
-  p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type,
-  p_overlay_source_url text DEFAULT NULL::text,
-  p_overlay_group_by text DEFAULT NULL::text,
-  p_included_properties text[] DEFAULT NULL::text[],
-  p_source_processing_job_dependency text DEFAULT NULL::text
-  ) RETURNS bigint[]
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-    fragment_hash text;
-    metric_row spatial_metrics;
-    metric_ids bigint[] := ARRAY[]::bigint[];
-BEGIN
-    IF p_type IS NULL THEN
-        RAISE EXCEPTION 'type parameter is required';
-    END IF;
-
-    IF p_subject_fragments IS NULL OR array_length(p_subject_fragments, 1) IS NULL THEN
-        RETURN metric_ids;
-    END IF;
-
-    IF p_source_processing_job_dependency IS NULL AND p_overlay_source_url IS NULL AND p_type <> 'total_area' THEN
-        RAISE EXCEPTION 'source_processing_job_dependency or overlay_source_url is required for non-total_area metrics';
-    END IF;
-
-    FOREACH fragment_hash IN ARRAY p_subject_fragments LOOP
-        IF fragment_hash IS NULL THEN
-            CONTINUE;
-        END IF;
-        metric_row := get_or_create_spatial_metric(
-            p_subject_fragment_id => fragment_hash,
-            p_subject_geography_id => NULL,
-            p_type => p_type,
-            p_overlay_source_url => p_overlay_source_url,
-            p_overlay_group_by => p_overlay_group_by,
-            p_included_properties => p_included_properties,
-            p_source_processing_job_dependency => p_source_processing_job_dependency
-        );
-        metric_ids := array_append(metric_ids, metric_row.id);
-    END LOOP;
-
-    RETURN metric_ids;
-END;
-$$;
-
-comment on function get_or_create_spatial_metrics_for_fragments is '@omit';
-comment on function get_or_create_spatial_metric is '@omit';
-
-grant execute on function get_or_create_spatial_metrics_for_fragments to anon;
-grant execute on function get_or_create_spatial_metric to anon;
 
 create or replace function get_state_for_spatial_metric(metric_id bigint) returns spatial_metric_state
     language plpgsql
@@ -910,6 +774,7 @@ as $$
     metric_id bigint;
     source_id integer;
     source_url text;
+    source_job_key text;
   begin
     if nullif(current_setting('session.user_id', true), '') is null then
       raise exception 'User not authenticated';
@@ -919,12 +784,15 @@ as $$
         select overlay_source_url into source_url from spatial_metrics where id = metric_id;
         if source_url is not null then
           for source_id in (select data_source_id from data_upload_outputs where url = source_url and type = 'ReportingFlatgeobufV1') loop
+          -- TODO: this is going to end up running the source processing job multiple times if there are multiple metrics that depend on it
             delete from source_processing_jobs where data_source_id = source_id;
             delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1';
+            -- create a new source processing job
+            insert into source_processing_jobs (data_source_id, project_id) values (source_id, (select project_id from data_sources where id = source_id)) returning job_key into source_job_key;
             -- trigger preprocessSource job for this data source
             perform graphile_worker.add_job(
               'preprocessSource',
-              json_build_object('dataSourceId', source_id),
+              json_build_object('jobKey', source_job_key),
               max_attempts := 1,
               job_key := 'preprocessSource:' || source_id::text,
               job_key_mode := 'replace'
@@ -1073,6 +941,7 @@ CREATE OR REPLACE FUNCTION public.trigger_queue_preprocess_source_on_rcl()
   DECLARE
     existing_output_id integer;
     ds_id integer;
+    source_processing_job_key text;
   BEGIN
     -- Determine data source id for the referenced TOC item
     SELECT data_source_id INTO ds_id
@@ -1085,23 +954,19 @@ CREATE OR REPLACE FUNCTION public.trigger_queue_preprocess_source_on_rcl()
 
     -- If we can't resolve a data source, do nothing
     IF ds_id IS NULL THEN
-      raise notice 'No data source found for table of contents item %', NEW.table_of_contents_item_id;
+      raise exception 'No data source found for table of contents item %', NEW.table_of_contents_item_id;
       RETURN NEW;
     END IF;
 
-    -- Check for an existing processed reporting output
-
-    select id into existing_output_id from data_upload_outputs where data_source_id = ds_id and type = 'ReportingFlatgeobufV1' limit 1;
-
-    -- If none exists, enqueue a preprocess job for this data source
-    IF existing_output_id IS NULL THEN
-      raise notice 'Enqueuing preprocess job for data source %', ds_id;
+    
+    
+    -- If no existing source processing job exists, enqueue a preprocess job for this data source
+    IF (SELECT COUNT(*) FROM source_processing_jobs WHERE data_source_id = ds_id) = 0 THEN
+      insert into source_processing_jobs (data_source_id, project_id) values (ds_id, (select project_id from data_sources where id = ds_id)) returning job_key into source_processing_job_key;
       PERFORM graphile_worker.add_job(
         'preprocessSource',
-        json_build_object('dataSourceId', ds_id),
-        max_attempts := 1,
-        job_key := 'preprocessSource:' || ds_id::text,
-        job_key_mode := 'replace'
+        json_build_object('jobKey', source_processing_job_key),
+        max_attempts := 1
       );
     END IF;
     return new;
@@ -1113,3 +978,177 @@ CREATE TRIGGER trigger_queue_preprocess_source_on_rcl_trigger
   AFTER INSERT OR UPDATE ON public.report_card_layers
   FOR EACH ROW
   EXECUTE FUNCTION public.trigger_queue_preprocess_source_on_rcl();
+
+create or replace function reports_geographies(r reports)
+returns setof project_geography
+language sql
+security definer
+stable
+as $$
+  select * from project_geography where project_id = r.project_id;
+$$;
+
+grant execute on function reports_geographies to anon;
+
+comment on function reports_geographies is '@simpleCollections only';
+
+alter table source_processing_jobs add column if not exists data_upload_output_id integer references data_upload_outputs(id) on delete cascade;
+
+alter table spatial_metrics add column if not exists project_id integer not null references projects(id) on delete cascade;
+
+create index if not exists spatial_metrics_project_id_idx on public.spatial_metrics (project_id);
+
+alter table source_processing_jobs add column if not exists eta timestamptz;
+alter table source_processing_jobs add column if not exists started_at timestamptz;
+alter table source_processing_jobs add column if not exists completed_at timestamptz;
+
+alter table spatial_metrics add column if not exists eta timestamptz;
+alter table spatial_metrics add column if not exists started_at timestamptz;
+alter table spatial_metrics add column if not exists completed_at timestamptz;
+
+create or replace function report_card_ids_for_report(rid integer)
+returns setof int
+language sql
+security definer
+stable
+as $$
+  select id from report_cards where report_tab_id in (select id from report_tabs where report_id = rid);
+$$;
+
+grant execute on function report_card_ids_for_report to anon;
+comment on function report_card_ids_for_report is '@omit';
+
+alter table data_upload_outputs enable row level security;
+grant select on data_upload_outputs to anon;
+
+drop policy if exists data_upload_outputs_select on data_upload_outputs;
+create policy data_upload_outputs_select on data_upload_outputs for select using (
+  session_is_admin(project_id) or 
+  (
+    session_has_project_access(project_id) and _session_on_toc_item_acl(
+      ( SELECT table_of_contents_items.path
+        FROM table_of_contents_items
+        WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = (select id from data_layers where data_source_id = data_upload_outputs.data_source_id)))
+      )
+    )
+  )
+);
+
+comment on table data_upload_outputs is '@omit';
+
+-- Drop old constraint if it exists
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'spatial_metrics_unique_metric'
+  ) THEN
+    ALTER TABLE public.spatial_metrics DROP CONSTRAINT spatial_metrics_unique_metric;
+  END IF;
+END $$;
+
+-- Drop old indexes if they exist so we can recreate them
+DROP INDEX IF EXISTS spatial_metrics_fragment_unique_idx;
+DROP INDEX IF EXISTS spatial_metrics_geography_unique_idx;
+DROP INDEX IF EXISTS spatial_metrics_lookup_idx;
+
+
+-- Create unique indexes for spatial_metrics that handle NULL values properly
+-- We need separate partial indexes for different NULL combinations since standard
+-- UNIQUE constraints treat NULLs as distinct
+
+-- Fragment-based metrics (subject_fragment_id NOT NULL, subject_geography_id IS NULL)
+CREATE UNIQUE INDEX spatial_metrics_fragment_unique_idx
+  ON public.spatial_metrics (subject_fragment_id, type, COALESCE(overlay_source_url, ''), COALESCE(overlay_group_by, ''))
+  WHERE subject_fragment_id IS NOT NULL AND subject_geography_id IS NULL;
+
+-- Geography-based metrics (subject_geography_id NOT NULL, subject_fragment_id IS NULL)
+CREATE UNIQUE INDEX spatial_metrics_geography_unique_idx
+  ON public.spatial_metrics (subject_geography_id, type, COALESCE(overlay_source_url, ''), COALESCE(overlay_group_by, ''))
+  WHERE subject_geography_id IS NOT NULL AND subject_fragment_id IS NULL;
+
+create or replace function get_or_create_spatial_metric(
+  p_subject_fragment_id text,
+  p_subject_geography_id integer,
+  p_type spatial_metric_type,
+  p_overlay_source_url text,
+  p_overlay_group_by text,
+  p_included_properties text[],
+  p_source_processing_job_dependency text,
+  p_project_id integer
+) returns jsonb
+language plpgsql
+security definer
+as $$
+  declare
+    metric_id bigint;
+  begin
+    if p_subject_fragment_id is not null and p_subject_geography_id is not null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_subject_fragment_id is null and p_subject_geography_id is null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_type is null then
+      raise exception 'type parameter is required';
+    end if;
+    if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
+      raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
+    end if;
+    
+    -- Try to find existing metric first
+    if p_subject_fragment_id is not null then
+      select id into metric_id from spatial_metrics
+      where subject_fragment_id = p_subject_fragment_id
+        and subject_geography_id is null
+        and type = p_type
+        and coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+        and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+    else
+      select id into metric_id from spatial_metrics
+      where subject_geography_id = p_subject_geography_id
+        and subject_fragment_id is null
+        and type = p_type
+        and coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+        and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+    end if;
+    
+    -- If not found, insert new metric
+    if metric_id is null then
+      insert into spatial_metrics (
+        subject_fragment_id, 
+        subject_geography_id, 
+        type, 
+        overlay_source_url, 
+        overlay_group_by, 
+        included_properties, 
+        source_processing_job_dependency,
+        project_id
+      ) values (
+        p_subject_fragment_id, 
+        p_subject_geography_id, 
+        p_type, 
+        p_overlay_source_url, 
+        p_overlay_group_by, 
+        p_included_properties, 
+        p_source_processing_job_dependency,
+        p_project_id
+      ) returning id into metric_id;
+    end if;
+    
+    return (select get_spatial_metric(metric_id));
+  end;
+$$;
+
+grant execute on function get_or_create_spatial_metric to anon;
+
+comment on function get_or_create_spatial_metric is '@omit';
+
+grant select on report_cards to anon;
+comment on table report_cards is '@omit';
+
+
+drop policy if exists reports_select on reports;
+create policy reports_select on reports for select using (
+  session_is_admin(project_id) or session_has_project_access(project_id)
+);

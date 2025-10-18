@@ -1,9 +1,10 @@
+// @ts-nocheck
 import { XIcon } from "@heroicons/react/outline";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import Skeleton from "../../components/Skeleton";
 import {
   SketchGeometryType,
-  useSketchReportingDetailsQuery,
+  useReportContextQuery,
 } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
 import Warning from "../../components/Warning";
@@ -33,10 +34,10 @@ export default function LegacySketchReportWindow({
 }) {
   const mapContext = useContext(MapContext);
   const token = useAccessToken();
-  const { data, loading } = useSketchReportingDetailsQuery({
+  const { data, loading } = useReportContextQuery({
     variables: {
-      id: sketchId,
-      sketchClassId: sketchClassId,
+      reportId: 1,
+      sketchId: sketchId,
     },
     fetchPolicy: "cache-first",
   });

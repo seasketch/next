@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
-import { LocalMetric } from "../ReportContext";
 import { motion } from "framer-motion";
-import { SpatialMetricState } from "../../generated/graphql";
+import {
+  CompatibleSpatialMetric,
+  SpatialMetricState,
+} from "../../generated/graphql";
 
 export default function ReportCardLoadingIndicator({
   display,
@@ -9,7 +11,7 @@ export default function ReportCardLoadingIndicator({
   className,
 }: {
   display: boolean;
-  metrics: Pick<LocalMetric, "id" | "state" | "progress">[];
+  metrics: Pick<CompatibleSpatialMetric, "id" | "state" | "progress">[];
   className?: string;
 }) {
   const prevOutRef = useRef(0); // store previous output percent [0,100]

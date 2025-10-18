@@ -624,7 +624,6 @@ fragment SourceProcessingJobDetails on SourceProcessingJob {
   progressPercentage
   progressMessage
   createdAt
-  layerTitle
   errorMessage
 }
 
@@ -653,5 +652,54 @@ mutation RecalculateSpatialMetrics(
     input: { metricIds: $metricIds, preprocessSources: $preprocessSources }
   ) {
     boolean
+  }
+}
+
+fragment OverlaySourceDetails on ReportOverlaySource {
+  tableOfContentsItemId
+  tableOfContentsItem {
+    title
+  }
+  geostats
+  mapboxGlStyles
+  sourceProcessingJob {
+    ...SourceProcessingJobDetails
+  }
+  sourceUrl
+  output {
+    size
+    url
+  }
+}
+
+query ReportContext($reportId: Int!, $sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+  report(id: $reportId) {
+    id
+    tabs {
+      ...ReportTabDetails
+    }
+    geographies {
+      id
+      name
+      translatedProps
+    }
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+    }
   }
 }
