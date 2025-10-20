@@ -635,11 +635,11 @@ query SourceProcessingJobs($projectId: Int!) {
   }
 }
 
-subscription SourceProcessingJobsSubscription($projectId: Int!) {
-  sourceProcessingJobs(projectId: $projectId) {
+subscription ReportOverlaySourcesSubscription($projectId: Int!) {
+  reportOverlaySources(projectId: $projectId) {
     jobKey
-    job {
-      ...SourceProcessingJobDetails
+    source {
+      ...OverlaySourceDetails
     }
   }
 }

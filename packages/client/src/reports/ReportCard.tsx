@@ -1,4 +1,4 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards/cards";
 import {
   getCardComponent,
@@ -29,6 +29,8 @@ import { subjectIsFragment } from "overlay-engine";
 import ReportCardLoadingIndicator from "./components/ReportCardLoadingIndicator";
 import { CalculatorIcon } from "@heroicons/react/outline";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
+import Badge from "../components/Badge";
+import Button from "../components/Button";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -74,6 +76,7 @@ export default function ReportCard({
     setSelectedForEditing,
     deleteCard,
     recalculate,
+    recalculateState,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
@@ -284,7 +287,7 @@ export default function ReportCard({
       </div>
 
       <div className="p-4 text-sm pt-0 pb-1">
-        {/* {Object.keys(errors).length > 0 && (
+        {Object.keys(errors).length > 0 && (
           <>
             <p>
               <Trans ns="sketching">
@@ -308,17 +311,15 @@ export default function ReportCard({
               <div className="mt-2">
                 <Button
                   onClick={() => {
-                    retry();
+                    setShowCalcDetails(true);
                   }}
-                  label={t("Retry calculations")}
+                  label={t("View details")}
                   small
-                  disabled={retryState.loading}
-                  loading={retryState.loading}
                 />
               </div>
             )}
           </>
-        )} */}
+        )}
         {isReady && children}
         {/* {adminMode && !isReady && (
           <ReportMetricsProgressDetails
@@ -366,6 +367,7 @@ export default function ReportCard({
                 setRecalcOpen(false);
               },
               variant: "danger",
+              loading: recalculateState.loading,
             },
           ]}
         >
@@ -416,12 +418,19 @@ export default function ReportCard({
               <span>{t("Data Sources and Calculations")}</span>
             </div>
           }
-          disableBackdropClick={false}
+          disableBackdropClick={recalcOpen}
           footer={[
             {
               label: t("Close"),
               onClick: () => setShowCalcDetails(false),
               variant: "secondary",
+            },
+            {
+              label: t("Recalculate"),
+              onClick: () => setRecalcOpen(true),
+              disabled: !isReady,
+              variant: "secondary",
+              loading: recalculateState.loading,
             },
           ]}
         >

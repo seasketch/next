@@ -6679,29 +6679,6 @@ export type GetOrCreateSpatialMetricsResults = {
   metrics: Array<CompatibleSpatialMetric>;
 };
 
-/** All input for the `getPublishedCardIdFromDraft` mutation. */
-export type GetPublishedCardIdFromDraftInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  draftReportCardId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `getPublishedCardIdFromDraft` mutation. */
-export type GetPublishedCardIdFromDraftPayload = {
-  __typename?: 'GetPublishedCardIdFromDraftPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7782,7 +7759,6 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
-  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8994,12 +8970,6 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetPublishedCardIdFromDraftArgs = {
-  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -13470,6 +13440,14 @@ export type ReportOverlaySource = {
   tableOfContentsItemId: Scalars['Int'];
 };
 
+export type ReportOverlaySourcesSubscriptionPayload = {
+  __typename?: 'ReportOverlaySourcesSubscriptionPayload';
+  dataSourceId: Scalars['Int'];
+  jobKey: Scalars['String'];
+  projectId: Scalars['Int'];
+  source: ReportOverlaySource;
+};
+
 /** Represents an update to a `Report`. Fields that are set will be updated. */
 export type ReportPatch = {
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -14493,15 +14471,6 @@ export type SourceProcessingJobCondition = {
   updatedAt?: Maybe<Scalars['Datetime']>;
 };
 
-export type SourceProcessingJobSubscriptionPayload = {
-  __typename?: 'SourceProcessingJobSubscriptionPayload';
-  dataUploadOutputId?: Maybe<Scalars['Int']>;
-  job: SourceProcessingJob;
-  jobKey: Scalars['String'];
-  output?: Maybe<DataUploadOutput>;
-  projectId: Scalars['Int'];
-};
-
 /** A connection to a list of `SourceProcessingJob` values. */
 export type SourceProcessingJobsConnection = {
   __typename?: 'SourceProcessingJobsConnection';
@@ -14668,8 +14637,8 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  reportOverlaySources?: Maybe<ReportOverlaySourcesSubscriptionPayload>;
   sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
-  sourceProcessingJobs?: Maybe<SourceProcessingJobSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
@@ -14696,14 +14665,14 @@ export type SubscriptionGeographyMetricsArgs = {
 
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionSketchMetricsArgs = {
-  sketchId: Scalars['Int'];
+export type SubscriptionReportOverlaySourcesArgs = {
+  projectId: Scalars['Int'];
 };
 
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionSourceProcessingJobsArgs = {
-  projectId: Scalars['Int'];
+export type SubscriptionSketchMetricsArgs = {
+  sketchId: Scalars['Int'];
 };
 
 
@@ -22704,19 +22673,19 @@ export type SourceProcessingJobsQuery = (
   )> }
 );
 
-export type SourceProcessingJobsSubscriptionSubscriptionVariables = Exact<{
+export type ReportOverlaySourcesSubscriptionSubscriptionVariables = Exact<{
   projectId: Scalars['Int'];
 }>;
 
 
-export type SourceProcessingJobsSubscriptionSubscription = (
+export type ReportOverlaySourcesSubscriptionSubscription = (
   { __typename?: 'Subscription' }
-  & { sourceProcessingJobs?: Maybe<(
-    { __typename?: 'SourceProcessingJobSubscriptionPayload' }
-    & Pick<SourceProcessingJobSubscriptionPayload, 'jobKey'>
-    & { job: (
-      { __typename?: 'SourceProcessingJob' }
-      & SourceProcessingJobDetailsFragment
+  & { reportOverlaySources?: Maybe<(
+    { __typename?: 'ReportOverlaySourcesSubscriptionPayload' }
+    & Pick<ReportOverlaySourcesSubscriptionPayload, 'jobKey'>
+    & { source: (
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
     ) }
   )> }
 );
@@ -35226,39 +35195,39 @@ export function useSourceProcessingJobsLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourceProcessingJobsQuery>;
 export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
 export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
-export const SourceProcessingJobsSubscriptionDocument = gql`
-    subscription SourceProcessingJobsSubscription($projectId: Int!) {
-  sourceProcessingJobs(projectId: $projectId) {
+export const ReportOverlaySourcesSubscriptionDocument = gql`
+    subscription ReportOverlaySourcesSubscription($projectId: Int!) {
+  reportOverlaySources(projectId: $projectId) {
     jobKey
-    job {
-      ...SourceProcessingJobDetails
+    source {
+      ...OverlaySourceDetails
     }
   }
 }
-    ${SourceProcessingJobDetailsFragmentDoc}`;
+    ${OverlaySourceDetailsFragmentDoc}`;
 
 /**
- * __useSourceProcessingJobsSubscriptionSubscription__
+ * __useReportOverlaySourcesSubscriptionSubscription__
  *
- * To run a query within a React component, call `useSourceProcessingJobsSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useSourceProcessingJobsSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * To run a query within a React component, call `useReportOverlaySourcesSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useReportOverlaySourcesSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
  * you can use to render your UI.
  *
  * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
  *
  * @example
- * const { data, loading, error } = useSourceProcessingJobsSubscriptionSubscription({
+ * const { data, loading, error } = useReportOverlaySourcesSubscriptionSubscription({
  *   variables: {
  *      projectId: // value for 'projectId'
  *   },
  * });
  */
-export function useSourceProcessingJobsSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<SourceProcessingJobsSubscriptionSubscription, SourceProcessingJobsSubscriptionSubscriptionVariables>) {
+export function useReportOverlaySourcesSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>) {
         const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<SourceProcessingJobsSubscriptionSubscription, SourceProcessingJobsSubscriptionSubscriptionVariables>(SourceProcessingJobsSubscriptionDocument, options);
+        return Apollo.useSubscription<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>(ReportOverlaySourcesSubscriptionDocument, options);
       }
-export type SourceProcessingJobsSubscriptionSubscriptionHookResult = ReturnType<typeof useSourceProcessingJobsSubscriptionSubscription>;
-export type SourceProcessingJobsSubscriptionSubscriptionResult = Apollo.SubscriptionResult<SourceProcessingJobsSubscriptionSubscription>;
+export type ReportOverlaySourcesSubscriptionSubscriptionHookResult = ReturnType<typeof useReportOverlaySourcesSubscriptionSubscription>;
+export type ReportOverlaySourcesSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ReportOverlaySourcesSubscriptionSubscription>;
 export const RecalculateSpatialMetricsDocument = gql`
     mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!) {
   recalculateSpatialMetrics(
@@ -39273,7 +39242,7 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
-    SourceProcessingJobsSubscription: 'SourceProcessingJobsSubscription',
+    ReportOverlaySourcesSubscription: 'ReportOverlaySourcesSubscription',
     GeographyMetricSubscription: 'GeographyMetricSubscription',
     SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'

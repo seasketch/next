@@ -139,7 +139,6 @@ export default function GeographyMetricsProgressIndicator() {
 
 function nameForGeography(
   subject: {
-    type: "geography";
     id: number;
   },
   geographies: Pick<Geography, "id" | "name">[]

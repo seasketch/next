@@ -14,19 +14,18 @@ import {
   useGeographyMetricSubscriptionSubscription,
   useRecalculateSpatialMetricsMutation,
   useSketchMetricSubscriptionSubscription,
-  useSourceProcessingJobsQuery,
-  useSourceProcessingJobsSubscriptionSubscription,
-  DraftReportDocument,
   OverlaySourceDetailsFragment,
   useReportContextQuery,
   ReportContextDocument,
   SketchGeometryType,
+  useReportOverlaySourcesSubscriptionSubscription,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 import { MetricSubjectFragment } from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { ApolloError } from "@apollo/client";
 
 export interface ReportContextState {
   /**
@@ -86,6 +85,7 @@ export interface ReportContextState {
   overlaySources: OverlaySourceDetailsFragment[];
   userIsAdmin: boolean;
   recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
+  recalculateState: { loading: boolean; error: ApolloError | undefined };
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -94,36 +94,43 @@ export const ReportContext = createContext<ReportContextState | null>(null);
  * Custom hook to manage report state
  */
 export function useReportState(
-  report: ReportConfiguration | undefined,
+  reportId: number | undefined,
   sketchClassId: number,
   selectedSketchId: number | null,
   initialSelectedTabId?: number
 ): ReportContextState | undefined {
   const projectMetadata = useCurrentProjectMetadata();
-  const [selectedTabId, setSelectedTabId] = useState<number>(
-    initialSelectedTabId || report?.tabs?.[0]?.id || 0
-  );
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
 
-  const sourceProcessingJobsQuery = useSourceProcessingJobsQuery({
+  useReportOverlaySourcesSubscriptionSubscription({
     variables: {
       projectId: projectMetadata.data?.project?.id!,
     },
     skip: !projectMetadata.data?.project?.id,
   });
 
-  useSourceProcessingJobsSubscriptionSubscription({
+  const onError = useGlobalErrorHandler();
+
+  const { data, loading } = useReportContextQuery({
     variables: {
-      projectId: projectMetadata.data?.project?.id!,
+      reportId: reportId!,
+      sketchId: selectedSketchId!,
     },
-    skip: !projectMetadata.data?.project?.id,
+    skip: !reportId || !selectedSketchId,
+    onError,
   });
+
+  const [selectedTabId, setSelectedTabId] = useState<number>(
+    initialSelectedTabId || data?.report?.tabs?.[0]?.id || 0
+  );
 
   // Get the selected tab based on selectedTabId, fallback to first tab
-  const selectedTab = report?.tabs?.find((tab) => tab.id === selectedTabId) ||
-    report?.tabs?.[0] || {
+  const selectedTab = data?.report?.tabs?.find(
+    (tab) => tab.id === selectedTabId
+  ) ||
+    data?.report?.tabs?.[0] || {
       id: 0,
       title: "Default Tab",
       position: 0,
@@ -131,21 +138,10 @@ export function useReportState(
       alternateLanguageSettings: {},
     };
 
-  const onError = useGlobalErrorHandler();
-
-  const { data, loading } = useReportContextQuery({
-    variables: {
-      reportId: report?.id!,
-      sketchId: selectedSketchId!,
-    },
-    skip: !report?.id || !selectedSketchId,
-    onError,
-  });
-
   const [recalculateMutation, recalculateState] =
     useRecalculateSpatialMetricsMutation({
       onError: onError,
-      refetchQueries: [DraftReportDocument],
+      refetchQueries: [ReportContextDocument],
       awaitRefetchQueries: true,
     });
 
@@ -167,15 +163,15 @@ export function useReportState(
 
   // Update selectedTabId if the current one is no longer valid
   useEffect(() => {
-    if (!report?.tabs) return;
+    if (!data?.report?.tabs) return;
 
-    const currentTabExists = report.tabs.some(
+    const currentTabExists = data.report.tabs.some(
       (tab) => tab.id === selectedTabId
     );
-    if (!currentTabExists && report.tabs[0]?.id) {
-      setSelectedTabId(report.tabs[0].id);
+    if (!currentTabExists && data.report.tabs[0]?.id) {
+      setSelectedTabId(data.report.tabs[0].id);
     }
-  }, [report?.tabs, selectedTabId]);
+  }, [data?.report?.tabs, selectedTabId]);
 
   const recalculate = useCallback(
     (metricIds: number[], preprocessSources?: boolean) => {
@@ -224,6 +220,7 @@ export function useReportState(
         []) as CompatibleSpatialMetricDetailsFragment[],
       userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
       recalculate,
+      recalculateState,
       isCollection: Boolean(
         data.sketch.sketchClass?.geometryType === SketchGeometryType.Collection
       ),

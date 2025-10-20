@@ -29,7 +29,6 @@ export function useMetrics<
   const reportContext = useReportContext();
 
   const state = useMemo(() => {
-    console.time("useMetrics state calculation");
     const sources = new Set<OverlaySourceDetailsFragment>();
     const metrics: CompatibleSpatialMetricDetailsFragment[] = [];
     let loading = false;
@@ -90,7 +89,6 @@ export function useMetrics<
         errors.push(metric.errorMessage || "Unknown error");
       }
     }
-    console.timeEnd("useMetrics state calculation");
     return {
       data: metrics,
       sources: Array.from(sources),

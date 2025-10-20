@@ -239,6 +239,9 @@ function ApolloProviderWithToken(props: any) {
           SourceProcessingJob: {
             keyFields: ["jobKey"],
           },
+          ReportOverlaySource: {
+            keyFields: ["tableOfContentsItemId"],
+          },
         },
       });
 

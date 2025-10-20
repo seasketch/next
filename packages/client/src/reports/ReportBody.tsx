@@ -18,8 +18,8 @@ export function ReportBody() {
             key={tab.id}
             className={
               isActive
-                ? "p-4 space-y-2 relative w-full"
-                : "p-4 space-y-2 absolute left-0 top-0 -left-[10000px] w-full"
+                ? "p-4 space-y-2 relative w-full left-0"
+                : "p-4 space-y-2 absolute top-0 -left-[10000px] w-full"
             }
           >
             {tab.cards?.length === 0 && (

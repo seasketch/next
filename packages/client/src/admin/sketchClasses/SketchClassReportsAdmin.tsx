@@ -15,6 +15,7 @@ import {
   usePublishReportMutation,
   useDraftReportDebuggingMaterialsQuery,
   ReportingLayerDetailsFragment,
+  ReportContextDocument,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -167,7 +168,7 @@ export default function SketchClassReportsAdmin({
 
   // Use the custom hook to manage report state
   const reportState = useReportState(
-    (draftReport as any) || undefined,
+    draftReport?.id || undefined,
     sketchClass.id,
     selectedSketchId
   );
@@ -222,13 +223,15 @@ export default function SketchClassReportsAdmin({
       groupBy: string | undefined;
     }[]
   ) => {
+    console.log("handleCardSelect", selection, cardType);
     if (!reportState) {
       console.error("No report state");
       return;
     }
     console.log(selection, cardType);
     if (
-      !selection?.length ||
+      selection?.length &&
+      selection[0] &&
       typeof selection[0].layer.tableOfContentsItemId !== "number"
     ) {
       console.error("Invalid selection");
@@ -279,6 +282,8 @@ export default function SketchClassReportsAdmin({
             })) || [],
         },
         onError,
+        refetchQueries: [ReportContextDocument],
+        awaitRefetchQueries: true,
       });
       // If server requires a separate mutation to attach layers, that will be handled elsewhere.
       setAddCardModalOpen(false);
@@ -812,8 +817,10 @@ export default function SketchClassReportsAdmin({
                             return (
                               <div
                                 key={tab.id}
-                                className={`absolute left-0 top-0 w-full ${
-                                  isActive ? "relative" : "-left-[10000px]"
+                                className={`absolute top-0 w-full ${
+                                  isActive
+                                    ? "relative left-0"
+                                    : "-left-[10000px]"
                                 }`}
                               >
                                 <SortableReportBody

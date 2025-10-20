@@ -680,8 +680,10 @@ $$;
 grant execute on function projects_source_processing_jobs to seasketch_user;
 comment on function projects_source_processing_jobs is '@simpleCollections only';
 
+drop trigger if exists trigger_source_processing_job_subscription_trigger on public.source_processing_jobs;
+drop function if exists trigger_source_processing_job_subscription;
 -- Create trigger function to notify GraphQL subscriptions when source processing jobs are updated
-CREATE OR REPLACE FUNCTION public.trigger_source_processing_job_subscription()
+CREATE OR REPLACE FUNCTION public.trigger_report_overlay_source_subscription()
   RETURNS trigger
   LANGUAGE plpgsql
   SECURITY DEFINER
@@ -690,18 +692,18 @@ CREATE OR REPLACE FUNCTION public.trigger_source_processing_job_subscription()
   BEGIN
     -- Notify GraphQL subscription for source processing job updates
     PERFORM pg_notify(
-      'graphql:projects:' || NEW.project_id || ':sourceProcessingJobs',
-      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || '"dataUploadOutputId": ' || NEW.data_upload_output_id || '}'
+      'graphql:projects:' || NEW.project_id || ':reportOverlaySources',
+      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || ', "dataSourceId": ' || NEW.data_source_id || '}'
     );
     RETURN NEW;
   END;
   $$;
 
 -- Create trigger to call the subscription function when source_processing_jobs are updated
-CREATE TRIGGER trigger_source_processing_job_subscription_trigger
+CREATE TRIGGER trigger_report_overlay_source_subscription_trigger
   AFTER UPDATE OR INSERT ON public.source_processing_jobs
   FOR EACH ROW
-  EXECUTE FUNCTION public.trigger_source_processing_job_subscription();
+  EXECUTE FUNCTION public.trigger_report_overlay_source_subscription();
 
 
 create or replace function source_processing_jobs_layer_title(job source_processing_jobs)

@@ -34,11 +34,11 @@ const sketchMetricTopicFromContext = async (args: any, context: any) => {
   }
 };
 
-const sourceProcessingJobTopicFromContext = async (args: any, context: any) => {
+const reportOverlaySourceTopicFromContext = async (args: any, context: any) => {
   if (args.projectId) {
-    return `graphql:projects:${args.projectId}:sourceProcessingJobs`;
+    return `graphql:projects:${args.projectId}:reportOverlaySources`;
   } else {
-    throw new Error("You must specify projectId");
+    throw new Error("You must specify a projectId");
   }
 };
 
@@ -105,26 +105,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         metric: CompatibleSpatialMetric
       }
 
-      type SourceProcessingJobSubscriptionPayload {
-        projectId: Int!
-        jobKey: String!
-        job: SourceProcessingJob!
-        dataUploadOutputId: Int
-        output: DataUploadOutput
-      }
-
-      extend type Subscription {
-        geographyMetrics(projectId: Int!): GeographyMetricSubscriptionPayload @pgSubscription(topic: ${embed(
-          geographyMetricTopicFromContext
-        )})
-        sketchMetrics(sketchId: Int!): SketchMetricSubscriptionPayload @pgSubscription(topic: ${embed(
-          sketchMetricTopicFromContext
-        )})
-        sourceProcessingJobs(projectId: Int!): SourceProcessingJobSubscriptionPayload @pgSubscription(topic: ${embed(
-          sourceProcessingJobTopicFromContext
-        )})
-      }
-
       type ReportOverlaySource {
         tableOfContentsItemId: Int!
         tableOfContentsItem: TableOfContentsItem!
@@ -136,6 +116,29 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         output: DataUploadOutput
         sourceUrl: String
       }
+
+      type ReportOverlaySourcesSubscriptionPayload {
+        jobKey: String!
+        source: ReportOverlaySource!
+        dataSourceId: Int!
+        projectId: Int!
+      }
+
+      extend type Subscription {
+        
+        geographyMetrics(projectId: Int!): GeographyMetricSubscriptionPayload @pgSubscription(topic: ${embed(
+          geographyMetricTopicFromContext
+        )})
+        
+        sketchMetrics(sketchId: Int!): SketchMetricSubscriptionPayload @pgSubscription(topic: ${embed(
+          sketchMetricTopicFromContext
+        )})
+
+        reportOverlaySources(projectId: Int!): ReportOverlaySourcesSubscriptionPayload @pgSubscription(topic: ${embed(
+          reportOverlaySourceTopicFromContext
+        )})
+      }
+
 
       type ReportOverlayDependencies {
         ready: Boolean!
@@ -151,7 +154,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
     resolvers: {
       Report: {
         async dependencies(report, args, context, resolveInfo) {
-          console.log("resolving dependencies for report", report.id);
           const { pgClient } = context;
           const overlaySources = await getOverlaySources(
             report.id,
@@ -268,40 +270,55 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           };
         },
       },
-      SourceProcessingJobSubscriptionPayload: {
-        async job(
+      ReportOverlaySourcesSubscriptionPayload: {
+        async source(
           event,
           args,
           context,
           { graphile: { selectGraphQLResultFromTable } }
         ) {
-          const rows = await selectGraphQLResultFromTable(
-            sql.fragment`source_processing_jobs`,
-            (tableAlias, sqlBuilder) => {
-              return sqlBuilder.where(
-                sql.fragment`${tableAlias}.job_key = ${sql.value(event.jobKey)}`
-              );
-            }
+          const { jobKey, dataSourceId } = event;
+          // type ReportOverlaySource {
+          //   tableOfContentsItemId: Int!
+          //   tableOfContentsItem: TableOfContentsItem!
+          //   geostats: JSON!
+          //   mapboxGlStyles: JSON!
+          //   sourceProcessingJob: SourceProcessingJob!
+          //   sourceProcessingJobId: String!
+          //   outputId: Int!
+          //   output: DataUploadOutput
+          //   sourceUrl: String
+          // }
+          const result = await context.pgClient.query(
+            `
+            select
+              items.id as table_of_contents_item_id,
+              s.geostats as geostats,
+              l.mapbox_gl_styles as mapbox_gl_styles,
+              o.id as output_id,
+              o.url as source_url
+            from
+              data_sources s
+            inner join data_layers l on l.data_source_id = s.id
+            inner join table_of_contents_items items on items.data_layer_id = l.id
+            left join data_upload_outputs o on o.data_source_id = s.id and o.type = 'ReportingFlatgeobufV1'
+            where
+              s.id = $1
+          `,
+            [dataSourceId]
           );
-          return rows[0];
-        },
-        async output(
-          event,
-          args,
-          context,
-          { graphile: { selectGraphQLResultFromTable } }
-        ) {
-          const rows = await selectGraphQLResultFromTable(
-            sql.fragment`data_upload_outputs`,
-            (tableAlias, sqlBuilder) => {
-              return sqlBuilder.where(
-                sql.fragment`${tableAlias}.id = ${sql.value(
-                  event.dataUploadOutputId
-                )}`
-              );
-            }
-          );
-          return rows[0];
+          if (!result.rows[0]) {
+            throw new Error("Report overlay source not found");
+          }
+          return {
+            __typename: "ReportOverlaySource",
+            tableOfContentsItemId: result.rows[0].table_of_contents_item_id,
+            geostats: result.rows[0].geostats,
+            mapboxGlStyles: result.rows[0].mapbox_gl_styles,
+            sourceProcessingJobId: jobKey,
+            outputId: result.rows[0].output_id,
+            sourceUrl: result.rows[0].source_url,
+          };
         },
       },
     },
