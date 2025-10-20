@@ -109,6 +109,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         projectId: Int!
         jobKey: String!
         job: SourceProcessingJob!
+        dataUploadOutputId: Int
+        output: DataUploadOutput
       }
 
       extend type Subscription {
@@ -278,6 +280,24 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, sqlBuilder) => {
               return sqlBuilder.where(
                 sql.fragment`${tableAlias}.job_key = ${sql.value(event.jobKey)}`
+              );
+            }
+          );
+          return rows[0];
+        },
+        async output(
+          event,
+          args,
+          context,
+          { graphile: { selectGraphQLResultFromTable } }
+        ) {
+          const rows = await selectGraphQLResultFromTable(
+            sql.fragment`data_upload_outputs`,
+            (tableAlias, sqlBuilder) => {
+              return sqlBuilder.where(
+                sql.fragment`${tableAlias}.id = ${sql.value(
+                  event.dataUploadOutputId
+                )}`
               );
             }
           );

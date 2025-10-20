@@ -14495,8 +14495,10 @@ export type SourceProcessingJobCondition = {
 
 export type SourceProcessingJobSubscriptionPayload = {
   __typename?: 'SourceProcessingJobSubscriptionPayload';
+  dataUploadOutputId?: Maybe<Scalars['Int']>;
   job: SourceProcessingJob;
   jobKey: Scalars['String'];
+  output?: Maybe<DataUploadOutput>;
   projectId: Scalars['Int'];
 };
 

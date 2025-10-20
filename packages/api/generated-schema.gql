@@ -15792,8 +15792,10 @@ enum SourceProcessingJobsOrderBy {
 }
 
 type SourceProcessingJobSubscriptionPayload {
+  dataUploadOutputId: Int
   job: SourceProcessingJob!
   jobKey: String!
+  output: DataUploadOutput
   projectId: Int!
 }
 

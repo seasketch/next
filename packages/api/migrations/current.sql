@@ -691,7 +691,7 @@ CREATE OR REPLACE FUNCTION public.trigger_source_processing_job_subscription()
     -- Notify GraphQL subscription for source processing job updates
     PERFORM pg_notify(
       'graphql:projects:' || NEW.project_id || ':sourceProcessingJobs',
-      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || '}'
+      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || '"dataUploadOutputId": ' || NEW.data_upload_output_id || '}'
     );
     RETURN NEW;
   END;
