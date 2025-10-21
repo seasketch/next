@@ -120,6 +120,7 @@ export function useReportState(
     },
     skip: !reportId || !selectedSketchId,
     onError,
+    fetchPolicy: "cache-and-network",
   });
 
   const [selectedTabId, setSelectedTabId] = useState<number>(

@@ -77,12 +77,6 @@ export function OverlappingAreasCard({
     layers: reportingLayers,
   });
 
-  console.log(
-    "overlayMetrics",
-    reportingLayers[0].tableOfContentsItem?.title,
-    overlayMetrics
-  );
-
   const sumSketchOverlaysByClass = useMemo(() => {
     let layers: { [layer: string]: { [classKey: string]: number } } = {};
     if (overlayMetrics.data) {
@@ -150,6 +144,12 @@ export function OverlappingAreasCard({
           `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
         );
       }
+      const sourceUrl = layer.processedOutput?.url;
+      if (!sourceUrl) {
+        throw new Error(
+          `Layer ${layer.tableOfContentsItem?.title} has no source URL`
+        );
+      }
       if (layer.groupBy) {
         // get values for groupBy
         if (!isRasterInfo(meta)) {
@@ -179,8 +179,7 @@ export function OverlappingAreasCard({
           const values = Object.keys(attr.values);
           for (const value of values) {
             const geographyTotal = (geographyMetric?.value as any)?.[value];
-            const area =
-              sumSketchOverlaysByClass?.[layer.tableOfContentsItemId]?.[value];
+            const area = sumSketchOverlaysByClass?.[sourceUrl]?.[value];
             if (area && area > 0) {
               items.push({
                 title: value,
@@ -198,8 +197,7 @@ export function OverlappingAreasCard({
           );
         }
       } else {
-        const area =
-          sumSketchOverlaysByClass?.[layer.tableOfContentsItemId]?.["*"];
+        const area = sumSketchOverlaysByClass?.[sourceUrl]?.["*"];
         const geographyTotal = (geographyMetric?.value as any)?.["*"];
         if (area && area > 0) {
           items.push({

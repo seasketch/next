@@ -21943,7 +21943,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'reportId'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -22707,7 +22707,7 @@ export type OverlaySourceDetailsFragment = (
   & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'title'>
+    & Pick<TableOfContentsItem, 'title' | 'stableId'>
   ), sourceProcessingJob: (
     { __typename?: 'SourceProcessingJob' }
     & SourceProcessingJobDetailsFragment
@@ -26029,6 +26029,7 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   clippingGeographies {
     ...GeographyDetails
   }
+  reportId
 }
     ${SketchFormElementFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}
@@ -26160,6 +26161,7 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   tableOfContentsItemId
   tableOfContentsItem {
     title
+    stableId
   }
   geostats
   mapboxGlStyles

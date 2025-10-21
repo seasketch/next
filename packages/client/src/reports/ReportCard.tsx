@@ -214,7 +214,7 @@ export default function ReportCard({
       )}
       <div className="absolute right-2 top-2">
         <div>
-          {!loading && adminMode && !selectedForEditing && cardId && (
+          {!loading && !selectedForEditing && cardId && (
             <div
               className={`flex-1 ml-auto transition-opacity flex items-center justify-end ${
                 menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
@@ -225,22 +225,32 @@ export default function ReportCard({
                 onOpenChange={setMenuOpen}
                 label={t("Card actions")}
               >
+                <ReportCardActionMenu.Item
+                  onSelect={() => setShowCalcDetails(true)}
+                  icon={<CalculatorIcon className="h-4 w-4" />}
+                >
+                  {t("Calculation details")}
+                </ReportCardActionMenu.Item>
+                <ReportCardActionMenu.Item
+                  icon={<ReloadIcon className="h-4 w-4" />}
+                  onSelect={async () => {
+                    if (adminMode) {
+                      setRecalcOpen(true);
+                    } else {
+                      const metricsToRecalculate = [] as number[];
+                      for (const metric of metrics) {
+                        if (subjectIsFragment(metric.subject)) {
+                          metricsToRecalculate.push(metric.id);
+                        }
+                      }
+                      await recalculate(metricsToRecalculate, false);
+                    }
+                  }}
+                >
+                  {t("Recalculate")}
+                </ReportCardActionMenu.Item>
                 {adminMode && (
                   <>
-                    <ReportCardActionMenu.Item
-                      onSelect={() => setShowCalcDetails(true)}
-                      icon={<CalculatorIcon className="h-4 w-4" />}
-                    >
-                      {t("Calculation details")}
-                    </ReportCardActionMenu.Item>
-                    <ReportCardActionMenu.Item
-                      icon={<ReloadIcon className="h-4 w-4" />}
-                      onSelect={() => {
-                        setRecalcOpen(true);
-                      }}
-                    >
-                      {t("Recalculate")}
-                    </ReportCardActionMenu.Item>
                     <ReportCardActionMenu.Item
                       icon={<Pencil1Icon className="h-4 w-4" />}
                       onSelect={() => {
@@ -427,7 +437,19 @@ export default function ReportCard({
             },
             {
               label: t("Recalculate"),
-              onClick: () => setRecalcOpen(true),
+              onClick: async () => {
+                if (adminMode) {
+                  setRecalcOpen(true);
+                } else {
+                  const metricsToRecalculate = [] as number[];
+                  for (const metric of metrics) {
+                    if (subjectIsFragment(metric.subject)) {
+                      metricsToRecalculate.push(metric.id);
+                    }
+                  }
+                  await recalculate(metricsToRecalculate, false);
+                }
+              },
               disabled: !isReady,
               variant: "secondary",
               loading: recalculateState.loading,

@@ -13,9 +13,10 @@ import {
   clipSketchToPolygons,
   clipToGeographies,
 } from "overlay-engine";
-import { PoolClient } from "pg";
+import { Pool, PoolClient } from "pg";
 import bbox from "@turf/bbox";
 import { PendingFragmentResult } from "overlay-engine/dist/fragments";
+import { startMetricCalculationsForSketch } from "./plugins/reportsPlugin";
 
 // Initialize source cache for clipping operations
 const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
@@ -847,6 +848,14 @@ export async function createOrUpdateSketch({
     pgClient,
     sketchId
   );
+
+  startMetricCalculationsForSketch(
+    pgClient as unknown as Pool,
+    sketchId!,
+    false
+  ).then(() => {
+    console.log("started metric calculations for sketch", sketchId);
+  });
 
   return sketchId!;
 }

@@ -40,7 +40,7 @@ export default function SketchReportWindow({
   });
 
   const reportState = useReportState(
-    (data?.sketchClass?.report as any) || undefined,
+    (data?.sketchClass?.report?.id as number) || undefined,
     data?.sketchClass?.id || 0,
     data?.sketch?.id || 0
   );

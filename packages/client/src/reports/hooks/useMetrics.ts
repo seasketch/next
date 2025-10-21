@@ -71,8 +71,6 @@ export function useMetrics<
         if (!matchingLayer) {
           continue;
         }
-      } else if (!relatedSource && options.layers) {
-        continue;
       }
       // It's a match! Add it to the list.
       metrics.push(metric);

@@ -266,7 +266,8 @@ CREATE TYPE public.data_upload_output_type AS ENUM (
     'GeoTIFF',
     'PNG',
     'XMLMetadata',
-    'NetCDF'
+    'NetCDF',
+    'ReportingFlatgeobufV1'
 );
 
 
@@ -825,6 +826,32 @@ CREATE TYPE public.render_under_type AS ENUM (
 
 
 --
+-- Name: report_layer_input; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.report_layer_input AS (
+	table_of_contents_item_id integer,
+	report_card_id integer,
+	group_by text
+);
+
+
+--
+-- Name: reporting_layer; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.reporting_layer AS (
+	table_of_contents_item_id integer,
+	title text,
+	type text,
+	meta jsonb,
+	mapbox_gl_styles jsonb,
+	group_by text,
+	processing_job_id text
+);
+
+
+--
 -- Name: retention_change_estimate; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -889,7 +916,8 @@ CREATE TYPE public.spatial_metric_state AS ENUM (
     'queued',
     'processing',
     'complete',
-    'error'
+    'error',
+    'dependency_not_ready'
 );
 
 
@@ -1867,7 +1895,7 @@ COMMENT ON FUNCTION public._delete_table_of_contents_item(tid integer) IS '@omit
 --
 
 CREATE FUNCTION public._session_has_toc_access(item_id integer) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
     AS $$
 WITH toc AS (
   SELECT id, path
@@ -2125,8 +2153,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
@@ -2468,34 +2496,65 @@ CREATE TABLE public.report_cards (
     type text NOT NULL,
     tint text,
     icon text,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    is_draft boolean DEFAULT true NOT NULL
 );
 
 
 --
--- Name: add_report_card(integer, jsonb, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: TABLE report_cards; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) RETURNS public.report_cards
+COMMENT ON TABLE public.report_cards IS '@omit';
+
+
+--
+-- Name: add_report_card(integer, jsonb, text, jsonb, public.report_layer_input[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, layers public.report_layer_input[]) RETURNS public.report_cards
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
       new_card report_cards;
+      tab_report_id int;
+      is_published_target boolean;
     begin
       if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = add_report_card.report_tab_id))) then
+        -- Determine if the target tab belongs to the published or draft report
+        select report_id from report_tabs where id = add_report_card.report_tab_id into tab_report_id;
+        is_published_target := exists (
+          select 1
+          from sketch_classes sc
+          join reports r on r.sketch_class_id = sc.id
+          where r.id = tab_report_id
+            and sc.report_id = tab_report_id
+        );
+
+        if is_published_target then
+          raise exception 'You cannot add a card to a published report';
+        end if;
+
         insert into report_cards (
-          report_tab_id, 
-          position, 
-          component_settings, 
+          report_tab_id,
+          position,
+          component_settings,
           type,
           body
         ) values (
-          add_report_card.report_tab_id, 
+          add_report_card.report_tab_id,
           coalesce((select max(position) from report_cards where report_cards.report_tab_id = add_report_card.report_tab_id), 0) + 1,
-          add_report_card.component_settings, 
+          add_report_card.component_settings,
           add_report_card.card_type,
           add_report_card.body
         ) returning * into new_card;
+
+        insert into report_card_layers (report_card_id, table_of_contents_item_id, group_by)
+        select 
+          new_card.id,
+          layer.table_of_contents_item_id,
+          layer.group_by
+        from unnest(add_report_card.layers) as layer;
         return new_card;
       else
         raise exception 'You are not authorized to add a card to this report';
@@ -2676,6 +2735,28 @@ begin
     );
   return NEW;
 end;
+$$;
+
+
+--
+-- Name: after_delete_toc_items_cascade_report_card_layers(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.after_delete_toc_items_cascade_report_card_layers() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  IF OLD.is_draft THEN
+    DELETE FROM public.report_card_layers rcl
+    USING public.report_cards rc,
+          public.report_tabs rtab,
+          public.reports r
+    WHERE rcl.toc_stable_id = OLD.stable_id
+      AND rc.id = rcl.report_card_id
+      AND rc.is_draft = true;
+  END IF;
+  RETURN NULL;
+END
 $$;
 
 
@@ -4070,6 +4151,45 @@ CREATE FUNCTION public.before_insert_or_update_form_logic_rules_100() RETURNS tr
     end if;
     return NEW;
   end;
+$$;
+
+
+--
+-- Name: before_insert_or_update_report_card_layers(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_or_update_report_card_layers() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+BEGIN
+  -- Validate stable_id exists on a TOC item within the same project as the report card's report
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.report_cards rc
+    JOIN public.report_tabs rtab ON rtab.id = rc.report_tab_id
+    JOIN public.reports r ON r.id = rtab.report_id
+    JOIN public.table_of_contents_items t ON t.id = NEW.table_of_contents_item_id AND t.project_id = r.project_id
+    WHERE rc.id = NEW.report_card_id
+  ) THEN
+    RAISE EXCEPTION 'Invalid table of contents item id %: no matching TOC item in the same project as the report card', NEW.table_of_contents_item_id;
+  END IF;
+
+  -- Validate data source type is allowed for at least one matching TOC item with a data layer, in same project
+  IF NOT EXISTS (
+    SELECT 1
+    FROM public.report_cards rc
+    JOIN public.report_tabs rtab ON rtab.id = rc.report_tab_id
+    JOIN public.reports r ON r.id = rtab.report_id
+    JOIN public.table_of_contents_items t ON t.id = NEW.table_of_contents_item_id AND t.project_id = r.project_id
+    WHERE rc.id = NEW.report_card_id
+      AND t.data_layer_id IS NOT NULL
+      AND public.data_source_type(t.data_layer_id) IN ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster')
+  ) THEN
+    RAISE EXCEPTION 'table of contents item id % does not reference a supported data layer type in the same project', NEW.table_of_contents_item_id;
+  END IF;
+
+  RETURN NEW;
+END
 $$;
 
 
@@ -7271,8 +7391,16 @@ CREATE TABLE public.data_upload_outputs (
     size bigint NOT NULL,
     filename text NOT NULL,
     original_filename text,
-    is_custom_upload boolean DEFAULT false
+    is_custom_upload boolean DEFAULT false,
+    fgb_header_size integer
 );
+
+
+--
+-- Name: TABLE data_upload_outputs; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.data_upload_outputs IS '@omit';
 
 
 --
@@ -9986,6 +10114,24 @@ COMMENT ON FUNCTION public.export_spatial_responses(fid integer) IS '@omit';
 
 
 --
+-- Name: extension_to_source_type(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extension_to_source_type(url text) RETURNS text
+    LANGUAGE sql STABLE
+    AS $$
+    with base as (
+      select split_part(url, '?', 1) as base
+    ), parts as (
+      select string_to_array(base, '.') as parts from base
+    ), ext as (
+      select lower(parts[array_length(parts, 1)]) as ext from parts
+    )
+    select case when ext = 'fgb' then 'FlatGeobuf' when ext = 'geojson' then 'GeoJSON' when ext in ('tif','tiff') then 'GeoTIFF' else null end from ext;
+  $$;
+
+
+--
 -- Name: extract_all_titles(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11073,13 +11219,15 @@ CREATE FUNCTION public.get_metrics_for_geography(geography_id integer) RETURNS j
           'createdAt', created_at,
           'value', value,
           'state', state,
-          'stableId', overlay_layer_stable_id,
+          'sourceUrl', overlay_source_url,
+          'sourceType', extension_to_source_type(overlay_source_url),
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
           'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
           'errorMessage', error_message,
           'progress', progress_percentage,
-          'jobKey', job_key
+          'jobKey', job_key,
+          'sourceProcessingJobDependency', source_processing_job_dependency
         )
       )
       from spatial_metrics
@@ -11122,13 +11270,15 @@ CREATE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS jsonb
           'createdAt', created_at,
           'value', value,
           'state', state,
-          'stableId', overlay_layer_stable_id,
+          'sourceUrl', overlay_source_url,
+          'sourceType', extension_to_source_type(overlay_source_url),
           'groupBy', overlay_group_by,
           'includedProperties', included_properties,
           'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
           'errorMessage', error_message,
           'progress', progress_percentage,
-          'jobKey', job_key
+          'jobKey', job_key,
+          'sourceProcessingJobDependency', source_processing_job_dependency
         )
       )
       from spatial_metrics
@@ -11147,127 +11297,85 @@ COMMENT ON FUNCTION public.get_metrics_for_sketch(skid integer) IS '@omit';
 
 
 --
--- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
+-- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, text, text[], text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE TABLE public.spatial_metrics (
-    id bigint NOT NULL,
-    subject_fragment_id text,
-    subject_geography_id integer,
-    type public.spatial_metric_type NOT NULL,
-    overlay_layer_stable_id text,
-    overlay_source_remote text,
-    overlay_group_by text,
-    included_properties text[],
-    value jsonb,
-    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
-    error_message text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    overlay_type public.metric_overlay_type,
-    progress_percentage integer DEFAULT 0 NOT NULL,
-    logs_url text,
-    logs_expires_at timestamp with time zone,
-    job_key text DEFAULT (gen_random_uuid())::text,
-    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
-);
-
-
---
--- Name: TABLE spatial_metrics; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.spatial_metrics IS '@omit';
-
-
---
--- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, text, text, text[], public.metric_overlay_type); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text DEFAULT NULL::text, p_subject_geography_id integer DEFAULT NULL::integer, p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, p_overlay_source_remote text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type) RETURNS public.spatial_metrics
+CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-DECLARE
-    metric spatial_metrics;
-    found_metric boolean := false;
-BEGIN
-    -- Validate that exactly one subject ID is provided and type is not null
-    IF (p_subject_fragment_id IS NULL AND p_subject_geography_id IS NULL) OR 
-       (p_subject_fragment_id IS NOT NULL AND p_subject_geography_id IS NOT NULL) THEN
-        RAISE EXCEPTION 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
-    END IF;
+  declare
+    metric_id bigint;
+  begin
+    if p_subject_fragment_id is not null and p_subject_geography_id is not null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_subject_fragment_id is null and p_subject_geography_id is null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_type is null then
+      raise exception 'type parameter is required';
+    end if;
+    if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
+      raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
+    end if;
     
-    IF p_type IS NULL THEN
-        RAISE EXCEPTION 'type parameter is required';
-    END IF;
+    -- Try to find existing metric first
+    if p_subject_fragment_id is not null then
+      select id into metric_id from spatial_metrics
+      where subject_fragment_id = p_subject_fragment_id
+        and subject_geography_id is null
+        and type = p_type
+        and coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+        and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+    else
+      select id into metric_id from spatial_metrics
+      where subject_geography_id = p_subject_geography_id
+        and subject_fragment_id is null
+        and type = p_type
+        and coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+        and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+    end if;
     
-    -- Try to find existing metric using comprehensive query that matches unique indexes
-    IF p_subject_fragment_id IS NOT NULL THEN
-        -- Fragment-based metric - check for existing record
-        SELECT * INTO metric
-        FROM spatial_metrics
-        WHERE subject_fragment_id = p_subject_fragment_id
-          AND type::text = p_type::text
-          AND COALESCE(overlay_layer_stable_id, '') = COALESCE(p_overlay_layer_stable_id, '')
-          AND COALESCE(overlay_source_remote, '') = COALESCE(p_overlay_source_remote, '')
-          AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
-          AND COALESCE(overlay_type::text, '') = COALESCE(p_overlay_type::text, '')
-        ORDER BY created_at DESC
-        LIMIT 1;
-        
-        found_metric := FOUND;
-    ELSE
-        -- Geography-based metric - check for existing record
-        SELECT * INTO metric
-        FROM spatial_metrics
-        WHERE subject_geography_id = p_subject_geography_id
-          AND type::text = p_type::text
-          AND COALESCE(overlay_layer_stable_id, '') = COALESCE(p_overlay_layer_stable_id, '')
-          AND COALESCE(overlay_source_remote, '') = COALESCE(p_overlay_source_remote, '')
-          AND COALESCE(overlay_group_by, '') = COALESCE(p_overlay_group_by, '')
-          AND COALESCE(overlay_type::text, '') = COALESCE(p_overlay_type::text, '')
-        ORDER BY created_at DESC
-        LIMIT 1;
-        
-        found_metric := FOUND;
-    END IF;
+    -- If not found, insert new metric
+    if metric_id is null then
+      insert into spatial_metrics (
+        subject_fragment_id, 
+        subject_geography_id, 
+        type, 
+        overlay_source_url, 
+        overlay_group_by, 
+        included_properties, 
+        source_processing_job_dependency,
+        project_id
+      ) values (
+        p_subject_fragment_id, 
+        p_subject_geography_id, 
+        p_type, 
+        p_overlay_source_url, 
+        p_overlay_group_by, 
+        p_included_properties, 
+        p_source_processing_job_dependency,
+        p_project_id
+      ) returning id into metric_id;
+    end if;
     
-    -- If found, return existing record
-    IF found_metric THEN
-        RETURN metric;
-    END IF;
-    
-    -- If not found, create new metric
-    INSERT INTO spatial_metrics (
-        subject_fragment_id,
-        subject_geography_id,
-        type,
-        overlay_layer_stable_id,
-        overlay_source_remote,
-        overlay_group_by,
-        included_properties,
-        overlay_type
-    ) VALUES (
-        p_subject_fragment_id,
-        p_subject_geography_id,
-        p_type,
-        p_overlay_layer_stable_id,
-        p_overlay_source_remote,
-        p_overlay_group_by,
-        p_included_properties,
-        p_overlay_type
-    ) RETURNING * INTO metric;
-    
-    RETURN metric;
-END;
+    return (select get_spatial_metric(metric_id));
+  end;
 $$;
 
 
 --
--- Name: get_or_create_spatial_metrics_for_fragments(text[], public.spatial_metric_type, text, text, text, text[], public.metric_overlay_type); Type: FUNCTION; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, p_overlay_source_remote text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type) RETURNS bigint[]
+COMMENT ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) IS '@omit';
+
+
+--
+-- Name: get_or_create_spatial_metrics_for_fragments(text[], public.spatial_metric_type, text, text, text, text, text[], public.metric_overlay_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, p_overlay_source_url text DEFAULT NULL::text, p_overlay_source_type text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type) RETURNS bigint[]
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 DECLARE
@@ -11292,7 +11400,8 @@ BEGIN
             p_subject_geography_id => NULL,
             p_type => p_type,
             p_overlay_layer_stable_id => p_overlay_layer_stable_id,
-            p_overlay_source_remote => p_overlay_source_remote,
+            p_overlay_source_url => p_overlay_source_url,
+            p_overlay_source_type => p_overlay_source_type,
             p_overlay_group_by => p_overlay_group_by,
             p_included_properties => p_included_properties,
             p_overlay_type => p_overlay_type
@@ -11306,10 +11415,10 @@ $$;
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) IS '@omit';
+COMMENT ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) IS '@omit';
 
 
 --
@@ -11539,7 +11648,8 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
         'createdAt', created_at,
         'value', value,
         'state', state,
-        'stableId', overlay_layer_stable_id,
+        'sourceUrl', overlay_source_url,
+        'sourceType', extension_to_source_type(overlay_source_url),
         'groupBy', overlay_group_by,
         'includedProperties', included_properties,
         'jobKey', job_key,
@@ -11550,7 +11660,8 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
           jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
         end,
         'errorMessage', error_message,
-        'progress', progress_percentage
+        'progress', progress_percentage,
+        'sourceProcessingJobDependency', source_processing_job_dependency
       ) from spatial_metrics where id = metric_id
     );
   end;
@@ -11562,6 +11673,32 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
 --
 
 COMMENT ON FUNCTION public.get_spatial_metric(metric_id bigint) IS '@omit';
+
+
+--
+-- Name: get_spatial_metrics(bigint[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_spatial_metrics(metric_ids bigint[]) RETURNS jsonb
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  begin
+    return (
+      select coalesce(
+        jsonb_agg(get_spatial_metric(id) order by ord),
+        '[]'::jsonb
+      )
+      from unnest(metric_ids) with ordinality as t(id, ord)
+    );
+  end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_spatial_metrics(metric_ids bigint[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_spatial_metrics(metric_ids bigint[]) IS '@omit';
 
 
 --
@@ -11604,6 +11741,19 @@ CREATE FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookma
 --
 
 COMMENT ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) IS '@omit';
+
+
+--
+-- Name: get_state_for_spatial_metric(bigint); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_state_for_spatial_metric(metric_id bigint) RETURNS public.spatial_metric_state
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+        return (select state from spatial_metrics where id = metric_id);
+    end;
+    $$;
 
 
 --
@@ -13894,6 +14044,32 @@ COMMENT ON FUNCTION public.projects_admins(p public.projects) IS '@simpleCollect
 
 
 --
+-- Name: projects_available_report_layers(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_available_report_layers(project public.projects) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    toc_item_ids integer[];
+  begin
+    if session_is_admin(project.id) then
+      return query select * from table_of_contents_items where data_source_type in ('seasketch-mvt', 'seasketch-vector', 'seasketch-raster') and is_draft = true and project_id = project.id;
+    else
+      raise exception 'You are not authorized to view available report layers';
+    end if;
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_available_report_layers(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_available_report_layers(project public.projects) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_basemaps(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -13927,6 +14103,17 @@ CREATE FUNCTION public.projects_basemaps(project public.projects) RETURNS SETOF 
 COMMENT ON FUNCTION public.projects_basemaps(project public.projects) IS '
 @simpleCollections only
 ';
+
+
+--
+-- Name: projects_center_geojson(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_center_geojson(project public.projects) RETURNS json
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select ST_AsGeoJSON(ST_Centroid(region))::json from projects where id = project.id;
+  $$;
 
 
 --
@@ -14851,6 +15038,52 @@ $$;
 
 
 --
+-- Name: source_processing_jobs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.source_processing_jobs (
+    job_key text DEFAULT (gen_random_uuid())::text NOT NULL,
+    progress_percentage integer DEFAULT 0 NOT NULL,
+    progress_message text,
+    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    logs_url text,
+    logs_expires_at timestamp with time zone,
+    data_source_id integer NOT NULL,
+    project_id integer NOT NULL,
+    data_upload_output_id integer,
+    eta timestamp with time zone,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone
+);
+
+
+--
+-- Name: projects_source_processing_jobs(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_source_processing_jobs(p public.projects) RETURNS SETOF public.source_processing_jobs
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  begin
+    if session_is_admin(p.id) != true then
+      raise 'Permission denied';
+    end if;
+  return query select * from source_processing_jobs where project_id = p.id;
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_source_processing_jobs(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_source_processing_jobs(p public.projects) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_sprites(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15277,6 +15510,13 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
       new_report_id int;
       new_tab_id int;
       old_report_id int;
+      new_report_card_id int;
+      source_card report_cards;
+      published_toc_item_id int;
+      source_url text;
+      published_source_id int;
+      original_source_id int;
+      rcl report_card_layers;
     begin
       -- Note that this function copies many columns by name, much like the 
       -- data layers table of contents publishing function. Like it, we will
@@ -15331,20 +15571,111 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
           returning id into new_tab_id_copy;
           
           -- Copy all cards for this tab
-          insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at)
-          select 
-            new_tab_id_copy,
-            rc.body, 
-            rc.position, 
-            rc.alternate_language_settings, 
-            rc.component_settings, 
-            rc.type, 
-            rc.tint, 
-            rc.icon,
-            rc.updated_at
-          from report_cards rc 
-          where rc.report_tab_id = old_tab_id
-          order by rc.position;
+          -- loop through all existing report_cards in the old tab, creating new
+          -- non-draft report_cards in the new tab, and copying report_card_layers
+          for source_card in
+            select * from report_cards 
+            where report_tab_id = old_tab_id
+            order by position
+          loop
+            insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at, is_draft)
+            values (
+              new_tab_id_copy,
+              source_card.body, 
+              source_card.position, 
+              source_card.alternate_language_settings, 
+              source_card.component_settings, 
+              source_card.type, 
+              source_card.tint, 
+              source_card.icon,
+              source_card.updated_at,
+              false
+            ) returning id into new_report_card_id;
+
+            for rcl in
+              select * from report_card_layers where report_card_id = source_card.id
+            loop
+              -- get the associated data source for the referenced draft tocitem
+              select data_source_id into original_source_id from data_layers where id = (
+                select data_layer_id from table_of_contents_items where id = rcl.table_of_contents_item_id
+              ) limit 1;
+              select 
+                url into source_url 
+              from 
+                data_sources where id = original_source_id;
+              
+              if original_source_id is null then
+                raise exception 'original_source_id is null';
+              end if;
+              if source_url is null then
+                raise exception 'source_url is null';
+              end if;
+
+              -- ensure there is a published counterpart to the draft toc item
+              select
+                id into published_toc_item_id
+              from
+                table_of_contents_items
+              where
+                is_draft = false and
+                data_layer_id in (
+                  select
+                    id
+                  from
+                    data_layers
+                  where
+                    data_source_id in (
+                      select id from data_sources where url = source_url
+                    )
+                )
+              limit 1;
+              if published_toc_item_id is null then
+                raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
+              end if;
+
+              select data_source_id into published_source_id from data_layers where id = (
+                select data_layer_id from table_of_contents_items where id = published_toc_item_id
+              ) limit 1;
+              if published_source_id is null then
+                raise exception 'published_source_id is null';
+              end if;
+
+              -- copy data_upload_output with type = 'ReportingFlatgeobufV1' for the 
+              -- published source replacing any that already exist.
+              delete from data_upload_outputs where data_source_id = published_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+              insert into data_upload_outputs (
+                data_source_id,
+                project_id,
+                type,
+                url,
+                remote,
+                is_original,
+                size,
+                filename,
+                original_filename,
+                is_custom_upload,
+                fgb_header_size
+              ) select
+                published_source_id,
+                data_upload_outputs.project_id,
+                type,
+                url,
+                remote,
+                is_original,
+                size,
+                filename,
+                original_filename,
+                is_custom_upload,
+                fgb_header_size
+              from data_upload_outputs where data_source_id = original_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+              insert into report_card_layers (report_card_id, table_of_contents_item_id, group_by)
+              values (
+                new_report_card_id,
+                published_toc_item_id,
+                rcl.group_by
+              );
+            end loop;
+          end loop;
         end;
       end loop;
       
@@ -15382,11 +15713,44 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
       orig_acl_id int;
       new_toc_id int;
       new_interactivity_settings_id int;
+      new_source_id integer;
+      ref record;
     begin
       -- check permissions
       if session_is_admin("projectId") = false then
         raise 'Permission denied. Must be a project admin';
       end if;
+
+      -- create a temporary table of report_card_layer references so that 
+      -- existing published reports aren't broken by the publish operation.
+      CREATE TEMP TABLE _rcl_snapshot (
+        report_card_id integer,
+        table_of_contents_item_id integer,
+        group_by text,
+        stable_id text
+      ) ON COMMIT DROP;
+
+      INSERT INTO _rcl_snapshot (report_card_id, table_of_contents_item_id, group_by, stable_id)
+      SELECT
+        rcl.report_card_id,
+        rcl.table_of_contents_item_id,
+        rcl.group_by,
+        tci.stable_id
+      FROM public.report_card_layers rcl
+      JOIN public.table_of_contents_items tci
+        ON tci.id = rcl.table_of_contents_item_id
+      WHERE rcl.report_card_id in (
+        select id from report_cards where report_tab_id in (
+          select id from report_tabs where report_id in (
+            select id from reports where project_id = "projectId"
+          )
+        )
+      ) and tci.is_draft = false;
+
+      if ((select count(*) from _rcl_snapshot) = 0) then
+        raise exception 'No report card layers referenced by published reports were found';
+      end if;
+    
       -- delete existing published table of contents items, layers, sources, and interactivity settings
       delete from 
         interactivity_settings 
@@ -15714,6 +16078,17 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
         table_of_contents_last_published = now() 
       where 
         id = "projectId";
+
+      -- restore report_card_layers that were referenced by the published report
+      for ref in select * from _rcl_snapshot loop
+        select id into new_toc_id from table_of_contents_items where stable_id = ref.stable_id and is_draft = false and project_id = "projectId";
+        if new_toc_id is null then
+          raise exception 'Table of contents item with stable_id % not found', ref.stable_id;
+        end if;
+        if new_toc_id is not null then
+          insert into report_card_layers (report_card_id, group_by, table_of_contents_item_id) values (ref.report_card_id, ref.group_by, new_toc_id);
+        end if;
+      end loop;
       -- return items
       return query select * from table_of_contents_items 
         where project_id = "projectId" and is_draft = false;
@@ -15748,6 +16123,50 @@ CREATE FUNCTION public.queue_calculate_spatial_metric_task() RETURNS trigger
     return NEW;
   end;
   $$;
+
+
+--
+-- Name: recalculate_spatial_metrics(bigint[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    metric_id bigint;
+    source_id integer;
+    source_url text;
+    source_job_key text;
+  begin
+    if nullif(current_setting('session.user_id', true), '') is null then
+      raise exception 'User not authenticated';
+    end if;
+    foreach metric_id in array metric_ids loop
+      if preprocess_sources then
+        select overlay_source_url into source_url from spatial_metrics where id = metric_id;
+        if source_url is not null then
+          for source_id in (select data_source_id from data_upload_outputs where url = source_url and type = 'ReportingFlatgeobufV1'::data_upload_output_type) loop
+          -- TODO: this is going to end up running the source processing job multiple times if there are multiple metrics that depend on it
+            delete from source_processing_jobs where data_source_id = source_id;
+            delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+            -- create a new source processing job
+            insert into source_processing_jobs (data_source_id, project_id) values (source_id, (select project_id from data_sources where id = source_id)) returning job_key into source_job_key;
+            -- trigger preprocessSource job for this data source
+            perform graphile_worker.add_job(
+              'preprocessSource',
+              json_build_object('jobKey', source_job_key),
+              max_attempts := 1,
+              job_key := 'preprocessSource:' || source_id::text,
+              job_key_mode := 'replace'
+            );
+          end loop;
+        end if;
+      end if;
+      delete from spatial_metrics where id = metric_id and (subject_fragment_id is not null or session_is_admin((select project_id from project_geography where id = spatial_metrics.subject_geography_id limit 1)));
+    end loop;
+    return true;
+  end;
+$$;
 
 
 --
@@ -16283,6 +16702,81 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
 
 
 --
+-- Name: report_card_ids_for_report(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.report_card_ids_for_report(rid integer) RETURNS SETOF integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select id from report_cards where report_tab_id in (select id from report_tabs where report_id = rid);
+$$;
+
+
+--
+-- Name: FUNCTION report_card_ids_for_report(rid integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.report_card_ids_for_report(rid integer) IS '@omit';
+
+
+--
+-- Name: report_card_layers; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.report_card_layers (
+    report_card_id integer NOT NULL,
+    table_of_contents_item_id integer NOT NULL,
+    group_by text
+);
+
+
+--
+-- Name: report_card_layers_processed_output(public.report_card_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.report_card_layers_processed_output(layer public.report_card_layers) RETURNS public.data_upload_outputs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from data_upload_outputs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = layer.table_of_contents_item_id)) and type = 'ReportingFlatgeobufV1'::data_upload_output_type limit 1;
+  $$;
+
+
+--
+-- Name: report_cards_reporting_layers(public.report_cards); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.report_cards_reporting_layers(rc public.report_cards) RETURNS SETOF public.reporting_layer
+    LANGUAGE sql STABLE SECURITY DEFINER COST 1 ROWS 1 PARALLEL SAFE
+    AS $$
+  select
+    t.id as table_of_contents_item_id,
+    t.title,
+    t.data_source_type,
+    ds.geostats,
+    dl.mapbox_gl_styles,
+    rcl.group_by,
+    spj.job_key as processing_job_id
+  from table_of_contents_items t
+  join data_layers dl on dl.id = t.data_layer_id
+  join data_sources ds on ds.id = dl.data_source_id
+  join report_card_layers rcl on rcl.table_of_contents_item_id = t.id and rcl.report_card_id = rc.id
+  left join source_processing_jobs spj on spj.data_source_id = dl.data_source_id
+  where t.id in (
+    select table_of_contents_item_id from report_card_layers where report_card_id = rc.id
+  )
+    and t.is_draft = rc.is_draft
+  limit 1;
+$$;
+
+
+--
+-- Name: FUNCTION report_cards_reporting_layers(rc public.report_cards); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.report_cards_reporting_layers(rc public.report_cards) IS '@simpleCollections only';
+
+
+--
 -- Name: report_tabs_cards(public.report_tabs); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16298,6 +16792,35 @@ CREATE FUNCTION public.report_tabs_cards(report_tab public.report_tabs) RETURNS 
 --
 
 COMMENT ON FUNCTION public.report_tabs_cards(report_tab public.report_tabs) IS '@simpleCollections only';
+
+
+--
+-- Name: reporting_layer_source_processing_job(public.reporting_layer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reporting_layer_source_processing_job(l public.reporting_layer) RETURNS public.source_processing_jobs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from source_processing_jobs where job_key = l.processing_job_id limit 1;
+  $$;
+
+
+--
+-- Name: reports_geographies(public.reports); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reports_geographies(r public.reports) RETURNS SETOF public.project_geography
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select * from project_geography where project_id = r.project_id;
+$$;
+
+
+--
+-- Name: FUNCTION reports_geographies(r public.reports); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.reports_geographies(r public.reports) IS '@simpleCollections only';
 
 
 --
@@ -16340,11 +16863,21 @@ CREATE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS
     metric spatial_metrics;
     updated_metric_id bigint;
     metric_id bigint;
+    job_dep text;
+    existing_job_state spatial_metric_state;
   begin
     -- loop through the metric ids, and update the state to queued
     foreach metric_id in array metric_ids loop
       update spatial_metrics set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where id = metric_id returning id into updated_metric_id;
       if updated_metric_id is not null then
+        -- if this metric depends on a source_processing_job, restart it first
+        select source_processing_job_dependency into job_dep from spatial_metrics where id = updated_metric_id;
+        if job_dep is not null then
+          select state into existing_job_state from source_processing_jobs where job_key = job_dep;
+          if existing_job_state = 'error' then
+            delete from source_processing_jobs where job_key = job_dep;
+          end if;
+        end if;
         perform graphile_worker.add_job(
           'calculateSpatialMetric',
           json_build_object('metricId', updated_metric_id),
@@ -16877,6 +17410,91 @@ COMMENT ON FUNCTION public.search_overlays(lang text, query text, "projectId" in
 
 
 --
+-- Name: search_projects(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.search_projects(query text) RETURNS SETOF public.projects
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      visible_project_ids int[] = '{}';
+      trimmed text;
+      q tsquery;
+      tokens text[];
+    begin
+      select coalesce(array_agg(id), '{}') into visible_project_ids from projects where session_has_project_access(id);
+      trimmed := btrim(query);
+
+      if trimmed is null or length(trimmed) < 3 then
+        return;
+      end if;
+
+      -- Build a tsquery using the simple configuration with prefix matching for each token
+      if position(' ' in trimmed) <= 0 then
+        q := to_tsquery('simple', regexp_replace(trimmed, '[^[:alnum:]]', ' ', 'g') || ':*');
+      else
+        tokens := regexp_split_to_array(regexp_replace(trimmed, '[^[:alnum:]\s]+', ' ', 'g'), '\s+');
+        q := to_tsquery(
+          'simple',
+          (
+            select coalesce(
+              array_to_string(
+                ARRAY(
+                  select (tok || ':*')
+                  from unnest(tokens) as tok
+                  where tok is not null and length(tok) > 0
+                ),
+                ' & '
+              ),
+              ''
+            )
+          )
+        );
+      end if;
+
+      return query
+      select p.*
+      from projects p,
+      lateral (
+        select
+          setweight(
+            to_tsvector(
+              'simple',
+              coalesce(p.name, '') || ' ' || coalesce(
+                (select array_to_string(array_agg(e.value->>'name'), ' ')
+                 from jsonb_each(p.translated_props) e),
+                ''
+              )
+            ), 'A'
+          ) ||
+          setweight(
+            to_tsvector(
+              'simple',
+              coalesce(p.description, '') || ' ' || coalesce(
+                (select array_to_string(array_agg(e2.value->>'description'), ' ')
+                 from jsonb_each(p.translated_props) e2),
+                ''
+              )
+            ), 'B'
+          ) as doc
+      ) d
+      where p.id = any(visible_project_ids)
+        and not p.is_deleted
+        and d.doc @@ q
+        and p.slug != 'superuser'
+      order by ts_rank(d.doc, q) desc, p.id asc;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION search_projects(query text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.search_projects(query text) IS '@simpleCollections only';
+
+
+--
 -- Name: security_definer_get_child_sketches_recursive(integer, public.sketch_child_type); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -17199,7 +17817,7 @@ COMMENT ON FUNCTION public.session_can_access_sketch(skid integer) IS '@omit';
 --
 
 CREATE FUNCTION public.session_has_project_access(pid integer) RETURNS boolean
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER PARALLEL SAFE
     AS $$
     -- Here we give access if the project is public, if the session is an admin,
     -- or if the session belongs to an approved participant
@@ -17907,6 +18525,29 @@ CREATE FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) RET
 
 
 --
+-- Name: sketch_classes_my_sketches(public.sketch_classes); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketch_classes_my_sketches(sk public.sketch_classes) RETURNS SETOF public.sketches
+    LANGUAGE sql STABLE
+    AS $$
+    select
+      *
+    from
+      sketches
+    where
+      it_me(user_id) and sketch_class_id = sk.id
+  $$;
+
+
+--
+-- Name: FUNCTION sketch_classes_my_sketches(sk public.sketch_classes); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketch_classes_my_sketches(sk public.sketch_classes) IS '@simpleCollections only';
+
+
+--
 -- Name: sketch_classes_prohibit_delete(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18333,6 +18974,17 @@ CREATE FUNCTION public.soft_delete_sprite(id integer) RETURNS public.sprites
 --
 
 COMMENT ON FUNCTION public.soft_delete_sprite(id integer) IS 'Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it.';
+
+
+--
+-- Name: source_processing_jobs_layer_title(public.source_processing_jobs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.source_processing_jobs_layer_title(job public.source_processing_jobs) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select title from table_of_contents_items where data_layer_id = (select id from data_layers where data_source_id = job.data_source_id) limit 1;
+$$;
 
 
 --
@@ -19253,23 +19905,6 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
--- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = stableId
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -19611,6 +20246,112 @@ CREATE FUNCTION public.trigger_geography_metric_subscription() RETURNS trigger
     end if;
     return NEW;
   end;
+  $$;
+
+
+--
+-- Name: trigger_queue_preprocess_source_on_rcl(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_queue_preprocess_source_on_rcl() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  DECLARE
+    existing_output_id integer;
+    ds_id integer;
+    source_processing_job_key text;
+  BEGIN
+    -- Determine data source id for the referenced TOC item
+    SELECT data_source_id INTO ds_id
+    FROM data_layers
+    WHERE id = (
+      SELECT data_layer_id
+      FROM table_of_contents_items
+      WHERE id = NEW.table_of_contents_item_id
+    );
+
+    -- If we can't resolve a data source, do nothing
+    IF ds_id IS NULL THEN
+      raise exception 'No data source found for table of contents item %', NEW.table_of_contents_item_id;
+      RETURN NEW;
+    END IF;
+
+    
+    
+    -- If no existing source processing job exists, enqueue a preprocess job for this data source
+    IF (SELECT COUNT(*) FROM source_processing_jobs WHERE data_source_id = ds_id) = 0 THEN
+      insert into source_processing_jobs (data_source_id, project_id) values (ds_id, (select project_id from data_sources where id = ds_id)) returning job_key into source_processing_job_key;
+      PERFORM graphile_worker.add_job(
+        'preprocessSource',
+        json_build_object('jobKey', source_processing_job_key),
+        max_attempts := 1
+      );
+    END IF;
+    return new;
+  END;
+  $$;
+
+
+--
+-- Name: trigger_queue_spatial_metrics_on_source_complete(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  DECLARE
+    metric_record RECORD;
+    completed_source_url text;
+  BEGIN
+    IF NEW.state = 'complete' AND (OLD.state IS NULL OR OLD.state != 'complete') THEN
+      -- get the completed source url
+      select url into completed_source_url from data_upload_outputs where type = 'ReportingFlatgeobufV1'::data_upload_output_type and data_source_id = NEW.data_source_id limit 1;
+      if completed_source_url is null then
+        raise exception 'Completed source url not found';
+      end if;
+      -- Find all spatial_metrics that depend on this source processing job
+      FOR metric_record IN 
+        SELECT id 
+        FROM spatial_metrics 
+        WHERE source_processing_job_dependency = NEW.job_key
+      LOOP
+        -- update the spatial_metrics with the completed source url
+        update spatial_metrics set overlay_source_url = completed_source_url, state = 'queued' where id = metric_record.id;
+        -- Queue a calculateSpatialMetric job for each dependent metric
+        PERFORM graphile_worker.add_job(
+          'calculateSpatialMetric',
+          json_build_object('metricId', metric_record.id),
+          max_attempts := 1,
+          job_key := 'calculateSpatialMetric:' || metric_record.id,
+          job_key_mode := 'replace'
+        );
+      END LOOP;
+    END IF;
+    IF NEW.state = 'error' AND (OLD.state IS NULL OR OLD.state != 'error') THEN
+      -- update the spatial_metrics with the error message
+      update spatial_metrics set state = 'error', error_message = 'Error processing source dependency.' where source_processing_job_dependency = NEW.job_key;
+    END IF;
+    
+    RETURN NEW;
+  END;
+  $$;
+
+
+--
+-- Name: trigger_report_overlay_source_subscription(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trigger_report_overlay_source_subscription() RETURNS trigger
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  BEGIN
+    -- Notify GraphQL subscription for source processing job updates
+    PERFORM pg_notify(
+      'graphql:projects:' || NEW.project_id || ':reportOverlaySources',
+      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || ', "dataSourceId": ' || NEW.data_source_id || '}'
+    );
+    RETURN NEW;
+  END;
   $$;
 
 
@@ -21915,6 +22656,43 @@ ALTER TABLE public.sketches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 
 
 --
+-- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.spatial_metrics (
+    id bigint NOT NULL,
+    subject_fragment_id text,
+    subject_geography_id integer,
+    type public.spatial_metric_type NOT NULL,
+    overlay_source_url text,
+    overlay_group_by text,
+    included_properties text[],
+    value jsonb,
+    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    progress_percentage integer DEFAULT 0 NOT NULL,
+    logs_url text,
+    logs_expires_at timestamp with time zone,
+    job_key text DEFAULT (gen_random_uuid())::text,
+    source_processing_job_dependency text,
+    project_id integer NOT NULL,
+    eta timestamp with time zone,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
+);
+
+
+--
+-- Name: TABLE spatial_metrics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.spatial_metrics IS '@omit';
+
+
+--
 -- Name: spatial_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -22856,11 +23634,35 @@ ALTER TABLE ONLY public.sketches
 
 
 --
+-- Name: source_processing_jobs source_processing_jobs_data_source_id_unique; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.source_processing_jobs
+    ADD CONSTRAINT source_processing_jobs_data_source_id_unique UNIQUE (data_source_id);
+
+
+--
+-- Name: source_processing_jobs source_processing_jobs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.source_processing_jobs
+    ADD CONSTRAINT source_processing_jobs_pkey PRIMARY KEY (job_key);
+
+
+--
 -- Name: spatial_metrics spatial_metrics_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
 ALTER TABLE ONLY public.spatial_metrics
     ADD CONSTRAINT spatial_metrics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: spatial_metrics spatial_metrics_requires_source_or_dependency; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.spatial_metrics
+    ADD CONSTRAINT spatial_metrics_requires_source_or_dependency CHECK (((type = 'total_area'::public.spatial_metric_type) OR (overlay_source_url IS NOT NULL) OR (source_processing_job_dependency IS NOT NULL))) NOT VALID;
 
 
 --
@@ -23162,6 +23964,13 @@ CREATE INDEX data_layers_project_id_idx ON public.data_layers USING btree (proje
 --
 
 CREATE INDEX data_sources_project_id_idx ON public.data_sources USING btree (project_id);
+
+
+--
+-- Name: data_upload_outputs_data_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX data_upload_outputs_data_source_id_idx ON public.data_upload_outputs USING btree (data_source_id);
 
 
 --
@@ -23620,6 +24429,27 @@ CREATE INDEX projects_name_idx ON public.projects USING btree (name);
 
 
 --
+-- Name: rcl_report_card_id_only; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX rcl_report_card_id_only ON public.report_card_layers USING btree (report_card_id);
+
+
+--
+-- Name: report_card_layers_table_of_contents_item_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX report_card_layers_table_of_contents_item_id_idx ON public.report_card_layers USING btree (table_of_contents_item_id);
+
+
+--
+-- Name: report_card_layers_unique_report_card_id_table_of_contents_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX report_card_layers_unique_report_card_id_table_of_contents_item ON public.report_card_layers USING btree (report_card_id, table_of_contents_item_id);
+
+
+--
 -- Name: report_cards_report_tab_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -23764,6 +24594,55 @@ CREATE INDEX sketches_user_id_idx ON public.sketches USING btree (user_id);
 --
 
 CREATE INDEX sketches_user_id_sketch_class_id_idx ON public.sketches USING btree (user_id, sketch_class_id);
+
+
+--
+-- Name: source_processing_jobs_data_source_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX source_processing_jobs_data_source_id_idx ON public.source_processing_jobs USING btree (data_source_id);
+
+
+--
+-- Name: source_processing_jobs_job_key_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX source_processing_jobs_job_key_idx ON public.source_processing_jobs USING btree (job_key);
+
+
+--
+-- Name: source_processing_jobs_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX source_processing_jobs_project_id_idx ON public.source_processing_jobs USING btree (project_id);
+
+
+--
+-- Name: source_processing_jobs_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX source_processing_jobs_updated_at_idx ON public.source_processing_jobs USING btree (updated_at);
+
+
+--
+-- Name: spatial_metrics_fragment_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_fragment_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, COALESCE(overlay_source_url, ''::text), COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL));
+
+
+--
+-- Name: spatial_metrics_geography_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_geography_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, COALESCE(overlay_source_url, ''::text), COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL));
+
+
+--
+-- Name: spatial_metrics_project_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX spatial_metrics_project_id_idx ON public.spatial_metrics USING btree (project_id);
 
 
 --
@@ -24131,6 +25010,13 @@ CREATE TRIGGER before_insert_or_update_form_logic_rules_100_trigger BEFORE INSER
 
 
 --
+-- Name: report_card_layers before_insert_or_update_report_card_layers_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_report_card_layers_trigger BEFORE INSERT OR UPDATE ON public.report_card_layers FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_report_card_layers();
+
+
+--
 -- Name: table_of_contents_items before_insert_or_update_table_of_contents_items; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -24383,6 +25269,13 @@ CREATE TRIGGER table_of_contents_items_project_update AFTER INSERT OR DELETE OR 
 
 
 --
+-- Name: table_of_contents_items toc_items_report_card_layers_draft_cascade; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER toc_items_report_card_layers_draft_cascade AFTER DELETE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.after_delete_toc_items_cascade_report_card_layers();
+
+
+--
 -- Name: geography_clipping_layers trg_update_geog_hash_delete; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -24443,6 +25336,27 @@ CREATE TRIGGER trig_create_table_of_contents_item_acl AFTER INSERT ON public.tab
 --
 
 CREATE TRIGGER trigger_geography_metric_subscription_trigger AFTER UPDATE ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.trigger_geography_metric_subscription();
+
+
+--
+-- Name: report_card_layers trigger_queue_preprocess_source_on_rcl_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_queue_preprocess_source_on_rcl_trigger AFTER INSERT OR UPDATE ON public.report_card_layers FOR EACH ROW EXECUTE FUNCTION public.trigger_queue_preprocess_source_on_rcl();
+
+
+--
+-- Name: source_processing_jobs trigger_queue_spatial_metrics_on_source_complete_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_queue_spatial_metrics_on_source_complete_trigger AFTER UPDATE ON public.source_processing_jobs FOR EACH ROW EXECUTE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete();
+
+
+--
+-- Name: source_processing_jobs trigger_report_overlay_source_subscription_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trigger_report_overlay_source_subscription_trigger AFTER INSERT OR UPDATE ON public.source_processing_jobs FOR EACH ROW EXECUTE FUNCTION public.trigger_report_overlay_source_subscription();
 
 
 --
@@ -25280,6 +26194,36 @@ ALTER TABLE ONLY public.projects_shared_basemaps
 
 
 --
+-- Name: report_card_layers report_card_layers_report_card_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_card_layers
+    ADD CONSTRAINT report_card_layers_report_card_id_fkey FOREIGN KEY (report_card_id) REFERENCES public.report_cards(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT report_card_layers_report_card_id_fkey ON report_card_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT report_card_layers_report_card_id_fkey ON public.report_card_layers IS '@simpleCollections only';
+
+
+--
+-- Name: report_card_layers report_card_layers_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.report_card_layers
+    ADD CONSTRAINT report_card_layers_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT report_card_layers_table_of_contents_item_id_fkey ON report_card_layers; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT report_card_layers_table_of_contents_item_id_fkey ON public.report_card_layers IS '@simpleCollections only';
+
+
+--
 -- Name: report_cards report_cards_report_tab_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -25540,6 +26484,38 @@ COMMENT ON CONSTRAINT sketches_sketch_class_id_fkey ON public.sketches IS '@omit
 
 ALTER TABLE ONLY public.sketches
     ADD CONSTRAINT sketches_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: source_processing_jobs source_processing_jobs_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.source_processing_jobs
+    ADD CONSTRAINT source_processing_jobs_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: source_processing_jobs source_processing_jobs_data_upload_output_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.source_processing_jobs
+    ADD CONSTRAINT source_processing_jobs_data_upload_output_id_fkey FOREIGN KEY (data_upload_output_id) REFERENCES public.data_upload_outputs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: source_processing_jobs source_processing_jobs_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.source_processing_jobs
+    ADD CONSTRAINT source_processing_jobs_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: spatial_metrics spatial_metrics_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.spatial_metrics
+    ADD CONSTRAINT spatial_metrics_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -25999,6 +26975,23 @@ CREATE POLICY data_sources_update ON public.data_sources FOR UPDATE USING ((publ
 
 
 --
+-- Name: data_upload_outputs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.data_upload_outputs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: data_upload_outputs data_upload_outputs_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY data_upload_outputs_select ON public.data_upload_outputs FOR SELECT USING ((public.session_is_admin(project_id) OR (public.session_has_project_access(project_id) AND public._session_on_toc_item_acl(( SELECT table_of_contents_items.path
+   FROM public.table_of_contents_items
+  WHERE ((table_of_contents_items.is_draft = false) AND (table_of_contents_items.data_layer_id = ( SELECT data_layers.id
+           FROM public.data_layers
+          WHERE (data_layers.data_source_id = data_upload_outputs.data_source_id)))))))));
+
+
+--
 -- Name: data_upload_tasks; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -26303,6 +27296,12 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -26412,9 +27411,7 @@ CREATE POLICY reports_admin ON public.reports USING (public.session_is_admin(( S
 -- Name: reports reports_select; Type: POLICY; Schema: public; Owner: -
 --
 
-CREATE POLICY reports_select ON public.reports FOR SELECT USING (public.session_on_acl(( SELECT access_control_lists.id
-   FROM public.access_control_lists
-  WHERE (access_control_lists.sketch_class_id = access_control_lists.sketch_class_id))));
+CREATE POLICY reports_select ON public.reports FOR SELECT USING ((public.session_is_admin(project_id) OR public.session_has_project_access(project_id)));
 
 
 --
@@ -26546,6 +27543,19 @@ CREATE POLICY sketches_select ON public.sketches FOR SELECT USING ((public.it_me
 --
 
 CREATE POLICY sketches_updated ON public.sketches FOR UPDATE USING (public.it_me(user_id)) WITH CHECK (public.it_me(user_id));
+
+
+--
+-- Name: source_processing_jobs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.source_processing_jobs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: source_processing_jobs source_processing_jobs_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY source_processing_jobs_select ON public.source_processing_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
 
 --
@@ -28062,17 +29072,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -28128,11 +29138,18 @@ GRANT ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio
 
 
 --
--- Name: FUNCTION add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: TABLE report_cards; Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) TO seasketch_user;
+GRANT SELECT ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: FUNCTION add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, layers public.report_layer_input[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, layers public.report_layer_input[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, layers public.report_layer_input[]) TO seasketch_user;
 
 
 --
@@ -28206,6 +29223,13 @@ REVOKE ALL ON FUNCTION public.after_data_layers_update_or_delete_set_draft_table
 --
 
 REVOKE ALL ON FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_contents() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION after_delete_toc_items_cascade_report_card_layers(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.after_delete_toc_items_cascade_report_card_layers() FROM PUBLIC;
 
 
 --
@@ -28659,6 +29683,13 @@ REVOKE ALL ON FUNCTION public.before_insert_or_update_form_logic_conditions_100(
 --
 
 REVOKE ALL ON FUNCTION public.before_insert_or_update_form_logic_rules_100() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_or_update_report_card_layers(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_or_update_report_card_layers() FROM PUBLIC;
 
 
 --
@@ -29843,6 +30874,13 @@ GRANT ALL ON FUNCTION public.create_map_bookmark(slug text, "isPublic" boolean, 
 
 
 --
+-- Name: TABLE data_upload_outputs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.data_upload_outputs TO anon;
+
+
+--
 -- Name: FUNCTION create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -30803,6 +31841,14 @@ GRANT ALL ON FUNCTION public.export_spatial_responses(fid integer) TO seasketch_
 
 
 --
+-- Name: FUNCTION extension_to_source_type(url text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extension_to_source_type(url text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extension_to_source_type(url text) TO anon;
+
+
+--
 -- Name: FUNCTION extract_all_titles(doc jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -31060,6 +32106,7 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -31917,19 +32964,19 @@ GRANT ALL ON FUNCTION public.get_metrics_for_sketch(skid integer) TO anon;
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) TO anon;
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) TO anon;
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_remote text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) TO anon;
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) TO anon;
 
 
 --
@@ -32003,11 +33050,27 @@ GRANT ALL ON FUNCTION public.get_spatial_metric(metric_id bigint) TO anon;
 
 
 --
+-- Name: FUNCTION get_spatial_metrics(metric_ids bigint[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_spatial_metrics(metric_ids bigint[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_spatial_metrics(metric_ids bigint[]) TO anon;
+
+
+--
 -- Name: FUNCTION get_sprite_data_for_screenshot(bookmark public.map_bookmarks); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_sprite_data_for_screenshot(bookmark public.map_bookmarks) TO anon;
+
+
+--
+-- Name: FUNCTION get_state_for_spatial_metric(metric_id bigint); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_state_for_spatial_metric(metric_id bigint) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_state_for_spatial_metric(metric_id bigint) TO anon;
 
 
 --
@@ -33625,11 +34688,27 @@ GRANT ALL ON FUNCTION public.projects_admins(p public.projects) TO seasketch_use
 
 
 --
+-- Name: FUNCTION projects_available_report_layers(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_available_report_layers(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_available_report_layers(project public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_basemaps(project public.projects); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.projects_basemaps(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_basemaps(project public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_center_geojson(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_center_geojson(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_center_geojson(project public.projects) TO anon;
 
 
 --
@@ -33846,6 +34925,21 @@ GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.proj
 
 
 --
+-- Name: TABLE source_processing_jobs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.source_processing_jobs TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_source_processing_jobs(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_source_processing_jobs(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_source_processing_jobs(p public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_sprites(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33961,6 +35055,14 @@ GRANT ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) TO s
 --
 
 REVOKE ALL ON FUNCTION public.queue_calculate_spatial_metric_task() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean) TO seasketch_user;
 
 
 --
@@ -34124,11 +35226,58 @@ REVOKE ALL ON FUNCTION public.replace_data_source(data_layer_id integer, data_so
 
 
 --
+-- Name: FUNCTION report_card_ids_for_report(rid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_card_ids_for_report(rid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.report_card_ids_for_report(rid integer) TO anon;
+
+
+--
+-- Name: TABLE report_card_layers; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT ALL ON TABLE public.report_card_layers TO seasketch_user;
+
+
+--
+-- Name: FUNCTION report_card_layers_processed_output(layer public.report_card_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_card_layers_processed_output(layer public.report_card_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.report_card_layers_processed_output(layer public.report_card_layers) TO anon;
+
+
+--
+-- Name: FUNCTION report_cards_reporting_layers(rc public.report_cards); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_cards_reporting_layers(rc public.report_cards) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.report_cards_reporting_layers(rc public.report_cards) TO anon;
+
+
+--
 -- Name: FUNCTION report_tabs_cards(report_tab public.report_tabs); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.report_tabs_cards(report_tab public.report_tabs) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.report_tabs_cards(report_tab public.report_tabs) TO anon;
+
+
+--
+-- Name: FUNCTION reporting_layer_source_processing_job(l public.reporting_layer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reporting_layer_source_processing_job(l public.reporting_layer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reporting_layer_source_processing_job(l public.reporting_layer) TO anon;
+
+
+--
+-- Name: FUNCTION reports_geographies(r public.reports); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reports_geographies(r public.reports) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reports_geographies(r public.reports) TO anon;
 
 
 --
@@ -34199,6 +35348,14 @@ REVOKE ALL ON FUNCTION public.schedule_visitor_metric_collection_for_all_project
 
 REVOKE ALL ON FUNCTION public.search_overlays(lang text, query text, "projectId" integer, draft boolean, "limit" integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.search_overlays(lang text, query text, "projectId" integer, draft boolean, "limit" integer) TO anon;
+
+
+--
+-- Name: FUNCTION search_projects(query text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.search_projects(query text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.search_projects(query text) TO anon;
 
 
 --
@@ -34519,6 +35676,14 @@ GRANT ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classe
 
 
 --
+-- Name: FUNCTION sketch_classes_my_sketches(sk public.sketch_classes); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketch_classes_my_sketches(sk public.sketch_classes) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketch_classes_my_sketches(sk public.sketch_classes) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION sketch_classes_prohibit_delete(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34695,6 +35860,14 @@ GRANT ALL ON FUNCTION public.slugify(value text, allow_unicode boolean) TO anon;
 
 REVOKE ALL ON FUNCTION public.soft_delete_sprite(id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.soft_delete_sprite(id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION source_processing_jobs_layer_title(job public.source_processing_jobs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.source_processing_jobs_layer_title(job public.source_processing_jobs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.source_processing_jobs_layer_title(job public.source_processing_jobs) TO anon;
 
 
 --
@@ -37797,13 +38970,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
--- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -37999,6 +39165,27 @@ GRANT ALL ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.trigger_geography_metric_subscription() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trigger_queue_preprocess_source_on_rcl(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_queue_preprocess_source_on_rcl() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trigger_queue_spatial_metrics_on_source_complete(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_queue_spatial_metrics_on_source_complete() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trigger_report_overlay_source_subscription(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trigger_report_overlay_source_subscription() FROM PUBLIC;
 
 
 --

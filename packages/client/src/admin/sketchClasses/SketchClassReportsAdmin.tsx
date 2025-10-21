@@ -282,7 +282,7 @@ export default function SketchClassReportsAdmin({
             })) || [],
         },
         onError,
-        refetchQueries: [ReportContextDocument],
+        refetchQueries: [ReportContextDocument, DraftReportDocument],
         awaitRefetchQueries: true,
       });
       // If server requires a separate mutation to attach layers, that will be handled elsewhere.

@@ -59,6 +59,7 @@ fragment SketchingDetails on SketchClass {
   clippingGeographies {
     ...GeographyDetails
   }
+  reportId
 }
 
 fragment SketchingGeographyDetails on SketchClass {
@@ -659,6 +660,7 @@ fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
   tableOfContentsItem {
     title
+    stableId
   }
   geostats
   mapboxGlStyles

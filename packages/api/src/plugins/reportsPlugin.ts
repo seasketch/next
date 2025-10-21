@@ -105,6 +105,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         metric: CompatibleSpatialMetric
       }
 
+
       type ReportOverlaySource {
         tableOfContentsItemId: Int!
         tableOfContentsItem: TableOfContentsItem!

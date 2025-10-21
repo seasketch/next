@@ -25,9 +25,7 @@ export function ReportBody() {
             {tab.cards?.length === 0 && (
               <div>
                 <p className="text-sm text-gray-500">
-                  <Trans ns="admin:sketching">
-                    No cards found. Click the + button to customize.
-                  </Trans>
+                  <Trans ns="admin:sketching">This tab is empty</Trans>
                 </p>
               </div>
             )}
