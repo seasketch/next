@@ -366,12 +366,6 @@ export default function ReportCard({
                     metricsToRecalculate.push(metric.id);
                   }
                 }
-                // Placeholder for future implementation
-                console.log(`recalculate metrics`, {
-                  recomputePreprocessed,
-                  recomputeTotals,
-                  metricsToRecalculate,
-                });
 
                 await recalculate(metricsToRecalculate, recomputePreprocessed);
                 setRecalcOpen(false);
@@ -450,7 +444,7 @@ export default function ReportCard({
                   await recalculate(metricsToRecalculate, false);
                 }
               },
-              disabled: !isReady,
+              disabled: loading,
               variant: "secondary",
               loading: recalculateState.loading,
             },

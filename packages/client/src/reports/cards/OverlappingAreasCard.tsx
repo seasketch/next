@@ -146,9 +146,10 @@ export function OverlappingAreasCard({
       }
       const sourceUrl = layer.processedOutput?.url;
       if (!sourceUrl) {
-        throw new Error(
-          `Layer ${layer.tableOfContentsItem?.title} has no source URL`
-        );
+        continue;
+        // throw new Error(
+        //   `Layer ${layer.tableOfContentsItem?.title} has no source URL`
+        // );
       }
       if (layer.groupBy) {
         // get values for groupBy

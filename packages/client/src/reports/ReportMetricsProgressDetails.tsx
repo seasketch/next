@@ -233,6 +233,10 @@ export default function ReportMetricsProgressDetails({
                         )}
                         ...
                       </span>
+                      <span className="text-sm text-gray-500">
+                        {metric.type}
+                        {metric.groupBy && ` (${metric.groupBy})`}
+                      </span>
                     </span>
                   }
                   state={metric.state}

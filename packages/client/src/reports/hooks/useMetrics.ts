@@ -48,17 +48,18 @@ export function useMetrics<
         }
       }
       let relatedSource: OverlaySourceDetailsFragment | null = null;
-      if (metric.sourceProcessingJobDependency) {
+
+      if (metric.sourceUrl) {
+        relatedSource =
+          reportContext.overlaySources.find(
+            (s) => s.sourceUrl === metric.sourceUrl
+          ) || null;
+      } else if (metric.sourceProcessingJobDependency) {
         relatedSource =
           reportContext.overlaySources.find(
             (s) =>
               s.sourceProcessingJob.jobKey ===
               metric.sourceProcessingJobDependency
-          ) || null;
-      } else if (metric.sourceUrl) {
-        relatedSource =
-          reportContext.overlaySources.find(
-            (s) => s.sourceUrl === metric.sourceUrl
           ) || null;
       }
       if (relatedSource && options.layers) {
@@ -70,6 +71,8 @@ export function useMetrics<
         );
         if (!matchingLayer) {
           continue;
+        } else {
+          // console.log("found matchingLayer", matchingLayer, relatedSource);
         }
       }
       // It's a match! Add it to the list.

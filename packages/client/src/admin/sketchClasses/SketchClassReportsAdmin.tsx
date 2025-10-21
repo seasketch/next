@@ -223,12 +223,10 @@ export default function SketchClassReportsAdmin({
       groupBy: string | undefined;
     }[]
   ) => {
-    console.log("handleCardSelect", selection, cardType);
     if (!reportState) {
       console.error("No report state");
       return;
     }
-    console.log(selection, cardType);
     if (
       selection?.length &&
       selection[0] &&
