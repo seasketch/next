@@ -125,16 +125,7 @@ module.exports = {
             loader: appBabelRule.loader,
             options: {
               ...(appBabelRule.options || {}),
-              plugins: [
-                ...((appBabelRule.options || {}).plugins || []),
-                require.resolve("@babel/plugin-proposal-optional-chaining"),
-                require.resolve(
-                  "@babel/plugin-proposal-nullish-coalescing-operator"
-                ),
-                require.resolve(
-                  "@babel/plugin-proposal-logical-assignment-operators"
-                ),
-              ],
+              plugins: [...((appBabelRule.options || {}).plugins || [])],
             },
           };
           const insertIndex = depsBabelRuleIndex > -1 ? depsBabelRuleIndex : 0;

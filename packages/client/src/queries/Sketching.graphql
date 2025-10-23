@@ -322,6 +322,9 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   sourceUrl
   groupBy
   sourceProcessingJobDependency
+  eta
+  startedAt
+  durationSeconds
 }
 
 fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {

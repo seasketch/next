@@ -127,6 +127,19 @@ export function OverlappingAreasCard({
       reportContext.sketchClass?.clippingGeographies?.[0]?.id;
 
     for (const layer of reportingLayers) {
+      const source = overlayMetrics.sources.find(
+        (s) => s.tableOfContentsItemId === layer.tableOfContentsItemId
+      );
+      if (!source) {
+        continue;
+        // throw new Error(
+        //   `Source for layer ${layer.tableOfContentsItem?.title} not found`
+        // );
+      }
+      const sourceUrl = source.output?.url;
+      if (!sourceUrl) {
+        continue;
+      }
       // get the geography-level total for this layer
       const geographyMetric = sketchClassPrimaryGeographyId
         ? (overlayMetrics.data || []).find(
@@ -143,13 +156,6 @@ export function OverlappingAreasCard({
         throw new Error(
           `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
         );
-      }
-      const sourceUrl = layer.processedOutput?.url;
-      if (!sourceUrl) {
-        continue;
-        // throw new Error(
-        //   `Layer ${layer.tableOfContentsItem?.title} has no source URL`
-        // );
       }
       if (layer.groupBy) {
         // get values for groupBy
@@ -219,7 +225,12 @@ export function OverlappingAreasCard({
       items.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
     }
     return items;
-  }, [reportingLayers, sumSketchOverlaysByClass, config.componentSettings]);
+  }, [
+    reportingLayers,
+    sumSketchOverlaysByClass,
+    config.componentSettings,
+    overlayMetrics.data,
+  ]);
 
   return (
     <ReportCard

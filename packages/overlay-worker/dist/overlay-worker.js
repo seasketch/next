@@ -49,7 +49,6 @@ const pbf_1 = __importDefault(require("pbf"));
 const undici_1 = require("undici");
 const lru_cache_1 = require("lru-cache");
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
-    // allowH2: true,
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
 });
@@ -112,11 +111,13 @@ const sourceCache = new fgb_source_1.SourceCache("1GB", {
 });
 async function handler(payload) {
     console.log("Overlay worker (v2) received payload", payload);
+    const startTime = Date.now();
     const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 1000, payload.queueUrl);
     await (0, messaging_1.sendBeginMessage)(payload.jobKey, "/test", new Date().toISOString(), payload.queueUrl);
     const helpers = {
-        progress: (progress, message) => {
-            return progressNotifier.notify(progress, message);
+        progress: async (progress, message) => {
+            await progressNotifier.notify(progress, message);
+            return;
         },
         log: (message) => {
             console.log(message);
@@ -136,7 +137,7 @@ async function handler(payload) {
                     progressNotifier.notify(0, "Beginning area calculation");
                     const area = await (0, overlay_engine_1.calculateArea)(payload.subject.clippingLayers, sourceCache, helpers);
                     await (0, messaging_1.flushMessages)();
-                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl);
+                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                     return;
                 }
                 else if (subjectIsFragment(payload.subject)) {
@@ -154,7 +155,7 @@ async function handler(payload) {
                     progressNotifier.notify(0, "Beginning area calculation");
                     const area = await (0, overlay_engine_1.calculateGeographyOverlap)(payload.subject.clippingLayers, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
                     await (0, messaging_1.flushMessages)();
-                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl);
+                    await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                     return;
                 }
                 else {
@@ -173,7 +174,7 @@ async function handler(payload) {
                         await (0, messaging_1.flushMessages)();
                         const area = await (0, overlay_engine_1.calculateFragmentOverlap)(feature, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
                         await (0, messaging_1.flushMessages)();
-                        await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl);
+                        await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                         return;
                     }
                     else {

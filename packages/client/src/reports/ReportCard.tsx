@@ -22,6 +22,7 @@ import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import {
   CompatibleSpatialMetricDetailsFragment,
   SpatialMetricState,
+  useRetryFailedSpatialMetricsMutation,
 } from "../generated/graphql";
 import Skeleton from "../components/Skeleton";
 import ReportMetricsProgressDetails from "./ReportMetricsProgressDetails";
@@ -77,9 +78,13 @@ export default function ReportCard({
     deleteCard,
     recalculate,
     recalculateState,
+    overlaySources,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
+
+  const [retryFailedMetrics, retryState] =
+    useRetryFailedSpatialMetricsMutation();
 
   let { errors, failedMetrics, loading } = useMemo(() => {
     const errors = {} as { [key: string]: number };
@@ -128,7 +133,7 @@ export default function ReportCard({
         }
       }
     },
-    [onUpdate, config, langContext?.lang?.code]
+    [onUpdate, langContext?.lang?.code]
   );
 
   const getBackgroundClasses = () => {
@@ -198,7 +203,7 @@ export default function ReportCard({
           )}
         </div>
       </div>
-      {loading && (
+      {loading && !Object.values(errors).length && (
         <button
           type="button"
           className="absolute top-[14px] right-[16px]"
@@ -209,72 +214,77 @@ export default function ReportCard({
             className=""
             display={true}
             metrics={metrics}
+            sourceProcessingJobs={overlaySources.map(
+              (s) => s.sourceProcessingJob
+            )}
           />
         </button>
       )}
       <div className="absolute right-2 top-2">
         <div>
-          {!loading && !selectedForEditing && cardId && (
-            <div
-              className={`flex-1 ml-auto transition-opacity flex items-center justify-end ${
-                menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}
-            >
-              <ReportCardActionMenu
-                open={menuOpen}
-                onOpenChange={setMenuOpen}
-                label={t("Card actions")}
+          {(!loading || Object.values(errors).length > 0) &&
+            !selectedForEditing &&
+            cardId && (
+              <div
+                className={`flex-1 ml-auto transition-opacity flex items-center justify-end ${
+                  menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                }`}
               >
-                <ReportCardActionMenu.Item
-                  onSelect={() => setShowCalcDetails(true)}
-                  icon={<CalculatorIcon className="h-4 w-4" />}
+                <ReportCardActionMenu
+                  open={menuOpen}
+                  onOpenChange={setMenuOpen}
+                  label={t("Card actions")}
                 >
-                  {t("Calculation details")}
-                </ReportCardActionMenu.Item>
-                <ReportCardActionMenu.Item
-                  icon={<ReloadIcon className="h-4 w-4" />}
-                  onSelect={async () => {
-                    if (adminMode) {
-                      setRecalcOpen(true);
-                    } else {
-                      const metricsToRecalculate = [] as number[];
-                      for (const metric of metrics) {
-                        if (subjectIsFragment(metric.subject)) {
-                          metricsToRecalculate.push(metric.id);
+                  <ReportCardActionMenu.Item
+                    onSelect={() => setShowCalcDetails(true)}
+                    icon={<CalculatorIcon className="h-4 w-4" />}
+                  >
+                    {t("Calculation details")}
+                  </ReportCardActionMenu.Item>
+                  <ReportCardActionMenu.Item
+                    icon={<ReloadIcon className="h-4 w-4" />}
+                    onSelect={async () => {
+                      if (adminMode) {
+                        setRecalcOpen(true);
+                      } else {
+                        const metricsToRecalculate = [] as number[];
+                        for (const metric of metrics) {
+                          if (subjectIsFragment(metric.subject)) {
+                            metricsToRecalculate.push(metric.id);
+                          }
                         }
+                        await recalculate(metricsToRecalculate, false);
                       }
-                      await recalculate(metricsToRecalculate, false);
-                    }
-                  }}
-                >
-                  {t("Recalculate")}
-                </ReportCardActionMenu.Item>
-                {adminMode && (
-                  <>
-                    <ReportCardActionMenu.Item
-                      icon={<Pencil1Icon className="h-4 w-4" />}
-                      onSelect={() => {
-                        setSelectedForEditing(cardId!);
-                      }}
-                    >
-                      {t("Edit card")}
-                    </ReportCardActionMenu.Item>
-                    {deleteCard && (
+                    }}
+                  >
+                    {t("Recalculate")}
+                  </ReportCardActionMenu.Item>
+                  {adminMode && (
+                    <>
                       <ReportCardActionMenu.Item
-                        icon={<TrashIcon className="h-4 w-4" />}
-                        variant="danger"
+                        icon={<Pencil1Icon className="h-4 w-4" />}
                         onSelect={() => {
-                          deleteCard(cardId!);
+                          setSelectedForEditing(cardId!);
                         }}
                       >
-                        {t("Delete card")}
+                        {t("Edit card")}
                       </ReportCardActionMenu.Item>
-                    )}
-                  </>
-                )}
-              </ReportCardActionMenu>
-            </div>
-          )}
+                      {deleteCard && (
+                        <ReportCardActionMenu.Item
+                          icon={<TrashIcon className="h-4 w-4" />}
+                          variant="danger"
+                          onSelect={() => {
+                            deleteCard(cardId!);
+                          }}
+                        >
+                          {t("Delete card")}
+                        </ReportCardActionMenu.Item>
+                      )}
+                    </>
+                  )}
+                </ReportCardActionMenu>
+              </div>
+            )}
         </div>
       </div>
       <div className="px-4 pb-0 text-sm">
@@ -331,13 +341,7 @@ export default function ReportCard({
           </>
         )}
         {isReady && children}
-        {/* {adminMode && !isReady && (
-          <ReportMetricsProgressDetails
-            metricIds={metrics.map((m) => m.id)}
-            skeleton={loadingSkeleton}
-          />
-        )} */}
-        {loading && (
+        {loading && !Object.values(errors).length && (
           <div className="relative">
             <div>{loadingSkeleton}</div>
           </div>
@@ -448,12 +452,30 @@ export default function ReportCard({
               variant: "secondary",
               loading: recalculateState.loading,
             },
+            ...(failedMetrics.length > 0
+              ? [
+                  {
+                    label: t("Retry failed calculations"),
+                    onClick: async () => {
+                      await retryFailedMetrics({
+                        variables: {
+                          metricIds: failedMetrics,
+                        },
+                      });
+                    },
+                    disabled: retryState.loading,
+                    variant: "danger" as const,
+                    loading: retryState.loading,
+                  },
+                ]
+              : []),
           ]}
         >
           <ReportMetricsProgressDetails
             metricIds={metrics.map((m) => m.id)}
             skeleton={loadingSkeleton}
             config={config}
+            isAdmin={adminMode}
           />
         </Modal>
       )}

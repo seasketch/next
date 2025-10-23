@@ -626,6 +626,9 @@ fragment SourceProcessingJobDetails on SourceProcessingJob {
   progressMessage
   createdAt
   errorMessage
+  startedAt
+  durationSeconds
+  eta
 }
 
 query SourceProcessingJobs($projectId: Int!) {

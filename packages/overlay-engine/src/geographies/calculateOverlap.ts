@@ -14,9 +14,6 @@ import * as clipping from "polyclip-ts";
 import calcArea from "@turf/area";
 import simplify from "@turf/simplify";
 import { ContainerIndex } from "../utils/containerIndex";
-import fs from "fs";
-import isValid from "@turf/boolean-valid";
-import { union } from "union-subdivided-polygons";
 
 const layers: Record<string, OverlayWorkerLogFeatureLayerConfig> = {
   batchedDifferenceFeatures: {

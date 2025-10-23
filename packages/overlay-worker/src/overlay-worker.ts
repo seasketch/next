@@ -25,7 +25,6 @@ import { fetch, Client, Pool } from "undici";
 import { LRUCache } from "lru-cache";
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
-  // allowH2: true,
   // 10 second timeout for body
   bodyTimeout: 10 * 1000,
 });
@@ -94,6 +93,7 @@ const sourceCache = new SourceCache("1GB", {
 
 export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker (v2) received payload", payload);
+  const startTime = Date.now();
   const progressNotifier = new ProgressNotifier(
     payload.jobKey,
     1000,
@@ -106,8 +106,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
     payload.queueUrl
   );
   const helpers = {
-    progress: (progress: number, message?: string) => {
-      return progressNotifier.notify(progress, message);
+    progress: async (progress: number, message?: string) => {
+      await progressNotifier.notify(progress, message);
+      return;
     },
     log: (message: string) => {
       console.log(message);
@@ -131,7 +132,12 @@ export default async function handler(payload: OverlayWorkerPayload) {
             helpers
           );
           await flushMessages();
-          await sendResultMessage(payload.jobKey, area, payload.queueUrl);
+          await sendResultMessage(
+            payload.jobKey,
+            area,
+            payload.queueUrl,
+            Date.now() - startTime
+          );
           return;
         } else if (subjectIsFragment(payload.subject)) {
           throw new Error(
@@ -158,7 +164,12 @@ export default async function handler(payload: OverlayWorkerPayload) {
             helpers
           );
           await flushMessages();
-          await sendResultMessage(payload.jobKey, area, payload.queueUrl);
+          await sendResultMessage(
+            payload.jobKey,
+            area,
+            payload.queueUrl,
+            Date.now() - startTime
+          );
           return;
         } else {
           if ("geobuf" in payload.subject) {
@@ -189,7 +200,12 @@ export default async function handler(payload: OverlayWorkerPayload) {
               helpers
             );
             await flushMessages();
-            await sendResultMessage(payload.jobKey, area, payload.queueUrl);
+            await sendResultMessage(
+              payload.jobKey,
+              area,
+              payload.queueUrl,
+              Date.now() - startTime
+            );
             return;
           } else {
             throw new Error(

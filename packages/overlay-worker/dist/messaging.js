@@ -30,23 +30,25 @@ function sendMessage(msg) {
         .finally(() => pendingSendOperations.delete(sendPromise));
     return sendPromise;
 }
-async function sendResultMessage(jobKey, result, queueUrl) {
+async function sendResultMessage(jobKey, result, queueUrl, duration) {
     console.log("sending result message", result);
     const msg = {
         type: "result",
         result,
         jobKey,
         queueUrl,
+        duration,
     };
     await sendMessage(msg);
 }
-async function sendProgressMessage(jobKey, progress, queueUrl, message) {
+async function sendProgressMessage(jobKey, progress, queueUrl, message, eta) {
     const msg = {
         type: "progress",
         progress,
         message,
         jobKey,
         queueUrl,
+        eta: eta ? eta.toISOString() : undefined,
     };
     return sendMessage(msg);
 }

@@ -8,6 +8,10 @@ export type OverlayEngineWorkerBaseMessage = {
 export type OverlayEngineWorkerResultMessage = OverlayEngineWorkerBaseMessage & {
     type: "result";
     result: any;
+    /**
+     * The duration of the job in milliseconds, as measured by the worker.
+     */
+    duration?: number;
 };
 export type OverlayEngineWorkerErrorMessage = OverlayEngineWorkerBaseMessage & {
     type: "error";
@@ -17,6 +21,7 @@ export type OverlayEngineWorkerProgressMessage = OverlayEngineWorkerBaseMessage 
     type: "progress";
     progress: number;
     message?: string;
+    eta?: string;
 };
 export type OverlayEngineWorkerBeginMessage = OverlayEngineWorkerBaseMessage & {
     type: "begin";

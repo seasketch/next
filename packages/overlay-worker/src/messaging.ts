@@ -36,7 +36,8 @@ export function sendMessage(msg: OverlayEngineWorkerMessage) {
 export async function sendResultMessage(
   jobKey: string,
   result: any,
-  queueUrl: string
+  queueUrl: string,
+  duration?: number
 ) {
   console.log("sending result message", result);
   const msg: OverlayEngineWorkerResultMessage = {
@@ -44,6 +45,7 @@ export async function sendResultMessage(
     result,
     jobKey,
     queueUrl,
+    duration,
   };
   await sendMessage(msg);
 }
@@ -52,7 +54,8 @@ export async function sendProgressMessage(
   jobKey: string,
   progress: number,
   queueUrl: string,
-  message?: string
+  message?: string,
+  eta?: Date
 ) {
   const msg: OverlayEngineWorkerProgressMessage = {
     type: "progress",
@@ -60,6 +63,7 @@ export async function sendProgressMessage(
     message,
     jobKey,
     queueUrl,
+    eta: eta ? eta.toISOString() : undefined,
   };
   return sendMessage(msg);
 }

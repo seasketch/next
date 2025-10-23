@@ -1,4 +1,5 @@
 import { sendProgressMessage } from "./messaging";
+import { EtaEstimator } from "./EtaEstimator";
 
 // Debounces progress messages to avoid spamming the database and client
 export class ProgressNotifier {
@@ -9,6 +10,8 @@ export class ProgressNotifier {
   private maxWaitMs: number;
   private message?: string;
   private queueUrl: string;
+  private etaEstimator: EtaEstimator | null = null;
+  private eta: null | Date = null;
   private sendMessage = () => {};
 
   constructor(jobKey: string, maxWaitMs: number, queueUrl: string) {
@@ -20,6 +23,11 @@ export class ProgressNotifier {
 
   notify(progress: number, message?: string) {
     let sendNotification = false;
+    if (progress === 0) {
+      this.etaEstimator = new EtaEstimator({
+        totalUnits: 100,
+      });
+    }
     const timeSinceLastSent = Date.now() - (this.messageLastSent || 0);
 
     const exceedsMaxWait = timeSinceLastSent > this.maxWaitMs;
@@ -37,6 +45,12 @@ export class ProgressNotifier {
       sendNotification = true;
     }
 
+    if (progress > this.progress) {
+      if (this.etaEstimator) {
+        const state = this.etaEstimator.update(progress);
+        this.eta = state.eta;
+      }
+    }
     this.progress = progress;
     this.message = message;
     if (sendNotification) {
@@ -48,17 +62,14 @@ export class ProgressNotifier {
     }
   }
 
-  async sendNotification() {
-    await sendProgressMessage(
+  sendNotification() {
+    return sendProgressMessage(
       this.jobKey,
       this.progress,
       this.queueUrl,
-      this.message
-    ).then((response) => {
-      // noop
-      let noop = 1 + 2;
-    });
-    return;
+      this.message,
+      this.eta || undefined
+    );
   }
 
   flush() {

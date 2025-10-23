@@ -86,6 +86,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         eta: Datetime
         startedAt: Datetime
         completedAt: Datetime
+        durationSeconds: Float
       }
 
       type GetOrCreateSpatialMetricsResults {

@@ -7390,6 +7390,10 @@ select{
   cursor:grab
 }
 
+.cursor-help{
+  cursor:help
+}
+
 .cursor-move{
   cursor:move
 }
@@ -7726,6 +7730,12 @@ select{
   --tw-space-y-reverse:0;
   margin-top:calc(6px * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom:calc(6px * var(--tw-space-y-reverse))
+}
+
+.space-y-2\.5 > :not([hidden]) ~ :not([hidden]){
+  --tw-space-y-reverse:0;
+  margin-top:calc(0.625rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom:calc(0.625rem * var(--tw-space-y-reverse))
 }
 
 .divide-y > :not([hidden]) ~ :not([hidden]){
@@ -9870,6 +9880,11 @@ select{
   color:rgb(147 197 253 / var(--tw-text-opacity, 1))
 }
 
+.text-blue-400{
+  --tw-text-opacity:1;
+  color:rgb(96 165 250 / var(--tw-text-opacity, 1))
+}
+
 .text-blue-50{
   --tw-text-opacity:1;
   color:rgb(239 246 255 / var(--tw-text-opacity, 1))
@@ -10255,12 +10270,24 @@ select{
   color:rgb(120 53 15 / var(--tw-text-opacity, 1))
 }
 
+.text-opacity-50{
+  --tw-text-opacity:0.5
+}
+
 .text-opacity-80{
   --tw-text-opacity:0.8
 }
 
 .text-opacity-85{
   --tw-text-opacity:0.85
+}
+
+.text-opacity-90{
+  --tw-text-opacity:0.9
+}
+
+.text-opacity-95{
+  --tw-text-opacity:0.95
 }
 
 .underline{
@@ -11386,6 +11413,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(219 234 254 / var(--tw-text-opacity, 1))
 }
 
+.hover\:text-blue-300:hover{
+  --tw-text-opacity:1;
+  color:rgb(147 197 253 / var(--tw-text-opacity, 1))
+}
+
 .hover\:text-blue-600:hover{
   --tw-text-opacity:1;
   color:rgb(37 99 235 / var(--tw-text-opacity, 1))
@@ -11769,6 +11801,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus\:ring-offset-0:focus{
   --tw-ring-offset-width:0px
+}
+
+.focus\:ring-offset-1:focus{
+  --tw-ring-offset-width:1px
 }
 
 .focus\:ring-offset-2:focus{

@@ -19,6 +19,8 @@ import {
   ReportContextDocument,
   SketchGeometryType,
   useReportOverlaySourcesSubscriptionSubscription,
+  SourceProcessingJobDetailsFragment,
+  ReportOverlaySourcesSubscriptionSubscription,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 import { MetricSubjectFragment } from "overlay-engine";

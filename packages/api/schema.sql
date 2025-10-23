@@ -2153,8 +2153,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    enable_report_builder boolean DEFAULT false,
     custom_doc_link text,
+    enable_report_builder boolean DEFAULT false,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
@@ -11227,7 +11227,10 @@ CREATE FUNCTION public.get_metrics_for_geography(geography_id integer) RETURNS j
           'errorMessage', error_message,
           'progress', progress_percentage,
           'jobKey', job_key,
-          'sourceProcessingJobDependency', source_processing_job_dependency
+          'sourceProcessingJobDependency', source_processing_job_dependency,
+          'eta', eta,
+          'startedAt', started_at,
+          'durationSeconds', extract(seconds from duration)::float
         )
       )
       from spatial_metrics
@@ -11278,7 +11281,10 @@ CREATE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS jsonb
           'errorMessage', error_message,
           'progress', progress_percentage,
           'jobKey', job_key,
-          'sourceProcessingJobDependency', source_processing_job_dependency
+          'sourceProcessingJobDependency', source_processing_job_dependency,
+          'eta', eta,
+          'startedAt', started_at,
+          'durationSeconds', extract(seconds from duration)::float
         )
       )
       from spatial_metrics
@@ -11372,10 +11378,10 @@ COMMENT ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id te
 
 
 --
--- Name: get_or_create_spatial_metrics_for_fragments(text[], public.spatial_metric_type, text, text, text, text, text[], public.metric_overlay_type); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_or_create_spatial_metrics_for_fragments(text[], public.spatial_metric_type, text, text, text[], text); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_layer_stable_id text DEFAULT NULL::text, p_overlay_source_url text DEFAULT NULL::text, p_overlay_source_type text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_overlay_type public.metric_overlay_type DEFAULT NULL::public.metric_overlay_type) RETURNS bigint[]
+CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_source_url text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_source_processing_job_dependency text DEFAULT NULL::text) RETURNS bigint[]
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 DECLARE
@@ -11391,6 +11397,10 @@ BEGIN
         RETURN metric_ids;
     END IF;
 
+    IF p_source_processing_job_dependency IS NULL AND p_overlay_source_url IS NULL AND p_type <> 'total_area' THEN
+        RAISE EXCEPTION 'source_processing_job_dependency or overlay_source_url is required for non-total_area metrics';
+    END IF;
+
     FOREACH fragment_hash IN ARRAY p_subject_fragments LOOP
         IF fragment_hash IS NULL THEN
             CONTINUE;
@@ -11399,12 +11409,10 @@ BEGIN
             p_subject_fragment_id => fragment_hash,
             p_subject_geography_id => NULL,
             p_type => p_type,
-            p_overlay_layer_stable_id => p_overlay_layer_stable_id,
             p_overlay_source_url => p_overlay_source_url,
-            p_overlay_source_type => p_overlay_source_type,
             p_overlay_group_by => p_overlay_group_by,
             p_included_properties => p_included_properties,
-            p_overlay_type => p_overlay_type
+            p_source_processing_job_dependency => p_source_processing_job_dependency
         );
         metric_ids := array_append(metric_ids, metric_row.id);
     END LOOP;
@@ -11415,10 +11423,10 @@ $$;
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) IS '@omit';
+COMMENT ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text) IS '@omit';
 
 
 --
@@ -11614,6 +11622,57 @@ COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
 
 
 --
+-- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  draft_tab_id integer;
+  draft_tab_position integer;
+  draft_card_position integer;
+  sketch_class_id integer;
+  published_report_id integer;
+  published_tab_id integer;
+  published_card_id integer;
+BEGIN
+  -- Gather draft card/tab positions and sketch_class
+  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
+  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
+  FROM public.report_cards rc
+  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
+  JOIN public.reports r ON r.id = rt.report_id
+  WHERE rc.id = draft_report_card_id;
+
+  -- Determine the published report id
+  SELECT sc.report_id
+  INTO published_report_id
+  FROM public.sketch_classes sc
+  WHERE sc.id = sketch_class_id;
+
+  IF published_report_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Match the tab by position in the published report
+  SELECT id
+  INTO published_tab_id
+  FROM public.report_tabs
+  WHERE report_id = published_report_id AND position = draft_tab_position;
+
+  -- Match the card by position within the matched tab
+  SELECT id
+  INTO published_card_id
+  FROM public.report_cards
+  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
+
+  RETURN published_card_id;
+END
+$$;
+
+
+--
 -- Name: get_spatial_metric(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11661,7 +11720,10 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
         end,
         'errorMessage', error_message,
         'progress', progress_percentage,
-        'sourceProcessingJobDependency', source_processing_job_dependency
+        'sourceProcessingJobDependency', source_processing_job_dependency,
+        'eta', eta,
+        'startedAt', started_at,
+        'durationSeconds', extract(seconds from duration)::float
       ) from spatial_metrics where id = metric_id
     );
   end;
@@ -15056,7 +15118,9 @@ CREATE TABLE public.source_processing_jobs (
     data_upload_output_id integer,
     eta timestamp with time zone,
     started_at timestamp with time zone,
-    completed_at timestamp with time zone
+    completed_at timestamp with time zone,
+    duration interval,
+    duration_seconds double precision GENERATED ALWAYS AS (date_part('epoch'::text, duration)) STORED
 );
 
 
@@ -19905,6 +19969,23 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
+-- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = stableId
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$;
+
+
+--
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22681,6 +22762,7 @@ CREATE TABLE public.spatial_metrics (
     eta timestamp with time zone,
     started_at timestamp with time zone,
     completed_at timestamp with time zone,
+    duration interval,
     CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
 );
 
@@ -27296,12 +27378,6 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
--- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -29072,17 +29148,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -32106,7 +32182,6 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -32972,11 +33047,11 @@ GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id 
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_layer_stable_id text, p_overlay_source_url text, p_overlay_source_type text, p_overlay_group_by text, p_included_properties text[], p_overlay_type public.metric_overlay_type) TO anon;
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text) TO anon;
 
 
 --
@@ -33039,6 +33114,14 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
+
+
+--
+-- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -38967,6 +39050,13 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
 
 
 --

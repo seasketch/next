@@ -1065,6 +1065,7 @@ input CommunityGuidelinePatch {
 type CompatibleSpatialMetric {
   completedAt: Datetime
   createdAt: Datetime!
+  durationSeconds: Float
   errorMessage: String
   eta: Datetime
   groupBy: String
@@ -14557,6 +14558,7 @@ type ReportOverlaySource {
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
+  sourceProcessingJob: SourceProcessingJob!
   sourceProcessingJobId: String!
   sourceUrl: String
   tableOfContentsItem: TableOfContentsItem!
@@ -15681,6 +15683,8 @@ type SourceProcessingJob implements Node {
   dataSource: DataSource
   dataSourceId: Int!
   dataUploadOutputId: Int
+  duration: Interval
+  durationSeconds: Float
   errorMessage: String
   eta: Datetime
   jobKey: String!

@@ -3,6 +3,8 @@ import json
 import tempfile
 from urllib.parse import urlparse
 from typing import Optional, Dict, Any
+from datetime import datetime, timezone
+import math
 
 import boto3
 import requests
@@ -77,8 +79,12 @@ class ProgressNotifier:
         self.progress = 0
         self.last_notified_progress = 0
         self.message_last_sent = int(time.time() * 1000)
+        self._eta_estimator: Optional["EtaEstimator"] = None
+        self._eta: Optional[datetime] = None
+        # Only count ETA samples beyond this baseline (exclude download phase)
+        self._eta_baseline_progress = 15
 
-    def notify(self, progress: float, message: Optional[str] = None):
+    def notify(self, progress: float, message: Optional[str] = None, include_in_eta: bool = False):
         now_ms = int(time.time() * 1000)
         send_notification = False
 
@@ -87,22 +93,41 @@ class ProgressNotifier:
         if progress > self.last_notified_progress + 5:
             send_notification = True
 
+        # Initialize ETA estimator on first post-download sample
+        if (
+            include_in_eta
+            and self._eta_estimator is None
+            and progress > self._eta_baseline_progress
+        ):
+            # Only measure remaining portion (exclude baseline segment)
+            self._eta_estimator = EtaEstimator(
+                total_units=100 - self._eta_baseline_progress
+            )
+
+        # Update ETA when progress increases and the sample should count
+        if include_in_eta and progress > self.progress and self._eta_estimator is not None:
+            effective_done = max(0, int(progress) - self._eta_baseline_progress)
+            state = self._eta_estimator.update(effective_done)
+            self._eta = state["eta"]
+
         self.progress = progress
         if send_notification:
             self.last_notified_progress = int(self.progress)
             self.message_last_sent = now_ms
             print(f"Sending progress notification for job {self.job_key}: {self.progress}%")
-            _send_sqs_message(
-                self.queue_url,
-                {
-                    "type": "progress",
-                    "progress": int(self.progress),
-                    "message": message,
-                    "jobKey": self.job_key,
-                    "queueUrl": self.queue_url,
-                    "origin": "subdivision",
-                },
-            )
+            payload: Dict[str, Any] = {
+                "type": "progress",
+                "progress": int(self.progress),
+                "message": message,
+                "jobKey": self.job_key,
+                "queueUrl": self.queue_url,
+                "origin": "subdivision",
+            }
+            if self._eta is not None:
+                # Serialize ETA as ISO 8601 UTC string (e.g., 2025-01-01T00:00:00.000Z)
+                eta_iso = self._eta.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+                payload["eta"] = eta_iso
+            _send_sqs_message(self.queue_url, payload)
 
     def begin(self, logfile_url: Optional[str] = None, logs_expires_at: Optional[str] = None):
         _send_sqs_message(
@@ -140,6 +165,105 @@ class ProgressNotifier:
                 "origin": "subdivision",
             },
         )
+
+
+class EtaEstimator:
+    """
+    ETA estimator using an EWMA of per-unit durations with an optional prior.
+
+    Mirrors the behavior of the TypeScript EtaEstimator used in overlay-worker.
+    Progress should be provided as cumulative units [0..total_units].
+    """
+
+    def __init__(
+        self,
+        *,
+        total_units: int,
+        prior_ms_per_unit: Optional[float] = None,
+        min_samples_units: int = 20,
+        min_samples_ms: int = 2000,
+        ewma_half_life_units: int = 100,
+        prior_weight_units: int = 100,
+    ) -> None:
+        if not isinstance(total_units, (int, float)) or total_units <= 0 or not math.isfinite(total_units):
+            raise ValueError("total_units must be a positive finite number")
+        self.total_units = int(max(1, math.floor(total_units)))
+
+        self.prior_ms_per_unit = prior_ms_per_unit if prior_ms_per_unit is not None else None
+        self.min_samples_units = int(min_samples_units)
+        self.min_samples_ms = int(min_samples_ms)
+        self.ewma_half_life_units = float(ewma_half_life_units)
+        self.prior_weight_units = int(prior_weight_units)
+
+        now_ms = int(time.time() * 1000)
+        self.start_ms: int = now_ms
+        self.last_tick_ms: int = now_ms
+        self.last_done: int = 0
+        self.ewma_ms_per_unit: Optional[float] = None
+        self.seen_units: int = 0
+
+    def update(self, done_units: float) -> Dict[str, Any]:
+        now_ms = int(time.time() * 1000)
+
+        # Clamp and enforce monotonicity
+        done_units = float(done_units)
+        done_units = min(self.total_units, max(0, math.floor(done_units)))
+        if done_units < self.last_done:
+            return self._current_state(now_ms)
+
+        # Update EWMA if new progress has occurred
+        if done_units > self.last_done:
+            dt = now_ms - self.last_tick_ms
+            dn = int(done_units - self.last_done)
+            if dt > 0 and dn > 0:
+                inst_ms_per_unit = dt / dn
+                alpha = 1 - math.exp(-dn / self.ewma_half_life_units)
+                if self.ewma_ms_per_unit is None:
+                    self.ewma_ms_per_unit = inst_ms_per_unit
+                else:
+                    self.ewma_ms_per_unit = (1 - alpha) * self.ewma_ms_per_unit + alpha * inst_ms_per_unit
+            self.seen_units = int(done_units)
+            self.last_done = int(done_units)
+            self.last_tick_ms = now_ms
+
+        return self._current_state(now_ms)
+
+    def _current_state(self, now_ms: int) -> Dict[str, Any]:
+        elapsed_ms = now_ms - self.start_ms
+        ready = self.seen_units >= self.min_samples_units or elapsed_ms >= self.min_samples_ms
+
+        if not ready or self.ewma_ms_per_unit is None:
+            return {
+                "eta": None,
+                "etaMs": None,
+                "msPerUnit": self.ewma_ms_per_unit,
+                "samples": self.seen_units,
+                "confidence": "low",
+            }
+
+        # Blend EWMA with prior if applicable
+        ms_per_unit = float(self.ewma_ms_per_unit)
+        if self.prior_ms_per_unit is not None:
+            w = min(self.prior_weight_units / max(1, self.seen_units), 1)
+            ms_per_unit = w * float(self.prior_ms_per_unit) + (1 - w) * ms_per_unit
+
+        remaining_units = max(0, self.total_units - self.seen_units)
+        eta_ms = int(max(ms_per_unit, 0) * remaining_units)
+        eta_dt = datetime.fromtimestamp((now_ms + eta_ms) / 1000, tz=timezone.utc)
+
+        confidence = (
+            "high"
+            if self.seen_units > self.min_samples_units * 3
+            else ("med" if self.seen_units >= self.min_samples_units else "low")
+        )
+
+        return {
+            "eta": eta_dt,
+            "etaMs": eta_ms,
+            "msPerUnit": ms_per_unit,
+            "samples": self.seen_units,
+            "confidence": confidence,
+        }
 
 
 def _download_with_progress(url: str, dest_path: str, progress_cb):
@@ -306,7 +430,9 @@ def handler(event, context):
             
         if notifier is not None:
             try:
-                notifier.notify(int(pct))
+                # Include ETA samples only for processing and upload phases
+                include_in_eta = phase in ("processing_start", "processing", "upload")
+                notifier.notify(int(pct), None, include_in_eta)
             except Exception:
                 pass
         last_value = pct

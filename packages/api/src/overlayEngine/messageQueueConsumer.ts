@@ -129,7 +129,9 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                 : message.type === "result"
                 ? message.result
                 : ""
-            } ${message.type === "progress" ? message.message : ""}`
+            } ${message.type === "progress" ? message.message : ""} ${
+              message.type === "progress" && message.eta ? message.eta : ""
+            }`
           )
         );
       }
@@ -147,30 +149,35 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           if (origin === "subdivision") {
             switch (consolidatedMessage.type) {
               case "begin":
+                console.log("begin and set started_at", consolidatedMessage);
+                console.log(
+                  `update source_processing_jobs set state = 'processing', updated_at = now(), started_at = now() where job_key = '${jobKey}' and (state = 'queued' or state = 'processing')`
+                );
                 await pgPool.query(
-                  `update source_processing_jobs set state = 'processing', updated_at = now() where job_key = $1 and state = 'queued'`,
+                  `update source_processing_jobs set state = 'processing', updated_at = now(), started_at = now() where job_key = $1 and (state = 'queued' or state = 'processing')`,
                   [jobKey]
                 );
                 break;
               case "progress":
                 await pgPool.query(
-                  `update source_processing_jobs set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), progress_message = $3 where job_key = $2 and state != 'complete' and state != 'error'`,
+                  `update source_processing_jobs set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), progress_message = $3, eta = $4 where job_key = $2 and state != 'complete' and state != 'error'`,
                   [
-                    Math.round((consolidatedMessage as any).progress || 0),
+                    Math.round(consolidatedMessage.progress || 0),
                     jobKey,
-                    (consolidatedMessage as any).message || null,
+                    consolidatedMessage.message || null,
+                    consolidatedMessage.eta || null,
                   ]
                 );
                 break;
               case "error":
                 await pgPool.query(
-                  `update source_processing_jobs set state = 'error', error_message = $1, updated_at = now() where job_key = $2 and (state = 'processing' or state = 'queued')`,
-                  [(consolidatedMessage as any).error, jobKey]
+                  `update source_processing_jobs set state = 'error', error_message = $1, updated_at = now(), duration = now() - started_at where job_key = $2 and (state = 'processing' or state = 'queued')`,
+                  [consolidatedMessage.error, jobKey]
                 );
                 break;
               case "result": {
                 // Expect { object: { publicUrl?, bucket, key, size, filename } }
-                const res = (consolidatedMessage as any).result || {};
+                const res = consolidatedMessage.result || {};
                 const obj = res.object || {};
                 // Fetch job so we know data_source_id and project_id
                 const jobQ = await pgPool.query(
@@ -190,8 +197,13 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                     `,
                     [data_source_id, remote, size, filename, url, project_id]
                   );
+                  console.log(
+                    "saving with duration",
+                    consolidatedMessage.duration,
+                    `duration = coalesce($2, now() - started_at)`
+                  );
                   await pgPool.query(
-                    `update source_processing_jobs set state = 'complete', updated_at = now(), progress_percentage = 100, error_message = null where job_key = $1`,
+                    `update source_processing_jobs set state = 'complete', updated_at = now(), completed_at = now(), duration = now() - started_at, progress_percentage = 100, error_message = null where job_key = $1`,
                     [jobKey]
                   );
                 }
@@ -200,51 +212,59 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
               default:
                 break;
             }
-            continue;
-          }
-
-          // Process overlay engine worker messages (existing behavior)
-          switch (consolidatedMessage.type) {
-            case "result":
-              await pgPool.query(
-                `update spatial_metrics set value = $1, state = 'complete', updated_at = now(), progress_percentage = 100, error_message = null where job_key = $2`,
-                [consolidatedMessage.result, jobKey]
-              );
-              break;
-            case "error":
-              await pgPool.query(
-                `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where job_key = $2 and (state = 'processing' or state = 'queued')`,
-                [consolidatedMessage.error, jobKey]
-              );
-              break;
-            case "progress":
-              await pgPool.query(
-                `update spatial_metrics set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1) where job_key = $2 and state != 'complete' and state != 'error'`,
-                [Math.round(consolidatedMessage.progress), jobKey]
-              );
-              break;
-            case "begin":
-              await pgPool.query(
-                `update spatial_metrics set state = 'processing', updated_at = now() where job_key = $1 and state = 'queued'`,
-                [jobKey]
-              );
-              if (consolidatedMessage.logfileUrl) {
+          } else {
+            switch (consolidatedMessage.type) {
+              case "result":
                 await pgPool.query(
-                  `update spatial_metrics set logs_url = $1, logs_expires_at = $2 where job_key = $3`,
+                  `update spatial_metrics set value = $1, state = 'complete', updated_at = now(), completed_at = now(), duration = coalesce($3, now() - started_at), progress_percentage = 100, error_message = null where job_key = $2`,
                   [
-                    consolidatedMessage.logfileUrl,
-                    consolidatedMessage.logsExpiresAt,
+                    consolidatedMessage.result,
                     jobKey,
+                    consolidatedMessage.duration
+                      ? `${consolidatedMessage.duration}ms`
+                      : null,
                   ]
                 );
-              }
-              break;
-            default:
-              console.log(
-                `Unknown message type for job ${jobKey}:`,
-                consolidatedMessage
-              );
-              break;
+                break;
+              case "error":
+                await pgPool.query(
+                  `update spatial_metrics set state = 'error', error_message = $1, updated_at = now(), duration = now() - started_at where job_key = $2 and (state = 'processing' or state = 'queued')`,
+                  [consolidatedMessage.error, jobKey]
+                );
+                break;
+              case "progress":
+                await pgPool.query(
+                  `update spatial_metrics set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), eta = $3 where job_key = $2 and state != 'complete' and state != 'error'`,
+                  [
+                    Math.round(consolidatedMessage.progress),
+                    jobKey,
+                    consolidatedMessage.eta,
+                  ]
+                );
+                break;
+              case "begin":
+                await pgPool.query(
+                  `update spatial_metrics set state = 'processing', updated_at = now(), started_at = now() where job_key = $1 and (state = 'queued' or state = 'processing')`,
+                  [jobKey]
+                );
+                if (consolidatedMessage.logfileUrl) {
+                  await pgPool.query(
+                    `update spatial_metrics set logs_url = $1, logs_expires_at = $2 where job_key = $3`,
+                    [
+                      consolidatedMessage.logfileUrl,
+                      consolidatedMessage.logsExpiresAt,
+                      jobKey,
+                    ]
+                  );
+                }
+                break;
+              default:
+                console.log(
+                  `Unknown message type for job ${jobKey}:`,
+                  consolidatedMessage
+                );
+                break;
+            }
           }
         } catch (processError) {
           console.error(

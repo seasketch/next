@@ -914,6 +914,7 @@ export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
   completedAt?: Maybe<Scalars['Datetime']>;
   createdAt: Scalars['Datetime'];
+  durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
   groupBy?: Maybe<Scalars['String']>;
@@ -6677,6 +6678,29 @@ export type GetOrCreateSpatialMetricsResults = {
   metrics: Array<CompatibleSpatialMetric>;
 };
 
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7757,6 +7781,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8968,6 +8993,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -14436,6 +14467,8 @@ export type SourceProcessingJob = Node & {
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
   dataUploadOutputId?: Maybe<Scalars['Int']>;
+  duration?: Maybe<Interval>;
+  durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
   jobKey: Scalars['String'];
@@ -22652,7 +22685,7 @@ export type AvailableReportLayersQuery = (
 
 export type SourceProcessingJobDetailsFragment = (
   { __typename?: 'SourceProcessingJob' }
-  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt' | 'errorMessage'>
+  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt' | 'errorMessage' | 'startedAt' | 'durationSeconds' | 'eta'>
 );
 
 export type SourceProcessingJobsQueryVariables = Exact<{
@@ -23092,7 +23125,7 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
@@ -26090,6 +26123,9 @@ export const SourceProcessingJobDetailsFragmentDoc = /*#__PURE__*/ gql`
   progressMessage
   createdAt
   errorMessage
+  startedAt
+  durationSeconds
+  eta
 }
     `;
 export const ReportingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -26347,6 +26383,9 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
   sourceUrl
   groupBy
   sourceProcessingJobDependency
+  eta
+  startedAt
+  durationSeconds
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
