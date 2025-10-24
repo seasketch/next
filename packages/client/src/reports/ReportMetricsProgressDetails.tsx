@@ -174,10 +174,9 @@ export default function ReportMetricsProgressDetails({
             <h3 className="text-sm font-medium">{t("Sketch Metrics")}</h3>
             <p className="text-sm text-gray-500">
               <Trans ns="sketching">
-                Results are calculated for whenever a sketch is created or
-                updated. Polygons may be split into multiple fragments in order
-                to account for antimeridian crossings or overlap with other
-                sketches in the same collection.
+                Results are calculated when a sketch is created or updated.
+                Polygons may be split in order to account for antimeridian
+                crossings or overlap with other sketches in a collection.
               </Trans>
             </p>
             <ul className="space-y-1 py-2">

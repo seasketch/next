@@ -1,6 +1,6 @@
 import { Metric, MetricTypeMap, subjectIsFragment } from "overlay-engine";
 import { useReportContext } from "../ReportContext";
-import { useEffect, useRef, useMemo } from "react";
+import { useMemo } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,

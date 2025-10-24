@@ -242,6 +242,7 @@ export function OverlappingAreasCard({
       tint={config.tint}
       icon={config.icon}
       metrics={overlayMetrics.data}
+      sources={overlayMetrics.sources}
       skeleton={
         <div className="w-full space-y-1">
           <Skeleton className="w-full h-4" />

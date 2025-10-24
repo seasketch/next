@@ -20,7 +20,7 @@ interface ETACountdownProps {
  * - For long jobs you can also switch to a % cap; see commented code below.
  */
 const MAX_UPWARD_DRIFT_RATE = 0.25; // sec/sec when ETA worsens (upward drift cap)
-const MAX_DOWNWARD_DRIFT_RATE = 2; // sec/sec when ETA improves (downward drift cap)
+const MAX_DOWNWARD_DRIFT_RATE = 3; // sec/sec when ETA improves (downward drift cap)
 // const MAX_UPWARD_PERCENT_PER_MIN = 0.10; // 10% per minute cap, optional alternative
 
 // Don't show the component at all unless it's going to take at least this long

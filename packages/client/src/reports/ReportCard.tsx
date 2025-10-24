@@ -21,6 +21,7 @@ import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import {
   CompatibleSpatialMetricDetailsFragment,
+  OverlaySourceDetailsFragment,
   SpatialMetricState,
   useRetryFailedSpatialMetricsMutation,
 } from "../generated/graphql";
@@ -45,6 +46,7 @@ export type ReportCardComponentProps = {
   onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
   metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
   skeleton?: React.ReactNode;
 };
 
@@ -66,6 +68,7 @@ export default function ReportCard({
   config,
   className,
   metrics,
+  sources,
   skeleton,
 }: ReportCardComponentProps & {
   config: ReportCardConfiguration<any>;
@@ -214,9 +217,7 @@ export default function ReportCard({
             className=""
             display={true}
             metrics={metrics}
-            sourceProcessingJobs={overlaySources.map(
-              (s) => s.sourceProcessingJob
-            )}
+            sourceProcessingJobs={sources.map((s) => s.sourceProcessingJob)}
           />
         </button>
       )}
@@ -504,6 +505,7 @@ export function ReportCardFactory({
         onUpdate={onUpdate}
         config={config}
         metrics={[]}
+        sources={[]}
         backgroundTint="red"
         tint="text-red-500"
         icon="error"

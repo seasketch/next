@@ -38,6 +38,7 @@ export function TextBlockCard({
       config={config}
       className="pb-2"
       metrics={[]}
+      sources={[]}
     />
   );
 }
