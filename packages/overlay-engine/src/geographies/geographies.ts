@@ -699,11 +699,15 @@ export async function initializeGeographySources(
     type: "Feature",
     geometry: {
       type: "MultiPolygon",
-      coordinates: union(
-        intersectionFeatures.map(
-          (f) => f.geometry.coordinates as polygonClipping.Geom
-        )
-      ),
+      coordinates:
+        intersectionFeatures.length === 1
+          ? (intersectionFeatures[0].geometry
+              .coordinates as polygonClipping.Geom)
+          : union(
+              intersectionFeatures.map(
+                (f) => f.geometry.coordinates as polygonClipping.Geom
+              )
+            ),
     },
     properties: {},
   } as Feature<MultiPolygon>;

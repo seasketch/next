@@ -544,7 +544,10 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
         type: "Feature",
         geometry: {
             type: "MultiPolygon",
-            coordinates: (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates)),
+            coordinates: intersectionFeatures.length === 1
+                ? intersectionFeatures[0].geometry
+                    .coordinates
+                : (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates)),
         },
         properties: {},
     };

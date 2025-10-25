@@ -319,6 +319,19 @@ declare class FlatGeobufSource<T = Feature> {
         warmCache?: boolean;
         queryPlan?: QueryPlan;
     }): AsyncGenerator<FeatureWithMetadata<T>>;
+    queryAsync(bbox: Envelope | Envelope[], options?: {
+        queryPlan?: QueryPlan;
+    }): AsyncGenerator<{
+        bbox: [number, number, number, number];
+        bytes: Uint8Array<ArrayBuffer>;
+        getProperties: () => {
+            [name: string]: any;
+        } & {
+            __byteLength: number;
+            __offset: number;
+        };
+        getFeature: () => FeatureWithMetadata<T>;
+    }, void, unknown>;
     search(bbox: Envelope | Envelope[]): {
         bytes: number;
         features: number;

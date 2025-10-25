@@ -355,6 +355,45 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
   }
 
+  async *queryAsync(
+    bbox: Envelope | Envelope[],
+    options?: {
+      queryPlan?: QueryPlan;
+    }
+  ) {
+    const queryPlan = options?.queryPlan ?? this.createPlan(bbox);
+    for await (const [data, offset, length, bbox] of executeQueryPlan2(
+      queryPlan.pages,
+      this.fetchRangeFn,
+      this.featureDataOffset,
+      3
+    )) {
+      const bytes = new Uint8Array(data.buffer);
+      const bytesAligned = new Uint8Array(data.byteLength);
+      bytesAligned.set(
+        bytes.slice(data.byteOffset, data.byteOffset + data.byteLength),
+        0
+      );
+      yield {
+        bbox,
+        bytes: bytesAligned,
+        getProperties: () =>
+          parseProperties(
+            new ByteBuffer(bytesAligned),
+            this.header.columns,
+            offset
+          ),
+        getFeature: (): FeatureWithMetadata<T> =>
+          parseFeatureData(
+            offset,
+            bytesAligned,
+            this.header,
+            bbox
+          ) as unknown as FeatureWithMetadata<T>,
+      };
+    }
+  }
+
   search(bbox: Envelope | Envelope[]) {
     if (!this.index) {
       throw new Error("Spatial index not available");
@@ -726,10 +765,10 @@ export async function* executeQueryPlan2(
       i++;
       // Yield control to event loop after each feature to allow other promises to resolve
       // This ensures pending fetch promises can complete their cleanup without blocking
-      if (i % 1000 === 0) {
-        // process.nextTick(() => {});
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
+      // if (i % 1000 === 0) {
+      //   // process.nextTick(() => {});
+      //   await new Promise((resolve) => setTimeout(resolve, 0));
+      // }
     }
     // console.log(`finished parsing page ${pageIndex}`);
     // console.log("finished processing features of page", pageIndex);

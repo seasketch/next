@@ -2443,6 +2443,37 @@ var FlatGeobufSource = class {
       yield feature;
     }
   }
+  async *queryAsync(bbox, options) {
+    const queryPlan = options?.queryPlan ?? this.createPlan(bbox);
+    for await (const [data, offset, length, bbox2] of executeQueryPlan2(
+      queryPlan.pages,
+      this.fetchRangeFn,
+      this.featureDataOffset,
+      3
+    )) {
+      const bytes3 = new Uint8Array(data.buffer);
+      const bytesAligned = new Uint8Array(data.byteLength);
+      bytesAligned.set(
+        bytes3.slice(data.byteOffset, data.byteOffset + data.byteLength),
+        0
+      );
+      yield {
+        bbox: bbox2,
+        bytes: bytesAligned,
+        getProperties: () => parseProperties2(
+          new ByteBuffer(bytesAligned),
+          this.header.columns,
+          offset
+        ),
+        getFeature: () => parseFeatureData(
+          offset,
+          bytesAligned,
+          this.header,
+          bbox2
+        )
+      };
+    }
+  }
   search(bbox) {
     if (!this.index) {
       throw new Error("Spatial index not available");
@@ -2650,7 +2681,6 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
     }
     const { data, pageIndex, features, range } = winner;
     const view = new DataView(data);
-    let i = 0;
     for (let [offset, length, bbox] of features) {
       const adjustedOffset = offset - range[0] + featureDataOffset;
       if (length === null) {
@@ -2658,10 +2688,6 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
       }
       let featureView = new DataView(data, adjustedOffset, length);
       yield [featureView, offset, length, bbox];
-      i++;
-      if (i % 1e3 === 0) {
-        await new Promise((resolve) => setTimeout(resolve, 0));
-      }
     }
   }
 }

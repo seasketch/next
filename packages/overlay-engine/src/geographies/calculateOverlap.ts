@@ -1,7 +1,13 @@
-import { FeatureReference, FeatureWithMetadata, SourceCache } from "fgb-source";
+import {
+  FeatureReference,
+  FeatureWithMetadata,
+  FlatGeobufSource,
+  SourceCache,
+} from "fgb-source";
 import { ClippingLayerOption, initializeGeographySources } from "./geographies";
 import { SourceType } from "../metrics/metrics";
 import {
+  GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
   OverlayWorkerHelpers,
   OverlayWorkerLogFeatureLayerConfig,
@@ -67,7 +73,7 @@ let batchedFeaturesId = 0;
  * also skips the opportunity to use the container index to achieve even greater
  * speed. This batch size is a compromise between these two factors.
  */
-const CLIPPING_BATCH_SIZE = 1024 * 1024 * 5; // 2MB
+const CLIPPING_BATCH_SIZE = 1024 * 1024 * 4; // 2MB
 
 export async function calculateGeographyOverlap(
   geography: ClippingLayerOption[],
@@ -138,7 +144,7 @@ export async function calculateGeographyOverlap(
   // for every page that intersects the geography. Afterwards,
   // feature-by-feature calculations can be performed.
 
-  const env = bboxToEnvelope(bbox(intersectionFeatureGeojson));
+  // const env = bboxToEnvelope(bbox(intersectionFeatureGeojson));
 
   // helpers.log("prefetching difference sources");
   // TODO: Work towards enabling this, or at least understanding why it happens.
@@ -168,9 +174,9 @@ export async function calculateGeographyOverlap(
   const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
     sourceUrl
   );
-
-  const envelope = bboxToEnvelope(bbox(intersectionFeatureGeojson));
-  const estimate = await source.search(envelope);
+  const boxes = splitBBoxAntimeridian(bbox(intersectionFeatureGeojson));
+  const envelopes = boxes.map(bboxToEnvelope);
+  const estimate = await source.search(envelopes);
   helpers.log(
     `Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}`
   );
@@ -339,9 +345,9 @@ export async function calculateGeographyOverlap(
   }
 
   const clippingBatchSize =
-    estimate.bytes < 1024 * 1024 ? estimate.bytes / 4 : CLIPPING_BATCH_SIZE;
+    estimate.bytes < 1024 * 1024 ? estimate.bytes / 8 : CLIPPING_BATCH_SIZE;
 
-  for await (const feature of source.getFeaturesAsync(envelope)) {
+  for await (const feature of source.getFeaturesAsync(envelopes)) {
     if (featuresProcessed === 0) {
       helpers.log("starting processing of first source feature");
     }
@@ -374,17 +380,20 @@ export async function calculateGeographyOverlap(
       // remaining area.
     }
 
-    const bboxes = splitBBoxAntimeridian(bbox(feature.geometry));
-    const splitEnvelopes = bboxes.map(bboxToEnvelope);
-
     let hasHits = false;
-    for (const diffLayer of differenceSources) {
-      const matches = diffLayer.source.search(splitEnvelopes);
-      if (matches.features > 0) {
-        batch.addDifferenceFeatureReferences(diffLayer.layerId, matches.refs);
-        hasHits = true;
+
+    if (differenceSources.length > 0) {
+      const bboxes = splitBBoxAntimeridian(bbox(feature.geometry));
+      const splitEnvelopes = bboxes.map(bboxToEnvelope);
+      for (const diffLayer of differenceSources) {
+        const matches = diffLayer.source.search(splitEnvelopes);
+        if (matches.features > 0) {
+          batch.addDifferenceFeatureReferences(diffLayer.layerId, matches.refs);
+          hasHits = true;
+        }
       }
     }
+
     if (hasHits) {
       batch.addFeature(feature);
       if (batch.bytes >= clippingBatchSize) {

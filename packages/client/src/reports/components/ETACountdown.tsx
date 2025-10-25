@@ -117,7 +117,7 @@ export default function ETACountdown({
   return (
     <span
       className={`pointer-events-none italic ml-2 text-xs text-gray-400 whitespace-nowrap tabular-nums ${
-        show ? "opacity-100 w-auto" : "opacity-0 w-0"
+        show ? "opacity-100 w-auto" : "opacity-0 w-0 overflow-hidden"
       } transition-opacity duration-500`}
     >
       {formatTimeRemaining(secondsRemaining || 0)}
