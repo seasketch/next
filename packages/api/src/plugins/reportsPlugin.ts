@@ -540,6 +540,16 @@ async function getOrCreateMetricsOfType(
   fragmentHashes: string[],
   projectId: number
 ) {
+  console.log(
+    "getOrCreateMetricsOfType",
+    type,
+    overlaySource,
+    groupBy,
+    cardSettings,
+    geographyIds,
+    fragmentHashes,
+    projectId
+  );
   const metrics: any[] = [];
   // first, create geography metrics
   for (const geographyId of geographyIds) {

@@ -3,8 +3,13 @@ import { Feature, MultiPolygon, Polygon } from "geojson";
 import { ContainerIndex } from "./utils/containerIndex";
 import { GuaranteedOverlayWorkerHelpers, OverlayWorkerHelpers } from "./utils/helpers";
 import { Cql2Query } from "./cql2";
+import * as clipping from "polyclip-ts";
+import PQueue from "p-queue";
+import { createPool, WorkerPool } from "./workers/pool";
+export { createPool };
 type BatchData = {
     weight: number;
+    progressWorth: number;
     differenceSourceReferences: {
         [layerId: string]: {
             offsets: Set<number>;
@@ -44,27 +49,24 @@ export declare class OverlappingAreaBatchedClippingProcessor {
     };
     batchData: BatchData;
     batchPromises: Promise<any>[];
-    options: {
-        useWorkers?: boolean;
-    };
+    pool?: WorkerPool<any, any>;
+    queue: PQueue;
+    private progress;
+    private progressTarget;
     constructor(maxBatchSize: number, subjectFeature: Feature<Polygon | MultiPolygon>, intersectionSource: FlatGeobufSource<Feature<Polygon | MultiPolygon>>, differenceSources: {
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
         cql2Query?: Cql2Query | undefined;
-    }[], helpers: OverlayWorkerHelpers, groupBy?: string, options?: {
-        useWorkers?: boolean;
-    });
+    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>);
     resetBatchData(): void;
-    calculateOverlap(): Promise<{
+    calculateOverlap(): Promise<unknown>;
+    processBatch(batch: BatchData, differenceMultiPolygon: clipping.Geom[]): Promise<{
         [classKey: string]: number;
     }>;
-    processBatch(batch: BatchData): Promise<{
-        [classKey: string]: number;
-    }>;
+    getDifferenceMultiPolygon(): Promise<clipping.Geom[]>;
     addFeatureToTotals(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>, usePrecomputedArea?: boolean): void;
     addDifferenceFeatureReferencesToBatch(layerId: string, refs: FeatureReference[]): void;
     addFeatureToBatch(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>, requiresIntersection: boolean, requiresDifference: boolean): void;
     weightForFeature(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>): number;
 }
-export {};
 //# sourceMappingURL=OverlappingAreaBatchedClippingProcessor.d.ts.map

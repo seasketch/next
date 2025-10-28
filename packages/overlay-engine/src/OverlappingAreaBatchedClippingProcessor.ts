@@ -16,11 +16,15 @@ import bbox from "@turf/bbox";
 import calcArea from "@turf/area";
 import { Cql2Query, evaluateCql2JSONQuery } from "./cql2";
 import * as clipping from "polyclip-ts";
-import { Piscina } from "piscina";
-import clipBatch from "./workers/clipBatch";
+import { clipBatch } from "./workers/clipBatch";
+import PQueue from "p-queue";
+import { createPool, WorkerPool } from "./workers/pool";
+
+export { createPool };
 
 type BatchData = {
   weight: number;
+  progressWorth: number;
   differenceSourceReferences: {
     [layerId: string]: {
       offsets: Set<number>;
@@ -33,13 +37,6 @@ type BatchData = {
     requiresDifference: boolean;
   }[];
 };
-
-const piscina = new Piscina({
-  filename: __dirname + "/../dist/workers/clipBatch.js",
-  // maxThreads: 5,
-  // minThreads: 5,
-  maxQueue: "auto",
-});
 
 export class OverlappingAreaBatchedClippingProcessor {
   /**
@@ -66,11 +63,11 @@ export class OverlappingAreaBatchedClippingProcessor {
   results: { [classKey: string]: number } = { "*": 0 };
   batchData!: BatchData;
   batchPromises: Promise<any>[] = [];
-  options: {
-    useWorkers?: boolean;
-  } = {
-    useWorkers: false,
-  };
+  pool?: WorkerPool<any, any>;
+  queue: PQueue;
+
+  private progress: number = 0;
+  private progressTarget: number = 0;
 
   constructor(
     maxBatchSize: number,
@@ -83,10 +80,9 @@ export class OverlappingAreaBatchedClippingProcessor {
     }[],
     helpers: OverlayWorkerHelpers,
     groupBy?: string,
-    options?: {
-      useWorkers?: boolean;
-    }
+    pool?: WorkerPool<any, any>
   ) {
+    this.pool = pool;
     this.intersectionSource = intersectionSource;
     this.differenceSources = differenceSources;
     this.maxBatchSize = maxBatchSize;
@@ -99,9 +95,10 @@ export class OverlappingAreaBatchedClippingProcessor {
     this.helpers = guaranteeHelpers(helpers);
     this.groupBy = groupBy;
     this.resetBatchData();
-    this.options = options || {
-      useWorkers: false,
-    };
+
+    this.queue = new PQueue({
+      concurrency: this.pool?.size || 1,
+    });
   }
 
   resetBatchData() {
@@ -111,6 +108,7 @@ export class OverlappingAreaBatchedClippingProcessor {
           Feature<Polygon | MultiPolygon>
         >
       ),
+      progressWorth: 0,
       differenceSourceReferences: this.differenceSources.reduce(
         (acc, curr) => {
           return {
@@ -137,177 +135,215 @@ export class OverlappingAreaBatchedClippingProcessor {
   }
 
   async calculateOverlap() {
-    // Step 1. Create query plan for fetching features from the intersection
-    // source which overlap the bounding box of the subject feature. Based on
-    // how many bytes of features are estimated to be returned, determine the
-    // batch size to use when clipping.
-    const envelopes = splitBBoxAntimeridian(
-      bbox(this.subjectFeature.geometry)
-    ).map(bboxToEnvelope);
-    const queryPlan = this.intersectionSource.createPlan(envelopes);
-    // The default max batch size is helpful when working with very large
-    // datasets. For example, if clipping to 100MB of features, we may want to
-    // work in batches of 5MB, rather than 100MB / 6 threads. That could cause
-    // very large pauses in the processing of the features.
-    let BATCH_SIZE = this.maxBatchSize;
-    if (
-      queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor <
-      this.maxBatchSize
-    ) {
-      // Ideally, batch size would be based on the number of threads used to
-      // perform the clipping operation.
-      BATCH_SIZE =
-        queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor;
-    }
-    this.helpers.log(
-      `Using batch size of ${BATCH_SIZE} for ${queryPlan.estimatedBytes.features} estimated bytes of features. Minimum batch division factor is ${this.minimumBatchDivisionFactor}, and max batch size setting is ${this.maxBatchSize}`
-    );
+    return new Promise(async (resolve, reject) => {
+      try {
+        this.progress = 0;
+        // Step 1. Create query plan for fetching features from the intersection
+        // source which overlap the bounding box of the subject feature. Based on
+        // how many bytes of features are estimated to be returned, determine the
+        // batch size to use when clipping.
+        const envelopes = splitBBoxAntimeridian(
+          bbox(this.subjectFeature.geometry)
+        ).map(bboxToEnvelope);
+        const queryPlan = this.intersectionSource.createPlan(envelopes);
+        // The default max batch size is helpful when working with very large
+        // datasets. For example, if clipping to 100MB of features, we may want to
+        // work in batches of 5MB, rather than 100MB / 6 threads. That could cause
+        // very large pauses in the processing of the features.
+        let BATCH_SIZE = this.maxBatchSize;
+        if (
+          queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor <
+          this.maxBatchSize
+        ) {
+          // Ideally, batch size would be based on the number of threads used to
+          // perform the clipping operation.
+          BATCH_SIZE =
+            queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor;
+        }
+        this.helpers.log(
+          `Using batch size of ${BATCH_SIZE} for ${queryPlan.estimatedBytes.features} estimated bytes of features. Minimum batch division factor is ${this.minimumBatchDivisionFactor}, and max batch size setting is ${this.maxBatchSize}`
+        );
 
-    // Step 2. Start working through the features, quickly discarding those that
-    // are completely outside the subject feature, and collecting size data from
-    // those entirely within. For those that are partially within, or need to be
-    // clipping against a difference layer, put them into the current batch.
-    for await (const feature of this.intersectionSource.getFeaturesAsync(
-      envelopes,
-      {
-        queryPlan,
-      }
-    )) {
-      let requiresIntersection = false;
-      const classification = this.containerIndex.classify(feature);
-      if (classification === "outside") {
-        // We can safely skip this feature.
-        continue;
-      } else if (classification === "mixed") {
-        // This feature will need to be clipped against the subject feature to
-        // find the intersection.
-        requiresIntersection = true;
-      } else {
-        // Requires no clipping against the subject feature, but still may need
-        // to be clipped against a difference layer(s) to find the difference.
-      }
-      let requiresDifference = false;
-      for (const differenceSource of this.differenceSources) {
-        // Note that since we're searching without first clipping the feature
-        // to the subject feature, we may be matching on a bigger bounding box
-        // than optimal. But since sources are subdivided into smaller chunks
-        // this shouldn't have a significant impact.
-        const matches = differenceSource.source.search(
-          bboxToEnvelope(bbox(feature.geometry))
-        );
-        if (matches.features > 0) {
-          requiresDifference = true;
-          this.addDifferenceFeatureReferencesToBatch(
-            differenceSource.layerId,
-            matches.refs
+        this.progressTarget = queryPlan.estimatedBytes.features;
+
+        // Step 2. Start working through the features, quickly discarding those that
+        // are completely outside the subject feature, and collecting size data from
+        // those entirely within. For those that are partially within, or need to be
+        // clipping against a difference layer, put them into the current batch.
+        for await (const feature of this.intersectionSource.getFeaturesAsync(
+          envelopes,
+          {
+            queryPlan,
+          }
+        )) {
+          this.helpers.progress(
+            (this.progress / this.progressTarget) * 100,
+            `Processing features: (${this.progress}/${this.progressTarget} bytes)`
           );
+          let requiresIntersection = false;
+          const classification = this.containerIndex.classify(feature);
+          if (classification === "outside") {
+            // We can safely skip this feature.
+            this.progress++;
+            continue;
+          } else if (classification === "mixed") {
+            // This feature will need to be clipped against the subject feature to
+            // find the intersection.
+            requiresIntersection = true;
+          } else {
+            // Requires no clipping against the subject feature, but still may need
+            // to be clipped against a difference layer(s) to find the difference.
+          }
+          let requiresDifference = false;
+          for (const differenceSource of this.differenceSources) {
+            // Note that since we're searching without first clipping the feature
+            // to the subject feature, we may be matching on a bigger bounding box
+            // than optimal. But since sources are subdivided into smaller chunks
+            // this shouldn't have a significant impact.
+            const matches = differenceSource.source.search(
+              bboxToEnvelope(bbox(feature.geometry))
+            );
+            if (matches.features > 0) {
+              requiresDifference = true;
+              this.addDifferenceFeatureReferencesToBatch(
+                differenceSource.layerId,
+                matches.refs
+              );
+            }
+          }
+          if (!requiresIntersection && !requiresDifference) {
+            // feature is entirely within the subject feature, so we can skip
+            // clipping. Just need to add it's area to the appropriate total(s).
+            this.addFeatureToTotals(feature, true);
+            this.progress += feature.properties?.__byteLength;
+          } else {
+            // add feature to batch for clipping
+            this.addFeatureToBatch(
+              feature,
+              requiresIntersection,
+              requiresDifference
+            );
+          }
+          if (this.batchData.weight >= BATCH_SIZE) {
+            const differenceMultiPolygon =
+              await this.getDifferenceMultiPolygon();
+            if (this.queue && this.queue.isSaturated) {
+              this.helpers.log("Waiting for worker pool to drain");
+              await this.queue.onSizeLessThan(this.queue.concurrency);
+            }
+            this.batchPromises.push(
+              this.queue.add(() =>
+                this.processBatch(this.batchData, differenceMultiPolygon).catch(
+                  (e) => {
+                    console.error(`Error processing batch: ${e.message}`);
+                    reject(e);
+                  }
+                )
+              )
+            );
+            this.resetBatchData();
+          }
         }
-      }
-      if (!requiresIntersection && !requiresDifference) {
-        // feature is entirely within the subject feature, so we can skip
-        // clipping. Just need to add it's area to the appropriate total(s).
-        this.addFeatureToTotals(feature, true);
-      } else {
-        // add feature to batch for clipping
-        this.addFeatureToBatch(
-          feature,
-          requiresIntersection,
-          requiresDifference
-        );
-      }
-      if (this.batchData.weight >= BATCH_SIZE) {
-        this.batchPromises.push(this.processBatch(this.batchData));
-        this.resetBatchData();
-        if (this.options.useWorkers && piscina.needsDrain) {
-          console.log("Draining workers");
-          await new Promise((resolve) => {
-            piscina.once("drain", resolve);
-          });
+        if (this.batchData.features.length > 0) {
+          const differenceMultiPolygon = await this.getDifferenceMultiPolygon();
+          this.batchPromises.push(
+            this.processBatch(this.batchData, differenceMultiPolygon)
+          );
+          this.resetBatchData();
         }
+        const resolvedBatchData = await Promise.all(this.batchPromises);
+        this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
+        for (const batchData of resolvedBatchData) {
+          for (const classKey in batchData) {
+            this.results[classKey] += batchData[classKey];
+          }
+        }
+        // Do not destroy the shared Piscina instance here; it may be reused by subsequent batches/invocations.
+        // await pool.destroy();
+        resolve(this.results);
+      } catch (e) {
+        reject(e);
       }
-    }
-    if (this.batchData.features.length > 0) {
-      this.batchPromises.push(this.processBatch(this.batchData));
-      this.resetBatchData();
-    }
-    const resolvedBatchData = await Promise.all(this.batchPromises);
-    console.log(`Resolved ${resolvedBatchData.length} batches`);
-    for (const batchData of resolvedBatchData) {
-      for (const classKey in batchData) {
-        this.results[classKey] += batchData[classKey];
-      }
-    }
-    if (this.options.useWorkers) {
-      console.log(piscina.utilization);
-      await piscina.destroy();
-    }
-    return this.results;
+    });
   }
 
   async processBatch(
-    batch: BatchData
+    batch: BatchData,
+    differenceMultiPolygon: clipping.Geom[]
   ): Promise<{ [classKey: string]: number }> {
-    const results: { [classKey: string]: number } = { "*": 0 };
-    console.log(
+    this.helpers.log(
       `Processing batch of ${batch.features.length} features, with weight of ${batch.weight}`
     );
-    console.log(
-      `Includes ${Object.values(batch.differenceSourceReferences).reduce(
-        (acc, curr) => acc + curr.references.length,
-        0
-      )} difference source references`
-    );
+    this.progress += batch.progressWorth;
+    this.helpers.progress((this.progress / this.progressTarget) * 100);
+    if (this.pool) {
+      return this.pool
+        .run({
+          features: batch.features,
+          differenceMultiPolygon: differenceMultiPolygon,
+          subjectFeature: this.subjectFeature,
+          groupBy: this.groupBy,
+        })
+        .catch((error) => {
+          console.error(
+            `Error processing batch in worker: ${
+              error && (error.stack || error.message || error)
+            }`
+          );
+          throw error;
+        });
+    } else {
+      return clipBatch({
+        features: batch.features,
+        differenceMultiPolygon: differenceMultiPolygon,
+        subjectFeature: this.subjectFeature,
+        groupBy: this.groupBy,
+      }).catch((error) => {
+        console.error(`Error processing batch: ${error.message}`);
+        throw error;
+      });
+    }
+  }
+
+  async getDifferenceMultiPolygon(): Promise<clipping.Geom[]> {
     // fetch the difference features, and combine into a single multipolygon
     const differenceMultiPolygon = [] as clipping.Geom[];
     await Promise.all(
-      Object.keys(batch.differenceSourceReferences).map(async (layerId) => {
-        const refs = batch.differenceSourceReferences[layerId].references;
-        const d = this.differenceSources.find((s) => s.layerId === layerId);
-        if (!d) {
-          throw new Error(
-            `Difference source not found for layer ID: ${layerId}`
-          );
-        }
-        const { source, cql2Query } = d;
-        const queryPlan = source.getQueryPlan(refs);
-        for await (const feature of source.getFeaturesAsync([], {
-          queryPlan,
-        })) {
-          if (
-            cql2Query &&
-            !evaluateCql2JSONQuery(cql2Query, feature.properties)
-          ) {
-            continue;
-          }
-          if (feature.geometry.type === "Polygon") {
-            differenceMultiPolygon.push(
-              feature.geometry.coordinates as clipping.Geom
+      Object.keys(this.batchData.differenceSourceReferences).map(
+        async (layerId) => {
+          const refs =
+            this.batchData.differenceSourceReferences[layerId].references;
+          const d = this.differenceSources.find((s) => s.layerId === layerId);
+          if (!d) {
+            throw new Error(
+              `Difference source not found for layer ID: ${layerId}`
             );
-          } else {
-            for (const poly of feature.geometry.coordinates) {
-              differenceMultiPolygon.push(poly as clipping.Geom);
+          }
+          const { source, cql2Query } = d;
+          const queryPlan = source.getQueryPlan(refs);
+          for await (const feature of source.getFeaturesAsync([], {
+            queryPlan,
+          })) {
+            if (
+              cql2Query &&
+              !evaluateCql2JSONQuery(cql2Query, feature.properties)
+            ) {
+              continue;
+            }
+            if (feature.geometry.type === "Polygon") {
+              differenceMultiPolygon.push(
+                feature.geometry.coordinates as clipping.Geom
+              );
+            } else {
+              for (const poly of feature.geometry.coordinates) {
+                differenceMultiPolygon.push(poly as clipping.Geom);
+              }
             }
           }
         }
-      })
+      )
     );
-    if (this.options.useWorkers) {
-      console.log("Using workers");
-      return await piscina.run({
-        features: batch.features,
-        differenceMultiPolygon: differenceMultiPolygon,
-        subjectFeature: this.subjectFeature,
-        groupBy: this.groupBy,
-      });
-    } else {
-      console.log("Using single thread");
-      return await clipBatch({
-        features: batch.features,
-        differenceMultiPolygon: differenceMultiPolygon,
-        subjectFeature: this.subjectFeature,
-        groupBy: this.groupBy,
-      });
-    }
+    return differenceMultiPolygon;
   }
 
   addFeatureToTotals(
@@ -355,6 +391,7 @@ export class OverlappingAreaBatchedClippingProcessor {
       requiresDifference,
     });
     this.batchData.weight += this.weightForFeature(feature);
+    this.batchData.progressWorth += feature.properties?.__byteLength || 1000;
   }
 
   weightForFeature(

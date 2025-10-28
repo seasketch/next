@@ -2751,7 +2751,7 @@ BEGIN
     USING public.report_cards rc,
           public.report_tabs rtab,
           public.reports r
-    WHERE rcl.toc_stable_id = OLD.stable_id
+    WHERE rcl.table_of_contents_item_id = OLD.id
       AND rc.id = rcl.report_card_id
       AND rc.is_draft = true;
   END IF;
@@ -11230,7 +11230,7 @@ CREATE FUNCTION public.get_metrics_for_geography(geography_id integer) RETURNS j
           'sourceProcessingJobDependency', source_processing_job_dependency,
           'eta', eta,
           'startedAt', started_at,
-          'durationSeconds', extract(seconds from duration)::float
+          'durationSeconds', extract(epoch from duration)::float
         )
       )
       from spatial_metrics
@@ -11284,7 +11284,7 @@ CREATE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS jsonb
           'sourceProcessingJobDependency', source_processing_job_dependency,
           'eta', eta,
           'startedAt', started_at,
-          'durationSeconds', extract(seconds from duration)::float
+          'durationSeconds', extract(epoch from duration)::float
         )
       )
       from spatial_metrics
@@ -11723,7 +11723,7 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
         'sourceProcessingJobDependency', source_processing_job_dependency,
         'eta', eta,
         'startedAt', started_at,
-        'durationSeconds', extract(seconds from duration)::float
+        'durationSeconds', extract(epoch from duration)::float
       ) from spatial_metrics where id = metric_id
     );
   end;
@@ -15810,10 +15810,6 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           )
         )
       ) and tci.is_draft = false;
-
-      if ((select count(*) from _rcl_snapshot) = 0) then
-        raise exception 'No report card layers referenced by published reports were found';
-      end if;
     
       -- delete existing published table of contents items, layers, sources, and interactivity settings
       delete from 
@@ -16201,33 +16197,31 @@ CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preproce
     source_id integer;
     source_url text;
     source_job_key text;
+    source_preprocessing_jobs text[];
   begin
     if nullif(current_setting('session.user_id', true), '') is null then
       raise exception 'User not authenticated';
     end if;
     foreach metric_id in array metric_ids loop
       if preprocess_sources then
-        select overlay_source_url into source_url from spatial_metrics where id = metric_id;
-        if source_url is not null then
-          for source_id in (select data_source_id from data_upload_outputs where url = source_url and type = 'ReportingFlatgeobufV1'::data_upload_output_type) loop
-          -- TODO: this is going to end up running the source processing job multiple times if there are multiple metrics that depend on it
-            delete from source_processing_jobs where data_source_id = source_id;
-            delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
-            -- create a new source processing job
-            insert into source_processing_jobs (data_source_id, project_id) values (source_id, (select project_id from data_sources where id = source_id)) returning job_key into source_job_key;
-            -- trigger preprocessSource job for this data source
-            perform graphile_worker.add_job(
-              'preprocessSource',
-              json_build_object('jobKey', source_job_key),
-              max_attempts := 1,
-              job_key := 'preprocessSource:' || source_id::text,
-              job_key_mode := 'replace'
-            );
-          end loop;
+        select source_processing_job_dependency into source_job_key from spatial_metrics where id = metric_id;
+        if source_job_key is not null then
+          source_preprocessing_jobs = array_append(source_preprocessing_jobs, source_job_key);
         end if;
       end if;
       delete from spatial_metrics where id = metric_id and (subject_fragment_id is not null or session_is_admin((select project_id from project_geography where id = spatial_metrics.subject_geography_id limit 1)));
     end loop;
+    if array_length(source_preprocessing_jobs, 1) > 0 then
+      -- loop through the source preprocessing jobs, and retry them
+      foreach source_job_key in array source_preprocessing_jobs loop
+        select data_source_id into source_id from source_processing_jobs where job_key = source_job_key;
+        if source_id is not null then
+          delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+        end if;
+        delete from spatial_metrics where source_processing_job_dependency = source_job_key;
+        perform retry_failed_source_processing_job(source_job_key);
+      end loop;
+    end if;
     return true;
   end;
 $$;
@@ -16917,6 +16911,30 @@ CREATE FUNCTION public.reports_updated_at(r public.reports) RETURNS timestamp wi
 
 
 --
+-- Name: retry_failed_source_processing_job(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.retry_failed_source_processing_job(jobkey text) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    updated_job_key text;
+  begin
+    update source_processing_jobs set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where job_key = jobkey returning job_key into updated_job_key;
+    if updated_job_key is not null then
+      update spatial_metrics set source_processing_job_dependency = updated_job_key where source_processing_job_dependency = jobkey;
+      perform graphile_worker.add_job(
+        'preprocessSource',
+        json_build_object('jobKey', updated_job_key),
+        max_attempts := 1
+      );
+    end if;
+    return true;
+  end;
+  $$;
+
+
+--
 -- Name: retry_failed_spatial_metrics(bigint[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -16932,14 +16950,26 @@ CREATE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS
   begin
     -- loop through the metric ids, and update the state to queued
     foreach metric_id in array metric_ids loop
-      update spatial_metrics set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where id = metric_id returning id into updated_metric_id;
+      update 
+        spatial_metrics 
+      set 
+        state = 'queued', 
+        error_message = null, 
+        updated_at = now(), 
+        created_at = now(), 
+        progress_percentage = 0, 
+        job_key = gen_random_uuid()::text 
+      where 
+        id = metric_id 
+      returning 
+        id into updated_metric_id;
       if updated_metric_id is not null then
         -- if this metric depends on a source_processing_job, restart it first
         select source_processing_job_dependency into job_dep from spatial_metrics where id = updated_metric_id;
         if job_dep is not null then
           select state into existing_job_state from source_processing_jobs where job_key = job_dep;
           if existing_job_state = 'error' then
-            delete from source_processing_jobs where job_key = job_dep;
+            perform retry_failed_source_processing_job(job_dep);
           end if;
         end if;
         perform graphile_worker.add_job(
@@ -35377,6 +35407,13 @@ GRANT ALL ON FUNCTION public.reports_tabs(report public.reports) TO anon;
 
 REVOKE ALL ON FUNCTION public.reports_updated_at(r public.reports) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.reports_updated_at(r public.reports) TO anon;
+
+
+--
+-- Name: FUNCTION retry_failed_source_processing_job(jobkey text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.retry_failed_source_processing_job(jobkey text) FROM PUBLIC;
 
 
 --

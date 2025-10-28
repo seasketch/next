@@ -276,6 +276,7 @@ export default function ReportCardLoadingIndicator({
           eta={etaForCountdown}
           done={isComplete}
           minWaitToShow={4}
+          showUnmodified
         />
       )}
       {stage === "sources" && (
@@ -284,7 +285,11 @@ export default function ReportCardLoadingIndicator({
             {t("optimizing sources")}
           </span>
           {etaForCountdown && (
-            <ETACountdown eta={etaForCountdown} done={isComplete} />
+            <ETACountdown
+              eta={etaForCountdown}
+              done={isComplete}
+              showUnmodified
+            />
           )}
         </>
       )}

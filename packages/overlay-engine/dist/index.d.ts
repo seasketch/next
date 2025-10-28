@@ -6,4 +6,5 @@ export { Cql2Query } from "./cql2";
 export { createFragments, eliminateOverlap, FragmentResult, SketchFragment, GeographySettings, mergeTouchingFragments, } from "./fragments";
 export { calculateFragmentOverlap } from "./calculateFragmentOverlap";
 export { Metric, MetricType, TotalAreaMetric, OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, MetricTypeMap, subjectIsFragment, subjectIsGeography, MetricSubjectFragment, MetricSubjectGeography, SourceType, } from "./metrics/metrics";
+export { initializeGeographySources } from "./geographies/geographies";
 //# sourceMappingURL=index.d.ts.map

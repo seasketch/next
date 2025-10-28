@@ -2,20 +2,9 @@ import { FeatureWithMetadata } from "fgb-source";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
 import calcArea from "@turf/area";
+import { parentPort } from "node:worker_threads";
 
-export default function clipBatchWorker(data: {
-  features: {
-    feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
-    requiresIntersection: boolean;
-    requiresDifference: boolean;
-  }[];
-  differenceMultiPolygon: clipping.Geom[];
-  subjectFeature: Feature<Polygon | MultiPolygon>;
-  groupBy?: string;
-}) {
-  return clipBatch(data);
-}
-
+let i = 0;
 export async function clipBatch({
   features,
   differenceMultiPolygon,
@@ -58,7 +47,6 @@ export async function clipBatch({
     );
     results["*"] += area;
   }
-
   return results;
 }
 
@@ -109,3 +97,27 @@ export async function performClipping(
     }) * 1e-6;
   return sqKm;
 }
+
+parentPort?.on(
+  "message",
+  async (job: {
+    features: {
+      feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+      requiresIntersection: boolean;
+      requiresDifference: boolean;
+    }[];
+    differenceMultiPolygon: clipping.Geom[];
+    subjectFeature: Feature<Polygon | MultiPolygon>;
+    groupBy?: string;
+  }) => {
+    try {
+      const result = await clipBatch(job);
+      parentPort?.postMessage({ ok: true, result });
+    } catch (err) {
+      parentPort?.postMessage({
+        ok: false,
+        error: { message: (err as Error).message, stack: (err as Error).stack },
+      });
+    }
+  }
+);

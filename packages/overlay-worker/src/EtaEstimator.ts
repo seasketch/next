@@ -33,8 +33,6 @@ export type EtaState = {
   msPerUnit: number | null;
   /** Total work units observed so far (cumulative, monotonic). */
   samples: number;
-  /** Heuristic confidence tier based on sample count. */
-  confidence: "low" | "med" | "high";
 };
 
 /**
@@ -55,17 +53,18 @@ export type EtaEstimatorOptions = {
   priorMsPerUnit?: number | null;
 
   /**
-   * Minimum number of observed units before the estimator produces an ETA.
-   * @default 20
-   */
-  minSamplesUnits?: number;
-
-  /**
    * Minimum wall-clock time (ms) before producing an ETA,
    * used to avoid highly volatile early estimates.
    * @default 2000
    */
   minSamplesMs?: number;
+
+  /**
+   * Minimum fraction [0..1] of totalUnits that must be completed
+   * before producing an ETA. Example: 0.15 = 15%.
+   * @default 0.15
+   */
+  minCompletionFraction?: number;
 
   /**
    * EWMA half-life measured in work units.
@@ -93,9 +92,9 @@ export type EtaEstimatorOptions = {
  */
 export class EtaEstimator {
   // --- Configuration defaults ---
-  private minSamplesUnits = 20;
-  private minSamplesMs = 2000;
+  private minSamplesMs = 8000;
   private ewmaHalfLifeUnits = 100;
+  private minCompletionFraction = 0.03;
 
   private readonly priorMsPerUnit: number | null;
   private priorWeightUnits = 100;
@@ -108,6 +107,7 @@ export class EtaEstimator {
 
   private ewmaMsPerUnit: number | null = null;
   private seenUnits = 0;
+  private bootstrapped = false;
 
   /**
    * Construct a new ETA estimator.
@@ -123,13 +123,16 @@ export class EtaEstimator {
 
     this.priorMsPerUnit = opts.priorMsPerUnit ?? null;
 
-    if (opts.minSamplesUnits !== undefined)
-      this.minSamplesUnits = opts.minSamplesUnits;
     if (opts.minSamplesMs !== undefined) this.minSamplesMs = opts.minSamplesMs;
     if (opts.ewmaHalfLifeUnits !== undefined)
       this.ewmaHalfLifeUnits = opts.ewmaHalfLifeUnits;
     if (opts.priorWeightUnits !== undefined)
       this.priorWeightUnits = opts.priorWeightUnits;
+    if (opts.minCompletionFraction !== undefined)
+      this.minCompletionFraction = Math.max(
+        0,
+        Math.min(1, opts.minCompletionFraction)
+      );
   }
 
   /**
@@ -195,8 +198,18 @@ export class EtaEstimator {
   private currentState(nowMs: number): EtaState {
     const elapsedMs = nowMs - this.startMs;
 
+    // Require BOTH a minimum elapsed time and at least 15% completion
+    const minUnitsRequired = Math.ceil(
+      this.totalUnits * this.minCompletionFraction
+    );
     const ready =
-      this.seenUnits >= this.minSamplesUnits || elapsedMs >= this.minSamplesMs;
+      elapsedMs >= this.minSamplesMs && this.seenUnits >= minUnitsRequired;
+
+    // On first readiness, anchor EWMA to the overall average so far.
+    if (ready && !this.bootstrapped && this.seenUnits > 0) {
+      this.ewmaMsPerUnit = elapsedMs / this.seenUnits;
+      this.bootstrapped = true;
+    }
 
     if (!ready || this.ewmaMsPerUnit === null) {
       return {
@@ -204,7 +217,6 @@ export class EtaEstimator {
         etaMs: null,
         msPerUnit: this.ewmaMsPerUnit,
         samples: this.seenUnits,
-        confidence: "low",
       };
     }
 
@@ -222,13 +234,6 @@ export class EtaEstimator {
     const etaMs = remainingUnits * Math.max(msPerUnit, 0);
     const eta = new Date(nowMs + etaMs);
 
-    const confidence =
-      this.seenUnits > this.minSamplesUnits * 3
-        ? "high"
-        : this.seenUnits >= this.minSamplesUnits
-        ? "med"
-        : "low";
-
-    return { eta, etaMs, msPerUnit, samples: this.seenUnits, confidence };
+    return { eta, etaMs, msPerUnit, samples: this.seenUnits };
   }
 }

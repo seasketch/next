@@ -42,28 +42,29 @@ class EtaEstimator {
     constructor(opts) {
         var _a;
         // --- Configuration defaults ---
-        this.minSamplesUnits = 20;
-        this.minSamplesMs = 2000;
+        this.minSamplesMs = 8000;
         this.ewmaHalfLifeUnits = 100;
+        this.minCompletionFraction = 0.03;
         this.priorWeightUnits = 100;
         this.startMs = Date.now();
         this.lastTickMs = this.startMs;
         this.lastDone = 0;
         this.ewmaMsPerUnit = null;
         this.seenUnits = 0;
+        this.bootstrapped = false;
         if (!Number.isFinite(opts.totalUnits) || opts.totalUnits <= 0) {
             throw new Error("totalUnits must be a positive finite number");
         }
         this.totalUnits = Math.max(1, Math.floor(opts.totalUnits));
         this.priorMsPerUnit = (_a = opts.priorMsPerUnit) !== null && _a !== void 0 ? _a : null;
-        if (opts.minSamplesUnits !== undefined)
-            this.minSamplesUnits = opts.minSamplesUnits;
         if (opts.minSamplesMs !== undefined)
             this.minSamplesMs = opts.minSamplesMs;
         if (opts.ewmaHalfLifeUnits !== undefined)
             this.ewmaHalfLifeUnits = opts.ewmaHalfLifeUnits;
         if (opts.priorWeightUnits !== undefined)
             this.priorWeightUnits = opts.priorWeightUnits;
+        if (opts.minCompletionFraction !== undefined)
+            this.minCompletionFraction = Math.max(0, Math.min(1, opts.minCompletionFraction));
     }
     /**
      * Update the estimator with the cumulative amount of work completed.
@@ -120,14 +121,20 @@ class EtaEstimator {
      */
     currentState(nowMs) {
         const elapsedMs = nowMs - this.startMs;
-        const ready = this.seenUnits >= this.minSamplesUnits || elapsedMs >= this.minSamplesMs;
+        // Require BOTH a minimum elapsed time and at least 15% completion
+        const minUnitsRequired = Math.ceil(this.totalUnits * this.minCompletionFraction);
+        const ready = elapsedMs >= this.minSamplesMs && this.seenUnits >= minUnitsRequired;
+        // On first readiness, anchor EWMA to the overall average so far.
+        if (ready && !this.bootstrapped && this.seenUnits > 0) {
+            this.ewmaMsPerUnit = elapsedMs / this.seenUnits;
+            this.bootstrapped = true;
+        }
         if (!ready || this.ewmaMsPerUnit === null) {
             return {
                 eta: null,
                 etaMs: null,
                 msPerUnit: this.ewmaMsPerUnit,
                 samples: this.seenUnits,
-                confidence: "low",
             };
         }
         // Blend EWMA with prior if applicable
@@ -139,12 +146,7 @@ class EtaEstimator {
         const remainingUnits = Math.max(0, this.totalUnits - this.seenUnits);
         const etaMs = remainingUnits * Math.max(msPerUnit, 0);
         const eta = new Date(nowMs + etaMs);
-        const confidence = this.seenUnits > this.minSamplesUnits * 3
-            ? "high"
-            : this.seenUnits >= this.minSamplesUnits
-                ? "med"
-                : "low";
-        return { eta, etaMs, msPerUnit, samples: this.seenUnits, confidence };
+        return { eta, etaMs, msPerUnit, samples: this.seenUnits };
     }
 }
 exports.EtaEstimator = EtaEstimator;

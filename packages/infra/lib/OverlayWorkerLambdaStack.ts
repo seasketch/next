@@ -40,6 +40,22 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
         esbuildVersion: "0.21.5",
         externalModules: ["undici"],
         nodeModules: ["undici", "@aws-sdk/client-sqs"],
+        commandHooks: {
+          beforeBundling() {
+            return [];
+          },
+          beforeInstall() {
+            return [];
+          },
+          afterBundling(inputDir: string, outputDir: string) {
+            // Copy the prebuilt self-contained worker from overlay-engine package
+            const standaloneSrc = path.join(
+              __dirname,
+              "../../overlay-engine/dist/workers/clipBatch.standalone.js"
+            );
+            return [`cp ${standaloneSrc} ${outputDir}/worker.js`];
+          },
+        },
       },
       entry: path.join(__dirname, "../../overlay-worker/src/index.ts"),
       handler: "lambdaHandler",
@@ -54,6 +70,8 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
       architecture: lambda.Architecture.ARM_64,
       environment: {
         OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: props.productionQueue.queueUrl,
+        // Absolute path at runtime inside Lambda for the Piscina worker
+        PISCINA_WORKER_PATH: "/var/task/worker.js",
       },
       initialPolicy: [
         new iam.PolicyStatement({

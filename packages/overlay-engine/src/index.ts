@@ -37,3 +37,4 @@ export {
   MetricSubjectGeography,
   SourceType,
 } from "./metrics/metrics";
+export { initializeGeographySources } from "./geographies/geographies";

@@ -16,7 +16,7 @@ import {
 import area from "@turf/area";
 import { unionAtAntimeridian } from "../utils/unionAtAntimeridian";
 import { union } from "../utils/polygonClipping";
-import { CreateSourceOptions, SourceCache } from "fgb-source";
+import { CreateSourceOptions, FlatGeobufSource, SourceCache } from "fgb-source";
 import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
@@ -644,6 +644,11 @@ export async function initializeGeographySources(
   intersectionFeature: Feature<MultiPolygon>;
   intersectionLayers: ClippingLayerOption[];
   differenceLayers: ClippingLayerOption[];
+  differenceSources: {
+    layerId: string;
+    source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+    cql2Query?: Cql2Query | undefined;
+  }[];
 }> {
   console.log("initializing geography sources", sourceOptions);
   // Kick off prefetches and capture any errors for later propagation.
@@ -695,6 +700,22 @@ export async function initializeGeographySources(
     }
   }
 
+  const differenceSources = await Promise.all(
+    differenceLayers.map(async (layer) => {
+      const diffSource = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
+        layer.source,
+        {
+          pageSize: "10MB",
+        }
+      );
+      return {
+        cql2Query: layer.cql2Query,
+        source: diffSource,
+        layerId: layer.source,
+      };
+    })
+  );
+
   const intersectionFeatureGeojson = {
     type: "Feature",
     geometry: {
@@ -716,5 +737,6 @@ export async function initializeGeographySources(
     intersectionFeature: intersectionFeatureGeojson,
     intersectionLayers,
     differenceLayers,
+    differenceSources,
   };
 }

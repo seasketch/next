@@ -2,6 +2,7 @@ import {
   calculateArea,
   calculateFragmentOverlap,
   calculateGeographyOverlap,
+  initializeGeographySources,
   MetricSubjectFragment,
   MetricSubjectGeography,
 } from "overlay-engine";
@@ -20,9 +21,13 @@ import {
 import { ProgressNotifier } from "./ProgressNotifier";
 import * as geobuf from "geobuf";
 import Pbf from "pbf";
-import { Feature, FeatureCollection, Polygon } from "geojson";
+import { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { fetch, Client, Pool } from "undici";
 import { LRUCache } from "lru-cache";
+import {
+  createPool,
+  OverlappingAreaBatchedClippingProcessor,
+} from "overlay-engine/src/OverlappingAreaBatchedClippingProcessor";
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
   // 10 second timeout for body
@@ -91,6 +96,8 @@ const sourceCache = new SourceCache("1GB", {
   maxCacheSize: "256MB",
 });
 
+const workerPool = createPool(process.env.PISCINA_WORKER_PATH || "worker.js");
+
 export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker (v2) received payload", payload);
   const startTime = Date.now();
@@ -155,14 +162,42 @@ export default async function handler(payload: OverlayWorkerPayload) {
         }
         if (subjectIsGeography(payload.subject)) {
           progressNotifier.notify(0, "Beginning area calculation");
-          const area = await calculateGeographyOverlap(
+          const {
+            intersectionFeature: intersectionFeatureGeojson,
+            differenceLayers,
+            differenceSources,
+          } = await initializeGeographySources(
             payload.subject.clippingLayers,
             sourceCache,
-            payload.sourceUrl,
-            payload.sourceType,
-            payload.groupBy,
-            helpers
+            helpers,
+            {
+              pageSize: "5MB",
+            }
           );
+          const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+            payload.sourceUrl,
+            {
+              pageSize: "5MB",
+            }
+          );
+          const processor = new OverlappingAreaBatchedClippingProcessor(
+            1024 * 1024 * 1, // 5MB
+            intersectionFeatureGeojson,
+            source,
+            differenceSources,
+            helpers,
+            payload.groupBy,
+            workerPool
+          );
+          // const area = await calculateGeographyOverlap(
+          //   payload.subject.clippingLayers,
+          //   sourceCache,
+          //   payload.sourceUrl,
+          //   payload.sourceType,
+          //   payload.groupBy,
+          //   helpers
+          // );
+          const area = await processor.calculateOverlap();
           await flushMessages();
           await sendResultMessage(
             payload.jobKey,
@@ -188,17 +223,31 @@ export default async function handler(payload: OverlayWorkerPayload) {
             if (feature.geometry.type !== "Polygon") {
               throw new Error("geobuf is not a GeoJSON Polygon.");
             }
-
-            progressNotifier.notify(0, "Beginning overlay area calculation");
-            await flushMessages();
-            const area = await calculateFragmentOverlap(
+            const source = await sourceCache.get<
+              Feature<Polygon | MultiPolygon>
+            >(payload.sourceUrl, {
+              pageSize: "5MB",
+            });
+            const processor = new OverlappingAreaBatchedClippingProcessor(
+              1024 * 1024 * 0.5, // 5MB
               feature as Feature<Polygon>,
-              sourceCache,
-              payload.sourceUrl,
-              payload.sourceType,
+              source,
+              [],
+              helpers,
               payload.groupBy,
-              helpers
+              workerPool
             );
+            const area = await processor.calculateOverlap();
+            // progressNotifier.notify(0, "Beginning overlay area calculation");
+            // await flushMessages();
+            // const area = await calculateFragmentOverlap(
+            //   feature as Feature<Polygon>,
+            //   sourceCache,
+            //   payload.sourceUrl,
+            //   payload.sourceType,
+            //   payload.groupBy,
+            //   helpers
+            // );
             await flushMessages();
             await sendResultMessage(
               payload.jobKey,

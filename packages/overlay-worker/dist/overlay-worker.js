@@ -48,6 +48,7 @@ const geobuf = __importStar(require("geobuf"));
 const pbf_1 = __importDefault(require("pbf"));
 const undici_1 = require("undici");
 const lru_cache_1 = require("lru-cache");
+const OverlappingAreaBatchedClippingProcessor_1 = require("overlay-engine/src/OverlappingAreaBatchedClippingProcessor");
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
@@ -109,6 +110,7 @@ const sourceCache = new fgb_source_1.SourceCache("1GB", {
     },
     maxCacheSize: "256MB",
 });
+const workerPool = (0, OverlappingAreaBatchedClippingProcessor_1.createPool)(process.env.PISCINA_WORKER_PATH || "worker.js");
 async function handler(payload) {
     console.log("Overlay worker (v2) received payload", payload);
     const startTime = Date.now();
@@ -153,7 +155,23 @@ async function handler(payload) {
                 }
                 if (subjectIsGeography(payload.subject)) {
                     progressNotifier.notify(0, "Beginning area calculation");
-                    const area = await (0, overlay_engine_1.calculateGeographyOverlap)(payload.subject.clippingLayers, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
+                    const { intersectionFeature: intersectionFeatureGeojson, differenceLayers, differenceSources, } = await (0, overlay_engine_1.initializeGeographySources)(payload.subject.clippingLayers, sourceCache, helpers, {
+                        pageSize: "5MB",
+                    });
+                    const source = await sourceCache.get(payload.sourceUrl, {
+                        pageSize: "5MB",
+                    });
+                    const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor(1024 * 1024 * 1, // 5MB
+                    intersectionFeatureGeojson, source, differenceSources, helpers, payload.groupBy, workerPool);
+                    // const area = await calculateGeographyOverlap(
+                    //   payload.subject.clippingLayers,
+                    //   sourceCache,
+                    //   payload.sourceUrl,
+                    //   payload.sourceType,
+                    //   payload.groupBy,
+                    //   helpers
+                    // );
+                    const area = await processor.calculateOverlap();
                     await (0, messaging_1.flushMessages)();
                     await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                     return;
@@ -170,9 +188,22 @@ async function handler(payload) {
                         if (feature.geometry.type !== "Polygon") {
                             throw new Error("geobuf is not a GeoJSON Polygon.");
                         }
-                        progressNotifier.notify(0, "Beginning overlay area calculation");
-                        await (0, messaging_1.flushMessages)();
-                        const area = await (0, overlay_engine_1.calculateFragmentOverlap)(feature, sourceCache, payload.sourceUrl, payload.sourceType, payload.groupBy, helpers);
+                        const source = await sourceCache.get(payload.sourceUrl, {
+                            pageSize: "5MB",
+                        });
+                        const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor(1024 * 1024 * 0.5, // 5MB
+                        feature, source, [], helpers, payload.groupBy, workerPool);
+                        const area = await processor.calculateOverlap();
+                        // progressNotifier.notify(0, "Beginning overlay area calculation");
+                        // await flushMessages();
+                        // const area = await calculateFragmentOverlap(
+                        //   feature as Feature<Polygon>,
+                        //   sourceCache,
+                        //   payload.sourceUrl,
+                        //   payload.sourceType,
+                        //   payload.groupBy,
+                        //   helpers
+                        // );
                         await (0, messaging_1.flushMessages)();
                         await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                         return;

@@ -36,14 +36,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = clipBatchWorker;
 exports.clipBatch = clipBatch;
 exports.performClipping = performClipping;
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
-function clipBatchWorker(data) {
-    return clipBatch(data);
-}
+const node_worker_threads_1 = require("node:worker_threads");
+let i = 0;
 async function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
     var _a;
     const results = { "*": 0 };
@@ -102,4 +100,16 @@ async function performClipping(features, differenceGeoms, subjectFeature) {
     }) * 1e-6;
     return sqKm;
 }
+node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.on("message", async (job) => {
+    try {
+        const result = await clipBatch(job);
+        node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.postMessage({ ok: true, result });
+    }
+    catch (err) {
+        node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.postMessage({
+            ok: false,
+            error: { message: err.message, stack: err.stack },
+        });
+    }
+});
 //# sourceMappingURL=clipBatch.js.map

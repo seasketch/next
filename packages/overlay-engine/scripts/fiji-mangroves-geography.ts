@@ -5,7 +5,10 @@ import {
   initializeGeographySources,
 } from "../src/geographies/geographies";
 import { guaranteeHelpers } from "../src/utils/helpers";
-import { OverlappingAreaBatchedClippingProcessor } from "../src/OverlappingAreaBatchedClippingProcessor";
+import {
+  createPool,
+  OverlappingAreaBatchedClippingProcessor,
+} from "../src/OverlappingAreaBatchedClippingProcessor";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { Pool } from "undici";
 import { LRUCache } from "lru-cache";
@@ -90,7 +93,7 @@ const deepwaterBioregionsSource =
   "https://uploads.seasketch.org/testing-deepwater-bioregions.fgb";
 
 const geomorphicSource =
-  "https://uploads.seasketch.org/projects/fiji/subdivided/123-dc99ab0f-2f1b-44ea-8c8b-8635341cbdda.fgb";
+  "https://uploads.seasketch.org/projects/fiji/subdivided/123-83d5c488-330e-4882-82de-e8809c0d3af1.fgb";
 
 // const intersectionSourceUrl = deepwaterBioregionsSource;
 // const groupBy = "Draft_name";
@@ -127,54 +130,30 @@ const FIJI_EEZ = [
 
 // const sourceCache = new SourceCache("200 MB");
 
+let lastLoggedProgress = 0;
 const helpers = guaranteeHelpers({
   log: (message) => {
     console.log(message);
   },
   progress: async (progress, message) => {
-    console.log(progress, message);
+    if (Math.floor(progress) - lastLoggedProgress >= 1) {
+      console.log(Math.floor(progress), message);
+      lastLoggedProgress = Math.floor(progress);
+    }
   },
 });
 
-// calculateGeographyOverlap(
-//   FIJI_EEZ,
-//   sourceCache,
-//   mangrovesSource,
-//   "FlatGeobuf",
-//   undefined,
-//   {
-//     log: (message) => {
-//       console.log(message);
-//     },
-//     progress: async (progress, message) => {
-//       console.log(progress, message);
-//     },
-//   }
-// ).then(console.log);
-
 (async () => {
   console.time("get intersection feature");
-  const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } =
-    await initializeGeographySources(FIJI_EEZ, sourceCache, helpers, {
-      pageSize: "5MB",
-    });
+  const {
+    intersectionFeature: intersectionFeatureGeojson,
+    differenceLayers,
+    differenceSources,
+  } = await initializeGeographySources(FIJI_EEZ, sourceCache, helpers, {
+    pageSize: "5MB",
+  });
   console.timeEnd("get intersection feature");
-  const differenceSources = await Promise.all(
-    differenceLayers.map(async (layer) => {
-      const diffSource = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
-        layer.source,
-        {
-          pageSize: "10MB",
-        }
-      );
-      return {
-        cql2Query: layer.cql2Query,
-        source: diffSource,
-        layerId: layer.source,
-      };
-    })
-  );
-  const intersectionSource = await sourceCache.get<Feature<MultiPolygon>>(
+  const source = await sourceCache.get<Feature<MultiPolygon>>(
     // deepwaterBioregionsSource,
     // geomorphicSource,
     intersectionSourceUrl,
@@ -182,19 +161,21 @@ const helpers = guaranteeHelpers({
       pageSize: "5MB",
     }
   );
+  const pool = createPool(
+    __dirname + "/../dist/workers/clipBatch.standalone.js"
+  );
   const processor = new OverlappingAreaBatchedClippingProcessor(
-    1024 * 1024 * 0.5, // 5MB
+    1024 * 1024 * 1, // 5MB
     intersectionFeatureGeojson,
-    intersectionSource,
+    source,
     differenceSources,
     helpers,
     groupBy,
-    {
-      useWorkers: true,
-    }
+    pool
   );
   console.time("calculate overlap");
   const results = await processor.calculateOverlap();
+  await pool.destroy();
   console.timeEnd("calculate overlap");
   console.log(`Cache hits: ${cacheHits}`);
   console.log(`Cache misses: ${cacheMisses}`);

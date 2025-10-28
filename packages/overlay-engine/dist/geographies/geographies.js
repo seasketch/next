@@ -540,6 +540,16 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
             throw r.error;
         }
     }
+    const differenceSources = await Promise.all(differenceLayers.map(async (layer) => {
+        const diffSource = await sourceCache.get(layer.source, {
+            pageSize: "10MB",
+        });
+        return {
+            cql2Query: layer.cql2Query,
+            source: diffSource,
+            layerId: layer.source,
+        };
+    }));
     const intersectionFeatureGeojson = {
         type: "Feature",
         geometry: {
@@ -555,6 +565,7 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
         intersectionFeature: intersectionFeatureGeojson,
         intersectionLayers,
         differenceLayers,
+        differenceSources,
     };
 }
 //# sourceMappingURL=geographies.js.map

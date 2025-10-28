@@ -197,11 +197,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                     `,
                     [data_source_id, remote, size, filename, url, project_id]
                   );
-                  console.log(
-                    "saving with duration",
-                    consolidatedMessage.duration,
-                    `duration = coalesce($2, now() - started_at)`
-                  );
                   await pgPool.query(
                     `update source_processing_jobs set state = 'complete', updated_at = now(), completed_at = now(), duration = now() - started_at, progress_percentage = 100, error_message = null where job_key = $1`,
                     [jobKey]

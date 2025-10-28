@@ -32,8 +32,6 @@ export type EtaState = {
     msPerUnit: number | null;
     /** Total work units observed so far (cumulative, monotonic). */
     samples: number;
-    /** Heuristic confidence tier based on sample count. */
-    confidence: "low" | "med" | "high";
 };
 /**
  * Configuration options for {@link EtaEstimator}.
@@ -51,16 +49,17 @@ export type EtaEstimatorOptions = {
      */
     priorMsPerUnit?: number | null;
     /**
-     * Minimum number of observed units before the estimator produces an ETA.
-     * @default 20
-     */
-    minSamplesUnits?: number;
-    /**
      * Minimum wall-clock time (ms) before producing an ETA,
      * used to avoid highly volatile early estimates.
      * @default 2000
      */
     minSamplesMs?: number;
+    /**
+     * Minimum fraction [0..1] of totalUnits that must be completed
+     * before producing an ETA. Example: 0.15 = 15%.
+     * @default 0.15
+     */
+    minCompletionFraction?: number;
     /**
      * EWMA half-life measured in work units.
      * Larger values yield smoother, slower-reacting estimates.
@@ -84,9 +83,9 @@ export type EtaEstimatorOptions = {
  * - **Units**: Choose units proportional to cost (e.g., vertices) for smoother ETAs.
  */
 export declare class EtaEstimator {
-    private minSamplesUnits;
     private minSamplesMs;
     private ewmaHalfLifeUnits;
+    private minCompletionFraction;
     private readonly priorMsPerUnit;
     private priorWeightUnits;
     private readonly totalUnits;
@@ -95,6 +94,7 @@ export declare class EtaEstimator {
     private lastDone;
     private ewmaMsPerUnit;
     private seenUnits;
+    private bootstrapped;
     /**
      * Construct a new ETA estimator.
      *

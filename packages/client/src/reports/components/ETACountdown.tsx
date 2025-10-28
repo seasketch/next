@@ -5,6 +5,8 @@ interface ETACountdownProps {
   eta: number | null | undefined;
   done: boolean;
   minWaitToShow?: number;
+  /** When true, display raw ETA without smoothing/hysteresis */
+  showUnmodified?: boolean;
 }
 
 /**
@@ -25,12 +27,13 @@ const MAX_DOWNWARD_DRIFT_RATE = 3; // sec/sec when ETA improves (downward drift 
 
 // Don't show the component at all unless it's going to take at least this long
 // to complete
-const MIN_WAIT_TO_SHOW = 10; // 10 seconds
+const MIN_WAIT_TO_SHOW = 1; // 1 second
 
 export default function ETACountdown({
   eta,
   done,
   minWaitToShow = MIN_WAIT_TO_SHOW,
+  showUnmodified = false,
 }: ETACountdownProps) {
   const [secondsRemaining, setSecondsRemaining] = useState<number | null>(null);
 
@@ -70,7 +73,13 @@ export default function ETACountdown({
       const rawRemaining = (currentEta - now) / 1000;
       const targetRemaining = Math.max(0, rawRemaining); // floor at 0
 
-      // Initialize on first tick
+      if (showUnmodified) {
+        // Show raw ETA, allow jumping up or down with no smoothing
+        setSecondsRemaining(Math.round(targetRemaining));
+        return;
+      }
+
+      // Initialize on first tick (smoothed mode)
       if (smoothedRemainingRef.current === null) {
         smoothedRemainingRef.current = targetRemaining;
         setSecondsRemaining(Math.round(targetRemaining));
@@ -79,9 +88,7 @@ export default function ETACountdown({
 
       const smoothed = smoothedRemainingRef.current;
 
-      // Apply directional hysteresis:
-      // - If ETA improves (target decreases), allow a faster but controlled decrease.
-      // - If ETA worsens (target increases), allow only a slow increase.
+      // Apply directional hysteresis (smoothed mode)
       let next = smoothed;
       if (targetRemaining < smoothed) {
         const allowedDecrease = MAX_DOWNWARD_DRIFT_RATE * dt;
@@ -91,16 +98,12 @@ export default function ETACountdown({
         next = Math.min(targetRemaining, smoothed + allowedIncrease);
       }
 
-      // Optional: percentage-based cap (good for long ETAs). Uncomment to combine.
-      // const maxUpPerMin = Math.max(0, smoothed * MAX_UPWARD_PERCENT_PER_MIN * (dt / 60));
-      // next = Math.min(next, smoothed + maxUpPerMin);
-
       smoothedRemainingRef.current = next;
       setSecondsRemaining(Math.round(next));
     }, 250);
 
     return () => clearInterval(intervalRef);
-  }, [done]);
+  }, [done, showUnmodified]);
 
   useEffect(() => {
     if (

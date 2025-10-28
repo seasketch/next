@@ -59,6 +59,14 @@ export default async function preprocessSource(
     );
 
     if (sourceResult.rows.length === 0) {
+      await client.query(
+        `update source_processing_jobs set state = 'error', error_message = 'Canonical source URL not found for dataSourceId: ${dataSourceId}' where job_key = $1`,
+        [jobKey]
+      );
+      await client.query(
+        `update spatial_metrics set state = 'error', error_message = 'Source preprocessing failed.' where source_processing_job_dependency = $1`,
+        [jobKey]
+      );
       throw new Error(
         `Canonical source URL not found for dataSourceId: ${dataSourceId}`
       );

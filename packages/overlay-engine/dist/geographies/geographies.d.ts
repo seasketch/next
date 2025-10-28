@@ -2,7 +2,7 @@ import { Feature, MultiPolygon, Polygon } from "geojson";
 import { PreparedSketch } from "../utils/prepareSketch";
 import { Cql2Query } from "../cql2";
 import { FragmentResult, GeographySettings, SketchFragment } from "../fragments";
-import { CreateSourceOptions, SourceCache } from "fgb-source";
+import { CreateSourceOptions, FlatGeobufSource, SourceCache } from "fgb-source";
 import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 /**
@@ -212,5 +212,10 @@ export declare function initializeGeographySources(geography: ClippingLayerOptio
     intersectionFeature: Feature<MultiPolygon>;
     intersectionLayers: ClippingLayerOption[];
     differenceLayers: ClippingLayerOption[];
+    differenceSources: {
+        layerId: string;
+        source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+        cql2Query?: Cql2Query | undefined;
+    }[];
 }>;
 //# sourceMappingURL=geographies.d.ts.map

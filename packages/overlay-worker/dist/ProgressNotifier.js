@@ -42,6 +42,13 @@ class ProgressNotifier {
                 this.eta = state.eta;
             }
         }
+        else if (sendNotification) {
+            // Refresh ETA on time-based notifications even without new progress
+            if (this.etaEstimator) {
+                const state = this.etaEstimator.getState();
+                this.eta = state.eta;
+            }
+        }
         this.progress = progress;
         this.message = message;
         if (sendNotification) {
