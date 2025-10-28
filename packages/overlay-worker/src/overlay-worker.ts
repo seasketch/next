@@ -25,7 +25,7 @@ import { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
 import { fetch, Client, Pool } from "undici";
 import { LRUCache } from "lru-cache";
 import {
-  createPool,
+  createClippingWorkerPool,
   OverlappingAreaBatchedClippingProcessor,
 } from "overlay-engine/src/OverlappingAreaBatchedClippingProcessor";
 
@@ -96,7 +96,9 @@ const sourceCache = new SourceCache("1GB", {
   maxCacheSize: "256MB",
 });
 
-const workerPool = createPool(process.env.PISCINA_WORKER_PATH || "worker.js");
+const workerPool = createClippingWorkerPool(
+  process.env.PISCINA_WORKER_PATH || "worker.js"
+);
 
 export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker (v2) received payload", payload);

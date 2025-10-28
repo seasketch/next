@@ -1,10 +1,8 @@
 import { SourceCache } from "fgb-source";
 import { eezUrl, landUrl, territorialSeaUrl } from "./constants";
-import {
-  calculateArea,
-  ClippingLayerOption,
-} from "../src/geographies/geographies";
+import { ClippingLayerOption } from "../src/geographies/geographies";
 import { vi } from "vitest";
+import { calculateArea } from "../src/geographies/calculateArea";
 
 const FijiEEZ = [
   {

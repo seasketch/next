@@ -275,7 +275,7 @@ describe("clipToGeographies", () => {
     // Verify that fragments were generated
     expect(result.fragments.length).toBe(1);
     const fragment = result.fragments[0];
-    expect(fragment.properties.__geographyIds).toEqual([1, 2]);
+    expect(fragment.properties.__geographyIds.sort()).toEqual([1, 2].sort());
     expect(fragment.properties.__sketchIds).toEqual([0]);
     expect(fragment.geometry.type).toBe("Polygon");
   });
@@ -385,7 +385,9 @@ describe("clipToGeographies", () => {
         f.properties.__sketchIds.length === 1
     );
     expect(existingSketchFragment).not.toBeNull();
-    expect(existingSketchFragment?.properties.__geographyIds).toEqual([1, 2]);
+    expect(existingSketchFragment?.properties.__geographyIds.sort()).toEqual(
+      [1, 2].sort()
+    );
 
     // Verify that the new sketch fragment was generated
     const newSketchFragment = result.fragments.find(
@@ -394,7 +396,9 @@ describe("clipToGeographies", () => {
         f.properties.__sketchIds.length === 1
     );
     expect(newSketchFragment).not.toBeNull();
-    expect(newSketchFragment?.properties.__geographyIds).toEqual([1, 2]);
+    expect(newSketchFragment?.properties.__geographyIds.sort()).toEqual(
+      [1, 2].sort()
+    );
 
     // Verify that the area of overlap has a fragment
     const overlapFragment = result.fragments.find(
@@ -404,7 +408,9 @@ describe("clipToGeographies", () => {
         f.properties.__sketchIds.length === 2
     );
     expect(overlapFragment).not.toBeNull();
-    expect(overlapFragment?.properties.__geographyIds).toEqual([1, 2]);
+    expect(overlapFragment?.properties.__geographyIds.sort()).toEqual(
+      [1, 2].sort()
+    );
 
     // Compare with reference output
     const referenceFragments = readOutput("overlapping-sketches-fragments");

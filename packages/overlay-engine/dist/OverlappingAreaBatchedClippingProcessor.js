@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OverlappingAreaBatchedClippingProcessor = exports.createPool = void 0;
+exports.OverlappingAreaBatchedClippingProcessor = exports.createClippingWorkerPool = void 0;
 const containerIndex_1 = require("./utils/containerIndex");
 const helpers_1 = require("./utils/helpers");
 const simplify_1 = __importDefault(require("@turf/simplify"));
@@ -14,7 +14,7 @@ const cql2_1 = require("./cql2");
 const clipBatch_1 = require("./workers/clipBatch");
 const p_queue_1 = __importDefault(require("p-queue"));
 const pool_1 = require("./workers/pool");
-Object.defineProperty(exports, "createPool", { enumerable: true, get: function () { return pool_1.createPool; } });
+Object.defineProperty(exports, "createClippingWorkerPool", { enumerable: true, get: function () { return pool_1.createClippingWorkerPool; } });
 class OverlappingAreaBatchedClippingProcessor {
     constructor(maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool) {
         var _a;
@@ -28,7 +28,6 @@ class OverlappingAreaBatchedClippingProcessor {
          * buffer fgb features size vs GeoJSON text.
          */
         this.maxBatchSize = 0;
-        this.minimumBatchDivisionFactor = 4;
         this.results = { "*": 0 };
         this.batchPromises = [];
         this.progress = 0;
@@ -66,7 +65,7 @@ class OverlappingAreaBatchedClippingProcessor {
     }
     async calculateOverlap() {
         return new Promise(async (resolve, reject) => {
-            var _a;
+            var _a, _b;
             try {
                 this.progress = 0;
                 // Step 1. Create query plan for fetching features from the intersection
@@ -75,19 +74,19 @@ class OverlappingAreaBatchedClippingProcessor {
                 // batch size to use when clipping.
                 const envelopes = (0, bboxUtils_1.splitBBoxAntimeridian)((0, bbox_1.default)(this.subjectFeature.geometry)).map(bboxUtils_1.bboxToEnvelope);
                 const queryPlan = this.intersectionSource.createPlan(envelopes);
+                const concurrency = ((_a = this.pool) === null || _a === void 0 ? void 0 : _a.size) || 1;
                 // The default max batch size is helpful when working with very large
                 // datasets. For example, if clipping to 100MB of features, we may want to
                 // work in batches of 5MB, rather than 100MB / 6 threads. That could cause
                 // very large pauses in the processing of the features.
                 let BATCH_SIZE = this.maxBatchSize;
-                if (queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor <
+                if (queryPlan.estimatedBytes.features / concurrency <
                     this.maxBatchSize) {
                     // Ideally, batch size would be based on the number of threads used to
                     // perform the clipping operation.
-                    BATCH_SIZE =
-                        queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor;
+                    BATCH_SIZE = Math.round(queryPlan.estimatedBytes.features / concurrency);
                 }
-                this.helpers.log(`Using batch size of ${BATCH_SIZE} for ${queryPlan.estimatedBytes.features} estimated bytes of features. Minimum batch division factor is ${this.minimumBatchDivisionFactor}, and max batch size setting is ${this.maxBatchSize}`);
+                this.helpers.log(`Using batch size of ${BATCH_SIZE} for ${queryPlan.estimatedBytes.features} estimated bytes of features. Concurrency is ${concurrency}, and max batch size setting is ${this.maxBatchSize}`);
                 this.progressTarget = queryPlan.estimatedBytes.features;
                 // Step 2. Start working through the features, quickly discarding those that
                 // are completely outside the subject feature, and collecting size data from
@@ -129,7 +128,7 @@ class OverlappingAreaBatchedClippingProcessor {
                         // feature is entirely within the subject feature, so we can skip
                         // clipping. Just need to add it's area to the appropriate total(s).
                         this.addFeatureToTotals(feature, true);
-                        this.progress += (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__byteLength;
+                        this.progress += (_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__byteLength;
                     }
                     else {
                         // add feature to batch for clipping
@@ -141,7 +140,8 @@ class OverlappingAreaBatchedClippingProcessor {
                             this.helpers.log("Waiting for worker pool to drain");
                             await this.queue.onSizeLessThan(this.queue.concurrency);
                         }
-                        this.batchPromises.push(this.queue.add(() => this.processBatch(this.batchData, differenceMultiPolygon).catch((e) => {
+                        let batchData = this.batchData;
+                        this.batchPromises.push(this.queue.add(() => this.processBatch(batchData, differenceMultiPolygon).catch((e) => {
                             console.error(`Error processing batch: ${e.message}`);
                             reject(e);
                         })));
@@ -170,7 +170,9 @@ class OverlappingAreaBatchedClippingProcessor {
         });
     }
     async processBatch(batch, differenceMultiPolygon) {
-        this.helpers.log(`Processing batch of ${batch.features.length} features, with weight of ${batch.weight}`);
+        if (batch.features.length === 0) {
+            throw new Error("Batch has no features");
+        }
         this.progress += batch.progressWorth;
         this.helpers.progress((this.progress / this.progressTarget) * 100);
         if (this.pool) {

@@ -17,7 +17,10 @@ import area from "@turf/area";
 import { unionAtAntimeridian } from "../utils/unionAtAntimeridian";
 import { union } from "../utils/polygonClipping";
 import { CreateSourceOptions, FlatGeobufSource, SourceCache } from "fgb-source";
-import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
+import {
+  GuaranteedOverlayWorkerHelpers,
+  guaranteeHelpers,
+} from "../utils/helpers";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 
@@ -650,6 +653,7 @@ export async function initializeGeographySources(
     cql2Query?: Cql2Query | undefined;
   }[];
 }> {
+  helpers = guaranteeHelpers(helpers);
   console.log("initializing geography sources", sourceOptions);
   // Kick off prefetches and capture any errors for later propagation.
   const prefetchResults = geography.map((clippingLayer) =>

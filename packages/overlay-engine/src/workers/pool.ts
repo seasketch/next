@@ -114,7 +114,7 @@ export class WorkerPool<TIn = unknown, TOut = unknown> {
   }
 }
 
-export function createPool(
+export function createClippingWorkerPool(
   workerPath: string,
   size = Math.max(1, (os.availableParallelism() || os.cpus().length) - 1)
 ): WorkerPool<any, any> {

@@ -11,5 +11,5 @@ export declare class WorkerPool<TIn = unknown, TOut = unknown> {
     private replaceCrashed;
     destroy(): Promise<void>;
 }
-export declare function createPool(workerPath: string, size?: number): WorkerPool<any, any>;
+export declare function createClippingWorkerPool(workerPath: string, size?: number): WorkerPool<any, any>;
 //# sourceMappingURL=pool.d.ts.map

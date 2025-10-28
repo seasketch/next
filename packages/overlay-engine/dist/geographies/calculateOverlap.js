@@ -98,6 +98,9 @@ let batchedFeaturesId = 0;
  * speed. This batch size is a compromise between these two factors.
  */
 const CLIPPING_BATCH_SIZE = 1024 * 1024 * 4; // 2MB
+/**
+ * @deprecated Use the OverlappingAreaBatchedClippingProcessor instead.
+ */
 async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
     var _a, _b;
     let differenceReferences = 0;

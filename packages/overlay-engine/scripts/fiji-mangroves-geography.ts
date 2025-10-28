@@ -6,103 +6,38 @@ import {
 } from "../src/geographies/geographies";
 import { guaranteeHelpers } from "../src/utils/helpers";
 import {
-  createPool,
+  createClippingWorkerPool,
   OverlappingAreaBatchedClippingProcessor,
 } from "../src/OverlappingAreaBatchedClippingProcessor";
 import { Feature, MultiPolygon, Polygon } from "geojson";
-import { Pool } from "undici";
-import { LRUCache } from "lru-cache";
+import { makeFetchRangeFn } from "./optimizedFetchRangeFn";
 
-const pool = new Pool(`https://uploads.seasketch.org`, {
-  // 10 second timeout for body
-  bodyTimeout: 10 * 1000,
-});
-
-const cache = new LRUCache<string, ArrayBuffer>({
-  maxSize: 1000 * 1024 * 128, // 128 MB
-  sizeCalculation: (value, key) => {
-    return value.byteLength;
-  },
-});
-
-const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
-
-let cacheHits = 0;
-let cacheMisses = 0;
+const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
+  `https://uploads.seasketch.org`,
+  1000 * 1024 * 128
+);
 
 const sourceCache = new SourceCache("1GB", {
-  fetchRangeFn: (url, range) => {
-    // console.log("fetching", url, range);
-    const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
-    // console.time(cacheKey);
-    const cached = cache.get(cacheKey);
-    if (cached) {
-      // console.timeEnd(cacheKey);
-      // console.log("cache hit", cacheKey);
-      cacheHits++;
-      return Promise.resolve(cached);
-    } else if (inFlightRequests.has(cacheKey)) {
-      // console.log("in-flight request hit", cacheKey);
-      cacheHits++;
-      return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
-    } else {
-      cacheMisses++;
-      // console.log("cache miss", cacheKey);
-      return pool
-        .request({
-          path: url.replace("https://uploads.seasketch.org", ""),
-          method: "GET",
-          headers: {
-            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-          },
-        })
-        .then(async (response) => {
-          const buffer = await response.body.arrayBuffer();
-          // console.log("fetched", cacheKey, buffer.byteLength);
-          return buffer;
-        })
-        .then((buffer) => {
-          // console.timeEnd(cacheKey);
-          cache.set(cacheKey, buffer);
-          // console.log("response", response.headers.get("x-cache-status"));
-          return buffer;
-        })
-        .catch((e) => {
-          console.log("rethrowing error for", cacheKey);
-          // rethrow error with enhanced error message consisting of url, range, and original error message
-          throw new Error(
-            `${e.message}. ${url} range=${range[0]}-${
-              range[1] ? range[1] : ""
-            }: ${e.message}`
-          );
-        });
-      // .finally(() => {
-      //   inFlightRequests.delete(cacheKey);
-      // });
-      // inFlightRequests.set(cacheKey, request);
-      // return request;
-    }
-  },
-  maxCacheSize: "256MB",
+  fetchRangeFn,
 });
 
-const mangrovesSource =
-  "http://uploads.seasketch.org/testing:fiji-mangroves.fgb";
+const testCases = {
+  mangroves: {
+    source: "http://uploads.seasketch.org/testing:fiji-mangroves.fgb",
+    groupBy: null,
+  },
+  deepwaterBioregions: {
+    source: "https://uploads.seasketch.org/testing-deepwater-bioregions.fgb",
+    groupBy: "Draft_name",
+  },
+  geomorphic: {
+    source:
+      "https://uploads.seasketch.org/projects/fiji/subdivided/123-2791aa46-9583-4268-a360-91dd1cee71c5.fgb",
+    groupBy: "class",
+  },
+};
 
-const deepwaterBioregionsSource =
-  "https://uploads.seasketch.org/testing-deepwater-bioregions.fgb";
-
-const geomorphicSource =
-  "https://uploads.seasketch.org/projects/fiji/subdivided/123-83d5c488-330e-4882-82de-e8809c0d3af1.fgb";
-
-// const intersectionSourceUrl = deepwaterBioregionsSource;
-// const groupBy = "Draft_name";
-
-const intersectionSourceUrl = geomorphicSource;
-const groupBy = "class";
-
-// const intersectionSourceUrl = mangrovesSource;
-// const groupBy = undefined;
+const testCase = testCases.geomorphic;
 
 const FIJI_EEZ = [
   {
@@ -128,8 +63,6 @@ const FIJI_EEZ = [
   },
 ] as ClippingLayerOption[];
 
-// const sourceCache = new SourceCache("200 MB");
-
 let lastLoggedProgress = 0;
 const helpers = guaranteeHelpers({
   log: (message) => {
@@ -145,32 +78,24 @@ const helpers = guaranteeHelpers({
 
 (async () => {
   console.time("get intersection feature");
-  const {
-    intersectionFeature: intersectionFeatureGeojson,
-    differenceLayers,
-    differenceSources,
-  } = await initializeGeographySources(FIJI_EEZ, sourceCache, helpers, {
+  const { intersectionFeature: intersectionFeatureGeojson, differenceSources } =
+    await initializeGeographySources(FIJI_EEZ, sourceCache, helpers, {
+      pageSize: "5MB",
+    });
+  console.timeEnd("get intersection feature");
+  const source = await sourceCache.get<Feature<MultiPolygon>>(testCase.source, {
     pageSize: "5MB",
   });
-  console.timeEnd("get intersection feature");
-  const source = await sourceCache.get<Feature<MultiPolygon>>(
-    // deepwaterBioregionsSource,
-    // geomorphicSource,
-    intersectionSourceUrl,
-    {
-      pageSize: "5MB",
-    }
-  );
-  const pool = createPool(
+  const pool = createClippingWorkerPool(
     __dirname + "/../dist/workers/clipBatch.standalone.js"
   );
   const processor = new OverlappingAreaBatchedClippingProcessor(
-    1024 * 1024 * 1, // 5MB
+    1024 * 1024 * 2, // 5MB
     intersectionFeatureGeojson,
     source,
     differenceSources,
     helpers,
-    groupBy,
+    testCase.groupBy || undefined,
     pool
   );
   console.time("calculate overlap");

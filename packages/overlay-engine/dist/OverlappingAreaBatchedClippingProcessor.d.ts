@@ -5,8 +5,8 @@ import { GuaranteedOverlayWorkerHelpers, OverlayWorkerHelpers } from "./utils/he
 import { Cql2Query } from "./cql2";
 import * as clipping from "polyclip-ts";
 import PQueue from "p-queue";
-import { createPool, WorkerPool } from "./workers/pool";
-export { createPool };
+import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
+export { createClippingWorkerPool };
 type BatchData = {
     weight: number;
     progressWorth: number;
@@ -33,7 +33,6 @@ export declare class OverlappingAreaBatchedClippingProcessor {
      * buffer fgb features size vs GeoJSON text.
      */
     maxBatchSize: number;
-    minimumBatchDivisionFactor: number;
     subjectFeature: Feature<Polygon | MultiPolygon>;
     containerIndex: ContainerIndex;
     intersectionSource: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;

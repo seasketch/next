@@ -45,6 +45,10 @@ const helpers_1 = require("./utils/helpers");
 const containerIndex_1 = require("./utils/containerIndex");
 const simplify_1 = __importDefault(require("@turf/simplify"));
 const calculateOverlap_1 = require("./geographies/calculateOverlap");
+/**
+ *
+ * @deprecated Use the OverlappingAreaBatchedClippingProcessor instead.
+ */
 async function calculateFragmentOverlap(fragment, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
     var _a, _b;
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);

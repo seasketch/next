@@ -75,6 +75,9 @@ let batchedFeaturesId = 0;
  */
 const CLIPPING_BATCH_SIZE = 1024 * 1024 * 4; // 2MB
 
+/**
+ * @deprecated Use the OverlappingAreaBatchedClippingProcessor instead.
+ */
 export async function calculateGeographyOverlap(
   geography: ClippingLayerOption[],
   sourceCache: SourceCache,

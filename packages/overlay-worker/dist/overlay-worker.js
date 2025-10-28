@@ -110,7 +110,7 @@ const sourceCache = new fgb_source_1.SourceCache("1GB", {
     },
     maxCacheSize: "256MB",
 });
-const workerPool = (0, OverlappingAreaBatchedClippingProcessor_1.createPool)(process.env.PISCINA_WORKER_PATH || "worker.js");
+const workerPool = (0, OverlappingAreaBatchedClippingProcessor_1.createClippingWorkerPool)(process.env.PISCINA_WORKER_PATH || "worker.js");
 async function handler(payload) {
     console.log("Overlay worker (v2) received payload", payload);
     const startTime = Date.now();

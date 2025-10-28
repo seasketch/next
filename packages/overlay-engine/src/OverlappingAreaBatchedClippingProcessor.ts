@@ -18,9 +18,9 @@ import { Cql2Query, evaluateCql2JSONQuery } from "./cql2";
 import * as clipping from "polyclip-ts";
 import { clipBatch } from "./workers/clipBatch";
 import PQueue from "p-queue";
-import { createPool, WorkerPool } from "./workers/pool";
+import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 
-export { createPool };
+export { createClippingWorkerPool };
 
 type BatchData = {
   weight: number;
@@ -49,7 +49,6 @@ export class OverlappingAreaBatchedClippingProcessor {
    * buffer fgb features size vs GeoJSON text.
    */
   maxBatchSize: number = 0;
-  minimumBatchDivisionFactor: number = 4;
   subjectFeature: Feature<Polygon | MultiPolygon>;
   containerIndex: ContainerIndex;
   intersectionSource: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
@@ -146,22 +145,24 @@ export class OverlappingAreaBatchedClippingProcessor {
           bbox(this.subjectFeature.geometry)
         ).map(bboxToEnvelope);
         const queryPlan = this.intersectionSource.createPlan(envelopes);
+        const concurrency = this.pool?.size || 1;
         // The default max batch size is helpful when working with very large
         // datasets. For example, if clipping to 100MB of features, we may want to
         // work in batches of 5MB, rather than 100MB / 6 threads. That could cause
         // very large pauses in the processing of the features.
         let BATCH_SIZE = this.maxBatchSize;
         if (
-          queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor <
+          queryPlan.estimatedBytes.features / concurrency <
           this.maxBatchSize
         ) {
           // Ideally, batch size would be based on the number of threads used to
           // perform the clipping operation.
-          BATCH_SIZE =
-            queryPlan.estimatedBytes.features / this.minimumBatchDivisionFactor;
+          BATCH_SIZE = Math.round(
+            queryPlan.estimatedBytes.features / concurrency
+          );
         }
         this.helpers.log(
-          `Using batch size of ${BATCH_SIZE} for ${queryPlan.estimatedBytes.features} estimated bytes of features. Minimum batch division factor is ${this.minimumBatchDivisionFactor}, and max batch size setting is ${this.maxBatchSize}`
+          `Using batch size of ${BATCH_SIZE} for ${queryPlan.estimatedBytes.features} estimated bytes of features. Concurrency is ${concurrency}, and max batch size setting is ${this.maxBatchSize}`
         );
 
         this.progressTarget = queryPlan.estimatedBytes.features;
@@ -231,9 +232,10 @@ export class OverlappingAreaBatchedClippingProcessor {
               this.helpers.log("Waiting for worker pool to drain");
               await this.queue.onSizeLessThan(this.queue.concurrency);
             }
+            let batchData = this.batchData;
             this.batchPromises.push(
               this.queue.add(() =>
-                this.processBatch(this.batchData, differenceMultiPolygon).catch(
+                this.processBatch(batchData, differenceMultiPolygon).catch(
                   (e) => {
                     console.error(`Error processing batch: ${e.message}`);
                     reject(e);
@@ -271,9 +273,9 @@ export class OverlappingAreaBatchedClippingProcessor {
     batch: BatchData,
     differenceMultiPolygon: clipping.Geom[]
   ): Promise<{ [classKey: string]: number }> {
-    this.helpers.log(
-      `Processing batch of ${batch.features.length} features, with weight of ${batch.weight}`
-    );
+    if (batch.features.length === 0) {
+      throw new Error("Batch has no features");
+    }
     this.progress += batch.progressWorth;
     this.helpers.progress((this.progress / this.progressTarget) * 100);
     if (this.pool) {

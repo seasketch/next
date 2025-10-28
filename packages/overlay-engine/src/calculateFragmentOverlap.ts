@@ -10,6 +10,10 @@ import { ContainerIndex } from "./utils/containerIndex";
 import simplify from "@turf/simplify";
 import { groupGeomsByClassKey } from "./geographies/calculateOverlap";
 
+/**
+ *
+ * @deprecated Use the OverlappingAreaBatchedClippingProcessor instead.
+ */
 export async function calculateFragmentOverlap(
   fragment: Feature<Polygon>,
   sourceCache: SourceCache,

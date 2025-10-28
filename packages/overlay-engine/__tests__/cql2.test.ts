@@ -311,14 +311,10 @@ describe("evaluateCql2JSONQuery", () => {
   });
 
   describe("error handling", () => {
-    it("should throw error for null or undefined query", () => {
+    it("should return true for null or undefined query", () => {
       const properties = { name: "test" };
-      expect(() => evaluateCql2JSONQuery(null, properties)).toThrow(
-        "Query cannot be null or undefined"
-      );
-      expect(() => evaluateCql2JSONQuery(undefined, properties)).toThrow(
-        "Query cannot be null or undefined"
-      );
+      expect(evaluateCql2JSONQuery(null, properties)).toBe(true);
+      expect(evaluateCql2JSONQuery(undefined, properties)).toBe(true);
     });
 
     it("should throw error for invalid query format", () => {

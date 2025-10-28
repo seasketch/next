@@ -47,6 +47,7 @@ const fragments_1 = require("../fragments");
 const area_1 = __importDefault(require("@turf/area"));
 const unionAtAntimeridian_1 = require("../utils/unionAtAntimeridian");
 const polygonClipping_1 = require("../utils/polygonClipping");
+const helpers_1 = require("../utils/helpers");
 /**
  * Clips a sketch to a geography defined by one or more clipping layers.
  *
@@ -506,6 +507,7 @@ Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, 
  * @param sourceCache - The source cache to use
  */
 async function initializeGeographySources(geography, sourceCache, helpers, sourceOptions) {
+    helpers = (0, helpers_1.guaranteeHelpers)(helpers);
     console.log("initializing geography sources", sourceOptions);
     // Kick off prefetches and capture any errors for later propagation.
     const prefetchResults = geography.map((clippingLayer) => sourceCache
