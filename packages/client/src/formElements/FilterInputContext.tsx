@@ -86,16 +86,12 @@ export const FilterInputServiceContext = createContext<{
     area: number;
     unit: string;
   };
-  opacity: number;
-  setOpacity: (opacity: number) => void;
 }>({
   loading: false,
   getAttributeDetails: () => null,
   updatingCount: true,
   count: 0,
   fullCellCount: 0,
-  opacity: 1,
-  setOpacity: () => {},
 });
 
 export function FilterInputServiceContextProvider({
@@ -122,14 +118,12 @@ export function FilterInputServiceContextProvider({
     count: number;
     fullCellCount: number;
     filterString: string;
-    opacity: number;
   }>({
     loading: false,
     updatingCount: true,
     count: 0,
     fullCellCount: 0,
     filterString: "",
-    opacity: 1,
   });
 
   const mapContext = useContext(MapContext);
@@ -218,15 +212,8 @@ export function FilterInputServiceContextProvider({
       ...state,
       getAttributeDetails,
       stopInformation,
-      setOpacity: (val: number) => {
-        setState((prev) => ({
-          ...prev,
-          opacity: val,
-        }));
-        filterLayerManager?.setOpacity(val);
-      },
     };
-  }, [state, getAttributeDetails, stopInformation, filterLayerManager]);
+  }, [state, getAttributeDetails, stopInformation]);
 
   const debouncedStartingProperties = useDebounce(startingProperties, 100);
 
@@ -356,10 +343,7 @@ function filterDefaults(
       if (!filter) {
         continue;
       }
-      if (
-        filter.length &&
-        filter.length !== Object.keys(attr.values || {}).length
-      ) {
+      if (filter.length > 0) {
         output[key] = state;
       }
     } else if (attr.type === "boolean") {
