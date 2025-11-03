@@ -215,7 +215,7 @@ export default function ProjectsMap() {
             const app = document.createElement("a");
             app.href = `/${c.slug}/app`;
             app.textContent = "Open project →";
-            app.className = "text-sky-500 hover:underline";
+            app.className = "text-black";
 
             const cs = document.createElement("a");
             cs.href = c.caseStudyPath || "/case-studies";
