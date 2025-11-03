@@ -207,6 +207,7 @@ export default function ProjectsMap() {
             title.textContent = c.r;
             title.style.fontWeight = "600";
             title.style.marginBottom = "6px";
+            title.style.color = "black";
 
             const links = document.createElement("div");
             links.style.display = "flex";
@@ -215,7 +216,7 @@ export default function ProjectsMap() {
             const app = document.createElement("a");
             app.href = `/${c.slug}/app`;
             app.textContent = "Open project →";
-            app.className = "text-black";
+            app.className = "text-sky-500 hover:underline";
 
             const cs = document.createElement("a");
             cs.href = c.caseStudyPath || "/case-studies";
