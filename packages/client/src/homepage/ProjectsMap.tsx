@@ -261,6 +261,7 @@ export default function ProjectsMap() {
           title.textContent = String(name);
           title.style.fontWeight = "600";
           title.style.marginBottom = "4px";
+          title.style.color = "black";
 
           const link = document.createElement("a");
           link.href = `/${slug}/app`;
