@@ -139,7 +139,7 @@ describe("sketchFragmentOverlap", () => {
       });
       it("Should have similar geomorphic results to the production fiji reports", async () => {
         const source = await sourceCache.get<Feature<MultiPolygon>>(
-          "https://uploads.seasketch.org/testing-geomorphic.fgb",
+          "https://uploads.seasketch.org/testing-geomorphic-2.fgb",
           {
             pageSize: "5MB",
           }
@@ -209,7 +209,7 @@ describe("sketchFragmentOverlap", () => {
 
       it("Should have at least one bioregion result", async () => {
         const source = await sourceCache.get<Feature<MultiPolygon>>(
-          "https://uploads.seasketch.org/testing-deepwater-bioregions.fgb",
+          "https://uploads.seasketch.org/testing-deepwater-bioregions-2.fgb",
           {
             pageSize: "5MB",
           }
@@ -403,7 +403,6 @@ describe("sketchFragmentOverlap", () => {
             }
             totalResults[classKey] += sketchResults[classKey];
           }
-          expect(true).toBe(true);
         }
         // make sure no result is greater than 100% of the total area
         for (const classKey in totalResults) {
@@ -523,7 +522,7 @@ describe("sketchFragmentOverlap", () => {
       );
       const results = await processor.calculateOverlap();
       expect(results["*"]).toBeCloseTo(11.06, 1);
-      console.log(results);
+      // console.log(results);
     });
   });
 });

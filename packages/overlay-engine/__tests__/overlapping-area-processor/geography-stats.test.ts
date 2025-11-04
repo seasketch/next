@@ -100,7 +100,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         pageSize: "5MB",
       });
       const source = await sourceCache.get<Feature<MultiPolygon>>(
-        "https://uploads.seasketch.org/testing-geomorphic.fgb",
+        "https://uploads.seasketch.org/testing-geomorphic-2.fgb",
         {
           pageSize: "5MB",
         }
@@ -145,7 +145,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         pageSize: "5MB",
       });
       const source = await sourceCache.get<Feature<MultiPolygon>>(
-        "https://uploads.seasketch.org/testing-deepwater-bioregions.fgb",
+        "https://uploads.seasketch.org/testing-deepwater-bioregions-2.fgb",
         {
           pageSize: "5MB",
         }
