@@ -1003,6 +1003,14 @@ div[attachments="forumAttachments"] {
   font-weight:500
 }
 
+.loading .ReportCardBody h1[data-report-title="yes"],
+.loading .ReportCardBodyEditor h1[data-report-title="yes"]{
+  max-width:16rem;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
+}
+
 .ReportCardBody h1[data-report-title="yes"]{
   pointer-events:none
 }
@@ -7013,6 +7021,10 @@ select{
 
 .max-w-5xl{
   max-width:64rem
+}
+
+.max-w-64{
+  max-width:16rem
 }
 
 .max-w-6xl{

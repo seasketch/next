@@ -48,21 +48,16 @@ export default function ReportMetricsProgressDetails({
         } else {
           fragmentMetrics.push(metric);
         }
-        if (metric.sourceProcessingJobDependency) {
+        if (metric.sourceUrl || metric.sourceProcessingJobDependency) {
           const relatedOverlaySource = reportContext.overlaySources.find(
             (s) =>
-              s.sourceProcessingJob.jobKey ===
-              metric.sourceProcessingJobDependency
+              s.sourceProcessingJob?.jobKey ===
+                metric.sourceProcessingJobDependency ||
+              (s.sourceUrl && s.sourceUrl === metric.sourceUrl)
           );
           if (relatedOverlaySource) {
             relatedOverlaySources.add(relatedOverlaySource);
           }
-          // const sourceProcessingJob = reportContext.sourceProcessingJobs.find(
-          //   (j) => j.jobKey === metric.sourceProcessingJobDependency
-          // );
-          // if (sourceProcessingJob) {
-          //   relatedSourceProcessingJobs.add(sourceProcessingJob.jobKey);
-          // }
         }
         if (metric.state === SpatialMetricState.Error) {
           failedMetrics.push(metric.id);
@@ -77,10 +72,6 @@ export default function ReportMetricsProgressDetails({
       failedMetrics,
     };
   }, [metricIds, reportContext.metrics, reportContext.overlaySources]);
-
-  // if (state.displayState === DisplayState.FRAGMENTS) {
-  //   return <>{skeleton}</>;
-  // }
 
   return (
     <Tooltip.Provider>
@@ -99,27 +90,33 @@ export default function ReportMetricsProgressDetails({
             </p>
             <ul className="space-y-1 py-2">
               {state.relatedOverlaySources.map((layer) => {
+                const isComplete =
+                  layer.sourceProcessingJob?.state ===
+                    SpatialMetricState.Complete || Boolean(layer.output);
                 return (
                   <ReportTaskLineItem
                     key={layer.tableOfContentsItemId}
                     title={layer.tableOfContentsItem?.title || "Untitled"}
-                    state={layer.sourceProcessingJob.state}
+                    state={
+                      isComplete
+                        ? SpatialMetricState.Complete
+                        : layer.sourceProcessingJob?.state ||
+                          SpatialMetricState.Queued
+                    }
                     progress={
-                      layer.sourceProcessingJob.state ===
-                      SpatialMetricState.Complete
+                      isComplete
                         ? 100
-                        : layer.sourceProcessingJob.progressPercentage
+                        : layer.sourceProcessingJob?.progressPercentage
                     }
-                    startedAt={layer.sourceProcessingJob.startedAt}
+                    startedAt={layer.sourceProcessingJob?.startedAt}
                     progressPercent={
-                      layer.sourceProcessingJob.state ===
-                      SpatialMetricState.Complete
+                      isComplete
                         ? 100
-                        : layer.sourceProcessingJob.progressPercentage
+                        : layer.sourceProcessingJob?.progressPercentage
                     }
-                    completedAt={layer.sourceProcessingJob.startedAt}
-                    durationSeconds={layer.sourceProcessingJob.durationSeconds}
-                    errorMessage={layer.sourceProcessingJob.errorMessage}
+                    completedAt={layer.output?.createdAt}
+                    durationSeconds={layer.sourceProcessingJob?.durationSeconds}
+                    errorMessage={layer.sourceProcessingJob?.errorMessage}
                     outputSize={layer.output?.size}
                     outputUrl={layer.output?.url}
                     outputType={
@@ -131,7 +128,7 @@ export default function ReportMetricsProgressDetails({
                         : undefined
                     }
                     isAdmin={isAdmin}
-                    estimatedCompletionTime={layer.sourceProcessingJob.eta}
+                    estimatedCompletionTime={layer.sourceProcessingJob?.eta}
                   />
                 );
               })}
@@ -166,8 +163,9 @@ export default function ReportMetricsProgressDetails({
                   estimatedCompletionTime={metric.eta}
                   sourcesReady={state.relatedOverlaySources.every(
                     (layer) =>
-                      layer.sourceProcessingJob.state ===
-                      SpatialMetricState.Complete
+                      layer.output ||
+                      layer.sourceProcessingJob?.state ===
+                        SpatialMetricState.Complete
                   )}
                 />
               ))}
@@ -214,8 +212,9 @@ export default function ReportMetricsProgressDetails({
                   estimatedCompletionTime={metric.eta}
                   sourcesReady={state.relatedOverlaySources.every(
                     (layer) =>
-                      layer.sourceProcessingJob.state ===
-                      SpatialMetricState.Complete
+                      layer.output ||
+                      layer.sourceProcessingJob?.state ===
+                        SpatialMetricState.Complete
                   )}
                 />
               ))}
@@ -239,5 +238,3 @@ function nameForGeography(
   }
   return geographies.find((g) => g.id === subject.id)?.name;
 }
-
-// removed local labelForState in favor of ReportTaskLineItem implementation

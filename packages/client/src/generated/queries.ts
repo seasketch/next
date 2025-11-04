@@ -3291,6 +3291,7 @@ export type DataUploadOutput = Node & {
   projectId?: Maybe<Scalars['Int']>;
   remote: Scalars['String'];
   size: Scalars['BigInt'];
+  sourceProcessingJobKey?: Maybe<Scalars['String']>;
   type: DataUploadOutputType;
   url: Scalars['String'];
 };
@@ -13462,8 +13463,8 @@ export type ReportOverlaySource = {
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
-  sourceProcessingJob: SourceProcessingJob;
-  sourceProcessingJobId: Scalars['String'];
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
+  sourceProcessingJobId?: Maybe<Scalars['String']>;
   sourceUrl?: Maybe<Scalars['String']>;
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
@@ -14466,7 +14467,6 @@ export type SourceProcessingJob = Node & {
   /** Reads a single `DataSource` that is related to this `SourceProcessingJob`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
-  dataUploadOutputId?: Maybe<Scalars['Int']>;
   duration?: Maybe<Interval>;
   durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
@@ -22741,12 +22741,12 @@ export type OverlaySourceDetailsFragment = (
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
-  ), sourceProcessingJob: (
+  ), sourceProcessingJob?: Maybe<(
     { __typename?: 'SourceProcessingJob' }
     & SourceProcessingJobDetailsFragment
-  ), output?: Maybe<(
+  )>, output?: Maybe<(
     { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'size' | 'url'>
+    & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt'>
   )> }
 );
 
@@ -26208,6 +26208,7 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   output {
     size
     url
+    createdAt
   }
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;

@@ -1,5 +1,6 @@
 import { Helpers } from "graphile-worker";
 import S3 from "aws-sdk/clients/s3";
+import { PoolClient } from "pg";
 
 const s3 = new S3({
   region: process.env.AWS_REGION!,
@@ -97,7 +98,7 @@ export default async function cleanupDeletedOverlayRecords(
         for (const layer of row.outputs.layers) {
           if ("outputs" in layer && Array.isArray(layer.outputs)) {
             for (const output of layer.outputs) {
-              await deleteRemote(output.remote);
+              await deleteRemote(output.remote, client);
             }
           }
         }
@@ -131,7 +132,7 @@ export default async function cleanupDeletedOverlayRecords(
             [record.id]
           );
         } else {
-          await deleteRemote(record.remote);
+          await deleteRemote(record.remote, client);
           helpers.logger.info(`Deleted ${record.remote}.`);
           await client.query(
             `delete from deleted_data_upload_outputs where id = $1`,
@@ -143,7 +144,17 @@ export default async function cleanupDeletedOverlayRecords(
   });
 }
 
-async function deleteRemote(remote: string) {
+async function deleteRemote(remote: string, pool: PoolClient) {
+  // before deleting a remote, make damn sure it's no longer referenced by
+  // anything
+  const { rowCount } = await pool.query(
+    `select 1 from data_upload_outputs where remote = $1`,
+    [remote]
+  );
+  if (rowCount > 0) {
+    console.error(`Remote ${remote} is still being used.`);
+    return;
+  }
   const client = /s3:/.test(remote) ? s3 : r2;
   const parts = remote.split(/:\/*/)[1].split("/");
   const Bucket = parts[0];

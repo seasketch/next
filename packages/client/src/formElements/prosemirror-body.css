@@ -178,6 +178,11 @@ div[attachments="forumAttachments"] {
   @apply text-base font-medium max-w-3/4 truncate py-2 pb-0;
 }
 
+.loading .ReportCardBody h1[data-report-title="yes"],
+.loading .ReportCardBodyEditor h1[data-report-title="yes"] {
+  @apply max-w-64 truncate;
+}
+
 .ReportCardBody h1[data-report-title="yes"] {
   @apply pointer-events-none;
 }

@@ -674,6 +674,7 @@ fragment OverlaySourceDetails on ReportOverlaySource {
   output {
     size
     url
+    createdAt
   }
 }
 

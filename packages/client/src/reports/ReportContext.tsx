@@ -215,7 +215,7 @@ export function useReportState(
     if (metricsInProgress) {
       const interval = setInterval(() => {
         refetch();
-      }, 8000);
+      }, 10000);
       return () => clearInterval(interval);
     }
   }, [metricsInProgress, refetch]);

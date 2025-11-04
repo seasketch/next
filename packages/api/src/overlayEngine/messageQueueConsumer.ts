@@ -192,10 +192,18 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                   const size = obj.size || 0;
                   const filename = obj.filename || obj.key || "output.fgb";
                   await pgPool.query(
-                    `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename)
-                     values ($1, 'ReportingFlatgeobufV1', $2, $3, $4, $5, false, $6, $4)
+                    `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key)
+                     values ($1, 'ReportingFlatgeobufV1', $2, $3, $4, $5, false, $6, $4, $7)
                     `,
-                    [data_source_id, remote, size, filename, url, project_id]
+                    [
+                      data_source_id,
+                      remote,
+                      size,
+                      filename,
+                      url,
+                      project_id,
+                      jobKey,
+                    ]
                   );
                   await pgPool.query(
                     `update source_processing_jobs set state = 'complete', updated_at = now(), completed_at = now(), duration = now() - started_at, progress_percentage = 100, error_message = null where job_key = $1`,

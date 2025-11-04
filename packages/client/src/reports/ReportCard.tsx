@@ -81,7 +81,6 @@ export default function ReportCard({
     deleteCard,
     recalculate,
     recalculateState,
-    overlaySources,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
@@ -104,6 +103,17 @@ export default function ReportCard({
         failedMetrics.push(metric.id);
       } else if (metric.state !== SpatialMetricState.Complete) {
         loading = true;
+      }
+    }
+    for (const source of sources) {
+      if (source.sourceProcessingJob?.state === SpatialMetricState.Error) {
+        let errorMessage =
+          source.sourceProcessingJob?.errorMessage || "Unknown error";
+        if (errorMessage in errors) {
+          errors[errorMessage]++;
+        } else {
+          errors[errorMessage] = 1;
+        }
       }
     }
     return { errors, failedMetrics, loading };
@@ -217,7 +227,9 @@ export default function ReportCard({
             className=""
             display={true}
             metrics={metrics}
-            sourceProcessingJobs={sources.map((s) => s.sourceProcessingJob)}
+            sourceProcessingJobs={sources
+              .map((s) => s.sourceProcessingJob!)
+              .filter((s) => Boolean(s))}
           />
         </button>
       )}
@@ -288,7 +300,7 @@ export default function ReportCard({
             )}
         </div>
       </div>
-      <div className="px-4 pb-0 text-sm">
+      <div className={`px-4 pb-0 text-sm ${loading ? "loading" : ""}`}>
         {adminMode && selectedForEditing === cardId ? (
           <ReportCardBodyEditor
             body={localizedBody}
@@ -328,7 +340,7 @@ export default function ReportCard({
                 </li>
               ))}
             </ul>
-            {failedMetrics.length && (
+            {failedMetrics.length > 0 && (
               <div className="mt-2">
                 <Button
                   onClick={() => {

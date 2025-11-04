@@ -3855,6 +3855,7 @@ type DataUploadOutput implements Node {
   projectId: Int
   remote: String!
   size: BigInt!
+  sourceProcessingJobKey: String
   type: DataUploadOutputType!
   url: String!
 }
@@ -14589,8 +14590,8 @@ type ReportOverlaySource {
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
-  sourceProcessingJob: SourceProcessingJob!
-  sourceProcessingJobId: String!
+  sourceProcessingJob: SourceProcessingJob
+  sourceProcessingJobId: String
   sourceUrl: String
   tableOfContentsItem: TableOfContentsItem!
   tableOfContentsItemId: Int!
@@ -15713,7 +15714,6 @@ type SourceProcessingJob implements Node {
   """
   dataSource: DataSource
   dataSourceId: Int!
-  dataUploadOutputId: Int
   duration: Interval
   durationSeconds: Float
   errorMessage: String

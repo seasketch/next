@@ -237,14 +237,18 @@ export default function ReportCardLoadingIndicator({
   const [readyToShow, setReadyToShow] = useState(false);
   useEffect(() => {
     if (display && !isComplete) {
-      const timeoutId = setTimeout(
-        () => setReadyToShow(true),
-        LOADING_INDICATOR_DELAY_MS
-      );
-      return () => {
-        clearTimeout(timeoutId);
-        setReadyToShow(false);
-      };
+      if (farthestEta) {
+        setReadyToShow(true);
+      } else {
+        const timeoutId = setTimeout(
+          () => setReadyToShow(true),
+          LOADING_INDICATOR_DELAY_MS
+        );
+        return () => {
+          clearTimeout(timeoutId);
+          setReadyToShow(false);
+        };
+      }
     } else {
       setReadyToShow(false);
     }
@@ -275,7 +279,7 @@ export default function ReportCardLoadingIndicator({
         <ETACountdown
           eta={etaForCountdown}
           done={isComplete}
-          minWaitToShow={4}
+          minWaitToShow={0}
           showUnmodified
         />
       )}

@@ -4281,6 +4281,28 @@ $$;
 
 
 --
+-- Name: before_insert_spatial_metrics_check_dependency_error(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.before_insert_spatial_metrics_check_dependency_error() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    dep_state public.spatial_metric_state;
+  begin
+    if NEW.source_processing_job_dependency is not null then
+      select state into dep_state from source_processing_jobs where job_key = NEW.source_processing_job_dependency;
+      if dep_state = 'error' then
+        NEW.state := 'error';
+        NEW.error_message := 'Related overlay did not complete processing.';
+      end if;
+    end if;
+    return NEW;
+  end;
+  $$;
+
+
+--
 -- Name: before_invite_emails_insert(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -7392,7 +7414,8 @@ CREATE TABLE public.data_upload_outputs (
     filename text NOT NULL,
     original_filename text,
     is_custom_upload boolean DEFAULT false,
-    fgb_header_size integer
+    fgb_header_size integer,
+    source_processing_job_key text
 );
 
 
@@ -11325,44 +11348,196 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
       raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
     end if;
     
-    -- Try to find existing metric first
     if p_subject_fragment_id is not null then
-      select id into metric_id from spatial_metrics
-      where subject_fragment_id = p_subject_fragment_id
-        and subject_geography_id is null
-        and type = p_type
-        and coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
-        and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+      -- Fragment metrics
+      if p_type = 'total_area' and p_overlay_source_url is null and p_source_processing_job_dependency is null then
+        insert into spatial_metrics (
+          subject_fragment_id,
+          subject_geography_id,
+          type,
+          overlay_source_url,
+          overlay_group_by,
+          included_properties,
+          source_processing_job_dependency,
+          project_id
+        ) values (
+          p_subject_fragment_id,
+          p_subject_geography_id,
+          p_type,
+          p_overlay_source_url,
+          p_overlay_group_by,
+          p_included_properties,
+          p_source_processing_job_dependency,
+          p_project_id
+        )
+        on conflict do nothing
+        returning id into metric_id;
+        if metric_id is null then
+          select id into metric_id from spatial_metrics
+          where subject_fragment_id = p_subject_fragment_id
+            and subject_geography_id is null
+            and type = 'total_area'::public.spatial_metric_type
+            and overlay_source_url is null
+            and source_processing_job_dependency is null
+            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+        end if;
+      elsif p_overlay_source_url is not null then
+        insert into spatial_metrics (
+          subject_fragment_id,
+          subject_geography_id,
+          type,
+          overlay_source_url,
+          overlay_group_by,
+          included_properties,
+          source_processing_job_dependency,
+          project_id
+        ) values (
+          p_subject_fragment_id,
+          p_subject_geography_id,
+          p_type,
+          p_overlay_source_url,
+          p_overlay_group_by,
+          p_included_properties,
+          p_source_processing_job_dependency,
+          p_project_id
+        )
+        on conflict do nothing
+        returning id into metric_id;
+        if metric_id is null then
+          select id into metric_id from spatial_metrics
+          where subject_fragment_id = p_subject_fragment_id
+            and subject_geography_id is null
+            and type = p_type
+            and overlay_source_url = p_overlay_source_url
+            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+        end if;
+      else
+        insert into spatial_metrics (
+          subject_fragment_id,
+          subject_geography_id,
+          type,
+          overlay_source_url,
+          overlay_group_by,
+          included_properties,
+          source_processing_job_dependency,
+          project_id
+        ) values (
+          p_subject_fragment_id,
+          p_subject_geography_id,
+          p_type,
+          p_overlay_source_url,
+          p_overlay_group_by,
+          p_included_properties,
+          p_source_processing_job_dependency,
+          p_project_id
+        )
+        on conflict do nothing
+        returning id into metric_id;
+        if metric_id is null then
+          select id into metric_id from spatial_metrics
+          where subject_fragment_id = p_subject_fragment_id
+            and subject_geography_id is null
+            and type = p_type
+            and overlay_source_url is null
+            and source_processing_job_dependency = p_source_processing_job_dependency
+            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+        end if;
+      end if;
     else
-      select id into metric_id from spatial_metrics
-      where subject_geography_id = p_subject_geography_id
-        and subject_fragment_id is null
-        and type = p_type
-        and coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
-        and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-    end if;
-    
-    -- If not found, insert new metric
-    if metric_id is null then
-      insert into spatial_metrics (
-        subject_fragment_id, 
-        subject_geography_id, 
-        type, 
-        overlay_source_url, 
-        overlay_group_by, 
-        included_properties, 
-        source_processing_job_dependency,
-        project_id
-      ) values (
-        p_subject_fragment_id, 
-        p_subject_geography_id, 
-        p_type, 
-        p_overlay_source_url, 
-        p_overlay_group_by, 
-        p_included_properties, 
-        p_source_processing_job_dependency,
-        p_project_id
-      ) returning id into metric_id;
+      -- Geography metrics
+      if p_type = 'total_area' and p_overlay_source_url is null and p_source_processing_job_dependency is null then
+        insert into spatial_metrics (
+          subject_fragment_id,
+          subject_geography_id,
+          type,
+          overlay_source_url,
+          overlay_group_by,
+          included_properties,
+          source_processing_job_dependency,
+          project_id
+        ) values (
+          p_subject_fragment_id,
+          p_subject_geography_id,
+          p_type,
+          p_overlay_source_url,
+          p_overlay_group_by,
+          p_included_properties,
+          p_source_processing_job_dependency,
+          p_project_id
+        )
+        on conflict do nothing
+        returning id into metric_id;
+        if metric_id is null then
+          select id into metric_id from spatial_metrics
+          where subject_geography_id = p_subject_geography_id
+            and subject_fragment_id is null
+            and type = 'total_area'::public.spatial_metric_type
+            and overlay_source_url is null
+            and source_processing_job_dependency is null
+            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+        end if;
+      elsif p_overlay_source_url is not null then
+        insert into spatial_metrics (
+          subject_fragment_id,
+          subject_geography_id,
+          type,
+          overlay_source_url,
+          overlay_group_by,
+          included_properties,
+          source_processing_job_dependency,
+          project_id
+        ) values (
+          p_subject_fragment_id,
+          p_subject_geography_id,
+          p_type,
+          p_overlay_source_url,
+          p_overlay_group_by,
+          p_included_properties,
+          p_source_processing_job_dependency,
+          p_project_id
+        )
+        on conflict do nothing
+        returning id into metric_id;
+        if metric_id is null then
+          select id into metric_id from spatial_metrics
+          where subject_geography_id = p_subject_geography_id
+            and subject_fragment_id is null
+            and type = p_type
+            and overlay_source_url = p_overlay_source_url
+            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+        end if;
+      else
+        insert into spatial_metrics (
+          subject_fragment_id,
+          subject_geography_id,
+          type,
+          overlay_source_url,
+          overlay_group_by,
+          included_properties,
+          source_processing_job_dependency,
+          project_id
+        ) values (
+          p_subject_fragment_id,
+          p_subject_geography_id,
+          p_type,
+          p_overlay_source_url,
+          p_overlay_group_by,
+          p_included_properties,
+          p_source_processing_job_dependency,
+          p_project_id
+        )
+        on conflict do nothing
+        returning id into metric_id;
+        if metric_id is null then
+          select id into metric_id from spatial_metrics
+          where subject_geography_id = p_subject_geography_id
+            and subject_fragment_id is null
+            and type = p_type
+            and overlay_source_url is null
+            and source_processing_job_dependency = p_source_processing_job_dependency
+            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
+        end if;
+      end if;
     end if;
     
     return (select get_spatial_metric(metric_id));
@@ -15115,7 +15290,6 @@ CREATE TABLE public.source_processing_jobs (
     logs_expires_at timestamp with time zone,
     data_source_id integer NOT NULL,
     project_id integer NOT NULL,
-    data_upload_output_id integer,
     eta timestamp with time zone,
     started_at timestamp with time zone,
     completed_at timestamp with time zone,
@@ -15581,6 +15755,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
       published_source_id int;
       original_source_id int;
       rcl report_card_layers;
+      published_data_upload_output_id int;
     begin
       -- Note that this function copies many columns by name, much like the 
       -- data layers table of contents publishing function. Like it, we will
@@ -15718,7 +15893,9 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
                 filename,
                 original_filename,
                 is_custom_upload,
-                fgb_header_size
+                fgb_header_size,
+                source_processing_job_key,
+                created_at
               ) select
                 published_source_id,
                 data_upload_outputs.project_id,
@@ -15730,8 +15907,14 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
                 filename,
                 original_filename,
                 is_custom_upload,
-                fgb_header_size
-              from data_upload_outputs where data_source_id = original_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+                fgb_header_size,
+                source_processing_job_key,
+                created_at
+              from data_upload_outputs where data_source_id = original_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type returning id into published_data_upload_output_id;
+              if published_data_upload_output_id is null then
+                raise exception 'published_data_upload_output_id is null. Are you attempting to publish a report that references layers that have not completed preprocessing?';
+              end if;
+              -- copy the source processing job?
               insert into report_card_layers (report_card_id, table_of_contents_item_id, group_by)
               values (
                 new_report_card_id,
@@ -16218,7 +16401,6 @@ CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preproce
         if source_id is not null then
           delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
         end if;
-        delete from spatial_metrics where source_processing_job_dependency = source_job_key;
         perform retry_failed_source_processing_job(source_job_key);
       end loop;
     end if;
@@ -16920,6 +17102,7 @@ CREATE FUNCTION public.retry_failed_source_processing_job(jobkey text) RETURNS b
   declare
     updated_job_key text;
   begin
+    update data_upload_outputs set source_processing_job_key = null where source_processing_job_key = jobkey;
     update source_processing_jobs set state = 'queued', error_message = null, updated_at = now(), created_at = now(), progress_percentage = 0, job_key = gen_random_uuid()::text where job_key = jobkey returning job_key into updated_job_key;
     if updated_job_key is not null then
       update spatial_metrics set source_processing_job_dependency = updated_job_key where source_processing_job_dependency = jobkey;
@@ -20388,16 +20571,28 @@ CREATE FUNCTION public.trigger_queue_preprocess_source_on_rcl() RETURNS trigger
     END IF;
 
     
-    
-    -- If no existing source processing job exists, enqueue a preprocess job for this data source
-    IF (SELECT COUNT(*) FROM source_processing_jobs WHERE data_source_id = ds_id) = 0 THEN
-      insert into source_processing_jobs (data_source_id, project_id) values (ds_id, (select project_id from data_sources where id = ds_id)) returning job_key into source_processing_job_key;
-      PERFORM graphile_worker.add_job(
-        'preprocessSource',
-        json_build_object('jobKey', source_processing_job_key),
-        max_attempts := 1
-      );
-    END IF;
+    -- if no ReportingFlatgeobufV1 data upload output exists for this data source,
+    -- enqueue a preprocess job for this data source
+    if not exists (select 1 from data_upload_outputs where data_source_id = ds_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type) then
+      insert into source_processing_jobs (data_source_id, project_id) values (ds_id, (select project_id from data_sources where id = ds_id)) on conflict do nothing returning job_key into source_processing_job_key;
+      if source_processing_job_key is not null then
+        PERFORM graphile_worker.add_job(
+          'preprocessSource',
+          json_build_object('jobKey', source_processing_job_key),
+          max_attempts := 1
+        );
+      end if;
+    end if;
+
+    -- -- If no existing source processing job exists, enqueue a preprocess job for this data source
+    -- IF (SELECT COUNT(*) FROM source_processing_jobs WHERE data_source_id = ds_id) = 0 THEN
+    --   insert into source_processing_jobs (data_source_id, project_id) values (ds_id, (select project_id from data_sources where id = ds_id)) returning job_key into source_processing_job_key;
+    --   PERFORM graphile_worker.add_job(
+    --     'preprocessSource',
+    --     json_build_object('jobKey', source_processing_job_key),
+    --     max_attempts := 1
+    --   );
+    -- END IF;
     return new;
   END;
   $$;
@@ -24737,17 +24932,45 @@ CREATE INDEX source_processing_jobs_updated_at_idx ON public.source_processing_j
 
 
 --
--- Name: spatial_metrics_fragment_unique_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: spatial_metrics_fragment_by_job_unique_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX spatial_metrics_fragment_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, COALESCE(overlay_source_url, ''::text), COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL));
+CREATE UNIQUE INDEX spatial_metrics_fragment_by_job_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, source_processing_job_dependency, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NOT NULL));
 
 
 --
--- Name: spatial_metrics_geography_unique_idx; Type: INDEX; Schema: public; Owner: -
+-- Name: spatial_metrics_fragment_by_source_url_unique_idx; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX spatial_metrics_geography_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, COALESCE(overlay_source_url, ''::text), COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL));
+CREATE UNIQUE INDEX spatial_metrics_fragment_by_source_url_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, overlay_source_url, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL) AND (overlay_source_url IS NOT NULL));
+
+
+--
+-- Name: spatial_metrics_fragment_total_area_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_fragment_total_area_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NULL) AND (type = 'total_area'::public.spatial_metric_type));
+
+
+--
+-- Name: spatial_metrics_geography_by_job_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_geography_by_job_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, source_processing_job_dependency, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NOT NULL));
+
+
+--
+-- Name: spatial_metrics_geography_by_source_url_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_geography_by_source_url_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, overlay_source_url, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL) AND (overlay_source_url IS NOT NULL));
+
+
+--
+-- Name: spatial_metrics_geography_total_area_unique_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_geography_total_area_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NULL) AND (type = 'total_area'::public.spatial_metric_type));
 
 
 --
@@ -25133,6 +25356,13 @@ CREATE TRIGGER before_insert_or_update_report_card_layers_trigger BEFORE INSERT 
 --
 
 CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR UPDATE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger();
+
+
+--
+-- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
 
 
 --
@@ -25763,6 +25993,14 @@ ALTER TABLE ONLY public.data_upload_outputs
 
 ALTER TABLE ONLY public.data_upload_outputs
     ADD CONSTRAINT data_upload_outputs_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: data_upload_outputs data_upload_outputs_source_processing_job_key_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.data_upload_outputs
+    ADD CONSTRAINT data_upload_outputs_source_processing_job_key_fkey FOREIGN KEY (source_processing_job_key) REFERENCES public.source_processing_jobs(job_key) ON DELETE CASCADE;
 
 
 --
@@ -26604,14 +26842,6 @@ ALTER TABLE ONLY public.sketches
 
 ALTER TABLE ONLY public.source_processing_jobs
     ADD CONSTRAINT source_processing_jobs_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
-
-
---
--- Name: source_processing_jobs source_processing_jobs_data_upload_output_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.source_processing_jobs
-    ADD CONSTRAINT source_processing_jobs_data_upload_output_id_fkey FOREIGN KEY (data_upload_output_id) REFERENCES public.data_upload_outputs(id) ON DELETE CASCADE;
 
 
 --
@@ -29803,6 +30033,13 @@ REVOKE ALL ON FUNCTION public.before_insert_or_update_report_card_layers() FROM 
 --
 
 REVOKE ALL ON FUNCTION public.before_insert_or_update_table_of_contents_items_trigger() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION before_insert_spatial_metrics_check_dependency_error(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.before_insert_spatial_metrics_check_dependency_error() FROM PUBLIC;
 
 
 --

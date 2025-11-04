@@ -58,8 +58,9 @@ export function useMetrics<
         relatedSource =
           reportContext.overlaySources.find(
             (s) =>
-              s.sourceProcessingJob.jobKey ===
-              metric.sourceProcessingJobDependency
+              (s.sourceUrl && s.sourceUrl === metric.sourceUrl) ||
+              s.sourceProcessingJob?.jobKey ===
+                metric.sourceProcessingJobDependency
           ) || null;
       }
       if (relatedSource && options.layers) {
@@ -92,7 +93,11 @@ export function useMetrics<
     }
     return {
       data: metrics,
-      sources: Array.from(sources),
+      sources: reportContext.overlaySources.filter((o) =>
+        options.layers?.some(
+          (l) => l.tableOfContentsItemId === o.tableOfContentsItemId
+        )
+      ),
       loading,
       errors,
     };

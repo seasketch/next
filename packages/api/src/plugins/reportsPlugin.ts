@@ -46,7 +46,7 @@ type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
   geostats: GeostatsLayer | RasterInfo;
   mapboxGlStyles: AnyLayer[];
-  sourceProcessingJobId: string;
+  sourceProcessingJobId?: string;
   outputId?: number;
   sourceUrl?: string;
 };
@@ -112,8 +112,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         tableOfContentsItem: TableOfContentsItem!
         geostats: JSON!
         mapboxGlStyles: JSON!
-        sourceProcessingJob: SourceProcessingJob!
-        sourceProcessingJobId: String!
+        sourceProcessingJob: SourceProcessingJob
+        sourceProcessingJobId: String
         outputId: Int!
         output: DataUploadOutput
         sourceUrl: String
@@ -346,7 +346,7 @@ async function getOverlaySources(reportId: number, pool: Pool) {
         distinct on (rcl.table_of_contents_item_id) rcl.table_of_contents_item_id, 
         ds.geostats,
         dl.mapbox_gl_styles,
-        spj.job_key as source_processing_job_id,
+        coalesce(spj.job_key, duo.source_processing_job_key) as source_processing_job_id,
         duo.id as output_id,
         duo.url as source_url
       from 
@@ -354,7 +354,7 @@ async function getOverlaySources(reportId: number, pool: Pool) {
       inner join table_of_contents_items t on t.id = rcl.table_of_contents_item_id
       inner join data_layers dl on dl.id = t.data_layer_id
       inner join data_sources ds on ds.id = dl.data_source_id
-      inner join source_processing_jobs spj on spj.data_source_id = ds.id
+      left join source_processing_jobs spj on spj.data_source_id = ds.id
       left join data_upload_outputs duo on duo.data_source_id = ds.id and duo.type = 'ReportingFlatgeobufV1'
       where 
         report_card_id in (select report_card_ids_for_report($1))
@@ -540,16 +540,6 @@ async function getOrCreateMetricsOfType(
   fragmentHashes: string[],
   projectId: number
 ) {
-  console.log(
-    "getOrCreateMetricsOfType",
-    type,
-    overlaySource,
-    groupBy,
-    cardSettings,
-    geographyIds,
-    fragmentHashes,
-    projectId
-  );
   const metrics: any[] = [];
   // first, create geography metrics
   for (const geographyId of geographyIds) {

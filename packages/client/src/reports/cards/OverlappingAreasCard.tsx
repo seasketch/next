@@ -70,7 +70,6 @@ export function OverlappingAreasCard({
   });
 
   // Fetch total_area (if needed elsewhere later). Currently not used directly.
-
   const overlayMetrics = useMetrics({
     type: "overlay_area",
     geographyIds: allGeographyIds,
