@@ -9,8 +9,8 @@ import {
   GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
   OverlayWorkerHelpers,
+  OverlayWorkerLogFeatureLayerConfig,
 } from "./utils/helpers";
-import simplify from "@turf/simplify";
 import { bboxToEnvelope, splitBBoxAntimeridian } from "./utils/bboxUtils";
 import bbox from "@turf/bbox";
 import calcArea from "@turf/area";
@@ -19,8 +19,32 @@ import * as clipping from "polyclip-ts";
 import { clipBatch } from "./workers/clipBatch";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
+import truncate from "@turf/truncate";
 
 export { createClippingWorkerPool };
+
+const layers: Record<string, OverlayWorkerLogFeatureLayerConfig> = {
+  classifiedFeatures: {
+    name: "classified-features",
+    geometryType: "Polygon",
+    fields: {
+      classification: "string",
+      groupBy: "string",
+    },
+  },
+  containerIndexBoxes: {
+    name: "container-index-boxes",
+    geometryType: "Polygon",
+    fields: {
+      id: "number",
+    },
+  },
+  subjectFeature: {
+    name: "subject-feature",
+    geometryType: "Polygon",
+    fields: {},
+  },
+};
 
 type BatchData = {
   weight: number;
@@ -86,18 +110,27 @@ export class OverlappingAreaBatchedClippingProcessor {
     this.differenceSources = differenceSources;
     this.maxBatchSize = maxBatchSize;
     this.subjectFeature = subjectFeature;
-    this.containerIndex = new ContainerIndex(
-      simplify(subjectFeature, {
-        tolerance: 0.002,
-      })
-    );
     this.helpers = guaranteeHelpers(helpers);
+    console.time("build container index");
+    this.containerIndex = new ContainerIndex(subjectFeature);
+    console.timeEnd("build container index");
+    const boxes = this.containerIndex.getBBoxPolygons();
+    let id = 0;
+    for (const box of boxes.features) {
+      box.properties = { id: id++ };
+      if (this.helpers.logFeature) {
+        this.helpers.logFeature(layers.containerIndexBoxes, box);
+      }
+    }
     this.groupBy = groupBy;
     this.resetBatchData();
 
     this.queue = new PQueue({
       concurrency: this.pool?.size || 1,
     });
+    if (this.helpers.logFeature) {
+      this.helpers.logFeature(layers.subjectFeature, subjectFeature);
+    }
   }
 
   resetBatchData() {
@@ -133,7 +166,7 @@ export class OverlappingAreaBatchedClippingProcessor {
     };
   }
 
-  async calculateOverlap() {
+  async calculateOverlap(): Promise<{ [classKey: string]: number }> {
     return new Promise(async (resolve, reject) => {
       try {
         this.progress = 0;
@@ -177,15 +210,27 @@ export class OverlappingAreaBatchedClippingProcessor {
             queryPlan,
           }
         )) {
+          truncate(feature, { mutate: true });
           this.helpers.progress(
             (this.progress / this.progressTarget) * 100,
             `Processing features: (${this.progress}/${this.progressTarget} bytes)`
           );
           let requiresIntersection = false;
           const classification = this.containerIndex.classify(feature);
+          if (this.helpers.logFeature) {
+            this.helpers.logFeature(layers.classifiedFeatures, {
+              type: "Feature",
+              geometry: feature.geometry,
+              properties: {
+                classification,
+                groupBy: feature.properties?.[this.groupBy || ""] || "",
+              },
+            });
+          }
           if (classification === "outside") {
             // We can safely skip this feature.
             this.progress++;
+            // requiresIntersection = true;
             continue;
           } else if (classification === "mixed") {
             // This feature will need to be clipped against the subject feature to
@@ -257,6 +302,9 @@ export class OverlappingAreaBatchedClippingProcessor {
         this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
         for (const batchData of resolvedBatchData) {
           for (const classKey in batchData) {
+            if (!(classKey in this.results)) {
+              this.results[classKey] = 0;
+            }
             this.results[classKey] += batchData[classKey];
           }
         }
@@ -278,6 +326,9 @@ export class OverlappingAreaBatchedClippingProcessor {
     }
     this.progress += batch.progressWorth;
     this.helpers.progress((this.progress / this.progressTarget) * 100);
+    const classKeysInBatch = batch.features.map(
+      (f) => f.feature.properties?.[this.groupBy || ""]
+    );
     if (this.pool) {
       return this.pool
         .run({

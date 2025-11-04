@@ -29,7 +29,7 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
       logGroup: new logs.LogGroup(this, "SubdivisionWorkerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),
-      ephemeralStorageSize: cdk.Size.gibibytes(2),
+      ephemeralStorageSize: cdk.Size.gibibytes(4),
       memorySize: 8192,
       retryAttempts: 0,
       environment: {

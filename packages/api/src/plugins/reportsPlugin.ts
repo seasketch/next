@@ -605,7 +605,7 @@ export async function startMetricCalculationsForSketch(
   }
   const reportId = draft ? sketchClass.draft_report_id : sketchClass.report_id;
   if (!reportId) {
-    throw new Error(`Report not found for sketch class ${sketchClass.id}`);
+    return;
   }
   return getOrCreateMetrics(
     reportId,

@@ -309,14 +309,18 @@ describe("clipToGeographies", () => {
     );
     expect(territorialSeaFragment).not.toBeNull();
     expect(territorialSeaFragment?.geometry.type).toBe("Polygon");
-    expect(territorialSeaFragment?.properties.__geographyIds).toEqual([1, 2]);
+    expect(territorialSeaFragment?.properties.__geographyIds.sort()).toEqual(
+      [1, 2].sort()
+    );
 
     const offshoreFragment = result.fragments.find((f) =>
       f.properties.__geographyIds.includes(3)
     );
     expect(offshoreFragment).not.toBeNull();
     expect(offshoreFragment?.geometry.type).toBe("Polygon");
-    expect(offshoreFragment?.properties.__geographyIds).toEqual([1, 3]);
+    expect(offshoreFragment?.properties.__geographyIds.sort()).toEqual(
+      [1, 3].sort()
+    );
 
     const landFragment = result.fragments.find(
       (f) =>
@@ -325,7 +329,7 @@ describe("clipToGeographies", () => {
     );
     expect(landFragment).not.toBeNull();
     expect(landFragment?.geometry.type).toBe("Polygon");
-    expect(landFragment?.properties.__geographyIds).toEqual([1]);
+    expect(landFragment?.properties.__geographyIds.sort()).toEqual([1].sort());
 
     // Compare with reference output
     const referenceFragments = readOutput("hawaii-eez-fragments");

@@ -26,6 +26,7 @@ interface ReportTaskLineItemProps {
   estimatedCompletionTime?: Date | string | number | null;
   startedAt?: Date | string | number | null;
   progressPercent?: number | null;
+  sourcesReady?: boolean;
 }
 
 export default function ReportTaskLineItem({
@@ -42,6 +43,7 @@ export default function ReportTaskLineItem({
   estimatedCompletionTime,
   startedAt,
   progressPercent,
+  sourcesReady,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
   const hasTooltipInfo =
@@ -54,7 +56,9 @@ export default function ReportTaskLineItem({
     <div className="text-sm text-gray-200">
       <div className="font-semibold text-white">{t("Queued")}</div>
       <div className="text-gray-300">
-        {t("Calculations will start once overlay layers are processed.")}
+        {sourcesReady === false
+          ? t("Calculations will start once overlay layers are processed.")
+          : t("Calculations are queued and should start momentarily.")}
       </div>
     </div>
   );
@@ -137,7 +141,12 @@ export default function ReportTaskLineItem({
         <Tooltip.Root delayDuration={100}>
           <Tooltip.Trigger asChild>
             <div className="text-sm text-gray-600 flex items-center justify-center w-5 h-5 cursor-help focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded">
-              <StateIcon state={state} progress={progress} />
+              <StateIcon
+                state={state}
+                progress={progress}
+                progressPercent={progressPercent}
+                t={t}
+              />
             </div>
           </Tooltip.Trigger>
           <Tooltip.Portal>
@@ -153,7 +162,13 @@ export default function ReportTaskLineItem({
         </Tooltip.Root>
       ) : (
         <span className="ml-2 text-sm text-gray-600 flex items-center justify-center w-5 h-5">
-          <StateIcon state={state} progress={progress} />
+          <StateIcon
+            state={state}
+            progress={progress}
+            progressPercent={progressPercent}
+            t={t}
+            startedAt={startedAt}
+          />
         </span>
       )}
     </li>
@@ -197,22 +212,65 @@ function humanizeDuration(seconds: number): string {
 function StateIcon({
   state,
   progress,
+  progressPercent,
+  t,
+  startedAt,
 }: {
   state: SpatialMetricState;
   progress?: number | null;
+  progressPercent?: number | null;
+  t: (key: string) => string;
+  startedAt?: Date | string | number | null;
 }) {
   switch (state) {
     case SpatialMetricState.Processing:
       // Use circular progress indicator with progress value or indeterminate
       const normalizedProgress =
         typeof progress === "number" ? progress / 100 : null;
+      // Calculate progress percentage for tooltip: prefer progressPercent, fallback to progress
+      const displayProgressPercent =
+        progressPercent !== null && progressPercent !== undefined
+          ? progressPercent
+          : typeof progress === "number"
+          ? progress
+          : null;
+
+      const progressTooltip = (
+        <div className="text-sm text-gray-200">
+          <div className="font-semibold text-white">{t("Processing")}</div>
+          {displayProgressPercent !== null && (
+            <>
+              <div className="text-gray-300">
+                {Math.round(displayProgressPercent)}%
+              </div>
+            </>
+          )}
+        </div>
+      );
+
       return (
-        <CircularProgressIndicator
-          progress={normalizedProgress}
-          size={20}
-          strokeWidth={2.5}
-          className="w-5 h-5"
-        />
+        <Tooltip.Root delayDuration={100}>
+          <Tooltip.Trigger asChild>
+            <div className="cursor-help focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded">
+              <CircularProgressIndicator
+                progress={normalizedProgress}
+                size={20}
+                strokeWidth={2.5}
+                className="w-5 h-5"
+              />
+            </div>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content
+              className="bg-gray-900 rounded-lg shadow-xl p-3 max-w-72 z-50 overflow-hidden"
+              sideOffset={5}
+              side="right"
+            >
+              {progressTooltip}
+              <Tooltip.Arrow className="fill-gray-900" />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
       );
     case SpatialMetricState.Queued:
       return <PauseIcon className="text-gray-400 w-5 h-5" />;

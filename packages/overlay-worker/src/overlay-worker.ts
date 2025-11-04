@@ -21,13 +21,20 @@ import {
 import { ProgressNotifier } from "./ProgressNotifier";
 import * as geobuf from "geobuf";
 import Pbf from "pbf";
-import { Feature, FeatureCollection, MultiPolygon, Polygon } from "geojson";
+import {
+  Feature,
+  FeatureCollection,
+  GeoJsonProperties,
+  MultiPolygon,
+  Polygon,
+} from "geojson";
 import { fetch, Client, Pool } from "undici";
 import { LRUCache } from "lru-cache";
 import {
   createClippingWorkerPool,
   OverlappingAreaBatchedClippingProcessor,
 } from "overlay-engine/src/OverlappingAreaBatchedClippingProcessor";
+import simplify from "@turf/simplify";
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
   // 10 second timeout for body
@@ -184,7 +191,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
           );
           const processor = new OverlappingAreaBatchedClippingProcessor(
             1024 * 1024 * 1, // 5MB
-            intersectionFeatureGeojson,
+            simplify(intersectionFeatureGeojson, {
+              tolerance: 0.002,
+            }),
             source,
             differenceSources,
             helpers,
@@ -232,7 +241,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
             });
             const processor = new OverlappingAreaBatchedClippingProcessor(
               1024 * 1024 * 0.5, // 5MB
-              feature as Feature<Polygon>,
+              simplify(feature, {
+                tolerance: 0.0002,
+              }),
               source,
               [],
               helpers,

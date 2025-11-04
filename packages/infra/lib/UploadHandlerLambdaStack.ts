@@ -64,6 +64,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       logGroup: new logs.LogGroup(this, "SpatialUploadHandlerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),
+      ephemeralStorageSize: cdk.Size.gibibytes(5),
       environment: {
         PGHOST: props.db.instanceEndpoint.hostname,
         PGPORT: "5432",

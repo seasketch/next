@@ -11,6 +11,7 @@ import {
 } from "../src/OverlappingAreaBatchedClippingProcessor";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { makeFetchRangeFn } from "./optimizedFetchRangeFn";
+import simplify from "@turf/simplify";
 
 const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
   `https://uploads.seasketch.org`,
@@ -31,8 +32,7 @@ const testCases = {
     groupBy: "Draft_name",
   },
   geomorphic: {
-    source:
-      "https://uploads.seasketch.org/projects/fiji/subdivided/123-2791aa46-9583-4268-a360-91dd1cee71c5.fgb",
+    source: "https://uploads.seasketch.org/testing-geomorphic.fgb",
     groupBy: "class",
   },
 };
@@ -91,7 +91,9 @@ const helpers = guaranteeHelpers({
   );
   const processor = new OverlappingAreaBatchedClippingProcessor(
     1024 * 1024 * 2, // 5MB
-    intersectionFeatureGeojson,
+    simplify(intersectionFeatureGeojson, {
+      tolerance: 0.002,
+    }),
     source,
     differenceSources,
     helpers,

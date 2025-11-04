@@ -10,9 +10,52 @@ import {
   OverlappingAreaBatchedClippingProcessor,
   createClippingWorkerPool,
 } from "../../src/OverlappingAreaBatchedClippingProcessor";
+import { DebuggingFgbWriter } from "../../src/utils/debuggingFgbWriter";
+import {
+  OverlayWorkerHelpers,
+  OverlayWorkerLogFeatureLayerConfig,
+} from "../../src/utils/helpers";
+import { compareResults } from "./compareResults";
+import simplify from "@turf/simplify";
+
+// const writer = new DebuggingFgbWriter("./classified-features.fgb", [
+//   { name: "classification", type: "string" },
+//   { name: "groupBy", type: "string" },
+// ]);
+
+const helpers: OverlayWorkerHelpers = {
+  // logFeature: (
+  //   layer: OverlayWorkerLogFeatureLayerConfig,
+  //   feature: Feature<any>
+  // ) => {
+  //   if (layer.name !== "classified-features") {
+  //     return;
+  //   }
+  //   writer.addFeature(feature);
+  // },
+};
 
 const metrics = require("./precalc.json");
 const geomorphologyMetrics = require("./precalcGeomorphACA.json");
+const geomorphologyResults: { [key: string]: number } = { "*": 0 };
+for (const metric of geomorphologyMetrics) {
+  geomorphologyResults[metric.classId] = metric.value / 1_000_000;
+  geomorphologyResults["*"] += metric.value / 1_000_000;
+}
+
+const deepwaterBioregionsResults: { [key: string]: number } = { "*": 0 };
+for (const metric of metrics.filter(
+  (m: any) =>
+    m.classId.startsWith("deepwater_bioregions-") &&
+    m.metricId === "area" &&
+    m.geographyId === "eez" &&
+    m.classId !== "deepwater_bioregions-total"
+)) {
+  const classKey = metric.classId.split("deepwater_bioregions-")[1];
+  const value = metric.value / 1_000_000;
+  deepwaterBioregionsResults[classKey] = value;
+  deepwaterBioregionsResults["*"] += value;
+}
 
 describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () => {
   vi.setConfig({ testTimeout: 1000000 });
@@ -38,14 +81,12 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
             8325,
           ],
         },
-        source:
-          "https://uploads.seasketch.org/projects/superuser/public/04620ab4-5550-4858-b827-9ef41539376b.fgb",
+        source: "https://uploads.seasketch.org/testing-eez.fgb",
         op: "INTERSECT",
       },
       {
         cql2Query: null,
-        source:
-          "https://uploads.seasketch.org/projects/superuser/public/5dee67d7-83ea-4755-be22-afefc22cbee3.fgb",
+        source: "https://uploads.seasketch.org/testing-land.fgb",
         op: "DIFFERENCE",
         headerSizeHint: 38500000,
       },
@@ -58,67 +99,82 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
       } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
         pageSize: "5MB",
       });
-      console.log("created intersection feature");
       const source = await sourceCache.get<Feature<MultiPolygon>>(
-        "https://uploads.seasketch.org/projects/fiji/subdivided/123-2791aa46-9583-4268-a360-91dd1cee71c5.fgb",
+        "https://uploads.seasketch.org/testing-geomorphic.fgb",
         {
           pageSize: "5MB",
         }
       );
-      console.log("initialized source");
       const pool = createClippingWorkerPool(
         __dirname + "/../../dist/workers/clipBatch.standalone.js"
       );
       const processor = new OverlappingAreaBatchedClippingProcessor(
         1024 * 1024 * 2, // 5MB
-        intersectionFeatureGeojson,
+        simplify(intersectionFeatureGeojson, {
+          tolerance: 0.002,
+        }),
         source,
         differenceSources,
         undefined,
         "class",
         pool
       );
-      console.log("calculating");
       const results = await processor.calculateOverlap();
-      // console.log("results", results);
-      expect(true).toBe(true);
-      let sum = 0;
-      for (const metric of geomorphologyMetrics) {
-        const classKey = metric.classId;
-        const sqKm = metric.value / 1_000_000;
-        let acceptableDifferenceRatio =
-          classKey === "Terrestrial Reef Flat" ? 0.1 : 0.025;
-        sum += sqKm;
-        expect(Object.keys(results)).toContain(classKey);
-        expect(results[classKey]).toBeLessThan(
-          sqKm * (1 + acceptableDifferenceRatio)
-        );
-        expect(results[classKey]).toBeGreaterThan(
-          sqKm * (1 - acceptableDifferenceRatio)
-        );
-        console.log(
-          `${classKey} differed by ${results[classKey] > sqKm ? "+" : "-"}${
-            Math.round(((results[classKey] - sqKm) / sqKm) * 1000) / 10
-          }%`
-        );
-      }
-      const acceptableDifferenceRatio = 0.02;
-      expect(results["*"]).toBeLessThan(sum * (1 + acceptableDifferenceRatio));
-      expect(results["*"]).toBeGreaterThan(
-        sum * (1 - acceptableDifferenceRatio)
+      compareResults(
+        results,
+        geomorphologyResults,
+        0.015,
+        {
+          // Reef flats are near to shore, and the tests are using a higher
+          // resolution shoreline than legacy reports so we expect higher amounts
+          // of the habitat to be present. The rough shoreline of the production
+          // reports cuts a lot out.
+          "Terrestrial Reef Flat": 0.055,
+          "Outer Reef Flat": 0.03,
+          "*": 0.02,
+        },
+        true
       );
-      console.log(
-        `total differed by ${results["*"] > sum ? "+" : "-"}${
-          Math.round(((results["*"] - sum) / sum) * 1000) / 10
-        }%`
+    });
+
+    it("Deepwater Bioregions", async () => {
+      const {
+        intersectionFeature: intersectionFeatureGeojson,
+        differenceSources,
+      } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
+        pageSize: "5MB",
+      });
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-deepwater-bioregions.fgb",
+        {
+          pageSize: "5MB",
+        }
       );
-      console.log(
-        `total expected: ${sum} km^2, results: ${
-          results["*"]
-        } km^2. Difference percentage: ${
-          Math.round(((results["*"] - sum) / sum) * 1000) / 10
-        }%`
+      const pool = createClippingWorkerPool(
+        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+      );
+      const processor = new OverlappingAreaBatchedClippingProcessor(
+        1024 * 1024 * 2, // 5MB
+        simplify(intersectionFeatureGeojson, {
+          tolerance: 0.002,
+        }),
+        source,
+        differenceSources,
+        helpers,
+        "Draft_name",
+        pool
+      );
+      const results = await processor.calculateOverlap();
+      compareResults(
+        results,
+        deepwaterBioregionsResults,
+        0.005,
+        undefined,
+        true
       );
     });
   });
+  // afterAll(() => {
+  //   writer.close();
+  // });
 });

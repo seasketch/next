@@ -32,8 +32,8 @@ export default async function cleanupTimedOutSpatialMetricTasks(
     const results = await client.query(
       `
         update source_processing_jobs
-        set state = 'error', error_message = 'Timeout. > 30 seconds since last update.'
-        where updated_at < now() - interval '30 seconds' and state != 'complete' and state != 'error' returning job_key
+        set state = 'error', error_message = 'Timeout. > 60 seconds since last update.'
+        where updated_at < now() - interval '60 seconds' and state != 'complete' and state != 'error' returning job_key
       `
     );
     const timedOutJobKeys = results.rows.map((row) => row.job_key);

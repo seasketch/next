@@ -49,6 +49,7 @@ const pbf_1 = __importDefault(require("pbf"));
 const undici_1 = require("undici");
 const lru_cache_1 = require("lru-cache");
 const OverlappingAreaBatchedClippingProcessor_1 = require("overlay-engine/src/OverlappingAreaBatchedClippingProcessor");
+const simplify_1 = __importDefault(require("@turf/simplify"));
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
@@ -162,7 +163,9 @@ async function handler(payload) {
                         pageSize: "5MB",
                     });
                     const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor(1024 * 1024 * 1, // 5MB
-                    intersectionFeatureGeojson, source, differenceSources, helpers, payload.groupBy, workerPool);
+                    (0, simplify_1.default)(intersectionFeatureGeojson, {
+                        tolerance: 0.002,
+                    }), source, differenceSources, helpers, payload.groupBy, workerPool);
                     // const area = await calculateGeographyOverlap(
                     //   payload.subject.clippingLayers,
                     //   sourceCache,
@@ -192,7 +195,9 @@ async function handler(payload) {
                             pageSize: "5MB",
                         });
                         const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor(1024 * 1024 * 0.5, // 5MB
-                        feature, source, [], helpers, payload.groupBy, workerPool);
+                        (0, simplify_1.default)(feature, {
+                            tolerance: 0.0002,
+                        }), source, [], helpers, payload.groupBy, workerPool);
                         const area = await processor.calculateOverlap();
                         // progressNotifier.notify(0, "Beginning overlay area calculation");
                         // await flushMessages();

@@ -12,6 +12,8 @@ export declare class ContainerIndex {
     private container;
     private containerBBox;
     private rings;
+    private holeRings;
+    private holeBBoxes;
     private segsA;
     private segsB;
     private index;

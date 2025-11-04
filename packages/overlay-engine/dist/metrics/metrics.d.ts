@@ -22,7 +22,7 @@ export type TotalAreaMetric = MetricBase & {
 };
 export type OverlayAreaMetric = OverlayMetricBase & {
     type: "overlay_area";
-    value: number | {
+    value: {
         [groupBy: string]: number;
     };
 };

@@ -58,7 +58,9 @@ export declare class OverlappingAreaBatchedClippingProcessor {
         cql2Query?: Cql2Query | undefined;
     }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>);
     resetBatchData(): void;
-    calculateOverlap(): Promise<unknown>;
+    calculateOverlap(): Promise<{
+        [classKey: string]: number;
+    }>;
     processBatch(batch: BatchData, differenceMultiPolygon: clipping.Geom[]): Promise<{
         [classKey: string]: number;
     }>;

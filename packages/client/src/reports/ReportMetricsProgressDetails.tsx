@@ -164,6 +164,11 @@ export default function ReportMetricsProgressDetails({
                   durationSeconds={metric.durationSeconds}
                   errorMessage={metric.errorMessage}
                   estimatedCompletionTime={metric.eta}
+                  sourcesReady={state.relatedOverlaySources.every(
+                    (layer) =>
+                      layer.sourceProcessingJob.state ===
+                      SpatialMetricState.Complete
+                  )}
                 />
               ))}
             </ul>
@@ -207,6 +212,11 @@ export default function ReportMetricsProgressDetails({
                   durationSeconds={metric.durationSeconds}
                   errorMessage={metric.errorMessage}
                   estimatedCompletionTime={metric.eta}
+                  sourcesReady={state.relatedOverlaySources.every(
+                    (layer) =>
+                      layer.sourceProcessingJob.state ===
+                      SpatialMetricState.Complete
+                  )}
                 />
               ))}
             </ul>

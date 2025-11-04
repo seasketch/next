@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
 } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -21,6 +22,7 @@ import {
   useReportOverlaySourcesSubscriptionSubscription,
   SourceProcessingJobDetailsFragment,
   ReportOverlaySourcesSubscriptionSubscription,
+  SpatialMetricState,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
 import { MetricSubjectFragment } from "overlay-engine";
@@ -115,7 +117,7 @@ export function useReportState(
 
   const onError = useGlobalErrorHandler();
 
-  const { data, loading } = useReportContextQuery({
+  const { data, loading, refetch } = useReportContextQuery({
     variables: {
       reportId: reportId!,
       sketchId: selectedSketchId!,
@@ -185,10 +187,38 @@ export function useReportState(
         },
         refetchQueries: [ReportContextDocument],
         awaitRefetchQueries: true,
+        onCompleted: () => {
+          // When there are a lot of metrics to recalculate, some appear in the
+          // client as "stuck" in the queued state. This is a hack to force a
+          // refetch. I'm not really sure why this occurs, but this seems to
+          // fix the issue.
+          setTimeout(() => {
+            refetch();
+          }, 1500);
+        },
       });
     },
     [recalculateMutation]
   );
+
+  const metricsInProgress = useMemo(() => {
+    return (
+      (data?.report?.dependencies?.metrics || []).find(
+        (m) =>
+          m.state === SpatialMetricState.Queued ||
+          m.state === SpatialMetricState.Processing
+      ) !== undefined
+    );
+  }, [data?.report?.dependencies?.metrics]);
+
+  useEffect(() => {
+    if (metricsInProgress) {
+      const interval = setInterval(() => {
+        refetch();
+      }, 8000);
+      return () => clearInterval(interval);
+    }
+  }, [metricsInProgress, refetch]);
 
   if (!data?.sketch) {
     return undefined;

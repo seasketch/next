@@ -508,7 +508,6 @@ Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, 
  */
 async function initializeGeographySources(geography, sourceCache, helpers, sourceOptions) {
     helpers = (0, helpers_1.guaranteeHelpers)(helpers);
-    console.log("initializing geography sources", sourceOptions);
     // Kick off prefetches and capture any errors for later propagation.
     const prefetchResults = geography.map((clippingLayer) => sourceCache
         .get(clippingLayer.source, {
@@ -539,7 +538,12 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
     // If any prefetch failed, propagate the first error now via awaited control flow
     for (const r of await Promise.all(prefetchResults)) {
         if (!r.ok) {
-            throw r.error;
+            if (r.error) {
+                throw r.error;
+            }
+            else {
+                throw new Error("Unknown error initializing geography source");
+            }
         }
     }
     const differenceSources = await Promise.all(differenceLayers.map(async (layer) => {

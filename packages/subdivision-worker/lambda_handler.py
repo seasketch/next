@@ -81,7 +81,7 @@ class ProgressNotifier:
         self.message_last_sent = int(time.time() * 1000)
         self._eta_estimator: Optional["EtaEstimator"] = None
         self._eta: Optional[datetime] = None
-        # Only count ETA samples beyond this baseline (exclude download phase)
+        # Only count ETA samples beyond this baseline (exclude download and scanning phases)
         self._eta_baseline_progress = 15
 
     def notify(self, progress: float, message: Optional[str] = None, include_in_eta: bool = False):
@@ -387,15 +387,24 @@ def handler(event, context):
     def _overall_progress(phase: str, current: int, total: Optional[int]):
         nonlocal last_value
         
-        # Progress allocation: Download 15%, Processing 70%, Upload 15%
+        # Progress allocation: Download 7%, Scanning 8%, Processing 70%, Upload 15%
         if phase == "download":
             if total and total > 0:
-                # Download: 0% to 15%
+                # Download: 0% to 7%
                 progress_ratio = min(1.0, float(current) / float(total))
-                pct = 15.0 * progress_ratio
+                pct = 7.0 * progress_ratio
             else:
-                # Without known total, increase slowly up to 15%
-                pct = min(15.0, last_value + 0.5)
+                # Without known total, increase slowly up to 7%
+                pct = min(7.0, last_value + 0.5)
+
+        elif phase == "scanning":
+            if total and total > 0:
+                # Scanning features: 7% to 15% (8% range)
+                progress_ratio = min(1.0, float(current) / float(total))
+                pct = 7.0 + 8.0 * progress_ratio
+            else:
+                # Without known total, increase slowly from 7% to 15%
+                pct = min(15.0, max(7.0, last_value + 0.5))
                 
         elif phase == "processing_start":
             # Processing starts at 15%
@@ -430,7 +439,7 @@ def handler(event, context):
             
         if notifier is not None:
             try:
-                # Include ETA samples only for processing and upload phases
+                # Include ETA samples only for processing and upload phases (exclude download and scanning)
                 include_in_eta = phase in ("processing_start", "processing", "upload")
                 notifier.notify(int(pct), None, include_in_eta)
             except Exception:

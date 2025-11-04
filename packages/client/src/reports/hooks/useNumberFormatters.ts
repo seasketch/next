@@ -52,9 +52,11 @@ export function useNumberFormatters() {
 
   const percent = useCallback(
     (value: number) => {
-      if (value > 1.005) {
-        throw new Error("Percent value is greater than 100%");
-      } else if (value > 1) {
+      if (value > 1.02) {
+        throw new Error(
+          `Percent value is greater than 100%. Value: ${value * 100}%`
+        );
+      } else if (value > 0.9999) {
         // Very small rounding issues are fine
         value = 1;
       }

@@ -452,6 +452,34 @@ export default function SketchClassReportsAdmin({
     ...(localCardEdits || {}),
   } as ReportCardConfiguration<any>;
 
+  if (sketchesForDemonstration.length === 0 && !loading) {
+    return (
+      <div className="flex-1 p-8 pt-16">
+        <div className="max-w-md text-center mx-auto">
+          <div className="mb-6">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+              <div className="w-6 h-6 text-blue-600">{SketchingIcon}</div>
+            </div>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {t("No sketches available for demonstration")}
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {t(
+              "To author reports based on real data, you need to create sketches in your account first. Consider creating multiple sketches that represent different scenarios to test your reports thoroughly."
+            )}
+          </p>
+          <Button
+            label={t("Go to Sketching")}
+            onClick={() => {
+              window.location.href = `/${slug}/app/sketches`;
+            }}
+            primary
+          />
+        </div>
+      </div>
+    );
+  }
   if (!reportState) {
     return <div>{t("Loading...")}</div>;
   }

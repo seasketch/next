@@ -85,18 +85,11 @@ export function OverlappingAreasCard({
           if (!(metric.sourceUrl! in layers)) {
             layers[metric.sourceUrl!] = {};
           }
-          let key =
-            !metric.groupBy && typeof metric.value === "number"
-              ? "*"
-              : metric.groupBy || "*";
+          let key = !metric.groupBy ? "*" : metric.groupBy || "*";
           if (!(key in layers[metric.sourceUrl!])) {
             layers[metric.sourceUrl!][key] = 0;
           }
-          if (
-            metric.groupBy &&
-            metric.value &&
-            typeof metric.value === "object"
-          ) {
+          if (metric.value && typeof metric.value === "object") {
             for (const valKey of Object.keys(metric.value)) {
               if (!(valKey in layers[metric.sourceUrl!])) {
                 layers[metric.sourceUrl!][valKey] = 0;
@@ -105,8 +98,6 @@ export function OverlappingAreasCard({
                 metric.value as { [groupBy: string]: number }
               )[valKey];
             }
-          } else {
-            layers[metric.sourceUrl!][key] += metric.value as number;
           }
         }
       }

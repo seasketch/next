@@ -55,6 +55,9 @@ async function clipBatch({ features, differenceMultiPolygon, subjectFeature, gro
             }
         }
         for (const classKey of classKeys) {
+            if (classKey === "*") {
+                continue;
+            }
             const area = await performClipping(features.filter((f) => { var _a; return ((_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy]) === classKey; }), differenceMultiPolygon, subjectFeature);
             results[classKey] += area;
             results["*"] += area;

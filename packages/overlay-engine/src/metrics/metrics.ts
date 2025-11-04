@@ -34,11 +34,9 @@ export type TotalAreaMetric = MetricBase & {
 
 export type OverlayAreaMetric = OverlayMetricBase & {
   type: "overlay_area";
-  value:
-    | number
-    | {
-        [groupBy: string]: number;
-      };
+  value: {
+    [groupBy: string]: number;
+  };
 };
 
 export type CountMetric = OverlayMetricBase & {

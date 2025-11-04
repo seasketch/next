@@ -27,6 +27,14 @@ def subdivide_and_write_feature(feature, write, max_nodes):
     stack = multipart_to_singlepart(geom)    
     while stack:
       geom = stack.pop()
+      # Early exit if already small enough
+      num_coords_geom = get_num_coordinates(geom)
+      if num_coords_geom <= max_nodes:
+          f = fiona.Feature(geometry=fiona.Geometry.from_dict(mapping(geom)), properties=feature['properties'])
+          # Pass node count through; caller wrapper may use it for progress
+          write(f, num_coords_geom)
+          continue
+
       bounds = geom.bounds
       width = bounds[2] - bounds[0]
       height = bounds[3] - bounds[1]
@@ -46,6 +54,7 @@ def subdivide_and_write_feature(feature, write, max_nodes):
         num_coords = get_num_coordinates(part)
         if num_coords <= max_nodes:
             f = fiona.Feature(geometry=fiona.Geometry.from_dict(mapping(part)), properties=feature['properties'])
+            # Pass node count through; caller wrapper may use it for progress
             write(f, num_coords)
         else:
             # prepare(part)
@@ -94,11 +103,22 @@ def crosses_antimeridian(geom):
         return any(crosses_antimeridian(p) for p in geom.geoms)
     return False
 
+def geojson_crosses_antimeridian(geom):
+    if geom['type'] == 'Polygon':
+        rings = [geom['coordinates'][0]] + geom['coordinates'][1:]
+        return any(_crosses_antimeridian_coords(r) for r in rings)
+    elif geom['type'] == 'MultiPolygon':
+        return any(geojson_crosses_antimeridian({'type':'Polygon','coordinates':coords})
+                   for coords in geom['coordinates'])
+    return False
 
 def antimeridian_split_to_non_crossing(geom_geojson):
     """Return a GeoJSON geometry with no parts crossing the antimeridian.
     Input is assumed to be EPSG:4326.
     """
+    # Fast path: no Shapely if not crossing
+    if not geojson_crosses_antimeridian(geom_geojson):
+        return geom_geojson
     g = shape(geom_geojson)
     if g.is_empty:
         return geom_geojson
@@ -177,15 +197,59 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
         geod = Geod(ellps="WGS84")
 
         total_nodes_in_dataset = int(0)  # Explicit 64-bit integer for large datasets
+        # Report scanning progress by number of features read
+        scanned_features = 0
+        if progress_callback is not None:
+          try:
+            progress_callback('scanning', 0, total_features)
+          except Exception:
+            pass
         for feature in src:
           total_nodes_in_dataset += count_nodes(feature['geometry'])
+          scanned_features += 1
+          if progress_callback is not None:
+            try:
+              progress_callback('scanning', scanned_features, total_features)
+            except Exception:
+              pass
 
         cumulative_processed_nodes = int(0)
 
         def geodesic_area_sqkm(geom_geojson):
-            geom = shape(geom_geojson)
-            area_m2 = geod.geometry_area_perimeter(geom)[0]
-            return abs(area_m2) / 1_000_000.0
+            """Compute geodesic area in sq km directly from GeoJSON coordinates using pyproj.Geod.
+            Supports Polygon and MultiPolygon. Holes are subtracted from the exterior.
+            """
+            def polygon_area_sq_m(coords):
+                if not coords or len(coords) == 0:
+                    return 0.0
+                # Exterior
+                ext = coords[0]
+                if not ext or len(ext) < 3:
+                    return 0.0
+                lons_ext = [pt[0] for pt in ext]
+                lats_ext = [pt[1] for pt in ext]
+                area_ext_m2, _ = geod.polygon_area_perimeter(lons_ext, lats_ext)
+                area_m2_total = abs(area_ext_m2)
+                # Holes
+                for hole in coords[1:]:
+                    if not hole or len(hole) < 3:
+                        continue
+                    lons_h = [pt[0] for pt in hole]
+                    lats_h = [pt[1] for pt in hole]
+                    area_h_m2, _ = geod.polygon_area_perimeter(lons_h, lats_h)
+                    area_m2_total -= abs(area_h_m2)
+                return max(area_m2_total, 0.0)
+
+            gtype = geom_geojson.get('type')
+            if gtype == 'Polygon':
+                return polygon_area_sq_m(geom_geojson.get('coordinates', [])) / 1_000_000.0
+            elif gtype == 'MultiPolygon':
+                total_m2 = 0.0
+                for coords in geom_geojson.get('coordinates', []):
+                    total_m2 += polygon_area_sq_m(coords)
+                return total_m2 / 1_000_000.0
+            else:
+                return 0.0
 
         with fiona.open(output_file, "w", driver="FlatGeobuf", crs=src.crs, schema=schema) as dst:
           # Initialize local progress bar only if no external callback is provided
@@ -198,12 +262,19 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
           # batching doesn't seem to help, even though the fiona docs suggest
           # it should. Maybe the flatgeobuf driver doesn't work well with 
           # batching?
+          # Allow overriding batch size via env var; default larger than 5000 for throughput
+          try:
+            BATCH_SIZE = int(os.getenv("SUBDIVIDE_BATCH_SIZE", "10000"))
+          except Exception:
+            BATCH_SIZE = 10000
+
           def write(feature, is_split=False):
             # Compute area and add to properties before batching
             geom_geojson = feature['geometry']
-            area_val = geodesic_area_sqkm(geom_geojson)
             props = dict(feature['properties'])
-            props['__area'] = area_val
+            if '__area' not in props:
+              area_val = geodesic_area_sqkm(geom_geojson)
+              props['__area'] = area_val
             batch.append({'geometry': geom_geojson, 'properties': props})
             nonlocal cumulative_processed_nodes
             cumulative_processed_nodes += count_nodes(feature['geometry'])
@@ -214,85 +285,83 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
                 progress_callback('processing', cumulative_processed_nodes, total_nodes_in_dataset)
               except Exception:
                 pass
-            if len(batch) > 5000:
+            if len(batch) >= BATCH_SIZE:
               dst.writerecords(batch)
               batch.clear()
 
           for feature in src:
             adjusted_geom = antimeridian_split_to_non_crossing(feature['geometry'])
-            node_count = count_nodes(adjusted_geom)
-            total_node_count += node_count
-            if node_count > max_nodes:
-              # set progress bar description to "Subdividing big feature"
+
+            # Common props for all outputs from this input feature
+            base_props = dict(feature['properties'])
+            base_props['__oidx'] = i
+
+            # Progress accounting helpers for subdivision
+            nodes_processed = 0
+            update_total = 0.0
+
+            def writeSubdividedFeature(f, f_node_count):
+              nonlocal nodes_processed
+              nonlocal update_total
+              # Slight adjustment carried over from previous logic
+              try:
+                f_node_adj = f_node_count - 2
+              except Exception:
+                f_node_adj = f_node_count
+              nodes_processed += f_node_adj
+              write(f, True)
               if pbar is not None:
-                pbar.set_postfix({"Task": "Subdividing big features"})
-              base_props = dict(feature['properties'])
-              base_props['__oidx'] = i
-              nodes_processed = 0
-              update_total = 0.0
-              def writeSubdividedFeature(feature, f_node_count):
-                f_node_count = f_node_count - 2
-                nonlocal nodes_processed
-                nodes_processed += f_node_count
-                nonlocal update_total
-                write(feature, True)
-                # print(f_node_count / total_node_count)
-                if pbar is not None:
-                  amount = f_node_count / node_count
+                try:
+                  amount = f_node_adj / node_count
                   update_total += amount
                   if update_total < 1.0:
                     pbar.update(amount)
-                # if progress_callback is not None:
-                #   try:
-                #     progress_callback('processing', nodes_processed, total_features)
-                #   except Exception:
-                #     pass
+                except Exception:
+                  pass
 
-              if adjusted_geom['type'] == 'MultiPolygon':
-                for coords in adjusted_geom['coordinates']:
+            any_big = False
+            if adjusted_geom['type'] == 'MultiPolygon':
+              if pbar is not None:
+                pbar.set_postfix({"Task": "Analyzing multipolygon parts"})
+              for coords in adjusted_geom['coordinates']:
+                poly_geom = {'type': 'Polygon', 'coordinates': coords}
+                # Count nodes of the exterior ring (consistent with count_nodes for Polygon)
+                part_nodes = len(coords[0]) if coords and len(coords) > 0 else 0
+                total_node_count += part_nodes
+                # Set denominator for progress updates within the wrapper
+                node_count = part_nodes
+                if part_nodes > max_nodes:
+                  any_big = True
                   part_feature = fiona.Feature(
-                    geometry=fiona.Geometry.from_dict({'type': 'Polygon', 'coordinates': coords}),
+                    geometry=fiona.Geometry.from_dict(poly_geom),
                     properties=base_props
                   )
                   subdivide_and_write_feature(part_feature, writeSubdividedFeature, max_nodes)
-              else:
+                else:
+                  props = dict(base_props)
+                  write({'geometry': poly_geom, 'properties': props})
+              if any_big:
+                big_poly_indexes[str(i)] = True
+              if pbar is not None:
+                pbar.update(1)
+            else:
+              # Single polygon case
+              node_count = count_nodes(adjusted_geom)
+              total_node_count += node_count
+              if node_count > max_nodes:
+                if pbar is not None:
+                  pbar.set_postfix({"Task": "Subdividing big features"})
                 adj_feature = fiona.Feature(
                   geometry=fiona.Geometry.from_dict(adjusted_geom),
                   properties=base_props
                 )
                 subdivide_and_write_feature(adj_feature, writeSubdividedFeature, max_nodes)
-              big_poly_indexes[str(i)] = True
-              # if progress_callback is not None:
-              #   try:
-              #     progress_callback('processing', i, total_features)
-              #   except Exception:
-              #     pass
-            else:
-              if pbar is not None:
-                pbar.set_postfix({"Task": "Analyzing small features"})
-              total_small_nodes_added += node_count
-              if adjusted_geom['type'] == "MultiPolygon":
-                for coords in adjusted_geom['coordinates']:
-                  poly_geom = {'type': 'Polygon', 'coordinates': coords}
-                  area_val = geodesic_area_sqkm(poly_geom)
-                  props = dict(feature['properties'])
-                  props['__area'] = area_val
-                  props['__oidx'] = i
-                  write({'geometry': poly_geom, 'properties': props})
+                big_poly_indexes[str(i)] = True
               else:
-                geom_geojson = adjusted_geom
-                area_val = geodesic_area_sqkm(geom_geojson)
-                props = dict(feature['properties'])
-                props['__area'] = area_val
-                props['__oidx'] = i
-                write({'geometry': geom_geojson, 'properties': props})
+                write({'geometry': adjusted_geom, 'properties': base_props})
               if pbar is not None:
                 pbar.update(1)
-              # if progress_callback is not None:
-              #   try:
-              #     progress_callback('processing', i + 1, total_features)
-              #   except Exception:
-              #     pass
+
             i += 1
           if pbar is not None:
             try:

@@ -654,7 +654,6 @@ export async function initializeGeographySources(
   }[];
 }> {
   helpers = guaranteeHelpers(helpers);
-  console.log("initializing geography sources", sourceOptions);
   // Kick off prefetches and capture any errors for later propagation.
   const prefetchResults = geography.map((clippingLayer) =>
     sourceCache
@@ -700,7 +699,11 @@ export async function initializeGeographySources(
   // If any prefetch failed, propagate the first error now via awaited control flow
   for (const r of await Promise.all(prefetchResults)) {
     if (!r.ok) {
-      throw r.error;
+      if (r.error) {
+        throw r.error;
+      } else {
+        throw new Error("Unknown error initializing geography source");
+      }
     }
   }
 

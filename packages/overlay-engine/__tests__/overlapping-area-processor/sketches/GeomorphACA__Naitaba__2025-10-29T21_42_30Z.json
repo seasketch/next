@@ -1,0 +1,112 @@
+[
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Back Reef Slope",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 649454.036356,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Deep Lagoon",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 88078.753092,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Inner Reef Flat",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 804410.143295,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Outer Reef Flat",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 2365275.094813,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Plateau",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 64263.023443,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Reef Crest",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 370054.307124,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Reef Slope",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 773591.296717,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Shallow Lagoon",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 1351038.070882,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Sheltered Reef Slope",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 38721.348279,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  },
+  {
+    "geographyId": null,
+    "metricId": "geomorphACA",
+    "classId": "Terrestrial Reef Flat",
+    "sketchId": "122619",
+    "groupId": null,
+    "value": 0,
+    "extra": {
+      "sketchName": "Naitaba"
+    }
+  }
+]

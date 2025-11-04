@@ -3,20 +3,20 @@
 ### Build the Docker image
 
 ```bash
-docker build -t subdivide:latest /Users/cburt/src/subdivide
+docker build -t subdivide:latest .
 ```
 
 ### Run locally (with progress output only)
 
 Use the Lambda Runtime Interface Emulator:
 
-1) Start the container and expose the invoke port:
+1. Start the container and expose the invoke port:
 
 ```bash
 docker run --rm -p 9000:8080 subdivide:latest
 ```
 
-2) In another terminal, invoke with your event JSON:
+2. In another terminal, invoke with your event JSON:
 
 ```bash
 curl -s -X POST \
@@ -25,4 +25,3 @@ curl -s -X POST \
 ```
 
 Note: On Apple Silicon you may see an amd64/arm64 warning; it runs under emulation but you can rebuild the image for arm64 if desired.
-

@@ -6,7 +6,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OverlappingAreaBatchedClippingProcessor = exports.createClippingWorkerPool = void 0;
 const containerIndex_1 = require("./utils/containerIndex");
 const helpers_1 = require("./utils/helpers");
-const simplify_1 = __importDefault(require("@turf/simplify"));
 const bboxUtils_1 = require("./utils/bboxUtils");
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const area_1 = __importDefault(require("@turf/area"));
@@ -15,6 +14,29 @@ const clipBatch_1 = require("./workers/clipBatch");
 const p_queue_1 = __importDefault(require("p-queue"));
 const pool_1 = require("./workers/pool");
 Object.defineProperty(exports, "createClippingWorkerPool", { enumerable: true, get: function () { return pool_1.createClippingWorkerPool; } });
+const truncate_1 = __importDefault(require("@turf/truncate"));
+const layers = {
+    classifiedFeatures: {
+        name: "classified-features",
+        geometryType: "Polygon",
+        fields: {
+            classification: "string",
+            groupBy: "string",
+        },
+    },
+    containerIndexBoxes: {
+        name: "container-index-boxes",
+        geometryType: "Polygon",
+        fields: {
+            id: "number",
+        },
+    },
+    subjectFeature: {
+        name: "subject-feature",
+        geometryType: "Polygon",
+        fields: {},
+    },
+};
 class OverlappingAreaBatchedClippingProcessor {
     constructor(maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool) {
         var _a;
@@ -37,15 +59,26 @@ class OverlappingAreaBatchedClippingProcessor {
         this.differenceSources = differenceSources;
         this.maxBatchSize = maxBatchSize;
         this.subjectFeature = subjectFeature;
-        this.containerIndex = new containerIndex_1.ContainerIndex((0, simplify_1.default)(subjectFeature, {
-            tolerance: 0.002,
-        }));
         this.helpers = (0, helpers_1.guaranteeHelpers)(helpers);
+        console.time("build container index");
+        this.containerIndex = new containerIndex_1.ContainerIndex(subjectFeature);
+        console.timeEnd("build container index");
+        const boxes = this.containerIndex.getBBoxPolygons();
+        let id = 0;
+        for (const box of boxes.features) {
+            box.properties = { id: id++ };
+            if (this.helpers.logFeature) {
+                this.helpers.logFeature(layers.containerIndexBoxes, box);
+            }
+        }
         this.groupBy = groupBy;
         this.resetBatchData();
         this.queue = new p_queue_1.default({
             concurrency: ((_a = this.pool) === null || _a === void 0 ? void 0 : _a.size) || 1,
         });
+        if (this.helpers.logFeature) {
+            this.helpers.logFeature(layers.subjectFeature, subjectFeature);
+        }
     }
     resetBatchData() {
         this.batchData = {
@@ -65,7 +98,7 @@ class OverlappingAreaBatchedClippingProcessor {
     }
     async calculateOverlap() {
         return new Promise(async (resolve, reject) => {
-            var _a, _b;
+            var _a, _b, _c;
             try {
                 this.progress = 0;
                 // Step 1. Create query plan for fetching features from the intersection
@@ -95,12 +128,24 @@ class OverlappingAreaBatchedClippingProcessor {
                 for await (const feature of this.intersectionSource.getFeaturesAsync(envelopes, {
                     queryPlan,
                 })) {
+                    (0, truncate_1.default)(feature, { mutate: true });
                     this.helpers.progress((this.progress / this.progressTarget) * 100, `Processing features: (${this.progress}/${this.progressTarget} bytes)`);
                     let requiresIntersection = false;
                     const classification = this.containerIndex.classify(feature);
+                    if (this.helpers.logFeature) {
+                        this.helpers.logFeature(layers.classifiedFeatures, {
+                            type: "Feature",
+                            geometry: feature.geometry,
+                            properties: {
+                                classification,
+                                groupBy: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy || ""]) || "",
+                            },
+                        });
+                    }
                     if (classification === "outside") {
                         // We can safely skip this feature.
                         this.progress++;
+                        // requiresIntersection = true;
                         continue;
                     }
                     else if (classification === "mixed") {
@@ -128,7 +173,7 @@ class OverlappingAreaBatchedClippingProcessor {
                         // feature is entirely within the subject feature, so we can skip
                         // clipping. Just need to add it's area to the appropriate total(s).
                         this.addFeatureToTotals(feature, true);
-                        this.progress += (_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__byteLength;
+                        this.progress += (_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength;
                     }
                     else {
                         // add feature to batch for clipping
@@ -157,6 +202,9 @@ class OverlappingAreaBatchedClippingProcessor {
                 this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
                 for (const batchData of resolvedBatchData) {
                     for (const classKey in batchData) {
+                        if (!(classKey in this.results)) {
+                            this.results[classKey] = 0;
+                        }
                         this.results[classKey] += batchData[classKey];
                     }
                 }
@@ -175,6 +223,7 @@ class OverlappingAreaBatchedClippingProcessor {
         }
         this.progress += batch.progressWorth;
         this.helpers.progress((this.progress / this.progressTarget) * 100);
+        const classKeysInBatch = batch.features.map((f) => { var _a; return (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy || ""]; });
         if (this.pool) {
             return this.pool
                 .run({
