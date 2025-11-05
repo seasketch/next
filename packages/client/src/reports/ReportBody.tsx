@@ -19,7 +19,7 @@ export function ReportBody() {
             className={
               isActive
                 ? "p-4 space-y-2 relative w-full left-0"
-                : "p-4 space-y-2 absolute top-0 -left-[10000px] w-full"
+                : "p-4 space-y-2 hidden"
             }
           >
             {tab.cards?.length === 0 && (
