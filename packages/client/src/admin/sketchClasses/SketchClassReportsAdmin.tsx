@@ -395,6 +395,12 @@ export default function SketchClassReportsAdmin({
             selectedCardForEditing.alternateLanguageSettings,
           body: localCardEdits.body || selectedCardForEditing.body,
           cardType: localCardEdits.type || selectedCardForEditing.type,
+          collapsibleFooterEnabled:
+            localCardEdits.collapsibleFooterEnabled ||
+            selectedCardForEditing.collapsibleFooterEnabled,
+          collapsibleFooterBody:
+            localCardEdits.collapsibleFooterBody ||
+            selectedCardForEditing.collapsibleFooterBody,
         },
         refetchQueries: [DraftReportDocument],
         awaitRefetchQueries: true,

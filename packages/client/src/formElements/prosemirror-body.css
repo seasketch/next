@@ -175,12 +175,12 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBody h1[data-report-title="yes"],
 .ReportCardBodyEditor h1[data-report-title="yes"] {
-  @apply text-base font-medium max-w-3/4 truncate py-2 pb-0;
+  @apply text-base font-medium max-w-[95%] truncate py-2 pb-0;
 }
 
 .loading .ReportCardBody h1[data-report-title="yes"],
 .loading .ReportCardBodyEditor h1[data-report-title="yes"] {
-  @apply max-w-64 truncate;
+  @apply max-w-[calc(100%-120px)] truncate;
 }
 
 .ReportCardBody h1[data-report-title="yes"] {
@@ -207,4 +207,41 @@ div[attachments="forumAttachments"] {
 .ReportCardBodyEditor p:first-of-type,
 .ReportCardBody p:first-of-type {
   /* @apply pt-0 mt-0; */
+}
+
+/* Footer Title */
+.ProseMirror .empty-footer-title-node::before {
+  position: absolute;
+  opacity: 0.5;
+  cursor: text;
+}
+
+.ProseMirror .empty-footer-title-node:hover::before {
+  opacity: 0.3;
+}
+
+.ProseMirror h2.empty-footer-title-node::before {
+  content: "Learn More...";
+}
+
+.ReportCardBody h2[data-footer-title="yes"],
+.ReportCardBodyEditor h2[data-footer-title="yes"] {
+  @apply text-sm font-medium;
+}
+
+.ReportCardBody h2[data-footer-title="yes"] {
+  @apply pointer-events-none;
+  display: none; /* Hide the title in rendered view since it's shown as button label */
+}
+
+/* Show footer title in editor */
+.ReportCardBodyEditor h2[data-footer-title="yes"] {
+  display: block;
+  @apply mb-2;
+}
+
+.ProseMirrorFooterHideBody
+  > [contenteditable="true"]
+  > *:not([data-footer-title="yes"]) {
+  display: none;
 }

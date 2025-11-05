@@ -13340,6 +13340,8 @@ export type ReportCard = Node & {
   __typename?: 'ReportCard';
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
+  collapsibleFooterBody: Scalars['JSON'];
+  collapsibleFooterEnabled: Scalars['Boolean'];
   componentSettings: Scalars['JSON'];
   icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
@@ -17183,6 +17185,8 @@ export type UpdateReportCardInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
+  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   componentSettings?: Maybe<Scalars['JSON']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
@@ -22405,7 +22409,7 @@ export type ReportingLayerDetailsFragment = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody'>
   & { reportingLayers: Array<(
     { __typename?: 'ReportCardLayer' }
     & ReportingLayerDetailsFragment
@@ -22600,6 +22604,8 @@ export type UpdateReportCardMutationVariables = Exact<{
   tint?: Maybe<Scalars['String']>;
   icon?: Maybe<Scalars['String']>;
   cardType?: Maybe<Scalars['String']>;
+  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
+  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -26171,6 +26177,8 @@ export const ReportCardDetailsFragmentDoc = gql`
   reportingLayers: reportCardLayers {
     ...ReportingLayerDetails
   }
+  collapsibleFooterEnabled
+  collapsibleFooterBody
 }
     ${ReportingLayerDetailsFragmentDoc}`;
 export const ReportTabDetailsFragmentDoc = gql`
@@ -35005,9 +35013,9 @@ export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReord
 export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
 export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
 export const UpdateReportCardDocument = gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody}
   ) {
     reportCard {
       ...ReportCardDetails
@@ -35037,6 +35045,8 @@ export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCar
  *      tint: // value for 'tint'
  *      icon: // value for 'icon'
  *      cardType: // value for 'cardType'
+ *      collapsibleFooterEnabled: // value for 'collapsibleFooterEnabled'
+ *      collapsibleFooterBody: // value for 'collapsibleFooterBody'
  *   },
  * });
  */

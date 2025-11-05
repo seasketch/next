@@ -13338,6 +13338,8 @@ export type ReportCard = Node & {
   __typename?: 'ReportCard';
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
+  collapsibleFooterBody: Scalars['JSON'];
+  collapsibleFooterEnabled: Scalars['Boolean'];
   componentSettings: Scalars['JSON'];
   icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
@@ -17181,6 +17183,8 @@ export type UpdateReportCardInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
+  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   componentSettings?: Maybe<Scalars['JSON']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
@@ -22403,7 +22407,7 @@ export type ReportingLayerDetailsFragment = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody'>
   & { reportingLayers: Array<(
     { __typename?: 'ReportCardLayer' }
     & ReportingLayerDetailsFragment
@@ -22598,6 +22602,8 @@ export type UpdateReportCardMutationVariables = Exact<{
   tint?: Maybe<Scalars['String']>;
   icon?: Maybe<Scalars['String']>;
   cardType?: Maybe<Scalars['String']>;
+  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
+  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -26169,6 +26175,8 @@ export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`
   reportingLayers: reportCardLayers {
     ...ReportingLayerDetails
   }
+  collapsibleFooterEnabled
+  collapsibleFooterBody
 }
     ${ReportingLayerDetailsFragmentDoc}`;
 export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -29467,9 +29475,9 @@ export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateReportCardDocument = /*#__PURE__*/ gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody}
   ) {
     reportCard {
       ...ReportCardDetails

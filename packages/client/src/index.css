@@ -991,7 +991,7 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBody h1[data-report-title="yes"],
 .ReportCardBodyEditor h1[data-report-title="yes"]{
-  max-width:75%;
+  max-width:95%;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
@@ -1005,7 +1005,7 @@ div[attachments="forumAttachments"] {
 
 .loading .ReportCardBody h1[data-report-title="yes"],
 .loading .ReportCardBodyEditor h1[data-report-title="yes"]{
-  max-width:16rem;
+  max-width:calc(100% - 120px);
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap
@@ -1037,6 +1037,48 @@ div[attachments="forumAttachments"] {
 .ReportCardBodyEditor p:first-of-type,
 .ReportCardBody p:first-of-type {
   /* @apply pt-0 mt-0; */
+}
+
+/* Footer Title */
+
+.ProseMirror .empty-footer-title-node::before {
+  position: absolute;
+  opacity: 0.5;
+  cursor: text;
+}
+
+.ProseMirror .empty-footer-title-node:hover::before {
+  opacity: 0.3;
+}
+
+.ProseMirror h2.empty-footer-title-node::before {
+  content: "Learn More...";
+}
+
+.ReportCardBody h2[data-footer-title="yes"],
+.ReportCardBodyEditor h2[data-footer-title="yes"]{
+  font-size:0.875rem;
+  line-height:1.25rem;
+  font-weight:500
+}
+
+.ReportCardBody h2[data-footer-title="yes"]{
+  pointer-events:none;
+  display: none
+  /* Hide the title in rendered view since it's shown as button label */
+}
+
+/* Show footer title in editor */
+
+.ReportCardBodyEditor h2[data-footer-title="yes"] {
+  display: block;
+  margin-bottom:0.5rem;
+}
+
+.ProseMirrorFooterHideBody
+  > [contenteditable="true"]
+  > *:not([data-footer-title="yes"]) {
+  display: none;
 }
 
 input[type="number"].form-element-number-input {
@@ -6983,10 +7025,6 @@ select{
   max-width:0.75rem
 }
 
-.max-w-3\/4{
-  max-width:75%
-}
-
 .max-w-32{
   max-width:8rem
 }
@@ -7041,6 +7079,14 @@ select{
 
 .max-w-80{
   max-width:20rem
+}
+
+.max-w-\[95\%\]{
+  max-width:95%
+}
+
+.max-w-\[calc\(100\%-120px\)\]{
+  max-width:calc(100% - 120px)
 }
 
 .max-w-full{
@@ -9740,14 +9786,6 @@ select{
   line-height:1rem
 }
 
-.text-\[11px\]{
-  font-size:11px
-}
-
-.text-\[12px\]{
-  font-size:12px
-}
-
 .font-bold{
   font-weight:700
 }
@@ -10477,6 +10515,10 @@ select{
   outline-width:0px
 }
 
+.outline-1{
+  outline-width:1px
+}
+
 .outline-2{
   outline-width:2px
 }
@@ -10499,6 +10541,14 @@ select{
 
 .outline-blue-500{
   outline-color:#3b82f6
+}
+
+.outline-gray-100{
+  outline-color:#f3f4f6
+}
+
+.outline-gray-200{
+  outline-color:#e5e7eb
 }
 
 .outline-slate-700{

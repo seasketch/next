@@ -71,6 +71,17 @@ export type ReportCardConfiguration<T> = {
    * The reporting layers of the card.
    */
   reportingLayers: ReportingLayerDetailsFragment[];
+  /**
+   * Whether the collapsible footer ("Learn More" element) is enabled.
+   * @default false
+   */
+  collapsibleFooterEnabled?: boolean;
+  /**
+   * The prosemirror body content for the collapsible footer.
+   * The first element should be a footerTitle node containing the title text.
+   * Supports localization via alternateLanguageSettings.
+   */
+  collapsibleFooterBody?: ProsemirrorBodyJSON;
 };
 
 export type ReportTabConfiguration = {

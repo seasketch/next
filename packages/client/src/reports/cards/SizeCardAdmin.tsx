@@ -6,6 +6,7 @@ import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useCardLocalizedStringAdmin } from "./cards";
 import AreaUnitSelect from "../components/AreaUnitSelect";
+import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 
 export default function SizeCardAdmin({
   config,
@@ -98,6 +99,8 @@ export default function SizeCardAdmin({
           </p>
         </div> */}
       </div>
+
+      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

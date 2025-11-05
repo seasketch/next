@@ -16,7 +16,14 @@ import {
 import ReportCardActionMenu from "./components/ReportCardActionMenu";
 import Modal from "../components/Modal";
 import { FormLanguageContext } from "../formElements/FormElement";
-import { useContext, useCallback, useState, useMemo } from "react";
+import {
+  useContext,
+  useCallback,
+  useState,
+  useMemo,
+  useRef,
+  useEffect,
+} from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import {
@@ -33,6 +40,7 @@ import { CalculatorIcon } from "@heroicons/react/outline";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
+import CollapsibleFooter from "./components/CollapsibleFooter";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -85,6 +93,12 @@ export default function ReportCard({
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
 
+  // Use a ref to always get the current language code, even from debounced callbacks
+  const langCodeRef = useRef<string>(langContext?.lang?.code || "EN");
+  useEffect(() => {
+    langCodeRef.current = langContext?.lang?.code || "EN";
+  }, [langContext?.lang?.code]);
+
   const [retryFailedMetrics, retryState] =
     useRetryFailedSpatialMetricsMutation();
 
@@ -126,14 +140,17 @@ export default function ReportCard({
   const handleBodyUpdate = useCallback(
     (newBody: any) => {
       if (onUpdate) {
-        if (langContext?.lang?.code !== "EN") {
+        // Always read the current language code from ref, not from closure
+        // This ensures debounced saves use the current language, not a stale one
+        const currentLangCode = langCodeRef.current;
+        if (currentLangCode !== "EN") {
           // Save to alternateLanguageSettings for non-English languages
           onUpdate((prevState) => ({
             ...prevState,
             alternateLanguageSettings: {
               ...prevState.alternateLanguageSettings,
-              [langContext.lang.code]: {
-                ...prevState.alternateLanguageSettings[langContext.lang.code],
+              [currentLangCode]: {
+                ...prevState.alternateLanguageSettings[currentLangCode],
                 body: newBody,
               },
             },
@@ -146,7 +163,7 @@ export default function ReportCard({
         }
       }
     },
-    [onUpdate, langContext?.lang?.code]
+    [onUpdate]
   );
 
   const getBackgroundClasses = () => {
@@ -248,52 +265,34 @@ export default function ReportCard({
                   onOpenChange={setMenuOpen}
                   label={t("Card actions")}
                 >
-                  <ReportCardActionMenu.Item
-                    onSelect={() => setShowCalcDetails(true)}
-                    icon={<CalculatorIcon className="h-4 w-4" />}
-                  >
-                    {t("Calculation details")}
-                  </ReportCardActionMenu.Item>
-                  <ReportCardActionMenu.Item
-                    icon={<ReloadIcon className="h-4 w-4" />}
-                    onSelect={async () => {
-                      if (adminMode) {
-                        setRecalcOpen(true);
-                      } else {
-                        const metricsToRecalculate = [] as number[];
-                        for (const metric of metrics) {
-                          if (subjectIsFragment(metric.subject)) {
-                            metricsToRecalculate.push(metric.id);
-                          }
-                        }
-                        await recalculate(metricsToRecalculate, false);
-                      }
-                    }}
-                  >
-                    {t("Recalculate")}
-                  </ReportCardActionMenu.Item>
                   {adminMode && (
-                    <>
-                      <ReportCardActionMenu.Item
-                        icon={<Pencil1Icon className="h-4 w-4" />}
-                        onSelect={() => {
-                          setSelectedForEditing(cardId!);
-                        }}
-                      >
-                        {t("Edit card")}
-                      </ReportCardActionMenu.Item>
-                      {deleteCard && (
-                        <ReportCardActionMenu.Item
-                          icon={<TrashIcon className="h-4 w-4" />}
-                          variant="danger"
-                          onSelect={() => {
-                            deleteCard(cardId!);
-                          }}
-                        >
-                          {t("Delete card")}
-                        </ReportCardActionMenu.Item>
-                      )}
-                    </>
+                    <ReportCardActionMenu.Item
+                      icon={<Pencil1Icon className="h-4 w-4" />}
+                      onSelect={() => {
+                        setSelectedForEditing(cardId!);
+                      }}
+                    >
+                      {t("Edit card")}
+                    </ReportCardActionMenu.Item>
+                  )}
+                  {metrics?.length > 0 && (
+                    <ReportCardActionMenu.Item
+                      onSelect={() => setShowCalcDetails(true)}
+                      icon={<CalculatorIcon className="h-4 w-4" />}
+                    >
+                      {t("Calculation details")}
+                    </ReportCardActionMenu.Item>
+                  )}
+                  {adminMode && deleteCard && (
+                    <ReportCardActionMenu.Item
+                      icon={<TrashIcon className="h-4 w-4" />}
+                      variant="danger"
+                      onSelect={() => {
+                        deleteCard(cardId!);
+                      }}
+                    >
+                      {t("Delete card")}
+                    </ReportCardActionMenu.Item>
                   )}
                 </ReportCardActionMenu>
               </div>
@@ -355,10 +354,11 @@ export default function ReportCard({
         )}
         {isReady && children}
         {loading && !Object.values(errors).length && (
-          <div className="relative">
+          <div className="relative mt-2">
             <div>{loadingSkeleton}</div>
           </div>
         )}
+        <CollapsibleFooter config={config} onUpdate={onUpdate} />
       </div>
 
       {recalcOpen && (

@@ -415,6 +415,8 @@ fragment ReportCardDetails on ReportCard {
   reportingLayers: reportCardLayers {
     ...ReportingLayerDetails
   }
+  collapsibleFooterEnabled
+  collapsibleFooterBody
 }
 
 fragment ReportTabDetails on ReportTab {
@@ -559,6 +561,8 @@ mutation UpdateReportCard(
   $tint: String
   $icon: String
   $cardType: String
+  $collapsibleFooterEnabled: Boolean
+  $collapsibleFooterBody: JSON
 ) {
   updateReportCard(
     input: {
@@ -569,6 +573,8 @@ mutation UpdateReportCard(
       tint: $tint
       icon: $icon
       cardType: $cardType
+      collapsibleFooterEnabled: $collapsibleFooterEnabled
+      collapsibleFooterBody: $collapsibleFooterBody
     }
   ) {
     reportCard {

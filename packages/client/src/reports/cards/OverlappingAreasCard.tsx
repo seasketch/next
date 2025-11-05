@@ -291,7 +291,7 @@ export function OverlappingAreasCard({
               </div>
             ))}
           {!overlayMetrics.loading && items.length === 0 && (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2 py-2">
               <ValueNoneIcon className="w-4 h-4 text-red-800" />
               <span className="text-gray-700">
                 <Trans ns="reports">No overlapping features found.</Trans>

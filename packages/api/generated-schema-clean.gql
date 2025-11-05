@@ -14402,6 +14402,8 @@ type Report implements Node {
 type ReportCard implements Node {
   alternateLanguageSettings: JSON!
   body: JSON!
+  collapsibleFooterBody: JSON!
+  collapsibleFooterEnabled: Boolean!
   componentSettings: JSON!
   icon: String
   id: Int!
@@ -18928,6 +18930,8 @@ input UpdateReportCardInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  collapsibleFooterBody: JSON
+  collapsibleFooterEnabled: Boolean
   componentSettings: JSON
   icon: String
   tint: String
