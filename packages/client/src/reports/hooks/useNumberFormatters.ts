@@ -19,8 +19,8 @@ export function useNumberFormatters() {
       langContext?.lang?.code,
       {
         style: "percent",
-        maximumFractionDigits: 2,
-        minimumFractionDigits: 2,
+        maximumFractionDigits: 1,
+        minimumFractionDigits: 1,
       }
     );
     const largePercentFormatter = new Intl.NumberFormat(
@@ -60,7 +60,11 @@ export function useNumberFormatters() {
         // Very small rounding issues are fine
         value = 1;
       }
-      if (value < 0.05 && value > 0) {
+      if (value === 0) {
+        return formatters.smallPercentFormatter.format(value);
+      } else if (value < 0.001) {
+        return "< 0.1%";
+      } else if (value < 0.05 && value > 0) {
         return formatters.smallPercentFormatter.format(value);
       } else {
         return formatters.largePercentFormatter.format(value);

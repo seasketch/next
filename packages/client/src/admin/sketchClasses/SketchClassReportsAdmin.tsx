@@ -16,6 +16,7 @@ import {
   useDraftReportDebuggingMaterialsQuery,
   ReportingLayerDetailsFragment,
   ReportContextDocument,
+  usePublishTableOfContentsMutation,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -24,7 +25,6 @@ import {
   MenuBarItemClasses,
 } from "../../components/Menubar";
 import {
-  ReportConfiguration,
   registerCards,
   ReportCardType,
   ReportCardConfiguration,
@@ -43,6 +43,7 @@ import { AddCardModal } from "../../reports/AddCardModal";
 import Button from "../../components/Button";
 import DropdownButton from "../../components/DropdownButton";
 import useDialog from "../../components/useDialog";
+import useProjectId from "../../useProjectId";
 import Spinner from "../../components/Spinner";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
@@ -59,8 +60,9 @@ export default function SketchClassReportsAdmin({
   sketchClass: SketchingDetailsFragment;
 }) {
   const { t, i18n } = useTranslation("admin:sketching");
-  const { confirmDelete } = useDialog();
+  const { confirmDelete, confirm, loadingMessage } = useDialog();
   const slug = getSlug();
+  const projectId = useProjectId();
 
   const onError = useGlobalErrorHandler();
   const { data, loading } = useDraftReportQuery({
@@ -145,8 +147,44 @@ export default function SketchClassReportsAdmin({
     awaitRefetchQueries: true,
   });
 
+  const [publishTableOfContents] = usePublishTableOfContentsMutation();
+
   const [publishReport, publishReportState] = usePublishReportMutation({
-    onError,
+    onError: (err) => {
+      const message = err?.message || "";
+      if (
+        message
+          .toLowerCase()
+          .includes("references data layers that have not yet been published")
+      ) {
+        confirm(t("Report contains unpublished layers"), {
+          description: t(
+            "This report references data layers from the draft layer list that have not yet been published. Would you like to publish the overlays now?"
+          ),
+          primaryButtonText: t("Publish draft layers and report"),
+          secondaryButtonText: t("Cancel"),
+          onSubmit: async () => {
+            const { hideLoadingMessage } = loadingMessage(
+              t("Publishing overlays...")
+            );
+            try {
+              await publishTableOfContents({
+                variables: { projectId: projectId! },
+              });
+              hideLoadingMessage();
+              await publishReport({
+                variables: { sketchClassId: sketchClass.id },
+              });
+            } catch (e) {
+              hideLoadingMessage();
+              onError(e as any);
+            }
+          },
+        });
+        return;
+      }
+      onError(err);
+    },
     refetchQueries: [DraftReportDocument],
     awaitRefetchQueries: true,
   });
@@ -506,7 +544,7 @@ export default function SketchClassReportsAdmin({
             (projectData?.project?.supportedLanguages as string[]) || [],
         }}
       >
-        <div className="flex flex-col w-full h-full">
+        <div className="flex flex-col w-full h-full overflow-y-hidden">
           {/* Header */}
           <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
             <div className="flex-none space-x-2">
@@ -566,7 +604,7 @@ export default function SketchClassReportsAdmin({
             <EditorLanguageSelector />
           </div>
           {/* Main */}
-          <div className="flex-1 flex relative">
+          <div className="flex-1 flex relative max-h-full overflow-hidden">
             {/* left sidebar */}
             <div
               className={`absolute left-0 top-0 bg-white flex-none border-r shadow-lg border-black/15 min-h-full flex flex-col w-72 transition-transform ${
@@ -731,7 +769,7 @@ export default function SketchClassReportsAdmin({
                   }
                 }}
               >
-                <div className="flex-1 p-8">
+                <div className="flex-1 p-8 max-h-full overflow-hidden">
                   {draftReport && !selectedSketch && selectedSketchId && (
                     <div className="max-w-md text-center mx-auto">
                       <div className="mb-6">
@@ -754,7 +792,7 @@ export default function SketchClassReportsAdmin({
                   {draftReport && selectedSketch && (
                     <>
                       <div
-                        className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
+                        className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col ${
                           reportState.selectedForEditing
                             ? "3xl:translate-x-0 translate-x-36"
                             : ""
@@ -836,7 +874,7 @@ export default function SketchClassReportsAdmin({
                         {/* report tabs */}
                         <ReportTabs enableDragDrop={true} />
                         {/* report body */}
-                        <div className="relative">
+                        <div className="relative max-h-full overflow-y-auto">
                           {draftReport.tabs?.map((tab) => {
                             const isActive =
                               tab.id === reportState.selectedTab?.id;

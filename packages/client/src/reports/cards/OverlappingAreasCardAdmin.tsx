@@ -5,6 +5,7 @@ import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useCardLocalizedStringAdmin } from "./cards";
 import Switch from "../../components/Switch";
+import AreaUnitSelect from "../components/AreaUnitSelect";
 
 type AdminConfig = ReportCardConfiguration<{
   unit?: "km" | "mi" | "acres" | "ha";
@@ -47,16 +48,10 @@ export default function OverlappingAreasCardAdmin({
           {t("Choose the unit used to display area values.")}
         </p>
         <div className="mt-2">
-          <select
-            className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
-            value={unit}
-            onChange={(e) => updateSettings({ unit: e.target.value as any })}
-          >
-            <option value="km">{t("km²")}</option>
-            <option value="mi">{t("mi²")}</option>
-            <option value="acres">{t("acres")}</option>
-            <option value="ha">{t("hectares")}</option>
-          </select>
+          <AreaUnitSelect
+            value={unit as any}
+            onChange={(unit) => updateSettings({ unit })}
+          />
         </div>
       </div>
 

@@ -7,6 +7,9 @@ export type UnitCategory = "area" | "length";
 // "km" to mean km² and "mi" to mean mi²
 export type AreaDisplayUnit = "km" | "mi" | "acres" | "ha";
 
+// Central list of supported area units for UI components
+export const AREA_UNITS: AreaDisplayUnit[] = ["km", "mi", "acres", "ha"];
+
 export type LengthDisplayUnit = "km" | "mi" | "nm" | "m";
 
 export function useUnits(

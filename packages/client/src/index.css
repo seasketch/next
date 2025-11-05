@@ -9740,6 +9740,14 @@ select{
   line-height:1rem
 }
 
+.text-\[11px\]{
+  font-size:11px
+}
+
+.text-\[12px\]{
+  font-size:12px
+}
+
 .font-bold{
   font-weight:700
 }

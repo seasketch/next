@@ -24,7 +24,7 @@ export type SizeCardConfiguration = ReportCardConfiguration<{
    * The unit of measurement to display the area in.
    * @default "km"
    */
-  unit?: "km" | "mi" | "acres";
+  unit?: "km" | "mi" | "acres" | "ha";
   /**
    * When true, the table of additional geographies will include
    * geographies that have 0% overlap with the sketch.
@@ -202,16 +202,16 @@ export function SizeCard({
           <Skeleton className="w-full h-4" />
         ) : (
           <div>
-            <p>
+            <p className="text-[15px] line-height-[24px] py-2">
               {t("This area is ")}
-              <span className="tabular-nums text-base font-medium">
+              <span className="tabular-nums font-semibold">
                 {formatters.area(convertFromBase(sizeCardData.area))}{" "}
                 {unitLabel}
               </span>
               {sizeCardData.geographies.length > 0 && (
                 <>
                   {t(", which is ")}
-                  <span className="tabular-nums text-base font-medium">
+                  <span className="tabular-nums font-semibold">
                     {(() => {
                       const primaryGeography = sizeCardData.geographies.find(
                         (g) => g.primary
@@ -225,7 +225,7 @@ export function SizeCard({
                     })()}
                   </span>
                   {t(" of the ")}
-                  <span className="font-medium">
+                  <span className="font-semibold">
                     {(() => {
                       const primaryGeography = sizeCardData.geographies.find(
                         (g) => g.primary
