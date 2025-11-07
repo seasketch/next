@@ -832,7 +832,7 @@ CREATE TYPE public.render_under_type AS ENUM (
 CREATE TYPE public.report_layer_input AS (
 	table_of_contents_item_id integer,
 	report_card_id integer,
-	group_by text
+	layer_parameters jsonb
 );
 
 
@@ -2552,11 +2552,11 @@ CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings
           add_report_card.body
         ) returning * into new_card;
 
-        insert into report_card_layers (report_card_id, table_of_contents_item_id, group_by)
+        insert into report_card_layers (report_card_id, table_of_contents_item_id, layer_parameters)
         select 
           new_card.id,
           layer.table_of_contents_item_id,
-          layer.group_by
+          layer.layer_parameters
         from unnest(add_report_card.layers) as layer;
         return new_card;
       else
@@ -11237,30 +11237,9 @@ CREATE FUNCTION public.get_metrics_for_geography(geography_id integer) RETURNS j
       raise exception 'Permission denied';
     end if;
     return (
-      select jsonb_agg(
-        jsonb_build_object(
-          'id', id,
-          'type', type,
-          'updatedAt', updated_at,
-          'createdAt', created_at,
-          'value', value,
-          'state', state,
-          'sourceUrl', overlay_source_url,
-          'sourceType', extension_to_source_type(overlay_source_url),
-          'groupBy', overlay_group_by,
-          'includedProperties', included_properties,
-          'subject', jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject'),
-          'errorMessage', error_message,
-          'progress', progress_percentage,
-          'jobKey', job_key,
-          'sourceProcessingJobDependency', source_processing_job_dependency,
-          'eta', eta,
-          'startedAt', started_at,
-          'durationSeconds', extract(epoch from duration)::float
-        )
-      )
-      from spatial_metrics
-      where subject_geography_id = geography_id
+      select jsonb_agg(spatial_metric_to_json(sm))
+      from spatial_metrics sm
+      where sm.subject_geography_id = geography_id
     );
   end;
   $$;
@@ -11291,31 +11270,10 @@ CREATE FUNCTION public.get_metrics_for_sketch(skid integer) RETURNS jsonb
     select array_agg(hash) into hash_fragments
     from get_fragment_ids_for_sketch_recursive(skid);
     return (
-      select jsonb_agg(
-        jsonb_build_object(
-          'id', id,
-          'type', type,
-          'updatedAt', updated_at,
-          'createdAt', created_at,
-          'value', value,
-          'state', state,
-          'sourceUrl', overlay_source_url,
-          'sourceType', extension_to_source_type(overlay_source_url),
-          'groupBy', overlay_group_by,
-          'includedProperties', included_properties,
-          'subject', jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject'),
-          'errorMessage', error_message,
-          'progress', progress_percentage,
-          'jobKey', job_key,
-          'sourceProcessingJobDependency', source_processing_job_dependency,
-          'eta', eta,
-          'startedAt', started_at,
-          'durationSeconds', extract(epoch from duration)::float
-        )
-      )
-      from spatial_metrics
-      where subject_fragment_id = any(hash_fragments)
-      and subject_geography_id is null
+      select jsonb_agg(spatial_metric_to_json(sm))
+      from spatial_metrics sm
+      where sm.subject_fragment_id = any(hash_fragments)
+      and sm.subject_geography_id is null
     );
   end;
   $$;
@@ -11337,7 +11295,9 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
     AS $$
   declare
     metric_id bigint;
+    metric_parameters jsonb;
   begin
+    -- Validation
     if p_subject_fragment_id is not null and p_subject_geography_id is not null then
       raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
     end if;
@@ -11351,199 +11311,45 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
       raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
     end if;
     
-    if p_subject_fragment_id is not null then
-      -- Fragment metrics
-      if p_type = 'total_area' and p_overlay_source_url is null and p_source_processing_job_dependency is null then
-        insert into spatial_metrics (
-          subject_fragment_id,
-          subject_geography_id,
-          type,
-          overlay_source_url,
-          overlay_group_by,
-          included_properties,
-          source_processing_job_dependency,
-          project_id
-        ) values (
-          p_subject_fragment_id,
-          p_subject_geography_id,
-          p_type,
-          p_overlay_source_url,
-          p_overlay_group_by,
-          p_included_properties,
-          p_source_processing_job_dependency,
-          p_project_id
-        )
-        on conflict do nothing
-        returning id into metric_id;
-        if metric_id is null then
-          select id into metric_id from spatial_metrics
-          where subject_fragment_id = p_subject_fragment_id
-            and subject_geography_id is null
-            and type = 'total_area'::public.spatial_metric_type
-            and overlay_source_url is null
-            and source_processing_job_dependency is null
-            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-        end if;
-      elsif p_overlay_source_url is not null then
-        insert into spatial_metrics (
-          subject_fragment_id,
-          subject_geography_id,
-          type,
-          overlay_source_url,
-          overlay_group_by,
-          included_properties,
-          source_processing_job_dependency,
-          project_id
-        ) values (
-          p_subject_fragment_id,
-          p_subject_geography_id,
-          p_type,
-          p_overlay_source_url,
-          p_overlay_group_by,
-          p_included_properties,
-          p_source_processing_job_dependency,
-          p_project_id
-        )
-        on conflict do nothing
-        returning id into metric_id;
-        if metric_id is null then
-          select id into metric_id from spatial_metrics
-          where subject_fragment_id = p_subject_fragment_id
-            and subject_geography_id is null
-            and type = p_type
-            and overlay_source_url = p_overlay_source_url
-            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-        end if;
-      else
-        insert into spatial_metrics (
-          subject_fragment_id,
-          subject_geography_id,
-          type,
-          overlay_source_url,
-          overlay_group_by,
-          included_properties,
-          source_processing_job_dependency,
-          project_id
-        ) values (
-          p_subject_fragment_id,
-          p_subject_geography_id,
-          p_type,
-          p_overlay_source_url,
-          p_overlay_group_by,
-          p_included_properties,
-          p_source_processing_job_dependency,
-          p_project_id
-        )
-        on conflict do nothing
-        returning id into metric_id;
-        if metric_id is null then
-          select id into metric_id from spatial_metrics
-          where subject_fragment_id = p_subject_fragment_id
-            and subject_geography_id is null
-            and type = p_type
-            and overlay_source_url is null
-            and source_processing_job_dependency = p_source_processing_job_dependency
-            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-        end if;
-      end if;
+    -- Build parameters jsonb from group_by
+    if p_overlay_group_by is not null then
+      metric_parameters := jsonb_build_object('groupBy', p_overlay_group_by);
     else
-      -- Geography metrics
-      if p_type = 'total_area' and p_overlay_source_url is null and p_source_processing_job_dependency is null then
-        insert into spatial_metrics (
-          subject_fragment_id,
-          subject_geography_id,
-          type,
-          overlay_source_url,
-          overlay_group_by,
-          included_properties,
-          source_processing_job_dependency,
-          project_id
-        ) values (
-          p_subject_fragment_id,
-          p_subject_geography_id,
-          p_type,
-          p_overlay_source_url,
-          p_overlay_group_by,
-          p_included_properties,
-          p_source_processing_job_dependency,
-          p_project_id
-        )
-        on conflict do nothing
-        returning id into metric_id;
-        if metric_id is null then
-          select id into metric_id from spatial_metrics
-          where subject_geography_id = p_subject_geography_id
-            and subject_fragment_id is null
-            and type = 'total_area'::public.spatial_metric_type
-            and overlay_source_url is null
-            and source_processing_job_dependency is null
-            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-        end if;
-      elsif p_overlay_source_url is not null then
-        insert into spatial_metrics (
-          subject_fragment_id,
-          subject_geography_id,
-          type,
-          overlay_source_url,
-          overlay_group_by,
-          included_properties,
-          source_processing_job_dependency,
-          project_id
-        ) values (
-          p_subject_fragment_id,
-          p_subject_geography_id,
-          p_type,
-          p_overlay_source_url,
-          p_overlay_group_by,
-          p_included_properties,
-          p_source_processing_job_dependency,
-          p_project_id
-        )
-        on conflict do nothing
-        returning id into metric_id;
-        if metric_id is null then
-          select id into metric_id from spatial_metrics
-          where subject_geography_id = p_subject_geography_id
-            and subject_fragment_id is null
-            and type = p_type
-            and overlay_source_url = p_overlay_source_url
-            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-        end if;
-      else
-        insert into spatial_metrics (
-          subject_fragment_id,
-          subject_geography_id,
-          type,
-          overlay_source_url,
-          overlay_group_by,
-          included_properties,
-          source_processing_job_dependency,
-          project_id
-        ) values (
-          p_subject_fragment_id,
-          p_subject_geography_id,
-          p_type,
-          p_overlay_source_url,
-          p_overlay_group_by,
-          p_included_properties,
-          p_source_processing_job_dependency,
-          p_project_id
-        )
-        on conflict do nothing
-        returning id into metric_id;
-        if metric_id is null then
-          select id into metric_id from spatial_metrics
-          where subject_geography_id = p_subject_geography_id
-            and subject_fragment_id is null
-            and type = p_type
-            and overlay_source_url is null
-            and source_processing_job_dependency = p_source_processing_job_dependency
-            and coalesce(overlay_group_by, '') = coalesce(p_overlay_group_by, '');
-        end if;
-      end if;
+      metric_parameters := '{}'::jsonb;
     end if;
     
-    return (select get_spatial_metric(metric_id));
+    -- Try to get existing metric first (matching the unique index logic)
+    select id into metric_id
+    from spatial_metrics
+    where coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+      and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
+      and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
+      and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
+      and parameters = metric_parameters;
+    
+    -- If not found, insert new metric
+    if metric_id is null then
+      insert into spatial_metrics (
+        subject_fragment_id,
+        subject_geography_id,
+        type,
+        overlay_source_url,
+        source_processing_job_dependency,
+        project_id,
+        parameters
+      ) values (
+        p_subject_fragment_id,
+        p_subject_geography_id,
+        p_type,
+        p_overlay_source_url,
+        p_source_processing_job_dependency,
+        p_project_id,
+        metric_parameters
+      )
+      returning id into metric_id;
+    end if;
+    
+    return get_spatial_metric(metric_id);
   end;
 $$;
 
@@ -11553,58 +11359,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) IS '@omit';
-
-
---
--- Name: get_or_create_spatial_metrics_for_fragments(text[], public.spatial_metric_type, text, text, text[], text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type DEFAULT NULL::public.spatial_metric_type, p_overlay_source_url text DEFAULT NULL::text, p_overlay_group_by text DEFAULT NULL::text, p_included_properties text[] DEFAULT NULL::text[], p_source_processing_job_dependency text DEFAULT NULL::text) RETURNS bigint[]
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-    fragment_hash text;
-    metric_row spatial_metrics;
-    metric_ids bigint[] := ARRAY[]::bigint[];
-BEGIN
-    IF p_type IS NULL THEN
-        RAISE EXCEPTION 'type parameter is required';
-    END IF;
-
-    IF p_subject_fragments IS NULL OR array_length(p_subject_fragments, 1) IS NULL THEN
-        RETURN metric_ids;
-    END IF;
-
-    IF p_source_processing_job_dependency IS NULL AND p_overlay_source_url IS NULL AND p_type <> 'total_area' THEN
-        RAISE EXCEPTION 'source_processing_job_dependency or overlay_source_url is required for non-total_area metrics';
-    END IF;
-
-    FOREACH fragment_hash IN ARRAY p_subject_fragments LOOP
-        IF fragment_hash IS NULL THEN
-            CONTINUE;
-        END IF;
-        metric_row := get_or_create_spatial_metric(
-            p_subject_fragment_id => fragment_hash,
-            p_subject_geography_id => NULL,
-            p_type => p_type,
-            p_overlay_source_url => p_overlay_source_url,
-            p_overlay_group_by => p_overlay_group_by,
-            p_included_properties => p_included_properties,
-            p_source_processing_job_dependency => p_source_processing_job_dependency
-        );
-        metric_ids := array_append(metric_ids, metric_row.id);
-    END LOOP;
-
-    RETURN metric_ids;
-END;
-$$;
-
-
---
--- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text) IS '@omit';
 
 
 --
@@ -11861,49 +11615,30 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
     policy_passed boolean;
     subj_geography_id integer;
     subj_fragment_id text;
+    metric_row spatial_metrics;
   begin
-    select subject_geography_id, subject_fragment_id into subj_geography_id, subj_fragment_id
+    select * into metric_row
     from spatial_metrics
     where id = metric_id;
+    
+    if not found then
+      return null;
+    end if;
+    
     if current_user not in ('graphile_worker', 'postgres') then
-      if subj_geography_id is not null then
-        if not session_has_project_access((select project_id from project_geography where id = subj_geography_id limit 1)) then
+      if metric_row.subject_geography_id is not null then
+        if not session_has_project_access((select project_id from project_geography where id = metric_row.subject_geography_id limit 1)) then
           raise exception 'Permission denied';
         end if;
       else
-        policy_passed := check_sketch_rls_policy((select sketch_id from sketch_fragments where fragment_hash = subj_fragment_id limit 1));
+        policy_passed := check_sketch_rls_policy((select sketch_id from sketch_fragments where fragment_hash = metric_row.subject_fragment_id limit 1));
         if not policy_passed then
           raise exception 'Permission denied';
         end if;
       end if;
     end if;
-    return (
-      select jsonb_build_object(
-        'id', id,
-        'type', type,
-        'updatedAt', updated_at,
-        'createdAt', created_at,
-        'value', value,
-        'state', state,
-        'sourceUrl', overlay_source_url,
-        'sourceType', extension_to_source_type(overlay_source_url),
-        'groupBy', overlay_group_by,
-        'includedProperties', included_properties,
-        'jobKey', job_key,
-        'subject', 
-        case when subject_geography_id is not null then
-          jsonb_build_object('id', subject_geography_id, '__typename', 'GeographySubject')
-        else
-          jsonb_build_object('hash', subject_fragment_id, 'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = subject_fragment_id), 'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = subject_fragment_id), '__typename', 'FragmentSubject')
-        end,
-        'errorMessage', error_message,
-        'progress', progress_percentage,
-        'sourceProcessingJobDependency', source_processing_job_dependency,
-        'eta', eta,
-        'startedAt', started_at,
-        'durationSeconds', extract(epoch from duration)::float
-      ) from spatial_metrics where id = metric_id
-    );
+    
+    return spatial_metric_to_json(metric_row);
   end;
   $$;
 
@@ -15920,11 +15655,11 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
                 raise exception 'published_data_upload_output_id is null. Are you attempting to publish a report that references layers that have not completed preprocessing?';
               end if;
               -- copy the source processing job?
-              insert into report_card_layers (report_card_id, table_of_contents_item_id, group_by)
+              insert into report_card_layers (report_card_id, table_of_contents_item_id, layer_parameters)
               values (
                 new_report_card_id,
                 published_toc_item_id,
-                rcl.group_by
+                rcl.layer_parameters
               );
             end loop;
           end loop;
@@ -15978,15 +15713,15 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
       CREATE TEMP TABLE _rcl_snapshot (
         report_card_id integer,
         table_of_contents_item_id integer,
-        group_by text,
+        layer_parameters jsonb,
         stable_id text
       ) ON COMMIT DROP;
 
-      INSERT INTO _rcl_snapshot (report_card_id, table_of_contents_item_id, group_by, stable_id)
+      INSERT INTO _rcl_snapshot (report_card_id, table_of_contents_item_id, layer_parameters, stable_id)
       SELECT
         rcl.report_card_id,
         rcl.table_of_contents_item_id,
-        rcl.group_by,
+        rcl.layer_parameters,
         tci.stable_id
       FROM public.report_card_layers rcl
       JOIN public.table_of_contents_items tci
@@ -16334,7 +16069,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           raise exception 'Table of contents item with stable_id % not found', ref.stable_id;
         end if;
         if new_toc_id is not null then
-          insert into report_card_layers (report_card_id, group_by, table_of_contents_item_id) values (ref.report_card_id, ref.group_by, new_toc_id);
+          insert into report_card_layers (report_card_id, layer_parameters, table_of_contents_item_id) values (ref.report_card_id, ref.layer_parameters, new_toc_id);
         end if;
       end loop;
       -- return items
@@ -16971,7 +16706,7 @@ COMMENT ON FUNCTION public.report_card_ids_for_report(rid integer) IS '@omit';
 CREATE TABLE public.report_card_layers (
     report_card_id integer NOT NULL,
     table_of_contents_item_id integer NOT NULL,
-    group_by text
+    layer_parameters jsonb DEFAULT '{}'::jsonb NOT NULL
 );
 
 
@@ -16999,7 +16734,7 @@ CREATE FUNCTION public.report_cards_reporting_layers(rc public.report_cards) RET
     t.data_source_type,
     ds.geostats,
     dl.mapbox_gl_styles,
-    rcl.group_by,
+    rcl.layer_parameters,
     spj.job_key as processing_job_id
   from table_of_contents_items t
   join data_layers dl on dl.id = t.data_layer_id
@@ -19266,6 +19001,82 @@ CREATE FUNCTION public.source_processing_jobs_layer_title(job public.source_proc
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
     select title from table_of_contents_items where data_layer_id = (select id from data_layers where data_source_id = job.data_source_id) limit 1;
+$$;
+
+
+--
+-- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.spatial_metrics (
+    id bigint NOT NULL,
+    subject_fragment_id text,
+    subject_geography_id integer,
+    type public.spatial_metric_type NOT NULL,
+    overlay_source_url text,
+    value jsonb,
+    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
+    error_message text,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    progress_percentage integer DEFAULT 0 NOT NULL,
+    logs_url text,
+    logs_expires_at timestamp with time zone,
+    job_key text DEFAULT (gen_random_uuid())::text,
+    source_processing_job_dependency text,
+    project_id integer NOT NULL,
+    eta timestamp with time zone,
+    started_at timestamp with time zone,
+    completed_at timestamp with time zone,
+    duration interval,
+    parameters jsonb DEFAULT '{}'::jsonb NOT NULL,
+    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
+);
+
+
+--
+-- Name: TABLE spatial_metrics; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.spatial_metrics IS '@omit';
+
+
+--
+-- Name: spatial_metric_to_json(public.spatial_metrics); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.spatial_metric_to_json(sm public.spatial_metrics) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+  select jsonb_build_object(
+    'id', sm.id,
+    'type', sm.type,
+    'updatedAt', sm.updated_at,
+    'createdAt', sm.created_at,
+    'value', sm.value,
+    'state', sm.state,
+    'sourceUrl', sm.overlay_source_url,
+    'sourceType', extension_to_source_type(sm.overlay_source_url),
+    'parameters', coalesce(sm.parameters, '{}'::jsonb),
+    'jobKey', sm.job_key,
+    'subject', 
+    case when sm.subject_geography_id is not null then
+      jsonb_build_object('id', sm.subject_geography_id, '__typename', 'GeographySubject')
+    else
+      jsonb_build_object(
+        'hash', sm.subject_fragment_id, 
+        'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = sm.subject_fragment_id), 
+        'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = sm.subject_fragment_id), 
+        '__typename', 'FragmentSubject'
+      )
+    end,
+    'errorMessage', sm.error_message,
+    'progress', sm.progress_percentage,
+    'sourceProcessingJobDependency', sm.source_processing_job_dependency,
+    'eta', sm.eta,
+    'startedAt', sm.started_at,
+    'durationSeconds', extract(epoch from sm.duration)::float
+  );
 $$;
 
 
@@ -22967,44 +22778,6 @@ ALTER TABLE public.sketches ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 
 
 --
--- Name: spatial_metrics; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.spatial_metrics (
-    id bigint NOT NULL,
-    subject_fragment_id text,
-    subject_geography_id integer,
-    type public.spatial_metric_type NOT NULL,
-    overlay_source_url text,
-    overlay_group_by text,
-    included_properties text[],
-    value jsonb,
-    state public.spatial_metric_state DEFAULT 'queued'::public.spatial_metric_state NOT NULL,
-    error_message text,
-    created_at timestamp with time zone DEFAULT now() NOT NULL,
-    updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    progress_percentage integer DEFAULT 0 NOT NULL,
-    logs_url text,
-    logs_expires_at timestamp with time zone,
-    job_key text DEFAULT (gen_random_uuid())::text,
-    source_processing_job_dependency text,
-    project_id integer NOT NULL,
-    eta timestamp with time zone,
-    started_at timestamp with time zone,
-    completed_at timestamp with time zone,
-    duration interval,
-    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
-);
-
-
---
--- Name: TABLE spatial_metrics; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.spatial_metrics IS '@omit';
-
-
---
 -- Name: spatial_metrics_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -24755,10 +24528,10 @@ CREATE INDEX report_card_layers_table_of_contents_item_id_idx ON public.report_c
 
 
 --
--- Name: report_card_layers_unique_report_card_id_table_of_contents_item; Type: INDEX; Schema: public; Owner: -
+-- Name: report_card_layers_unique_configuration; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX report_card_layers_unique_report_card_id_table_of_contents_item ON public.report_card_layers USING btree (report_card_id, table_of_contents_item_id);
+CREATE INDEX report_card_layers_unique_configuration ON public.report_card_layers USING btree (report_card_id, table_of_contents_item_id, layer_parameters);
 
 
 --
@@ -24937,48 +24710,6 @@ CREATE INDEX source_processing_jobs_updated_at_idx ON public.source_processing_j
 
 
 --
--- Name: spatial_metrics_fragment_by_job_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX spatial_metrics_fragment_by_job_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, source_processing_job_dependency, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NOT NULL));
-
-
---
--- Name: spatial_metrics_fragment_by_source_url_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX spatial_metrics_fragment_by_source_url_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, overlay_source_url, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL) AND (overlay_source_url IS NOT NULL));
-
-
---
--- Name: spatial_metrics_fragment_total_area_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX spatial_metrics_fragment_total_area_unique_idx ON public.spatial_metrics USING btree (subject_fragment_id, type, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NULL) AND (type = 'total_area'::public.spatial_metric_type));
-
-
---
--- Name: spatial_metrics_geography_by_job_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX spatial_metrics_geography_by_job_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, source_processing_job_dependency, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NOT NULL));
-
-
---
--- Name: spatial_metrics_geography_by_source_url_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX spatial_metrics_geography_by_source_url_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, overlay_source_url, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL) AND (overlay_source_url IS NOT NULL));
-
-
---
--- Name: spatial_metrics_geography_total_area_unique_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX spatial_metrics_geography_total_area_unique_idx ON public.spatial_metrics USING btree (subject_geography_id, type, COALESCE(overlay_group_by, ''::text)) WHERE ((subject_geography_id IS NOT NULL) AND (subject_fragment_id IS NULL) AND (overlay_source_url IS NULL) AND (source_processing_job_dependency IS NULL) AND (type = 'total_area'::public.spatial_metric_type));
-
-
---
 -- Name: spatial_metrics_project_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -24990,6 +24721,13 @@ CREATE INDEX spatial_metrics_project_id_idx ON public.spatial_metrics USING btre
 --
 
 CREATE INDEX spatial_metrics_queued_created_at_idx ON public.spatial_metrics USING btree (created_at) WHERE (state = 'queued'::public.spatial_metric_state);
+
+
+--
+-- Name: spatial_metrics_unique_metric; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX spatial_metrics_unique_metric ON public.spatial_metrics USING btree (COALESCE(overlay_source_url, ''::text), COALESCE(source_processing_job_dependency, ''::text), COALESCE(subject_fragment_id, ''::text), COALESCE(subject_geography_id, '-999999'::integer), parameters);
 
 
 --
@@ -33319,14 +33057,6 @@ GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id 
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_or_create_spatial_metrics_for_fragments(p_subject_fragments text[], p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text) TO anon;
-
-
---
 -- Name: FUNCTION get_or_create_user_by_sub(_sub text, OUT user_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36230,6 +35960,13 @@ GRANT ALL ON FUNCTION public.soft_delete_sprite(id integer) TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.source_processing_jobs_layer_title(job public.source_processing_jobs) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.source_processing_jobs_layer_title(job public.source_processing_jobs) TO anon;
+
+
+--
+-- Name: FUNCTION spatial_metric_to_json(sm public.spatial_metrics); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.spatial_metric_to_json(sm public.spatial_metrics) FROM PUBLIC;
 
 
 --

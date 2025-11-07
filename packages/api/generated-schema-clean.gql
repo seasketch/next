@@ -961,6 +961,12 @@ type CancelBackgroundJobPayload {
   query: Query
 }
 
+type CardDependencyLists {
+  cardId: Int!
+  metrics: [BigInt!]!
+  overlaySources: [Int!]!
+}
+
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
   """
@@ -1068,10 +1074,9 @@ type CompatibleSpatialMetric {
   durationSeconds: Float
   errorMessage: String
   eta: Datetime
-  groupBy: String
   id: BigInt!
-  includedProperties: [String!]
   jobKey: String
+  parameters: MetricParameters!
   progress: Int
   sourceProcessingJobDependency: String
   sourceUrl: String
@@ -8569,6 +8574,15 @@ type MergeTranslatedPropsPayload {
   query: Query
 }
 
+type MetricParameters {
+  bufferDistanceKm: Float
+  groupBy: String
+  includedColumns: [String!]
+  maxDistanceKm: Float
+  maxResults: Int
+  valueColumn: String
+}
+
 union MetricSubject = FragmentSubject | GeographySubject
 
 """All input for the `modifySurveyAnswers` mutation."""
@@ -14448,7 +14462,7 @@ type ReportCard implements Node {
 }
 
 type ReportCardLayer {
-  groupBy: String
+  layerParameters: JSON!
   processedOutput: DataUploadOutput
   reportCardId: Int!
 
@@ -14473,7 +14487,7 @@ input ReportCardLayerCondition {
 
 """An input for mutations affecting `ReportCardLayer`"""
 input ReportCardLayerInput {
-  groupBy: String
+  layerParameters: JSON
   reportCardId: Int!
   tableOfContentsItemId: Int!
 }
@@ -14546,12 +14560,13 @@ input ReportInput {
 
 """An input for mutations affecting `ReportLayerInputRecord`"""
 input ReportLayerInputRecordInput {
-  groupBy: String
+  layerParameters: JSON
   reportCardId: Int
   tableOfContentsItemId: Int
 }
 
 type ReportOverlayDependencies {
+  cardDependencyLists: [CardDependencyLists!]!
   metrics: [CompatibleSpatialMetric!]!
   overlaySources: [ReportOverlaySource!]!
   ready: Boolean!
