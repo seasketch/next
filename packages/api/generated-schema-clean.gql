@@ -14405,6 +14405,7 @@ type ReportCard implements Node {
   collapsibleFooterBody: JSON!
   collapsibleFooterEnabled: Boolean!
   componentSettings: JSON!
+  displayMapLayerVisibilityControls: Boolean!
   icon: String
   id: Int!
   isDraft: Boolean!
@@ -18933,6 +18934,7 @@ input UpdateReportCardInput {
   collapsibleFooterBody: JSON
   collapsibleFooterEnabled: Boolean
   componentSettings: JSON
+  displayMapLayerVisibilityControls: Boolean
   icon: String
   tint: String
 }

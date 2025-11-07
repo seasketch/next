@@ -7,6 +7,7 @@ import { useCardLocalizedStringAdmin } from "./cards";
 import Switch from "../../components/Switch";
 import AreaUnitSelect from "../components/AreaUnitSelect";
 import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
+import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
 
 type AdminConfig = ReportCardConfiguration<{
   unit?: "km" | "mi" | "acres" | "ha";
@@ -95,6 +96,8 @@ export default function OverlappingAreasCardAdmin({
           />
         </div>
       )}
+
+      <MapLayerVisibilityControlsAdmin config={config} onUpdate={onUpdate} />
 
       <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>

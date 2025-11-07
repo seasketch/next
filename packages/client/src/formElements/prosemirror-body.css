@@ -199,6 +199,10 @@ div[attachments="forumAttachments"] {
   @apply pl-6;
 }
 
+.ProseMirrorBody.ReportCardBody a {
+  @apply text-primary-600 no-underline font-medium hover:underline;
+}
+
 .ReportCardBody p,
 .ReportCardBodyEditor p {
   @apply text-black;

@@ -82,6 +82,11 @@ export type ReportCardConfiguration<T> = {
    * Supports localization via alternateLanguageSettings.
    */
   collapsibleFooterBody?: ProsemirrorBodyJSON;
+  /**
+   * Whether to display the linked data layer map visibility controls.
+   * @default true
+   */
+  displayMapLayerVisibilityControls?: boolean;
 };
 
 export type ReportTabConfiguration = {

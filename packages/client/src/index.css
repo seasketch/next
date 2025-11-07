@@ -1028,6 +1028,19 @@ div[attachments="forumAttachments"] {
   padding-left:1.5rem
 }
 
+.ProseMirrorBody.ReportCardBody a{
+  font-weight:500;
+  --tw-text-opacity:1;
+  color:rgb(36 105 172 / var(--tw-text-opacity, 1));
+  -webkit-text-decoration-line:none;
+          text-decoration-line:none
+}
+
+.ProseMirrorBody.ReportCardBody a:hover{
+  -webkit-text-decoration-line:underline;
+          text-decoration-line:underline
+}
+
 .ReportCardBody p,
 .ReportCardBodyEditor p{
   --tw-text-opacity:1;
@@ -5844,6 +5857,11 @@ select{
   margin-right:-0.75rem
 }
 
+.-mx-4{
+  margin-left:-1rem;
+  margin-right:-1rem
+}
+
 .mx-0{
   margin-left:0px;
   margin-right:0px
@@ -10346,6 +10364,11 @@ select{
 .line-through{
   -webkit-text-decoration-line:line-through;
           text-decoration-line:line-through
+}
+
+.no-underline{
+  -webkit-text-decoration-line:none;
+          text-decoration-line:none
 }
 
 .antialiased{

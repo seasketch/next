@@ -2499,7 +2499,8 @@ CREATE TABLE public.report_cards (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     is_draft boolean DEFAULT true NOT NULL,
     collapsible_footer_enabled boolean DEFAULT false NOT NULL,
-    collapsible_footer_body jsonb DEFAULT '{"type": "doc", "content": [{"type": "footerTitle", "content": [{"text": "Learn More", "type": "text"}]}, {"type": "paragraph", "content": [{"text": "Describe your data sources and purpose here.", "type": "text"}]}]}'::jsonb NOT NULL
+    collapsible_footer_body jsonb DEFAULT '{"type": "doc", "content": [{"type": "footerTitle", "content": [{"text": "Learn More", "type": "text"}]}, {"type": "paragraph", "content": [{"text": "Describe your data sources and purpose here.", "type": "text"}]}]}'::jsonb NOT NULL,
+    display_map_layer_visibility_controls boolean DEFAULT true NOT NULL
 );
 
 
@@ -21046,10 +21047,10 @@ CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin bool
 
 
 --
--- Name: update_report_card(integer, jsonb, jsonb, jsonb, text, text, text, boolean, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_report_card(integer, jsonb, jsonb, jsonb, text, text, text, boolean, jsonb, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb) RETURNS public.report_cards
+CREATE FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb, display_map_layer_visibility_controls boolean) RETURNS public.report_cards
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -21058,7 +21059,7 @@ CREATE FUNCTION public.update_report_card(card_id integer, component_settings js
     begin
       select report_tab_id from report_cards where id = card_id into tab_id;
       if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
-        update report_cards set component_settings = update_report_card.component_settings, body = update_report_card.body, alternate_language_settings = update_report_card.alternate_language_settings, tint = update_report_card.tint, icon = update_report_card.icon, type = update_report_card.card_type, collapsible_footer_enabled = update_report_card.collapsible_footer_enabled, collapsible_footer_body = update_report_card.collapsible_footer_body where id = update_report_card.card_id returning * into updated_card;
+        update report_cards set component_settings = update_report_card.component_settings, body = update_report_card.body, alternate_language_settings = update_report_card.alternate_language_settings, tint = update_report_card.tint, icon = update_report_card.icon, type = update_report_card.card_type, collapsible_footer_enabled = update_report_card.collapsible_footer_enabled, collapsible_footer_body = update_report_card.collapsible_footer_body, display_map_layer_visibility_controls = update_report_card.display_map_layer_visibility_controls where id = update_report_card.card_id returning * into updated_card;
         return updated_card;
       else
         raise exception 'You are not authorized to update this card';
@@ -39700,11 +39701,11 @@ GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admi
 
 
 --
--- Name: FUNCTION update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb, display_map_layer_visibility_controls boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb, display_map_layer_visibility_controls boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb, display_map_layer_visibility_controls boolean) TO seasketch_user;
 
 
 --

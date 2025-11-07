@@ -15,10 +15,14 @@ import { useMetrics } from "../hooks/useMetrics";
 import { useReportContext } from "../ReportContext";
 import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
-import { extractColorsForCategories } from "../utils/colors";
+import {
+  extractColorsForCategories,
+  extractColorForLayers,
+} from "../utils/colors";
 import { AnyLayer } from "mapbox-gl";
 import { useTranslation } from "react-i18next";
 import { useUnits } from "../hooks/useUnits";
+import MapLayerVisibilityControl from "../components/MapLayerVisibilityControl";
 
 export type OverlappingAreasCardConfiguration = ReportCardConfiguration<{
   /**
@@ -198,9 +202,12 @@ export function OverlappingAreasCard({
         const geographyTotal = (geographyMetric?.value as any)?.["*"];
         if (area && area > 0) {
           items.push({
-            title: layer.tableOfContentsItem?.title || "Untitled",
+            title: "All features",
             value: area,
             percentage: geographyTotal ? area / geographyTotal : undefined,
+            color: extractColorForLayers(
+              layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
+            ),
           });
         } else if (config.componentSettings?.showZeroOverlapCategories) {
           items.push({ title: layer.tableOfContentsItem?.title || "Untitled" });
@@ -299,6 +306,13 @@ export function OverlappingAreasCard({
             </div>
           )}
         </div>
+        {config.displayMapLayerVisibilityControls !== false &&
+          reportingLayers.length === 1 &&
+          reportingLayers[0].tableOfContentsItem?.stableId && (
+            <MapLayerVisibilityControl
+              stableId={reportingLayers[0].tableOfContentsItem.stableId}
+            />
+          )}
       </div>
     </ReportCard>
   );

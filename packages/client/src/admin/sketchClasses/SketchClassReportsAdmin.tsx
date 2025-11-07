@@ -384,6 +384,16 @@ export default function SketchClassReportsAdmin({
     }
 
     try {
+      // Ensure displayMapLayerVisibilityControls always has a value (defaults to true)
+      // This is required because the database column is NOT NULL
+      const displayMapLayerVisibilityControls =
+        localCardEdits.displayMapLayerVisibilityControls !== undefined
+          ? localCardEdits.displayMapLayerVisibilityControls
+          : selectedCardForEditing.displayMapLayerVisibilityControls !==
+            undefined
+          ? selectedCardForEditing.displayMapLayerVisibilityControls
+          : true;
+
       await updateReportCard({
         variables: {
           id: selectedCardForEditing.id,
@@ -396,12 +406,16 @@ export default function SketchClassReportsAdmin({
           body: localCardEdits.body || selectedCardForEditing.body,
           cardType: localCardEdits.type || selectedCardForEditing.type,
           collapsibleFooterEnabled:
-            localCardEdits.collapsibleFooterEnabled ||
-            selectedCardForEditing.collapsibleFooterEnabled,
+            localCardEdits.collapsibleFooterEnabled !== undefined
+              ? localCardEdits.collapsibleFooterEnabled
+              : selectedCardForEditing.collapsibleFooterEnabled !== undefined
+              ? selectedCardForEditing.collapsibleFooterEnabled
+              : false,
           collapsibleFooterBody:
             localCardEdits.collapsibleFooterBody ||
             selectedCardForEditing.collapsibleFooterBody,
-        },
+          displayMapLayerVisibilityControls,
+        } as any, // Type assertion needed - the field exists in the GraphQL schema but TypeScript types may be out of sync
         refetchQueries: [DraftReportDocument],
         awaitRefetchQueries: true,
       });

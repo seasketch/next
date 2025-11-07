@@ -13343,6 +13343,7 @@ export type ReportCard = Node & {
   collapsibleFooterBody: Scalars['JSON'];
   collapsibleFooterEnabled: Scalars['Boolean'];
   componentSettings: Scalars['JSON'];
+  displayMapLayerVisibilityControls: Scalars['Boolean'];
   icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   isDraft: Scalars['Boolean'];
@@ -17188,6 +17189,7 @@ export type UpdateReportCardInput = {
   collapsibleFooterBody?: Maybe<Scalars['JSON']>;
   collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   componentSettings?: Maybe<Scalars['JSON']>;
+  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
 };
@@ -22391,7 +22393,7 @@ export type ReportingLayerDetailsFragment = (
     & Pick<DataUploadOutput, 'url' | 'size' | 'type'>
   )>, tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'title' | 'dataSourceType'>
+    & Pick<TableOfContentsItem, 'id' | 'title' | 'dataSourceType' | 'stableId'>
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
@@ -22409,7 +22411,7 @@ export type ReportingLayerDetailsFragment = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody'>
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody' | 'displayMapLayerVisibilityControls'>
   & { reportingLayers: Array<(
     { __typename?: 'ReportCardLayer' }
     & ReportingLayerDetailsFragment
@@ -22606,6 +22608,7 @@ export type UpdateReportCardMutationVariables = Exact<{
   cardType?: Maybe<Scalars['String']>;
   collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   collapsibleFooterBody?: Maybe<Scalars['JSON']>;
+  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -26149,6 +26152,7 @@ export const ReportingLayerDetailsFragmentDoc = gql`
     id
     title
     dataSourceType
+    stableId
     dataLayer {
       id
       mapboxGlStyles
@@ -26179,6 +26183,7 @@ export const ReportCardDetailsFragmentDoc = gql`
   }
   collapsibleFooterEnabled
   collapsibleFooterBody
+  displayMapLayerVisibilityControls
 }
     ${ReportingLayerDetailsFragmentDoc}`;
 export const ReportTabDetailsFragmentDoc = gql`
@@ -35013,9 +35018,9 @@ export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReord
 export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
 export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
 export const UpdateReportCardDocument = gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON, $displayMapLayerVisibilityControls: Boolean) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
   ) {
     reportCard {
       ...ReportCardDetails
@@ -35047,6 +35052,7 @@ export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCar
  *      cardType: // value for 'cardType'
  *      collapsibleFooterEnabled: // value for 'collapsibleFooterEnabled'
  *      collapsibleFooterBody: // value for 'collapsibleFooterBody'
+ *      displayMapLayerVisibilityControls: // value for 'displayMapLayerVisibilityControls'
  *   },
  * });
  */

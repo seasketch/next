@@ -72,8 +72,6 @@ export function useMetrics<
         );
         if (!matchingLayer) {
           continue;
-        } else {
-          // console.log("found matchingLayer", matchingLayer, relatedSource);
         }
       }
       // It's a match! Add it to the list.

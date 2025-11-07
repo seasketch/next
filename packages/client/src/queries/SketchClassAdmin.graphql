@@ -388,6 +388,7 @@ fragment ReportingLayerDetails on ReportCardLayer {
     id
     title
     dataSourceType
+    stableId
     dataLayer {
       id
       mapboxGlStyles
@@ -417,6 +418,7 @@ fragment ReportCardDetails on ReportCard {
   }
   collapsibleFooterEnabled
   collapsibleFooterBody
+  displayMapLayerVisibilityControls
 }
 
 fragment ReportTabDetails on ReportTab {
@@ -563,6 +565,7 @@ mutation UpdateReportCard(
   $cardType: String
   $collapsibleFooterEnabled: Boolean
   $collapsibleFooterBody: JSON
+  $displayMapLayerVisibilityControls: Boolean
 ) {
   updateReportCard(
     input: {
@@ -575,6 +578,7 @@ mutation UpdateReportCard(
       cardType: $cardType
       collapsibleFooterEnabled: $collapsibleFooterEnabled
       collapsibleFooterBody: $collapsibleFooterBody
+      displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls
     }
   ) {
     reportCard {

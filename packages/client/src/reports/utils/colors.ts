@@ -51,3 +51,22 @@ export function extractColorsForCategories(
   }
   return colors;
 }
+
+export function extractColorForLayers(style: AnyLayer[]): string {
+  for (const layer of style) {
+    if (
+      layer.type === "fill" ||
+      layer.type === "circle" ||
+      layer.type === "line"
+    ) {
+      if (
+        layer.paint &&
+        "fill-color" in layer.paint &&
+        typeof layer.paint["fill-color"] === "string"
+      ) {
+        return layer.paint["fill-color"];
+      }
+    }
+  }
+  return "#000000";
+}
