@@ -716,6 +716,11 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
       metrics {
         ...CompatibleSpatialMetricDetails
       }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
     }
   }
 }

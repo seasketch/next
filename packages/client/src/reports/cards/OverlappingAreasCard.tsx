@@ -1,9 +1,5 @@
 import { ReportCardConfiguration, ReportCardProps } from "./cards";
-import ReportCard from "../ReportCard";
-import {
-  registerReportCardType,
-  ReportCardConfigUpdateCallback,
-} from "../registerCard";
+import { registerReportCardType } from "../registerCard";
 import { Trans } from "react-i18next";
 import { LayersIcon, ValueNoneIcon } from "@radix-ui/react-icons";
 import { DataSourceTypes } from "../../generated/graphql";
@@ -11,7 +7,6 @@ import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
-import { useMetrics } from "../hooks/useMetrics";
 import { useReportContext } from "../ReportContext";
 import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
@@ -53,18 +48,14 @@ const OverlappingAreasCardAdmin = lazy(
 
 export function OverlappingAreasCard({
   config,
-  dragHandleProps,
-  onUpdate,
-}: OverlappingAreasCardProps & {
-  dragHandleProps?: any;
-  onUpdate?: ReportCardConfigUpdateCallback;
-}) {
+  metrics,
+  loading,
+  sources,
+  errors,
+}: OverlappingAreasCardProps) {
   const { reportingLayers } = config;
   const reportContext = useReportContext();
   useTranslation("reports");
-  const allGeographyIds = useMemo(() => {
-    return reportContext.geographies.map((g) => g.id);
-  }, [reportContext.geographies]);
 
   const formatters = useNumberFormatters();
 
@@ -73,17 +64,10 @@ export function OverlappingAreasCard({
     unit: config.componentSettings?.unit ?? "km",
   });
 
-  // Fetch total_area (if needed elsewhere later). Currently not used directly.
-  const overlayMetrics = useMetrics({
-    type: "overlay_area",
-    geographyIds: allGeographyIds,
-    layers: reportingLayers,
-  });
-
   const sumSketchOverlaysByClass = useMemo(() => {
     let layers: { [layer: string]: { [classKey: string]: number } } = {};
-    if (overlayMetrics.data) {
-      for (const metric of overlayMetrics.data) {
+    if (metrics.length > 0) {
+      for (const metric of metrics) {
         if (subjectIsFragment(metric.subject)) {
           if (!(metric.sourceUrl! in layers)) {
             layers[metric.sourceUrl!] = {};
@@ -108,7 +92,7 @@ export function OverlappingAreasCard({
     } else {
       return null;
     }
-  }, [overlayMetrics.data]);
+  }, [metrics]);
 
   const items = useMemo(() => {
     const items: {
@@ -121,7 +105,7 @@ export function OverlappingAreasCard({
       reportContext.sketchClass?.clippingGeographies?.[0]?.id;
 
     for (const layer of reportingLayers) {
-      const source = overlayMetrics.sources.find(
+      const source = sources.find(
         (s) => s.tableOfContentsItemId === layer.tableOfContentsItemId
       );
       if (!source) {
@@ -136,7 +120,7 @@ export function OverlappingAreasCard({
       }
       // get the geography-level total for this layer
       const geographyMetric = sketchClassPrimaryGeographyId
-        ? (overlayMetrics.data || []).find(
+        ? (metrics || []).find(
             (m) =>
               subjectIsGeography(m.subject) &&
               m.subject.id === sketchClassPrimaryGeographyId &&
@@ -226,95 +210,76 @@ export function OverlappingAreasCard({
     reportingLayers,
     sumSketchOverlaysByClass,
     config.componentSettings,
-    overlayMetrics.data,
+    metrics,
   ]);
 
   return (
-    <ReportCard
-      dragHandleProps={dragHandleProps}
-      cardId={config.id}
-      onUpdate={onUpdate}
-      config={config}
-      className="pb-2"
-      tint={config.tint}
-      icon={config.icon}
-      metrics={overlayMetrics.data}
-      sources={overlayMetrics.sources}
-      skeleton={
-        <div className="w-full space-y-1">
-          <Skeleton className="w-full h-4" />
-          <Skeleton className="w-3/4 h-4" />
-          <Skeleton className="w-4/5 h-4" />
-        </div>
-      }
-    >
+    <div>
+      {config.reportingLayers.length === 0 && (
+        <Warning>
+          <Trans ns="reports">No layers selected..</Trans>
+        </Warning>
+      )}
       <div>
-        {config.reportingLayers.length === 0 && (
-          <Warning>
-            <Trans ns="reports">No layers selected..</Trans>
-          </Warning>
-        )}
-        <div>
-          {!overlayMetrics.loading &&
-            items.length > 0 &&
-            items.map((item) => (
-              <div
-                className={`flex max-w-full items-center px-2 space-x-2 ${
-                  item.value ? "opacity-100" : "opacity-50"
-                }`}
-                key={item.title}
-              >
-                {item.color && (
-                  <div
-                    className="w-4 h-4 rounded"
-                    style={{ backgroundColor: item.color }}
-                  />
-                )}
+        {!loading &&
+          items.length > 0 &&
+          items.map((item) => (
+            <div
+              className={`flex max-w-full items-center px-2 space-x-2 ${
+                item.value ? "opacity-100" : "opacity-50"
+              }`}
+              key={item.title}
+            >
+              {item.color && (
                 <div
-                  title={item.title.length > 48 ? item.title : undefined}
-                  className="flex-1 truncate"
-                >
-                  {item.title}
-                </div>
-                <div className="tabular-nums">
-                  {overlayMetrics.loading ? (
-                    <Skeleton className="w-10 h-4" />
-                  ) : (
-                    <>
-                      {formatters.area(convertFromBase(item.value || 0))}{" "}
-                      {unitLabel}
-                    </>
-                  )}
-                </div>
-                {typeof item.percentage === "number" && (
-                  <div className="tabular-nums w-16 text-right">
-                    {overlayMetrics.loading ? (
-                      <Skeleton className="w-10 h-4" />
-                    ) : (
-                      <>{formatters.percent(item.percentage)}</>
-                    )}
-                  </div>
+                  className="w-4 h-4 rounded"
+                  style={{ backgroundColor: item.color }}
+                />
+              )}
+              <div
+                title={item.title.length > 48 ? item.title : undefined}
+                className="flex-1 truncate"
+              >
+                {item.title}
+              </div>
+              <div className="tabular-nums">
+                {loading ? (
+                  <Skeleton className="w-10 h-4" />
+                ) : (
+                  <>
+                    {formatters.area(convertFromBase(item.value || 0))}{" "}
+                    {unitLabel}
+                  </>
                 )}
               </div>
-            ))}
-          {!overlayMetrics.loading && items.length === 0 && (
-            <div className="flex items-center space-x-2 py-2">
-              <ValueNoneIcon className="w-4 h-4 text-red-800" />
-              <span className="text-gray-700">
-                <Trans ns="reports">No overlapping features found.</Trans>
-              </span>
+              {typeof item.percentage === "number" && (
+                <div className="tabular-nums w-16 text-right">
+                  {loading ? (
+                    <Skeleton className="w-10 h-4" />
+                  ) : (
+                    <>{formatters.percent(item.percentage)}</>
+                  )}
+                </div>
+              )}
             </div>
-          )}
-        </div>
-        {config.displayMapLayerVisibilityControls !== false &&
-          reportingLayers.length === 1 &&
-          reportingLayers[0].tableOfContentsItem?.stableId && (
-            <MapLayerVisibilityControl
-              stableId={reportingLayers[0].tableOfContentsItem.stableId}
-            />
-          )}
+          ))}
+        {!loading && items.length === 0 && (
+          <div className="flex items-center space-x-2 py-2">
+            <ValueNoneIcon className="w-4 h-4 text-red-800" />
+            <span className="text-gray-700">
+              <Trans ns="reports">No overlapping features found.</Trans>
+            </span>
+          </div>
+        )}
       </div>
-    </ReportCard>
+      {config.displayMapLayerVisibilityControls !== false &&
+        reportingLayers.length === 1 &&
+        reportingLayers[0].tableOfContentsItem?.stableId && (
+          <MapLayerVisibilityControl
+            stableId={reportingLayers[0].tableOfContentsItem.stableId}
+          />
+        )}
+    </div>
   );
 }
 

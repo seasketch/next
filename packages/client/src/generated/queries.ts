@@ -829,6 +829,13 @@ export type CancelBackgroundJobPayload = {
   query?: Maybe<Query>;
 };
 
+export type CardDependencyLists = {
+  __typename?: 'CardDependencyLists';
+  cardId: Scalars['Int'];
+  metrics: Array<Scalars['BigInt']>;
+  overlaySources: Array<Scalars['Int']>;
+};
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -13455,6 +13462,7 @@ export type ReportLayerInputRecordInput = {
 
 export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
+  cardDependencyLists: Array<CardDependencyLists>;
   metrics: Array<CompatibleSpatialMetric>;
   overlaySources: Array<ReportOverlaySource>;
   ready: Scalars['Boolean'];
@@ -22792,6 +22800,9 @@ export type ReportContextQuery = (
       )>, metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricDetailsFragment
+      )>, cardDependencyLists: Array<(
+        { __typename?: 'CardDependencyLists' }
+        & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
       )> }
     ) }
   )> }
@@ -29592,6 +29603,11 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
       }
       metrics {
         ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
       }
     }
   }

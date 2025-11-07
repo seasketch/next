@@ -3,8 +3,10 @@ import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
 import {
+  CompatibleSpatialMetricDetailsFragment,
   DataSourceTypes,
   DataUploadOutputType,
+  OverlaySourceDetailsFragment,
   ReportingLayerDetailsFragment,
   SpatialMetricState,
 } from "../../generated/graphql";
@@ -137,6 +139,10 @@ export type ReportConfiguration = {
 
 export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
   config: T;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: string[];
 };
 
 // Import card implementations

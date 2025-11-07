@@ -318,7 +318,7 @@ export default function ReportCard({
         )}
       </div>
 
-      <div className="p-4 text-sm pt-0 pb-1">
+      <div className="p-4 text-sm pt-0 pb-2">
         {Object.keys(errors).length > 0 && (
           <>
             <p>
@@ -500,10 +500,18 @@ export function ReportCardFactory({
   config,
   dragHandleProps,
   onUpdate,
+  metrics,
+  sources,
+  loading,
+  errors,
 }: {
   config: ReportCardConfiguration<any>;
   dragHandleProps?: any;
   onUpdate?: ReportCardConfigUpdateCallback;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: string[];
 }) {
   const { t } = useTranslation("admin:sketching");
   const cardType = config.type;
@@ -529,11 +537,26 @@ export function ReportCardFactory({
     );
   }
   return (
-    <CardComponent
-      config={config}
+    <ReportCard
       dragHandleProps={dragHandleProps}
       cardId={config.id}
       onUpdate={onUpdate}
-    />
+      config={config}
+      metrics={metrics}
+      sources={sources}
+      tint={config.tint}
+      icon={config.icon}
+    >
+      <CardComponent
+        config={config}
+        dragHandleProps={dragHandleProps}
+        cardId={config.id}
+        onUpdate={onUpdate}
+        metrics={metrics}
+        sources={sources}
+        loading={loading}
+        errors={errors}
+      />
+    </ReportCard>
   );
 }

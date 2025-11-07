@@ -961,6 +961,12 @@ type CancelBackgroundJobPayload {
   query: Query
 }
 
+type CardDependencyLists {
+  cardId: Int!
+  metrics: [BigInt!]!
+  overlaySources: [Int!]!
+}
+
 """All input for the `clearFormElementStyle` mutation."""
 input ClearFormElementStyleInput {
   """
@@ -14583,6 +14589,7 @@ input ReportLayerInputRecordInput {
 }
 
 type ReportOverlayDependencies {
+  cardDependencyLists: [CardDependencyLists!]!
   metrics: [CompatibleSpatialMetric!]!
   overlaySources: [ReportOverlaySource!]!
   ready: Boolean!

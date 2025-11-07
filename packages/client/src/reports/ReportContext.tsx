@@ -87,6 +87,14 @@ export interface ReportContextState {
   sketchClass: ReportContextSketchClassDetailsFragment;
   metrics: CompatibleSpatialMetricDetailsFragment[];
   overlaySources: OverlaySourceDetailsFragment[];
+  dependencies: {
+    [cardId: number]: {
+      metrics: CompatibleSpatialMetricDetailsFragment[];
+      overlaySources: OverlaySourceDetailsFragment[];
+      loading: boolean;
+      errors: string[];
+    };
+  };
   userIsAdmin: boolean;
   recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
   recalculateState: { loading: boolean; error: ApolloError | undefined };
@@ -220,6 +228,69 @@ export function useReportState(
     }
   }, [metricsInProgress, refetch]);
 
+  const dependencies = useMemo(() => {
+    let dependencies: {
+      [cardId: number]: {
+        metrics: CompatibleSpatialMetricDetailsFragment[];
+        overlaySources: OverlaySourceDetailsFragment[];
+        loading: boolean;
+        errors: string[];
+      };
+    } = {};
+    if (
+      data?.report?.dependencies?.cardDependencyLists &&
+      data?.report?.dependencies?.metrics &&
+      data?.report?.dependencies?.overlaySources
+    ) {
+      for (const cardDependencyList of data.report.dependencies
+        .cardDependencyLists) {
+        const overlays = data.report.dependencies.overlaySources.filter(
+          (overlay) =>
+            cardDependencyList.overlaySources.includes(
+              overlay.tableOfContentsItemId
+            )
+        );
+        const metrics = data.report.dependencies.metrics.filter((metric) =>
+          cardDependencyList.metrics.includes(metric.id)
+        );
+        let loading = false;
+        let errors: string[] = [];
+        for (const overlay of overlays) {
+          if (!overlay.output) {
+            loading = true;
+          }
+          if (overlay.sourceProcessingJob?.state === SpatialMetricState.Error) {
+            errors.push(
+              overlay.sourceProcessingJob?.errorMessage || "Unknown error"
+            );
+          }
+        }
+        for (const metric of metrics) {
+          if (metric.state === SpatialMetricState.Error) {
+            errors.push(metric.errorMessage || "Unknown error");
+          }
+          if (
+            metric.state !== SpatialMetricState.Complete &&
+            metric.state !== SpatialMetricState.Error
+          ) {
+            loading = true;
+          }
+        }
+        dependencies[cardDependencyList.cardId] = {
+          metrics,
+          overlaySources: overlays,
+          loading,
+          errors,
+        };
+      }
+    }
+    return dependencies;
+  }, [
+    data?.report?.dependencies?.cardDependencyLists,
+    data?.report?.dependencies?.metrics,
+    data?.report?.dependencies?.overlaySources,
+  ]);
+
   if (!data?.sketch) {
     return undefined;
   } else {
@@ -233,7 +304,7 @@ export function useReportState(
     return {
       selectedTabId,
       setSelectedTabId,
-      selectedTab,
+      selectedTab: selectedTab as ReportConfiguration["tabs"][0],
       selectedForEditing,
       setSelectedForEditing,
       selectedSketchId,
@@ -253,14 +324,18 @@ export function useReportState(
         []) as CompatibleSpatialMetricDetailsFragment[],
       userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
       recalculate,
-      recalculateState,
+      recalculateState: {
+        loading: recalculateState.loading,
+        error: recalculateState.error || undefined,
+      },
       isCollection: Boolean(
         data.sketch.sketchClass?.geometryType === SketchGeometryType.Collection
       ),
       overlaySources: data.report.dependencies.overlaySources,
       geographies: data.report.geographies || [],
       report: data.report as ReportConfiguration,
-    } as ReportContextState;
+      dependencies,
+    };
   }
 }
 

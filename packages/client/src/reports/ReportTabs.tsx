@@ -221,7 +221,7 @@ export function ReportTabs({
           setSelectedTabId(parseInt(value));
         }
       }}
-      className={`shadow-md z-10 w-full ${
+      className={`shadow-md z-[2] w-full ${
         isDisabled ? "pointer-events-none" : ""
       }`}
     >

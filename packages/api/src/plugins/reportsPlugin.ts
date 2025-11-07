@@ -141,11 +141,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         )})
       }
 
+      type CardDependencyLists {
+        cardId: Int!
+        metrics: [BigInt!]!
+        overlaySources: [Int!]!
+      }
 
       type ReportOverlayDependencies {
         ready: Boolean!
         overlaySources: [ReportOverlaySource!]!
         metrics: [CompatibleSpatialMetric!]!
+        cardDependencyLists: [CardDependencyLists!]!
       }
 
       extend type Report {
@@ -157,26 +163,14 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       Report: {
         async dependencies(report, args, context, resolveInfo) {
           const { pgClient } = context;
-          const overlaySources = await getOverlaySources(
-            report.id,
-            context.pgClient
-          );
-          const metrics = await getOrCreateMetrics(
+
+          const deps = await getOrCreateReportDependencies(
             report.id,
             pgClient,
             report.projectId,
-            overlaySources,
             args.sketchId
           );
-          const ready =
-            metrics.every((metric) => metric.state === "complete") &&
-            overlaySources.every((source) => Boolean(source.outputId));
-
-          return {
-            ready,
-            overlaySources,
-            metrics,
-          };
+          return deps;
         },
       },
       ReportOverlaySource: {
@@ -370,6 +364,153 @@ async function getOverlaySources(reportId: number, pool: Pool) {
     sourceUrl: row.source_url,
   })) as ReportOverlaySourcePartial[];
   return overlaySources;
+}
+
+async function getOrCreateReportDependencies(
+  reportId: number,
+  pool: Pool,
+  projectId: number,
+  sketchId?: number
+) {
+  // Retrieve all overlay sources related to the report
+  const overlaySources = await getOverlaySources(reportId, pool);
+
+  const results = {
+    overlaySources,
+    ready: true,
+    metrics: [] as any[],
+    cardDependencyLists: [] as {
+      cardId: number;
+      metrics: number[];
+      overlaySources: number[];
+    }[],
+  };
+
+  // Retrieve all fragments related to the sketch (if any)
+  const fragments: string[] = [];
+  if (sketchId) {
+    const { rows: sketchFragmentsRows } = await pool.query(
+      `select get_fragment_hashes_for_sketch($1)`,
+      [sketchId]
+    );
+    fragments.push(...sketchFragmentsRows[0].get_fragment_hashes_for_sketch);
+  }
+
+  // Retrieve all geographies related to the project
+  const { rows: geogs } = await pool.query(
+    `select name, id from project_geography where project_id = $1`,
+    [projectId]
+  );
+  if (geogs.length === 0) {
+    throw new Error("No geographies found");
+  }
+
+  const cards = await pool.query(
+    `
+      select 
+        rc.id, 
+        rc.type, 
+        rc.component_settings,
+        coalesce(
+          jsonb_agg(
+            jsonb_build_object(
+              'id', rcl.table_of_contents_item_id,
+              'groupBy', rcl.group_by
+            )
+          ) filter (where rcl.report_card_id is not null),
+          '[]'::jsonb
+        ) as layers
+      from 
+        report_cards rc
+        left join report_card_layers rcl on rc.id = rcl.report_card_id
+      where 
+        rc.id in (select report_card_ids_for_report($1))
+      group by rc.id, rc.type, rc.component_settings`,
+    [reportId]
+  );
+
+  // first, create total_area metrics. These will be calculated for all
+  // geographies and fragments, regardless of configuration.
+
+  const totalAreaMetrics: any[] = [];
+  // First, create total_area metrics. These will be calculated for all
+  // geographies and fragments, regardless of configuration.
+  for (const geography of geogs) {
+    const metricId = await getOrCreateSpatialMetric(
+      pool,
+      null,
+      geography.id,
+      "total_area",
+      null,
+      null,
+      null,
+      null,
+      projectId
+    );
+    totalAreaMetrics.push(metricId);
+  }
+  for (const fragment of fragments) {
+    const metricId = await getOrCreateSpatialMetric(
+      pool,
+      fragment,
+      null,
+      "total_area",
+      null,
+      null,
+      null,
+      null,
+      projectId
+    );
+    totalAreaMetrics.push(metricId);
+  }
+
+  results.metrics.push(...totalAreaMetrics);
+
+  for (const card of cards.rows) {
+    const cardDependencyList = {
+      cardId: card.id,
+      metrics: [] as number[],
+      overlaySources: [] as number[],
+    };
+    switch (card.type) {
+      case "OverlappingAreas": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "overlay_area",
+            overlaySource,
+            layer.groupBy,
+            card.component_settings,
+            geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
+      case "Size": {
+        cardDependencyList.metrics.push(...totalAreaMetrics.map((m) => m.id));
+        break;
+      }
+      default:
+        // do nothing. some cards like sketchAttributes do not have dependencies
+        break;
+    }
+    results.cardDependencyLists.push(cardDependencyList);
+  }
+
+  return results;
 }
 
 /**

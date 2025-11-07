@@ -134,7 +134,6 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
 
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
   if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
-    console.log("Calling overlay worker dev handler", payload);
     const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -145,11 +144,6 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
     }
     return data;
   } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
-    console.log(
-      "Calling production overlay worker lambda",
-      JSON.stringify(payload)
-    );
-
     try {
       await lambda
         .invoke({

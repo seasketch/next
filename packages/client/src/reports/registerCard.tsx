@@ -2,8 +2,10 @@ import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
 import { MetricType } from "overlay-engine";
 import { ReactElement, FunctionComponent } from "react";
 import {
+  CompatibleSpatialMetricDetailsFragment,
   DataSourceTypes,
   DataUploadOutputType,
+  OverlaySourceDetailsFragment,
   SketchClassDetailsFragment,
 } from "../generated/graphql";
 
@@ -17,6 +19,10 @@ export type ReportCardConfigUpdateCallback = (
 
 export type ReportCardComponent<T> = React.ComponentType<{
   config: ReportCardConfiguration<T>;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: string[];
   dragHandleProps?: any;
   cardId?: number;
   onUpdate?: ReportCardConfigUpdateCallback;

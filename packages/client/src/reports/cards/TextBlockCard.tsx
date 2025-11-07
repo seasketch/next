@@ -27,20 +27,23 @@ export function TextBlockCard({
 
   const { tint, backgroundTint, icon } = getTintAndIcon(presentation);
 
-  return (
-    <ReportCard
-      tint={tint}
-      backgroundTint={backgroundTint}
-      icon={icon}
-      dragHandleProps={dragHandleProps}
-      cardId={config.id}
-      onUpdate={onUpdate}
-      config={config}
-      className="pb-2"
-      metrics={[]}
-      sources={[]}
-    />
-  );
+  // TODO: bring back presentation settings
+  return <div></div>;
+
+  // return (
+  //   <ReportCard
+  //     tint={tint}
+  //     backgroundTint={backgroundTint}
+  //     icon={icon}
+  //     dragHandleProps={dragHandleProps}
+  //     cardId={config.id}
+  //     onUpdate={onUpdate}
+  //     config={config}
+  //     className="pb-2"
+  //     metrics={[]}
+  //     sources={[]}
+  //   />
+  // );
 }
 
 const defaultComponentSettings: TextBlockCardConfiguration["componentSettings"] =

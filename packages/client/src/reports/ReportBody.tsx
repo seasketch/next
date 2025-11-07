@@ -3,7 +3,7 @@ import { useReportContext } from "./ReportContext";
 import { ReportCardFactory } from "./ReportCard";
 
 export function ReportBody() {
-  const { report, selectedTabId } = useReportContext();
+  const { report, selectedTabId, dependencies } = useReportContext();
 
   if (!report?.tabs || report.tabs.length === 0) {
     return null;
@@ -29,9 +29,20 @@ export function ReportBody() {
                 </p>
               </div>
             )}
-            {tab.cards?.map((card) => (
-              <ReportCardFactory key={card.id} config={card} />
-            ))}
+            {tab.cards?.map((card) => {
+              const { metrics, loading, errors, overlaySources } =
+                dependencies[card.id];
+              return (
+                <ReportCardFactory
+                  key={card.id}
+                  config={card}
+                  metrics={metrics}
+                  sources={overlaySources}
+                  loading={loading}
+                  errors={errors}
+                />
+              );
+            })}
           </div>
         );
       })}

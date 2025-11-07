@@ -1,5 +1,4 @@
 import { ReportCardConfiguration, ReportCardProps } from "./cards";
-import ReportCard from "../ReportCard";
 import {
   registerReportCardType,
   ReportCardConfigUpdateCallback,
@@ -7,7 +6,6 @@ import {
 import { lazy, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
-import { useMetrics } from "../hooks/useMetrics";
 import { useReportContext } from "../ReportContext";
 import Skeleton from "../../components/Skeleton";
 import { Trans } from "react-i18next";
@@ -74,27 +72,22 @@ export function SizeCard({
   config,
   dragHandleProps,
   onUpdate,
+  metrics,
+  sources,
+  loading,
+  errors,
 }: SizeCardProps & {
   dragHandleProps?: any;
   onUpdate?: ReportCardConfigUpdateCallback;
 }) {
   const reportContext = useReportContext();
-  const allGeographyIds = useMemo(() => {
-    return reportContext.geographies.map((g) => g.id);
-  }, [reportContext.geographies]);
 
   const { t } = useTranslation("reports");
 
   const unit = config.componentSettings?.unit ?? "km";
 
-  const metrics = useMetrics({
-    type: "total_area",
-    // just fetch area stats for all geographies since it is easy to calculate
-    geographyIds: allGeographyIds,
-  });
-
   const sizeCardData: SizeCardData = useMemo(() => {
-    if (metrics.loading) {
+    if (loading) {
       return {
         area: 0,
         geographies: [],
@@ -102,7 +95,7 @@ export function SizeCard({
     }
 
     // Calculate total area from fragments
-    const totalArea = metrics.data.reduce((acc, metric) => {
+    const totalArea = metrics.reduce((acc, metric) => {
       if (subjectIsFragment(metric.subject)) {
         return acc + metric.value;
       }
@@ -111,7 +104,7 @@ export function SizeCard({
 
     // Filter and calculate geography statistics
     const geogs = reportContext.geographies.filter((g) => {
-      const metric = metrics.data.find(
+      const metric = metrics.find(
         (m) => subjectIsGeography(m.subject) && m.subject.id === g.id
       );
       return Boolean(metric && metric.value > 0);
@@ -119,7 +112,7 @@ export function SizeCard({
 
     const geographyStats = geogs.map((g) => {
       const geographyTotalArea =
-        metrics.data.find(
+        metrics.find(
           (m) =>
             subjectIsGeography(m.subject) &&
             m.subject.id === g.id &&
@@ -127,7 +120,7 @@ export function SizeCard({
         )?.value ?? 0;
 
       let overlapArea = 0;
-      for (const m of metrics.data) {
+      for (const m of metrics) {
         if (
           subjectIsFragment(m.subject) &&
           m.subject.geographies.includes(g.id)
@@ -161,7 +154,7 @@ export function SizeCard({
       area: totalArea,
       geographies: geographyStats,
     };
-  }, [metrics.data, metrics.loading, reportContext.geographies]);
+  }, [metrics, loading, reportContext.geographies]);
 
   const { unitLabel, convertFromBase } = useUnits({ category: "area", unit });
 
@@ -186,72 +179,59 @@ export function SizeCard({
   }, [sizeCardData.geographies, showZeros]);
 
   return (
-    <ReportCard
-      dragHandleProps={dragHandleProps}
-      cardId={config.id}
-      onUpdate={onUpdate}
-      config={config}
-      className="pb-2"
-      tint={config.tint}
-      icon={config.icon}
-      metrics={metrics.data}
-      sources={metrics.sources}
-    >
-      <div>
-        {metrics.loading ? (
-          <Skeleton className="w-full h-4" />
-        ) : (
-          <div>
-            <p className="text-[15px] line-height-[24px] py-2">
-              {t("This area is ")}
-              <span className="tabular-nums font-semibold">
-                {formatters.area(convertFromBase(sizeCardData.area))}{" "}
-                {unitLabel}
-              </span>
-              {sizeCardData.geographies.length > 0 && (
-                <>
-                  {t(", which is ")}
-                  <span className="tabular-nums font-semibold">
-                    {(() => {
-                      const primaryGeography = sizeCardData.geographies.find(
-                        (g) => g.primary
+    <div>
+      {loading ? (
+        <Skeleton className="w-full h-4" />
+      ) : (
+        <div>
+          <p className="text-[15px] line-height-[24px] py-2">
+            {t("This area is ")}
+            <span className="tabular-nums font-semibold">
+              {formatters.area(convertFromBase(sizeCardData.area))} {unitLabel}
+            </span>
+            {sizeCardData.geographies.length > 0 && (
+              <>
+                {t(", which is ")}
+                <span className="tabular-nums font-semibold">
+                  {(() => {
+                    const primaryGeography = sizeCardData.geographies.find(
+                      (g) => g.primary
+                    );
+                    if (primaryGeography) {
+                      return formatters.percent(
+                        primaryGeography.overlap.fraction
                       );
-                      if (primaryGeography) {
-                        return formatters.percent(
-                          primaryGeography.overlap.fraction
-                        );
-                      }
-                      return formatters.percent(1);
-                    })()}
-                  </span>
-                  {t(" of the ")}
-                  <span className="font-semibold">
-                    {(() => {
-                      const primaryGeography = sizeCardData.geographies.find(
-                        (g) => g.primary
-                      );
-                      return primaryGeography?.name || t("total area");
-                    })()}
-                  </span>
-                  {t(".")}
-                </>
-              )}
-            </p>
-            {secondaryGeographies.length > 0 ? (
-              <GeographiesTable
-                config={config}
-                onUpdate={onUpdate}
-                secondaryGeographies={secondaryGeographies}
-                unitLabel={unitLabel}
-                AreaFormatter={(n) => formatters.area(convertFromBase(n))}
-                PercentageFormatter={(n) => formatters.percent(n)}
-                editable
-              />
-            ) : null}
-          </div>
-        )}
-      </div>
-    </ReportCard>
+                    }
+                    return formatters.percent(1);
+                  })()}
+                </span>
+                {t(" of the ")}
+                <span className="font-semibold">
+                  {(() => {
+                    const primaryGeography = sizeCardData.geographies.find(
+                      (g) => g.primary
+                    );
+                    return primaryGeography?.name || t("total area");
+                  })()}
+                </span>
+                {t(".")}
+              </>
+            )}
+          </p>
+          {secondaryGeographies.length > 0 ? (
+            <GeographiesTable
+              config={config}
+              onUpdate={onUpdate}
+              secondaryGeographies={secondaryGeographies}
+              unitLabel={unitLabel}
+              AreaFormatter={(n) => formatters.area(convertFromBase(n))}
+              PercentageFormatter={(n) => formatters.percent(n)}
+              editable
+            />
+          ) : null}
+        </div>
+      )}
+    </div>
   );
 }
 

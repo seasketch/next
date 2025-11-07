@@ -65,15 +65,7 @@ export function SketchAttributesCard({
   }
 
   return (
-    <ReportCard
-      dragHandleProps={dragHandleProps}
-      cardId={config.id}
-      onUpdate={onUpdate}
-      backgroundTint={nameOnly ? "yellow" : undefined}
-      config={config}
-      metrics={[]}
-      sources={[]}
-    >
+    <>
       {nameOnly ? (
         <>
           <p>
@@ -131,7 +123,7 @@ export function SketchAttributesCard({
           )}
         </div>
       )}
-    </ReportCard>
+    </>
   );
 }
 
