@@ -72,7 +72,9 @@ export function OverlappingAreasCard({
           if (!(metric.sourceUrl! in layers)) {
             layers[metric.sourceUrl!] = {};
           }
-          let key = !metric.groupBy ? "*" : metric.groupBy || "*";
+          let key = !metric.parameters?.groupBy
+            ? "*"
+            : metric.parameters?.groupBy || "*";
           if (!(key in layers[metric.sourceUrl!])) {
             layers[metric.sourceUrl!][key] = 0;
           }
@@ -125,7 +127,7 @@ export function OverlappingAreasCard({
               subjectIsGeography(m.subject) &&
               m.subject.id === sketchClassPrimaryGeographyId &&
               m.type === "overlay_area" &&
-              m.groupBy === layer.groupBy
+              m.parameters?.groupBy === layer.layerParameters?.groupBy
           )
         : null;
 
@@ -135,16 +137,18 @@ export function OverlappingAreasCard({
           `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
         );
       }
-      if (layer.groupBy) {
+      if (layer.layerParameters?.groupBy) {
         // get values for groupBy
         if (!isRasterInfo(meta)) {
           const geostats = meta.layers[0] as GeostatsLayer;
           const attr = geostats.attributes.find(
-            (a) => a.attribute === layer.groupBy
+            (a) => a.attribute === layer.layerParameters.groupBy
           );
           if (!attr) {
             throw new Error(
-              `Group by attribute ${layer.groupBy} not found in layer ${
+              `Group by attribute ${
+                layer.layerParameters.groupBy
+              } not found in layer ${
                 layer.tableOfContentsItem?.title || "Untitled"
               }`
             );
@@ -211,6 +215,7 @@ export function OverlappingAreasCard({
     sumSketchOverlaysByClass,
     config.componentSettings,
     metrics,
+    sources,
   ]);
 
   return (

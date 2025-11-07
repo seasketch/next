@@ -94,7 +94,7 @@ export function SortableReportBody({
                   : card;
 
               const { metrics, loading, errors, overlaySources } =
-                context.dependencies[card.id];
+                context.getDependencies(card.id);
               return (
                 <Draggable
                   key={card.id}

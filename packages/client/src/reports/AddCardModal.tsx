@@ -20,7 +20,7 @@ import {
 
 type LayerSelection = {
   layer: ReportingLayerDetailsFragment;
-  groupBy: string | undefined;
+  parameters: any;
 };
 interface AddCardModalProps {
   isOpen: boolean;
@@ -355,7 +355,7 @@ LayerSelectionStepProps) {
                           const reportLayer: ReportingLayerDetailsFragment = {
                             __typename: "ReportCardLayer",
                             tableOfContentsItemId: sid,
-                            groupBy: undefined,
+                            layerParameters: {},
                             tableOfContentsItem: {
                               __typename: "TableOfContentsItem",
                               id: sid,
@@ -364,11 +364,11 @@ LayerSelectionStepProps) {
                             },
                           } as any;
                           if (typeof max === "number" && max === 1) {
-                            return [{ layer: reportLayer, groupBy: undefined }];
+                            return [{ layer: reportLayer, parameters: {} }];
                           }
                           return [
                             ...prev,
-                            { layer: reportLayer, groupBy: undefined },
+                            { layer: reportLayer, parameters: {} },
                           ];
                         }
                       });
@@ -398,7 +398,6 @@ LayerSelectionStepProps) {
                                   {
                                     __typename: "ReportCardLayer",
                                     tableOfContentsItemId: sid,
-                                    groupBy: undefined,
                                     tableOfContentsItem: {
                                       __typename: "TableOfContentsItem",
                                       id: sid,
@@ -406,9 +405,7 @@ LayerSelectionStepProps) {
                                       dataSourceType: layer.dataSourceType,
                                     },
                                   } as any;
-                                return [
-                                  { layer: reportLayer, groupBy: undefined },
-                                ];
+                                return [{ layer: reportLayer, parameters: {} }];
                               }
                               return prev;
                             }
@@ -425,9 +422,7 @@ LayerSelectionStepProps) {
                                     dataSourceType: layer.dataSourceType,
                                   },
                                 } as any;
-                              return [
-                                { layer: reportLayer, groupBy: undefined },
-                              ];
+                              return [{ layer: reportLayer, parameters: {} }];
                             }
                             const reportLayer: ReportingLayerDetailsFragment = {
                               __typename: "ReportCardLayer",
@@ -442,7 +437,7 @@ LayerSelectionStepProps) {
                             } as any;
                             return [
                               ...prev,
-                              { layer: reportLayer, groupBy: undefined },
+                              { layer: reportLayer, parameters: {} },
                             ];
                           } else {
                             return prev.filter(
@@ -485,12 +480,12 @@ LayerSelectionStepProps) {
                           placeholderDescription={t(
                             "Analyze all features as a group"
                           )}
-                          value={selected?.groupBy}
+                          value={selected?.parameters?.groupBy}
                           onChange={(value) =>
                             setSelectedLayers((prev) =>
                               prev.map((s) =>
                                 s.layer.tableOfContentsItemId === sid
-                                  ? { ...s, groupBy: value }
+                                  ? { ...s, parameters: { groupBy: value } }
                                   : s
                               )
                             )

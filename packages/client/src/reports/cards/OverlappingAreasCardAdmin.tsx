@@ -38,7 +38,7 @@ export default function OverlappingAreasCardAdmin({
   };
 
   let multipeCategories =
-    config.reportingLayers.some((l) => l.groupBy) ||
+    config.reportingLayers.some((l) => l.layerParameters?.groupBy) ||
     config.reportingLayers.length > 1;
   return (
     <div className="space-y-6">

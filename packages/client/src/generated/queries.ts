@@ -924,10 +924,9 @@ export type CompatibleSpatialMetric = {
   durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
-  groupBy?: Maybe<Scalars['String']>;
   id: Scalars['BigInt'];
-  includedProperties?: Maybe<Array<Scalars['String']>>;
   jobKey?: Maybe<Scalars['String']>;
+  parameters: MetricParameters;
   progress?: Maybe<Scalars['Int']>;
   sourceProcessingJobDependency?: Maybe<Scalars['String']>;
   sourceUrl?: Maybe<Scalars['String']>;
@@ -7429,6 +7428,16 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
+export type MetricParameters = {
+  __typename?: 'MetricParameters';
+  bufferDistanceKm?: Maybe<Scalars['Float']>;
+  groupBy?: Maybe<Scalars['String']>;
+  includedColumns?: Maybe<Array<Scalars['String']>>;
+  maxDistanceKm?: Maybe<Scalars['Float']>;
+  maxResults?: Maybe<Scalars['Int']>;
+  valueColumn?: Maybe<Scalars['String']>;
+};
+
 export type MetricSubject = FragmentSubject | GeographySubject;
 
 /** All input for the `modifySurveyAnswers` mutation. */
@@ -13381,7 +13390,7 @@ export type ReportCardReportingLayersArgs = {
 
 export type ReportCardLayer = {
   __typename?: 'ReportCardLayer';
-  groupBy?: Maybe<Scalars['String']>;
+  layerParameters: Scalars['JSON'];
   processedOutput?: Maybe<DataUploadOutput>;
   reportCardId: Scalars['Int'];
   /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
@@ -13402,7 +13411,7 @@ export type ReportCardLayerCondition = {
 
 /** An input for mutations affecting `ReportCardLayer` */
 export type ReportCardLayerInput = {
-  groupBy?: Maybe<Scalars['String']>;
+  layerParameters?: Maybe<Scalars['JSON']>;
   reportCardId: Scalars['Int'];
   tableOfContentsItemId: Scalars['Int'];
 };
@@ -13455,7 +13464,7 @@ export type ReportInput = {
 
 /** An input for mutations affecting `ReportLayerInputRecord` */
 export type ReportLayerInputRecordInput = {
-  groupBy?: Maybe<Scalars['String']>;
+  layerParameters?: Maybe<Scalars['JSON']>;
   reportCardId?: Maybe<Scalars['Int']>;
   tableOfContentsItemId?: Maybe<Scalars['Int']>;
 };
@@ -22393,7 +22402,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
 
 export type ReportingLayerDetailsFragment = (
   { __typename?: 'ReportCardLayer' }
-  & Pick<ReportCardLayer, 'tableOfContentsItemId' | 'groupBy'>
+  & Pick<ReportCardLayer, 'tableOfContentsItemId' | 'layerParameters'>
   & { processedOutput?: Maybe<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'url' | 'size' | 'type'>
@@ -23145,13 +23154,16 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
   ) | (
     { __typename?: 'GeographySubject' }
     & GeographySubjectDetailsFragment
+  ), parameters: (
+    { __typename?: 'MetricParameters' }
+    & Pick<MetricParameters, 'groupBy' | 'includedColumns' | 'valueColumn' | 'bufferDistanceKm' | 'maxResults' | 'maxDistanceKm'>
   ) }
 );
 
@@ -26151,7 +26163,7 @@ export const SourceProcessingJobDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const ReportingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportingLayerDetails on ReportCardLayer {
   tableOfContentsItemId
-  groupBy
+  layerParameters
   processedOutput {
     url
     size
@@ -26400,13 +26412,18 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
   updatedAt
   value
   state
-  groupBy
-  includedProperties
   errorMessage
   progress
   jobKey
   sourceUrl
-  groupBy
+  parameters {
+    groupBy
+    includedColumns
+    valueColumn
+    bufferDistanceKm
+    maxResults
+    maxDistanceKm
+  }
   sourceProcessingJobDependency
   eta
   startedAt

@@ -68,6 +68,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
 
       union MetricSubject = GeographySubject | FragmentSubject
 
+      type MetricParameters {
+        groupBy: String
+        includedColumns: [String!]
+        valueColumn: String
+        bufferDistanceKm: Float
+        maxResults: Int
+        maxDistanceKm: Float
+      }
+
       type CompatibleSpatialMetric {
         id: BigInt!
         type: String!
@@ -75,8 +84,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         createdAt: Datetime!
         value: JSON
         state: SpatialMetricState!
-        groupBy: String
-        includedProperties: [String!]
+        parameters: MetricParameters!
         subject: MetricSubject!
         errorMessage: String
         progress: Int
@@ -274,17 +282,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           { graphile: { selectGraphQLResultFromTable } }
         ) {
           const { jobKey, dataSourceId } = event;
-          // type ReportOverlaySource {
-          //   tableOfContentsItemId: Int!
-          //   tableOfContentsItem: TableOfContentsItem!
-          //   geostats: JSON!
-          //   mapboxGlStyles: JSON!
-          //   sourceProcessingJob: SourceProcessingJob!
-          //   sourceProcessingJobId: String!
-          //   outputId: Int!
-          //   output: DataUploadOutput
-          //   sourceUrl: String
-          // }
           const result = await context.pgClient.query(
             `
             select
@@ -334,7 +331,14 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
  * @returns An array of ReportOverlaySourcePartial objects
  */
 async function getOverlaySources(reportId: number, pool: Pool) {
-  const rows = await pool.query(
+  const rows = await pool.query<{
+    table_of_contents_item_id: number;
+    geostats: GeostatsLayer | RasterInfo;
+    mapbox_gl_styles: AnyLayer[];
+    source_processing_job_id?: string;
+    output_id: number | null;
+    source_url: string | null;
+  }>(
     `
       select 
         distinct on (rcl.table_of_contents_item_id) rcl.table_of_contents_item_id, 
@@ -355,7 +359,7 @@ async function getOverlaySources(reportId: number, pool: Pool) {
       `,
     [reportId]
   );
-  const overlaySources = rows.rows.map((row: any) => ({
+  const overlaySources = rows.rows.map((row) => ({
     tableOfContentsItemId: row.table_of_contents_item_id,
     geostats: row.geostats,
     mapboxGlStyles: row.mapbox_gl_styles,
@@ -415,7 +419,7 @@ async function getOrCreateReportDependencies(
           jsonb_agg(
             jsonb_build_object(
               'id', rcl.table_of_contents_item_id,
-              'groupBy', rcl.group_by
+              'layerParameters', rcl.layer_parameters
             )
           ) filter (where rcl.report_card_id is not null),
           '[]'::jsonb
@@ -488,7 +492,7 @@ async function getOrCreateReportDependencies(
             pool,
             "overlay_area",
             overlaySource,
-            layer.groupBy,
+            layer.layerParameters,
             card.component_settings,
             geogs.map((g) => g.id),
             fragments,
@@ -511,130 +515,6 @@ async function getOrCreateReportDependencies(
   }
 
   return results;
-}
-
-/**
- * Returns all spatial_metrics for a report, optionally including fragment
- * metrics for the sketch identified by sketchId. This is a getOrCreate type
- * operation, where by the resolver:
- *   1. determines which metrics are dependencies given the report configuration
- *   2. makes sure those metrics are in the db, or creates them and fires off
- *      graphile-worker jobs to handle them. In the process, it checks to make
- *      sure each related overlay source needed is either already preprocessed,
- *      has a source_processing_job in-progress, or it creates and fires off a
- *      new source_processing_job.
- *   3. returns the metrics
- */
-async function getOrCreateMetrics(
-  reportId: number,
-  pool: Pool,
-  projectId: number,
-  overlaySources?: ReportOverlaySourcePartial[],
-  sketchId?: number
-) {
-  const metrics: any[] = [];
-  overlaySources = overlaySources || (await getOverlaySources(reportId, pool));
-  if (!overlaySources) {
-    throw new Error("No overlay sources found");
-  }
-  const { rows: geogs } = await pool.query(
-    `select name, id from project_geography where project_id = $1`,
-    [projectId]
-  );
-  if (geogs.length === 0) {
-    throw new Error("No geographies found");
-  }
-  const { rows: reportCardLayers } = await pool.query(
-    `
-    select 
-      rcl.table_of_contents_item_id, 
-      rcl.report_card_id, 
-      rcl.group_by,
-      rc.type as card_type,
-      rc.component_settings as card_settings
-    from 
-      report_card_layers rcl
-    inner join report_cards rc on rc.id = rcl.report_card_id
-    where 
-      report_card_id in (select report_card_ids_for_report($1))`,
-    [reportId]
-  );
-  const fragments: string[] = [];
-  if (sketchId) {
-    const { rows: sketchFragmentsRows } = await pool.query(
-      `select get_fragment_hashes_for_sketch($1)`,
-      [sketchId]
-    );
-    fragments.push(...sketchFragmentsRows[0].get_fragment_hashes_for_sketch);
-  }
-
-  // First, create total_area metrics. These will be calculated for all
-  // geographies and fragments, regardless of configuration.
-  for (const geography of geogs) {
-    const metricId = await getOrCreateSpatialMetric(
-      pool,
-      null,
-      geography.id,
-      "total_area",
-      null,
-      null,
-      null,
-      null,
-      projectId
-    );
-    metrics.push(metricId);
-  }
-  for (const fragment of fragments) {
-    const metricId = await getOrCreateSpatialMetric(
-      pool,
-      fragment,
-      null,
-      "total_area",
-      null,
-      null,
-      null,
-      null,
-      projectId
-    );
-    metrics.push(metricId);
-  }
-
-  // Now, move on to overlays referenced by report card layers
-  for (const reportCardLayer of reportCardLayers) {
-    const overlaySource = overlaySources.find(
-      (source) =>
-        source.tableOfContentsItemId ===
-        reportCardLayer.table_of_contents_item_id
-    );
-    if (!overlaySource) {
-      throw new Error(
-        `Overlay source not found for report card (${reportCardLayer.card_type}) layer: ${reportCardLayer.table_of_contents_item_id}`
-      );
-    }
-    switch (reportCardLayer.card_type) {
-      case "OverlappingAreas":
-        metrics.push(
-          ...(await getOrCreateMetricsOfType(
-            pool,
-            "overlay_area",
-            overlaySource,
-            reportCardLayer.group_by,
-            reportCardLayer.card_settings,
-            geogs.map((g) => g.id),
-            fragments,
-            projectId
-          ))
-        );
-        break;
-      case "Size":
-        // do nothing. Size already handled above.
-        break;
-      default:
-        throw new Error("Unhandled card type: " + reportCardLayer.card_type);
-    }
-  }
-
-  return metrics;
 }
 
 async function getOrCreateSpatialMetric(
@@ -675,12 +555,18 @@ async function getOrCreateMetricsOfType(
     | "presence_table"
     | "contextualized_mean",
   overlaySource: ReportOverlaySourcePartial,
-  groupBy: string,
+  layerParameters: { groupBy?: string | null } | undefined,
   cardSettings: any,
   geographyIds: number[],
   fragmentHashes: string[],
   projectId: number
 ) {
+  console.log(
+    "getOrCreateMetricsOfType",
+    type,
+    layerParameters,
+    layerParameters?.groupBy || null
+  );
   const metrics: any[] = [];
   // first, create geography metrics
   for (const geographyId of geographyIds) {
@@ -690,7 +576,7 @@ async function getOrCreateMetricsOfType(
       geographyId,
       type,
       overlaySource.sourceUrl || null,
-      groupBy,
+      layerParameters?.groupBy || null,
       cardSettings.includedProperties,
       overlaySource.sourceProcessingJobId || null,
       projectId
@@ -705,7 +591,7 @@ async function getOrCreateMetricsOfType(
       null,
       type,
       overlaySource.sourceUrl || null,
-      groupBy,
+      layerParameters?.groupBy || null,
       cardSettings.includedProperties,
       overlaySource.sourceProcessingJobId || null,
       projectId
@@ -738,11 +624,11 @@ export async function startMetricCalculationsForSketch(
   if (!reportId) {
     return;
   }
-  return getOrCreateMetrics(
+
+  return await getOrCreateReportDependencies(
     reportId,
     pool,
     sketchClass.project_id,
-    undefined,
     sketchId
   );
 }

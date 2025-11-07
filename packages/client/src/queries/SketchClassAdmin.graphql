@@ -378,7 +378,7 @@ query SketchClassGeographyEditorDetails($slug: String!) {
 
 fragment ReportingLayerDetails on ReportCardLayer {
   tableOfContentsItemId
-  groupBy
+  layerParameters
   processedOutput {
     url
     size

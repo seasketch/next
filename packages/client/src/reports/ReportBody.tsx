@@ -3,7 +3,7 @@ import { useReportContext } from "./ReportContext";
 import { ReportCardFactory } from "./ReportCard";
 
 export function ReportBody() {
-  const { report, selectedTabId, dependencies } = useReportContext();
+  const { report, selectedTabId, getDependencies } = useReportContext();
 
   if (!report?.tabs || report.tabs.length === 0) {
     return null;
@@ -31,7 +31,7 @@ export function ReportBody() {
             )}
             {tab.cards?.map((card) => {
               const { metrics, loading, errors, overlaySources } =
-                dependencies[card.id];
+                getDependencies(card.id);
               return (
                 <ReportCardFactory
                   key={card.id}

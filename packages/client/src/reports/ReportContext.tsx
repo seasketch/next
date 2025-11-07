@@ -87,13 +87,11 @@ export interface ReportContextState {
   sketchClass: ReportContextSketchClassDetailsFragment;
   metrics: CompatibleSpatialMetricDetailsFragment[];
   overlaySources: OverlaySourceDetailsFragment[];
-  dependencies: {
-    [cardId: number]: {
-      metrics: CompatibleSpatialMetricDetailsFragment[];
-      overlaySources: OverlaySourceDetailsFragment[];
-      loading: boolean;
-      errors: string[];
-    };
+  getDependencies: (cardId: number) => {
+    metrics: CompatibleSpatialMetricDetailsFragment[];
+    overlaySources: OverlaySourceDetailsFragment[];
+    loading: boolean;
+    errors: string[];
   };
   userIsAdmin: boolean;
   recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
@@ -291,6 +289,22 @@ export function useReportState(
     data?.report?.dependencies?.overlaySources,
   ]);
 
+  const getDependencies = useCallback(
+    (cardId: number) => {
+      if (cardId in dependencies) {
+        return dependencies[cardId];
+      } else {
+        return {
+          metrics: [],
+          overlaySources: [],
+          loading: false,
+          errors: [],
+        };
+      }
+    },
+    [dependencies]
+  );
+
   if (!data?.sketch) {
     return undefined;
   } else {
@@ -334,7 +348,7 @@ export function useReportState(
       overlaySources: data.report.dependencies.overlaySources,
       geographies: data.report.geographies || [],
       report: data.report as ReportConfiguration,
-      dependencies,
+      getDependencies,
     };
   }
 }

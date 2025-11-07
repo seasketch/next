@@ -314,13 +314,18 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   updatedAt
   value
   state
-  groupBy
-  includedProperties
   errorMessage
   progress
   jobKey
   sourceUrl
-  groupBy
+  parameters {
+    groupBy
+    includedColumns
+    valueColumn
+    bufferDistanceKm
+    maxResults
+    maxDistanceKm
+  }
   sourceProcessingJobDependency
   eta
   startedAt

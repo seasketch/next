@@ -58,6 +58,7 @@ export default async function calculateSpatialMetric(
             id: metric.subject.id,
             clippingLayers,
           },
+          ...metric.parameters,
         } as OverlayWorkerPayload);
       }
     } else if (metric.type === "overlay_area") {
@@ -78,10 +79,10 @@ export default async function calculateSpatialMetric(
               hash: metric.subject.hash,
               geobuf,
             },
-            groupBy: metric.groupBy,
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+            ...metric.parameters,
           } as OverlayWorkerPayload);
         } else {
           const clippingLayers = await getClippingLayersForGeography(
@@ -100,6 +101,7 @@ export default async function calculateSpatialMetric(
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+            ...metric.parameters,
           });
         }
       }
@@ -206,45 +208,7 @@ function getSpatialMetric(metricId: number, helpers: Helpers) {
       jobKey: string;
       sourceUrl: string;
       sourceType: SourceType;
+      parameters: any;
     };
   });
 }
-
-function getCanonicalDataSource(stableId: string, helpers: Helpers) {
-  return helpers.withPgClient(async (client) => {
-    const result = await client.query(
-      `
-        select
-          o.url,
-          o.data_source_id
-        from
-          data_upload_outputs o
-        where
-          o.data_source_id = (
-            select
-              data_source_id
-            from
-              data_layers
-            where
-              id = (
-              select data_layer_id from table_of_contents_items where stable_id = $1 and is_draft = true
-            )
-          )
-        order by case when o.type = 'FlatGeobuf' then 0 else 1 end
-        limit 1
-        `,
-      [stableId]
-    );
-    if (result.rows.length === 0) {
-      throw new Error(
-        `Canonical source URL not found for stable ID: ${stableId}`
-      );
-    }
-    return {
-      sourceUrl: result.rows[0].url as string,
-      sourceId: result.rows[0].data_source_id as number,
-    };
-  });
-}
-
-// assignSubdivisionJob removed. Preprocessing is handled by preprocessSource task and DB triggers.

@@ -258,7 +258,7 @@ export default function SketchClassReportsAdmin({
     cardType: string,
     selection?: {
       layer: ReportingLayerDetailsFragment;
-      groupBy: string | undefined;
+      parameters: any;
     }[]
   ) => {
     if (!reportState) {
@@ -314,7 +314,7 @@ export default function SketchClassReportsAdmin({
           layers:
             selection?.map((l) => ({
               tableOfContentsItemId: l.layer.tableOfContentsItemId,
-              groupBy: l.groupBy,
+              layerParameters: l.parameters,
             })) || [],
         },
         onError,
