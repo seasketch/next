@@ -20,8 +20,6 @@ import {
   ReportContextDocument,
   SketchGeometryType,
   useReportOverlaySourcesSubscriptionSubscription,
-  SourceProcessingJobDetailsFragment,
-  ReportOverlaySourcesSubscriptionSubscription,
   SpatialMetricState,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
@@ -123,7 +121,7 @@ export function useReportState(
 
   const onError = useGlobalErrorHandler();
 
-  const { data, loading, refetch } = useReportContextQuery({
+  const { data, refetch } = useReportContextQuery({
     variables: {
       reportId: reportId!,
       sketchId: selectedSketchId!,
@@ -204,7 +202,7 @@ export function useReportState(
         },
       });
     },
-    [recalculateMutation]
+    [recalculateMutation, refetch]
   );
 
   const metricsInProgress = useMemo(() => {
