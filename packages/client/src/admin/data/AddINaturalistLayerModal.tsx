@@ -3,7 +3,6 @@ import AddRemoteServiceMapModal from "./AddRemoteServiceMapModal";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Map } from "mapbox-gl";
 import Switch from "../../components/Switch";
-import Button from "../../components/Button";
 import Warning from "../../components/Warning";
 import INaturalistProjectAutocomplete from "./INaturalistProjectAutocomplete";
 import INaturalistTaxonAutocomplete from "./INaturalistTaxonAutocomplete";
@@ -328,123 +327,127 @@ export default function AddINaturalistLayerModal({
       onMapLoad={handleMapLoad}
       basemap="google-earth"
     >
-      <div className="p-4 space-y-4 max-h-full overflow-y-auto">
-        <p className="text-sm">
-          <Trans ns="admin:data">
-            Create a layer from iNaturalist observations. You can filter by
-            project, taxa, date range, and customize the display style. At least
-            one project or taxon must be selected.
-          </Trans>
-        </p>
+      <div className="flex flex-col h-full">
+        <div className="p-4 space-y-4 flex-1 overflow-y-auto">
+          <p className="text-sm">
+            <Trans ns="admin:data">
+              Select at least one project or taxa to create a layer of
+              iNaturalist observations. Adjust options to update the preview
+              layer on the map. Click save when you are ready to add this layer
+              to your project's Overlay Layers list.
+            </Trans>
+          </p>
 
-        {validationError && <Warning level="error">{validationError}</Warning>}
+          {validationError && (
+            <Warning level="error">{validationError}</Warning>
+          )}
 
-        <div className="space-y-4">
-          <INaturalistProjectAutocomplete
-            value={selectedProject}
-            onChange={setSelectedProject}
-          />
+          <div className="space-y-4">
+            <INaturalistProjectAutocomplete
+              value={selectedProject}
+              onChange={setSelectedProject}
+            />
 
-          <INaturalistTaxonAutocomplete
-            value={selectedTaxa}
-            onChange={setSelectedTaxa}
-          />
+            <INaturalistTaxonAutocomplete
+              value={selectedTaxa}
+              onChange={setSelectedTaxa}
+            />
 
-          <div>
-            <label className="block text-sm font-medium leading-5 text-gray-800 mb-1">
-              <Trans ns="admin:data">Date Range (optional)</Trans>
-            </label>
-            <div className="flex items-center space-x-2">
-              <input
-                type="date"
-                value={config.d1 || ""}
-                onChange={(e) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    d1: e.target.value || null,
-                  }))
-                }
-                className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
-              />
-              <span className="text-gray-500">
-                <Trans ns="admin:data">to</Trans>
-              </span>
-              <input
-                type="date"
-                value={config.d2 || ""}
-                onChange={(e) =>
-                  setConfig((prev) => ({
-                    ...prev,
-                    d2: e.target.value || null,
-                  }))
-                }
-                min={config.d1 || undefined}
-                className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
-              />
+            <div>
+              <label className="block text-sm font-medium leading-5 text-gray-800 mb-1">
+                <Trans ns="admin:data">Date Range (optional)</Trans>
+              </label>
+              <div className="flex items-center space-x-2">
+                <input
+                  type="date"
+                  value={config.d1 || ""}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      d1: e.target.value || null,
+                    }))
+                  }
+                  className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+                />
+                <span className="text-gray-500">
+                  <Trans ns="admin:data">to</Trans>
+                </span>
+                <input
+                  type="date"
+                  value={config.d2 || ""}
+                  onChange={(e) =>
+                    setConfig((prev) => ({
+                      ...prev,
+                      d2: e.target.value || null,
+                    }))
+                  }
+                  min={config.d1 || undefined}
+                  className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+                />
+              </div>
             </div>
-          </div>
 
-          <div>
-            <label className="block text-sm font-medium leading-5 text-gray-800 mb-2">
-              <Trans ns="admin:data">Layer Type</Trans>
-            </label>
-            <select
-              value={config.type}
-              onChange={(e) =>
-                setConfig((prev) => ({
-                  ...prev,
-                  type: e.target.value as LayerType,
-                }))
-              }
-              className="w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
-            >
-              <option value="grid+points">{t("Grid + Points")}</option>
-              <option value="heatmap+points">{t("Heatmap + Points")}</option>
-              <option value="points">{t("Points")}</option>
-              <option value="grid">{t("Grid")}</option>
-              <option value="heatmap">{t("Heatmap")}</option>
-            </select>
-            {(config.type === "grid+points" ||
-              config.type === "heatmap+points") && (
-              <div className="mt-3">
-                <label className="block text-sm font-medium leading-5 text-gray-800 mb-2">
-                  <Trans ns="admin:data">Zoom Cutoff</Trans>
-                </label>
-                <div className="flex items-center space-x-4">
-                  <input
-                    type="range"
-                    min={MIN_ZOOM_CUTOFF}
-                    max={MAX_ZOOM_CUTOFF}
-                    step="1"
-                    value={config.zoomCutoff}
-                    onChange={(e) => {
-                      const value = parseInt(e.target.value, 10);
-                      setConfig((prev) => ({
-                        ...prev,
-                        zoomCutoff: value,
-                      }));
-                    }}
-                    className="zoom-cutoff-slider flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
-                    style={{
-                      // eslint-disable-next-line i18next/no-literal-string
-                      background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
-                        ((config.zoomCutoff - MIN_ZOOM_CUTOFF) /
-                          (MAX_ZOOM_CUTOFF - MIN_ZOOM_CUTOFF)) *
-                        100
-                      }%, #e5e7eb ${
-                        ((config.zoomCutoff - MIN_ZOOM_CUTOFF) /
-                          (MAX_ZOOM_CUTOFF - MIN_ZOOM_CUTOFF)) *
-                        100
-                      }%, #e5e7eb 100%)`,
-                    }}
-                  />
-                  <span className="text-sm font-medium text-gray-700 w-8 text-center">
-                    {config.zoomCutoff}
-                  </span>
-                </div>
-                <style>
-                  {/* eslint-disable-next-line i18next/no-literal-string */}
-                  {`.zoom-cutoff-slider::-webkit-slider-thumb {
+            <div>
+              <label className="block text-sm font-medium leading-5 text-gray-800 mb-2">
+                <Trans ns="admin:data">Layer Presentation</Trans>
+              </label>
+              <select
+                value={config.type}
+                onChange={(e) =>
+                  setConfig((prev) => ({
+                    ...prev,
+                    type: e.target.value as LayerType,
+                  }))
+                }
+                className="w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+              >
+                <option value="grid+points">{t("Grid + Points")}</option>
+                <option value="heatmap+points">{t("Heatmap + Points")}</option>
+                <option value="points">{t("Points")}</option>
+                <option value="grid">{t("Grid")}</option>
+                <option value="heatmap">{t("Heatmap")}</option>
+              </select>
+              {(config.type === "grid+points" ||
+                config.type === "heatmap+points") && (
+                <div className="mt-3">
+                  <label className="block text-sm font-medium leading-5 text-gray-800 mb-2">
+                    <Trans ns="admin:data">Point Layer Reveal Zoom Level</Trans>
+                  </label>
+                  <div className="flex items-center space-x-4">
+                    <input
+                      type="range"
+                      min={MIN_ZOOM_CUTOFF}
+                      max={MAX_ZOOM_CUTOFF}
+                      step="1"
+                      value={config.zoomCutoff}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value, 10);
+                        setConfig((prev) => ({
+                          ...prev,
+                          zoomCutoff: value,
+                        }));
+                      }}
+                      className="zoom-cutoff-slider flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                      style={{
+                        // eslint-disable-next-line i18next/no-literal-string
+                        background: `linear-gradient(to right, #3b82f6 0%, #3b82f6 ${
+                          ((config.zoomCutoff - MIN_ZOOM_CUTOFF) /
+                            (MAX_ZOOM_CUTOFF - MIN_ZOOM_CUTOFF)) *
+                          100
+                        }%, #e5e7eb ${
+                          ((config.zoomCutoff - MIN_ZOOM_CUTOFF) /
+                            (MAX_ZOOM_CUTOFF - MIN_ZOOM_CUTOFF)) *
+                          100
+                        }%, #e5e7eb 100%)`,
+                      }}
+                    />
+                    <span className="text-sm font-medium text-gray-700 w-8 text-center">
+                      {config.zoomCutoff}
+                    </span>
+                  </div>
+                  <style>
+                    {/* eslint-disable-next-line i18next/no-literal-string */}
+                    {`.zoom-cutoff-slider::-webkit-slider-thumb {
                     -webkit-appearance: none;
                     appearance: none;
                     width: 18px;
@@ -473,53 +476,62 @@ export default function AddINaturalistLayerModal({
                   .zoom-cutoff-slider:focus::-moz-range-thumb {
                     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
                   }`}
-                </style>
-                <p className="text-xs text-gray-500 mt-1">
-                  {config.type === "grid+points" ? (
-                    <Trans
-                      ns="admin:data"
-                      i18nKey="Grid tiles will be shown at zoom levels 0-{{cutoff}}, and point tiles at zoom levels {{cutoffPlus}} and above."
-                      values={{
-                        cutoff: config.zoomCutoff - 1,
-                        cutoffPlus: config.zoomCutoff,
-                      }}
-                    />
-                  ) : (
-                    <Trans
-                      ns="admin:data"
-                      i18nKey="Heatmap tiles will be shown at zoom levels 0-{{cutoff}}, and point tiles at zoom levels {{cutoffPlus}} and above."
-                      values={{
-                        cutoff: config.zoomCutoff - 1,
-                        cutoffPlus: config.zoomCutoff,
-                      }}
-                    />
-                  )}
-                </p>
-              </div>
-            )}
-          </div>
+                  </style>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {config.type === "grid+points" ? (
+                      <Trans
+                        ns="admin:data"
+                        i18nKey="Grid tiles will be shown at zoom levels 0-{{cutoff}}, and point tiles at zoom levels {{cutoffPlus}} and above."
+                        values={{
+                          cutoff: config.zoomCutoff - 1,
+                          cutoffPlus: config.zoomCutoff,
+                        }}
+                      />
+                    ) : (
+                      <Trans
+                        ns="admin:data"
+                        i18nKey="Heatmap tiles will be shown at zoom levels 0-{{cutoff}}, and point tiles at zoom levels {{cutoffPlus}} and above."
+                        values={{
+                          cutoff: config.zoomCutoff - 1,
+                          cutoffPlus: config.zoomCutoff,
+                        }}
+                      />
+                    )}
+                  </p>
+                </div>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium leading-5 text-gray-800 mb-2">
-              <Trans ns="admin:data">Show only verifiable observations</Trans>
-            </label>
-            <Switch
-              isToggled={config.verifiable}
-              onClick={(val) =>
-                setConfig((prev) => ({ ...prev, verifiable: val }))
-              }
-            />
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium leading-5 text-gray-800">
+                <Trans ns="admin:data">Show only verifiable observations</Trans>
+              </label>
+              <Switch
+                isToggled={config.verifiable}
+                onClick={(val) =>
+                  setConfig((prev) => ({ ...prev, verifiable: val }))
+                }
+              />
+            </div>
           </div>
         </div>
 
-        <div className="pt-4 border-t flex justify-end space-x-2">
-          <Button label={t("Cancel")} onClick={onRequestClose} />
-          <Button
-            primary
-            label={t("Save Layer")}
+        <div className="bg-gray-100 p-4 flex justify-end space-x-2">
+          <button
+            type="button"
+            onClick={onRequestClose}
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            {t("Cancel")}
+          </button>
+          <button
+            type="button"
             onClick={handleSave}
             disabled={!canSave}
-          />
+            className="px-4 py-2 text-sm font-medium text-white bg-primary-500 border border-transparent rounded-md shadow-sm hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {t("Save Layer")}
+          </button>
         </div>
       </div>
     </AddRemoteServiceMapModal>

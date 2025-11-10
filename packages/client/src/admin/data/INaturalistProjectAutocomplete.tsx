@@ -48,7 +48,6 @@ export default function INaturalistProjectAutocomplete({
         )}&per_page=50`
       );
       const data = await response.json();
-      console.log("iNaturalist projects data:", data);
       const projects: ProjectResult[] = (data.results || []).map(
         (item: any) => ({
           id: item.id,
