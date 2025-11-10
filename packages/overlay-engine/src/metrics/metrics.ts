@@ -41,11 +41,9 @@ export type OverlayAreaMetric = OverlayMetricBase & {
 
 export type CountMetric = OverlayMetricBase & {
   type: "count";
-  value:
-    | number
-    | {
-        [groupBy: string]: number;
-      };
+  value: {
+    [groupBy: string]: number;
+  };
 };
 
 export type PresenceMetric = OverlayMetricBase & {

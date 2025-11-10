@@ -59,6 +59,7 @@
     "geojson": "^0.5.0",
     "geojson-antimeridian-cut": "^0.1.0",
     "p-queue": "^9.0.0",
+    "point-in-polygon-hao": "^1.2.4",
     "polyclip-ts": "^0.16.8",
     "polygon-clipping": "^0.15.7",
     "rbush": "3",

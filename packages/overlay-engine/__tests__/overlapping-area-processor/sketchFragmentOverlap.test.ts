@@ -146,6 +146,7 @@ describe("sketchFragmentOverlap", () => {
         );
         const prepared = prepareSketch(naitaba);
         const processor = new OverlappingAreaBatchedClippingProcessor(
+          "overlay_area",
           1024 * 1024 * 2, // 5MB
           prepared.feature,
           source,
@@ -154,7 +155,7 @@ describe("sketchFragmentOverlap", () => {
           "class",
           pool
         );
-        const results = await processor.calculateOverlap();
+        const results = await processor.calculate();
         compareResults(results, naitabaGeomorphologyResults, 0.005, {}, true);
       });
     });
@@ -216,6 +217,7 @@ describe("sketchFragmentOverlap", () => {
         );
         const prepared = prepareSketch(insideBioregion);
         const processor = new OverlappingAreaBatchedClippingProcessor(
+          "overlay_area",
           1024 * 1024 * 2, // 5MB
           prepared.feature,
           source,
@@ -224,7 +226,7 @@ describe("sketchFragmentOverlap", () => {
           "Draft_name",
           pool
         );
-        const results = await processor.calculateOverlap();
+        const results = await processor.calculate();
         expect(results["Ambae Trough and North Fiji Basin"]).toBeGreaterThan(0);
       });
     });
@@ -338,6 +340,7 @@ describe("sketchFragmentOverlap", () => {
           __dirname + "/../../dist/workers/clipBatch.standalone.js"
         );
         const processor = new OverlappingAreaBatchedClippingProcessor(
+          "overlay_area",
           1024 * 1024 * 2, // 5MB
           simplify(intersectionFeatureGeojson, {
             tolerance: 0.002,
@@ -348,7 +351,7 @@ describe("sketchFragmentOverlap", () => {
           "Site_Name",
           pool
         );
-        const results = await processor.calculateOverlap();
+        const results = await processor.calculate();
         expect(true).toBe(true);
 
         const prepared = prepareSketch(
@@ -388,6 +391,7 @@ describe("sketchFragmentOverlap", () => {
         let totalResults: { [key: string]: number } = { "*": 0 };
         for (const fragment of fragments) {
           const sketchProcessor = new OverlappingAreaBatchedClippingProcessor(
+            "overlay_area",
             1024 * 1024 * 2, // 5MB
             fragment,
             source,
@@ -396,7 +400,7 @@ describe("sketchFragmentOverlap", () => {
             "Site_Name",
             pool
           );
-          const sketchResults = await sketchProcessor.calculateOverlap();
+          const sketchResults = await sketchProcessor.calculate();
           for (const classKey in sketchResults) {
             if (!totalResults[classKey]) {
               totalResults[classKey] = 0;
@@ -512,6 +516,7 @@ describe("sketchFragmentOverlap", () => {
         );
       }
       const processor = new OverlappingAreaBatchedClippingProcessor(
+        "overlay_area",
         1024 * 1024 * 2, // 5MB
         prepared.feature,
         source,
@@ -520,7 +525,7 @@ describe("sketchFragmentOverlap", () => {
         undefined,
         pool
       );
-      const results = await processor.calculateOverlap();
+      const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(11.06, 1);
       // console.log(results);
     });

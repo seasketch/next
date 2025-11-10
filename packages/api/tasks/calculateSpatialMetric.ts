@@ -61,7 +61,7 @@ export default async function calculateSpatialMetric(
           ...metric.parameters,
         } as OverlayWorkerPayload);
       }
-    } else if (metric.type === "overlay_area") {
+    } else if (metric.type === "overlay_area" || metric.type === "count") {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
         return;
@@ -73,7 +73,7 @@ export default async function calculateSpatialMetric(
             helpers
           );
           await callOverlayWorker({
-            type: "overlay_area",
+            type: metric.type,
             jobKey: metric.jobKey,
             subject: {
               hash: metric.subject.hash,
@@ -90,14 +90,13 @@ export default async function calculateSpatialMetric(
             helpers
           );
           await callOverlayWorker({
-            type: "overlay_area",
+            type: metric.type,
             jobKey: metric.jobKey,
             subject: {
               type: "geography",
               id: metric.subject.id,
               clippingLayers,
             },
-            groupBy: metric.groupBy,
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,

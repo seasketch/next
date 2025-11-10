@@ -1,5 +1,5 @@
 import { FeatureReference, FeatureWithMetadata, FlatGeobufSource } from "fgb-source";
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, MultiPolygon, Polygon, Geometry } from "geojson";
 import { ContainerIndex } from "./utils/containerIndex";
 import { GuaranteedOverlayWorkerHelpers, OverlayWorkerHelpers } from "./utils/helpers";
 import { Cql2Query } from "./cql2";
@@ -7,6 +7,7 @@ import * as clipping from "polyclip-ts";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 export { createClippingWorkerPool };
+export type OperationType = "overlay_area" | "count";
 type BatchData = {
     weight: number;
     progressWorth: number;
@@ -17,7 +18,7 @@ type BatchData = {
         };
     };
     features: {
-        feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+        feature: FeatureWithMetadata<Feature<Geometry>>;
         requiresIntersection: boolean;
         requiresDifference: boolean;
     }[];
@@ -33,9 +34,10 @@ export declare class OverlappingAreaBatchedClippingProcessor {
      * buffer fgb features size vs GeoJSON text.
      */
     maxBatchSize: number;
+    operation: OperationType;
     subjectFeature: Feature<Polygon | MultiPolygon>;
     containerIndex: ContainerIndex;
-    intersectionSource: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+    intersectionSource: FlatGeobufSource<Feature<Geometry>>;
     differenceSources: {
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
@@ -52,22 +54,22 @@ export declare class OverlappingAreaBatchedClippingProcessor {
     queue: PQueue;
     private progress;
     private progressTarget;
-    constructor(maxBatchSize: number, subjectFeature: Feature<Polygon | MultiPolygon>, intersectionSource: FlatGeobufSource<Feature<Polygon | MultiPolygon>>, differenceSources: {
+    constructor(operation: OperationType, maxBatchSize: number, subjectFeature: Feature<Polygon | MultiPolygon>, intersectionSource: FlatGeobufSource<Feature<Geometry>>, differenceSources: {
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
         cql2Query?: Cql2Query | undefined;
     }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>);
     resetBatchData(): void;
-    calculateOverlap(): Promise<{
+    calculate(): Promise<{
         [classKey: string]: number;
     }>;
     processBatch(batch: BatchData, differenceMultiPolygon: clipping.Geom[]): Promise<{
         [classKey: string]: number;
     }>;
     getDifferenceMultiPolygon(): Promise<clipping.Geom[]>;
-    addFeatureToTotals(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>, usePrecomputedArea?: boolean): void;
+    addFeatureToTotals(feature: FeatureWithMetadata<Feature<Geometry>>): void;
     addDifferenceFeatureReferencesToBatch(layerId: string, refs: FeatureReference[]): void;
-    addFeatureToBatch(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>, requiresIntersection: boolean, requiresDifference: boolean): void;
-    weightForFeature(feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>): number;
+    addFeatureToBatch(feature: FeatureWithMetadata<Feature<Geometry>>, requiresIntersection: boolean, requiresDifference: boolean): void;
+    weightForFeature(feature: FeatureWithMetadata<Feature<Geometry>>): number;
 }
 //# sourceMappingURL=OverlappingAreaBatchedClippingProcessor.d.ts.map

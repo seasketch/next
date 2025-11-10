@@ -42,7 +42,7 @@ export default async function cleanupTimedOutSpatialMetricTasks(
       `
         update spatial_metrics
         set state = 'error', error_message = 'Overlay dependency processing timed out.'
-        where source_processing_job_dependency = any($1)
+        where source_processing_job_dependency = any($1) and state != 'complete' and state != 'error'
       `,
       [timedOutJobKeys]
     );

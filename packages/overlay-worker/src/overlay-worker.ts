@@ -2,6 +2,7 @@ import {
   calculateArea,
   calculateFragmentOverlap,
   calculateGeographyOverlap,
+  Cql2Query,
   initializeGeographySources,
   MetricSubjectFragment,
   MetricSubjectGeography,
@@ -11,7 +12,7 @@ import {
   GeographySubjectPayload,
   OverlayWorkerPayload,
 } from "./types";
-import { SourceCache } from "fgb-source";
+import { FlatGeobufSource, SourceCache } from "fgb-source";
 import {
   sendBeginMessage,
   sendErrorMessage,
@@ -35,6 +36,10 @@ import {
   OverlappingAreaBatchedClippingProcessor,
 } from "overlay-engine/src/OverlappingAreaBatchedClippingProcessor";
 import simplify from "@turf/simplify";
+import {
+  GuaranteedOverlayWorkerHelpers,
+  guaranteeHelpers,
+} from "overlay-engine/src/utils/helpers";
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
   // 10 second timeout for body
@@ -121,7 +126,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
     new Date().toISOString(),
     payload.queueUrl
   );
-  const helpers = {
+  const helpers = guaranteeHelpers({
     progress: async (progress: number, message?: string) => {
       await progressNotifier.notify(progress, message);
       return;
@@ -135,11 +140,11 @@ export default async function handler(payload: OverlayWorkerPayload) {
     timeEnd: (message: string) => {
       console.timeEnd(message);
     },
-  };
+  });
   try {
     // Example of how to use the discriminated union with switch statements
     switch (payload.type) {
-      case "total_area":
+      case "total_area": {
         if (subjectIsGeography(payload.subject)) {
           progressNotifier.notify(0, "Beginning area calculation");
           const area = await calculateArea(
@@ -164,117 +169,82 @@ export default async function handler(payload: OverlayWorkerPayload) {
             "Unknown subject type. Must be geography or fragment."
           );
         }
-        break;
-      case "overlay_area":
+      }
+      case "overlay_area": {
         if (!payload.sourceUrl) {
           throw new Error("sourceUrl is required for overlay_area");
         }
-        if (subjectIsGeography(payload.subject)) {
-          progressNotifier.notify(0, "Beginning area calculation");
-          const {
-            intersectionFeature: intersectionFeatureGeojson,
-            differenceLayers,
-            differenceSources,
-          } = await initializeGeographySources(
-            payload.subject.clippingLayers,
-            sourceCache,
-            helpers,
-            {
-              pageSize: "5MB",
-            }
+        const { intersectionFeature, differenceSources } =
+          await subjectsForAnalysis(
+            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+            helpers
           );
-          const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
-            payload.sourceUrl,
-            {
-              pageSize: "5MB",
-            }
-          );
-          const processor = new OverlappingAreaBatchedClippingProcessor(
-            1024 * 1024 * 1, // 5MB
-            simplify(intersectionFeatureGeojson, {
-              tolerance: 0.002,
-            }),
-            source,
-            differenceSources,
-            helpers,
-            payload.groupBy,
-            workerPool
-          );
-          // const area = await calculateGeographyOverlap(
-          //   payload.subject.clippingLayers,
-          //   sourceCache,
-          //   payload.sourceUrl,
-          //   payload.sourceType,
-          //   payload.groupBy,
-          //   helpers
-          // );
-          const area = await processor.calculateOverlap();
-          await flushMessages();
-          await sendResultMessage(
-            payload.jobKey,
-            area,
-            payload.queueUrl,
-            Date.now() - startTime
-          );
-          return;
-        } else {
-          if ("geobuf" in payload.subject) {
-            // payload.subject.geobuf is a base64 encoded string
-            const buffer = Buffer.from(
-              payload.subject.geobuf as string,
-              "base64"
-            );
-            let feature = geobuf.decode(new Pbf(buffer)) as
-              | Feature<Polygon>
-              | FeatureCollection<Polygon>;
-            helpers.log(`decoded geobuf feature. ${buffer.byteLength} bytes`);
-            if (feature.type === "FeatureCollection") {
-              feature = feature.features[0];
-            }
-            if (feature.geometry.type !== "Polygon") {
-              throw new Error("geobuf is not a GeoJSON Polygon.");
-            }
-            const source = await sourceCache.get<
-              Feature<Polygon | MultiPolygon>
-            >(payload.sourceUrl, {
-              pageSize: "5MB",
-            });
-            const processor = new OverlappingAreaBatchedClippingProcessor(
-              1024 * 1024 * 0.5, // 5MB
-              simplify(feature, {
-                tolerance: 0.0002,
-              }),
-              source,
-              [],
-              helpers,
-              payload.groupBy,
-              workerPool
-            );
-            const area = await processor.calculateOverlap();
-            // progressNotifier.notify(0, "Beginning overlay area calculation");
-            // await flushMessages();
-            // const area = await calculateFragmentOverlap(
-            //   feature as Feature<Polygon>,
-            //   sourceCache,
-            //   payload.sourceUrl,
-            //   payload.sourceType,
-            //   payload.groupBy,
-            //   helpers
-            // );
-            await flushMessages();
-            await sendResultMessage(
-              payload.jobKey,
-              area,
-              payload.queueUrl,
-              Date.now() - startTime
-            );
-            return;
-          } else {
-            throw new Error(
-              "Geobuf feature was not provided. Fetch-based workflows not suppored yet."
-            );
+        const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+          payload.sourceUrl,
+          {
+            pageSize: "5MB",
           }
+        );
+        const processor = new OverlappingAreaBatchedClippingProcessor(
+          "overlay_area",
+          1024 * 1024 * 1, // 5MB
+          simplify(intersectionFeature, {
+            tolerance: 0.002,
+          }),
+          source,
+          differenceSources,
+          helpers,
+          payload.groupBy,
+          workerPool
+        );
+        const area = await processor.calculate();
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          area,
+          payload.queueUrl,
+          Date.now() - startTime
+        );
+        return;
+      }
+      case "count": {
+        if (!payload.sourceUrl) {
+          throw new Error("sourceUrl is required for count");
         }
+        const { intersectionFeature, differenceSources } =
+          await subjectsForAnalysis(
+            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+            helpers
+          );
+        const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+          payload.sourceUrl,
+          {
+            pageSize: "5MB",
+          }
+        );
+        helpers.log("running count operation");
+        const processor = new OverlappingAreaBatchedClippingProcessor(
+          "count",
+          1024 * 1024 * 1, // 5MB
+          simplify(intersectionFeature, {
+            tolerance: 0.002,
+          }),
+          source,
+          differenceSources,
+          helpers,
+          payload.groupBy,
+          workerPool
+        );
+        const count = await processor.calculate();
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          count,
+          payload.queueUrl,
+          Date.now() - startTime
+        );
+        return;
+      }
       default:
         throw new Error(`Unknown payload type: ${payload.type}`);
     }
@@ -374,4 +344,62 @@ export function subjectIsGeography(
     subject.type === "geography" &&
     "clippingLayers" in subject
   );
+}
+
+function polygonFromFragment(
+  subject: FragmentSubjectPayload
+): Feature<Polygon> {
+  if (!subject.geobuf) {
+    throw new Error("geobuf is required for fragment subjects");
+  }
+  // payload.subject.geobuf is a base64 encoded string
+  const buffer = Buffer.from(subject.geobuf as string, "base64");
+  let feature = geobuf.decode(new Pbf(buffer)) as
+    | Feature<Polygon>
+    | FeatureCollection<Polygon>;
+  if (feature.type === "FeatureCollection") {
+    feature = feature.features[0];
+  }
+  if (feature.geometry.type !== "Polygon") {
+    throw new Error("geobuf is not a GeoJSON Polygon.");
+  }
+  return feature;
+}
+
+async function subjectsForAnalysis(
+  subject: MetricSubjectFragment | MetricSubjectGeography,
+  helpers: GuaranteedOverlayWorkerHelpers
+): Promise<{
+  intersectionFeature: Feature<Polygon | MultiPolygon>;
+  differenceSources: {
+    layerId: string;
+    source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+    cql2Query?: Cql2Query | undefined;
+  }[];
+}> {
+  if (subjectIsGeography(subject)) {
+    const { intersectionFeature, differenceLayers, differenceSources } =
+      await initializeGeographySources(
+        subject.clippingLayers,
+        sourceCache,
+        helpers,
+        {
+          pageSize: "5MB",
+        }
+      );
+    return {
+      intersectionFeature,
+      differenceSources,
+    };
+  } else if ("geobuf" in subject) {
+    const feature = polygonFromFragment(
+      subject as unknown as FragmentSubjectPayload
+    );
+    return {
+      intersectionFeature: feature,
+      differenceSources: [],
+    };
+  } else {
+    throw new Error("Unknown subject type. Must be geography or fragment.");
+  }
 }

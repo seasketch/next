@@ -507,6 +507,32 @@ async function getOrCreateReportDependencies(
         cardDependencyList.metrics.push(...totalAreaMetrics.map((m) => m.id));
         break;
       }
+      case "FeatureCount": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "count",
+            overlaySource,
+            layer.layerParameters,
+            card.component_settings,
+            geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
       default:
         // do nothing. some cards like sketchAttributes do not have dependencies
         break;

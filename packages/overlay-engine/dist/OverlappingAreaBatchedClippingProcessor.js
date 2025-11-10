@@ -38,7 +38,7 @@ const layers = {
     },
 };
 class OverlappingAreaBatchedClippingProcessor {
-    constructor(maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool) {
+    constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool) {
         var _a;
         /**
          * Current weight of the batch. Once the weight exceeds the batch size, the
@@ -54,12 +54,21 @@ class OverlappingAreaBatchedClippingProcessor {
         this.batchPromises = [];
         this.progress = 0;
         this.progressTarget = 0;
+        this.operation = operation;
         this.pool = pool;
         this.intersectionSource = intersectionSource;
         this.differenceSources = differenceSources;
         this.maxBatchSize = maxBatchSize;
         this.subjectFeature = subjectFeature;
         this.helpers = (0, helpers_1.guaranteeHelpers)(helpers);
+        // Validate operation type and geometry type compatibility
+        if (operation === "overlay_area") {
+            // overlay_area only supports Polygon/MultiPolygon
+            // Type checking will handle this at compile time, but we can add runtime validation if needed
+        }
+        else if (operation === "count") {
+            // count supports Point/MultiPoint (and potentially others in the future)
+        }
         console.time("build container index");
         this.containerIndex = new containerIndex_1.ContainerIndex(subjectFeature);
         console.timeEnd("build container index");
@@ -96,7 +105,7 @@ class OverlappingAreaBatchedClippingProcessor {
             features: [],
         };
     }
-    async calculateOverlap() {
+    async calculate() {
         return new Promise(async (resolve, reject) => {
             var _a, _b, _c;
             try {
@@ -131,6 +140,7 @@ class OverlappingAreaBatchedClippingProcessor {
                     (0, truncate_1.default)(feature, { mutate: true });
                     this.helpers.progress((this.progress / this.progressTarget) * 100, `Processing features: (${this.progress}/${this.progressTarget} bytes)`);
                     let requiresIntersection = false;
+                    // ContainerIndex.classify supports Polygon, MultiPolygon, Point, and MultiPoint
                     const classification = this.containerIndex.classify(feature);
                     if (this.helpers.logFeature) {
                         this.helpers.logFeature(layers.classifiedFeatures, {
@@ -149,9 +159,13 @@ class OverlappingAreaBatchedClippingProcessor {
                         continue;
                     }
                     else if (classification === "mixed") {
-                        // This feature will need to be clipped against the subject feature to
-                        // find the intersection.
-                        requiresIntersection = true;
+                        // This feature will need to be clipped against the subject feature
+                        // to find the intersection, if we're doing an overlay area
+                        // operation. If we're doing a count operation, we don't need to
+                        // clip against the subject feature. We know it intersects in some
+                        // way, so we'll count it.
+                        requiresIntersection =
+                            this.operation === "overlay_area" ? true : false;
                     }
                     else {
                         // Requires no clipping against the subject feature, but still may need
@@ -171,15 +185,18 @@ class OverlappingAreaBatchedClippingProcessor {
                     }
                     if (!requiresIntersection && !requiresDifference) {
                         // feature is entirely within the subject feature, so we can skip
-                        // clipping. Just need to add it's area to the appropriate total(s).
-                        this.addFeatureToTotals(feature, true);
-                        this.progress += (_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength;
+                        // clipping. Just need to add it to the appropriate total(s).
+                        this.addFeatureToTotals(feature);
+                        this.progress += ((_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength) || 0;
                     }
                     else {
                         // add feature to batch for clipping
                         this.addFeatureToBatch(feature, requiresIntersection, requiresDifference);
                     }
-                    if (this.batchData.weight >= BATCH_SIZE) {
+                    // Only process batch if it has features AND weight threshold is reached
+                    // (weight can exceed threshold due to difference references even without features)
+                    if (this.batchData.features.length > 0 &&
+                        this.batchData.weight >= BATCH_SIZE) {
                         const differenceMultiPolygon = await this.getDifferenceMultiPolygon();
                         if (this.queue && this.queue.isSaturated) {
                             this.helpers.log("Waiting for worker pool to drain");
@@ -201,6 +218,7 @@ class OverlappingAreaBatchedClippingProcessor {
                 const resolvedBatchData = await Promise.all(this.batchPromises);
                 this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
                 for (const batchData of resolvedBatchData) {
+                    console.log("resolving batch data", batchData);
                     for (const classKey in batchData) {
                         if (!(classKey in this.results)) {
                             this.results[classKey] = 0;
@@ -208,8 +226,6 @@ class OverlappingAreaBatchedClippingProcessor {
                         this.results[classKey] += batchData[classKey];
                     }
                 }
-                // Do not destroy the shared Piscina instance here; it may be reused by subsequent batches/invocations.
-                // await pool.destroy();
                 resolve(this.results);
             }
             catch (e) {
@@ -223,30 +239,52 @@ class OverlappingAreaBatchedClippingProcessor {
         }
         this.progress += batch.progressWorth;
         this.helpers.progress((this.progress / this.progressTarget) * 100);
-        const classKeysInBatch = batch.features.map((f) => { var _a; return (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy || ""]; });
+        const batchPayload = {
+            operation: this.operation,
+            features: batch.features,
+            differenceMultiPolygon: differenceMultiPolygon,
+            subjectFeature: this.subjectFeature,
+            groupBy: this.groupBy,
+        };
+        this.helpers.log(`submitting batchPayload: ${JSON.stringify({
+            operation: this.operation,
+            features: batch.features.length,
+            differenceMultiPolygon: differenceMultiPolygon.length,
+            subjectFeature: this.subjectFeature.geometry.type,
+            groupBy: this.groupBy,
+        })}`);
         if (this.pool) {
-            return this.pool
-                .run({
-                features: batch.features,
-                differenceMultiPolygon: differenceMultiPolygon,
-                subjectFeature: this.subjectFeature,
-                groupBy: this.groupBy,
-            })
-                .catch((error) => {
+            return this.pool.run(batchPayload).catch((error) => {
                 console.error(`Error processing batch in worker: ${error && (error.stack || error.message || error)}`);
                 throw error;
             });
         }
         else {
-            return (0, clipBatch_1.clipBatch)({
-                features: batch.features,
-                differenceMultiPolygon: differenceMultiPolygon,
-                subjectFeature: this.subjectFeature,
-                groupBy: this.groupBy,
-            }).catch((error) => {
-                console.error(`Error processing batch: ${error.message}`);
-                throw error;
-            });
+            if (this.operation === "overlay_area") {
+                return (0, clipBatch_1.clipBatch)({
+                    features: batch.features,
+                    differenceMultiPolygon: differenceMultiPolygon,
+                    subjectFeature: this.subjectFeature,
+                    groupBy: this.groupBy,
+                }).catch((error) => {
+                    console.error(`Error processing batch: ${error.message}`);
+                    throw error;
+                });
+            }
+            else if (this.operation === "count") {
+                return (0, clipBatch_1.countFeatures)({
+                    features: batch.features,
+                    differenceMultiPolygon: differenceMultiPolygon,
+                    subjectFeature: this.subjectFeature,
+                    groupBy: this.groupBy,
+                }).catch((error) => {
+                    console.error(`Error counting features: ${error.message}`);
+                    throw error;
+                });
+            }
+            else {
+                throw new Error(`Unknown operation type: ${this.operation}`);
+            }
         }
     }
     async getDifferenceMultiPolygon() {
@@ -279,18 +317,32 @@ class OverlappingAreaBatchedClippingProcessor {
         }));
         return differenceMultiPolygon;
     }
-    addFeatureToTotals(feature, usePrecomputedArea = false) {
+    addFeatureToTotals(feature) {
         var _a, _b, _c;
-        // get area in square kilometers
-        const area = usePrecomputedArea && ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area)
-            ? (_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__area
-            : (0, area_1.default)(feature) * 1e-6;
-        this.results["*"] += area;
-        if (this.groupBy) {
-            const classKey = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c[this.groupBy];
-            if (classKey) {
-                this.results[classKey] = this.results[classKey] || 0;
-                this.results[classKey] += area;
+        if (this.operation === "overlay_area") {
+            // get area in square kilometers
+            const area = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area)
+                ? feature.properties.__area
+                : (0, area_1.default)(feature) * 1e-6;
+            this.results["*"] += area;
+            if (this.groupBy) {
+                const classKey = (_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy];
+                if (classKey) {
+                    this.results[classKey] = this.results[classKey] || 0;
+                    this.results[classKey] += area;
+                }
+            }
+        }
+        else if (this.operation === "count") {
+            console.log("add to count", this.results);
+            // Count the feature (or points in MultiPoint)
+            this.results["*"] += 1;
+            if (this.groupBy) {
+                const classKey = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c[this.groupBy];
+                if (classKey) {
+                    this.results[classKey] = this.results[classKey] || 0;
+                    this.results[classKey] += 1;
+                }
             }
         }
     }
@@ -317,12 +369,22 @@ class OverlappingAreaBatchedClippingProcessor {
         var _a;
         let weight = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__byteLength;
         if (weight === undefined || weight === null) {
-            // base weight on number of vertices in the feature
+            // base weight on number of vertices/points in the feature
             if (feature.geometry.type === "Polygon") {
+                weight = feature.geometry.coordinates.reduce((acc, ring) => acc + ring.length, 0);
+            }
+            else if (feature.geometry.type === "MultiPolygon") {
+                weight = feature.geometry.coordinates.reduce((acc, poly) => acc + poly.reduce((acc2, ring) => acc2 + ring.length, 0), 0);
+            }
+            else if (feature.geometry.type === "Point") {
+                weight = 1;
+            }
+            else if (feature.geometry.type === "MultiPoint") {
                 weight = feature.geometry.coordinates.length;
             }
             else {
-                weight = feature.geometry.coordinates.reduce((acc, curr) => acc + curr.length, 0);
+                // Default weight for other geometry types
+                weight = 1000;
             }
         }
         return weight;

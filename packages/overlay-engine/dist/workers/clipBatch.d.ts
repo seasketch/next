@@ -1,5 +1,5 @@
 import { FeatureWithMetadata } from "fgb-source";
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
 export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
@@ -18,4 +18,16 @@ export declare function performClipping(features: {
     requiresIntersection: boolean;
     requiresDifference: boolean;
 }[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>): Promise<number>;
+export declare function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
+    features: {
+        feature: FeatureWithMetadata<Feature<Geometry>>;
+        requiresIntersection: boolean;
+        requiresDifference: boolean;
+    }[];
+    differenceMultiPolygon: clipping.Geom[];
+    subjectFeature: Feature<Polygon | MultiPolygon>;
+    groupBy?: string;
+}): Promise<{
+    [classKey: string]: number;
+}>;
 //# sourceMappingURL=clipBatch.d.ts.map

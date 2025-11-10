@@ -66,6 +66,20 @@ export function extractColorForLayers(style: AnyLayer[]): string {
       ) {
         return layer.paint["fill-color"];
       }
+      if (
+        layer.paint &&
+        "circle-color" in layer.paint &&
+        typeof layer.paint["circle-color"] === "string"
+      ) {
+        return layer.paint["circle-color"];
+      }
+      if (
+        layer.paint &&
+        "line-color" in layer.paint &&
+        typeof layer.paint["line-color"] === "string"
+      ) {
+        return layer.paint["line-color"];
+      }
     }
   }
   return "#000000";

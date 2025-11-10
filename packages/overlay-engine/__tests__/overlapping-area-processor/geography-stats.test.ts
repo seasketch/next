@@ -109,6 +109,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         __dirname + "/../../dist/workers/clipBatch.standalone.js"
       );
       const processor = new OverlappingAreaBatchedClippingProcessor(
+        "overlay_area",
         1024 * 1024 * 2, // 5MB
         simplify(intersectionFeatureGeojson, {
           tolerance: 0.002,
@@ -119,7 +120,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         "class",
         pool
       );
-      const results = await processor.calculateOverlap();
+      const results = await processor.calculate();
       compareResults(
         results,
         geomorphologyResults,
@@ -154,6 +155,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         __dirname + "/../../dist/workers/clipBatch.standalone.js"
       );
       const processor = new OverlappingAreaBatchedClippingProcessor(
+        "overlay_area",
         1024 * 1024 * 2, // 5MB
         simplify(intersectionFeatureGeojson, {
           tolerance: 0.002,
@@ -164,7 +166,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         "Draft_name",
         pool
       );
-      const results = await processor.calculateOverlap();
+      const results = await processor.calculate();
       compareResults(
         results,
         deepwaterBioregionsResults,

@@ -9,19 +9,24 @@ import type {
   Feature,
   Polygon,
   MultiPolygon,
+  Point,
+  MultiPoint,
   Position,
   BBox,
   Geometry,
   FeatureCollection,
 } from "geojson";
 import bboxPolygon from "@turf/bbox-polygon";
+import pip from "point-in-polygon-hao";
 
 type Pt = Position; // [x, y]
 type LinearRing = Pt[];
 type Rings = LinearRing[];
 
 export type ContainerFeature = Feature<Polygon | MultiPolygon>;
-export type CandidateFeature = Feature<Polygon | MultiPolygon>;
+export type CandidateFeature = Feature<
+  Polygon | MultiPolygon | Point | MultiPoint
+>;
 export type Classification = "inside" | "outside" | "mixed";
 
 /**
@@ -108,10 +113,26 @@ export class ContainerIndex {
    *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices
    */
   classify(candidate: CandidateFeature): Classification {
+    if (
+      candidate.geometry.type === "Point" ||
+      candidate.geometry.type === "MultiPoint"
+    ) {
+      const inside = this.pointInPolygon(
+        candidate as Feature<Point | MultiPoint>
+      );
+      if (inside) {
+        return "inside";
+      } else {
+        return "outside";
+      }
+    }
+
     const candBBox = turfBbox(candidate);
     if (!bboxesOverlap(candBBox, this.containerBBox)) {
       return "outside";
     }
+
+    const polygonCandidate = candidate as Feature<Polygon | MultiPolygon>;
 
     // Edge-crossing check (exact, robust). Any hit => 'mixed'
     for (const seg of iterateSegments(candidate.geometry)) {
@@ -181,7 +202,7 @@ export class ContainerIndex {
         );
         let containerInsideCount = 0;
         for (const pt of containerPoints) {
-          if (booleanPointInPolygon(turfPoint(pt), candidate)) {
+          if (booleanPointInPolygon(turfPoint(pt), polygonCandidate)) {
             containerInsideCount++;
           }
         }
@@ -258,7 +279,7 @@ export class ContainerIndex {
               3
             );
             for (const holePt of holePoints) {
-              if (booleanPointInPolygon(turfPoint(holePt), candidate)) {
+              if (booleanPointInPolygon(turfPoint(holePt), polygonCandidate)) {
                 return "mixed";
               }
             }
@@ -269,6 +290,93 @@ export class ContainerIndex {
 
     // If all vertices are inside and no hole overlap detected, classify as inside
     return "inside";
+  }
+
+  /**
+   * Test whether a point (or multipoint) feature is within the container polygon.
+   * Uses the container bbox and hole bboxes for efficient filtering.
+   *
+   * @param pointFeature - A Point or MultiPoint feature to test
+   * @returns For Point: true if the point is inside the container (and not in any holes).
+   *          For MultiPoint: true if ANY point is inside the container (and not in any holes).
+   */
+  pointInPolygon(pointFeature: Feature<Point | MultiPoint>): boolean {
+    const geom = pointFeature.geometry;
+
+    if (geom.type === "Point") {
+      return this.pointInPolygonSingle(geom.coordinates);
+    } else if (geom.type === "MultiPoint") {
+      // For MultiPoint, return true if ANY point is inside
+      for (const coord of geom.coordinates) {
+        if (this.pointInPolygonSingle(coord)) {
+          return true;
+        }
+      }
+      return false;
+    } else {
+      throw new Error(
+        `Unsupported geometry type: ${geom["type"]}. Expected Point or MultiPoint.`
+      );
+    }
+  }
+
+  /**
+   * Test whether a single point coordinate is within the container polygon.
+   * Uses bbox filtering and hole bboxes for efficiency.
+   */
+  private pointInPolygonSingle(coord: Position): boolean {
+    const [x, y] = coord;
+
+    // Quick bbox rejection: if point is outside container bbox, it's definitely outside
+    if (
+      x < this.containerBBox[0] ||
+      x > this.containerBBox[2] ||
+      y < this.containerBBox[1] ||
+      y > this.containerBBox[3]
+    ) {
+      return false;
+    }
+
+    // Check if point is inside the container polygon
+    const point = turfPoint(coord);
+    if (!booleanPointInPolygon(point, this.container)) {
+      return false;
+    }
+
+    // If there are holes, check if the point is inside any hole
+    // (if so, it's outside the container)
+    if (this.holeRings.length > 0) {
+      // Use hole bboxes for efficient filtering
+      for (let i = 0; i < this.holeRings.length; i++) {
+        const holeBBox = this.holeBBoxes[i];
+        // Quick bbox check: if point is outside hole bbox, skip expensive test
+        if (
+          x < holeBBox[0] ||
+          x > holeBBox[2] ||
+          y < holeBBox[1] ||
+          y > holeBBox[3]
+        ) {
+          continue;
+        }
+        // Point is within hole bbox, do precise point-in-polygon test
+        const holeRing = this.holeRings[i];
+        const holePoly: Polygon = {
+          type: "Polygon",
+          coordinates: [holeRing],
+        };
+        const holeFeature: Feature<Polygon> = {
+          type: "Feature",
+          geometry: holePoly,
+          properties: {},
+        };
+        // If point is inside a hole, it's outside the container
+        if (booleanPointInPolygon(point, holeFeature)) {
+          return false;
+        }
+      }
+    }
+
+    return true;
   }
 
   getBBoxPolygons() {

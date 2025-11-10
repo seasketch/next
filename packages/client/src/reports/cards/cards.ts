@@ -4,16 +4,9 @@ import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
 import {
   CompatibleSpatialMetricDetailsFragment,
-  DataSourceTypes,
-  DataUploadOutputType,
   OverlaySourceDetailsFragment,
   ReportingLayerDetailsFragment,
-  SpatialMetricState,
 } from "../../generated/graphql";
-import { Geostats } from "../../admin/data/GLStyleEditor/GeostatsModal";
-import { RasterInfo } from "@seasketch/geostats-types";
-import { SourceType } from "overlay-engine";
-import { AnyLayer } from "mapbox-gl";
 
 export type ProsemirrorBodyJSON = any;
 
@@ -21,7 +14,8 @@ export type ReportCardType =
   | "Attributes"
   | "TextBlock"
   | "Size"
-  | "OverlappingAreas";
+  | "OverlappingAreas"
+  | "FeatureCount";
 
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
@@ -152,6 +146,7 @@ export function registerCards() {
   import("./SizeCard");
   import("./OverlappingAreasCard");
   import("./TextBlockCard");
+  import("./FeatureCountCard");
 }
 
 /**

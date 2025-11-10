@@ -90,6 +90,7 @@ const helpers = guaranteeHelpers({
     __dirname + "/../dist/workers/clipBatch.standalone.js"
   );
   const processor = new OverlappingAreaBatchedClippingProcessor(
+    "overlay_area",
     1024 * 1024 * 2, // 5MB
     simplify(intersectionFeatureGeojson, {
       tolerance: 0.002,
@@ -101,7 +102,7 @@ const helpers = guaranteeHelpers({
     pool
   );
   console.time("calculate overlap");
-  const results = await processor.calculateOverlap();
+  const results = await processor.calculate();
   await pool.destroy();
   console.timeEnd("calculate overlap");
   console.log(`Cache hits: ${cacheHits}`);

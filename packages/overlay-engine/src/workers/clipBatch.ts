@@ -1,10 +1,11 @@
 import { FeatureWithMetadata } from "fgb-source";
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
 import calcArea from "@turf/area";
 import { parentPort } from "node:worker_threads";
+import pip from "point-in-polygon-hao";
+import booleanIntersects from "@turf/boolean-intersects";
 
-let i = 0;
 export async function clipBatch({
   features,
   differenceMultiPolygon,
@@ -101,11 +102,87 @@ export async function performClipping(
   return sqKm;
 }
 
+export async function countFeatures({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  groupBy,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  groupBy?: string;
+}) {
+  const results: { [classKey: string]: number } = { "*": 0 };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (
+        f.feature.geometry.type === "Point" ||
+        f.feature.geometry.type === "MultiPoint"
+      ) {
+        const coords =
+          f.feature.geometry.type === "Point"
+            ? [f.feature.geometry.coordinates]
+            : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pip(coord, poly as number[][][]);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        // for any other geometry type, we'll use booleanIntersects to check if
+        // the feature intersects the difference feature
+        if (
+          booleanIntersects(f.feature, {
+            type: "Feature",
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: differenceMultiPolygon,
+            },
+            properties: {},
+          })
+        ) {
+          continue;
+        }
+      }
+    }
+    if (groupBy) {
+      const classKey = f.feature.properties?.[groupBy];
+      if (classKey) {
+        if (!(classKey in results)) {
+          results[classKey] = 0;
+        }
+        results[classKey] += 1;
+      }
+    }
+    results["*"] += 1;
+  }
+  return results;
+}
+
 parentPort?.on(
   "message",
   async (job: {
+    operation?: "overlay_area" | "count";
     features: {
-      feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+      feature: FeatureWithMetadata<Feature<Geometry>>;
       requiresIntersection: boolean;
       requiresDifference: boolean;
     }[];
@@ -114,7 +191,30 @@ parentPort?.on(
     groupBy?: string;
   }) => {
     try {
-      const result = await clipBatch(job);
+      const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
+      let result;
+      if (operation === "overlay_area") {
+        result = await clipBatch({
+          features: job.features as {
+            feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+            requiresIntersection: boolean;
+            requiresDifference: boolean;
+          }[],
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          groupBy: job.groupBy,
+        });
+      } else if (operation === "count") {
+        console.log("running countFeatures");
+        result = await countFeatures({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          groupBy: job.groupBy,
+        });
+      } else {
+        throw new Error(`Unknown operation type: ${operation}`);
+      }
       parentPort?.postMessage({ ok: true, result });
     } catch (err) {
       parentPort?.postMessage({

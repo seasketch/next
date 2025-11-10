@@ -38,10 +38,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.clipBatch = clipBatch;
 exports.performClipping = performClipping;
+exports.countFeatures = countFeatures;
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
 const node_worker_threads_1 = require("node:worker_threads");
-let i = 0;
+const point_in_polygon_hao_1 = __importDefault(require("point-in-polygon-hao"));
+const boolean_intersects_1 = __importDefault(require("@turf/boolean-intersects"));
 async function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
     var _a;
     const results = { "*": 0 };
@@ -103,9 +105,85 @@ async function performClipping(features, differenceGeoms, subjectFeature) {
     }) * 1e-6;
     return sqKm;
 }
+async function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
+    var _a;
+    const results = { "*": 0 };
+    for (const f of features) {
+        if (f.requiresIntersection) {
+            throw new Error("Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature.");
+        }
+        if (f.requiresDifference) {
+            if (f.feature.geometry.type === "Point" ||
+                f.feature.geometry.type === "MultiPoint") {
+                const coords = f.feature.geometry.type === "Point"
+                    ? [f.feature.geometry.coordinates]
+                    : f.feature.geometry.coordinates;
+                for (const coord of coords) {
+                    let anyMisses = false;
+                    for (const poly of differenceMultiPolygon) {
+                        const r = (0, point_in_polygon_hao_1.default)(coord, poly);
+                        if (r === false) {
+                            anyMisses = true;
+                            break;
+                        }
+                    }
+                    if (!anyMisses) {
+                        continue;
+                    }
+                }
+            }
+            else {
+                // for any other geometry type, we'll use booleanIntersects to check if
+                // the feature intersects the difference feature
+                if ((0, boolean_intersects_1.default)(f.feature, {
+                    type: "Feature",
+                    geometry: {
+                        type: "MultiPolygon",
+                        coordinates: differenceMultiPolygon,
+                    },
+                    properties: {},
+                })) {
+                    continue;
+                }
+            }
+        }
+        if (groupBy) {
+            const classKey = (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy];
+            if (classKey) {
+                if (!(classKey in results)) {
+                    results[classKey] = 0;
+                }
+                results[classKey] += 1;
+            }
+        }
+        results["*"] += 1;
+    }
+    return results;
+}
 node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.on("message", async (job) => {
     try {
-        const result = await clipBatch(job);
+        const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
+        let result;
+        if (operation === "overlay_area") {
+            result = await clipBatch({
+                features: job.features,
+                differenceMultiPolygon: job.differenceMultiPolygon,
+                subjectFeature: job.subjectFeature,
+                groupBy: job.groupBy,
+            });
+        }
+        else if (operation === "count") {
+            console.log("running countFeatures");
+            result = await countFeatures({
+                features: job.features,
+                differenceMultiPolygon: job.differenceMultiPolygon,
+                subjectFeature: job.subjectFeature,
+                groupBy: job.groupBy,
+            });
+        }
+        else {
+            throw new Error(`Unknown operation type: ${operation}`);
+        }
         node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.postMessage({ ok: true, result });
     }
     catch (err) {
