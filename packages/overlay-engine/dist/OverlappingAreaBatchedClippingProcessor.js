@@ -15,6 +15,7 @@ const p_queue_1 = __importDefault(require("p-queue"));
 const pool_1 = require("./workers/pool");
 Object.defineProperty(exports, "createClippingWorkerPool", { enumerable: true, get: function () { return pool_1.createClippingWorkerPool; } });
 const truncate_1 = __importDefault(require("@turf/truncate"));
+const uniqueIdIndex_1 = require("./utils/uniqueIdIndex");
 const layers = {
     classifiedFeatures: {
         name: "classified-features",
@@ -38,6 +39,29 @@ const layers = {
     },
 };
 class OverlappingAreaBatchedClippingProcessor {
+    // Type guard helpers
+    isOverlayAreaOperation() {
+        return this.operation === "overlay_area";
+    }
+    isCountOperation() {
+        return this.operation === "count";
+    }
+    // Operation-specific result getters with proper typing
+    getOverlayResults() {
+        return this.results;
+    }
+    // Initialize results based on operation type
+    initializeResults(op) {
+        if (op === "count") {
+            // Initialize interim ID storage
+            this.countInterimIds = { "*": [] };
+            // Return empty structure - will be populated at the end
+            return {};
+        }
+        else {
+            return { "*": 0 };
+        }
+    }
     constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool) {
         var _a;
         /**
@@ -50,7 +74,8 @@ class OverlappingAreaBatchedClippingProcessor {
          * buffer fgb features size vs GeoJSON text.
          */
         this.maxBatchSize = 0;
-        this.results = { "*": 0 };
+        // Interim storage for count operation IDs (before converting to UniqueIdIndex)
+        this.countInterimIds = {};
         this.batchPromises = [];
         this.progress = 0;
         this.progressTarget = 0;
@@ -81,6 +106,8 @@ class OverlappingAreaBatchedClippingProcessor {
             }
         }
         this.groupBy = groupBy;
+        // Initialize results based on operation type
+        this.results = this.initializeResults(operation);
         this.resetBatchData();
         this.queue = new p_queue_1.default({
             concurrency: ((_a = this.pool) === null || _a === void 0 ? void 0 : _a.size) || 1,
@@ -206,6 +233,7 @@ class OverlappingAreaBatchedClippingProcessor {
                         this.batchPromises.push(this.queue.add(() => this.processBatch(batchData, differenceMultiPolygon).catch((e) => {
                             console.error(`Error processing batch: ${e.message}`);
                             reject(e);
+                            throw e;
                         })));
                         this.resetBatchData();
                     }
@@ -217,14 +245,12 @@ class OverlappingAreaBatchedClippingProcessor {
                 }
                 const resolvedBatchData = await Promise.all(this.batchPromises);
                 this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
-                for (const batchData of resolvedBatchData) {
-                    console.log("resolving batch data", batchData);
-                    for (const classKey in batchData) {
-                        if (!(classKey in this.results)) {
-                            this.results[classKey] = 0;
-                        }
-                        this.results[classKey] += batchData[classKey];
-                    }
+                if (this.isOverlayAreaOperation()) {
+                    this.mergeOverlayBatchResults(resolvedBatchData);
+                }
+                else if (this.isCountOperation()) {
+                    this.mergeCountBatchResults(resolvedBatchData);
+                    this.finalizeCountResults();
                 }
                 resolve(this.results);
             }
@@ -254,38 +280,94 @@ class OverlappingAreaBatchedClippingProcessor {
             groupBy: this.groupBy,
         })}`);
         if (this.pool) {
-            return this.pool.run(batchPayload).catch((error) => {
+            const result = await this.pool.run(batchPayload).catch((error) => {
                 console.error(`Error processing batch in worker: ${error && (error.stack || error.message || error)}`);
                 throw error;
             });
+            return result;
         }
         else {
-            if (this.operation === "overlay_area") {
-                return (0, clipBatch_1.clipBatch)({
-                    features: batch.features,
-                    differenceMultiPolygon: differenceMultiPolygon,
-                    subjectFeature: this.subjectFeature,
-                    groupBy: this.groupBy,
-                }).catch((error) => {
-                    console.error(`Error processing batch: ${error.message}`);
-                    throw error;
-                });
+            if (this.isOverlayAreaOperation()) {
+                return this.processOverlayBatch(batch, differenceMultiPolygon);
             }
-            else if (this.operation === "count") {
-                return (0, clipBatch_1.countFeatures)({
-                    features: batch.features,
-                    differenceMultiPolygon: differenceMultiPolygon,
-                    subjectFeature: this.subjectFeature,
-                    groupBy: this.groupBy,
-                }).catch((error) => {
-                    console.error(`Error counting features: ${error.message}`);
-                    throw error;
-                });
+            else if (this.isCountOperation()) {
+                return this.processCountBatch(batch, differenceMultiPolygon);
             }
             else {
                 throw new Error(`Unknown operation type: ${this.operation}`);
             }
         }
+    }
+    async processOverlayBatch(batch, differenceMultiPolygon) {
+        return (0, clipBatch_1.clipBatch)({
+            features: batch.features,
+            differenceMultiPolygon: differenceMultiPolygon,
+            subjectFeature: this.subjectFeature,
+            groupBy: this.groupBy,
+        }).catch((error) => {
+            console.error(`Error processing batch: ${error.message}`);
+            throw error;
+        });
+    }
+    async processCountBatch(batch, differenceMultiPolygon) {
+        // countFeatures returns { [classKey: string]: number[] } - interim format
+        return (0, clipBatch_1.countFeatures)({
+            features: batch.features,
+            differenceMultiPolygon: differenceMultiPolygon,
+            subjectFeature: this.subjectFeature,
+            groupBy: this.groupBy,
+        }).catch((error) => {
+            console.error(`Error counting features: ${error.message}`);
+            throw error;
+        });
+    }
+    mergeOverlayBatchResults(batchResults) {
+        console.log("resolving batch data", batchResults);
+        const results = this.getOverlayResults();
+        for (const batchData of batchResults) {
+            const overlayBatchData = batchData;
+            for (const classKey in overlayBatchData) {
+                if (!(classKey in results)) {
+                    results[classKey] = 0;
+                }
+                results[classKey] += overlayBatchData[classKey];
+            }
+        }
+    }
+    mergeCountBatchResults(batchResults) {
+        // Merge batch results into interim ID storage
+        for (const countBatchData of batchResults) {
+            for (const classKey in countBatchData) {
+                if (!(classKey in this.countInterimIds)) {
+                    this.countInterimIds[classKey] = [];
+                }
+                const ids = countBatchData[classKey];
+                for (const id of ids) {
+                    if (!this.countInterimIds[classKey].includes(id)) {
+                        this.countInterimIds[classKey].push(id);
+                    }
+                }
+            }
+        }
+    }
+    /**
+     * Finalizes count results by converting interim ID arrays to UniqueIdIndex
+     * and calculating counts. Called at the end of calculate().
+     */
+    finalizeCountResults() {
+        const finalResults = {};
+        for (const classKey in this.countInterimIds) {
+            const ids = this.countInterimIds[classKey];
+            // Create UniqueIdIndex from the array of IDs
+            const uniqueIdIndex = (0, uniqueIdIndex_1.createUniqueIdIndex)(ids);
+            // Calculate count from the index
+            const count = (0, uniqueIdIndex_1.countUniqueIds)(uniqueIdIndex);
+            finalResults[classKey] = {
+                count,
+                uniqueIdIndex,
+            };
+        }
+        this.results = finalResults;
     }
     async getDifferenceMultiPolygon() {
         // fetch the difference features, and combine into a single multipolygon
@@ -318,30 +400,49 @@ class OverlappingAreaBatchedClippingProcessor {
         return differenceMultiPolygon;
     }
     addFeatureToTotals(feature) {
-        var _a, _b, _c;
-        if (this.operation === "overlay_area") {
-            // get area in square kilometers
-            const area = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area)
-                ? feature.properties.__area
-                : (0, area_1.default)(feature) * 1e-6;
-            this.results["*"] += area;
-            if (this.groupBy) {
-                const classKey = (_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy];
-                if (classKey) {
-                    this.results[classKey] = this.results[classKey] || 0;
-                    this.results[classKey] += area;
-                }
+        if (this.isOverlayAreaOperation()) {
+            this.addOverlayFeatureToTotals(feature);
+        }
+        else if (this.isCountOperation()) {
+            this.addCountFeatureToTotals(feature);
+        }
+    }
+    addOverlayFeatureToTotals(feature) {
+        var _a, _b;
+        // get area in square kilometers
+        const area = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area)
+            ? feature.properties.__area
+            : (0, area_1.default)(feature) * 1e-6;
+        const results = this.getOverlayResults();
+        results["*"] = (results["*"] || 0) + area;
+        if (this.groupBy) {
+            const classKey = (_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy];
+            if (classKey) {
+                results[classKey] = (results[classKey] || 0) + area;
             }
         }
-        else if (this.operation === "count") {
-            console.log("add to count", this.results);
+    }
+    addCountFeatureToTotals(feature) {
+        var _a;
+        if (!("__oidx" in feature.properties || {})) {
+            throw new Error("Feature properties must contain __oidx");
+        }
+        const oidx = feature.properties.__oidx;
+        if (oidx !== undefined && oidx !== null) {
+            // Add to interim ID storage
+            if (!this.countInterimIds["*"].includes(oidx)) {
+                this.countInterimIds["*"].push(oidx);
+            }
             // Count the feature (or points in MultiPoint)
-            this.results["*"] += 1;
             if (this.groupBy) {
-                const classKey = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c[this.groupBy];
+                const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy];
                 if (classKey) {
-                    this.results[classKey] = this.results[classKey] || 0;
-                    this.results[classKey] += 1;
+                    if (!(classKey in this.countInterimIds)) {
+                        this.countInterimIds[classKey] = [];
+                    }
+                    if (!this.countInterimIds[classKey].includes(oidx)) {
+                        this.countInterimIds[classKey].push(oidx);
+                    }
                 }
             }
         }

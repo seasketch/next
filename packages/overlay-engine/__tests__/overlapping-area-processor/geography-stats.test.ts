@@ -175,6 +175,59 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         true
       );
     });
+
+    describe("Count metrics", () => {
+      it("Hydrothermal vents", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-hydrothermal-vents.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const {
+          intersectionFeature: intersectionFeatureGeojson,
+          differenceSources,
+        } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
+          pageSize: "5MB",
+        });
+        const processor = new OverlappingAreaBatchedClippingProcessor(
+          "count",
+          1024 * 1024 * 2, // 5MB
+          intersectionFeatureGeojson,
+          source,
+          differenceSources,
+          {}
+        );
+        const results = await processor.calculate();
+        expect(results["*"].count).toBe(13);
+      });
+
+      it("EBSA - Should count features not subdivided parts", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-ebsa.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const {
+          intersectionFeature: intersectionFeatureGeojson,
+          differenceSources,
+        } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
+          pageSize: "5MB",
+        });
+
+        const processor = new OverlappingAreaBatchedClippingProcessor(
+          "count",
+          1024 * 1024 * 2, // 5MB
+          intersectionFeatureGeojson,
+          source,
+          differenceSources,
+          {}
+        );
+        const results = await processor.calculate();
+        expect(results["*"].count).toBe(4);
+      });
+    });
   });
   // afterAll(() => {
   //   writer.close();

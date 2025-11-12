@@ -33,6 +33,7 @@ for (const metric of naitabaGeomorphologyMetrics) {
   naitabaGeomorphologyResults[metric.classId] = metric.value / 1_000_000;
   naitabaGeomorphologyResults["*"] += metric.value / 1_000_000;
 }
+const ventsSketch = require("./sketches/Hydrothermal-vents.geojson.json");
 
 describe("sketchFragmentOverlap", () => {
   vi.setConfig({ testTimeout: 1000 * 10 });
@@ -418,6 +419,52 @@ describe("sketchFragmentOverlap", () => {
           );
         }
         // const sketchProcessor
+      });
+    });
+
+    describe("Count metrics", () => {
+      describe("Hydrothermal vents", () => {
+        it("Should match vents in sketch", async () => {
+          const source = await sourceCache.get<Feature<MultiPolygon>>(
+            "https://uploads.seasketch.org/testing-hydrothermal-vents.fgb",
+            {
+              pageSize: "5MB",
+            }
+          );
+          const prepared = prepareSketch(ventsSketch);
+          const processor = new OverlappingAreaBatchedClippingProcessor(
+            "count",
+            1024 * 1024 * 2, // 5MB
+            prepared.feature,
+            source,
+            [],
+            {}
+          );
+          const results = await processor.calculate();
+          expect(results["*"].count).toBe(5);
+        });
+      });
+
+      it("EBSA - Should count features not subdivided parts", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-ebsa.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const prepared = prepareSketch(
+          require("./sketches/hunga-unclipped.geojson.json")
+        );
+        const processor = new OverlappingAreaBatchedClippingProcessor(
+          "count",
+          1024 * 1024 * 2, // 5MB
+          prepared.feature,
+          source,
+          [],
+          {}
+        );
+        const results = await processor.calculate();
+        expect(results["*"].count).toBe(2);
       });
     });
   });

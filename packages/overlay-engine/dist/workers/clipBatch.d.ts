@@ -28,6 +28,6 @@ export declare function countFeatures({ features, differenceMultiPolygon, subjec
     subjectFeature: Feature<Polygon | MultiPolygon>;
     groupBy?: string;
 }): Promise<{
-    [classKey: string]: number;
+    [k: string]: number[];
 }>;
 //# sourceMappingURL=clipBatch.d.ts.map

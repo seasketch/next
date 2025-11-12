@@ -107,7 +107,7 @@ async function performClipping(features, differenceGeoms, subjectFeature) {
 }
 async function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
     var _a;
-    const results = { "*": 0 };
+    const results = { "*": new Set() };
     for (const f of features) {
         if (f.requiresIntersection) {
             throw new Error("Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature.");
@@ -147,18 +147,21 @@ async function countFeatures({ features, differenceMultiPolygon, subjectFeature,
                 }
             }
         }
+        if (!("__oidx" in f.feature.properties || {})) {
+            throw new Error("Feature properties must contain __oidx");
+        }
         if (groupBy) {
             const classKey = (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy];
             if (classKey) {
                 if (!(classKey in results)) {
-                    results[classKey] = 0;
+                    results[classKey] = new Set();
                 }
-                results[classKey] += 1;
+                results[classKey].add(f.feature.properties.__oidx);
             }
         }
-        results["*"] += 1;
+        results["*"].add(f.feature.properties.__oidx);
     }
-    return results;
+    return Object.fromEntries(Object.entries(results).map(([key, value]) => [key, Array.from(value)]));
 }
 node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.on("message", async (job) => {
     try {

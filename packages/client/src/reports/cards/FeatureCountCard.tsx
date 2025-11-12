@@ -10,7 +10,13 @@ import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
-import { subjectIsFragment } from "overlay-engine";
+import {
+  subjectIsFragment,
+  CountMetric,
+  UniqueIdIndex,
+  mergeUniqueIdIndexes,
+  countUniqueIds,
+} from "overlay-engine";
 import {
   extractColorsForCategories,
   extractColorForLayers,
@@ -49,7 +55,6 @@ export function FeatureCountCard({
   const { reportingLayers } = config;
   useTranslation("reports");
 
-  console.log("metrics", metrics);
   const items = useMemo(() => {
     const items: {
       title: string;
@@ -75,14 +80,40 @@ export function FeatureCountCard({
       (m) => subjectIsFragment(m.subject) && m.type === "count"
     );
 
-    // Sum up counts by groupBy value across all fragments
-    const sumCountsByClass: { [classKey: string]: number } = {};
+    // Collect uniqueIdIndexes by groupBy value across all fragments
+    const indexesByClass: { [classKey: string]: UniqueIdIndex[] } = {};
     for (const metric of fragmentMetrics) {
-      if (metric.value && typeof metric.value === "object") {
-        for (const key in metric.value) {
-          sumCountsByClass[key] =
-            (sumCountsByClass[key] || 0) + metric.value[key];
+      // Access the value property which should be CountMetric["value"]
+      const countValue = metric.value as CountMetric["value"];
+      if (countValue && typeof countValue === "object") {
+        for (const classKey in countValue) {
+          const entry = countValue[classKey];
+          if (
+            entry &&
+            typeof entry === "object" &&
+            "uniqueIdIndex" in entry &&
+            "count" in entry
+          ) {
+            if (!indexesByClass[classKey]) {
+              indexesByClass[classKey] = [];
+            }
+            indexesByClass[classKey].push(entry.uniqueIdIndex);
+          }
         }
+      }
+    }
+
+    // Merge indexes and calculate final counts
+    const sumCountsByClass: { [classKey: string]: number } = {};
+    for (const classKey in indexesByClass) {
+      const indexes = indexesByClass[classKey];
+      if (indexes.length > 0) {
+        // Merge all indexes for this classKey
+        const mergedIndex = mergeUniqueIdIndexes(...indexes);
+        // Calculate count from merged index
+        sumCountsByClass[classKey] = countUniqueIds(mergedIndex);
+      } else {
+        sumCountsByClass[classKey] = 0;
       }
     }
 

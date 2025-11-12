@@ -36,5 +36,11 @@ export {
   MetricSubjectFragment,
   MetricSubjectGeography,
   SourceType,
+  UniqueIdIndex,
 } from "./metrics/metrics";
+export {
+  createUniqueIdIndex,
+  countUniqueIds,
+  mergeUniqueIdIndexes,
+} from "./utils/uniqueIdIndex";
 export { initializeGeographySources } from "./geographies/geographies";

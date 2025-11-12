@@ -28,10 +28,26 @@ import { clipBatch, countFeatures } from "./workers/clipBatch";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 import truncate from "@turf/truncate";
+import { OverlayAreaMetric, CountMetric } from "./metrics/metrics";
+import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 
 export { createClippingWorkerPool };
 
 export type OperationType = "overlay_area" | "count";
+
+/**
+ * Maps operation types to their corresponding metric value types
+ */
+type OperationResultTypeMap = {
+  overlay_area: OverlayAreaMetric["value"];
+  count: CountMetric["value"];
+};
+
+/**
+ * Gets the result type for a given operation type
+ */
+export type OperationResultType<TOp extends OperationType> =
+  OperationResultTypeMap[TOp];
 
 const layers: Record<string, OverlayWorkerLogFeatureLayerConfig> = {
   classifiedFeatures: {
@@ -72,7 +88,9 @@ type BatchData = {
   }[];
 };
 
-export class OverlappingAreaBatchedClippingProcessor {
+export class OverlappingAreaBatchedClippingProcessor<
+  TOp extends OperationType = OperationType
+> {
   /**
    * Current weight of the batch. Once the weight exceeds the batch size, the
    * batch is processed. These values should be based on the complexity of the
@@ -83,7 +101,7 @@ export class OverlappingAreaBatchedClippingProcessor {
    * buffer fgb features size vs GeoJSON text.
    */
   maxBatchSize: number = 0;
-  operation: OperationType;
+  operation: TOp;
   subjectFeature: Feature<Polygon | MultiPolygon>;
   containerIndex: ContainerIndex;
   intersectionSource: FlatGeobufSource<Feature<Geometry>>;
@@ -94,7 +112,9 @@ export class OverlappingAreaBatchedClippingProcessor {
   }[];
   helpers: GuaranteedOverlayWorkerHelpers;
   groupBy?: string;
-  results: { [classKey: string]: number } = { "*": 0 };
+  results: OperationResultType<TOp>;
+  // Interim storage for count operation IDs (before converting to UniqueIdIndex)
+  private countInterimIds: { [groupBy: string]: number[] } = {};
   batchData!: BatchData;
   batchPromises: Promise<any>[] = [];
   pool?: WorkerPool<any, any>;
@@ -103,8 +123,34 @@ export class OverlappingAreaBatchedClippingProcessor {
   private progress: number = 0;
   private progressTarget: number = 0;
 
+  // Type guard helpers
+  private isOverlayAreaOperation(): this is OverlappingAreaBatchedClippingProcessor<"overlay_area"> {
+    return this.operation === "overlay_area";
+  }
+
+  private isCountOperation(): this is OverlappingAreaBatchedClippingProcessor<"count"> {
+    return this.operation === "count";
+  }
+
+  // Operation-specific result getters with proper typing
+  private getOverlayResults(): OperationResultType<"overlay_area"> {
+    return this.results as OperationResultType<"overlay_area">;
+  }
+
+  // Initialize results based on operation type
+  private initializeResults(op: OperationType): OperationResultType<TOp> {
+    if (op === "count") {
+      // Initialize interim ID storage
+      this.countInterimIds = { "*": [] };
+      // Return empty structure - will be populated at the end
+      return {} as unknown as OperationResultType<TOp>;
+    } else {
+      return { "*": 0 } as unknown as OperationResultType<TOp>;
+    }
+  }
+
   constructor(
-    operation: OperationType,
+    operation: TOp,
     maxBatchSize: number,
     subjectFeature: Feature<Polygon | MultiPolygon>,
     intersectionSource: FlatGeobufSource<Feature<Geometry>>,
@@ -145,6 +191,8 @@ export class OverlappingAreaBatchedClippingProcessor {
       }
     }
     this.groupBy = groupBy;
+    // Initialize results based on operation type
+    this.results = this.initializeResults(operation);
     this.resetBatchData();
 
     this.queue = new PQueue({
@@ -155,7 +203,7 @@ export class OverlappingAreaBatchedClippingProcessor {
     }
   }
 
-  resetBatchData() {
+  private resetBatchData() {
     this.batchData = {
       weight: this.weightForFeature(
         this.subjectFeature as FeatureWithMetadata<Feature<Geometry>>
@@ -186,7 +234,7 @@ export class OverlappingAreaBatchedClippingProcessor {
     };
   }
 
-  async calculate(): Promise<{ [classKey: string]: number }> {
+  async calculate(): Promise<OperationResultType<TOp>> {
     return new Promise(async (resolve, reject) => {
       try {
         this.progress = 0;
@@ -314,8 +362,11 @@ export class OverlappingAreaBatchedClippingProcessor {
               this.queue.add(() =>
                 this.processBatch(batchData, differenceMultiPolygon).catch(
                   (e) => {
-                    console.error(`Error processing batch: ${e.message}`);
+                    console.error(
+                      `Error processing batch: ${(e as Error).message}`
+                    );
                     reject(e);
+                    throw e;
                   }
                 )
               )
@@ -332,15 +383,18 @@ export class OverlappingAreaBatchedClippingProcessor {
         }
         const resolvedBatchData = await Promise.all(this.batchPromises);
         this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
-        for (const batchData of resolvedBatchData) {
-          console.log("resolving batch data", batchData);
-          for (const classKey in batchData) {
-            if (!(classKey in this.results)) {
-              this.results[classKey] = 0;
-            }
-            this.results[classKey] += batchData[classKey];
-          }
+
+        if (this.isOverlayAreaOperation()) {
+          this.mergeOverlayBatchResults(
+            resolvedBatchData as OperationResultType<"overlay_area">[]
+          );
+        } else if (this.isCountOperation()) {
+          this.mergeCountBatchResults(
+            resolvedBatchData as { [classKey: string]: number[] }[]
+          );
+          this.finalizeCountResults();
         }
+
         resolve(this.results);
       } catch (e) {
         reject(e);
@@ -348,10 +402,10 @@ export class OverlappingAreaBatchedClippingProcessor {
     });
   }
 
-  async processBatch(
+  private async processBatch(
     batch: BatchData,
     differenceMultiPolygon: clipping.Geom[]
-  ): Promise<{ [classKey: string]: number }> {
+  ): Promise<any> {
     if (batch.features.length === 0) {
       throw new Error("Batch has no features");
     }
@@ -377,7 +431,7 @@ export class OverlappingAreaBatchedClippingProcessor {
     );
 
     if (this.pool) {
-      return this.pool.run(batchPayload).catch((error) => {
+      const result = await this.pool.run(batchPayload).catch((error) => {
         console.error(
           `Error processing batch in worker: ${
             error && (error.stack || error.message || error)
@@ -385,38 +439,110 @@ export class OverlappingAreaBatchedClippingProcessor {
         );
         throw error;
       });
+      return result;
     } else {
-      if (this.operation === "overlay_area") {
-        return clipBatch({
-          features: batch.features as {
-            feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
-            requiresIntersection: boolean;
-            requiresDifference: boolean;
-          }[],
-          differenceMultiPolygon: differenceMultiPolygon,
-          subjectFeature: this.subjectFeature,
-          groupBy: this.groupBy,
-        }).catch((error) => {
-          console.error(`Error processing batch: ${error.message}`);
-          throw error;
-        });
-      } else if (this.operation === "count") {
-        return countFeatures({
-          features: batch.features,
-          differenceMultiPolygon: differenceMultiPolygon,
-          subjectFeature: this.subjectFeature,
-          groupBy: this.groupBy,
-        }).catch((error) => {
-          console.error(`Error counting features: ${error.message}`);
-          throw error;
-        });
+      if (this.isOverlayAreaOperation()) {
+        return this.processOverlayBatch(batch, differenceMultiPolygon);
+      } else if (this.isCountOperation()) {
+        return this.processCountBatch(batch, differenceMultiPolygon);
       } else {
         throw new Error(`Unknown operation type: ${this.operation}`);
       }
     }
   }
 
-  async getDifferenceMultiPolygon(): Promise<clipping.Geom[]> {
+  private async processOverlayBatch(
+    batch: BatchData,
+    differenceMultiPolygon: clipping.Geom[]
+  ): Promise<OperationResultType<"overlay_area">> {
+    return clipBatch({
+      features: batch.features as {
+        feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+        requiresIntersection: boolean;
+        requiresDifference: boolean;
+      }[],
+      differenceMultiPolygon: differenceMultiPolygon,
+      subjectFeature: this.subjectFeature,
+      groupBy: this.groupBy,
+    }).catch((error) => {
+      console.error(`Error processing batch: ${error.message}`);
+      throw error;
+    });
+  }
+
+  private async processCountBatch(
+    batch: BatchData,
+    differenceMultiPolygon: clipping.Geom[]
+  ): Promise<{ [classKey: string]: number[] }> {
+    // countFeatures returns { [classKey: string]: number[] } - interim format
+    return countFeatures({
+      features: batch.features,
+      differenceMultiPolygon: differenceMultiPolygon,
+      subjectFeature: this.subjectFeature,
+      groupBy: this.groupBy,
+    }).catch((error) => {
+      console.error(`Error counting features: ${error.message}`);
+      throw error;
+    });
+  }
+
+  private mergeOverlayBatchResults(batchResults: OperationResultType<TOp>[]) {
+    console.log("resolving batch data", batchResults);
+    const results = this.getOverlayResults();
+    for (const batchData of batchResults) {
+      const overlayBatchData = batchData as OperationResultType<"overlay_area">;
+      for (const classKey in overlayBatchData) {
+        if (!(classKey in results)) {
+          results[classKey] = 0;
+        }
+        results[classKey] += overlayBatchData[classKey];
+      }
+    }
+  }
+
+  private mergeCountBatchResults(
+    batchResults: { [classKey: string]: number[] }[]
+  ) {
+    // Merge batch results into interim ID storage
+    for (const countBatchData of batchResults) {
+      for (const classKey in countBatchData) {
+        if (!(classKey in this.countInterimIds)) {
+          this.countInterimIds[classKey] = [];
+        }
+        const ids = countBatchData[classKey];
+        for (const id of ids) {
+          if (!this.countInterimIds[classKey].includes(id)) {
+            this.countInterimIds[classKey].push(id);
+          }
+        }
+      }
+    }
+  }
+
+  /**
+   * Finalizes count results by converting interim ID arrays to UniqueIdIndex
+   * and calculating counts. Called at the end of calculate().
+   */
+  private finalizeCountResults() {
+    const finalResults: CountMetric["value"] = {};
+
+    for (const classKey in this.countInterimIds) {
+      const ids = this.countInterimIds[classKey];
+      // Create UniqueIdIndex from the array of IDs
+      const uniqueIdIndex = createUniqueIdIndex(ids);
+      // Calculate count from the index
+      const count = countUniqueIds(uniqueIdIndex);
+
+      finalResults[classKey] = {
+        count,
+        uniqueIdIndex,
+      };
+    }
+
+    this.results = finalResults as OperationResultType<TOp>;
+  }
+
+  private async getDifferenceMultiPolygon(): Promise<clipping.Geom[]> {
     // fetch the difference features, and combine into a single multipolygon
     const differenceMultiPolygon = [] as clipping.Geom[];
     await Promise.all(
@@ -458,28 +584,50 @@ export class OverlappingAreaBatchedClippingProcessor {
   }
 
   addFeatureToTotals(feature: FeatureWithMetadata<Feature<Geometry>>) {
-    if (this.operation === "overlay_area") {
-      // get area in square kilometers
-      const area = feature.properties?.__area
-        ? feature.properties.__area
-        : calcArea(feature as Feature<Polygon | MultiPolygon>) * 1e-6;
-      this.results["*"] += area;
-      if (this.groupBy) {
-        const classKey = feature.properties?.[this.groupBy];
-        if (classKey) {
-          this.results[classKey] = this.results[classKey] || 0;
-          this.results[classKey] += area;
-        }
+    if (this.isOverlayAreaOperation()) {
+      this.addOverlayFeatureToTotals(feature);
+    } else if (this.isCountOperation()) {
+      this.addCountFeatureToTotals(feature);
+    }
+  }
+
+  private addOverlayFeatureToTotals(
+    feature: FeatureWithMetadata<Feature<Geometry>>
+  ) {
+    // get area in square kilometers
+    const area = feature.properties?.__area
+      ? feature.properties.__area
+      : calcArea(feature as Feature<Polygon | MultiPolygon>) * 1e-6;
+    const results = this.getOverlayResults();
+    results["*"] = (results["*"] || 0) + area;
+    if (this.groupBy) {
+      const classKey = feature.properties?.[this.groupBy];
+      if (classKey) {
+        results[classKey] = (results[classKey] || 0) + area;
       }
-    } else if (this.operation === "count") {
-      console.log("add to count", this.results);
+    }
+  }
+
+  addCountFeatureToTotals(feature: FeatureWithMetadata<Feature<Geometry>>) {
+    if (!("__oidx" in feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const oidx = feature.properties.__oidx;
+    if (oidx !== undefined && oidx !== null) {
+      // Add to interim ID storage
+      if (!this.countInterimIds["*"].includes(oidx)) {
+        this.countInterimIds["*"].push(oidx);
+      }
       // Count the feature (or points in MultiPoint)
-      this.results["*"] += 1;
       if (this.groupBy) {
         const classKey = feature.properties?.[this.groupBy];
         if (classKey) {
-          this.results[classKey] = this.results[classKey] || 0;
-          this.results[classKey] += 1;
+          if (!(classKey in this.countInterimIds)) {
+            this.countInterimIds[classKey] = [];
+          }
+          if (!this.countInterimIds[classKey].includes(oidx)) {
+            this.countInterimIds[classKey].push(oidx);
+          }
         }
       }
     }

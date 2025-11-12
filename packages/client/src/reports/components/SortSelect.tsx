@@ -22,9 +22,7 @@ export default function SortSelect<T extends string>({
 
   return (
     <div>
-      <label className="text-sm font-medium text-gray-900">
-        {t(labelKey)}
-      </label>
+      <label className="text-sm font-medium text-gray-900">{t(labelKey)}</label>
       {descriptionKey && (
         <p className="text-xs text-gray-500 mt-1">{t(descriptionKey)}</p>
       )}
@@ -44,4 +42,3 @@ export default function SortSelect<T extends string>({
     </div>
   );
 }
-

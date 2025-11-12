@@ -4210,7 +4210,7 @@ async function countFeatures({
   subjectFeature,
   groupBy
 }) {
-  const results = { "*": 0 };
+  const results = { "*": /* @__PURE__ */ new Set() };
   for (const f of features) {
     if (f.requiresIntersection) {
       throw new Error(
@@ -4246,18 +4246,23 @@ async function countFeatures({
         }
       }
     }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
     if (groupBy) {
       const classKey = f.feature.properties?.[groupBy];
       if (classKey) {
         if (!(classKey in results)) {
-          results[classKey] = 0;
+          results[classKey] = /* @__PURE__ */ new Set();
         }
-        results[classKey] += 1;
+        results[classKey].add(f.feature.properties.__oidx);
       }
     }
-    results["*"] += 1;
+    results["*"].add(f.feature.properties.__oidx);
   }
-  return results;
+  return Object.fromEntries(
+    Object.entries(results).map(([key, value]) => [key, Array.from(value)])
+  );
 }
 import_node_worker_threads.parentPort?.on(
   "message",

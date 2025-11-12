@@ -117,7 +117,7 @@ export async function countFeatures({
   subjectFeature: Feature<Polygon | MultiPolygon>;
   groupBy?: string;
 }) {
-  const results: { [classKey: string]: number } = { "*": 0 };
+  const results: { [classKey: string]: Set<number> } = { "*": new Set() };
   for (const f of features) {
     if (f.requiresIntersection) {
       throw new Error(
@@ -163,18 +163,23 @@ export async function countFeatures({
         }
       }
     }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
     if (groupBy) {
       const classKey = f.feature.properties?.[groupBy];
       if (classKey) {
         if (!(classKey in results)) {
-          results[classKey] = 0;
+          results[classKey] = new Set();
         }
-        results[classKey] += 1;
+        results[classKey].add(f.feature.properties.__oidx);
       }
     }
-    results["*"] += 1;
+    results["*"].add(f.feature.properties.__oidx);
   }
-  return results;
+  return Object.fromEntries(
+    Object.entries(results).map(([key, value]) => [key, Array.from(value)])
+  );
 }
 
 parentPort?.on(

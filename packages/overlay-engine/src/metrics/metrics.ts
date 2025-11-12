@@ -39,10 +39,29 @@ export type OverlayAreaMetric = OverlayMetricBase & {
   };
 };
 
+/**
+ * For CountMetrics, it's important to know the unique IDs of matches, since you
+ * may need to join results from multiple fragments. You must check the index
+ * in this scenario to avoid double-counting features.
+ */
+export type UniqueIdIndex = {
+  /**
+   * [start, end] Ranges of IDs that are consecutive. Always sorted.
+   */
+  ranges: [number, number][];
+  /**
+   * IDs that don't fit in ranges. Always sorted.
+   */
+  individuals: number[];
+};
+
 export type CountMetric = OverlayMetricBase & {
   type: "count";
   value: {
-    [groupBy: string]: number;
+    [groupBy: string]: {
+      count: number;
+      uniqueIdIndex: UniqueIdIndex;
+    };
   };
 };
 
