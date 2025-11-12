@@ -135,7 +135,7 @@ async function createPMTiles(path, logger, workingDirectory, jobId, layerName, p
             "-co",
             "BLOCKSIZE=512",
             "-co",
-            "RESAMPLING=CUBIC",
+            "RESAMPLING=NEAREST",
             "-co",
             `NAME=${layerName}`,
             // `-co`,
@@ -175,9 +175,9 @@ async function createPMTiles(path, logger, workingDirectory, jobId, layerName, p
             "gdaladdo",
             [
                 "-r",
-                // presentation === SuggestedRasterPresentation.rgb
-                "cubic",
-                // : "nearest",
+                presentation === geostats_types_1.SuggestedRasterPresentation.rgb
+                    ? "cubic"
+                    : "nearest",
                 mbtilesPath,
                 ...overviews.map((o) => o.toString()),
             ],
