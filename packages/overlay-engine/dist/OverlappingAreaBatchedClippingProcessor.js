@@ -322,7 +322,6 @@ class OverlappingAreaBatchedClippingProcessor {
         });
     }
     mergeOverlayBatchResults(batchResults) {
-        console.log("resolving batch data", batchResults);
         const results = this.getOverlayResults();
         for (const batchData of batchResults) {
             const overlayBatchData = batchData;
@@ -428,21 +427,22 @@ class OverlappingAreaBatchedClippingProcessor {
             throw new Error("Feature properties must contain __oidx");
         }
         const oidx = feature.properties.__oidx;
-        if (oidx !== undefined && oidx !== null) {
-            // Add to interim ID storage
-            if (!this.countInterimIds["*"].includes(oidx)) {
-                this.countInterimIds["*"].push(oidx);
-            }
-            // Count the feature (or points in MultiPoint)
-            if (this.groupBy) {
-                const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy];
-                if (classKey) {
-                    if (!(classKey in this.countInterimIds)) {
-                        this.countInterimIds[classKey] = [];
-                    }
-                    if (!this.countInterimIds[classKey].includes(oidx)) {
-                        this.countInterimIds[classKey].push(oidx);
-                    }
+        if (oidx === undefined || oidx === null) {
+            throw new Error("Feature properties must contain __oidx");
+        }
+        // Add to interim ID storage
+        if (!this.countInterimIds["*"].includes(oidx)) {
+            this.countInterimIds["*"].push(oidx);
+        }
+        // Count the feature (or points in MultiPoint)
+        if (this.groupBy) {
+            const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy];
+            if (classKey) {
+                if (!(classKey in this.countInterimIds)) {
+                    this.countInterimIds[classKey] = [];
+                }
+                if (!this.countInterimIds[classKey].includes(oidx)) {
+                    this.countInterimIds[classKey].push(oidx);
                 }
             }
         }

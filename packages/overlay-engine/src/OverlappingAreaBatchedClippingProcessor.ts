@@ -487,7 +487,6 @@ export class OverlappingAreaBatchedClippingProcessor<
   }
 
   private mergeOverlayBatchResults(batchResults: OperationResultType<TOp>[]) {
-    console.log("resolving batch data", batchResults);
     const results = this.getOverlayResults();
     for (const batchData of batchResults) {
       const overlayBatchData = batchData as OperationResultType<"overlay_area">;
@@ -613,21 +612,22 @@ export class OverlappingAreaBatchedClippingProcessor<
       throw new Error("Feature properties must contain __oidx");
     }
     const oidx = feature.properties.__oidx;
-    if (oidx !== undefined && oidx !== null) {
-      // Add to interim ID storage
-      if (!this.countInterimIds["*"].includes(oidx)) {
-        this.countInterimIds["*"].push(oidx);
-      }
-      // Count the feature (or points in MultiPoint)
-      if (this.groupBy) {
-        const classKey = feature.properties?.[this.groupBy];
-        if (classKey) {
-          if (!(classKey in this.countInterimIds)) {
-            this.countInterimIds[classKey] = [];
-          }
-          if (!this.countInterimIds[classKey].includes(oidx)) {
-            this.countInterimIds[classKey].push(oidx);
-          }
+    if (oidx === undefined || oidx === null) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    // Add to interim ID storage
+    if (!this.countInterimIds["*"].includes(oidx)) {
+      this.countInterimIds["*"].push(oidx);
+    }
+    // Count the feature (or points in MultiPoint)
+    if (this.groupBy) {
+      const classKey = feature.properties?.[this.groupBy];
+      if (classKey) {
+        if (!(classKey in this.countInterimIds)) {
+          this.countInterimIds[classKey] = [];
+        }
+        if (!this.countInterimIds[classKey].includes(oidx)) {
+          this.countInterimIds[classKey].push(oidx);
         }
       }
     }

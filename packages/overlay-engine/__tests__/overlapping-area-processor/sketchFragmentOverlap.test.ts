@@ -518,15 +518,6 @@ describe("sketchFragmentOverlap", () => {
           }
         },
       };
-      clippingFn = async (sketch, source, op, query) => {
-        const fgbSource = await sourceCache.get<
-          Feature<MultiPolygon | Polygon>
-        >(source);
-        const overlappingFeatures = fgbSource.getFeaturesAsync(
-          sketch.envelopes
-        );
-        return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
-      };
     });
 
     afterAll(async () => {
@@ -575,6 +566,53 @@ describe("sketchFragmentOverlap", () => {
       const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(11.06, 1);
       // console.log(results);
+    });
+  });
+
+  describe("CRDSS", () => {
+    const { fetchRangeFn } = makeFetchRangeFn(
+      `https://uploads.seasketch.org`,
+      1000 * 1024 * 128
+    );
+
+    let pool: WorkerPool<any, any>;
+    let sourceCache: SourceCache;
+
+    beforeAll(async () => {
+      sourceCache = new SourceCache("128mb", {
+        fetchRangeFn,
+      });
+      pool = createClippingWorkerPool(
+        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+      );
+    });
+
+    it("Should count features not subdivided parts", async () => {
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-reef-injury-sites-2.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const prepared = prepareSketch(
+        require("./sketches/CRDSS-Example-A.geojson.json")
+      );
+      console.log("prepared", prepared);
+      const processor = new OverlappingAreaBatchedClippingProcessor(
+        "count",
+        1024 * 1024 * 2, // 5MB
+        prepared.feature,
+        source,
+        [],
+        {},
+        "Type",
+        pool
+      );
+      const results = await processor.calculate();
+      expect(results["*"].count).toBe(7);
+      expect(results["chain"].count).toBe(1);
+      expect(results["grounding"].count).toBe(5);
+      expect(results["sunken object"].count).toBe(1);
     });
   });
 });
