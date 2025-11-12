@@ -7423,6 +7423,10 @@ select{
   max-width:20rem
 }
 
+.max-w-96{
+  max-width:24rem
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -8212,6 +8216,14 @@ select{
 
 .whitespace-pre-line{
   white-space:pre-line
+}
+
+.whitespace-pre-wrap{
+  white-space:pre-wrap
+}
+
+.break-words{
+  overflow-wrap:break-word
 }
 
 .rounded{
@@ -10624,6 +10636,11 @@ select{
 .text-yellow-900{
   --tw-text-opacity:1;
   color:rgb(120 53 15 / var(--tw-text-opacity, 1))
+}
+
+.text-purple-400{
+  --tw-text-opacity:1;
+  color:rgb(192 132 252 / var(--tw-text-opacity, 1))
 }
 
 .text-opacity-50{

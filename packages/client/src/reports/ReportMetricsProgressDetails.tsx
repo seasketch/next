@@ -161,6 +161,8 @@ export default function ReportMetricsProgressDetails({
                   durationSeconds={metric.durationSeconds}
                   errorMessage={metric.errorMessage}
                   estimatedCompletionTime={metric.eta}
+                  isAdmin={isAdmin}
+                  value={metric.value}
                   sourcesReady={state.relatedOverlaySources.every(
                     (layer) =>
                       layer.output ||
@@ -210,6 +212,8 @@ export default function ReportMetricsProgressDetails({
                   durationSeconds={metric.durationSeconds}
                   errorMessage={metric.errorMessage}
                   estimatedCompletionTime={metric.eta}
+                  isAdmin={isAdmin}
+                  value={metric.value}
                   sourcesReady={state.relatedOverlaySources.every(
                     (layer) =>
                       layer.output ||
