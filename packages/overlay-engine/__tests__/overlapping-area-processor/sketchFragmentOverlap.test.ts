@@ -614,5 +614,49 @@ describe("sketchFragmentOverlap", () => {
       expect(results["grounding"].count).toBe(5);
       expect(results["sunken object"].count).toBe(1);
     });
+
+    it("Presence metrics", async () => {
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-reef-injury-sites-2.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const prepared = prepareSketch(
+        require("./sketches/CRDSS-Example-A.geojson.json")
+      );
+      const processor = new OverlappingAreaBatchedClippingProcessor(
+        "presence",
+        1024 * 1024 * 2, // 5MB
+        prepared.feature,
+        source,
+        [],
+        {}
+      );
+      const results = await processor.calculate();
+      expect(results).toBe(true);
+    });
+
+    it("Presence miss", async () => {
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-reef-injury-sites-2.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const prepared = prepareSketch(
+        require("./sketches/Long-Beach.geojson.json")
+      );
+      const processor = new OverlappingAreaBatchedClippingProcessor(
+        "presence",
+        1024 * 1024 * 2, // 5MB
+        prepared.feature,
+        source,
+        [],
+        {}
+      );
+      const results = await processor.calculate();
+      expect(results).toBe(false);
+    });
   });
 });

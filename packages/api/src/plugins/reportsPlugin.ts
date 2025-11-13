@@ -533,6 +533,32 @@ async function getOrCreateReportDependencies(
         }
         break;
       }
+      case "Presence": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "presence",
+            overlaySource,
+            layer.layerParameters,
+            card.component_settings,
+            [],
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+          console.log(cardDependencyList);
+        }
+      }
       default:
         // do nothing. some cards like sketchAttributes do not have dependencies
         break;
@@ -554,6 +580,19 @@ async function getOrCreateSpatialMetric(
   sourceProcessingJobDependency: string | null,
   projectId: number
 ) {
+  if (type === "presence") {
+    console.log(
+      "getOrCreateSpatialMetric",
+      subjectFragmentId,
+      subjectGeographyId,
+      type,
+      overlaySourceUrl,
+      overlayGroupBy,
+      includedProperties,
+      sourceProcessingJobDependency,
+      projectId
+    );
+  }
   const result = await pool.query(
     `
     select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::text, $6::text[], $7::text, $8::int) as metric
@@ -569,6 +608,9 @@ async function getOrCreateSpatialMetric(
       projectId,
     ]
   );
+  if (type === "presence") {
+    console.log("getOrCreateSpatialMetric result", result.rows[0].metric);
+  }
   return result.rows[0].metric;
 }
 
@@ -622,6 +664,9 @@ async function getOrCreateMetricsOfType(
       overlaySource.sourceProcessingJobId || null,
       projectId
     );
+    if (type === "presence") {
+      console.log("presence metric", metric);
+    }
     metrics.push(metric);
   }
   return metrics;

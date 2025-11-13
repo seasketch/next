@@ -39,6 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.clipBatch = clipBatch;
 exports.performClipping = performClipping;
 exports.countFeatures = countFeatures;
+exports.testForPresenceInSubject = testForPresenceInSubject;
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
 const node_worker_threads_1 = require("node:worker_threads");
@@ -163,6 +164,33 @@ async function countFeatures({ features, differenceMultiPolygon, subjectFeature,
     }
     return Object.fromEntries(Object.entries(results).map(([key, value]) => [key, Array.from(value)]));
 }
+async function testForPresenceInSubject({ features, differenceMultiPolygon, subjectFeature, }) {
+    // Tests whether any features in the feature array are present in the subject
+    // feature. If any of those features are in the subject but also in the
+    // difference feature, they don't count as a match. This function will return
+    // tru as soon as it finds any match.
+    for (const f of features) {
+        if (f.requiresIntersection) {
+            if (!(0, boolean_intersects_1.default)(f.feature, subjectFeature)) {
+                continue;
+            }
+        }
+        if (f.requiresDifference) {
+            if ((0, boolean_intersects_1.default)(f.feature, {
+                type: "Feature",
+                properties: {},
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: differenceMultiPolygon,
+                },
+            })) {
+                continue;
+            }
+        }
+        return true;
+    }
+    return false;
+}
 node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.on("message", async (job) => {
     try {
         const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
@@ -182,6 +210,13 @@ node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort ==
                 differenceMultiPolygon: job.differenceMultiPolygon,
                 subjectFeature: job.subjectFeature,
                 groupBy: job.groupBy,
+            });
+        }
+        else if (operation === "presence") {
+            result = await testForPresenceInSubject({
+                features: job.features,
+                differenceMultiPolygon: job.differenceMultiPolygon,
+                subjectFeature: job.subjectFeature,
             });
         }
         else {

@@ -46,6 +46,9 @@ class OverlappingAreaBatchedClippingProcessor {
     isCountOperation() {
         return this.operation === "count";
     }
+    isPresenceOperation() {
+        return this.operation === "presence";
+    }
     // Operation-specific result getters with proper typing
     getOverlayResults() {
         return this.results;
@@ -77,6 +80,7 @@ class OverlappingAreaBatchedClippingProcessor {
         // Interim storage for count operation IDs (before converting to UniqueIdIndex)
         this.countInterimIds = {};
         this.batchPromises = [];
+        this.presenceOperationEarlyReturn = false;
         this.progress = 0;
         this.progressTarget = 0;
         this.operation = operation;
@@ -86,14 +90,6 @@ class OverlappingAreaBatchedClippingProcessor {
         this.maxBatchSize = maxBatchSize;
         this.subjectFeature = subjectFeature;
         this.helpers = (0, helpers_1.guaranteeHelpers)(helpers);
-        // Validate operation type and geometry type compatibility
-        if (operation === "overlay_area") {
-            // overlay_area only supports Polygon/MultiPolygon
-            // Type checking will handle this at compile time, but we can add runtime validation if needed
-        }
-        else if (operation === "count") {
-            // count supports Point/MultiPoint (and potentially others in the future)
-        }
         console.time("build container index");
         this.containerIndex = new containerIndex_1.ContainerIndex(subjectFeature);
         console.timeEnd("build container index");
@@ -164,6 +160,11 @@ class OverlappingAreaBatchedClippingProcessor {
                 for await (const feature of this.intersectionSource.getFeaturesAsync(envelopes, {
                     queryPlan,
                 })) {
+                    if (this.presenceOperationEarlyReturn) {
+                        this.progress = this.progressTarget;
+                        this.results = true;
+                        return resolve(this.results);
+                    }
                     (0, truncate_1.default)(feature, { mutate: true });
                     this.helpers.progress((this.progress / this.progressTarget) * 100, `Processing features: (${this.progress}/${this.progressTarget} bytes)`);
                     let requiresIntersection = false;
@@ -211,10 +212,17 @@ class OverlappingAreaBatchedClippingProcessor {
                         }
                     }
                     if (!requiresIntersection && !requiresDifference) {
-                        // feature is entirely within the subject feature, so we can skip
-                        // clipping. Just need to add it to the appropriate total(s).
-                        this.addFeatureToTotals(feature);
-                        this.progress += ((_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength) || 0;
+                        if (this.operation === "presence") {
+                            this.progress = this.progressTarget;
+                            this.results = true;
+                            return resolve(this.results);
+                        }
+                        else {
+                            // feature is entirely within the subject feature, so we can skip
+                            // clipping. Just need to add it to the appropriate total(s).
+                            this.addFeatureToTotals(feature);
+                            this.progress += ((_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength) || 0;
+                        }
                     }
                     else {
                         // add feature to batch for clipping
@@ -252,6 +260,15 @@ class OverlappingAreaBatchedClippingProcessor {
                     this.mergeCountBatchResults(resolvedBatchData);
                     this.finalizeCountResults();
                 }
+                if (this.isPresenceOperation()) {
+                    const hasMatch = resolvedBatchData.some((result) => result === true);
+                    if (hasMatch) {
+                        resolve(true);
+                    }
+                    else {
+                        resolve(false);
+                    }
+                }
                 resolve(this.results);
             }
             catch (e) {
@@ -284,6 +301,9 @@ class OverlappingAreaBatchedClippingProcessor {
                 console.error(`Error processing batch in worker: ${error && (error.stack || error.message || error)}`);
                 throw error;
             });
+            if (this.isPresenceOperation() && result === true) {
+                this.presenceOperationEarlyReturn = true;
+            }
             return result;
         }
         else {
@@ -292,6 +312,9 @@ class OverlappingAreaBatchedClippingProcessor {
             }
             else if (this.isCountOperation()) {
                 return this.processCountBatch(batch, differenceMultiPolygon);
+            }
+            else if (this.isPresenceOperation()) {
+                return this.processPresenceBatch(batch, differenceMultiPolygon);
             }
             else {
                 throw new Error(`Unknown operation type: ${this.operation}`);
@@ -318,6 +341,16 @@ class OverlappingAreaBatchedClippingProcessor {
             groupBy: this.groupBy,
         }).catch((error) => {
             console.error(`Error counting features: ${error.message}`);
+            throw error;
+        });
+    }
+    async processPresenceBatch(batch, differenceMultiPolygon) {
+        return (0, clipBatch_1.testForPresenceInSubject)({
+            features: batch.features,
+            differenceMultiPolygon: differenceMultiPolygon,
+            subjectFeature: this.subjectFeature,
+        }).catch((error) => {
+            console.error(`Error testing for presence in subject: ${error.message}`);
             throw error;
         });
     }

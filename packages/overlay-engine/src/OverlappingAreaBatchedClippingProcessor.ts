@@ -24,16 +24,24 @@ import bbox from "@turf/bbox";
 import calcArea from "@turf/area";
 import { Cql2Query, evaluateCql2JSONQuery } from "./cql2";
 import * as clipping from "polyclip-ts";
-import { clipBatch, countFeatures } from "./workers/clipBatch";
+import {
+  clipBatch,
+  countFeatures,
+  testForPresenceInSubject,
+} from "./workers/clipBatch";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 import truncate from "@turf/truncate";
-import { OverlayAreaMetric, CountMetric } from "./metrics/metrics";
+import {
+  OverlayAreaMetric,
+  CountMetric,
+  PresenceMetric,
+} from "./metrics/metrics";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 
 export { createClippingWorkerPool };
 
-export type OperationType = "overlay_area" | "count";
+export type OperationType = "overlay_area" | "count" | "presence";
 
 /**
  * Maps operation types to their corresponding metric value types
@@ -41,6 +49,7 @@ export type OperationType = "overlay_area" | "count";
 type OperationResultTypeMap = {
   overlay_area: OverlayAreaMetric["value"];
   count: CountMetric["value"];
+  presence: PresenceMetric["value"];
 };
 
 /**
@@ -119,6 +128,7 @@ export class OverlappingAreaBatchedClippingProcessor<
   batchPromises: Promise<any>[] = [];
   pool?: WorkerPool<any, any>;
   queue: PQueue;
+  presenceOperationEarlyReturn = false;
 
   private progress: number = 0;
   private progressTarget: number = 0;
@@ -130,6 +140,10 @@ export class OverlappingAreaBatchedClippingProcessor<
 
   private isCountOperation(): this is OverlappingAreaBatchedClippingProcessor<"count"> {
     return this.operation === "count";
+  }
+
+  private isPresenceOperation(): this is OverlappingAreaBatchedClippingProcessor<"presence"> {
+    return this.operation === "presence";
   }
 
   // Operation-specific result getters with proper typing
@@ -170,14 +184,6 @@ export class OverlappingAreaBatchedClippingProcessor<
     this.maxBatchSize = maxBatchSize;
     this.subjectFeature = subjectFeature;
     this.helpers = guaranteeHelpers(helpers);
-
-    // Validate operation type and geometry type compatibility
-    if (operation === "overlay_area") {
-      // overlay_area only supports Polygon/MultiPolygon
-      // Type checking will handle this at compile time, but we can add runtime validation if needed
-    } else if (operation === "count") {
-      // count supports Point/MultiPoint (and potentially others in the future)
-    }
 
     console.time("build container index");
     this.containerIndex = new ContainerIndex(subjectFeature);
@@ -278,6 +284,11 @@ export class OverlappingAreaBatchedClippingProcessor<
             queryPlan,
           }
         )) {
+          if (this.presenceOperationEarlyReturn) {
+            this.progress = this.progressTarget;
+            this.results = true as OperationResultType<TOp>;
+            return resolve(this.results);
+          }
           truncate(feature, { mutate: true });
           this.helpers.progress(
             (this.progress / this.progressTarget) * 100,
@@ -333,10 +344,16 @@ export class OverlappingAreaBatchedClippingProcessor<
             }
           }
           if (!requiresIntersection && !requiresDifference) {
-            // feature is entirely within the subject feature, so we can skip
-            // clipping. Just need to add it to the appropriate total(s).
-            this.addFeatureToTotals(feature);
-            this.progress += feature.properties?.__byteLength || 0;
+            if (this.operation === "presence") {
+              this.progress = this.progressTarget;
+              this.results = true as OperationResultType<TOp>;
+              return resolve(this.results);
+            } else {
+              // feature is entirely within the subject feature, so we can skip
+              // clipping. Just need to add it to the appropriate total(s).
+              this.addFeatureToTotals(feature);
+              this.progress += feature.properties?.__byteLength || 0;
+            }
           } else {
             // add feature to batch for clipping
             this.addFeatureToBatch(
@@ -394,7 +411,14 @@ export class OverlappingAreaBatchedClippingProcessor<
           );
           this.finalizeCountResults();
         }
-
+        if (this.isPresenceOperation()) {
+          const hasMatch = resolvedBatchData.some((result) => result === true);
+          if (hasMatch) {
+            resolve(true as OperationResultType<TOp>);
+          } else {
+            resolve(false as OperationResultType<TOp>);
+          }
+        }
         resolve(this.results);
       } catch (e) {
         reject(e);
@@ -439,12 +463,17 @@ export class OverlappingAreaBatchedClippingProcessor<
         );
         throw error;
       });
+      if (this.isPresenceOperation() && result === true) {
+        this.presenceOperationEarlyReturn = true;
+      }
       return result;
     } else {
       if (this.isOverlayAreaOperation()) {
         return this.processOverlayBatch(batch, differenceMultiPolygon);
       } else if (this.isCountOperation()) {
         return this.processCountBatch(batch, differenceMultiPolygon);
+      } else if (this.isPresenceOperation()) {
+        return this.processPresenceBatch(batch, differenceMultiPolygon);
       } else {
         throw new Error(`Unknown operation type: ${this.operation}`);
       }
@@ -482,6 +511,20 @@ export class OverlappingAreaBatchedClippingProcessor<
       groupBy: this.groupBy,
     }).catch((error) => {
       console.error(`Error counting features: ${error.message}`);
+      throw error;
+    });
+  }
+
+  private async processPresenceBatch(
+    batch: BatchData,
+    differenceMultiPolygon: clipping.Geom[]
+  ): Promise<OperationResultType<"presence">> {
+    return testForPresenceInSubject({
+      features: batch.features,
+      differenceMultiPolygon: differenceMultiPolygon,
+      subjectFeature: this.subjectFeature,
+    }).catch((error) => {
+      console.error(`Error testing for presence in subject: ${error.message}`);
       throw error;
     });
   }

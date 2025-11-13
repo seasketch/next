@@ -182,10 +182,52 @@ export async function countFeatures({
   );
 }
 
+export async function testForPresenceInSubject({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+}) {
+  // Tests whether any features in the feature array are present in the subject
+  // feature. If any of those features are in the subject but also in the
+  // difference feature, they don't count as a match. This function will return
+  // tru as soon as it finds any match.
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      if (!booleanIntersects(f.feature, subjectFeature)) {
+        continue;
+      }
+    }
+    if (f.requiresDifference) {
+      if (
+        booleanIntersects(f.feature, {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon,
+          },
+        })
+      ) {
+        continue;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
 parentPort?.on(
   "message",
   async (job: {
-    operation?: "overlay_area" | "count";
+    operation?: "overlay_area" | "count" | "presence";
     features: {
       feature: FeatureWithMetadata<Feature<Geometry>>;
       requiresIntersection: boolean;
@@ -216,6 +258,12 @@ parentPort?.on(
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
           groupBy: job.groupBy,
+        });
+      } else if (operation === "presence") {
+        result = await testForPresenceInSubject({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
         });
       } else {
         throw new Error(`Unknown operation type: ${operation}`);

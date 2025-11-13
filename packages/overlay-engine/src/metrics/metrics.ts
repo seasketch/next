@@ -67,11 +67,7 @@ export type CountMetric = OverlayMetricBase & {
 
 export type PresenceMetric = OverlayMetricBase & {
   type: "presence";
-  value:
-    | boolean
-    | {
-        [groupBy: string]: boolean;
-      };
+  value: boolean;
 };
 
 export type PresenceTableValue = {

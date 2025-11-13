@@ -216,9 +216,30 @@ export default function ReportCard({
   const [recomputeTotals, setRecomputeTotals] = useState(false);
   const [showCalcDetails, setShowCalcDetails] = useState(false);
 
+  const presenceAbsenceClassName = useMemo(() => {
+    if (
+      config.type === "Presence" &&
+      !loading &&
+      !Object.values(errors).length
+    ) {
+      const isPresent = metrics.some(
+        (m) => m.type === "presence" && m.value === true
+      );
+      if (isPresent) {
+        return "isPresent";
+      } else {
+        return "isAbsent";
+      }
+    } else {
+      return "";
+    }
+  }, [config.type, metrics, loading, errors]);
+
   return (
     <div
-      className={`transition-opacity opacity-100 relative rounded w-full shadow-sm ${getBackgroundClasses()} group ${
+      className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
+        adminMode && selectedForEditing === cardId ? "editing" : ""
+      } transition-opacity opacity-100 relative rounded w-full shadow-sm ${getBackgroundClasses()} group ${
         isSelectedForEditing ? "ring-2 ring-opacity-80 ring-blue-500" : ""
       } ${
         isDisabled ? "opacity-60 pointer-events-none select-none" : ""

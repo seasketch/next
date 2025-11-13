@@ -61,7 +61,11 @@ export default async function calculateSpatialMetric(
           ...metric.parameters,
         } as OverlayWorkerPayload);
       }
-    } else if (metric.type === "overlay_area" || metric.type === "count") {
+    } else if (
+      metric.type === "overlay_area" ||
+      metric.type === "count" ||
+      metric.type === "presence"
+    ) {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
         return;

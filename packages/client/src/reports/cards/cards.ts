@@ -15,8 +15,8 @@ export type ReportCardType =
   | "TextBlock"
   | "Size"
   | "OverlappingAreas"
-  | "FeatureCount";
-
+  | "FeatureCount"
+  | "Presence";
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
  * used to render a card in a report. It is used to determine the type of card,
@@ -147,6 +147,7 @@ export function registerCards() {
   import("./OverlappingAreasCard");
   import("./TextBlockCard");
   import("./FeatureCountCard");
+  import("./PresenceCard");
 }
 
 /**

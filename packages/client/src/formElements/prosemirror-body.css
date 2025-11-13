@@ -169,7 +169,7 @@ div[attachments="forumAttachments"] {
   opacity: 0.3;
 }
 
-.ProseMirror h1.empty-report-title-node::before {
+.ProseMirror .ProseMirror h1.empty-report-title-node::before {
   content: "Card Title...";
 }
 
@@ -248,4 +248,43 @@ div[attachments="forumAttachments"] {
   > [contenteditable="true"]
   > *:not([data-footer-title="yes"]) {
   display: none;
+}
+
+[data-presence-block="yes"],
+[data-absence-block="yes"] {
+  @apply hidden;
+}
+
+.Presence.ReportCard.editing [data-presence-block="yes"] {
+  @apply outline-1 outline-green-500/50 outline outline-offset-4 rounded-sm;
+}
+
+.Presence.ReportCard.editing [data-absence-block="yes"] {
+  @apply outline-1 outline-red-500/50 outline outline-offset-4 rounded-sm mt-4;
+}
+
+.Presence.ReportCard.editing [data-presence-block="yes"] {
+  @apply block;
+}
+
+.Presence.ReportCard.editing [data-absence-block="yes"] {
+  @apply block;
+}
+
+.Presence.ReportCard.editing [data-presence-block="yes"]::before {
+  content: "Content to show when features overlap";
+  @apply text-green-500;
+}
+
+.Presence.ReportCard.editing [data-absence-block="yes"]::before {
+  content: "Content to show when overlapping features are absent";
+  @apply text-red-500;
+}
+
+.Presence.ReportCard.isPresent [data-presence-block="yes"] {
+  @apply block;
+}
+
+.Presence.ReportCard.isAbsent [data-absence-block="yes"] {
+  @apply block;
 }

@@ -138,6 +138,38 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
       );
     });
 
+    it("Presence Stress test - Geomorphic", async () => {
+      const {
+        intersectionFeature: intersectionFeatureGeojson,
+        differenceSources,
+      } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
+        pageSize: "5MB",
+      });
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-geomorphic-2.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const pool = createClippingWorkerPool(
+        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+      );
+      const processor = new OverlappingAreaBatchedClippingProcessor(
+        "presence",
+        1024 * 1024 * 2, // 5MB
+        simplify(intersectionFeatureGeojson, {
+          tolerance: 0.002,
+        }),
+        source,
+        differenceSources,
+        undefined,
+        "class",
+        pool
+      );
+      const results = await processor.calculate();
+      expect(results).toBe(true);
+    });
+
     it("Deepwater Bioregions", async () => {
       const {
         intersectionFeature: intersectionFeatureGeojson,
@@ -226,6 +258,33 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         );
         const results = await processor.calculate();
         expect(results["*"].count).toBe(4);
+      });
+    });
+
+    describe("Presence metrics", () => {
+      it("Hydrothermal vents", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-hydrothermal-vents.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const {
+          intersectionFeature: intersectionFeatureGeojson,
+          differenceSources,
+        } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
+          pageSize: "5MB",
+        });
+        const processor = new OverlappingAreaBatchedClippingProcessor(
+          "presence",
+          1024 * 1024 * 2, // 5MB
+          intersectionFeatureGeojson,
+          source,
+          differenceSources,
+          {}
+        );
+        const results = await processor.calculate();
+        expect(results).toBe(true);
       });
     });
   });

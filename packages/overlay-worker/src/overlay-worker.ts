@@ -207,7 +207,8 @@ export default async function handler(payload: OverlayWorkerPayload) {
         );
         return;
       }
-      case "count": {
+      case "count":
+      case "presence": {
         if (!payload.sourceUrl) {
           throw new Error("sourceUrl is required for count");
         }
@@ -224,7 +225,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
         );
         helpers.log("running count operation");
         const processor = new OverlappingAreaBatchedClippingProcessor(
-          "count",
+          payload.type,
           1024 * 1024 * 1, // 5MB
           simplify(intersectionFeature, {
             tolerance: 0.002,

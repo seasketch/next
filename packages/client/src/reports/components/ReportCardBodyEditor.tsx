@@ -15,6 +15,62 @@ import {
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 
+// Ensure legacy report bodies (saved before presenceBlock/absenceBlock existed) always
+// have both presenceBlock and absenceBlock nodes at the end, each with at least one paragraph.
+// Only applies when the active schema actually defines these nodes.
+function ensurePresenceBlockJson(body: any, schema: any): any {
+  if (!schema?.nodes?.presenceBlock || !schema?.nodes?.absenceBlock) {
+    return body;
+  }
+
+  if (!body || body.type !== "doc" || !Array.isArray(body.content)) {
+    return body;
+  }
+
+  const hasPresenceBlock = body.content.some(
+    (node: any) => node && node.type === "presenceBlock"
+  );
+  const hasAbsenceBlock = body.content.some(
+    (node: any) => node && node.type === "absenceBlock"
+  );
+
+  // If both already exist, return as-is
+  if (hasPresenceBlock && hasAbsenceBlock) {
+    return body;
+  }
+
+  const newContent = [...body.content];
+
+  // Add presenceBlock if missing
+  if (!hasPresenceBlock) {
+    newContent.push({
+      type: "presenceBlock",
+      content: [
+        {
+          type: "paragraph",
+        },
+      ],
+    });
+  }
+
+  // Add absenceBlock if missing (should always come after presenceBlock)
+  if (!hasAbsenceBlock) {
+    newContent.push({
+      type: "absenceBlock",
+      content: [
+        {
+          type: "paragraph",
+        },
+      ],
+    });
+  }
+
+  return {
+    ...body,
+    content: newContent,
+  };
+}
+
 interface ReportCardBodyEditorProps {
   /**
    * The Prosemirror document to edit
@@ -67,7 +123,9 @@ export default function ReportCardBodyEditor({
   const lastBodyRef = useRef<any>(body);
 
   useEffect(() => {
-    const doc = body ? Node.fromJSON(schema, body) : undefined;
+    const doc = body
+      ? Node.fromJSON(schema, ensurePresenceBlockJson(body, schema))
+      : undefined;
     const view = new EditorView(root.current!, {
       state: EditorState.create({
         schema,
@@ -98,7 +156,10 @@ export default function ReportCardBodyEditor({
 
       // Always update when language changes to show the correct language's content
       if (langChanged) {
-        const doc = Node.fromJSON(schema, body);
+        const doc = Node.fromJSON(
+          schema,
+          ensurePresenceBlockJson(body, schema)
+        );
         const newState = EditorState.create({
           schema,
           plugins,

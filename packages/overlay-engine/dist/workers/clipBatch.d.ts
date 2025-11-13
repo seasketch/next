@@ -30,4 +30,13 @@ export declare function countFeatures({ features, differenceMultiPolygon, subjec
 }): Promise<{
     [k: string]: number[];
 }>;
+export declare function testForPresenceInSubject({ features, differenceMultiPolygon, subjectFeature, }: {
+    features: {
+        feature: FeatureWithMetadata<Feature<Geometry>>;
+        requiresIntersection: boolean;
+        requiresDifference: boolean;
+    }[];
+    differenceMultiPolygon: clipping.Geom[];
+    subjectFeature: Feature<Polygon | MultiPolygon>;
+}): Promise<boolean>;
 //# sourceMappingURL=clipBatch.d.ts.map

@@ -5,15 +5,16 @@ import { GuaranteedOverlayWorkerHelpers, OverlayWorkerHelpers } from "./utils/he
 import { Cql2Query } from "./cql2";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
-import { OverlayAreaMetric, CountMetric } from "./metrics/metrics";
+import { OverlayAreaMetric, CountMetric, PresenceMetric } from "./metrics/metrics";
 export { createClippingWorkerPool };
-export type OperationType = "overlay_area" | "count";
+export type OperationType = "overlay_area" | "count" | "presence";
 /**
  * Maps operation types to their corresponding metric value types
  */
 type OperationResultTypeMap = {
     overlay_area: OverlayAreaMetric["value"];
     count: CountMetric["value"];
+    presence: PresenceMetric["value"];
 };
 /**
  * Gets the result type for a given operation type
@@ -62,10 +63,12 @@ export declare class OverlappingAreaBatchedClippingProcessor<TOp extends Operati
     batchPromises: Promise<any>[];
     pool?: WorkerPool<any, any>;
     queue: PQueue;
+    presenceOperationEarlyReturn: boolean;
     private progress;
     private progressTarget;
     private isOverlayAreaOperation;
     private isCountOperation;
+    private isPresenceOperation;
     private getOverlayResults;
     private initializeResults;
     constructor(operation: TOp, maxBatchSize: number, subjectFeature: Feature<Polygon | MultiPolygon>, intersectionSource: FlatGeobufSource<Feature<Geometry>>, differenceSources: {
@@ -78,6 +81,7 @@ export declare class OverlappingAreaBatchedClippingProcessor<TOp extends Operati
     private processBatch;
     private processOverlayBatch;
     private processCountBatch;
+    private processPresenceBatch;
     private mergeOverlayBatchResults;
     private mergeCountBatchResults;
     /**

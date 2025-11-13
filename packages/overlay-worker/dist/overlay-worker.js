@@ -168,7 +168,8 @@ async function handler(payload) {
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                 return;
             }
-            case "count": {
+            case "count":
+            case "presence": {
                 if (!payload.sourceUrl) {
                     throw new Error("sourceUrl is required for count");
                 }
@@ -177,7 +178,7 @@ async function handler(payload) {
                     pageSize: "5MB",
                 });
                 helpers.log("running count operation");
-                const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor("count", 1024 * 1024 * 1, // 5MB
+                const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor(payload.type, 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(intersectionFeature, {
                     tolerance: 0.002,
                 }), source, differenceSources, helpers, payload.groupBy, workerPool);
