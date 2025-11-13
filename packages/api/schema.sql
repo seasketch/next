@@ -11325,6 +11325,7 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
       and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
       and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
       and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
+      and type = p_type
       and parameters = metric_parameters;
     
     -- If not found, insert new metric
@@ -24747,7 +24748,7 @@ CREATE INDEX spatial_metrics_queued_created_at_idx ON public.spatial_metrics USI
 -- Name: spatial_metrics_unique_metric; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX spatial_metrics_unique_metric ON public.spatial_metrics USING btree (COALESCE(overlay_source_url, ''::text), COALESCE(source_processing_job_dependency, ''::text), COALESCE(subject_fragment_id, ''::text), COALESCE(subject_geography_id, '-999999'::integer), parameters);
+CREATE UNIQUE INDEX spatial_metrics_unique_metric ON public.spatial_metrics USING btree (COALESCE(overlay_source_url, ''::text), COALESCE(source_processing_job_dependency, ''::text), COALESCE(subject_fragment_id, ''::text), COALESCE(subject_geography_id, '-999999'::integer), type, parameters);
 
 
 --
