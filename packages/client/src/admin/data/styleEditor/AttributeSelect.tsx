@@ -22,10 +22,10 @@ export default function AttributeSelect({
   const Select = Editor.Select;
   const isLight = appearance === "light";
   const triggerClass = isLight
-    ? "bg-white text-gray-700 border border-gray-300 hover:border-gray-400 focus:ring-blue-600"
+    ? "bg-white text-gray-700 border !border-black/15 hover:!border-gray-400 focus:ring-blue-600"
     : "";
   const contentClass = isLight
-    ? "bg-white text-gray-800 border border-gray-200 shadow-lg"
+    ? "bg-white text-gray-800 !border !border-black/10 shadow-lg"
     : "";
   const iconClass = isLight ? "text-gray-500" : "text-gray-300";
   const itemTitleClass = isLight ? "text-gray-800" : "";

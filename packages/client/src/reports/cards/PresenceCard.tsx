@@ -115,7 +115,7 @@ registerReportCardType({
   adminComponent: PresenceCardAdmin,
   defaultSettings: defaultComponentSettings,
   defaultBody: defaultBody,
-  label: <Trans ns="admin:sketching">Feature Presence</Trans>,
+  label: <Trans ns="admin:sketching">Presence / Absence Card</Trans>,
   description: (
     <Trans ns="admin:sketching">
       Display whether features from a layer are present within the sketch.

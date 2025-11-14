@@ -40,6 +40,8 @@ exports.clipBatch = clipBatch;
 exports.performClipping = performClipping;
 exports.countFeatures = countFeatures;
 exports.testForPresenceInSubject = testForPresenceInSubject;
+exports.createPresenceTable = createPresenceTable;
+exports.pick = pick;
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
 const node_worker_threads_1 = require("node:worker_threads");
@@ -191,6 +193,68 @@ async function testForPresenceInSubject({ features, differenceMultiPolygon, subj
     }
     return false;
 }
+async function createPresenceTable({ features, differenceMultiPolygon, subjectFeature, limit = 50, includedProperties, }) {
+    const results = {
+        exceededLimit: false,
+        values: [],
+    };
+    for (const f of features) {
+        if (results.exceededLimit) {
+            break;
+        }
+        if (f.requiresIntersection) {
+            throw new Error("Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature.");
+        }
+        if (f.requiresDifference) {
+            if (f.feature.geometry.type === "Point" ||
+                f.feature.geometry.type === "MultiPoint") {
+                const coords = f.feature.geometry.type === "Point"
+                    ? [f.feature.geometry.coordinates]
+                    : f.feature.geometry.coordinates;
+                for (const coord of coords) {
+                    let anyMisses = false;
+                    for (const poly of differenceMultiPolygon) {
+                        const r = (0, point_in_polygon_hao_1.default)(coord, poly);
+                        if (r === false) {
+                            anyMisses = true;
+                            break;
+                        }
+                    }
+                    if (!anyMisses) {
+                        continue;
+                    }
+                }
+            }
+            else {
+                // for any other geometry type, we'll use booleanIntersects to check if
+                // the feature intersects the difference feature
+                if ((0, boolean_intersects_1.default)(f.feature, {
+                    type: "Feature",
+                    geometry: {
+                        type: "MultiPolygon",
+                        coordinates: differenceMultiPolygon,
+                    },
+                    properties: {},
+                })) {
+                    continue;
+                }
+            }
+        }
+        if (!("__oidx" in f.feature.properties || {})) {
+            throw new Error("Feature properties must contain __oidx");
+        }
+        let result = {
+            __id: f.feature.properties.__oidx,
+            ...f.feature.properties,
+        };
+        result = pick(result, includedProperties);
+        results.values.push(result);
+        if (results.values.length >= limit) {
+            results.exceededLimit = true;
+        }
+    }
+    return results;
+}
 node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.on("message", async (job) => {
     try {
         const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
@@ -204,7 +268,6 @@ node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort ==
             });
         }
         else if (operation === "count") {
-            console.log("running countFeatures");
             result = await countFeatures({
                 features: job.features,
                 differenceMultiPolygon: job.differenceMultiPolygon,
@@ -219,6 +282,15 @@ node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort ==
                 subjectFeature: job.subjectFeature,
             });
         }
+        else if (operation === "presence_table") {
+            result = await createPresenceTable({
+                features: job.features,
+                differenceMultiPolygon: job.differenceMultiPolygon,
+                subjectFeature: job.subjectFeature,
+                limit: job.limit,
+                includedProperties: job.includedProperties,
+            });
+        }
         else {
             throw new Error(`Unknown operation type: ${operation}`);
         }
@@ -231,4 +303,15 @@ node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort ==
         });
     }
 });
+function pick(object, keys) {
+    keys = keys || Object.keys(object);
+    keys = keys.filter((key) => key !== "__oidx" &&
+        key !== "__byteLength" &&
+        key !== "__area" &&
+        key !== "__offset");
+    return keys.reduce((acc, key) => {
+        acc[key] = object[key];
+        return acc;
+    }, {});
+}
 //# sourceMappingURL=clipBatch.js.map

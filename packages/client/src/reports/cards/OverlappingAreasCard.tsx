@@ -125,6 +125,7 @@ export function OverlappingAreasCard({
         ? (metrics || []).find(
             (m) =>
               subjectIsGeography(m.subject) &&
+              // @ts-ignore
               m.subject.id === sketchClassPrimaryGeographyId &&
               m.type === "overlay_area" &&
               m.parameters?.groupBy === layer.layerParameters?.groupBy

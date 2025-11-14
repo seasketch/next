@@ -64,7 +64,8 @@ export default async function calculateSpatialMetric(
     } else if (
       metric.type === "overlay_area" ||
       metric.type === "count" ||
-      metric.type === "presence"
+      metric.type === "presence" ||
+      metric.type === "presence_table"
     ) {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
@@ -109,7 +110,7 @@ export default async function calculateSpatialMetric(
         }
       }
     } else {
-      throw new Error(`Unsupported metric type: ${metric.type}`);
+      throw new Error(`Unsupported metric type: ${(metric as any).type}`);
     }
   } catch (e) {
     await helpers.withPgClient(async (client) => {

@@ -7,9 +7,9 @@ import {
 } from "../../src/geographies/geographies";
 import { Feature, MultiPolygon } from "geojson";
 import {
-  OverlappingAreaBatchedClippingProcessor,
+  OverlayEngineBatchProcessor,
   createClippingWorkerPool,
-} from "../../src/OverlappingAreaBatchedClippingProcessor";
+} from "../../src/OverlayEngineBatchProcessor";
 import { DebuggingFgbWriter } from "../../src/utils/debuggingFgbWriter";
 import {
   OverlayWorkerHelpers,
@@ -108,7 +108,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
       const pool = createClippingWorkerPool(
         __dirname + "/../../dist/workers/clipBatch.standalone.js"
       );
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
         1024 * 1024 * 2, // 5MB
         simplify(intersectionFeatureGeojson, {
@@ -154,7 +154,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
       const pool = createClippingWorkerPool(
         __dirname + "/../../dist/workers/clipBatch.standalone.js"
       );
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "presence",
         1024 * 1024 * 2, // 5MB
         simplify(intersectionFeatureGeojson, {
@@ -186,7 +186,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
       const pool = createClippingWorkerPool(
         __dirname + "/../../dist/workers/clipBatch.standalone.js"
       );
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
         1024 * 1024 * 2, // 5MB
         simplify(intersectionFeatureGeojson, {
@@ -222,7 +222,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
           pageSize: "5MB",
         });
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "count",
           1024 * 1024 * 2, // 5MB
           intersectionFeatureGeojson,
@@ -248,7 +248,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           pageSize: "5MB",
         });
 
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "count",
           1024 * 1024 * 2, // 5MB
           intersectionFeatureGeojson,
@@ -275,7 +275,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
           pageSize: "5MB",
         });
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "presence",
           1024 * 1024 * 2, // 5MB
           intersectionFeatureGeojson,

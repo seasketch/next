@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.OverlappingAreaBatchedClippingProcessor = exports.createClippingWorkerPool = void 0;
+exports.OverlayEngineBatchProcessor = exports.createClippingWorkerPool = void 0;
 const containerIndex_1 = require("./utils/containerIndex");
 const helpers_1 = require("./utils/helpers");
 const bboxUtils_1 = require("./utils/bboxUtils");
@@ -38,7 +38,7 @@ const layers = {
         fields: {},
     },
 };
-class OverlappingAreaBatchedClippingProcessor {
+class OverlayEngineBatchProcessor {
     // Type guard helpers
     isOverlayAreaOperation() {
         return this.operation === "overlay_area";
@@ -49,8 +49,14 @@ class OverlappingAreaBatchedClippingProcessor {
     isPresenceOperation() {
         return this.operation === "presence";
     }
+    isPresenceTableOperation() {
+        return this.operation === "presence_table";
+    }
     // Operation-specific result getters with proper typing
     getOverlayResults() {
+        return this.results;
+    }
+    getPresenceTableResults() {
         return this.results;
     }
     // Initialize results based on operation type
@@ -61,11 +67,20 @@ class OverlappingAreaBatchedClippingProcessor {
             // Return empty structure - will be populated at the end
             return {};
         }
+        else if (op === "presence_table") {
+            return {
+                values: [],
+                exceededLimit: false,
+            };
+        }
+        else if (op === "presence") {
+            return false;
+        }
         else {
             return { "*": 0 };
         }
     }
-    constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool) {
+    constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool, includedProperties, resultsLimit) {
         var _a;
         /**
          * Current weight of the batch. Once the weight exceeds the batch size, the
@@ -81,6 +96,7 @@ class OverlappingAreaBatchedClippingProcessor {
         this.countInterimIds = {};
         this.batchPromises = [];
         this.presenceOperationEarlyReturn = false;
+        this.resultsLimit = 50;
         this.progress = 0;
         this.progressTarget = 0;
         this.operation = operation;
@@ -110,6 +126,10 @@ class OverlappingAreaBatchedClippingProcessor {
         });
         if (this.helpers.logFeature) {
             this.helpers.logFeature(layers.subjectFeature, subjectFeature);
+        }
+        this.includedProperties = includedProperties;
+        if (resultsLimit) {
+            this.resultsLimit = resultsLimit;
         }
     }
     resetBatchData() {
@@ -212,6 +232,8 @@ class OverlappingAreaBatchedClippingProcessor {
                         }
                     }
                     if (!requiresIntersection && !requiresDifference) {
+                        // Presence operations are a special case here, as it't the only
+                        // one that triggers an early return.
                         if (this.operation === "presence") {
                             this.progress = this.progressTarget;
                             this.results = true;
@@ -220,7 +242,7 @@ class OverlappingAreaBatchedClippingProcessor {
                         else {
                             // feature is entirely within the subject feature, so we can skip
                             // clipping. Just need to add it to the appropriate total(s).
-                            this.addFeatureToTotals(feature);
+                            this.addIndividualFeatureToResults(feature);
                             this.progress += ((_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength) || 0;
                         }
                     }
@@ -260,7 +282,7 @@ class OverlappingAreaBatchedClippingProcessor {
                     this.mergeCountBatchResults(resolvedBatchData);
                     this.finalizeCountResults();
                 }
-                if (this.isPresenceOperation()) {
+                else if (this.isPresenceOperation()) {
                     const hasMatch = resolvedBatchData.some((result) => result === true);
                     if (hasMatch) {
                         resolve(true);
@@ -268,6 +290,9 @@ class OverlappingAreaBatchedClippingProcessor {
                     else {
                         resolve(false);
                     }
+                }
+                else if (this.isPresenceTableOperation()) {
+                    this.mergePresenceTableBatchResults(resolvedBatchData);
                 }
                 resolve(this.results);
             }
@@ -288,6 +313,8 @@ class OverlappingAreaBatchedClippingProcessor {
             differenceMultiPolygon: differenceMultiPolygon,
             subjectFeature: this.subjectFeature,
             groupBy: this.groupBy,
+            includedProperties: this.includedProperties,
+            resultsLimit: this.resultsLimit,
         };
         this.helpers.log(`submitting batchPayload: ${JSON.stringify({
             operation: this.operation,
@@ -295,6 +322,8 @@ class OverlappingAreaBatchedClippingProcessor {
             differenceMultiPolygon: differenceMultiPolygon.length,
             subjectFeature: this.subjectFeature.geometry.type,
             groupBy: this.groupBy,
+            includedProperties: this.includedProperties,
+            resultsLimit: this.resultsLimit,
         })}`);
         if (this.pool) {
             const result = await this.pool.run(batchPayload).catch((error) => {
@@ -431,12 +460,15 @@ class OverlappingAreaBatchedClippingProcessor {
         }));
         return differenceMultiPolygon;
     }
-    addFeatureToTotals(feature) {
+    addIndividualFeatureToResults(feature) {
         if (this.isOverlayAreaOperation()) {
             this.addOverlayFeatureToTotals(feature);
         }
         else if (this.isCountOperation()) {
             this.addCountFeatureToTotals(feature);
+        }
+        else if (this.isPresenceTableOperation()) {
+            this.addPresenceTableFeatureToResults(feature);
         }
     }
     addOverlayFeatureToTotals(feature) {
@@ -478,6 +510,38 @@ class OverlappingAreaBatchedClippingProcessor {
                     this.countInterimIds[classKey].push(oidx);
                 }
             }
+        }
+    }
+    addPresenceTableFeatureToResults(feature) {
+        var _a;
+        const id = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__oidx;
+        if (id === undefined || id === null) {
+            throw new Error("Feature properties must contain __oidx");
+        }
+        this.addToPresenceTableResults({
+            __id: id,
+            ...(0, clipBatch_1.pick)(feature.properties, this.includedProperties),
+        });
+    }
+    addToPresenceTableResults(value) {
+        const results = this.getPresenceTableResults();
+        if (!results.values.find((v) => v.__id === value.__id)) {
+            results.values.push(value);
+        }
+    }
+    mergePresenceTableBatchResults(batchResults) {
+        const results = this.getPresenceTableResults();
+        for (const batchData of batchResults) {
+            if (batchData.exceededLimit) {
+                results.exceededLimit = true;
+            }
+            for (const value of batchData.values) {
+                this.addToPresenceTableResults(value);
+            }
+        }
+        if (results.values.length >= this.resultsLimit) {
+            results.exceededLimit = true;
+            results.values = results.values.slice(0, this.resultsLimit);
         }
     }
     addDifferenceFeatureReferencesToBatch(layerId, refs) {
@@ -524,5 +588,5 @@ class OverlappingAreaBatchedClippingProcessor {
         return weight;
     }
 }
-exports.OverlappingAreaBatchedClippingProcessor = OverlappingAreaBatchedClippingProcessor;
-//# sourceMappingURL=OverlappingAreaBatchedClippingProcessor.js.map
+exports.OverlayEngineBatchProcessor = OverlayEngineBatchProcessor;
+//# sourceMappingURL=OverlayEngineBatchProcessor.js.map

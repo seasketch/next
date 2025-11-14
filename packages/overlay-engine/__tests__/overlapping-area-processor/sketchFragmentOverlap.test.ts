@@ -10,9 +10,9 @@ import {
 } from "../../src/geographies/geographies";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import {
-  OverlappingAreaBatchedClippingProcessor,
+  OverlayEngineBatchProcessor,
   createClippingWorkerPool,
-} from "../../src/OverlappingAreaBatchedClippingProcessor";
+} from "../../src/OverlayEngineBatchProcessor";
 import { DebuggingFgbWriter } from "../../src/utils/debuggingFgbWriter";
 import {
   OverlayWorkerHelpers,
@@ -146,7 +146,7 @@ describe("sketchFragmentOverlap", () => {
           }
         );
         const prepared = prepareSketch(naitaba);
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
           1024 * 1024 * 2, // 5MB
           prepared.feature,
@@ -217,7 +217,7 @@ describe("sketchFragmentOverlap", () => {
           }
         );
         const prepared = prepareSketch(insideBioregion);
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
           1024 * 1024 * 2, // 5MB
           prepared.feature,
@@ -340,7 +340,7 @@ describe("sketchFragmentOverlap", () => {
         const pool = createClippingWorkerPool(
           __dirname + "/../../dist/workers/clipBatch.standalone.js"
         );
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
           1024 * 1024 * 2, // 5MB
           simplify(intersectionFeatureGeojson, {
@@ -391,7 +391,7 @@ describe("sketchFragmentOverlap", () => {
         }
         let totalResults: { [key: string]: number } = { "*": 0 };
         for (const fragment of fragments) {
-          const sketchProcessor = new OverlappingAreaBatchedClippingProcessor(
+          const sketchProcessor = new OverlayEngineBatchProcessor(
             "overlay_area",
             1024 * 1024 * 2, // 5MB
             fragment,
@@ -432,7 +432,7 @@ describe("sketchFragmentOverlap", () => {
             }
           );
           const prepared = prepareSketch(ventsSketch);
-          const processor = new OverlappingAreaBatchedClippingProcessor(
+          const processor = new OverlayEngineBatchProcessor(
             "count",
             1024 * 1024 * 2, // 5MB
             prepared.feature,
@@ -455,7 +455,7 @@ describe("sketchFragmentOverlap", () => {
         const prepared = prepareSketch(
           require("./sketches/hunga-unclipped.geojson.json")
         );
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "count",
           1024 * 1024 * 2, // 5MB
           prepared.feature,
@@ -465,6 +465,30 @@ describe("sketchFragmentOverlap", () => {
         );
         const results = await processor.calculate();
         expect(results["*"].count).toBe(2);
+      });
+    });
+
+    describe("Presence Table metrics", () => {
+      it("Seamounts overlap with Fiji", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-seamounts.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const prepared = prepareSketch(
+          require("./sketches/Offshore-North.geojson.json")
+        );
+        const processor = new OverlayEngineBatchProcessor(
+          "presence_table",
+          1024 * 1024 * 2, // 5MB
+          prepared.feature,
+          source,
+          [],
+          {}
+        );
+        const results = await processor.calculate();
+        expect(results.values.length).toBe(26);
       });
     });
   });
@@ -553,7 +577,7 @@ describe("sketchFragmentOverlap", () => {
           prepared.feature
         );
       }
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
         1024 * 1024 * 2, // 5MB
         prepared.feature,
@@ -598,7 +622,7 @@ describe("sketchFragmentOverlap", () => {
         require("./sketches/CRDSS-Example-A.geojson.json")
       );
       console.log("prepared", prepared);
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "count",
         1024 * 1024 * 2, // 5MB
         prepared.feature,
@@ -625,7 +649,7 @@ describe("sketchFragmentOverlap", () => {
       const prepared = prepareSketch(
         require("./sketches/CRDSS-Example-A.geojson.json")
       );
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "presence",
         1024 * 1024 * 2, // 5MB
         prepared.feature,
@@ -647,7 +671,7 @@ describe("sketchFragmentOverlap", () => {
       const prepared = prepareSketch(
         require("./sketches/Long-Beach.geojson.json")
       );
-      const processor = new OverlappingAreaBatchedClippingProcessor(
+      const processor = new OverlayEngineBatchProcessor(
         "presence",
         1024 * 1024 * 2, // 5MB
         prepared.feature,

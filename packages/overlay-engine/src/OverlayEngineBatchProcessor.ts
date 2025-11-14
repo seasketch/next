@@ -27,6 +27,7 @@ import * as clipping from "polyclip-ts";
 import {
   clipBatch,
   countFeatures,
+  pick,
   testForPresenceInSubject,
 } from "./workers/clipBatch";
 import PQueue from "p-queue";
@@ -36,12 +37,18 @@ import {
   OverlayAreaMetric,
   CountMetric,
   PresenceMetric,
+  PresenceTableMetric,
+  PresenceTableValue,
 } from "./metrics/metrics";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 
 export { createClippingWorkerPool };
 
-export type OperationType = "overlay_area" | "count" | "presence";
+export type OperationType =
+  | "overlay_area"
+  | "count"
+  | "presence"
+  | "presence_table";
 
 /**
  * Maps operation types to their corresponding metric value types
@@ -50,6 +57,7 @@ type OperationResultTypeMap = {
   overlay_area: OverlayAreaMetric["value"];
   count: CountMetric["value"];
   presence: PresenceMetric["value"];
+  presence_table: PresenceTableMetric["value"];
 };
 
 /**
@@ -97,7 +105,7 @@ type BatchData = {
   }[];
 };
 
-export class OverlappingAreaBatchedClippingProcessor<
+export class OverlayEngineBatchProcessor<
   TOp extends OperationType = OperationType
 > {
   /**
@@ -129,26 +137,36 @@ export class OverlappingAreaBatchedClippingProcessor<
   pool?: WorkerPool<any, any>;
   queue: PQueue;
   presenceOperationEarlyReturn = false;
+  includedProperties?: string[];
+  resultsLimit = 50;
 
   private progress: number = 0;
   private progressTarget: number = 0;
 
   // Type guard helpers
-  private isOverlayAreaOperation(): this is OverlappingAreaBatchedClippingProcessor<"overlay_area"> {
+  private isOverlayAreaOperation(): this is OverlayEngineBatchProcessor<"overlay_area"> {
     return this.operation === "overlay_area";
   }
 
-  private isCountOperation(): this is OverlappingAreaBatchedClippingProcessor<"count"> {
+  private isCountOperation(): this is OverlayEngineBatchProcessor<"count"> {
     return this.operation === "count";
   }
 
-  private isPresenceOperation(): this is OverlappingAreaBatchedClippingProcessor<"presence"> {
+  private isPresenceOperation(): this is OverlayEngineBatchProcessor<"presence"> {
     return this.operation === "presence";
+  }
+
+  private isPresenceTableOperation(): this is OverlayEngineBatchProcessor<"presence_table"> {
+    return this.operation === "presence_table";
   }
 
   // Operation-specific result getters with proper typing
   private getOverlayResults(): OperationResultType<"overlay_area"> {
     return this.results as OperationResultType<"overlay_area">;
+  }
+
+  private getPresenceTableResults(): OperationResultType<"presence_table"> {
+    return this.results as OperationResultType<"presence_table">;
   }
 
   // Initialize results based on operation type
@@ -158,6 +176,13 @@ export class OverlappingAreaBatchedClippingProcessor<
       this.countInterimIds = { "*": [] };
       // Return empty structure - will be populated at the end
       return {} as unknown as OperationResultType<TOp>;
+    } else if (op === "presence_table") {
+      return {
+        values: [],
+        exceededLimit: false,
+      } as unknown as OperationResultType<TOp>;
+    } else if (op === "presence") {
+      return false as unknown as OperationResultType<TOp>;
     } else {
       return { "*": 0 } as unknown as OperationResultType<TOp>;
     }
@@ -175,7 +200,9 @@ export class OverlappingAreaBatchedClippingProcessor<
     }[],
     helpers: OverlayWorkerHelpers,
     groupBy?: string,
-    pool?: WorkerPool<any, any>
+    pool?: WorkerPool<any, any>,
+    includedProperties?: string[],
+    resultsLimit?: number
   ) {
     this.operation = operation;
     this.pool = pool;
@@ -206,6 +233,10 @@ export class OverlappingAreaBatchedClippingProcessor<
     });
     if (this.helpers.logFeature) {
       this.helpers.logFeature(layers.subjectFeature, subjectFeature);
+    }
+    this.includedProperties = includedProperties;
+    if (resultsLimit) {
+      this.resultsLimit = resultsLimit;
     }
   }
 
@@ -344,6 +375,8 @@ export class OverlappingAreaBatchedClippingProcessor<
             }
           }
           if (!requiresIntersection && !requiresDifference) {
+            // Presence operations are a special case here, as it't the only
+            // one that triggers an early return.
             if (this.operation === "presence") {
               this.progress = this.progressTarget;
               this.results = true as OperationResultType<TOp>;
@@ -351,7 +384,7 @@ export class OverlappingAreaBatchedClippingProcessor<
             } else {
               // feature is entirely within the subject feature, so we can skip
               // clipping. Just need to add it to the appropriate total(s).
-              this.addFeatureToTotals(feature);
+              this.addIndividualFeatureToResults(feature);
               this.progress += feature.properties?.__byteLength || 0;
             }
           } else {
@@ -410,14 +443,15 @@ export class OverlappingAreaBatchedClippingProcessor<
             resolvedBatchData as { [classKey: string]: number[] }[]
           );
           this.finalizeCountResults();
-        }
-        if (this.isPresenceOperation()) {
+        } else if (this.isPresenceOperation()) {
           const hasMatch = resolvedBatchData.some((result) => result === true);
           if (hasMatch) {
             resolve(true as OperationResultType<TOp>);
           } else {
             resolve(false as OperationResultType<TOp>);
           }
+        } else if (this.isPresenceTableOperation()) {
+          this.mergePresenceTableBatchResults(resolvedBatchData);
         }
         resolve(this.results);
       } catch (e) {
@@ -442,6 +476,8 @@ export class OverlappingAreaBatchedClippingProcessor<
       differenceMultiPolygon: differenceMultiPolygon,
       subjectFeature: this.subjectFeature,
       groupBy: this.groupBy,
+      includedProperties: this.includedProperties,
+      resultsLimit: this.resultsLimit,
     };
 
     this.helpers.log(
@@ -451,6 +487,8 @@ export class OverlappingAreaBatchedClippingProcessor<
         differenceMultiPolygon: differenceMultiPolygon.length,
         subjectFeature: this.subjectFeature.geometry.type,
         groupBy: this.groupBy,
+        includedProperties: this.includedProperties,
+        resultsLimit: this.resultsLimit,
       })}`
     );
 
@@ -625,11 +663,15 @@ export class OverlappingAreaBatchedClippingProcessor<
     return differenceMultiPolygon;
   }
 
-  addFeatureToTotals(feature: FeatureWithMetadata<Feature<Geometry>>) {
+  addIndividualFeatureToResults(
+    feature: FeatureWithMetadata<Feature<Geometry>>
+  ) {
     if (this.isOverlayAreaOperation()) {
       this.addOverlayFeatureToTotals(feature);
     } else if (this.isCountOperation()) {
       this.addCountFeatureToTotals(feature);
+    } else if (this.isPresenceTableOperation()) {
+      this.addPresenceTableFeatureToResults(feature);
     }
   }
 
@@ -673,6 +715,44 @@ export class OverlappingAreaBatchedClippingProcessor<
           this.countInterimIds[classKey].push(oidx);
         }
       }
+    }
+  }
+
+  addPresenceTableFeatureToResults(
+    feature: Pick<FeatureWithMetadata<Feature<Geometry>>, "properties">
+  ) {
+    const id = feature.properties?.__oidx;
+    if (id === undefined || id === null) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    this.addToPresenceTableResults({
+      __id: id,
+      ...pick(feature.properties, this.includedProperties),
+    });
+  }
+
+  addToPresenceTableResults(value: PresenceTableValue) {
+    const results = this.getPresenceTableResults();
+    if (!results.values.find((v) => v.__id === value.__id)) {
+      results.values.push(value);
+    }
+  }
+
+  private mergePresenceTableBatchResults(
+    batchResults: { exceededLimit: boolean; values: PresenceTableValue[] }[]
+  ) {
+    const results = this.getPresenceTableResults();
+    for (const batchData of batchResults) {
+      if (batchData.exceededLimit) {
+        results.exceededLimit = true;
+      }
+      for (const value of batchData.values) {
+        this.addToPresenceTableResults(value);
+      }
+    }
+    if (results.values.length >= this.resultsLimit) {
+      results.exceededLimit = true;
+      results.values = results.values.slice(0, this.resultsLimit);
     }
   }
 

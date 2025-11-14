@@ -5,6 +5,7 @@ import calcArea from "@turf/area";
 import { parentPort } from "node:worker_threads";
 import pip from "point-in-polygon-hao";
 import booleanIntersects from "@turf/boolean-intersects";
+import { PresenceTableValue } from "../metrics/metrics";
 
 export async function clipBatch({
   features,
@@ -224,10 +225,95 @@ export async function testForPresenceInSubject({
   return false;
 }
 
+export async function createPresenceTable({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  limit = 50,
+  includedProperties,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  limit?: number;
+  includedProperties?: string[];
+}) {
+  const results: { exceededLimit: boolean; values: PresenceTableValue[] } = {
+    exceededLimit: false,
+    values: [],
+  };
+  for (const f of features) {
+    if (results.exceededLimit) {
+      break;
+    }
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (
+        f.feature.geometry.type === "Point" ||
+        f.feature.geometry.type === "MultiPoint"
+      ) {
+        const coords =
+          f.feature.geometry.type === "Point"
+            ? [f.feature.geometry.coordinates]
+            : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pip(coord, poly as number[][][]);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        // for any other geometry type, we'll use booleanIntersects to check if
+        // the feature intersects the difference feature
+        if (
+          booleanIntersects(f.feature, {
+            type: "Feature",
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: differenceMultiPolygon,
+            },
+            properties: {},
+          })
+        ) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    let result = {
+      __id: f.feature.properties.__oidx,
+      ...f.feature.properties,
+    };
+    result = pick(result, includedProperties);
+    results.values.push(result);
+    if (results.values.length >= limit) {
+      results.exceededLimit = true;
+    }
+  }
+  return results;
+}
+
 parentPort?.on(
   "message",
   async (job: {
-    operation?: "overlay_area" | "count" | "presence";
+    operation?: "overlay_area" | "count" | "presence" | "presence_table";
     features: {
       feature: FeatureWithMetadata<Feature<Geometry>>;
       requiresIntersection: boolean;
@@ -236,6 +322,8 @@ parentPort?.on(
     differenceMultiPolygon: clipping.Geom[];
     subjectFeature: Feature<Polygon | MultiPolygon>;
     groupBy?: string;
+    limit?: number;
+    includedProperties?: string[];
   }) => {
     try {
       const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
@@ -252,7 +340,6 @@ parentPort?.on(
           groupBy: job.groupBy,
         });
       } else if (operation === "count") {
-        console.log("running countFeatures");
         result = await countFeatures({
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
@@ -264,6 +351,14 @@ parentPort?.on(
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
+        });
+      } else if (operation === "presence_table") {
+        result = await createPresenceTable({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          limit: job.limit,
+          includedProperties: job.includedProperties,
         });
       } else {
         throw new Error(`Unknown operation type: ${operation}`);
@@ -277,3 +372,18 @@ parentPort?.on(
     }
   }
 );
+
+export function pick(object: any, keys?: string[]) {
+  keys = keys || Object.keys(object);
+  keys = keys.filter(
+    (key) =>
+      key !== "__oidx" &&
+      key !== "__byteLength" &&
+      key !== "__area" &&
+      key !== "__offset"
+  );
+  return keys.reduce((acc, key) => {
+    acc[key] = object[key];
+    return acc;
+  }, {} as any);
+}

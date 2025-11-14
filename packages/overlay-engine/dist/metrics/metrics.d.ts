@@ -55,13 +55,15 @@ export type PresenceMetric = OverlayMetricBase & {
     value: boolean;
 };
 export type PresenceTableValue = {
-    id: string;
+    __id: number;
     [attribute: string]: any;
 };
 export type PresenceTableMetric = OverlayMetricBase & {
     type: "presence_table";
-    value: PresenceTableValue[];
-    count: number;
+    value: {
+        values: PresenceTableValue[];
+        exceededLimit: boolean;
+    };
 };
 export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric;
 export type MetricTypeMap = {

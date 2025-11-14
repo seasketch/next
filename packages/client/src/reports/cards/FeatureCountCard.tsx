@@ -12,10 +12,10 @@ import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
 import {
   subjectIsFragment,
-  CountMetric,
-  UniqueIdIndex,
   mergeUniqueIdIndexes,
   countUniqueIds,
+  UniqueIdIndex,
+  CountMetric,
 } from "overlay-engine";
 import {
   extractColorsForCategories,

@@ -48,7 +48,7 @@ const geobuf = __importStar(require("geobuf"));
 const pbf_1 = __importDefault(require("pbf"));
 const undici_1 = require("undici");
 const lru_cache_1 = require("lru-cache");
-const OverlappingAreaBatchedClippingProcessor_1 = require("overlay-engine/src/OverlappingAreaBatchedClippingProcessor");
+const OverlayEngineBatchProcessor_1 = require("overlay-engine/src/OverlayEngineBatchProcessor");
 const simplify_1 = __importDefault(require("@turf/simplify"));
 const helpers_1 = require("overlay-engine/src/utils/helpers");
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
@@ -112,7 +112,7 @@ const sourceCache = new fgb_source_1.SourceCache("1GB", {
     },
     maxCacheSize: "256MB",
 });
-const workerPool = (0, OverlappingAreaBatchedClippingProcessor_1.createClippingWorkerPool)(process.env.PISCINA_WORKER_PATH || "worker.js");
+const workerPool = (0, OverlayEngineBatchProcessor_1.createClippingWorkerPool)(process.env.PISCINA_WORKER_PATH || "worker.js");
 async function handler(payload) {
     console.log("Overlay worker (v2) received payload", payload);
     const startTime = Date.now();
@@ -159,7 +159,7 @@ async function handler(payload) {
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
-                const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor("overlay_area", 1024 * 1024 * 1, // 5MB
+                const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor("overlay_area", 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(intersectionFeature, {
                     tolerance: 0.002,
                 }), source, differenceSources, helpers, payload.groupBy, workerPool);
@@ -168,6 +168,7 @@ async function handler(payload) {
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
                 return;
             }
+            case "presence_table":
             case "count":
             case "presence": {
                 if (!payload.sourceUrl) {
@@ -177,11 +178,10 @@ async function handler(payload) {
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
-                helpers.log("running count operation");
-                const processor = new OverlappingAreaBatchedClippingProcessor_1.OverlappingAreaBatchedClippingProcessor(payload.type, 1024 * 1024 * 1, // 5MB
+                const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor(payload.type, 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(intersectionFeature, {
                     tolerance: 0.002,
-                }), source, differenceSources, helpers, payload.groupBy, workerPool);
+                }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedProperties, payload.resultsLimit);
                 const count = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, count, payload.queueUrl, Date.now() - startTime);

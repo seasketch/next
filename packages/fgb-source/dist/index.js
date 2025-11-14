@@ -2268,6 +2268,7 @@ var MAGIC_BYTES = [102, 103, 98, VERSION, 102, 103, 98, 0];
 var SIZE_PREFIX_LEN2 = 4;
 var HEADER_FETCH_SIZE = 8192 * 4;
 var DEFAULT_CACHE_SIZE = 16 * 1024 * 1024;
+var VALIDATE_FEATURE_DATA = false;
 function validateFeatureData(view, size) {
   view.getUint32(0, true);
 }
@@ -2658,36 +2659,45 @@ async function* executeQueryPlan2(plan, fetchRange, featureDataOffset, maxConcur
   };
   const inFlight = /* @__PURE__ */ new Map();
   const pagesInFlight = /* @__PURE__ */ new Set();
-  let nextToStart = 0;
-  const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
-  while (nextToStart < plan.length && inFlight.size < limit) {
-    pagesInFlight.add(plan[nextToStart].pageIndex);
-    inFlight.set(nextToStart, startFetch(nextToStart));
-    nextToStart++;
-  }
-  while (inFlight.size > 0) {
-    const winner = await Promise.race(inFlight.values());
-    inFlight.delete(winner.i);
-    pagesInFlight.delete(winner.pageIndex);
-    if (nextToStart < plan.length) {
+  try {
+    let nextToStart = 0;
+    const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
+    while (nextToStart < plan.length && inFlight.size < limit) {
       pagesInFlight.add(plan[nextToStart].pageIndex);
       inFlight.set(nextToStart, startFetch(nextToStart));
       nextToStart++;
     }
-    if (!("ok" in winner) || winner.ok === false) {
-      console.log("error in winner", winner);
-      await Promise.allSettled(Array.from(inFlight.values()));
-      throw "error" in winner ? winner.error : new Error("Unknown fetch error");
-    }
-    const { data, pageIndex, features, range } = winner;
-    const view = new DataView(data);
-    for (let [offset, length, bbox] of features) {
-      const adjustedOffset = offset - range[0] + featureDataOffset;
-      if (length === null) {
-        length = view.buffer.byteLength - adjustedOffset;
+    while (inFlight.size > 0) {
+      const winner = await Promise.race(inFlight.values());
+      inFlight.delete(winner.i);
+      pagesInFlight.delete(winner.pageIndex);
+      if (nextToStart < plan.length) {
+        pagesInFlight.add(plan[nextToStart].pageIndex);
+        inFlight.set(nextToStart, startFetch(nextToStart));
+        nextToStart++;
       }
-      let featureView = new DataView(data, adjustedOffset, length);
-      yield [featureView, offset, length, bbox];
+      if (!("ok" in winner) || winner.ok === false) {
+        console.log("error in winner", winner);
+        await Promise.allSettled(Array.from(inFlight.values()));
+        throw "error" in winner ? winner.error : new Error("Unknown fetch error");
+      }
+      const { data, pageIndex, features, range } = winner;
+      const view = new DataView(data);
+      let i = 0;
+      for (let [offset, length, bbox] of features) {
+        const adjustedOffset = offset - range[0] + featureDataOffset;
+        if (length === null) {
+          length = view.buffer.byteLength - adjustedOffset;
+        }
+        let featureView = new DataView(data, adjustedOffset, length);
+        if (VALIDATE_FEATURE_DATA) ;
+        yield [featureView, offset, length, bbox];
+        i++;
+      }
+    }
+  } finally {
+    if (inFlight.size > 0) {
+      await Promise.allSettled(Array.from(inFlight.values()));
     }
   }
 }

@@ -277,7 +277,10 @@ var clipBatch_exports = {};
 __export(clipBatch_exports, {
   clipBatch: () => clipBatch,
   countFeatures: () => countFeatures,
-  performClipping: () => performClipping
+  createPresenceTable: () => createPresenceTable,
+  performClipping: () => performClipping,
+  pick: () => pick,
+  testForPresenceInSubject: () => testForPresenceInSubject
 });
 module.exports = __toCommonJS(clipBatch_exports);
 
@@ -4264,6 +4267,97 @@ async function countFeatures({
     Object.entries(results).map(([key, value]) => [key, Array.from(value)])
   );
 }
+async function testForPresenceInSubject({
+  features,
+  differenceMultiPolygon,
+  subjectFeature
+}) {
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      if (!turf_boolean_intersects_default(f.feature, subjectFeature)) {
+        continue;
+      }
+    }
+    if (f.requiresDifference) {
+      if (turf_boolean_intersects_default(f.feature, {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: differenceMultiPolygon
+        }
+      })) {
+        continue;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+async function createPresenceTable({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  limit = 50,
+  includedProperties
+}) {
+  const results = {
+    exceededLimit: false,
+    values: []
+  };
+  for (const f of features) {
+    if (results.exceededLimit) {
+      break;
+    }
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+        const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pointInPolygon(coord, poly);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        if (turf_boolean_intersects_default(f.feature, {
+          type: "Feature",
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon
+          },
+          properties: {}
+        })) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    let result = {
+      __id: f.feature.properties.__oidx,
+      ...f.feature.properties
+    };
+    result = pick(result, includedProperties);
+    results.values.push(result);
+    if (results.values.length >= limit) {
+      results.exceededLimit = true;
+    }
+  }
+  return results;
+}
 import_node_worker_threads.parentPort?.on(
   "message",
   async (job) => {
@@ -4278,12 +4372,25 @@ import_node_worker_threads.parentPort?.on(
           groupBy: job.groupBy
         });
       } else if (operation2 === "count") {
-        console.log("running countFeatures");
         result = await countFeatures({
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
           groupBy: job.groupBy
+        });
+      } else if (operation2 === "presence") {
+        result = await testForPresenceInSubject({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature
+        });
+      } else if (operation2 === "presence_table") {
+        result = await createPresenceTable({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          limit: job.limit,
+          includedProperties: job.includedProperties
         });
       } else {
         throw new Error(`Unknown operation type: ${operation2}`);
@@ -4297,9 +4404,22 @@ import_node_worker_threads.parentPort?.on(
     }
   }
 );
+function pick(object, keys) {
+  keys = keys || Object.keys(object);
+  keys = keys.filter(
+    (key) => key !== "__oidx" && key !== "__byteLength" && key !== "__area" && key !== "__offset"
+  );
+  return keys.reduce((acc, key) => {
+    acc[key] = object[key];
+    return acc;
+  }, {});
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   clipBatch,
   countFeatures,
-  performClipping
+  createPresenceTable,
+  performClipping,
+  pick,
+  testForPresenceInSubject
 });

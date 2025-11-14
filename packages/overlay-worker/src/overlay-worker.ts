@@ -33,8 +33,8 @@ import { fetch, Client, Pool } from "undici";
 import { LRUCache } from "lru-cache";
 import {
   createClippingWorkerPool,
-  OverlappingAreaBatchedClippingProcessor,
-} from "overlay-engine/src/OverlappingAreaBatchedClippingProcessor";
+  OverlayEngineBatchProcessor,
+} from "overlay-engine/src/OverlayEngineBatchProcessor";
 import simplify from "@turf/simplify";
 import {
   GuaranteedOverlayWorkerHelpers,
@@ -112,7 +112,12 @@ const workerPool = createClippingWorkerPool(
   process.env.PISCINA_WORKER_PATH || "worker.js"
 );
 
-export default async function handler(payload: OverlayWorkerPayload) {
+export default async function handler(
+  payload: OverlayWorkerPayload & {
+    includedProperties?: string[];
+    resultsLimit?: number;
+  }
+) {
   console.log("Overlay worker (v2) received payload", payload);
   const startTime = Date.now();
   const progressNotifier = new ProgressNotifier(
@@ -185,7 +190,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
             pageSize: "5MB",
           }
         );
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
           1024 * 1024 * 1, // 5MB
           simplify(intersectionFeature, {
@@ -207,6 +212,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
         );
         return;
       }
+      case "presence_table":
       case "count":
       case "presence": {
         if (!payload.sourceUrl) {
@@ -223,8 +229,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
             pageSize: "5MB",
           }
         );
-        helpers.log("running count operation");
-        const processor = new OverlappingAreaBatchedClippingProcessor(
+        const processor = new OverlayEngineBatchProcessor(
           payload.type,
           1024 * 1024 * 1, // 5MB
           simplify(intersectionFeature, {
@@ -234,7 +239,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
           differenceSources,
           helpers,
           payload.groupBy,
-          workerPool
+          workerPool,
+          payload.includedProperties,
+          payload.resultsLimit
         );
         const count = await processor.calculate();
         await flushMessages();
@@ -247,7 +254,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
         return;
       }
       default:
-        throw new Error(`Unknown payload type: ${payload.type}`);
+        throw new Error(`Unknown payload type: ${(payload as any).type}`);
     }
   } catch (e) {
     console.log("caught error in overlay worker", e);

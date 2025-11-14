@@ -71,14 +71,16 @@ export type PresenceMetric = OverlayMetricBase & {
 };
 
 export type PresenceTableValue = {
-  id: string;
+  __id: number;
   [attribute: string]: any;
 };
 
 export type PresenceTableMetric = OverlayMetricBase & {
   type: "presence_table";
-  value: PresenceTableValue[];
-  count: number;
+  value: {
+    values: PresenceTableValue[];
+    exceededLimit: boolean;
+  };
 };
 
 export type Metric =

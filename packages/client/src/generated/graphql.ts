@@ -6748,6 +6748,35 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getOrCreateSpatialMetric` mutation. */
+export type GetOrCreateSpatialMetricInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  pOverlaySourceUrl?: Maybe<Scalars['String']>;
+  pParameters?: Maybe<Scalars['JSON']>;
+  pProjectId?: Maybe<Scalars['Int']>;
+  pSourceProcessingJobDependency?: Maybe<Scalars['String']>;
+  pSubjectFragmentId?: Maybe<Scalars['String']>;
+  pSubjectGeographyId?: Maybe<Scalars['Int']>;
+  pType?: Maybe<SpatialMetricType>;
+};
+
+/** The output of our `getOrCreateSpatialMetric` mutation. */
+export type GetOrCreateSpatialMetricPayload = {
+  __typename?: 'GetOrCreateSpatialMetricPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  json?: Maybe<Scalars['JSON']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GetOrCreateSpatialMetricsResults = {
   __typename?: 'GetOrCreateSpatialMetricsResults';
   metrics: Array<CompatibleSpatialMetric>;
@@ -7864,6 +7893,7 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
+  getOrCreateSpatialMetric?: Maybe<GetOrCreateSpatialMetricPayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -9076,6 +9106,12 @@ export type MutationGenerateOfflineTilePackageArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetChildFoldersRecursiveArgs = {
   input: GetChildFoldersRecursiveInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetOrCreateSpatialMetricArgs = {
+  input: GetOrCreateSpatialMetricInput;
 };
 
 
@@ -14749,6 +14785,15 @@ export enum SpatialMetricState {
   Error = 'ERROR',
   Processing = 'PROCESSING',
   Queued = 'QUEUED'
+}
+
+export enum SpatialMetricType {
+  ContextualizedMean = 'CONTEXTUALIZED_MEAN',
+  Count = 'COUNT',
+  OverlayArea = 'OVERLAY_AREA',
+  Presence = 'PRESENCE',
+  PresenceTable = 'PRESENCE_TABLE',
+  TotalArea = 'TOTAL_AREA'
 }
 
 /**

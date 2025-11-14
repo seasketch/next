@@ -11287,15 +11287,14 @@ COMMENT ON FUNCTION public.get_metrics_for_sketch(skid integer) IS '@omit';
 
 
 --
--- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, text, text[], text, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, jsonb, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) RETURNS jsonb
+CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   declare
     metric_id bigint;
-    metric_parameters jsonb;
   begin
     -- Validation
     if p_subject_fragment_id is not null and p_subject_geography_id is not null then
@@ -11310,14 +11309,7 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
     if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
       raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
     end if;
-    
-    -- Build parameters jsonb from group_by
-    if p_overlay_group_by is not null then
-      metric_parameters := jsonb_build_object('groupBy', p_overlay_group_by);
-    else
-      metric_parameters := '{}'::jsonb;
-    end if;
-    
+        
     -- Try to get existing metric first (matching the unique index logic)
     select id into metric_id
     from spatial_metrics
@@ -11326,7 +11318,7 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
       and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
       and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
       and type = p_type
-      and parameters = metric_parameters;
+      and parameters = p_parameters;
     
     -- If not found, insert new metric
     if metric_id is null then
@@ -11345,7 +11337,7 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
         p_overlay_source_url,
         p_source_processing_job_dependency,
         p_project_id,
-        metric_parameters
+        p_parameters
       )
       returning id into metric_id;
     end if;
@@ -11353,13 +11345,6 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
     return get_spatial_metric(metric_id);
   end;
 $$;
-
-
---
--- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) IS '@omit';
 
 
 --
@@ -33070,11 +33055,11 @@ GRANT ALL ON FUNCTION public.get_metrics_for_sketch(skid integer) TO anon;
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) TO anon;
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) TO anon;
 
 
 --
