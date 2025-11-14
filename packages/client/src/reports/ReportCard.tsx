@@ -217,14 +217,23 @@ export default function ReportCard({
   const [showCalcDetails, setShowCalcDetails] = useState(false);
 
   const presenceAbsenceClassName = useMemo(() => {
-    if (
-      config.type === "Presence" &&
-      !loading &&
-      !Object.values(errors).length
-    ) {
-      const isPresent = metrics.some(
-        (m) => m.type === "presence" && m.value === true
-      );
+    if (!loading && !Object.values(errors).length) {
+      const isPresent = metrics.some((m) => {
+        if (subjectIsFragment(m.subject)) {
+          switch (m.type) {
+            case "presence":
+              return m.value === true;
+            case "count":
+              return m.value["*"] > 0;
+            case "overlay_area":
+              return m.value["*"] > 0;
+            default:
+              return false;
+          }
+        } else {
+          return false;
+        }
+      });
       if (isPresent) {
         return "isPresent";
       } else {
@@ -233,7 +242,7 @@ export default function ReportCard({
     } else {
       return "";
     }
-  }, [config.type, metrics, loading, errors]);
+  }, [metrics, loading, errors]);
 
   return (
     <div
