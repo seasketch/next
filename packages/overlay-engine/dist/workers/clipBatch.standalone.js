@@ -276,6 +276,7 @@ var require_sweeplineIntersections = __commonJS({
 var clipBatch_exports = {};
 __export(clipBatch_exports, {
   clipBatch: () => clipBatch,
+  collectColumnValues: () => collectColumnValues,
   countFeatures: () => countFeatures,
   createPresenceTable: () => createPresenceTable,
   performClipping: () => performClipping,
@@ -4358,6 +4359,73 @@ async function createPresenceTable({
   }
   return results;
 }
+async function collectColumnValues({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  property,
+  groupBy
+}) {
+  const results = { "*": [] };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just collecting column values, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+        const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pointInPolygon(coord, poly);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        if (turf_boolean_intersects_default(f.feature, {
+          type: "Feature",
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon
+          },
+          properties: {}
+        })) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const oidx = f.feature.properties.__oidx;
+    if (oidx === void 0 || oidx === null) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const value = f.feature.properties?.[property];
+    if (typeof value === "number") {
+      const identifiedValue = [oidx, value];
+      results["*"].push(identifiedValue);
+      if (groupBy) {
+        const classKey = f.feature.properties?.[groupBy];
+        if (classKey) {
+          if (!(classKey in results)) {
+            results[classKey] = [];
+          }
+          results[classKey].push(identifiedValue);
+        }
+      }
+    }
+  }
+  return results;
+}
 import_node_worker_threads.parentPort?.on(
   "message",
   async (job) => {
@@ -4392,6 +4460,17 @@ import_node_worker_threads.parentPort?.on(
           limit: job.limit,
           includedProperties: job.includedProperties
         });
+      } else if (operation2 === "column_values") {
+        if (!job.property) {
+          throw new Error("property is required for column_values operation");
+        }
+        result = await collectColumnValues({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          property: job.property,
+          groupBy: job.groupBy
+        });
       } else {
         throw new Error(`Unknown operation type: ${operation2}`);
       }
@@ -4417,6 +4496,7 @@ function pick(object, keys) {
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   clipBatch,
+  collectColumnValues,
   countFeatures,
   createPresenceTable,
   performClipping,

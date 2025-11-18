@@ -5,9 +5,9 @@ import { GuaranteedOverlayWorkerHelpers, OverlayWorkerHelpers } from "./utils/he
 import { Cql2Query } from "./cql2";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
-import { OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, PresenceTableValue } from "./metrics/metrics";
+import { OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, PresenceTableValue, ColumnValuesMetric } from "./metrics/metrics";
 export { createClippingWorkerPool };
-export type OperationType = "overlay_area" | "count" | "presence" | "presence_table";
+export type OperationType = "overlay_area" | "count" | "presence" | "presence_table" | "column_values";
 /**
  * Maps operation types to their corresponding metric value types
  */
@@ -16,6 +16,7 @@ type OperationResultTypeMap = {
     count: CountMetric["value"];
     presence: PresenceMetric["value"];
     presence_table: PresenceTableMetric["value"];
+    column_values: ColumnValuesMetric["value"];
 };
 /**
  * Gets the result type for a given operation type
@@ -67,12 +68,15 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     presenceOperationEarlyReturn: boolean;
     includedProperties?: string[];
     resultsLimit: number;
+    columnValuesProperty?: string;
     private progress;
     private progressTarget;
     private isOverlayAreaOperation;
     private isCountOperation;
     private isPresenceOperation;
     private isPresenceTableOperation;
+    private isColumnValuesOperation;
+    private getColumnValuesResults;
     private getOverlayResults;
     private getPresenceTableResults;
     private initializeResults;
@@ -80,15 +84,17 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
         cql2Query?: Cql2Query | undefined;
-    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number);
+    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, columnValuesProperty?: string);
     private resetBatchData;
     calculate(): Promise<OperationResultType<TOp>>;
     private processBatch;
+    private processColumnValuesBatch;
     private processOverlayBatch;
     private processCountBatch;
     private processPresenceBatch;
     private mergeOverlayBatchResults;
     private mergeCountBatchResults;
+    private mergeColumnValuesBatchResults;
     /**
      * Finalizes count results by converting interim ID arrays to UniqueIdIndex
      * and calculating counts. Called at the end of calculate().
@@ -96,6 +102,7 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     private finalizeCountResults;
     private getDifferenceMultiPolygon;
     addIndividualFeatureToResults(feature: FeatureWithMetadata<Feature<Geometry>>): void;
+    private addColumnValuesFeatureToResults;
     private addOverlayFeatureToTotals;
     addCountFeatureToTotals(feature: FeatureWithMetadata<Feature<Geometry>>): void;
     addPresenceTableFeatureToResults(feature: Pick<FeatureWithMetadata<Feature<Geometry>>, "properties">): void;

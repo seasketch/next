@@ -5,7 +5,7 @@ import calcArea from "@turf/area";
 import { parentPort } from "node:worker_threads";
 import pip from "point-in-polygon-hao";
 import booleanIntersects from "@turf/boolean-intersects";
-import { PresenceTableValue } from "../metrics/metrics";
+import { PresenceTableValue, IdentifiedValues } from "../metrics/metrics";
 
 export async function clipBatch({
   features,
@@ -310,10 +310,103 @@ export async function createPresenceTable({
   return results;
 }
 
+export async function collectColumnValues({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  property,
+  groupBy,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  property: string;
+  groupBy?: string;
+}) {
+  const results: { [classKey: string]: IdentifiedValues[] } = { "*": [] };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just collecting column values, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (
+        f.feature.geometry.type === "Point" ||
+        f.feature.geometry.type === "MultiPoint"
+      ) {
+        const coords =
+          f.feature.geometry.type === "Point"
+            ? [f.feature.geometry.coordinates]
+            : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pip(coord, poly as number[][][]);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        // for any other geometry type, we'll use booleanIntersects to check if
+        // the feature intersects the difference feature
+        if (
+          booleanIntersects(f.feature, {
+            type: "Feature",
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: differenceMultiPolygon,
+            },
+            properties: {},
+          })
+        ) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const oidx = f.feature.properties.__oidx;
+    if (oidx === undefined || oidx === null) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const value = f.feature.properties?.[property];
+    if (typeof value === "number") {
+      const identifiedValue: IdentifiedValues = [oidx, value];
+      results["*"].push(identifiedValue);
+      if (groupBy) {
+        const classKey = f.feature.properties?.[groupBy];
+        if (classKey) {
+          if (!(classKey in results)) {
+            results[classKey] = [];
+          }
+          results[classKey].push(identifiedValue);
+        }
+      }
+    }
+  }
+  return results;
+}
+
 parentPort?.on(
   "message",
   async (job: {
-    operation?: "overlay_area" | "count" | "presence" | "presence_table";
+    operation?:
+      | "overlay_area"
+      | "count"
+      | "presence"
+      | "presence_table"
+      | "column_values";
     features: {
       feature: FeatureWithMetadata<Feature<Geometry>>;
       requiresIntersection: boolean;
@@ -324,6 +417,7 @@ parentPort?.on(
     groupBy?: string;
     limit?: number;
     includedProperties?: string[];
+    property?: string;
   }) => {
     try {
       const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
@@ -359,6 +453,17 @@ parentPort?.on(
           subjectFeature: job.subjectFeature,
           limit: job.limit,
           includedProperties: job.includedProperties,
+        });
+      } else if (operation === "column_values") {
+        if (!job.property) {
+          throw new Error("property is required for column_values operation");
+        }
+        result = await collectColumnValues({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          property: job.property,
+          groupBy: job.groupBy,
         });
       } else {
         throw new Error(`Unknown operation type: ${operation}`);

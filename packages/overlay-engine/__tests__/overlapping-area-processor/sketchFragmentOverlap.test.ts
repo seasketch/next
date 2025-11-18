@@ -1,7 +1,6 @@
 import { vi } from "vitest";
 import { makeFetchRangeFn } from "../../scripts/optimizedFetchRangeFn";
-import turfBbox from "@turf/bbox";
-import { FlatGeobufSource, SourceCache } from "fgb-source";
+import { SourceCache } from "fgb-source";
 import {
   ClippingFn,
   ClippingLayerOption,
@@ -20,10 +19,11 @@ import {
 } from "../../src/utils/helpers";
 import { createFragments, GeographySettings } from "../../src/fragments";
 import { prepareSketch } from "../../src/utils/prepareSketch";
-import { Cql2Query } from "../../src/cql2";
 import { compareResults } from "./compareResults";
 import { WorkerPool } from "../../src/workers/pool";
 import simplify from "@turf/simplify";
+import { calculateRasterStats } from "../../src/rasterStats";
+import proj4 from "proj4";
 const insideBioregion = require("./sketches/Inside-bioregion-2.geojson.json");
 
 const naitaba = require("./sketches/Naitaba.geojson.json");
@@ -34,6 +34,13 @@ for (const metric of naitabaGeomorphologyMetrics) {
   naitabaGeomorphologyResults["*"] += metric.value / 1_000_000;
 }
 const ventsSketch = require("./sketches/Hydrothermal-vents.geojson.json");
+
+const WGS84 = "EPSG:4326";
+proj4.defs(
+  "EPSG:6933",
+  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs"
+);
+const to6933 = proj4(WGS84, "EPSG:6933");
 
 describe("sketchFragmentOverlap", () => {
   vi.setConfig({ testTimeout: 1000 * 10 });
@@ -466,6 +473,29 @@ describe("sketchFragmentOverlap", () => {
         const results = await processor.calculate();
         expect(results["*"].count).toBe(2);
       });
+
+      it("Kanacea Island Expedition sites", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-nitrogen-2.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const prepared = prepareSketch(
+          require("./sketches/Kanacea-Island.geojson.json")
+        );
+        const processor = new OverlayEngineBatchProcessor(
+          "count",
+          1024 * 1024 * 2, // 5MB
+          prepared.feature,
+          source,
+          [],
+          {}
+        );
+        const results = await processor.calculate();
+        console.log(results);
+        expect(results["*"].count).toBe(3);
+      });
     });
 
     describe("Presence Table metrics", () => {
@@ -489,6 +519,40 @@ describe("sketchFragmentOverlap", () => {
         );
         const results = await processor.calculate();
         expect(results.values.length).toBe(26);
+      });
+    });
+
+    describe("Column values metrics", () => {
+      it("Should have values for Kanacea Island test case", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-nitrogen-2.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const prepared = prepareSketch(
+          require("./sketches/Kanacea-Island.geojson.json")
+        );
+        const processor = new OverlayEngineBatchProcessor(
+          "column_values",
+          1024 * 1024 * 2, // 5MB
+          prepared.feature,
+          source,
+          [],
+          {},
+          undefined,
+          pool,
+          undefined,
+          undefined,
+          "d15n"
+        );
+        const results = await processor.calculate();
+        expect(results["*"].length).toBe(3);
+        // Verify that results are IdentifiedValues tuples [oidx, value]
+        expect(Array.isArray(results["*"][0])).toBe(true);
+        expect(results["*"][0].length).toBe(2);
+        expect(results["*"][0][0]).toBe(55);
+        expect(results["*"][0][1]).toBe(1.933);
       });
     });
   });
@@ -684,3 +748,75 @@ describe("sketchFragmentOverlap", () => {
     });
   });
 });
+
+describe("Raster metrics", () => {
+  let pool: WorkerPool<any, any>;
+
+  beforeAll(async () => {
+    pool = createClippingWorkerPool(
+      __dirname + "/../../dist/workers/clipBatch.standalone.js"
+    );
+  });
+  it("Should calculate raster stats", async () => {
+    // const source = "https://uploads.seasketch.org/fiji_GEBCO_bathymetry.tif";
+    const source =
+      "https://uploads.seasketch.org/projects/fiji/subdivided/651-e2a26b85-42b6-4e03-ae04-1741a24ca54e.tif";
+    const prepared = prepareSketch(
+      require("./sketches/Kanacea-Island.geojson.json")
+    );
+    const f = reprojectFeatureTo6933(prepared.feature);
+    console.log(f);
+    const stats = await calculateRasterStats(source, f);
+    console.log(stats[0].mean, stats[0].min, stats[0].max);
+  });
+});
+
+/**
+ * Reproject a single GeoJSON geometry in-place or into a copy.
+ * Handles Point, LineString, Polygon, Multi* and GeometryCollection.
+ */
+function reprojectGeometry(geom, transform) {
+  const t = ([x, y]) => transform.forward([x, y]);
+
+  switch (geom.type) {
+    case "Point":
+      geom.coordinates = t(geom.coordinates);
+      break;
+    case "MultiPoint":
+    case "LineString":
+      geom.coordinates = geom.coordinates.map(t);
+      break;
+    case "MultiLineString":
+    case "Polygon":
+      geom.coordinates = geom.coordinates.map((ring) => ring.map(t));
+      break;
+    case "MultiPolygon":
+      geom.coordinates = geom.coordinates.map((poly) =>
+        poly.map((ring) => ring.map(t))
+      );
+      break;
+    case "GeometryCollection":
+      geom.geometries.forEach((g) => reprojectGeometry(g, transform));
+      break;
+    default:
+      throw new Error(`Unsupported geometry type: ${geom.type}`);
+  }
+  return geom;
+}
+
+/**
+ * Reproject a GeoJSON Feature with Polygon geometry to EPSG:6933.
+ */
+export function reprojectFeatureTo6933(feature) {
+  if (feature.type !== "Feature") {
+    throw new Error("Expected a GeoJSON Feature");
+  }
+  // shallow clone feature, reuse properties
+  const out = {
+    type: "Feature",
+    properties: feature.properties || {},
+    geometry: JSON.parse(JSON.stringify(feature.geometry)),
+  };
+  reprojectGeometry(out.geometry, to6933);
+  return out;
+}

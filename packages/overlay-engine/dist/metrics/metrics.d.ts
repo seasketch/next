@@ -1,4 +1,4 @@
-export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "contextualized_mean";
+export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values";
 type MetricBase = {
     type: MetricType;
     subject: MetricSubjectFragment | MetricSubjectGeography;
@@ -65,16 +65,61 @@ export type PresenceTableMetric = OverlayMetricBase & {
         exceededLimit: boolean;
     };
 };
-export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric;
+/**
+ * The first number is the feature __oidx, the second is the value
+ */
+export type IdentifiedValues = [number, number];
+export type ColumnValuesMetric = OverlayMetricBase & {
+    type: "column_values";
+    value: {
+        [groupBy: string]: IdentifiedValues[];
+    };
+};
+export type RasterBandStats = {
+    count: number;
+    min: number;
+    max: number;
+    mean: number;
+    median: number;
+    mode: number;
+    modes: number[];
+    range: number;
+    histogram: [number, number | null][];
+    invalid: number;
+    std: number;
+    sum: number;
+};
+export type RasterStats = OverlayMetricBase & {
+    type: "raster_stats";
+    value: RasterBandStats[];
+};
+export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric;
 export type MetricTypeMap = {
     total_area: TotalAreaMetric;
     overlay_area: OverlayAreaMetric;
     count: CountMetric;
     presence: PresenceMetric;
     presence_table: PresenceTableMetric;
+    column_values: ColumnValuesMetric;
 };
 export declare function subjectIsFragment(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
 export declare function subjectIsGeography(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
+/**
+ * Computes statistics from a list of IdentifiedValues. This function can be used
+ * both server-side and client-side to calculate accurate statistics for overlapping
+ * fragments and multiple sketches in a collection by de-duplicating based on __oidx.
+ */
+export declare function computeStatsFromIdentifiedValues(identifiedValues: IdentifiedValues[]): {
+    min: number;
+    max: number;
+    mean: number;
+    median: number;
+    stdDev: number;
+    histogram: [number, number | null][];
+    count: number;
+    countDistinct: number;
+    values: number[];
+};
 export {};
 //# sourceMappingURL=metrics.d.ts.map

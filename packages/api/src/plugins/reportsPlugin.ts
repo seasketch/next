@@ -602,6 +602,62 @@ async function getOrCreateReportDependencies(
         }
         break;
       }
+      case "ColumnStatistics": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          if (!layer.layerParameters?.valueColumn) {
+            throw new Error(
+              `ColumnStatistics card requires valueColumn parameter for layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "column_values",
+            overlaySource,
+            layer.layerParameters,
+            geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
+      case "RasterBandStatistics": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "raster_stats",
+            overlaySource,
+            layer.layerParameters,
+            [],
+            // geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
       default:
         // do nothing. some cards like sketchAttributes do not have dependencies
         break;
@@ -647,10 +703,15 @@ async function getOrCreateMetricsOfType(
     | "count"
     | "presence"
     | "presence_table"
-    | "contextualized_mean",
+    | "column_values"
+    | "raster_stats",
   overlaySource: ReportOverlaySourcePartial,
   parameters:
-    | { groupBy?: string | null; includedProperties?: string[] | null }
+    | {
+        groupBy?: string | null;
+        includedProperties?: string[] | null;
+        valueColumn?: string | null;
+      }
     | undefined,
   geographyIds: number[],
   fragmentHashes: string[],

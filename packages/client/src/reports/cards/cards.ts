@@ -17,7 +17,9 @@ export type ReportCardType =
   | "OverlappingAreas"
   | "FeatureCount"
   | "Presence"
-  | "FeatureList";
+  | "FeatureList"
+  | "ColumnStatistics"
+  | "RasterBandStatistics";
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
  * used to render a card in a report. It is used to determine the type of card,
@@ -150,6 +152,8 @@ export function registerCards() {
   import("./FeatureCountCard");
   import("./PresenceCard");
   import("./FeatureListCard");
+  import("./ColumnStatisticsCard");
+  import("./RasterBandStatisticsCard");
 }
 
 /**

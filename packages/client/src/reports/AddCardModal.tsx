@@ -137,8 +137,22 @@ export function AddCardModal({
     const count = modalState.selectedLayers.length;
     if (count < min) return false;
     if (typeof max === "number" && count > max) return false;
+
+    // Check required layer parameters
+    const requiredParams = (registration as any).requiredLayerParameters || [];
+    if (requiredParams.length > 0) {
+      const allLayersHaveRequiredParams = modalState.selectedLayers.every(
+        (layer) => {
+          return requiredParams.every(
+            (paramName: string) => layer.parameters?.[paramName]
+          );
+        }
+      );
+      if (!allLayersHaveRequiredParams) return false;
+    }
+
     return true;
-  }, [registration, modalState.selectedLayers.length]);
+  }, [registration, modalState.selectedLayers]);
 
   const footerButtons = useMemo(() => {
     if (modalState.step === "chooseType") {
@@ -217,6 +231,20 @@ function getCategoricalAttributesForLayer(layer: TableOfContentsItem) {
   return categoricalAttributes(first.attributes as any);
 }
 
+function getNumericAttributesForLayer(layer: TableOfContentsItem) {
+  const meta = layer?.dataLayer?.dataSource?.geostats;
+  const layers: GeostatsLayer[] | undefined =
+    meta && isGeostatsLayer(meta)
+      ? [meta as GeostatsLayer]
+      : Array.isArray(meta?.layers) && meta.layers.length
+      ? (meta.layers as GeostatsLayer[])
+      : undefined;
+
+  if (!layers || layers.length === 0) return [];
+  const first = layers[0];
+  return (first.attributes || []).filter((a: any) => a.type === "number");
+}
+
 interface LayerItemProps {
   layer: TableOfContentsItem;
   checked: boolean;
@@ -224,6 +252,8 @@ interface LayerItemProps {
   selected: LayerSelection | undefined;
   onToggle: () => void;
   onGroupByChange: (value: any) => void;
+  onValueColumnChange?: (value: any) => void;
+  cardType?: string | null;
 }
 
 function LayerItem({
@@ -233,16 +263,25 @@ function LayerItem({
   selected,
   onToggle,
   onGroupByChange,
+  onValueColumnChange,
+  cardType,
 }: LayerItemProps) {
   const { t } = useTranslation("admin:sketching");
+  const registration = cardType
+    ? getCardRegistration(cardType as ReportCardType)
+    : null;
+  const requiresValueColumn =
+    (registration as any)?.requiredLayerParameters?.includes("valueColumn") ??
+    false;
+  const numericAttributes = requiresValueColumn
+    ? getNumericAttributesForLayer(layer)
+    : [];
 
   return (
     <div
       role="button"
-      className={`flex items-center space-x-3 rounded px-3 py-2 cursor-pointer border relative ${
-        checked
-          ? "bg-blue-50 border-blue-500 pr-0"
-          : "bg-white border-transparent"
+      className={`flex flex-col rounded px-3 py-2 cursor-pointer border relative ${
+        checked ? "bg-blue-50 border-blue-500" : "bg-white border-transparent"
       } ${disabled ? "opacity-60" : ""}`}
       onClick={(e) => {
         e.preventDefault();
@@ -251,45 +290,69 @@ function LayerItem({
         }
       }}
     >
-      <RadixCheckbox.Root
-        className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 ${
-          checked ? "bg-blue-600 border-blue-600" : "bg-white border-gray-300"
-        }`}
-        checked={checked}
-        disabled={disabled}
-        aria-label={layer.title || t("Untitled layer")}
-        onCheckedChange={(val) => {
-          if (!disabled && (val === true) !== checked) {
-            onToggle();
-          }
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <RadixCheckbox.Indicator asChild>
-          <RadixCheckIcon
-            className={`w-3 h-3 ${checked ? "text-white" : "text-transparent"}`}
-          />
-        </RadixCheckbox.Indicator>
-      </RadixCheckbox.Root>
-      <div className="flex-1 truncate">
-        <div
-          className={`text-sm ${checked ? "text-blue-900" : "text-gray-800"}`}
+      <div className="flex items-center space-x-3">
+        <RadixCheckbox.Root
+          className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+            checked ? "bg-blue-600 border-blue-600" : "bg-white border-gray-300"
+          }`}
+          checked={checked}
+          disabled={disabled}
+          aria-label={layer.title || t("Untitled layer")}
+          onCheckedChange={(val) => {
+            if (!disabled && (val === true) !== checked) {
+              onToggle();
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
         >
-          {layer.title || t("Untitled layer")}
+          <RadixCheckbox.Indicator asChild>
+            <RadixCheckIcon
+              className={`w-3 h-3 ${
+                checked ? "text-white" : "text-transparent"
+              }`}
+            />
+          </RadixCheckbox.Indicator>
+        </RadixCheckbox.Root>
+        <div className="flex-1 truncate">
+          <div
+            className={`text-sm ${checked ? "text-blue-900" : "text-gray-800"}`}
+          >
+            {layer.title || t("Untitled layer")}
+          </div>
         </div>
       </div>
       {checked && (
-        <div className="overflow-y-visible h-5 scale-90 transform flex items-center space-x-2">
-          <span className="text-xs text-blue-600">{t("Group by")}</span>
-          <AttributeSelect
-            appearance="light"
-            attributes={getCategoricalAttributesForLayer(layer)}
-            includeNone={true}
-            placeholder={t("None")}
-            placeholderDescription={t("Analyze all features as a group")}
-            value={selected?.parameters?.groupBy}
-            onChange={onGroupByChange}
-          />
+        <div className="mt-2 space-y-2 pl-7">
+          {requiresValueColumn && onValueColumnChange && (
+            <div className="flex items-center space-x-2">
+              <span className="text-xs text-blue-600 font-medium">
+                {t("Column to analyze")} *
+              </span>
+              <AttributeSelect
+                appearance="light"
+                attributes={numericAttributes}
+                includeNone={false}
+                placeholder={t("Select a numeric column")}
+                placeholderDescription={t(
+                  "Choose which numeric column to calculate statistics for"
+                )}
+                value={selected?.parameters?.valueColumn}
+                onChange={onValueColumnChange}
+              />
+            </div>
+          )}
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-blue-600">{t("Group by")}</span>
+            <AttributeSelect
+              appearance="light"
+              attributes={getCategoricalAttributesForLayer(layer)}
+              includeNone={true}
+              placeholder={t("None")}
+              placeholderDescription={t("Analyze all features as a group")}
+              value={selected?.parameters?.groupBy}
+              onChange={onGroupByChange}
+            />
+          </div>
         </div>
       )}
     </div>
@@ -503,6 +566,7 @@ function LayerSelectionStep({
                   checked={checked}
                   disabled={disableCheck}
                   selected={selected}
+                  cardType={registration?.type || null}
                   onToggle={() =>
                     toggleLayerSelection(layer as TableOfContentsItem)
                   }
@@ -510,7 +574,28 @@ function LayerSelectionStep({
                     setSelectedLayers((prev) =>
                       prev.map((s) =>
                         s.layer.tableOfContentsItemId === layerId
-                          ? { ...s, parameters: { groupBy: value } }
+                          ? {
+                              ...s,
+                              parameters: {
+                                ...s.parameters,
+                                groupBy: value,
+                              },
+                            }
+                          : s
+                      )
+                    )
+                  }
+                  onValueColumnChange={(value) =>
+                    setSelectedLayers((prev) =>
+                      prev.map((s) =>
+                        s.layer.tableOfContentsItemId === layerId
+                          ? {
+                              ...s,
+                              parameters: {
+                                ...s.parameters,
+                                valueColumn: value,
+                              },
+                            }
                           : s
                       )
                     )

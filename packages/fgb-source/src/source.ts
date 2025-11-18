@@ -275,7 +275,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         throw new Error("Spatial index not available");
       }
       const results = this.index.search(b.minX, b.minY, b.maxX, b.maxY);
-      // console.log("results", results.length);
       for (const result of results) {
         if (!addedIds.has(result[0])) {
           addedIds.add(result[0]);

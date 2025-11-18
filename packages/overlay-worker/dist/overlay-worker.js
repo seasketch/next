@@ -170,21 +170,24 @@ async function handler(payload) {
             }
             case "presence_table":
             case "count":
-            case "presence": {
+            case "presence":
+            case "column_values": {
                 if (!payload.sourceUrl) {
-                    throw new Error("sourceUrl is required for count");
+                    throw new Error(`sourceUrl is required for ${payload.type}`);
                 }
                 const { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
+                // Extract valueColumn from parameters for column_values
+                const columnValuesProperty = payload.type === "column_values" ? payload.valueColumn : undefined;
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor(payload.type, 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(intersectionFeature, {
                     tolerance: 0.002,
-                }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedProperties, payload.resultsLimit);
-                const count = await processor.calculate();
+                }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedProperties, payload.resultsLimit, columnValuesProperty);
+                const result = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
-                await (0, messaging_1.sendResultMessage)(payload.jobKey, count, payload.queueUrl, Date.now() - startTime);
+                await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
                 return;
             }
             default:

@@ -1,7 +1,7 @@
 import { FeatureWithMetadata } from "fgb-source";
 import { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
-import { PresenceTableValue } from "../metrics/metrics";
+import { PresenceTableValue, IdentifiedValues } from "../metrics/metrics";
 export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
@@ -53,6 +53,19 @@ export declare function createPresenceTable({ features, differenceMultiPolygon, 
 }): Promise<{
     exceededLimit: boolean;
     values: PresenceTableValue[];
+}>;
+export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }: {
+    features: {
+        feature: FeatureWithMetadata<Feature<Geometry>>;
+        requiresIntersection: boolean;
+        requiresDifference: boolean;
+    }[];
+    differenceMultiPolygon: clipping.Geom[];
+    subjectFeature: Feature<Polygon | MultiPolygon>;
+    property: string;
+    groupBy?: string;
+}): Promise<{
+    [classKey: string]: IdentifiedValues[];
 }>;
 export declare function pick(object: any, keys?: string[]): any;
 //# sourceMappingURL=clipBatch.d.ts.map

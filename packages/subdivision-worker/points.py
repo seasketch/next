@@ -4,6 +4,37 @@ import os
 from typing import Optional, Callable
 
 
+def normalize_lon(x):
+    """Normalize longitude to [-180, 180] range."""
+    while x > 180:
+        x -= 360
+    while x < -180:
+        x += 360
+    return x
+
+
+def normalize_lat(y):
+    """Normalize latitude to [-90, 90] range."""
+    # Clamp latitude to valid range
+    if y > 90:
+        return 90
+    if y < -90:
+        return -90
+    return y
+
+
+def normalize_coords(coords):
+    """Normalize a coordinate [lon, lat, ...] to valid WGS84 bounds.
+    Preserves additional coordinate dimensions (e.g., elevation).
+    """
+    lon, lat = coords[0], coords[1]
+    normalized = [normalize_lon(lon), normalize_lat(lat)]
+    # Preserve any additional coordinate dimensions (e.g., elevation)
+    if len(coords) > 2:
+        normalized.extend(coords[2:])
+    return normalized
+
+
 def process_points(input_file: str, output_file: str, progress_callback: Optional[Callable] = None):
     """
     Process Point and MultiPoint geometries from a fiona source.
@@ -94,14 +125,18 @@ def process_points(input_file: str, output_file: str, progress_callback: Optiona
                     # All points from the same MultiPoint get the same __oidx (parent feature index)
                     props['__oidx'] = feature_index
                     for coords in geom['coordinates']:
-                        point_geom = {'type': 'Point', 'coordinates': coords}
+                        normalized_coords = normalize_coords(coords)
+                        point_geom = {'type': 'Point', 'coordinates': normalized_coords}
                         write({'geometry': point_geom, 'properties': props})
                         if pbar is not None:
                             pbar.update(1)
                 elif geom['type'] == 'Point':
                     # Single Point - use sequential counter as __oidx
                     props['__oidx'] = feature_index
-                    write({'geometry': geom, 'properties': props})
+                    # Normalize coordinates to valid WGS84 bounds
+                    normalized_coords = normalize_coords(geom['coordinates'])
+                    normalized_geom = {'type': 'Point', 'coordinates': normalized_coords}
+                    write({'geometry': normalized_geom, 'properties': props})
                     if pbar is not None:
                         pbar.update(1)
                 # Skip other geometry types (shouldn't happen if routing is correct)

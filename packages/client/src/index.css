@@ -10108,6 +10108,10 @@ select{
   padding-top:2rem
 }
 
+.pl-7{
+  padding-left:1.75rem
+}
+
 .text-left{
   text-align:left
 }

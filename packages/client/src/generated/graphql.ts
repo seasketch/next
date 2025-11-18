@@ -14788,11 +14788,14 @@ export enum SpatialMetricState {
 }
 
 export enum SpatialMetricType {
+  ColumnStats = 'COLUMN_STATS',
+  ColumnValues = 'COLUMN_VALUES',
   ContextualizedMean = 'CONTEXTUALIZED_MEAN',
   Count = 'COUNT',
   OverlayArea = 'OVERLAY_AREA',
   Presence = 'PRESENCE',
   PresenceTable = 'PRESENCE_TABLE',
+  RasterStats = 'RASTER_STATS',
   TotalArea = 'TOTAL_AREA'
 }
 

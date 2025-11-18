@@ -26,6 +26,7 @@ import { Cql2Query, evaluateCql2JSONQuery } from "./cql2";
 import * as clipping from "polyclip-ts";
 import {
   clipBatch,
+  collectColumnValues,
   countFeatures,
   pick,
   testForPresenceInSubject,
@@ -39,6 +40,8 @@ import {
   PresenceMetric,
   PresenceTableMetric,
   PresenceTableValue,
+  ColumnValuesMetric,
+  IdentifiedValues,
 } from "./metrics/metrics";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 
@@ -48,7 +51,8 @@ export type OperationType =
   | "overlay_area"
   | "count"
   | "presence"
-  | "presence_table";
+  | "presence_table"
+  | "column_values";
 
 /**
  * Maps operation types to their corresponding metric value types
@@ -58,6 +62,7 @@ type OperationResultTypeMap = {
   count: CountMetric["value"];
   presence: PresenceMetric["value"];
   presence_table: PresenceTableMetric["value"];
+  column_values: ColumnValuesMetric["value"];
 };
 
 /**
@@ -139,6 +144,7 @@ export class OverlayEngineBatchProcessor<
   presenceOperationEarlyReturn = false;
   includedProperties?: string[];
   resultsLimit = 50;
+  columnValuesProperty?: string;
 
   private progress: number = 0;
   private progressTarget: number = 0;
@@ -158,6 +164,18 @@ export class OverlayEngineBatchProcessor<
 
   private isPresenceTableOperation(): this is OverlayEngineBatchProcessor<"presence_table"> {
     return this.operation === "presence_table";
+  }
+
+  private isColumnValuesOperation(): this is OverlayEngineBatchProcessor<"column_values"> {
+    return this.operation === "column_values";
+  }
+
+  private getColumnValuesResults(): {
+    [classKey: string]: IdentifiedValues[];
+  } {
+    return this.results as unknown as {
+      [classKey: string]: IdentifiedValues[];
+    };
   }
 
   // Operation-specific result getters with proper typing
@@ -183,8 +201,14 @@ export class OverlayEngineBatchProcessor<
       } as unknown as OperationResultType<TOp>;
     } else if (op === "presence") {
       return false as unknown as OperationResultType<TOp>;
-    } else {
+    } else if (op === "column_values") {
+      return {
+        "*": [] as IdentifiedValues[],
+      } as unknown as OperationResultType<TOp>;
+    } else if (op === "overlay_area") {
       return { "*": 0 } as unknown as OperationResultType<TOp>;
+    } else {
+      throw new Error(`Invalid operation type: ${op}`);
     }
   }
 
@@ -202,7 +226,8 @@ export class OverlayEngineBatchProcessor<
     groupBy?: string,
     pool?: WorkerPool<any, any>,
     includedProperties?: string[],
-    resultsLimit?: number
+    resultsLimit?: number,
+    columnValuesProperty?: string
   ) {
     this.operation = operation;
     this.pool = pool;
@@ -237,6 +262,14 @@ export class OverlayEngineBatchProcessor<
     this.includedProperties = includedProperties;
     if (resultsLimit) {
       this.resultsLimit = resultsLimit;
+    }
+    if (this.operation === "column_values") {
+      this.columnValuesProperty = columnValuesProperty;
+      if (!this.columnValuesProperty) {
+        throw new Error(
+          "columnValuesProperty is required for column_values operation"
+        );
+      }
     }
   }
 
@@ -435,13 +468,9 @@ export class OverlayEngineBatchProcessor<
         this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
 
         if (this.isOverlayAreaOperation()) {
-          this.mergeOverlayBatchResults(
-            resolvedBatchData as OperationResultType<"overlay_area">[]
-          );
+          this.mergeOverlayBatchResults(resolvedBatchData);
         } else if (this.isCountOperation()) {
-          this.mergeCountBatchResults(
-            resolvedBatchData as { [classKey: string]: number[] }[]
-          );
+          this.mergeCountBatchResults(resolvedBatchData);
           this.finalizeCountResults();
         } else if (this.isPresenceOperation()) {
           const hasMatch = resolvedBatchData.some((result) => result === true);
@@ -452,6 +481,8 @@ export class OverlayEngineBatchProcessor<
           }
         } else if (this.isPresenceTableOperation()) {
           this.mergePresenceTableBatchResults(resolvedBatchData);
+        } else if (this.isColumnValuesOperation()) {
+          this.mergeColumnValuesBatchResults(resolvedBatchData);
         }
         resolve(this.results);
       } catch (e) {
@@ -478,6 +509,7 @@ export class OverlayEngineBatchProcessor<
       groupBy: this.groupBy,
       includedProperties: this.includedProperties,
       resultsLimit: this.resultsLimit,
+      property: this.columnValuesProperty,
     };
 
     this.helpers.log(
@@ -512,10 +544,30 @@ export class OverlayEngineBatchProcessor<
         return this.processCountBatch(batch, differenceMultiPolygon);
       } else if (this.isPresenceOperation()) {
         return this.processPresenceBatch(batch, differenceMultiPolygon);
+      } else if (this.isColumnValuesOperation()) {
+        return this.processColumnValuesBatch(batch, differenceMultiPolygon);
       } else {
         throw new Error(`Unknown operation type: ${this.operation}`);
       }
     }
+  }
+
+  private async processColumnValuesBatch(
+    batch: BatchData,
+    differenceMultiPolygon: clipping.Geom[]
+  ): Promise<{
+    [classKey: string]: IdentifiedValues[];
+  }> {
+    return collectColumnValues({
+      features: batch.features,
+      differenceMultiPolygon: differenceMultiPolygon,
+      subjectFeature: this.subjectFeature,
+      groupBy: this.groupBy,
+      property: this.columnValuesProperty!,
+    }).catch((error) => {
+      console.error(`Error collecting column values: ${error.message}`);
+      throw error;
+    });
   }
 
   private async processOverlayBatch(
@@ -599,6 +651,24 @@ export class OverlayEngineBatchProcessor<
     }
   }
 
+  private mergeColumnValuesBatchResults(
+    batchResults: { [classKey: string]: IdentifiedValues[] }[]
+  ) {
+    const results = this.getColumnValuesResults();
+    for (const batchData of batchResults) {
+      for (const classKey in batchData) {
+        if (!(classKey in results)) {
+          results[classKey] = [];
+        }
+        results[classKey].push(...batchData[classKey]);
+      }
+    }
+    // Sort all results by oidx (first element of tuple)
+    for (const classKey in results) {
+      results[classKey].sort((a, b) => a[0] - b[0]);
+    }
+  }
+
   /**
    * Finalizes count results by converting interim ID arrays to UniqueIdIndex
    * and calculating counts. Called at the end of calculate().
@@ -672,6 +742,35 @@ export class OverlayEngineBatchProcessor<
       this.addCountFeatureToTotals(feature);
     } else if (this.isPresenceTableOperation()) {
       this.addPresenceTableFeatureToResults(feature);
+    } else if (this.isColumnValuesOperation()) {
+      this.addColumnValuesFeatureToResults(feature);
+    }
+  }
+
+  private addColumnValuesFeatureToResults(
+    feature: FeatureWithMetadata<Feature<Geometry>>
+  ) {
+    const value = feature.properties?.[this.columnValuesProperty!];
+    const results = this.getColumnValuesResults();
+    if (typeof value === "number") {
+      if (!("__oidx" in feature.properties || {})) {
+        throw new Error("Feature properties must contain __oidx");
+      }
+      const oidx = feature.properties.__oidx;
+      if (oidx === undefined || oidx === null) {
+        throw new Error("Feature properties must contain __oidx");
+      }
+      const identifiedValue: IdentifiedValues = [oidx, value];
+      results["*"].push(identifiedValue);
+      if (this.groupBy) {
+        const classKey = feature.properties?.[this.groupBy];
+        if (classKey) {
+          if (!(classKey in results)) {
+            results[classKey] = [];
+          }
+          results[classKey].push(identifiedValue);
+        }
+      }
     }
   }
 

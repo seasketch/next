@@ -9,7 +9,6 @@ import {
 } from "overlay-engine";
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
-import { v4 as uuid } from "uuid";
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -65,7 +64,8 @@ export default async function calculateSpatialMetric(
       metric.type === "overlay_area" ||
       metric.type === "count" ||
       metric.type === "presence" ||
-      metric.type === "presence_table"
+      metric.type === "presence_table" ||
+      metric.type === "column_values"
     ) {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
@@ -77,6 +77,7 @@ export default async function calculateSpatialMetric(
             metric.subject.hash,
             helpers
           );
+          console.log("metric.parameters", metric.parameters);
           await callOverlayWorker({
             type: metric.type,
             jobKey: metric.jobKey,

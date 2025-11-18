@@ -46,9 +46,26 @@ export default async function preprocessSource(
     );
     const slug: string = slugResults.rows[0].slug;
 
+    const typeResult = await client.query(
+      `select type from data_sources where id = $1`,
+      [dataSourceId]
+    );
+    const type: string = typeResult.rows[0].type;
+
     // Determine the canonical source URL for this data source (prefer FlatGeobuf)
     const sourceResult = await client.query(
+      type === "seasketch-raster"
+        ? `
+        select url
+        from data_upload_outputs
+        where 
+          data_source_id = $1 and 
+          type = 'GeoTIFF'
+        order by
+          case when is_original then 0 else 1 end
+        limit 1
       `
+        : `
         select url
         from data_upload_outputs
         where data_source_id = $1
@@ -74,7 +91,11 @@ export default async function preprocessSource(
 
     const sourceUrl: string = sourceResult.rows[0].url as string;
 
-    const objectKey = `projects/${slug}/subdivided/${dataSourceId}-${uuid()}.fgb`;
+    // Use appropriate extension based on data source type
+    const extension = type === "seasketch-raster" ? ".tif" : ".fgb";
+    const objectKey = `projects/${slug}/subdivided/${dataSourceId}-${uuid()}${extension}`;
+    console.log("sourceUrl", sourceUrl);
+    console.log("objectKey", objectKey);
     const payloadForLambda = {
       url: sourceUrl,
       jobKey,

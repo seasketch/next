@@ -116,6 +116,7 @@ export default async function handler(
   payload: OverlayWorkerPayload & {
     includedProperties?: string[];
     resultsLimit?: number;
+    valueColumn?: string;
   }
 ) {
   console.log("Overlay worker (v2) received payload", payload);
@@ -214,9 +215,10 @@ export default async function handler(
       }
       case "presence_table":
       case "count":
-      case "presence": {
+      case "presence":
+      case "column_values": {
         if (!payload.sourceUrl) {
-          throw new Error("sourceUrl is required for count");
+          throw new Error(`sourceUrl is required for ${payload.type}`);
         }
         const { intersectionFeature, differenceSources } =
           await subjectsForAnalysis(
@@ -229,6 +231,9 @@ export default async function handler(
             pageSize: "5MB",
           }
         );
+        // Extract valueColumn from parameters for column_values
+        const columnValuesProperty =
+          payload.type === "column_values" ? payload.valueColumn : undefined;
         const processor = new OverlayEngineBatchProcessor(
           payload.type,
           1024 * 1024 * 1, // 5MB
@@ -241,13 +246,14 @@ export default async function handler(
           payload.groupBy,
           workerPool,
           payload.includedProperties,
-          payload.resultsLimit
+          payload.resultsLimit,
+          columnValuesProperty
         );
-        const count = await processor.calculate();
+        const result = await processor.calculate();
         await flushMessages();
         await sendResultMessage(
           payload.jobKey,
-          count,
+          result,
           payload.queueUrl,
           Date.now() - startTime
         );
