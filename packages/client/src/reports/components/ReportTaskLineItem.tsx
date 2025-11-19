@@ -27,6 +27,7 @@ interface ReportTaskLineItemProps {
   startedAt?: Date | string | number | null;
   progressPercent?: number | null;
   sourcesReady?: boolean;
+  value?: any;
 }
 
 export default function ReportTaskLineItem({
@@ -44,12 +45,13 @@ export default function ReportTaskLineItem({
   startedAt,
   progressPercent,
   sourcesReady,
+  value,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
   const hasTooltipInfo =
     (state === SpatialMetricState.Complete ||
       state === SpatialMetricState.Error) &&
-    (completedAt || durationSeconds || errorMessage || outputSize);
+    (completedAt || durationSeconds || errorMessage || outputSize || value);
 
   // Precompute tooltip content
   const queuedTooltip = (
@@ -114,6 +116,15 @@ export default function ReportTaskLineItem({
           </div>
         </div>
       )}
+      {state === SpatialMetricState.Complete &&
+        value !== null &&
+        value !== undefined &&
+        isAdmin && (
+          <div>
+            <div className="font-semibold text-white mb-1">{t("Value")}</div>
+            <JSONPreview value={value} />
+          </div>
+        )}
     </div>
   );
 
@@ -151,7 +162,7 @@ export default function ReportTaskLineItem({
           </Tooltip.Trigger>
           <Tooltip.Portal>
             <Tooltip.Content
-              className="bg-gray-900 rounded-lg shadow-xl p-3 max-w-72 z-50 overflow-hidden"
+              className="bg-gray-900 rounded-lg shadow-xl p-3 max-w-96 z-50 overflow-hidden"
               sideOffset={5}
               side="left"
             >
@@ -172,6 +183,223 @@ export default function ReportTaskLineItem({
         </span>
       )}
     </li>
+  );
+}
+
+function JSONPreview({ value }: { value: any }) {
+  const [formattedJson, setFormattedJson] = React.useState<string | null>(null);
+  const [isLoading, setIsLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function formatJSON() {
+      try {
+        // Lazy load prettier dependencies
+        const [prettier, babel] = await Promise.all([
+          import("prettier/standalone"),
+          import("prettier/parser-babel"),
+        ]);
+
+        if (cancelled) return;
+
+        // Handle case where value might already be a JSON string
+        let parsedValue = value;
+        if (typeof value === "string") {
+          try {
+            parsedValue = JSON.parse(value);
+          } catch {
+            // If it's not valid JSON, just use the string as-is
+            parsedValue = value;
+          }
+        }
+
+        // Stringify the value, handling circular references
+        let jsonString: string;
+        try {
+          jsonString = JSON.stringify(parsedValue, null, 2);
+          if (!jsonString || jsonString === "null") {
+            jsonString = String(parsedValue);
+          }
+        } catch (e) {
+          // If stringify fails (e.g., circular reference), try with a replacer
+          const seen = new WeakSet();
+          try {
+            jsonString = JSON.stringify(
+              parsedValue,
+              (key, val) => {
+                if (val != null && typeof val === "object") {
+                  if (seen.has(val)) {
+                    return "[Circular]";
+                  }
+                  seen.add(val);
+                }
+                return val;
+              },
+              2
+            );
+          } catch {
+            // Last resort fallback
+            jsonString = String(parsedValue);
+          }
+        }
+
+        // Format with prettier
+        let formatted: string;
+        try {
+          formatted = prettier.default.format(jsonString, {
+            parser: "json",
+            plugins: [babel.default],
+            printWidth: 60,
+          });
+        } catch {
+          // If prettier fails, just use the stringified version
+          formatted = jsonString;
+        }
+
+        if (!cancelled) {
+          setFormattedJson(formatted);
+          setIsLoading(false);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          // Fallback: try to show something useful
+          let displayValue: string;
+          if (value === null) {
+            displayValue = "null";
+          } else if (value === undefined) {
+            displayValue = "undefined";
+          } else if (typeof value === "string") {
+            displayValue = value;
+          } else {
+            // Last resort: try JSON.stringify one more time
+            try {
+              displayValue = JSON.stringify(value, null, 2);
+            } catch {
+              displayValue = String(value);
+            }
+          }
+          setFormattedJson(displayValue);
+          setIsLoading(false);
+        }
+      }
+    }
+
+    formatJSON();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [value]);
+
+  // Early returns for null/undefined
+  if (value === null || value === undefined) {
+    return (
+      <div className="bg-gray-800 rounded p-2 max-h-64 overflow-auto">
+        <pre className="text-xs text-gray-300 font-mono">
+          {value === null ? "null" : "undefined"}
+        </pre>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="bg-gray-800 rounded p-2 max-h-64 overflow-auto">
+        {/* eslint-disable-next-line i18next/no-literal-string */}
+        <pre className="text-xs text-gray-400 font-mono">Loading...</pre>
+      </div>
+    );
+  }
+
+  if (!formattedJson) {
+    return null;
+  }
+
+  // Simple syntax highlighting using regex and CSS classes
+  // Process line by line to avoid issues with overlapping matches
+  let highlighted;
+  try {
+    highlighted = formattedJson.split("\n").map((line, lineIdx) => {
+      let result = "";
+      let i = 0;
+
+      while (i < line.length) {
+        // Match strings first (they can contain escaped quotes)
+        const stringMatch = line.slice(i).match(/^"([^"\\]|\\.)*"/);
+        if (stringMatch) {
+          // eslint-disable-next-line i18next/no-literal-string
+          result += `<span class="text-green-400">${stringMatch[0]}</span>`;
+          i += stringMatch[0].length;
+          continue;
+        }
+
+        // Match keywords (true, false, null) - but not as part of other words
+        const keywordMatch = line.slice(i).match(/^(true|false|null)\b/);
+        if (keywordMatch) {
+          // eslint-disable-next-line i18next/no-literal-string
+          result += `<span class="text-purple-400">${keywordMatch[0]}</span>`;
+          i += keywordMatch[0].length;
+          continue;
+        }
+
+        // Match numbers (but not inside strings, which we already handled)
+        const numberMatch = line.slice(i).match(/^-?\d+\.?\d*/);
+        if (numberMatch) {
+          // eslint-disable-next-line i18next/no-literal-string
+          result += `<span class="text-blue-400">${numberMatch[0]}</span>`;
+          i += numberMatch[0].length;
+          continue;
+        }
+
+        // Match braces and brackets
+        if (/^[{}[\]]/.test(line.slice(i))) {
+          // eslint-disable-next-line i18next/no-literal-string
+          result += `<span class="text-gray-400">${line[i]}</span>`;
+          i++;
+          continue;
+        }
+
+        // Match colons
+        if (line[i] === ":") {
+          // eslint-disable-next-line i18next/no-literal-string
+          result += '<span class="text-gray-500">:</span>';
+          i++;
+          continue;
+        }
+
+        // Match commas
+        if (line[i] === ",") {
+          // eslint-disable-next-line i18next/no-literal-string
+          result += '<span class="text-gray-500">,</span>';
+          i++;
+          continue;
+        }
+
+        // Regular character
+        result += line[i];
+        i++;
+      }
+
+      return (
+        <div key={lineIdx} className="font-mono text-xs text-gray-300">
+          <span dangerouslySetInnerHTML={{ __html: result }} />
+        </div>
+      );
+    });
+  } catch {
+    // If highlighting fails, just show plain text
+    highlighted = formattedJson.split("\n").map((line, lineIdx) => (
+      <div key={lineIdx} className="font-mono text-xs text-gray-300">
+        {line}
+      </div>
+    ));
+  }
+
+  return (
+    <div className="bg-gray-800 rounded p-2 max-h-64 overflow-auto">
+      <pre className="text-xs">{highlighted}</pre>
+    </div>
   );
 }
 

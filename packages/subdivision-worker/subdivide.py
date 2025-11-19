@@ -176,11 +176,23 @@ def antimeridian_split_to_non_crossing(geom_geojson):
     return mapping(result)
 
 def process_file(input_file, output_file, max_nodes, progress_callback=None):
-    """Process the input file and write the subdivided output as FlatGeobuf."""
+    """Process the input file and write the subdivided output as FlatGeobuf.
+    
+    Args:
+        input_file: Path to input file (any format supported by Fiona)
+        output_file: Path to output FlatGeobuf file
+        max_nodes: Maximum number of nodes per geometry
+        progress_callback: Optional callback function(phase, current, total) for progress updates
+    """
     # First, count the number of nodes in all features of the file
     total_nodes = 0
     total_features = 0
     batch = []
+    
+    # Geodesic calculator (input is always EPSG:4326)
+    geod = Geod(ellps="WGS84")
+    
+    # First pass: get schema and count nodes
     with fiona.open(input_file, "r") as src:
         schema = src.schema.copy()
         schema['geometry'] = 'Polygon'
@@ -189,12 +201,6 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
             schema['properties']['__area'] = 'float'
             schema['properties']['__oidx'] = 'int'
         total_features = len(src)
-        big_poly_indexes = {}
-        i = 0
-        total_small_nodes_added = 0
-        total_node_count = 0
-        # Geodesic calculator (input is always EPSG:4326)
-        geod = Geod(ellps="WGS84")
 
         total_nodes_in_dataset = int(0)  # Explicit 64-bit integer for large datasets
         # Report scanning progress by number of features read
@@ -213,44 +219,50 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
             except Exception:
               pass
 
-        cumulative_processed_nodes = int(0)
+    big_poly_indexes = {}
+    i = 0
+    total_small_nodes_added = 0
+    total_node_count = 0
+    cumulative_processed_nodes = int(0)
 
-        def geodesic_area_sqkm(geom_geojson):
-            """Compute geodesic area in sq km directly from GeoJSON coordinates using pyproj.Geod.
-            Supports Polygon and MultiPolygon. Holes are subtracted from the exterior.
-            """
-            def polygon_area_sq_m(coords):
-                if not coords or len(coords) == 0:
-                    return 0.0
-                # Exterior
-                ext = coords[0]
-                if not ext or len(ext) < 3:
-                    return 0.0
-                lons_ext = [pt[0] for pt in ext]
-                lats_ext = [pt[1] for pt in ext]
-                area_ext_m2, _ = geod.polygon_area_perimeter(lons_ext, lats_ext)
-                area_m2_total = abs(area_ext_m2)
-                # Holes
-                for hole in coords[1:]:
-                    if not hole or len(hole) < 3:
-                        continue
-                    lons_h = [pt[0] for pt in hole]
-                    lats_h = [pt[1] for pt in hole]
-                    area_h_m2, _ = geod.polygon_area_perimeter(lons_h, lats_h)
-                    area_m2_total -= abs(area_h_m2)
-                return max(area_m2_total, 0.0)
-
-            gtype = geom_geojson.get('type')
-            if gtype == 'Polygon':
-                return polygon_area_sq_m(geom_geojson.get('coordinates', [])) / 1_000_000.0
-            elif gtype == 'MultiPolygon':
-                total_m2 = 0.0
-                for coords in geom_geojson.get('coordinates', []):
-                    total_m2 += polygon_area_sq_m(coords)
-                return total_m2 / 1_000_000.0
-            else:
+    def geodesic_area_sqkm(geom_geojson):
+        """Compute geodesic area in sq km directly from GeoJSON coordinates using pyproj.Geod.
+        Supports Polygon and MultiPolygon. Holes are subtracted from the exterior.
+        """
+        def polygon_area_sq_m(coords):
+            if not coords or len(coords) == 0:
                 return 0.0
+            # Exterior
+            ext = coords[0]
+            if not ext or len(ext) < 3:
+                return 0.0
+            lons_ext = [pt[0] for pt in ext]
+            lats_ext = [pt[1] for pt in ext]
+            area_ext_m2, _ = geod.polygon_area_perimeter(lons_ext, lats_ext)
+            area_m2_total = abs(area_ext_m2)
+            # Holes
+            for hole in coords[1:]:
+                if not hole or len(hole) < 3:
+                    continue
+                lons_h = [pt[0] for pt in hole]
+                lats_h = [pt[1] for pt in hole]
+                area_h_m2, _ = geod.polygon_area_perimeter(lons_h, lats_h)
+                area_m2_total -= abs(area_h_m2)
+            return max(area_m2_total, 0.0)
 
+        gtype = geom_geojson.get('type')
+        if gtype == 'Polygon':
+            return polygon_area_sq_m(geom_geojson.get('coordinates', [])) / 1_000_000.0
+        elif gtype == 'MultiPolygon':
+            total_m2 = 0.0
+            for coords in geom_geojson.get('coordinates', []):
+                total_m2 += polygon_area_sq_m(coords)
+            return total_m2 / 1_000_000.0
+        else:
+            return 0.0
+
+    # Second pass: process features
+    with fiona.open(input_file, "r") as src:
         with fiona.open(output_file, "w", driver="FlatGeobuf", crs=src.crs, schema=schema) as dst:
           # Initialize local progress bar only if no external callback is provided
           pbar = None if progress_callback is not None else tqdm(total=total_features, desc="Processing features")
@@ -289,6 +301,7 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
               dst.writerecords(batch)
               batch.clear()
 
+          # Process features (file is opened fresh in second pass)
           for feature in src:
             adjusted_geom = antimeridian_split_to_non_crossing(feature['geometry'])
 
@@ -427,6 +440,7 @@ def main():
         print(f"Error: Output file must have a .fgb extension.")
         sys.exit(1)
 
+    # process_file now accepts file path directly
     process_file(args.input, args.output, args.max_nodes)
     print(f"\nSubdivision complete. Output written to {args.output}.")
 

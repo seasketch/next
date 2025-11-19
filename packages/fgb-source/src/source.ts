@@ -275,7 +275,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         throw new Error("Spatial index not available");
       }
       const results = this.index.search(b.minX, b.minY, b.maxX, b.maxY);
-      // console.log("results", results.length);
       for (const result of results) {
         if (!addedIds.has(result[0])) {
           addedIds.add(result[0]);
@@ -703,75 +702,85 @@ export async function* executeQueryPlan2(
   >();
   const pagesInFlight = new Set<number>();
 
-  let nextToStart = 0;
-  const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
-  // console.log("initial startFetch kickoff");
-  while (nextToStart < plan.length && inFlight.size < limit) {
-    pagesInFlight.add(plan[nextToStart].pageIndex);
-    inFlight.set(nextToStart, startFetch(nextToStart));
-    nextToStart++;
-  }
-
-  while (inFlight.size > 0) {
-    // console.log("waiting for pages to fetch", [...pagesInFlight]);
-    const winner = await Promise.race(inFlight.values());
-    inFlight.delete(winner.i);
-    pagesInFlight.delete(winner.pageIndex);
-
-    if (nextToStart < plan.length) {
-      // console.log("starting next fetch within while loop", nextToStart);
+  try {
+    let nextToStart = 0;
+    const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
+    // console.log("initial startFetch kickoff");
+    while (nextToStart < plan.length && inFlight.size < limit) {
       pagesInFlight.add(plan[nextToStart].pageIndex);
       inFlight.set(nextToStart, startFetch(nextToStart));
       nextToStart++;
     }
 
-    if (!("ok" in winner) || winner.ok === false) {
-      console.log("error in winner", winner);
-      // Ensure no unhandled rejections from remaining in-flight requests
-      await Promise.allSettled(Array.from(inFlight.values()));
-      throw "error" in winner ? winner.error : new Error("Unknown fetch error");
-    }
+    while (inFlight.size > 0) {
+      // console.log("waiting for pages to fetch", [...pagesInFlight]);
+      const winner = await Promise.race(inFlight.values());
+      inFlight.delete(winner.i);
+      pagesInFlight.delete(winner.pageIndex);
 
-    const { data, pageIndex, features, range } = winner;
-    const view = new DataView(data);
-
-    let i = 0;
-    // console.log(
-    //   `begining parsing of page ${pageIndex}. Ref range: ${features[0][0]}-${
-    //     features[features.length - 1][0]
-    //   }. Page range: ${range[0]}-${range[1]}, bytes=${
-    //     data.byteLength
-    //   }. Last ref = ${features[features.length - 1]}`
-    // );
-    // console.log("processing features of page", pageIndex);
-    for (let [offset, length, bbox] of features) {
-      // console.log(`parsing feature ${offset} ${length}`);
-      const adjustedOffset = offset - range[0] + featureDataOffset;
-      if (length === null) {
-        length = view.buffer.byteLength - adjustedOffset;
+      if (nextToStart < plan.length) {
+        // console.log("starting next fetch within while loop", nextToStart);
+        pagesInFlight.add(plan[nextToStart].pageIndex);
+        inFlight.set(nextToStart, startFetch(nextToStart));
+        nextToStart++;
       }
 
-      let featureView = new DataView(data, adjustedOffset, length);
-      if (VALIDATE_FEATURE_DATA) {
-        const size = featureView.getUint32(0, true);
-        if (size !== length - SIZE_PREFIX_LEN) {
-          throw new Error(
-            `Feature data size mismatch: expected ${length}, size prefix was ${size}`
-          );
+      if (!("ok" in winner) || winner.ok === false) {
+        console.log("error in winner", winner);
+        // Ensure no unhandled rejections from remaining in-flight requests
+        await Promise.allSettled(Array.from(inFlight.values()));
+        throw "error" in winner
+          ? winner.error
+          : new Error("Unknown fetch error");
+      }
+
+      const { data, pageIndex, features, range } = winner;
+      const view = new DataView(data);
+
+      let i = 0;
+      // console.log(
+      //   `begining parsing of page ${pageIndex}. Ref range: ${features[0][0]}-${
+      //     features[features.length - 1][0]
+      //   }. Page range: ${range[0]}-${range[1]}, bytes=${
+      //     data.byteLength
+      //   }. Last ref = ${features[features.length - 1]}`
+      // );
+      // console.log("processing features of page", pageIndex);
+      for (let [offset, length, bbox] of features) {
+        // console.log(`parsing feature ${offset} ${length}`);
+        const adjustedOffset = offset - range[0] + featureDataOffset;
+        if (length === null) {
+          length = view.buffer.byteLength - adjustedOffset;
         }
-      }
-      yield [featureView, offset, length, bbox];
 
-      i++;
-      // Yield control to event loop after each feature to allow other promises to resolve
-      // This ensures pending fetch promises can complete their cleanup without blocking
-      // if (i % 1000 === 0) {
-      //   // process.nextTick(() => {});
-      //   await new Promise((resolve) => setTimeout(resolve, 0));
-      // }
+        let featureView = new DataView(data, adjustedOffset, length);
+        if (VALIDATE_FEATURE_DATA) {
+          const size = featureView.getUint32(0, true);
+          if (size !== length - SIZE_PREFIX_LEN) {
+            throw new Error(
+              `Feature data size mismatch: expected ${length}, size prefix was ${size}`
+            );
+          }
+        }
+        yield [featureView, offset, length, bbox];
+
+        i++;
+        // Yield control to event loop after each feature to allow other promises to resolve
+        // This ensures pending fetch promises can complete their cleanup without blocking
+        // if (i % 1000 === 0) {
+        //   // process.nextTick(() => {});
+        //   await new Promise((resolve) => setTimeout(resolve, 0));
+        // }
+      }
+      // console.log(`finished parsing page ${pageIndex}`);
+      // console.log("finished processing features of page", pageIndex);
     }
-    // console.log(`finished parsing page ${pageIndex}`);
-    // console.log("finished processing features of page", pageIndex);
+  } finally {
+    // Cleanup: ensure all in-flight promises are handled to prevent unhandled rejections
+    // when consumer breaks out of the loop early
+    if (inFlight.size > 0) {
+      await Promise.allSettled(Array.from(inFlight.values()));
+    }
   }
 }
 

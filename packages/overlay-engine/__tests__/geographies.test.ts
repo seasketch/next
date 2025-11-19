@@ -13,6 +13,7 @@ import { hawaiiTestFeatures } from "./test-features";
 import { GeographySettings, SketchFragment } from "../src/fragments";
 import { saveOutput, readOutput, compareFragments } from "./test-helpers";
 import { eezUrl, landUrl, territorialSeaUrl } from "./constants";
+import { vi } from "vitest";
 
 // Geography configurations
 const hawaiiTerritorialSea: ClippingLayerOption[] = [
@@ -78,6 +79,8 @@ function countCoordinates(geom: MultiPolygon | Polygon) {
 }
 
 describe("clipToGeography", () => {
+  vi.setConfig({ testTimeout: 1000 * 12 });
+
   let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 

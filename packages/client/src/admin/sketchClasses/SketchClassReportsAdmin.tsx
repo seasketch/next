@@ -300,6 +300,31 @@ export default function SketchClassReportsAdmin({
               },
             ],
           },
+          {
+            type: "presenceBlock",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "✅ Found overlapping features in this sketch.",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "absenceBlock",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: "🚫 No overlapping features found." },
+                ],
+              },
+            ],
+          },
         ],
       };
     }

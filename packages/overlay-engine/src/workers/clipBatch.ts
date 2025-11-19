@@ -1,10 +1,12 @@
 import { FeatureWithMetadata } from "fgb-source";
-import { Feature, MultiPolygon, Polygon } from "geojson";
+import { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
 import calcArea from "@turf/area";
 import { parentPort } from "node:worker_threads";
+import pip from "point-in-polygon-hao";
+import booleanIntersects from "@turf/boolean-intersects";
+import { PresenceTableValue, IdentifiedValues } from "../metrics/metrics";
 
-let i = 0;
 export async function clipBatch({
   features,
   differenceMultiPolygon,
@@ -101,20 +103,371 @@ export async function performClipping(
   return sqKm;
 }
 
+export async function countFeatures({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  groupBy,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  groupBy?: string;
+}) {
+  const results: { [classKey: string]: Set<number> } = { "*": new Set() };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (
+        f.feature.geometry.type === "Point" ||
+        f.feature.geometry.type === "MultiPoint"
+      ) {
+        const coords =
+          f.feature.geometry.type === "Point"
+            ? [f.feature.geometry.coordinates]
+            : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pip(coord, poly as number[][][]);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        // for any other geometry type, we'll use booleanIntersects to check if
+        // the feature intersects the difference feature
+        if (
+          booleanIntersects(f.feature, {
+            type: "Feature",
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: differenceMultiPolygon,
+            },
+            properties: {},
+          })
+        ) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    if (groupBy) {
+      const classKey = f.feature.properties?.[groupBy];
+      if (classKey) {
+        if (!(classKey in results)) {
+          results[classKey] = new Set();
+        }
+        results[classKey].add(f.feature.properties.__oidx);
+      }
+    }
+    results["*"].add(f.feature.properties.__oidx);
+  }
+  return Object.fromEntries(
+    Object.entries(results).map(([key, value]) => [key, Array.from(value)])
+  );
+}
+
+export async function testForPresenceInSubject({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+}) {
+  // Tests whether any features in the feature array are present in the subject
+  // feature. If any of those features are in the subject but also in the
+  // difference feature, they don't count as a match. This function will return
+  // tru as soon as it finds any match.
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      if (!booleanIntersects(f.feature, subjectFeature)) {
+        continue;
+      }
+    }
+    if (f.requiresDifference) {
+      if (
+        booleanIntersects(f.feature, {
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon,
+          },
+        })
+      ) {
+        continue;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+export async function createPresenceTable({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  limit = 50,
+  includedProperties,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  limit?: number;
+  includedProperties?: string[];
+}) {
+  const results: { exceededLimit: boolean; values: PresenceTableValue[] } = {
+    exceededLimit: false,
+    values: [],
+  };
+  for (const f of features) {
+    if (results.exceededLimit) {
+      break;
+    }
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (
+        f.feature.geometry.type === "Point" ||
+        f.feature.geometry.type === "MultiPoint"
+      ) {
+        const coords =
+          f.feature.geometry.type === "Point"
+            ? [f.feature.geometry.coordinates]
+            : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pip(coord, poly as number[][][]);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        // for any other geometry type, we'll use booleanIntersects to check if
+        // the feature intersects the difference feature
+        if (
+          booleanIntersects(f.feature, {
+            type: "Feature",
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: differenceMultiPolygon,
+            },
+            properties: {},
+          })
+        ) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    let result = {
+      __id: f.feature.properties.__oidx,
+      ...f.feature.properties,
+    };
+    result = pick(result, includedProperties);
+    results.values.push(result);
+    if (results.values.length >= limit) {
+      results.exceededLimit = true;
+    }
+  }
+  return results;
+}
+
+export async function collectColumnValues({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  property,
+  groupBy,
+}: {
+  features: {
+    feature: FeatureWithMetadata<Feature<Geometry>>;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  property: string;
+  groupBy?: string;
+}) {
+  const results: { [classKey: string]: IdentifiedValues[] } = { "*": [] };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just collecting column values, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (
+        f.feature.geometry.type === "Point" ||
+        f.feature.geometry.type === "MultiPoint"
+      ) {
+        const coords =
+          f.feature.geometry.type === "Point"
+            ? [f.feature.geometry.coordinates]
+            : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pip(coord, poly as number[][][]);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        // for any other geometry type, we'll use booleanIntersects to check if
+        // the feature intersects the difference feature
+        if (
+          booleanIntersects(f.feature, {
+            type: "Feature",
+            geometry: {
+              type: "MultiPolygon",
+              coordinates: differenceMultiPolygon,
+            },
+            properties: {},
+          })
+        ) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const oidx = f.feature.properties.__oidx;
+    if (oidx === undefined || oidx === null) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const value = f.feature.properties?.[property];
+    if (typeof value === "number") {
+      const identifiedValue: IdentifiedValues = [oidx, value];
+      results["*"].push(identifiedValue);
+      if (groupBy) {
+        const classKey = f.feature.properties?.[groupBy];
+        if (classKey) {
+          if (!(classKey in results)) {
+            results[classKey] = [];
+          }
+          results[classKey].push(identifiedValue);
+        }
+      }
+    }
+  }
+  return results;
+}
+
 parentPort?.on(
   "message",
   async (job: {
+    operation?:
+      | "overlay_area"
+      | "count"
+      | "presence"
+      | "presence_table"
+      | "column_values";
     features: {
-      feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+      feature: FeatureWithMetadata<Feature<Geometry>>;
       requiresIntersection: boolean;
       requiresDifference: boolean;
     }[];
     differenceMultiPolygon: clipping.Geom[];
     subjectFeature: Feature<Polygon | MultiPolygon>;
     groupBy?: string;
+    limit?: number;
+    includedProperties?: string[];
+    property?: string;
   }) => {
     try {
-      const result = await clipBatch(job);
+      const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
+      let result;
+      if (operation === "overlay_area") {
+        result = await clipBatch({
+          features: job.features as {
+            feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+            requiresIntersection: boolean;
+            requiresDifference: boolean;
+          }[],
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          groupBy: job.groupBy,
+        });
+      } else if (operation === "count") {
+        result = await countFeatures({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          groupBy: job.groupBy,
+        });
+      } else if (operation === "presence") {
+        result = await testForPresenceInSubject({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+        });
+      } else if (operation === "presence_table") {
+        result = await createPresenceTable({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          limit: job.limit,
+          includedProperties: job.includedProperties,
+        });
+      } else if (operation === "column_values") {
+        if (!job.property) {
+          throw new Error("property is required for column_values operation");
+        }
+        result = await collectColumnValues({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          property: job.property,
+          groupBy: job.groupBy,
+        });
+      } else {
+        throw new Error(`Unknown operation type: ${operation}`);
+      }
       parentPort?.postMessage({ ok: true, result });
     } catch (err) {
       parentPort?.postMessage({
@@ -124,3 +477,18 @@ parentPort?.on(
     }
   }
 );
+
+export function pick(object: any, keys?: string[]) {
+  keys = keys || Object.keys(object);
+  keys = keys.filter(
+    (key) =>
+      key !== "__oidx" &&
+      key !== "__byteLength" &&
+      key !== "__area" &&
+      key !== "__offset"
+  );
+  return keys.reduce((acc, key) => {
+    acc[key] = object[key];
+    return acc;
+  }, {} as any);
+}

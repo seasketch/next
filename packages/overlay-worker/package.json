@@ -44,6 +44,7 @@
     "lru-cache": "^11.2.2",
     "overlay-engine": "^1.0.0",
     "pbf": "^4.0.1",
+    "point-in-polygon-hao": "^1.2.4",
     "polyclip-ts": "^0.16.8",
     "undici": "^7.16.0"
   },

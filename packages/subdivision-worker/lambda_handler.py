@@ -12,6 +12,9 @@ import traceback
 import time
 
 from subdivide import process_file
+from points import process_points
+from raster import process_raster
+import fiona
 
 # Cached AWS clients (reused across messages and invocations)
 _SQS_CLIENTS: Dict[str, Any] = {}
@@ -362,13 +365,15 @@ def _parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
 
 def handler(event, context):
     params = _parse_event(event or {})
+    print(f"handler called with params: {params}")
     source_url = params.get("url")
     if not source_url:
         err = {"error": "Missing required parameter: url"}
         if isinstance(event, dict) and "queryStringParameters" in event:
             return {"statusCode": 400, "headers": {"content-type": "application/json"}, "body": json.dumps(err)}
         return err
-
+        
+    is_raster = source_url.endswith(".tif") or source_url.endswith(".tiff") or source_url.endswith(".TIF") or source_url.endswith(".TIFF")
     max_nodes = params.get("max_nodes") or int(os.getenv("MAX_NODES", "256"))
     provided_key = params.get("key")
     object_key = provided_key if provided_key else None
@@ -449,11 +454,57 @@ def handler(event, context):
     upload_result = None
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
-            input_path = os.path.join(tmpdir, "input.fgb")
-            output_path = os.path.join(tmpdir, "output.fgb")
+            if is_raster:
+                input_path = os.path.join(tmpdir, "input.tif")
+                output_path = os.path.join(tmpdir, "output.tif")
+            else:
+                input_path = os.path.join(tmpdir, "input.fgb")
+                output_path = os.path.join(tmpdir, "output.fgb")
 
             _download_with_progress(source_url, input_path, _overall_progress)
-            process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress)
+            
+            if is_raster:
+                # Route to raster processor for GeoTIFF -> COG conversion
+                print("Detected raster file, routing to raster processor")
+                process_raster(input_path, output_path, progress_callback=_overall_progress)
+            else:
+                # Open file to detect geometry type
+                with fiona.open(input_path, "r") as src:
+                    print(f"Schema: {src.schema}")
+                    # Detect geometry type from schema or first feature
+                    schema_geom = src.schema.get('geometry', None)
+                    geom_type = None
+                    
+                    # Handle schema geometry - can be string or dict
+                    if isinstance(schema_geom, str):
+                        geom_type = schema_geom
+                    elif isinstance(schema_geom, dict):
+                        geom_type = schema_geom.get('type', None)
+                    
+                    print(f"Schema geometry: {schema_geom}")
+                    print(f"Schema geometry type: {geom_type}")
+                    # If not found in schema, try reading first feature
+                    if not geom_type or geom_type == "Unknown":
+                        try:
+                            first_feature = next(iter(src))
+                            print(f"First feature: {first_feature}")
+                            geom_type = first_feature['geometry']['type']
+                        except (StopIteration, KeyError, TypeError):
+                            print("No first feature found. got exception:", traceback.format_exc())
+                            geom_type = None
+                    
+                    if not geom_type:
+                        raise ValueError("Could not determine geometry type from file")
+                
+                # Route to appropriate processor based on geometry type (processors will open/close file themselves)
+                if geom_type in ('Point', 'MultiPoint'):
+                    print(f"Detected geometry type: {geom_type}, routing to points processor")
+                    process_points(input_path, output_path, progress_callback=_overall_progress)
+                elif geom_type in ('Polygon', 'MultiPolygon'):
+                    print(f"Detected geometry type: {geom_type}, routing to subdivision processor")
+                    process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress)
+                else:
+                    raise ValueError(f"Unsupported geometry type: {geom_type}. Supported types: Point, MultiPoint, Polygon, MultiPolygon")
 
             if object_key:
                 print(f"Uploading to {object_key}")
@@ -462,6 +513,9 @@ def handler(event, context):
             if notifier is not None and upload_result is not None:
                 try:
                     notifier.notify(100, "Complete")
+                    if is_raster:
+                        upload_result["epsg"] = 6933
+
                     notifier.result({"object": upload_result})
                 except Exception:
                     pass

@@ -65,6 +65,12 @@ export interface ReportCardRegistration<T> {
   supportedReportingLayerTypes: DataSourceTypes[];
   minimumReportingLayerCount: number;
   maximumReportingLayerCount?: number;
+  /**
+   * Required layer parameters that must be set when selecting layers.
+   * Each parameter name corresponds to a property that must exist in layerParameters.
+   * Example: ["valueColumn"] means each layer must have layerParameters.valueColumn set.
+   */
+  requiredLayerParameters?: string[];
 }
 
 export const registeredCards: Map<
@@ -87,11 +93,16 @@ export interface RegisterReportCardConfig<T> {
     componentSettings: T;
     sketchClass?: SketchClassDetailsFragment | undefined | null;
   }>;
-  requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
   supportedReportingLayerTypes?: DataSourceTypes[];
   minimumReportingLayerCount?: number;
   maximumReportingLayerCount?: number;
+  /**
+   * Required layer parameters that must be set when selecting layers.
+   * Each parameter name corresponds to a property that must exist in layerParameters.
+   * Example: ["valueColumn"] means each layer must have layerParameters.valueColumn set.
+   */
+  requiredLayerParameters?: string[];
 }
 
 export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
@@ -107,11 +118,11 @@ export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
     label: config.label,
     description: config.description,
     icon: config.icon,
-    requiredMetrics: config.requiredMetrics,
     order: config.order,
     supportedReportingLayerTypes: config.supportedReportingLayerTypes || [],
     minimumReportingLayerCount: config.minimumReportingLayerCount || 0,
     maximumReportingLayerCount: config.maximumReportingLayerCount,
+    requiredLayerParameters: config.requiredLayerParameters,
   });
 }
 

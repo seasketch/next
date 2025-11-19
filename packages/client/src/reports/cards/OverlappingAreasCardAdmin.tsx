@@ -8,6 +8,7 @@ import Switch from "../../components/Switch";
 import AreaUnitSelect from "../components/AreaUnitSelect";
 import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
+import SortSelect from "../components/SortSelect";
 
 type AdminConfig = ReportCardConfiguration<{
   unit?: "km" | "mi" | "acres" | "ha";
@@ -57,24 +58,15 @@ export default function OverlappingAreasCardAdmin({
         </div>
       </div>
 
-      <div>
-        <label className="text-sm font-medium text-gray-900">
-          {t("Sort items")}
-        </label>
-        <p className="text-xs text-gray-500 mt-1">
-          {t("Choose how to order categories in the list.")}
-        </p>
-        <div className="mt-2">
-          <select
-            className="w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-            value={sortBy}
-            onChange={(e) => updateSettings({ sortBy: e.target.value as any })}
-          >
-            <option value="overlap">{t("by amount")}</option>
-            <option value="name">{t("by name")}</option>
-          </select>
-        </div>
-      </div>
+      <SortSelect
+        value={sortBy}
+        onChange={(value) => updateSettings({ sortBy: value })}
+        options={[
+          { value: "overlap", labelKey: "by amount" },
+          { value: "name", labelKey: "by name" },
+        ]}
+        descriptionKey="Choose how to order categories in the list."
+      />
 
       {multipeCategories && (
         <div className="mt-3 flex items-center justify-between">

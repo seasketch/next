@@ -185,15 +185,17 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                   [jobKey]
                 );
                 if (jobQ.rows.length > 0) {
+                  console.log("obj", obj);
                   const { data_source_id, project_id } = jobQ.rows[0];
                   const url =
                     obj.publicUrl || `https://uploads.seasketch.org/${obj.key}`;
                   const remote = `r2://${obj.bucket}/${obj.key}`;
                   const size = obj.size || 0;
                   const filename = obj.filename || obj.key || "output.fgb";
+                  const epsg = obj.epsg || null;
                   await pgPool.query(
-                    `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key)
-                     values ($1, 'ReportingFlatgeobufV1', $2, $3, $4, $5, false, $6, $4, $7)
+                    `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key, epsg)
+                     values ($1, 'ReportingFlatgeobufV1', $2, $3, $4, $5, false, $6, $4, $7, $8)
                     `,
                     [
                       data_source_id,
@@ -203,6 +205,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                       url,
                       project_id,
                       jobKey,
+                      epsg,
                     ]
                   );
                   await pgPool.query(

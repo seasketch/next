@@ -6,4 +6,5 @@ shapely==2.0.4
 pyproj==3.6.1
 fiona==1.9.6
 awslambdaric==2.0.11
-
+rasterio==1.4.3
+rio-cogeo==6.0.0

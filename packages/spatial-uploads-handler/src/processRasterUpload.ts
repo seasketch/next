@@ -216,7 +216,7 @@ async function createPMTiles(
         "-co",
         "BLOCKSIZE=512",
         "-co",
-        "RESAMPLING=CUBIC",
+        "RESAMPLING=NEAREST",
         "-co",
         `NAME=${layerName}`,
         // `-co`,
@@ -263,9 +263,9 @@ async function createPMTiles(
         "gdaladdo",
         [
           "-r",
-          // presentation === SuggestedRasterPresentation.rgb
-          "cubic",
-          // : "nearest",
+          presentation === SuggestedRasterPresentation.rgb
+            ? "cubic"
+            : "nearest",
           mbtilesPath,
           ...overviews.map((o) => o.toString()),
         ],

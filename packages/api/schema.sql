@@ -11287,15 +11287,14 @@ COMMENT ON FUNCTION public.get_metrics_for_sketch(skid integer) IS '@omit';
 
 
 --
--- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, text, text[], text, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: get_or_create_spatial_metric(text, integer, public.spatial_metric_type, text, jsonb, text, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) RETURNS jsonb
+CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   declare
     metric_id bigint;
-    metric_parameters jsonb;
   begin
     -- Validation
     if p_subject_fragment_id is not null and p_subject_geography_id is not null then
@@ -11310,14 +11309,7 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
     if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
       raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
     end if;
-    
-    -- Build parameters jsonb from group_by
-    if p_overlay_group_by is not null then
-      metric_parameters := jsonb_build_object('groupBy', p_overlay_group_by);
-    else
-      metric_parameters := '{}'::jsonb;
-    end if;
-    
+        
     -- Try to get existing metric first (matching the unique index logic)
     select id into metric_id
     from spatial_metrics
@@ -11325,7 +11317,8 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
       and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
       and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
       and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
-      and parameters = metric_parameters;
+      and type = p_type
+      and parameters = p_parameters;
     
     -- If not found, insert new metric
     if metric_id is null then
@@ -11344,7 +11337,7 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
         p_overlay_source_url,
         p_source_processing_job_dependency,
         p_project_id,
-        metric_parameters
+        p_parameters
       )
       returning id into metric_id;
     end if;
@@ -11352,13 +11345,6 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
     return get_spatial_metric(metric_id);
   end;
 $$;
-
-
---
--- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) IS '@omit';
 
 
 --
@@ -15547,6 +15533,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
           where id = old_tab_id
           returning id into new_tab_id_copy;
           
+
           -- Copy all cards for this tab
           -- loop through all existing report_cards in the old tab, creating new
           -- non-draft report_cards in the new tab, and copying report_card_layers
@@ -15582,7 +15569,6 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
                 url into source_url 
               from 
                 data_sources where id = original_source_id;
-              
               if original_source_id is null then
                 raise exception 'original_source_id is null';
               end if;
@@ -15615,6 +15601,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
               select data_source_id into published_source_id from data_layers where id = (
                 select data_layer_id from table_of_contents_items where id = published_toc_item_id
               ) limit 1;
+
               if published_source_id is null then
                 raise exception 'published_source_id is null';
               end if;
@@ -15622,6 +15609,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
               -- copy data_upload_output with type = 'ReportingFlatgeobufV1' for the 
               -- published source replacing any that already exist.
               delete from data_upload_outputs where data_source_id = published_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+
               insert into data_upload_outputs (
                 data_source_id,
                 project_id,
@@ -15650,7 +15638,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
                 fgb_header_size,
                 source_processing_job_key,
                 created_at
-              from data_upload_outputs where data_source_id = original_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type returning id into published_data_upload_output_id;
+              from data_upload_outputs where data_source_id = original_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type order by created_at desc limit 1 returning id into published_data_upload_output_id;
               if published_data_upload_output_id is null then
                 raise exception 'published_data_upload_output_id is null. Are you attempting to publish a report that references layers that have not completed preprocessing?';
               end if;
@@ -22447,6 +22435,15 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
+-- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.original_source_id (
+    data_source_id integer
+);
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -22638,6 +22635,15 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
+);
+
+
+--
+-- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.published_toc_item_id (
+    id integer
 );
 
 
@@ -24727,7 +24733,7 @@ CREATE INDEX spatial_metrics_queued_created_at_idx ON public.spatial_metrics USI
 -- Name: spatial_metrics_unique_metric; Type: INDEX; Schema: public; Owner: -
 --
 
-CREATE UNIQUE INDEX spatial_metrics_unique_metric ON public.spatial_metrics USING btree (COALESCE(overlay_source_url, ''::text), COALESCE(source_processing_job_dependency, ''::text), COALESCE(subject_fragment_id, ''::text), COALESCE(subject_geography_id, '-999999'::integer), parameters);
+CREATE UNIQUE INDEX spatial_metrics_unique_metric ON public.spatial_metrics USING btree (COALESCE(overlay_source_url, ''::text), COALESCE(source_processing_job_dependency, ''::text), COALESCE(subject_fragment_id, ''::text), COALESCE(subject_geography_id, '-999999'::integer), type, parameters);
 
 
 --
@@ -33049,11 +33055,11 @@ GRANT ALL ON FUNCTION public.get_metrics_for_sketch(skid integer) TO anon;
 
 
 --
--- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_overlay_group_by text, p_included_properties text[], p_source_processing_job_dependency text, p_project_id integer) TO anon;
+REVOKE ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) TO anon;
 
 
 --

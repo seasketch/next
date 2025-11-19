@@ -1,8 +1,13 @@
 "use strict";
+var __create = Object.create;
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getProtoOf = Object.getPrototypeOf;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __commonJS = (cb, mod) => function __require() {
+  return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+};
 var __export = (target, all) => {
   for (var name in all)
     __defProp(target, name, { get: all[name], enumerable: true });
@@ -15,13 +20,268 @@ var __copyProps = (to, from, except, desc) => {
   }
   return to;
 };
+var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
+  // If the importer is in node compatibility mode or this is not an ESM
+  // file that has been converted to a CommonJS file using a Babel-
+  // compatible transform (i.e. "__esModule" has not been set), then set
+  // "default" to the CommonJS "module.exports" for node compatibility.
+  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
+  mod
+));
 var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
+
+// node_modules/sweepline-intersections/dist/sweeplineIntersections.js
+var require_sweeplineIntersections = __commonJS({
+  "node_modules/sweepline-intersections/dist/sweeplineIntersections.js"(exports2, module2) {
+    (function(global, factory) {
+      typeof exports2 === "object" && typeof module2 !== "undefined" ? module2.exports = factory() : typeof define === "function" && define.amd ? define(factory) : (global = typeof globalThis !== "undefined" ? globalThis : global || self, global.sweeplineIntersections = factory());
+    })(exports2, (function() {
+      "use strict";
+      var TinyQueue = function TinyQueue2(data, compare2) {
+        if (data === void 0) data = [];
+        if (compare2 === void 0) compare2 = defaultCompare;
+        this.data = data;
+        this.length = this.data.length;
+        this.compare = compare2;
+        if (this.length > 0) {
+          for (var i = (this.length >> 1) - 1; i >= 0; i--) {
+            this._down(i);
+          }
+        }
+      };
+      TinyQueue.prototype.push = function push(item) {
+        this.data.push(item);
+        this.length++;
+        this._up(this.length - 1);
+      };
+      TinyQueue.prototype.pop = function pop() {
+        if (this.length === 0) {
+          return void 0;
+        }
+        var top = this.data[0];
+        var bottom = this.data.pop();
+        this.length--;
+        if (this.length > 0) {
+          this.data[0] = bottom;
+          this._down(0);
+        }
+        return top;
+      };
+      TinyQueue.prototype.peek = function peek() {
+        return this.data[0];
+      };
+      TinyQueue.prototype._up = function _up(pos) {
+        var ref = this;
+        var data = ref.data;
+        var compare2 = ref.compare;
+        var item = data[pos];
+        while (pos > 0) {
+          var parent = pos - 1 >> 1;
+          var current = data[parent];
+          if (compare2(item, current) >= 0) {
+            break;
+          }
+          data[pos] = current;
+          pos = parent;
+        }
+        data[pos] = item;
+      };
+      TinyQueue.prototype._down = function _down(pos) {
+        var ref = this;
+        var data = ref.data;
+        var compare2 = ref.compare;
+        var halfLength = this.length >> 1;
+        var item = data[pos];
+        while (pos < halfLength) {
+          var left = (pos << 1) + 1;
+          var best = data[left];
+          var right = left + 1;
+          if (right < this.length && compare2(data[right], best) < 0) {
+            left = right;
+            best = data[right];
+          }
+          if (compare2(best, item) >= 0) {
+            break;
+          }
+          data[pos] = best;
+          pos = left;
+        }
+        data[pos] = item;
+      };
+      function defaultCompare(a, b) {
+        return a < b ? -1 : a > b ? 1 : 0;
+      }
+      function checkWhichEventIsLeft(e1, e2) {
+        if (e1.p.x > e2.p.x) {
+          return 1;
+        }
+        if (e1.p.x < e2.p.x) {
+          return -1;
+        }
+        if (e1.p.y !== e2.p.y) {
+          return e1.p.y > e2.p.y ? 1 : -1;
+        }
+        return 1;
+      }
+      function checkWhichSegmentHasRightEndpointFirst(seg1, seg2) {
+        if (seg1.rightSweepEvent.p.x > seg2.rightSweepEvent.p.x) {
+          return 1;
+        }
+        if (seg1.rightSweepEvent.p.x < seg2.rightSweepEvent.p.x) {
+          return -1;
+        }
+        if (seg1.rightSweepEvent.p.y !== seg2.rightSweepEvent.p.y) {
+          return seg1.rightSweepEvent.p.y < seg2.rightSweepEvent.p.y ? 1 : -1;
+        }
+        return 1;
+      }
+      var Event = function Event2(p, featureId2, ringId2, eventId2) {
+        this.p = {
+          x: p[0],
+          y: p[1]
+        };
+        this.featureId = featureId2;
+        this.ringId = ringId2;
+        this.eventId = eventId2;
+        this.otherEvent = null;
+        this.isLeftEndpoint = null;
+      };
+      Event.prototype.isSamePoint = function isSamePoint(eventToCheck) {
+        return this.p.x === eventToCheck.p.x && this.p.y === eventToCheck.p.y;
+      };
+      function fillEventQueue(geojson, eventQueue) {
+        if (geojson.type === "FeatureCollection") {
+          var features = geojson.features;
+          for (var i = 0; i < features.length; i++) {
+            processFeature(features[i], eventQueue);
+          }
+        } else {
+          processFeature(geojson, eventQueue);
+        }
+      }
+      var featureId = 0;
+      var ringId = 0;
+      var eventId = 0;
+      function processFeature(featureOrGeometry, eventQueue) {
+        var geom = featureOrGeometry.type === "Feature" ? featureOrGeometry.geometry : featureOrGeometry;
+        var coords = geom.coordinates;
+        if (geom.type === "Polygon" || geom.type === "MultiLineString") {
+          coords = [coords];
+        }
+        if (geom.type === "LineString") {
+          coords = [[coords]];
+        }
+        for (var i = 0; i < coords.length; i++) {
+          for (var ii = 0; ii < coords[i].length; ii++) {
+            var currentP = coords[i][ii][0];
+            var nextP = null;
+            ringId = ringId + 1;
+            for (var iii = 0; iii < coords[i][ii].length - 1; iii++) {
+              nextP = coords[i][ii][iii + 1];
+              var e1 = new Event(currentP, featureId, ringId, eventId);
+              var e2 = new Event(nextP, featureId, ringId, eventId + 1);
+              e1.otherEvent = e2;
+              e2.otherEvent = e1;
+              if (checkWhichEventIsLeft(e1, e2) > 0) {
+                e2.isLeftEndpoint = true;
+                e1.isLeftEndpoint = false;
+              } else {
+                e1.isLeftEndpoint = true;
+                e2.isLeftEndpoint = false;
+              }
+              eventQueue.push(e1);
+              eventQueue.push(e2);
+              currentP = nextP;
+              eventId = eventId + 1;
+            }
+          }
+        }
+        featureId = featureId + 1;
+      }
+      var Segment2 = function Segment3(event) {
+        this.leftSweepEvent = event;
+        this.rightSweepEvent = event.otherEvent;
+      };
+      function testSegmentIntersect(seg1, seg2) {
+        if (seg1 === null || seg2 === null) {
+          return false;
+        }
+        if (seg1.leftSweepEvent.ringId === seg2.leftSweepEvent.ringId && (seg1.rightSweepEvent.isSamePoint(seg2.leftSweepEvent) || seg1.rightSweepEvent.isSamePoint(seg2.leftSweepEvent) || seg1.rightSweepEvent.isSamePoint(seg2.rightSweepEvent) || seg1.leftSweepEvent.isSamePoint(seg2.leftSweepEvent) || seg1.leftSweepEvent.isSamePoint(seg2.rightSweepEvent))) {
+          return false;
+        }
+        var x1 = seg1.leftSweepEvent.p.x;
+        var y1 = seg1.leftSweepEvent.p.y;
+        var x2 = seg1.rightSweepEvent.p.x;
+        var y2 = seg1.rightSweepEvent.p.y;
+        var x3 = seg2.leftSweepEvent.p.x;
+        var y3 = seg2.leftSweepEvent.p.y;
+        var x4 = seg2.rightSweepEvent.p.x;
+        var y4 = seg2.rightSweepEvent.p.y;
+        var denom = (y4 - y3) * (x2 - x1) - (x4 - x3) * (y2 - y1);
+        var numeA = (x4 - x3) * (y1 - y3) - (y4 - y3) * (x1 - x3);
+        var numeB = (x2 - x1) * (y1 - y3) - (y2 - y1) * (x1 - x3);
+        if (denom === 0) {
+          if (numeA === 0 && numeB === 0) {
+            return false;
+          }
+          return false;
+        }
+        var uA = numeA / denom;
+        var uB = numeB / denom;
+        if (uA >= 0 && uA <= 1 && uB >= 0 && uB <= 1) {
+          var x = x1 + uA * (x2 - x1);
+          var y = y1 + uA * (y2 - y1);
+          return [x, y];
+        }
+        return false;
+      }
+      function runCheck(eventQueue, ignoreSelfIntersections) {
+        ignoreSelfIntersections = ignoreSelfIntersections ? ignoreSelfIntersections : false;
+        var intersectionPoints = [];
+        var outQueue = new TinyQueue([], checkWhichSegmentHasRightEndpointFirst);
+        while (eventQueue.length) {
+          var event = eventQueue.pop();
+          if (event.isLeftEndpoint) {
+            var segment = new Segment2(event);
+            for (var i = 0; i < outQueue.data.length; i++) {
+              var otherSeg = outQueue.data[i];
+              if (ignoreSelfIntersections) {
+                if (otherSeg.leftSweepEvent.featureId === event.featureId) {
+                  continue;
+                }
+              }
+              var intersection3 = testSegmentIntersect(segment, otherSeg);
+              if (intersection3 !== false) {
+                intersectionPoints.push(intersection3);
+              }
+            }
+            outQueue.push(segment);
+          } else if (event.isLeftEndpoint === false) {
+            outQueue.pop();
+          }
+        }
+        return intersectionPoints;
+      }
+      function sweeplineIntersections2(geojson, ignoreSelfIntersections) {
+        var eventQueue = new TinyQueue([], checkWhichEventIsLeft);
+        fillEventQueue(geojson, eventQueue);
+        return runCheck(eventQueue, ignoreSelfIntersections);
+      }
+      return sweeplineIntersections2;
+    }));
+  }
+});
 
 // src/workers/clipBatch.ts
 var clipBatch_exports = {};
 __export(clipBatch_exports, {
   clipBatch: () => clipBatch,
-  performClipping: () => performClipping
+  collectColumnValues: () => collectColumnValues,
+  countFeatures: () => countFeatures,
+  createPresenceTable: () => createPresenceTable,
+  performClipping: () => performClipping,
+  pick: () => pick,
+  testForPresenceInSubject: () => testForPresenceInSubject
 });
 module.exports = __toCommonJS(clipBatch_exports);
 
@@ -49,37 +309,37 @@ function clone(configObject) {
     // non-breaking space
     suffix: ""
   }, ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz", alphabetHasNormalDecimalDigits = true;
-  function BigNumber2(v, b) {
+  function BigNumber2(v2, b) {
     var alphabet, c, caseChanged, e, i, isNum, len, str, x = this;
-    if (!(x instanceof BigNumber2)) return new BigNumber2(v, b);
+    if (!(x instanceof BigNumber2)) return new BigNumber2(v2, b);
     if (b == null) {
-      if (v && v._isBigNumber === true) {
-        x.s = v.s;
-        if (!v.c || v.e > MAX_EXP) {
+      if (v2 && v2._isBigNumber === true) {
+        x.s = v2.s;
+        if (!v2.c || v2.e > MAX_EXP) {
           x.c = x.e = null;
-        } else if (v.e < MIN_EXP) {
+        } else if (v2.e < MIN_EXP) {
           x.c = [x.e = 0];
         } else {
-          x.e = v.e;
-          x.c = v.c.slice();
+          x.e = v2.e;
+          x.c = v2.c.slice();
         }
         return;
       }
-      if ((isNum = typeof v == "number") && v * 0 == 0) {
-        x.s = 1 / v < 0 ? (v = -v, -1) : 1;
-        if (v === ~~v) {
-          for (e = 0, i = v; i >= 10; i /= 10, e++) ;
+      if ((isNum = typeof v2 == "number") && v2 * 0 == 0) {
+        x.s = 1 / v2 < 0 ? (v2 = -v2, -1) : 1;
+        if (v2 === ~~v2) {
+          for (e = 0, i = v2; i >= 10; i /= 10, e++) ;
           if (e > MAX_EXP) {
             x.c = x.e = null;
           } else {
             x.e = e;
-            x.c = [v];
+            x.c = [v2];
           }
           return;
         }
-        str = String(v);
+        str = String(v2);
       } else {
-        if (!isNumeric.test(str = String(v))) return parseNumeric(x, str, isNum);
+        if (!isNumeric.test(str = String(v2))) return parseNumeric(x, str, isNum);
         x.s = str.charCodeAt(0) == 45 ? (str = str.slice(1), -1) : 1;
       }
       if ((e = str.indexOf(".")) > -1) str = str.replace(".", "");
@@ -93,15 +353,15 @@ function clone(configObject) {
     } else {
       intCheck(b, 2, ALPHABET.length, "Base");
       if (b == 10 && alphabetHasNormalDecimalDigits) {
-        x = new BigNumber2(v);
+        x = new BigNumber2(v2);
         return round(x, DECIMAL_PLACES + x.e + 1, ROUNDING_MODE);
       }
-      str = String(v);
-      if (isNum = typeof v == "number") {
-        if (v * 0 != 0) return parseNumeric(x, str, isNum, b);
-        x.s = 1 / v < 0 ? (str = str.slice(1), -1) : 1;
+      str = String(v2);
+      if (isNum = typeof v2 == "number") {
+        if (v2 * 0 != 0) return parseNumeric(x, str, isNum, b);
+        x.s = 1 / v2 < 0 ? (str = str.slice(1), -1) : 1;
         if (BigNumber2.DEBUG && str.replace(/^0\.0*|\./, "").length > 15) {
-          throw Error(tooManyDigits + v);
+          throw Error(tooManyDigits + v2);
         }
       } else {
         x.s = str.charCodeAt(0) === 45 ? (str = str.slice(1), -1) : 1;
@@ -123,7 +383,7 @@ function clone(configObject) {
               continue;
             }
           }
-          return parseNumeric(x, String(v), isNum, b);
+          return parseNumeric(x, String(v2), isNum, b);
         }
       }
       isNum = false;
@@ -135,8 +395,8 @@ function clone(configObject) {
     for (len = str.length; str.charCodeAt(--len) === 48; ) ;
     if (str = str.slice(i, ++len)) {
       len -= i;
-      if (isNum && BigNumber2.DEBUG && len > 15 && (v > MAX_SAFE_INTEGER || v !== mathfloor(v))) {
-        throw Error(tooManyDigits + x.s * v);
+      if (isNum && BigNumber2.DEBUG && len > 15 && (v2 > MAX_SAFE_INTEGER || v2 !== mathfloor(v2))) {
+        throw Error(tooManyDigits + x.s * v2);
       }
       if ((e = e - i - 1) > MAX_EXP) {
         x.c = x.e = null;
@@ -175,86 +435,86 @@ function clone(configObject) {
   BigNumber2.ROUND_HALF_FLOOR = 8;
   BigNumber2.EUCLID = 9;
   BigNumber2.config = BigNumber2.set = function(obj) {
-    var p, v;
+    var p, v2;
     if (obj != null) {
       if (typeof obj == "object") {
         if (obj.hasOwnProperty(p = "DECIMAL_PLACES")) {
-          v = obj[p];
-          intCheck(v, 0, MAX, p);
-          DECIMAL_PLACES = v;
+          v2 = obj[p];
+          intCheck(v2, 0, MAX, p);
+          DECIMAL_PLACES = v2;
         }
         if (obj.hasOwnProperty(p = "ROUNDING_MODE")) {
-          v = obj[p];
-          intCheck(v, 0, 8, p);
-          ROUNDING_MODE = v;
+          v2 = obj[p];
+          intCheck(v2, 0, 8, p);
+          ROUNDING_MODE = v2;
         }
         if (obj.hasOwnProperty(p = "EXPONENTIAL_AT")) {
-          v = obj[p];
-          if (v && v.pop) {
-            intCheck(v[0], -MAX, 0, p);
-            intCheck(v[1], 0, MAX, p);
-            TO_EXP_NEG = v[0];
-            TO_EXP_POS = v[1];
+          v2 = obj[p];
+          if (v2 && v2.pop) {
+            intCheck(v2[0], -MAX, 0, p);
+            intCheck(v2[1], 0, MAX, p);
+            TO_EXP_NEG = v2[0];
+            TO_EXP_POS = v2[1];
           } else {
-            intCheck(v, -MAX, MAX, p);
-            TO_EXP_NEG = -(TO_EXP_POS = v < 0 ? -v : v);
+            intCheck(v2, -MAX, MAX, p);
+            TO_EXP_NEG = -(TO_EXP_POS = v2 < 0 ? -v2 : v2);
           }
         }
         if (obj.hasOwnProperty(p = "RANGE")) {
-          v = obj[p];
-          if (v && v.pop) {
-            intCheck(v[0], -MAX, -1, p);
-            intCheck(v[1], 1, MAX, p);
-            MIN_EXP = v[0];
-            MAX_EXP = v[1];
+          v2 = obj[p];
+          if (v2 && v2.pop) {
+            intCheck(v2[0], -MAX, -1, p);
+            intCheck(v2[1], 1, MAX, p);
+            MIN_EXP = v2[0];
+            MAX_EXP = v2[1];
           } else {
-            intCheck(v, -MAX, MAX, p);
-            if (v) {
-              MIN_EXP = -(MAX_EXP = v < 0 ? -v : v);
+            intCheck(v2, -MAX, MAX, p);
+            if (v2) {
+              MIN_EXP = -(MAX_EXP = v2 < 0 ? -v2 : v2);
             } else {
-              throw Error(bignumberError + p + " cannot be zero: " + v);
+              throw Error(bignumberError + p + " cannot be zero: " + v2);
             }
           }
         }
         if (obj.hasOwnProperty(p = "CRYPTO")) {
-          v = obj[p];
-          if (v === !!v) {
-            if (v) {
+          v2 = obj[p];
+          if (v2 === !!v2) {
+            if (v2) {
               if (typeof crypto != "undefined" && crypto && (crypto.getRandomValues || crypto.randomBytes)) {
-                CRYPTO = v;
+                CRYPTO = v2;
               } else {
-                CRYPTO = !v;
+                CRYPTO = !v2;
                 throw Error(bignumberError + "crypto unavailable");
               }
             } else {
-              CRYPTO = v;
+              CRYPTO = v2;
             }
           } else {
-            throw Error(bignumberError + p + " not true or false: " + v);
+            throw Error(bignumberError + p + " not true or false: " + v2);
           }
         }
         if (obj.hasOwnProperty(p = "MODULO_MODE")) {
-          v = obj[p];
-          intCheck(v, 0, 9, p);
-          MODULO_MODE = v;
+          v2 = obj[p];
+          intCheck(v2, 0, 9, p);
+          MODULO_MODE = v2;
         }
         if (obj.hasOwnProperty(p = "POW_PRECISION")) {
-          v = obj[p];
-          intCheck(v, 0, MAX, p);
-          POW_PRECISION = v;
+          v2 = obj[p];
+          intCheck(v2, 0, MAX, p);
+          POW_PRECISION = v2;
         }
         if (obj.hasOwnProperty(p = "FORMAT")) {
-          v = obj[p];
-          if (typeof v == "object") FORMAT = v;
-          else throw Error(bignumberError + p + " not an object: " + v);
+          v2 = obj[p];
+          if (typeof v2 == "object") FORMAT = v2;
+          else throw Error(bignumberError + p + " not an object: " + v2);
         }
         if (obj.hasOwnProperty(p = "ALPHABET")) {
-          v = obj[p];
-          if (typeof v == "string" && !/^.?$|[+\-.\s]|(.).*\1/.test(v)) {
-            alphabetHasNormalDecimalDigits = v.slice(0, 10) == "0123456789";
-            ALPHABET = v;
+          v2 = obj[p];
+          if (typeof v2 == "string" && !/^.?$|[+\-.\s]|(.).*\1/.test(v2)) {
+            alphabetHasNormalDecimalDigits = v2.slice(0, 10) == "0123456789";
+            ALPHABET = v2;
           } else {
-            throw Error(bignumberError + p + " invalid: " + v);
+            throw Error(bignumberError + p + " invalid: " + v2);
           }
         }
       } else {
@@ -273,10 +533,10 @@ function clone(configObject) {
       ALPHABET
     };
   };
-  BigNumber2.isBigNumber = function(v) {
-    if (!v || v._isBigNumber !== true) return false;
+  BigNumber2.isBigNumber = function(v2) {
+    if (!v2 || v2._isBigNumber !== true) return false;
     if (!BigNumber2.DEBUG) return true;
-    var i, n, c = v.c, e = v.e, s = v.s;
+    var i, n, c = v2.c, e = v2.e, s = v2.s;
     out: if ({}.toString.call(c) == "[object Array]") {
       if ((s === 1 || s === -1) && e >= -MAX && e <= MAX && e === mathfloor(e)) {
         if (c[0] === 0) {
@@ -296,7 +556,7 @@ function clone(configObject) {
     } else if (c === null && e === null && (s === null || s === 1 || s === -1)) {
       return true;
     }
-    throw Error(bignumberError + "Invalid BigNumber: " + v);
+    throw Error(bignumberError + "Invalid BigNumber: " + v2);
   };
   BigNumber2.maximum = BigNumber2.max = function() {
     return maxOrMin(arguments, -1);
@@ -312,7 +572,7 @@ function clone(configObject) {
       return (Math.random() * 1073741824 | 0) * 8388608 + (Math.random() * 8388608 | 0);
     };
     return function(dp) {
-      var a, b, e, k, v, i = 0, c = [], rand = new BigNumber2(ONE);
+      var a, b, e, k, v2, i = 0, c = [], rand = new BigNumber2(ONE);
       if (dp == null) dp = DECIMAL_PLACES;
       else intCheck(dp, 0, MAX);
       k = mathceil(dp / LOG_BASE);
@@ -320,13 +580,13 @@ function clone(configObject) {
         if (crypto.getRandomValues) {
           a = crypto.getRandomValues(new Uint32Array(k *= 2));
           for (; i < k; ) {
-            v = a[i] * 131072 + (a[i + 1] >>> 11);
-            if (v >= 9e15) {
+            v2 = a[i] * 131072 + (a[i + 1] >>> 11);
+            if (v2 >= 9e15) {
               b = crypto.getRandomValues(new Uint32Array(2));
               a[i] = b[0];
               a[i + 1] = b[1];
             } else {
-              c.push(v % 1e14);
+              c.push(v2 % 1e14);
               i += 2;
             }
           }
@@ -334,11 +594,11 @@ function clone(configObject) {
         } else if (crypto.randomBytes) {
           a = crypto.randomBytes(k *= 7);
           for (; i < k; ) {
-            v = (a[i] & 31) * 281474976710656 + a[i + 1] * 1099511627776 + a[i + 2] * 4294967296 + a[i + 3] * 16777216 + (a[i + 4] << 16) + (a[i + 5] << 8) + a[i + 6];
-            if (v >= 9e15) {
+            v2 = (a[i] & 31) * 281474976710656 + a[i + 1] * 1099511627776 + a[i + 2] * 4294967296 + a[i + 3] * 16777216 + (a[i + 4] << 16) + (a[i + 5] << 8) + a[i + 6];
+            if (v2 >= 9e15) {
               crypto.randomBytes(7).copy(a, i);
             } else {
-              c.push(v % 1e14);
+              c.push(v2 % 1e14);
               i += 7;
             }
           }
@@ -350,22 +610,22 @@ function clone(configObject) {
       }
       if (!CRYPTO) {
         for (; i < k; ) {
-          v = random53bitInt();
-          if (v < 9e15) c[i++] = v % 1e14;
+          v2 = random53bitInt();
+          if (v2 < 9e15) c[i++] = v2 % 1e14;
         }
       }
       k = c[--i];
       dp %= LOG_BASE;
       if (k && dp) {
-        v = POWS_TEN[LOG_BASE - dp];
-        c[i] = mathfloor(k / v) * v;
+        v2 = POWS_TEN[LOG_BASE - dp];
+        c[i] = mathfloor(k / v2) * v2;
       }
       for (; c[i] === 0; c.pop(), i--) ;
       if (i < 0) {
         c = [e = 0];
       } else {
         for (e = -1; c[0] === 0; c.splice(0, 1), e -= LOG_BASE) ;
-        for (i = 1, v = c[0]; v >= 10; v /= 10, i++) ;
+        for (i = 1, v2 = c[0]; v2 >= 10; v2 /= 10, i++) ;
         if (i < LOG_BASE) e -= LOG_BASE - i;
       }
       rand.e = e;
@@ -374,9 +634,9 @@ function clone(configObject) {
     };
   })();
   BigNumber2.sum = function() {
-    var i = 1, args = arguments, sum = new BigNumber2(args[0]);
-    for (; i < args.length; ) sum = sum.plus(args[i++]);
-    return sum;
+    var i = 1, args = arguments, sum2 = new BigNumber2(args[0]);
+    for (; i < args.length; ) sum2 = sum2.plus(args[i++]);
+    return sum2;
   };
   convertBase = /* @__PURE__ */ (function() {
     var decimal = "0123456789";
@@ -780,7 +1040,7 @@ function clone(configObject) {
     return compare(this, new BigNumber2(y, b));
   };
   P.decimalPlaces = P.dp = function(dp, rm) {
-    var c, n, v, x = this;
+    var c, n, v2, x = this;
     if (dp != null) {
       intCheck(dp, 0, MAX);
       if (rm == null) rm = ROUNDING_MODE;
@@ -788,8 +1048,8 @@ function clone(configObject) {
       return round(new BigNumber2(x), dp + x.e + 1, rm);
     }
     if (!(c = x.c)) return null;
-    n = ((v = c.length - 1) - bitFloor(this.e / LOG_BASE)) * LOG_BASE;
-    if (v = c[v]) for (; v % 10 == 0; v /= 10, n--) ;
+    n = ((v2 = c.length - 1) - bitFloor(this.e / LOG_BASE)) * LOG_BASE;
+    if (v2 = c[v2]) for (; v2 % 10 == 0; v2 /= 10, n--) ;
     if (n < 0) n = 0;
     return n;
   };
@@ -1100,7 +1360,7 @@ function clone(configObject) {
     return normalise(y, xc, ye);
   };
   P.precision = P.sd = function(sd, rm) {
-    var c, n, v, x = this;
+    var c, n, v2, x = this;
     if (sd != null && sd !== !!sd) {
       intCheck(sd, 1, MAX);
       if (rm == null) rm = ROUNDING_MODE;
@@ -1108,11 +1368,11 @@ function clone(configObject) {
       return round(new BigNumber2(x), sd, rm);
     }
     if (!(c = x.c)) return null;
-    v = c.length - 1;
-    n = v * LOG_BASE + 1;
-    if (v = c[v]) {
-      for (; v % 10 == 0; v /= 10, n--) ;
-      for (v = c[0]; v >= 10; v /= 10, n++) ;
+    v2 = c.length - 1;
+    n = v2 * LOG_BASE + 1;
+    if (v2 = c[v2]) {
+      for (; v2 % 10 == 0; v2 /= 10, n--) ;
+      for (v2 = c[0]; v2 >= 10; v2 /= 10, n++) ;
     }
     if (sd && x.e + 1 > n) n = x.e + 1;
     return n;
@@ -1577,7 +1837,7 @@ var SplayTreeSet = class _SplayTreeSet extends SplayTree {
   constructor(compare2, isValidKey) {
     super();
     this.compare = compare2 ?? this.defaultCompare();
-    this.validKey = isValidKey ?? ((v) => v != null && v != void 0);
+    this.validKey = isValidKey ?? ((v2) => v2 != null && v2 != void 0);
   }
   delete(element) {
     if (!this.validKey(element)) return false;
@@ -1695,9 +1955,9 @@ var SplayTreeSet = class _SplayTreeSet extends SplayTree {
     return result;
   }
   union(other) {
-    const u = this.clone();
-    u.addAll(other);
-    return u;
+    const u4 = this.clone();
+    u4.addAll(other);
+    return u4;
   }
   clone() {
     const set2 = new _SplayTreeSet(this.compare, this.validKey);
@@ -1858,10 +2118,10 @@ var snap_default = (eps) => {
     const snapCoord = (coord, tree) => {
       return tree.addAndReturn(coord);
     };
-    const snap = (v) => {
+    const snap = (v2) => {
       return {
-        x: snapCoord(v.x, xTree),
-        y: snapCoord(v.y, yTree)
+        x: snapCoord(v2.x, xTree),
+        y: snapCoord(v2.y, yTree)
       };
     };
     snap({ x: new bignumber_default(0), y: new bignumber_default(0) });
@@ -1881,8 +2141,8 @@ var set = (eps) => {
   };
 };
 var precision = set();
-var isInBbox = (bbox, point) => {
-  return bbox.ll.x.isLessThanOrEqualTo(point.x) && point.x.isLessThanOrEqualTo(bbox.ur.x) && bbox.ll.y.isLessThanOrEqualTo(point.y) && point.y.isLessThanOrEqualTo(bbox.ur.y);
+var isInBbox = (bbox, point2) => {
+  return bbox.ll.x.isLessThanOrEqualTo(point2.x) && point2.x.isLessThanOrEqualTo(bbox.ur.x) && bbox.ll.y.isLessThanOrEqualTo(point2.y) && point2.y.isLessThanOrEqualTo(bbox.ur.y);
 };
 var getBboxOverlap = (b1, b2) => {
   if (b2.ur.x.isLessThan(b1.ll.x) || b1.ur.x.isLessThan(b2.ll.x) || b2.ur.y.isLessThan(b1.ll.y) || b1.ur.y.isLessThan(b2.ll.y))
@@ -1895,7 +2155,7 @@ var getBboxOverlap = (b1, b2) => {
 };
 var crossProduct = (a, b) => a.x.times(b.y).minus(a.y.times(b.x));
 var dotProduct = (a, b) => a.x.times(b.x).plus(a.y.times(b.y));
-var length = (v) => dotProduct(v, v).sqrt();
+var length = (v2) => dotProduct(v2, v2).sqrt();
 var sineOfAngle = (pShared, pBase, pAngle) => {
   const vBase = { x: pBase.x.minus(pShared.x), y: pBase.y.minus(pShared.y) };
   const vAngle = { x: pAngle.x.minus(pShared.x), y: pAngle.y.minus(pShared.y) };
@@ -1906,13 +2166,13 @@ var cosineOfAngle = (pShared, pBase, pAngle) => {
   const vAngle = { x: pAngle.x.minus(pShared.x), y: pAngle.y.minus(pShared.y) };
   return dotProduct(vAngle, vBase).div(length(vAngle)).div(length(vBase));
 };
-var horizontalIntersection = (pt, v, y) => {
-  if (v.y.isZero()) return null;
-  return { x: pt.x.plus(v.x.div(v.y).times(y.minus(pt.y))), y };
+var horizontalIntersection = (pt, v2, y) => {
+  if (v2.y.isZero()) return null;
+  return { x: pt.x.plus(v2.x.div(v2.y).times(y.minus(pt.y))), y };
 };
-var verticalIntersection = (pt, v, x) => {
-  if (v.x.isZero()) return null;
-  return { x, y: pt.y.plus(v.y.div(v.x).times(x.minus(pt.x))) };
+var verticalIntersection = (pt, v2, x) => {
+  if (v2.x.isZero()) return null;
+  return { x, y: pt.y.plus(v2.y.div(v2.x).times(x.minus(pt.x))) };
 };
 var intersection = (pt1, v1, pt2, v2) => {
   if (v1.x.isZero()) return verticalIntersection(pt2, v2, pt1.x);
@@ -1953,10 +2213,10 @@ var SweepEvent = class _SweepEvent {
     return 0;
   }
   // Warning: 'point' input will be modified and re-used (for performance)
-  constructor(point, isLeft) {
-    if (point.events === void 0) point.events = [this];
-    else point.events.push(this);
-    this.point = point;
+  constructor(point2, isLeft) {
+    if (point2.events === void 0) point2.events = [this];
+    else point2.events.push(this);
+    this.point = point2;
     this.isLeft = isLeft;
   }
   link(other) {
@@ -2546,8 +2806,8 @@ var Segment = class _Segment {
    *   0: point is colinear to segment
    *  -1: point lies below the segment (to the right of vertical)
    */
-  comparePoint(point) {
-    return precision.orient(this.leftSE.point, point, this.rightSE.point);
+  comparePoint(point2) {
+    return precision.orient(this.leftSE.point, point2, this.rightSE.point);
   }
   /**
    * Given another segment, returns the first non-trivial intersection
@@ -2614,11 +2874,11 @@ var Segment = class _Segment {
    *
    * Warning: input array of points is modified
    */
-  split(point) {
+  split(point2) {
     const newEvents = [];
-    const alreadyLinked = point.events !== void 0;
-    const newLeftSE = new SweepEvent(point, true);
-    const newRightSE = new SweepEvent(point, false);
+    const alreadyLinked = point2.events !== void 0;
+    const newLeftSE = new SweepEvent(point2, true);
+    const newRightSE = new SweepEvent(point2, false);
     const oldRightSE = this.rightSE;
     this.replaceRightSE(newRightSE);
     newEvents.push(newRightSE);
@@ -2813,14 +3073,14 @@ var RingIn = class {
       if (typeof geomRing[i][0] !== "number" || typeof geomRing[i][1] !== "number") {
         throw new Error("Input geometry is not a valid Polygon or MultiPolygon");
       }
-      const point = precision.snap({ x: new bignumber_default(geomRing[i][0]), y: new bignumber_default(geomRing[i][1]) });
-      if (point.x.eq(prevPoint.x) && point.y.eq(prevPoint.y)) continue;
-      this.segments.push(Segment.fromRing(prevPoint, point, this));
-      if (point.x.isLessThan(this.bbox.ll.x)) this.bbox.ll.x = point.x;
-      if (point.y.isLessThan(this.bbox.ll.y)) this.bbox.ll.y = point.y;
-      if (point.x.isGreaterThan(this.bbox.ur.x)) this.bbox.ur.x = point.x;
-      if (point.y.isGreaterThan(this.bbox.ur.y)) this.bbox.ur.y = point.y;
-      prevPoint = point;
+      const point2 = precision.snap({ x: new bignumber_default(geomRing[i][0]), y: new bignumber_default(geomRing[i][1]) });
+      if (point2.x.eq(prevPoint.x) && point2.y.eq(prevPoint.y)) continue;
+      this.segments.push(Segment.fromRing(prevPoint, point2, this));
+      if (point2.x.isLessThan(this.bbox.ll.x)) this.bbox.ll.x = point2.x;
+      if (point2.y.isLessThan(this.bbox.ll.y)) this.bbox.ll.y = point2.y;
+      if (point2.x.isGreaterThan(this.bbox.ur.x)) this.bbox.ur.x = point2.x;
+      if (point2.y.isGreaterThan(this.bbox.ur.y)) this.bbox.ur.y = point2.y;
+      prevPoint = point2;
     }
     if (!firstPoint.x.eq(prevPoint.x) || !firstPoint.y.eq(prevPoint.y)) {
       this.segments.push(Segment.fromRing(prevPoint, firstPoint, this));
@@ -2933,6 +3193,68 @@ var factors = {
   radians: 1,
   yards: earthRadius * 1.0936
 };
+function feature(geom, properties, options = {}) {
+  const feat = { type: "Feature" };
+  if (options.id === 0 || options.id) {
+    feat.id = options.id;
+  }
+  if (options.bbox) {
+    feat.bbox = options.bbox;
+  }
+  feat.properties = properties || {};
+  feat.geometry = geom;
+  return feat;
+}
+function point(coordinates, properties, options = {}) {
+  if (!coordinates) {
+    throw new Error("coordinates is required");
+  }
+  if (!Array.isArray(coordinates)) {
+    throw new Error("coordinates must be an Array");
+  }
+  if (coordinates.length < 2) {
+    throw new Error("coordinates must be at least 2 numbers long");
+  }
+  if (!isNumber(coordinates[0]) || !isNumber(coordinates[1])) {
+    throw new Error("coordinates must contain numbers");
+  }
+  const geom = {
+    type: "Point",
+    coordinates
+  };
+  return feature(geom, properties, options);
+}
+function lineString(coordinates, properties, options = {}) {
+  if (coordinates.length < 2) {
+    throw new Error("coordinates must be an array of two or more positions");
+  }
+  const geom = {
+    type: "LineString",
+    coordinates
+  };
+  return feature(geom, properties, options);
+}
+function featureCollection(features, options = {}) {
+  const fc = { type: "FeatureCollection" };
+  if (options.id) {
+    fc.id = options.id;
+  }
+  if (options.bbox) {
+    fc.bbox = options.bbox;
+  }
+  fc.features = features;
+  return fc;
+}
+function multiLineString(coordinates, properties, options = {}) {
+  const geom = {
+    type: "MultiLineString",
+    coordinates
+  };
+  return feature(geom, properties, options);
+}
+function isNumber(num) {
+  return !isNaN(num) && num !== null && !Array.isArray(num);
+}
 
 // node_modules/@turf/meta/dist/esm/index.js
 function geomEach(geojson, callback) {
@@ -3014,6 +3336,45 @@ function geomReduce(geojson, callback, initialValue) {
   );
   return previousValue;
 }
+function flattenEach(geojson, callback) {
+  geomEach(geojson, function(geometry, featureIndex, properties, bbox, id) {
+    var type = geometry === null ? null : geometry.type;
+    switch (type) {
+      case null:
+      case "Point":
+      case "LineString":
+      case "Polygon":
+        if (callback(
+          feature(geometry, properties, { bbox, id }),
+          featureIndex,
+          0
+        ) === false)
+          return false;
+        return;
+    }
+    var geomType;
+    switch (type) {
+      case "MultiPoint":
+        geomType = "Point";
+        break;
+      case "MultiLineString":
+        geomType = "LineString";
+        break;
+      case "MultiPolygon":
+        geomType = "Polygon";
+        break;
+    }
+    for (var multiFeatureIndex = 0; multiFeatureIndex < geometry.coordinates.length; multiFeatureIndex++) {
+      var coordinate = geometry.coordinates[multiFeatureIndex];
+      var geom = {
+        type: geomType,
+        coordinates: coordinate
+      };
+      if (callback(feature(geom, properties), featureIndex, multiFeatureIndex) === false)
+        return false;
+    }
+  });
+}
 
 // node_modules/@turf/area/dist/esm/index.js
 function area(geojson) {
@@ -3077,6 +3438,705 @@ var turf_area_default = area;
 
 // src/workers/clipBatch.ts
 var import_node_worker_threads = require("node:worker_threads");
+
+// node_modules/robust-predicates/esm/util.js
+var epsilon = 11102230246251565e-32;
+var splitter = 134217729;
+var resulterrbound = (3 + 8 * epsilon) * epsilon;
+function sum(elen, e, flen, f, h) {
+  let Q, Qnew, hh, bvirt;
+  let enow = e[0];
+  let fnow = f[0];
+  let eindex = 0;
+  let findex = 0;
+  if (fnow > enow === fnow > -enow) {
+    Q = enow;
+    enow = e[++eindex];
+  } else {
+    Q = fnow;
+    fnow = f[++findex];
+  }
+  let hindex = 0;
+  if (eindex < elen && findex < flen) {
+    if (fnow > enow === fnow > -enow) {
+      Qnew = enow + Q;
+      hh = Q - (Qnew - enow);
+      enow = e[++eindex];
+    } else {
+      Qnew = fnow + Q;
+      hh = Q - (Qnew - fnow);
+      fnow = f[++findex];
+    }
+    Q = Qnew;
+    if (hh !== 0) {
+      h[hindex++] = hh;
+    }
+    while (eindex < elen && findex < flen) {
+      if (fnow > enow === fnow > -enow) {
+        Qnew = Q + enow;
+        bvirt = Qnew - Q;
+        hh = Q - (Qnew - bvirt) + (enow - bvirt);
+        enow = e[++eindex];
+      } else {
+        Qnew = Q + fnow;
+        bvirt = Qnew - Q;
+        hh = Q - (Qnew - bvirt) + (fnow - bvirt);
+        fnow = f[++findex];
+      }
+      Q = Qnew;
+      if (hh !== 0) {
+        h[hindex++] = hh;
+      }
+    }
+  }
+  while (eindex < elen) {
+    Qnew = Q + enow;
+    bvirt = Qnew - Q;
+    hh = Q - (Qnew - bvirt) + (enow - bvirt);
+    enow = e[++eindex];
+    Q = Qnew;
+    if (hh !== 0) {
+      h[hindex++] = hh;
+    }
+  }
+  while (findex < flen) {
+    Qnew = Q + fnow;
+    bvirt = Qnew - Q;
+    hh = Q - (Qnew - bvirt) + (fnow - bvirt);
+    fnow = f[++findex];
+    Q = Qnew;
+    if (hh !== 0) {
+      h[hindex++] = hh;
+    }
+  }
+  if (Q !== 0 || hindex === 0) {
+    h[hindex++] = Q;
+  }
+  return hindex;
+}
+function estimate(elen, e) {
+  let Q = e[0];
+  for (let i = 1; i < elen; i++) Q += e[i];
+  return Q;
+}
+function vec(n) {
+  return new Float64Array(n);
+}
+
+// node_modules/robust-predicates/esm/orient2d.js
+var ccwerrboundA = (3 + 16 * epsilon) * epsilon;
+var ccwerrboundB = (2 + 12 * epsilon) * epsilon;
+var ccwerrboundC = (9 + 64 * epsilon) * epsilon * epsilon;
+var B = vec(4);
+var C1 = vec(8);
+var C2 = vec(12);
+var D = vec(16);
+var u = vec(4);
+function orient2dadapt(ax, ay, bx, by, cx, cy, detsum) {
+  let acxtail, acytail, bcxtail, bcytail;
+  let bvirt, c, ahi, alo, bhi, blo, _i, _j, _0, s1, s0, t1, t0, u32;
+  const acx = ax - cx;
+  const bcx = bx - cx;
+  const acy = ay - cy;
+  const bcy = by - cy;
+  s1 = acx * bcy;
+  c = splitter * acx;
+  ahi = c - (c - acx);
+  alo = acx - ahi;
+  c = splitter * bcy;
+  bhi = c - (c - bcy);
+  blo = bcy - bhi;
+  s0 = alo * blo - (s1 - ahi * bhi - alo * bhi - ahi * blo);
+  t1 = acy * bcx;
+  c = splitter * acy;
+  ahi = c - (c - acy);
+  alo = acy - ahi;
+  c = splitter * bcx;
+  bhi = c - (c - bcx);
+  blo = bcx - bhi;
+  t0 = alo * blo - (t1 - ahi * bhi - alo * bhi - ahi * blo);
+  _i = s0 - t0;
+  bvirt = s0 - _i;
+  B[0] = s0 - (_i + bvirt) + (bvirt - t0);
+  _j = s1 + _i;
+  bvirt = _j - s1;
+  _0 = s1 - (_j - bvirt) + (_i - bvirt);
+  _i = _0 - t1;
+  bvirt = _0 - _i;
+  B[1] = _0 - (_i + bvirt) + (bvirt - t1);
+  u32 = _j + _i;
+  bvirt = u32 - _j;
+  B[2] = _j - (u32 - bvirt) + (_i - bvirt);
+  B[3] = u32;
+  let det = estimate(4, B);
+  let errbound = ccwerrboundB * detsum;
+  if (det >= errbound || -det >= errbound) {
+    return det;
+  }
+  bvirt = ax - acx;
+  acxtail = ax - (acx + bvirt) + (bvirt - cx);
+  bvirt = bx - bcx;
+  bcxtail = bx - (bcx + bvirt) + (bvirt - cx);
+  bvirt = ay - acy;
+  acytail = ay - (acy + bvirt) + (bvirt - cy);
+  bvirt = by - bcy;
+  bcytail = by - (bcy + bvirt) + (bvirt - cy);
+  if (acxtail === 0 && acytail === 0 && bcxtail === 0 && bcytail === 0) {
+    return det;
+  }
+  errbound = ccwerrboundC * detsum + resulterrbound * Math.abs(det);
+  det += acx * bcytail + bcy * acxtail - (acy * bcxtail + bcx * acytail);
+  if (det >= errbound || -det >= errbound) return det;
+  s1 = acxtail * bcy;
+  c = splitter * acxtail;
+  ahi = c - (c - acxtail);
+  alo = acxtail - ahi;
+  c = splitter * bcy;
+  bhi = c - (c - bcy);
+  blo = bcy - bhi;
+  s0 = alo * blo - (s1 - ahi * bhi - alo * bhi - ahi * blo);
+  t1 = acytail * bcx;
+  c = splitter * acytail;
+  ahi = c - (c - acytail);
+  alo = acytail - ahi;
+  c = splitter * bcx;
+  bhi = c - (c - bcx);
+  blo = bcx - bhi;
+  t0 = alo * blo - (t1 - ahi * bhi - alo * bhi - ahi * blo);
+  _i = s0 - t0;
+  bvirt = s0 - _i;
+  u[0] = s0 - (_i + bvirt) + (bvirt - t0);
+  _j = s1 + _i;
+  bvirt = _j - s1;
+  _0 = s1 - (_j - bvirt) + (_i - bvirt);
+  _i = _0 - t1;
+  bvirt = _0 - _i;
+  u[1] = _0 - (_i + bvirt) + (bvirt - t1);
+  u32 = _j + _i;
+  bvirt = u32 - _j;
+  u[2] = _j - (u32 - bvirt) + (_i - bvirt);
+  u[3] = u32;
+  const C1len = sum(4, B, 4, u, C1);
+  s1 = acx * bcytail;
+  c = splitter * acx;
+  ahi = c - (c - acx);
+  alo = acx - ahi;
+  c = splitter * bcytail;
+  bhi = c - (c - bcytail);
+  blo = bcytail - bhi;
+  s0 = alo * blo - (s1 - ahi * bhi - alo * bhi - ahi * blo);
+  t1 = acy * bcxtail;
+  c = splitter * acy;
+  ahi = c - (c - acy);
+  alo = acy - ahi;
+  c = splitter * bcxtail;
+  bhi = c - (c - bcxtail);
+  blo = bcxtail - bhi;
+  t0 = alo * blo - (t1 - ahi * bhi - alo * bhi - ahi * blo);
+  _i = s0 - t0;
+  bvirt = s0 - _i;
+  u[0] = s0 - (_i + bvirt) + (bvirt - t0);
+  _j = s1 + _i;
+  bvirt = _j - s1;
+  _0 = s1 - (_j - bvirt) + (_i - bvirt);
+  _i = _0 - t1;
+  bvirt = _0 - _i;
+  u[1] = _0 - (_i + bvirt) + (bvirt - t1);
+  u32 = _j + _i;
+  bvirt = u32 - _j;
+  u[2] = _j - (u32 - bvirt) + (_i - bvirt);
+  u[3] = u32;
+  const C2len = sum(C1len, C1, 4, u, C2);
+  s1 = acxtail * bcytail;
+  c = splitter * acxtail;
+  ahi = c - (c - acxtail);
+  alo = acxtail - ahi;
+  c = splitter * bcytail;
+  bhi = c - (c - bcytail);
+  blo = bcytail - bhi;
+  s0 = alo * blo - (s1 - ahi * bhi - alo * bhi - ahi * blo);
+  t1 = acytail * bcxtail;
+  c = splitter * acytail;
+  ahi = c - (c - acytail);
+  alo = acytail - ahi;
+  c = splitter * bcxtail;
+  bhi = c - (c - bcxtail);
+  blo = bcxtail - bhi;
+  t0 = alo * blo - (t1 - ahi * bhi - alo * bhi - ahi * blo);
+  _i = s0 - t0;
+  bvirt = s0 - _i;
+  u[0] = s0 - (_i + bvirt) + (bvirt - t0);
+  _j = s1 + _i;
+  bvirt = _j - s1;
+  _0 = s1 - (_j - bvirt) + (_i - bvirt);
+  _i = _0 - t1;
+  bvirt = _0 - _i;
+  u[1] = _0 - (_i + bvirt) + (bvirt - t1);
+  u32 = _j + _i;
+  bvirt = u32 - _j;
+  u[2] = _j - (u32 - bvirt) + (_i - bvirt);
+  u[3] = u32;
+  const Dlen = sum(C2len, C2, 4, u, D);
+  return D[Dlen - 1];
+}
+function orient2d(ax, ay, bx, by, cx, cy) {
+  const detleft = (ay - cy) * (bx - cx);
+  const detright = (ax - cx) * (by - cy);
+  const det = detleft - detright;
+  const detsum = Math.abs(detleft + detright);
+  if (Math.abs(det) >= ccwerrboundA * detsum) return det;
+  return -orient2dadapt(ax, ay, bx, by, cx, cy, detsum);
+}
+
+// node_modules/robust-predicates/esm/orient3d.js
+var o3derrboundA = (7 + 56 * epsilon) * epsilon;
+var o3derrboundB = (3 + 28 * epsilon) * epsilon;
+var o3derrboundC = (26 + 288 * epsilon) * epsilon * epsilon;
+var bc = vec(4);
+var ca = vec(4);
+var ab = vec(4);
+var at_b = vec(4);
+var at_c = vec(4);
+var bt_c = vec(4);
+var bt_a = vec(4);
+var ct_a = vec(4);
+var ct_b = vec(4);
+var bct = vec(8);
+var cat = vec(8);
+var abt = vec(8);
+var u2 = vec(4);
+var _8 = vec(8);
+var _8b = vec(8);
+var _16 = vec(8);
+var _12 = vec(12);
+var fin = vec(192);
+var fin2 = vec(192);
+
+// node_modules/robust-predicates/esm/incircle.js
+var iccerrboundA = (10 + 96 * epsilon) * epsilon;
+var iccerrboundB = (4 + 48 * epsilon) * epsilon;
+var iccerrboundC = (44 + 576 * epsilon) * epsilon * epsilon;
+var bc2 = vec(4);
+var ca2 = vec(4);
+var ab2 = vec(4);
+var aa = vec(4);
+var bb = vec(4);
+var cc = vec(4);
+var u3 = vec(4);
+var v = vec(4);
+var axtbc = vec(8);
+var aytbc = vec(8);
+var bxtca = vec(8);
+var bytca = vec(8);
+var cxtab = vec(8);
+var cytab = vec(8);
+var abt2 = vec(8);
+var bct2 = vec(8);
+var cat2 = vec(8);
+var abtt = vec(4);
+var bctt = vec(4);
+var catt = vec(4);
+var _82 = vec(8);
+var _162 = vec(16);
+var _16b = vec(16);
+var _16c = vec(16);
+var _32 = vec(32);
+var _32b = vec(32);
+var _48 = vec(48);
+var _64 = vec(64);
+var fin3 = vec(1152);
+var fin22 = vec(1152);
+
+// node_modules/robust-predicates/esm/insphere.js
+var isperrboundA = (16 + 224 * epsilon) * epsilon;
+var isperrboundB = (5 + 72 * epsilon) * epsilon;
+var isperrboundC = (71 + 1408 * epsilon) * epsilon * epsilon;
+var ab3 = vec(4);
+var bc3 = vec(4);
+var cd = vec(4);
+var de = vec(4);
+var ea = vec(4);
+var ac = vec(4);
+var bd = vec(4);
+var ce = vec(4);
+var da = vec(4);
+var eb = vec(4);
+var abc = vec(24);
+var bcd = vec(24);
+var cde = vec(24);
+var dea = vec(24);
+var eab = vec(24);
+var abd = vec(24);
+var bce = vec(24);
+var cda = vec(24);
+var deb = vec(24);
+var eac = vec(24);
+var adet = vec(1152);
+var bdet = vec(1152);
+var cdet = vec(1152);
+var ddet = vec(1152);
+var edet = vec(1152);
+var abdet = vec(2304);
+var cddet = vec(2304);
+var cdedet = vec(3456);
+var deter = vec(5760);
+var _83 = vec(8);
+var _8b2 = vec(8);
+var _8c = vec(8);
+var _163 = vec(16);
+var _24 = vec(24);
+var _482 = vec(48);
+var _48b = vec(48);
+var _96 = vec(96);
+var _192 = vec(192);
+var _384x = vec(384);
+var _384y = vec(384);
+var _384z = vec(384);
+var _768 = vec(768);
+var xdet = vec(96);
+var ydet = vec(96);
+var zdet = vec(96);
+var fin4 = vec(1152);
+
+// node_modules/point-in-polygon-hao/dist/esm/index.js
+function pointInPolygon(p, polygon) {
+  var i;
+  var ii;
+  var k = 0;
+  var f;
+  var u1;
+  var v1;
+  var u22;
+  var v2;
+  var currentP;
+  var nextP;
+  var x = p[0];
+  var y = p[1];
+  var numContours = polygon.length;
+  for (i = 0; i < numContours; i++) {
+    ii = 0;
+    var contour = polygon[i];
+    var contourLen = contour.length - 1;
+    currentP = contour[0];
+    if (currentP[0] !== contour[contourLen][0] && currentP[1] !== contour[contourLen][1]) {
+      throw new Error("First and last coordinates in a ring must be the same");
+    }
+    u1 = currentP[0] - x;
+    v1 = currentP[1] - y;
+    for (ii; ii < contourLen; ii++) {
+      nextP = contour[ii + 1];
+      u22 = nextP[0] - x;
+      v2 = nextP[1] - y;
+      if (v1 === 0 && v2 === 0) {
+        if (u22 <= 0 && u1 >= 0 || u1 <= 0 && u22 >= 0) {
+          return 0;
+        }
+      } else if (v2 >= 0 && v1 <= 0 || v2 <= 0 && v1 >= 0) {
+        f = orient2d(u1, u22, v1, v2, 0, 0);
+        if (f === 0) {
+          return 0;
+        }
+        if (f > 0 && v2 > 0 && v1 <= 0 || f < 0 && v2 <= 0 && v1 > 0) {
+          k++;
+        }
+      }
+      currentP = nextP;
+      v1 = v2;
+      u1 = u22;
+    }
+  }
+  if (k % 2 === 0) {
+    return false;
+  }
+  return true;
+}
+
+// node_modules/@turf/invariant/dist/esm/index.js
+function getCoord(coord) {
+  if (!coord) {
+    throw new Error("coord is required");
+  }
+  if (!Array.isArray(coord)) {
+    if (coord.type === "Feature" && coord.geometry !== null && coord.geometry.type === "Point") {
+      return [...coord.geometry.coordinates];
+    }
+    if (coord.type === "Point") {
+      return [...coord.coordinates];
+    }
+  }
+  if (Array.isArray(coord) && coord.length >= 2 && !Array.isArray(coord[0]) && !Array.isArray(coord[1])) {
+    return [...coord];
+  }
+  throw new Error("coord must be GeoJSON Point or an Array of numbers");
+}
+function getGeom(geojson) {
+  if (geojson.type === "Feature") {
+    return geojson.geometry;
+  }
+  return geojson;
+}
+
+// node_modules/@turf/boolean-point-in-polygon/dist/esm/index.js
+function booleanPointInPolygon(point2, polygon, options = {}) {
+  if (!point2) {
+    throw new Error("point is required");
+  }
+  if (!polygon) {
+    throw new Error("polygon is required");
+  }
+  const pt = getCoord(point2);
+  const geom = getGeom(polygon);
+  const type = geom.type;
+  const bbox = polygon.bbox;
+  let polys = geom.coordinates;
+  if (bbox && inBBox(pt, bbox) === false) {
+    return false;
+  }
+  if (type === "Polygon") {
+    polys = [polys];
+  }
+  let result = false;
+  for (var i = 0; i < polys.length; ++i) {
+    const polyResult = pointInPolygon(pt, polys[i]);
+    if (polyResult === 0) return options.ignoreBoundary ? false : true;
+    else if (polyResult) result = true;
+  }
+  return result;
+}
+function inBBox(pt, bbox) {
+  return bbox[0] <= pt[0] && bbox[1] <= pt[1] && bbox[2] >= pt[0] && bbox[3] >= pt[1];
+}
+
+// node_modules/@turf/line-intersect/dist/esm/index.js
+var import_sweepline_intersections = __toESM(require_sweeplineIntersections(), 1);
+var sweeplineIntersections = import_sweepline_intersections.default;
+function lineIntersect(line1, line2, options = {}) {
+  const { removeDuplicates = true, ignoreSelfIntersections = true } = options;
+  let features = [];
+  if (line1.type === "FeatureCollection")
+    features = features.concat(line1.features);
+  else if (line1.type === "Feature") features.push(line1);
+  else if (line1.type === "LineString" || line1.type === "Polygon" || line1.type === "MultiLineString" || line1.type === "MultiPolygon") {
+    features.push(feature(line1));
+  }
+  if (line2.type === "FeatureCollection")
+    features = features.concat(line2.features);
+  else if (line2.type === "Feature") features.push(line2);
+  else if (line2.type === "LineString" || line2.type === "Polygon" || line2.type === "MultiLineString" || line2.type === "MultiPolygon") {
+    features.push(feature(line2));
+  }
+  const intersections = sweeplineIntersections(
+    featureCollection(features),
+    ignoreSelfIntersections
+  );
+  let results = [];
+  if (removeDuplicates) {
+    const unique = {};
+    intersections.forEach((intersection3) => {
+      const key = intersection3.join(",");
+      if (!unique[key]) {
+        unique[key] = true;
+        results.push(intersection3);
+      }
+    });
+  } else {
+    results = intersections;
+  }
+  return featureCollection(results.map((r) => point(r)));
+}
+
+// node_modules/@turf/polygon-to-line/dist/esm/index.js
+function polygonToLine(poly, options = {}) {
+  const geom = getGeom(poly);
+  if (!options.properties && poly.type === "Feature") {
+    options.properties = poly.properties;
+  }
+  switch (geom.type) {
+    case "Polygon":
+      return singlePolygonToLine(geom, options);
+    case "MultiPolygon":
+      return multiPolygonToLine(geom, options);
+    default:
+      throw new Error("invalid poly");
+  }
+}
+function singlePolygonToLine(poly, options = {}) {
+  const geom = getGeom(poly);
+  const coords = geom.coordinates;
+  const properties = options.properties ? options.properties : poly.type === "Feature" ? poly.properties : {};
+  return coordsToLine(coords, properties);
+}
+function multiPolygonToLine(multiPoly, options = {}) {
+  const geom = getGeom(multiPoly);
+  const coords = geom.coordinates;
+  const properties = options.properties ? options.properties : multiPoly.type === "Feature" ? multiPoly.properties : {};
+  const lines = [];
+  coords.forEach((coord) => {
+    lines.push(coordsToLine(coord, properties));
+  });
+  return featureCollection(lines);
+}
+function coordsToLine(coords, properties) {
+  if (coords.length > 1) {
+    return multiLineString(coords, properties);
+  }
+  return lineString(coords[0], properties);
+}
+
+// node_modules/@turf/boolean-disjoint/dist/esm/index.js
+function booleanDisjoint(feature1, feature2, {
+  ignoreSelfIntersections = true
+} = { ignoreSelfIntersections: true }) {
+  let bool = true;
+  flattenEach(feature1, (flatten1) => {
+    flattenEach(feature2, (flatten2) => {
+      if (bool === false) {
+        return false;
+      }
+      bool = disjoint(
+        flatten1.geometry,
+        flatten2.geometry,
+        ignoreSelfIntersections
+      );
+    });
+  });
+  return bool;
+}
+function disjoint(geom1, geom2, ignoreSelfIntersections) {
+  switch (geom1.type) {
+    case "Point":
+      switch (geom2.type) {
+        case "Point":
+          return !compareCoords(geom1.coordinates, geom2.coordinates);
+        case "LineString":
+          return !isPointOnLine(geom2, geom1);
+        case "Polygon":
+          return !booleanPointInPolygon(geom1, geom2);
+      }
+      break;
+    case "LineString":
+      switch (geom2.type) {
+        case "Point":
+          return !isPointOnLine(geom1, geom2);
+        case "LineString":
+          return !isLineOnLine(geom1, geom2, ignoreSelfIntersections);
+        case "Polygon":
+          return !isLineInPoly(geom2, geom1, ignoreSelfIntersections);
+      }
+      break;
+    case "Polygon":
+      switch (geom2.type) {
+        case "Point":
+          return !booleanPointInPolygon(geom2, geom1);
+        case "LineString":
+          return !isLineInPoly(geom1, geom2, ignoreSelfIntersections);
+        case "Polygon":
+          return !isPolyInPoly(geom2, geom1, ignoreSelfIntersections);
+      }
+  }
+  return false;
+}
+function isPointOnLine(lineString2, pt) {
+  for (let i = 0; i < lineString2.coordinates.length - 1; i++) {
+    if (isPointOnLineSegment(
+      lineString2.coordinates[i],
+      lineString2.coordinates[i + 1],
+      pt.coordinates
+    )) {
+      return true;
+    }
+  }
+  return false;
+}
+function isLineOnLine(lineString1, lineString2, ignoreSelfIntersections) {
+  const doLinesIntersect = lineIntersect(lineString1, lineString2, {
+    ignoreSelfIntersections
+  });
+  if (doLinesIntersect.features.length > 0) {
+    return true;
+  }
+  return false;
+}
+function isLineInPoly(polygon, lineString2, ignoreSelfIntersections) {
+  for (const coord of lineString2.coordinates) {
+    if (booleanPointInPolygon(coord, polygon)) {
+      return true;
+    }
+  }
+  const doLinesIntersect = lineIntersect(lineString2, polygonToLine(polygon), {
+    ignoreSelfIntersections
+  });
+  if (doLinesIntersect.features.length > 0) {
+    return true;
+  }
+  return false;
+}
+function isPolyInPoly(feature1, feature2, ignoreSelfIntersections) {
+  for (const coord1 of feature1.coordinates[0]) {
+    if (booleanPointInPolygon(coord1, feature2)) {
+      return true;
+    }
+  }
+  for (const coord2 of feature2.coordinates[0]) {
+    if (booleanPointInPolygon(coord2, feature1)) {
+      return true;
+    }
+  }
+  const doLinesIntersect = lineIntersect(
+    polygonToLine(feature1),
+    polygonToLine(feature2),
+    { ignoreSelfIntersections }
+  );
+  if (doLinesIntersect.features.length > 0) {
+    return true;
+  }
+  return false;
+}
+function isPointOnLineSegment(lineSegmentStart, lineSegmentEnd, pt) {
+  const dxc = pt[0] - lineSegmentStart[0];
+  const dyc = pt[1] - lineSegmentStart[1];
+  const dxl = lineSegmentEnd[0] - lineSegmentStart[0];
+  const dyl = lineSegmentEnd[1] - lineSegmentStart[1];
+  const cross = dxc * dyl - dyc * dxl;
+  if (cross !== 0) {
+    return false;
+  }
+  if (Math.abs(dxl) >= Math.abs(dyl)) {
+    if (dxl > 0) {
+      return lineSegmentStart[0] <= pt[0] && pt[0] <= lineSegmentEnd[0];
+    } else {
+      return lineSegmentEnd[0] <= pt[0] && pt[0] <= lineSegmentStart[0];
+    }
+  } else if (dyl > 0) {
+    return lineSegmentStart[1] <= pt[1] && pt[1] <= lineSegmentEnd[1];
+  } else {
+    return lineSegmentEnd[1] <= pt[1] && pt[1] <= lineSegmentStart[1];
+  }
+}
+function compareCoords(pair1, pair2) {
+  return pair1[0] === pair2[0] && pair1[1] === pair2[1];
+}
+
+// node_modules/@turf/boolean-intersects/dist/esm/index.js
+function booleanIntersects(feature1, feature2, {
+  ignoreSelfIntersections = true
+} = {}) {
+  let bool = false;
+  flattenEach(feature1, (flatten1) => {
+    flattenEach(feature2, (flatten2) => {
+      if (bool === true) {
+        return true;
+      }
+      bool = !booleanDisjoint(flatten1.geometry, flatten2.geometry, {
+        ignoreSelfIntersections
+      });
+    });
+  });
+  return bool;
+}
+var turf_boolean_intersects_default = booleanIntersects;
+
+// src/workers/clipBatch.ts
 async function clipBatch({
   features,
   differenceMultiPolygon,
@@ -3148,11 +4208,272 @@ async function performClipping(features, differenceGeoms, subjectFeature) {
   }) * 1e-6;
   return sqKm;
 }
+async function countFeatures({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  groupBy
+}) {
+  const results = { "*": /* @__PURE__ */ new Set() };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+        const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pointInPolygon(coord, poly);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        if (turf_boolean_intersects_default(f.feature, {
+          type: "Feature",
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon
+          },
+          properties: {}
+        })) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    if (groupBy) {
+      const classKey = f.feature.properties?.[groupBy];
+      if (classKey) {
+        if (!(classKey in results)) {
+          results[classKey] = /* @__PURE__ */ new Set();
+        }
+        results[classKey].add(f.feature.properties.__oidx);
+      }
+    }
+    results["*"].add(f.feature.properties.__oidx);
+  }
+  return Object.fromEntries(
+    Object.entries(results).map(([key, value]) => [key, Array.from(value)])
+  );
+}
+async function testForPresenceInSubject({
+  features,
+  differenceMultiPolygon,
+  subjectFeature
+}) {
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      if (!turf_boolean_intersects_default(f.feature, subjectFeature)) {
+        continue;
+      }
+    }
+    if (f.requiresDifference) {
+      if (turf_boolean_intersects_default(f.feature, {
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: differenceMultiPolygon
+        }
+      })) {
+        continue;
+      }
+    }
+    return true;
+  }
+  return false;
+}
+async function createPresenceTable({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  limit = 50,
+  includedProperties
+}) {
+  const results = {
+    exceededLimit: false,
+    values: []
+  };
+  for (const f of features) {
+    if (results.exceededLimit) {
+      break;
+    }
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+        const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pointInPolygon(coord, poly);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        if (turf_boolean_intersects_default(f.feature, {
+          type: "Feature",
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon
+          },
+          properties: {}
+        })) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    let result = {
+      __id: f.feature.properties.__oidx,
+      ...f.feature.properties
+    };
+    result = pick(result, includedProperties);
+    results.values.push(result);
+    if (results.values.length >= limit) {
+      results.exceededLimit = true;
+    }
+  }
+  return results;
+}
+async function collectColumnValues({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  property,
+  groupBy
+}) {
+  const results = { "*": [] };
+  for (const f of features) {
+    if (f.requiresIntersection) {
+      throw new Error(
+        "Not implemented. If just collecting column values, they should never be added to the batch if unsure if they lie within the subject feature."
+      );
+    }
+    if (f.requiresDifference) {
+      if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+        const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
+        for (const coord of coords) {
+          let anyMisses = false;
+          for (const poly of differenceMultiPolygon) {
+            const r = pointInPolygon(coord, poly);
+            if (r === false) {
+              anyMisses = true;
+              break;
+            }
+          }
+          if (!anyMisses) {
+            continue;
+          }
+        }
+      } else {
+        if (turf_boolean_intersects_default(f.feature, {
+          type: "Feature",
+          geometry: {
+            type: "MultiPolygon",
+            coordinates: differenceMultiPolygon
+          },
+          properties: {}
+        })) {
+          continue;
+        }
+      }
+    }
+    if (!("__oidx" in f.feature.properties || {})) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const oidx = f.feature.properties.__oidx;
+    if (oidx === void 0 || oidx === null) {
+      throw new Error("Feature properties must contain __oidx");
+    }
+    const value = f.feature.properties?.[property];
+    if (typeof value === "number") {
+      const identifiedValue = [oidx, value];
+      results["*"].push(identifiedValue);
+      if (groupBy) {
+        const classKey = f.feature.properties?.[groupBy];
+        if (classKey) {
+          if (!(classKey in results)) {
+            results[classKey] = [];
+          }
+          results[classKey].push(identifiedValue);
+        }
+      }
+    }
+  }
+  return results;
+}
 import_node_worker_threads.parentPort?.on(
   "message",
   async (job) => {
     try {
-      const result = await clipBatch(job);
+      const operation2 = job.operation || "overlay_area";
+      let result;
+      if (operation2 === "overlay_area") {
+        result = await clipBatch({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          groupBy: job.groupBy
+        });
+      } else if (operation2 === "count") {
+        result = await countFeatures({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          groupBy: job.groupBy
+        });
+      } else if (operation2 === "presence") {
+        result = await testForPresenceInSubject({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature
+        });
+      } else if (operation2 === "presence_table") {
+        result = await createPresenceTable({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          limit: job.limit,
+          includedProperties: job.includedProperties
+        });
+      } else if (operation2 === "column_values") {
+        if (!job.property) {
+          throw new Error("property is required for column_values operation");
+        }
+        result = await collectColumnValues({
+          features: job.features,
+          differenceMultiPolygon: job.differenceMultiPolygon,
+          subjectFeature: job.subjectFeature,
+          property: job.property,
+          groupBy: job.groupBy
+        });
+      } else {
+        throw new Error(`Unknown operation type: ${operation2}`);
+      }
       import_node_worker_threads.parentPort?.postMessage({ ok: true, result });
     } catch (err) {
       import_node_worker_threads.parentPort?.postMessage({
@@ -3162,8 +4483,23 @@ import_node_worker_threads.parentPort?.on(
     }
   }
 );
+function pick(object, keys) {
+  keys = keys || Object.keys(object);
+  keys = keys.filter(
+    (key) => key !== "__oidx" && key !== "__byteLength" && key !== "__area" && key !== "__offset"
+  );
+  return keys.reduce((acc, key) => {
+    acc[key] = object[key];
+    return acc;
+  }, {});
+}
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
   clipBatch,
-  performClipping
+  collectColumnValues,
+  countFeatures,
+  createPresenceTable,
+  performClipping,
+  pick,
+  testForPresenceInSubject
 });

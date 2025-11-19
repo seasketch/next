@@ -30,11 +30,21 @@ export {
   CountMetric,
   PresenceMetric,
   PresenceTableMetric,
+  ColumnValuesMetric,
+  IdentifiedValues,
   MetricTypeMap,
   subjectIsFragment,
   subjectIsGeography,
   MetricSubjectFragment,
   MetricSubjectGeography,
   SourceType,
+  UniqueIdIndex,
+  computeStatsFromIdentifiedValues,
 } from "./metrics/metrics";
+export {
+  createUniqueIdIndex,
+  countUniqueIds,
+  mergeUniqueIdIndexes,
+} from "./utils/uniqueIdIndex";
 export { initializeGeographySources } from "./geographies/geographies";
+export { calculateRasterStats } from "./rasterStats";

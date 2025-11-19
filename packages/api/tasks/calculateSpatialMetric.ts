@@ -9,7 +9,6 @@ import {
 } from "overlay-engine";
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
-import { v4 as uuid } from "uuid";
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -61,7 +60,13 @@ export default async function calculateSpatialMetric(
           ...metric.parameters,
         } as OverlayWorkerPayload);
       }
-    } else if (metric.type === "overlay_area") {
+    } else if (
+      metric.type === "overlay_area" ||
+      metric.type === "count" ||
+      metric.type === "presence" ||
+      metric.type === "presence_table" ||
+      metric.type === "column_values"
+    ) {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
         return;
@@ -72,8 +77,9 @@ export default async function calculateSpatialMetric(
             metric.subject.hash,
             helpers
           );
+          console.log("metric.parameters", metric.parameters);
           await callOverlayWorker({
-            type: "overlay_area",
+            type: metric.type,
             jobKey: metric.jobKey,
             subject: {
               hash: metric.subject.hash,
@@ -90,14 +96,13 @@ export default async function calculateSpatialMetric(
             helpers
           );
           await callOverlayWorker({
-            type: "overlay_area",
+            type: metric.type,
             jobKey: metric.jobKey,
             subject: {
               type: "geography",
               id: metric.subject.id,
               clippingLayers,
             },
-            groupBy: metric.groupBy,
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
@@ -106,7 +111,7 @@ export default async function calculateSpatialMetric(
         }
       }
     } else {
-      throw new Error(`Unsupported metric type: ${metric.type}`);
+      throw new Error(`Unsupported metric type: ${(metric as any).type}`);
     }
   } catch (e) {
     await helpers.withPgClient(async (client) => {

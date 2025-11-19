@@ -446,8 +446,7 @@ async function getOrCreateReportDependencies(
       geography.id,
       "total_area",
       null,
-      null,
-      null,
+      {},
       null,
       projectId
     );
@@ -460,8 +459,7 @@ async function getOrCreateReportDependencies(
       null,
       "total_area",
       null,
-      null,
-      null,
+      {},
       null,
       projectId
     );
@@ -493,7 +491,6 @@ async function getOrCreateReportDependencies(
             "overlay_area",
             overlaySource,
             layer.layerParameters,
-            card.component_settings,
             geogs.map((g) => g.id),
             fragments,
             projectId
@@ -505,6 +502,160 @@ async function getOrCreateReportDependencies(
       }
       case "Size": {
         cardDependencyList.metrics.push(...totalAreaMetrics.map((m) => m.id));
+        break;
+      }
+      case "FeatureCount": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "count",
+            overlaySource,
+            layer.layerParameters,
+            geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
+      case "Presence": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "presence",
+            overlaySource,
+            layer.layerParameters,
+            [],
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
+      case "FeatureList": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          let parameters = layer.layerParameters;
+          // NOTE:
+          // This works just fine if you send it, but I'm just including all
+          // props for now so metrics don't need to be recalculated when the
+          // included properties change. At this point the results size doesn't
+          // matter as much.
+          //
+          // if (
+          //   card.component_settings.includedProperties &&
+          //   card.component_settings.includedProperties.length > 0
+          // ) {
+          //   parameters = {
+          //     ...parameters,
+          //     includedProperties:
+          //       card.component_settings.includedProperties.sort(),
+          //   };
+          // }
+          if (card.component_settings.resultsLimit) {
+            parameters = {
+              ...parameters,
+              resultsLimit: card.component_settings.resultsLimit,
+            };
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "presence_table",
+            overlaySource,
+            parameters,
+            [],
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
+      case "ColumnStatistics": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          if (!layer.layerParameters?.valueColumn) {
+            throw new Error(
+              `ColumnStatistics card requires valueColumn parameter for layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "column_values",
+            overlaySource,
+            layer.layerParameters,
+            geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
+        break;
+      }
+      case "RasterBandStatistics": {
+        for (const layer of card.layers) {
+          cardDependencyList.overlaySources.push(layer.id);
+          const overlaySource = overlaySources.find(
+            (source) => source.tableOfContentsItemId === layer.id
+          );
+          if (!overlaySource) {
+            throw new Error(
+              `Overlay source not found for card layer: ${layer.id}`
+            );
+          }
+          const metrics = await getOrCreateMetricsOfType(
+            pool,
+            "raster_stats",
+            overlaySource,
+            layer.layerParameters,
+            [],
+            // geogs.map((g) => g.id),
+            fragments,
+            projectId
+          );
+          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+          results.metrics.push(...metrics);
+        }
         break;
       }
       default:
@@ -523,22 +674,21 @@ async function getOrCreateSpatialMetric(
   subjectGeographyId: number | null,
   type: string,
   overlaySourceUrl: string | null,
-  overlayGroupBy: string | null,
-  includedProperties: string[] | null,
+  parameters: any,
   sourceProcessingJobDependency: string | null,
   projectId: number
 ) {
+  console.log("parameters", parameters);
   const result = await pool.query(
     `
-    select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::text, $6::text[], $7::text, $8::int) as metric
+    select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int) as metric
   `,
     [
       subjectFragmentId,
       subjectGeographyId,
       type,
       overlaySourceUrl,
-      overlayGroupBy,
-      includedProperties,
+      parameters,
       sourceProcessingJobDependency,
       projectId,
     ]
@@ -553,20 +703,20 @@ async function getOrCreateMetricsOfType(
     | "count"
     | "presence"
     | "presence_table"
-    | "contextualized_mean",
+    | "column_values"
+    | "raster_stats",
   overlaySource: ReportOverlaySourcePartial,
-  layerParameters: { groupBy?: string | null } | undefined,
-  cardSettings: any,
+  parameters:
+    | {
+        groupBy?: string | null;
+        includedProperties?: string[] | null;
+        valueColumn?: string | null;
+      }
+    | undefined,
   geographyIds: number[],
   fragmentHashes: string[],
   projectId: number
 ) {
-  console.log(
-    "getOrCreateMetricsOfType",
-    type,
-    layerParameters,
-    layerParameters?.groupBy || null
-  );
   const metrics: any[] = [];
   // first, create geography metrics
   for (const geographyId of geographyIds) {
@@ -576,8 +726,7 @@ async function getOrCreateMetricsOfType(
       geographyId,
       type,
       overlaySource.sourceUrl || null,
-      layerParameters?.groupBy || null,
-      cardSettings.includedProperties,
+      parameters,
       overlaySource.sourceProcessingJobId || null,
       projectId
     );
@@ -591,8 +740,7 @@ async function getOrCreateMetricsOfType(
       null,
       type,
       overlaySource.sourceUrl || null,
-      layerParameters?.groupBy || null,
-      cardSettings.includedProperties,
+      parameters,
       overlaySource.sourceProcessingJobId || null,
       projectId
     );

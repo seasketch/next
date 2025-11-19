@@ -1,10 +1,19 @@
+import {
+  min,
+  max,
+  mean,
+  median,
+  standardDeviation,
+  equalIntervalBreaks,
+} from "simple-statistics";
+
 export type MetricType =
   | "total_area"
   | "overlay_area"
   | "count"
   | "presence"
   | "presence_table"
-  | "contextualized_mean";
+  | "column_values";
 
 type MetricBase = {
   type: MetricType;
@@ -39,33 +48,81 @@ export type OverlayAreaMetric = OverlayMetricBase & {
   };
 };
 
+/**
+ * For CountMetrics, it's important to know the unique IDs of matches, since you
+ * may need to join results from multiple fragments. You must check the index
+ * in this scenario to avoid double-counting features.
+ */
+export type UniqueIdIndex = {
+  /**
+   * [start, end] Ranges of IDs that are consecutive. Always sorted.
+   */
+  ranges: [number, number][];
+  /**
+   * IDs that don't fit in ranges. Always sorted.
+   */
+  individuals: number[];
+};
+
 export type CountMetric = OverlayMetricBase & {
   type: "count";
-  value:
-    | number
-    | {
-        [groupBy: string]: number;
-      };
+  value: {
+    [groupBy: string]: {
+      count: number;
+      uniqueIdIndex: UniqueIdIndex;
+    };
+  };
 };
 
 export type PresenceMetric = OverlayMetricBase & {
   type: "presence";
-  value:
-    | boolean
-    | {
-        [groupBy: string]: boolean;
-      };
+  value: boolean;
 };
 
 export type PresenceTableValue = {
-  id: string;
+  __id: number;
   [attribute: string]: any;
 };
 
 export type PresenceTableMetric = OverlayMetricBase & {
   type: "presence_table";
-  value: PresenceTableValue[];
+  value: {
+    values: PresenceTableValue[];
+    exceededLimit: boolean;
+  };
+};
+
+/**
+ * The first number is the feature __oidx, the second is the value
+ */
+export type IdentifiedValues = [number, number];
+
+export type ColumnValuesMetric = OverlayMetricBase & {
+  type: "column_values";
+  value: {
+    [groupBy: string]: IdentifiedValues[];
+  };
+};
+
+export type RasterBandStats = {
   count: number;
+  min: number;
+  max: number;
+  mean: number;
+  median: number;
+  mode: number;
+  modes: number[];
+  range: number;
+  histogram: [number, number | null][];
+  // count of no-data and invalid values
+  invalid: number;
+  std: number;
+  sum: number;
+};
+
+export type RasterStats = OverlayMetricBase & {
+  type: "raster_stats";
+  value: RasterBandStats[];
 };
 
 export type Metric =
@@ -73,7 +130,8 @@ export type Metric =
   | OverlayAreaMetric
   | CountMetric
   | PresenceMetric
-  | PresenceTableMetric;
+  | PresenceTableMetric
+  | ColumnValuesMetric;
 
 export type MetricTypeMap = {
   total_area: TotalAreaMetric;
@@ -81,6 +139,7 @@ export type MetricTypeMap = {
   count: CountMetric;
   presence: PresenceMetric;
   presence_table: PresenceTableMetric;
+  column_values: ColumnValuesMetric;
 };
 
 export function subjectIsFragment(
@@ -96,3 +155,96 @@ export function subjectIsGeography(
 }
 
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
+
+/**
+ * Computes statistics from a list of IdentifiedValues. This function can be used
+ * both server-side and client-side to calculate accurate statistics for overlapping
+ * fragments and multiple sketches in a collection by de-duplicating based on __oidx.
+ */
+export function computeStatsFromIdentifiedValues(
+  identifiedValues: IdentifiedValues[]
+): {
+  min: number;
+  max: number;
+  mean: number;
+  median: number;
+  stdDev: number;
+  histogram: [number, number | null][];
+  count: number;
+  countDistinct: number;
+  values: number[];
+} {
+  // De-duplicate by __oidx (first element of tuple), keeping the first occurrence
+  const uniqueMap = new Map<number, number>();
+  for (const [oidx, value] of identifiedValues) {
+    if (!uniqueMap.has(oidx)) {
+      uniqueMap.set(oidx, value);
+    }
+  }
+
+  const values = Array.from(uniqueMap.values());
+
+  if (values.length === 0) {
+    return {
+      min: Infinity,
+      max: -Infinity,
+      mean: NaN,
+      median: NaN,
+      stdDev: NaN,
+      histogram: [],
+      count: 0,
+      countDistinct: 0,
+      values: [],
+    };
+  }
+
+  const distinctValues = Array.from(new Set(values));
+
+  return {
+    min: min(values),
+    max: max(values),
+    mean: mean(values),
+    median: median(values),
+    stdDev: standardDeviation(values),
+    histogram: equalIntervalBuckets(values, 49),
+    count: values.length,
+    countDistinct: distinctValues.length,
+    values: Array.from(distinctValues).slice(0, 100),
+  };
+}
+
+function equalIntervalBuckets(
+  data: number[],
+  numBuckets: number,
+  max?: number,
+  fraction = false
+): [number, number | null][] {
+  const breaks = equalIntervalBreaks(data, numBuckets);
+  breaks.pop();
+
+  max = max !== undefined ? max : Math.max(...data);
+
+  return breaksToBuckets(max, breaks, data, fraction);
+}
+
+function breaksToBuckets(
+  max: number,
+  breaks: number[],
+  values: number[],
+  fraction = false
+): [number, number | null][] {
+  const buckets: [number, number | null][] = [];
+  for (const b of breaks) {
+    const nextBreak = breaks[breaks.indexOf(b) + 1];
+    const isLastBreak = nextBreak === undefined;
+    let valuesInRange = 0;
+    for (const value of values) {
+      if (value >= b && (isLastBreak || value < nextBreak)) {
+        valuesInRange++;
+      }
+    }
+    buckets.push([b, fraction ? valuesInRange / values.length : valuesInRange]);
+  }
+  buckets.push([max, null]);
+  return buckets;
+}
