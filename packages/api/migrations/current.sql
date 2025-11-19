@@ -31,3 +31,5 @@ BEGIN
     ALTER TYPE spatial_metric_type ADD VALUE 'raster_stats';
   END IF;
 END $$;
+
+alter table data_upload_outputs add column if not exists epsg integer;

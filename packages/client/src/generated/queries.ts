@@ -3352,6 +3352,7 @@ export type DataUploadOutput = Node & {
   /** Reads a single `DataSource` that is related to this `DataUploadOutput`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId?: Maybe<Scalars['Int']>;
+  epsg?: Maybe<Scalars['Int']>;
   fgbHeaderSize?: Maybe<Scalars['Int']>;
   filename: Scalars['String'];
   id: Scalars['Int'];

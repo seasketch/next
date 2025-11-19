@@ -513,6 +513,9 @@ def handler(event, context):
             if notifier is not None and upload_result is not None:
                 try:
                     notifier.notify(100, "Complete")
+                    if is_raster:
+                        upload_result["epsg"] = 6933
+
                     notifier.result({"object": upload_result})
                 except Exception:
                     pass

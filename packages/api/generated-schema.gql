@@ -3916,6 +3916,7 @@ type DataUploadOutput implements Node {
   """
   dataSource: DataSource
   dataSourceId: Int
+  epsg: Int
   fgbHeaderSize: Int
   filename: String!
   id: Int!

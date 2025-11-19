@@ -23,7 +23,7 @@ import { compareResults } from "./compareResults";
 import { WorkerPool } from "../../src/workers/pool";
 import simplify from "@turf/simplify";
 import { calculateRasterStats } from "../../src/rasterStats";
-import proj4 from "proj4";
+const proj4 = require("proj4");
 const insideBioregion = require("./sketches/Inside-bioregion-2.geojson.json");
 
 const naitaba = require("./sketches/Naitaba.geojson.json");
@@ -750,24 +750,18 @@ describe("sketchFragmentOverlap", () => {
 });
 
 describe("Raster metrics", () => {
-  let pool: WorkerPool<any, any>;
-
-  beforeAll(async () => {
-    pool = createClippingWorkerPool(
-      __dirname + "/../../dist/workers/clipBatch.standalone.js"
-    );
-  });
   it("Should calculate raster stats", async () => {
     // const source = "https://uploads.seasketch.org/fiji_GEBCO_bathymetry.tif";
-    const source =
-      "https://uploads.seasketch.org/projects/fiji/subdivided/651-e2a26b85-42b6-4e03-ae04-1741a24ca54e.tif";
+    const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
     const prepared = prepareSketch(
       require("./sketches/Kanacea-Island.geojson.json")
     );
     const f = reprojectFeatureTo6933(prepared.feature);
-    console.log(f);
     const stats = await calculateRasterStats(source, f);
-    console.log(stats[0].mean, stats[0].min, stats[0].max);
+    // console.log(stats[0].mean, stats[0].min, stats[0].max);
+    expect(stats[0].mean).toBeCloseTo(-20.6666);
+    expect(stats[0].min).toBeCloseTo(-207);
+    expect(stats[0].max).toBeCloseTo(54);
   });
 });
 
@@ -816,7 +810,7 @@ export function reprojectFeatureTo6933(feature) {
     type: "Feature",
     properties: feature.properties || {},
     geometry: JSON.parse(JSON.stringify(feature.geometry)),
-  };
+  } as Feature<Polygon | MultiPolygon>;
   reprojectGeometry(out.geometry, to6933);
   return out;
 }
