@@ -22,6 +22,10 @@ export interface AddRemoteServiceMapModalProps {
   children: React.ReactNode;
   transformRequest?: mapboxgl.TransformRequestFunction;
   basemap?: BasemapType;
+  /** Optional content to render on top of the map (e.g. a legend) */
+  legendContent?: React.ReactNode;
+  /** Optional content to render centered at the bottom of the map (e.g. a call-to-action banner) */
+  bottomCenterContent?: React.ReactNode;
 }
 
 export default function AddRemoteServiceMapModal({
@@ -31,6 +35,8 @@ export default function AddRemoteServiceMapModal({
   children,
   transformRequest,
   basemap = "mapbox",
+  legendContent,
+  bottomCenterContent,
 }: AddRemoteServiceMapModalProps) {
   const slug = getSlug();
   const projectMetadataQuery = useProjectRegionQuery({
@@ -123,7 +129,7 @@ export default function AddRemoteServiceMapModal({
         });
       }
     }
-  }, [mapDiv, basemap, geographyData.data?.gmapssatellitesession?.session]);
+  }, [mapDiv, basemap, geographyData.data?.gmapssatellitesession?.session]); // eslint-disable-line react-hooks/exhaustive-deps
   return createPortal(
     <>
       <div
@@ -144,7 +150,19 @@ export default function AddRemoteServiceMapModal({
             <div className="bg-white border-r w-96 flex flex-col">
               {children}
             </div>
-            <div ref={setMapDiv} className={`bg-gray-50 flex-1`}></div>
+            <div className="relative flex-1 bg-gray-50">
+              <div ref={setMapDiv} className="absolute inset-0" />
+              {legendContent && (
+                <div className="absolute top-4 right-4 z-10">
+                  {legendContent}
+                </div>
+              )}
+              {bottomCenterContent && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
+                  {bottomCenterContent}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
