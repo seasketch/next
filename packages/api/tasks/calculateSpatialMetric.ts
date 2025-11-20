@@ -65,12 +65,28 @@ export default async function calculateSpatialMetric(
       metric.type === "count" ||
       metric.type === "presence" ||
       metric.type === "presence_table" ||
-      metric.type === "column_values"
+      metric.type === "column_values" ||
+      metric.type === "raster_stats"
     ) {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {
         return;
       } else {
+        let epsg: number | null = null;
+        if (metric.type === "raster_stats") {
+          epsg = await helpers.withPgClient(async (client) => {
+            const result = await client.query(
+              `select epsg from data_upload_outputs where url = $1 and is_reporting_type(type) limit 1`,
+              [metric.sourceUrl]
+            );
+            return result.rows[0]?.epsg || null;
+          });
+          if (!epsg) {
+            throw new Error(
+              `No EPSG found for source URL: ${metric.sourceUrl}`
+            );
+          }
+        }
         // delegate to overlay worker
         if (subjectIsFragment(metric.subject)) {
           const geobuf = await getGeobufForFragment(
@@ -88,6 +104,7 @@ export default async function calculateSpatialMetric(
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+            epsg,
             ...metric.parameters,
           } as OverlayWorkerPayload);
         } else {
@@ -106,6 +123,7 @@ export default async function calculateSpatialMetric(
             sourceUrl: metric.sourceUrl,
             sourceType: metric.sourceType,
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+            epsg,
             ...metric.parameters,
           });
         }

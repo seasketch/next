@@ -13,7 +13,8 @@ export type MetricType =
   | "count"
   | "presence"
   | "presence_table"
-  | "column_values";
+  | "column_values"
+  | "raster_stats";
 
 type MetricBase = {
   type: MetricType;
@@ -122,7 +123,7 @@ export type RasterBandStats = {
 
 export type RasterStats = OverlayMetricBase & {
   type: "raster_stats";
-  value: RasterBandStats[];
+  value: { bands: RasterBandStats[] };
 };
 
 export type Metric =
@@ -131,7 +132,8 @@ export type Metric =
   | CountMetric
   | PresenceMetric
   | PresenceTableMetric
-  | ColumnValuesMetric;
+  | ColumnValuesMetric
+  | RasterStats;
 
 export type MetricTypeMap = {
   total_area: TotalAreaMetric;
@@ -140,6 +142,7 @@ export type MetricTypeMap = {
   presence: PresenceMetric;
   presence_table: PresenceTableMetric;
   column_values: ColumnValuesMetric;
+  raster_stats: RasterStats;
 };
 
 export function subjectIsFragment(

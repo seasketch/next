@@ -10,6 +10,7 @@ import Skeleton from "../../components/Skeleton";
 import { useTranslation } from "react-i18next";
 import MapLayerVisibilityControl from "../components/MapLayerVisibilityControl";
 import { RasterInfoHistogram } from "../../admin/data/RasterInfoModal";
+import { RasterBandStats } from "overlay-engine/dist/metrics/metrics";
 
 export type RasterBandStatisticsCardConfiguration = ReportCardConfiguration<{
   /**
@@ -36,6 +37,7 @@ export function RasterBandStatisticsCard({
   config,
   loading,
   sources,
+  metrics,
 }: RasterBandStatisticsCardProps) {
   const { reportingLayers } = config;
   const { t } = useTranslation("reports");
@@ -49,6 +51,12 @@ export function RasterBandStatisticsCard({
     histogram: true,
   };
 
+  // Get metric data (statistics for the sketch area)
+  const metricBands = useMemo((): RasterBandStats[] | undefined => {
+    return metrics.find((m) => m.type === "raster_stats")?.value?.bands;
+  }, [metrics]);
+
+  // Get raster metadata (for band names, color interpretation, etc.)
   const rasterInfo = useMemo(() => {
     if (reportingLayers.length === 0) {
       return null;
@@ -96,7 +104,7 @@ export function RasterBandStatisticsCard({
           <Trans ns="reports">No layer selected.</Trans>
         </Warning>
       )}
-      {!loading && !rasterInfo && config.reportingLayers.length > 0 && (
+      {!loading && !metricBands && config.reportingLayers.length > 0 && (
         <div className="flex items-center space-x-2 py-2">
           <ValueNoneIcon className="w-4 h-4 text-red-800" />
           <span className="text-gray-700">
@@ -104,7 +112,7 @@ export function RasterBandStatisticsCard({
           </span>
         </div>
       )}
-      {rasterInfo && rasterInfo.bands.length > 0 && (
+      {metricBands && metricBands.length > 0 && (
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -140,84 +148,89 @@ export function RasterBandStatisticsCard({
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {rasterInfo.bands.map((band, index) => (
-                <tr key={index}>
-                  <td className="px-3 py-2 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      <div className="font-medium">
-                        {band.name ||
-                          t("Band {{number}}", { number: index + 1 })}
-                      </div>
-                      {band.colorInterpretation && (
-                        <div className="text-xs text-gray-500">
-                          {band.colorInterpretation}
-                        </div>
-                      )}
-                      {band.noDataValue !== null && (
-                        <div className="text-xs text-gray-500">
-                          <Trans ns="reports">
-                            No Data: {band.noDataValue}
-                          </Trans>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                  {displayStats.min && (
-                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                      {loading ? (
-                        <Skeleton className="w-16 h-4" />
-                      ) : (
-                        formatStatValue(band.minimum)
-                      )}
-                    </td>
-                  )}
-                  {displayStats.max && (
-                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                      {loading ? (
-                        <Skeleton className="w-16 h-4" />
-                      ) : (
-                        formatStatValue(band.maximum)
-                      )}
-                    </td>
-                  )}
-                  {displayStats.mean && (
-                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                      {loading ? (
-                        <Skeleton className="w-16 h-4" />
-                      ) : (
-                        formatStatValue(band.stats.mean)
-                      )}
-                    </td>
-                  )}
-                  {displayStats.stdev && (
-                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                      {loading ? (
-                        <Skeleton className="w-16 h-4" />
-                      ) : (
-                        formatStatValue(band.stats.stdev)
-                      )}
-                    </td>
-                  )}
-                  {displayStats.histogram && (
+              {metricBands.map((metricBand: RasterBandStats, index: number) => {
+                // Get metadata from rasterInfo if available, otherwise use defaults
+                const metadataBand = rasterInfo?.bands[index];
+                const bandName =
+                  metadataBand?.name ||
+                  t("Band {{number}}", { number: index + 1 });
+                const colorInterpretation = metadataBand?.colorInterpretation;
+                const noDataValue = metadataBand?.noDataValue;
+
+                return (
+                  <tr key={index}>
                     <td className="px-3 py-2 whitespace-nowrap">
-                      {loading ? (
-                        <Skeleton className="w-48 h-20" />
-                      ) : (
-                        <RasterInfoHistogram
-                          data={band.stats.histogram}
-                          min={band.minimum}
-                          max={band.maximum}
-                          count={band.count}
-                          colorInterpretation={band.colorInterpretation}
-                          width={200}
-                          height={60}
-                          className="rounded bg-gray-50 ring-1 ring-gray-400 overflow-hidden shadow-sm"
-                        />
-                      )}
+                      <div className="text-sm text-gray-900">
+                        <div className="font-medium">{bandName}</div>
+                        {colorInterpretation && (
+                          <div className="text-xs text-gray-500">
+                            {colorInterpretation}
+                          </div>
+                        )}
+                        {noDataValue !== null && noDataValue !== undefined && (
+                          <div className="text-xs text-gray-500">
+                            <Trans ns="reports">No Data: {noDataValue}</Trans>
+                          </div>
+                        )}
+                      </div>
                     </td>
-                  )}
-                </tr>
-              ))}
+                    {displayStats.min && (
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
+                        {loading ? (
+                          <Skeleton className="w-16 h-4" />
+                        ) : (
+                          formatStatValue(metricBand.min)
+                        )}
+                      </td>
+                    )}
+                    {displayStats.max && (
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
+                        {loading ? (
+                          <Skeleton className="w-16 h-4" />
+                        ) : (
+                          formatStatValue(metricBand.max)
+                        )}
+                      </td>
+                    )}
+                    {displayStats.mean && (
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
+                        {loading ? (
+                          <Skeleton className="w-16 h-4" />
+                        ) : (
+                          formatStatValue(metricBand.mean)
+                        )}
+                      </td>
+                    )}
+                    {displayStats.stdev && (
+                      <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
+                        {loading ? (
+                          <Skeleton className="w-16 h-4" />
+                        ) : (
+                          formatStatValue(metricBand.std)
+                        )}
+                      </td>
+                    )}
+                    {displayStats.histogram && (
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        {loading ? (
+                          <Skeleton className="w-48 h-20" />
+                        ) : (
+                          <RasterInfoHistogram
+                            data={metricBand.histogram}
+                            min={metricBand.min}
+                            max={metricBand.max}
+                            count={metricBand.count}
+                            colorInterpretation={colorInterpretation}
+                            width={200}
+                            height={60}
+                            className="rounded bg-gray-50 ring-1 ring-gray-400 overflow-hidden shadow-sm"
+                          />
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

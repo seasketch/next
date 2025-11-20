@@ -23,7 +23,8 @@ import { compareResults } from "./compareResults";
 import { WorkerPool } from "../../src/workers/pool";
 import simplify from "@turf/simplify";
 import { calculateRasterStats } from "../../src/rasterStats";
-const proj4 = require("proj4");
+import { reprojectFeatureTo6933 } from "../../src/utils/reproject";
+
 const insideBioregion = require("./sketches/Inside-bioregion-2.geojson.json");
 
 const naitaba = require("./sketches/Naitaba.geojson.json");
@@ -34,13 +35,6 @@ for (const metric of naitabaGeomorphologyMetrics) {
   naitabaGeomorphologyResults["*"] += metric.value / 1_000_000;
 }
 const ventsSketch = require("./sketches/Hydrothermal-vents.geojson.json");
-
-const WGS84 = "EPSG:4326";
-proj4.defs(
-  "EPSG:6933",
-  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs"
-);
-const to6933 = proj4(WGS84, "EPSG:6933");
 
 describe("sketchFragmentOverlap", () => {
   vi.setConfig({ testTimeout: 1000 * 10 });
@@ -758,59 +752,10 @@ describe("Raster metrics", () => {
     );
     const f = reprojectFeatureTo6933(prepared.feature);
     const stats = await calculateRasterStats(source, f);
+    console.log(stats);
     // console.log(stats[0].mean, stats[0].min, stats[0].max);
     expect(stats[0].mean).toBeCloseTo(-20.6666);
     expect(stats[0].min).toBeCloseTo(-207);
     expect(stats[0].max).toBeCloseTo(54);
   });
 });
-
-/**
- * Reproject a single GeoJSON geometry in-place or into a copy.
- * Handles Point, LineString, Polygon, Multi* and GeometryCollection.
- */
-function reprojectGeometry(geom, transform) {
-  const t = ([x, y]) => transform.forward([x, y]);
-
-  switch (geom.type) {
-    case "Point":
-      geom.coordinates = t(geom.coordinates);
-      break;
-    case "MultiPoint":
-    case "LineString":
-      geom.coordinates = geom.coordinates.map(t);
-      break;
-    case "MultiLineString":
-    case "Polygon":
-      geom.coordinates = geom.coordinates.map((ring) => ring.map(t));
-      break;
-    case "MultiPolygon":
-      geom.coordinates = geom.coordinates.map((poly) =>
-        poly.map((ring) => ring.map(t))
-      );
-      break;
-    case "GeometryCollection":
-      geom.geometries.forEach((g) => reprojectGeometry(g, transform));
-      break;
-    default:
-      throw new Error(`Unsupported geometry type: ${geom.type}`);
-  }
-  return geom;
-}
-
-/**
- * Reproject a GeoJSON Feature with Polygon geometry to EPSG:6933.
- */
-export function reprojectFeatureTo6933(feature) {
-  if (feature.type !== "Feature") {
-    throw new Error("Expected a GeoJSON Feature");
-  }
-  // shallow clone feature, reuse properties
-  const out = {
-    type: "Feature",
-    properties: feature.properties || {},
-    geometry: JSON.parse(JSON.stringify(feature.geometry)),
-  } as Feature<Polygon | MultiPolygon>;
-  reprojectGeometry(out.geometry, to6933);
-  return out;
-}

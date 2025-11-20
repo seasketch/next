@@ -2,6 +2,7 @@ import {
   calculateArea,
   calculateFragmentOverlap,
   calculateGeographyOverlap,
+  calculateRasterStats,
   Cql2Query,
   initializeGeographySources,
   MetricSubjectFragment,
@@ -40,6 +41,7 @@ import {
   GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
 } from "overlay-engine/src/utils/helpers";
+import { reprojectFeatureTo6933 } from "overlay-engine/src/utils/reproject";
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
   // 10 second timeout for body
@@ -258,6 +260,40 @@ export default async function handler(
           Date.now() - startTime
         );
         return;
+      }
+      case "raster_stats": {
+        if (!payload.sourceUrl) {
+          throw new Error("sourceUrl is required for raster_stats");
+        }
+        if (!payload.epsg) {
+          throw new Error("epsg is required for raster_stats");
+        }
+        if (payload.epsg !== 6933) {
+          throw new Error(
+            `Support for projection EPSG:${payload.epsg} not implemented in worker.`
+          );
+        }
+        const { intersectionFeature, differenceSources } =
+          await subjectsForAnalysis(
+            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+            helpers
+          );
+        if (subjectIsGeography(payload.subject)) {
+          throw new Error(
+            `raster_stats for geographies not implemented in worker yet.`
+          );
+        } else {
+          const f = reprojectFeatureTo6933(intersectionFeature);
+          const result = await calculateRasterStats(payload.sourceUrl, f);
+          await flushMessages();
+          await sendResultMessage(
+            payload.jobKey,
+            result,
+            payload.queueUrl,
+            Date.now() - startTime
+          );
+          return;
+        }
       }
       default:
         throw new Error(`Unknown payload type: ${(payload as any).type}`);

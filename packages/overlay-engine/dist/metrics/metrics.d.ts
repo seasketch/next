@@ -1,4 +1,4 @@
-export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values";
+export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats";
 type MetricBase = {
     type: MetricType;
     subject: MetricSubjectFragment | MetricSubjectGeography;
@@ -91,9 +91,11 @@ export type RasterBandStats = {
 };
 export type RasterStats = OverlayMetricBase & {
     type: "raster_stats";
-    value: RasterBandStats[];
+    value: {
+        bands: RasterBandStats[];
+    };
 };
-export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric;
+export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats;
 export type MetricTypeMap = {
     total_area: TotalAreaMetric;
     overlay_area: OverlayAreaMetric;
@@ -101,6 +103,7 @@ export type MetricTypeMap = {
     presence: PresenceMetric;
     presence_table: PresenceTableMetric;
     column_values: ColumnValuesMetric;
+    raster_stats: RasterStats;
 };
 export declare function subjectIsFragment(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
 export declare function subjectIsGeography(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
