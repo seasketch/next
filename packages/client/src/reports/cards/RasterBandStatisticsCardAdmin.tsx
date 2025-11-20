@@ -47,7 +47,9 @@ export default function RasterBandStatisticsCardAdmin({
   };
 
   const updateDisplayStats = (
-    statName: keyof NonNullable<AdminConfig["componentSettings"]>["displayStats"],
+    statName: keyof NonNullable<
+      AdminConfig["componentSettings"]["displayStats"]
+    >,
     enabled: boolean
   ) => {
     updateSettings({
@@ -98,7 +100,9 @@ export default function RasterBandStatisticsCardAdmin({
             </div>
             <Switch
               isToggled={Boolean(displayStats.mean)}
-              onClick={(enabled: boolean) => updateDisplayStats("mean", enabled)}
+              onClick={(enabled: boolean) =>
+                updateDisplayStats("mean", enabled)
+              }
             />
           </div>
           <div className="flex items-center justify-between">
@@ -136,4 +140,3 @@ export default function RasterBandStatisticsCardAdmin({
     </div>
   );
 }
-

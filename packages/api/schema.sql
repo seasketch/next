@@ -267,7 +267,8 @@ CREATE TYPE public.data_upload_output_type AS ENUM (
     'PNG',
     'XMLMetadata',
     'NetCDF',
-    'ReportingFlatgeobufV1'
+    'ReportingFlatgeobufV1',
+    'ReportingCOG'
 );
 
 
@@ -931,7 +932,9 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence',
     'presence_table',
     'contextualized_mean',
-    'overlay_area'
+    'overlay_area',
+    'column_values',
+    'raster_stats'
 );
 
 
@@ -2153,8 +2156,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
@@ -7418,7 +7421,8 @@ CREATE TABLE public.data_upload_outputs (
     original_filename text,
     is_custom_upload boolean DEFAULT false,
     fgb_header_size integer,
-    source_processing_job_key text
+    source_processing_job_key text,
+    epsg integer
 );
 
 
@@ -11540,57 +11544,6 @@ COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
 
 
 --
--- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-  draft_tab_id integer;
-  draft_tab_position integer;
-  draft_card_position integer;
-  sketch_class_id integer;
-  published_report_id integer;
-  published_tab_id integer;
-  published_card_id integer;
-BEGIN
-  -- Gather draft card/tab positions and sketch_class
-  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
-  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
-  FROM public.report_cards rc
-  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
-  JOIN public.reports r ON r.id = rt.report_id
-  WHERE rc.id = draft_report_card_id;
-
-  -- Determine the published report id
-  SELECT sc.report_id
-  INTO published_report_id
-  FROM public.sketch_classes sc
-  WHERE sc.id = sketch_class_id;
-
-  IF published_report_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  -- Match the tab by position in the published report
-  SELECT id
-  INTO published_tab_id
-  FROM public.report_tabs
-  WHERE report_id = published_report_id AND position = draft_tab_position;
-
-  -- Match the card by position within the matched tab
-  SELECT id
-  INTO published_card_id
-  FROM public.report_cards
-  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
-
-  RETURN published_card_id;
-END
-$$;
-
-
---
 -- Name: get_spatial_metric(bigint); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12353,6 +12306,17 @@ CREATE FUNCTION public.is_collection(sketch_class_id integer) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.is_collection(sketch_class_id integer) IS '@omit';
+
+
+--
+-- Name: is_reporting_type(public.data_upload_output_type); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.is_reporting_type(type public.data_upload_output_type) RETURNS boolean
+    LANGUAGE sql
+    AS $$
+  select type::text in ('ReportingCOG', 'ReportingFlatgeobufV1') as is_reporting_type;
+$$;
 
 
 --
@@ -15608,7 +15572,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
 
               -- copy data_upload_output with type = 'ReportingFlatgeobufV1' for the 
               -- published source replacing any that already exist.
-              delete from data_upload_outputs where data_source_id = published_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+              delete from data_upload_outputs where data_source_id = published_source_id and is_reporting_type(type);
 
               insert into data_upload_outputs (
                 data_source_id,
@@ -15638,7 +15602,7 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
                 fgb_header_size,
                 source_processing_job_key,
                 created_at
-              from data_upload_outputs where data_source_id = original_source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type order by created_at desc limit 1 returning id into published_data_upload_output_id;
+              from data_upload_outputs where data_source_id = original_source_id and is_reporting_type(type) order by created_at desc limit 1 returning id into published_data_upload_output_id;
               if published_data_upload_output_id is null then
                 raise exception 'published_data_upload_output_id is null. Are you attempting to publish a report that references layers that have not completed preprocessing?';
               end if;
@@ -16127,7 +16091,7 @@ CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preproce
       foreach source_job_key in array source_preprocessing_jobs loop
         select data_source_id into source_id from source_processing_jobs where job_key = source_job_key;
         if source_id is not null then
-          delete from data_upload_outputs where data_source_id = source_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type;
+          delete from data_upload_outputs where data_source_id = source_id and is_reporting_type(type);
         end if;
         perform retry_failed_source_processing_job(source_job_key);
       end loop;
@@ -16705,7 +16669,7 @@ CREATE TABLE public.report_card_layers (
 CREATE FUNCTION public.report_card_layers_processed_output(layer public.report_card_layers) RETURNS public.data_upload_outputs
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select * from data_upload_outputs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = layer.table_of_contents_item_id)) and type = 'ReportingFlatgeobufV1'::data_upload_output_type limit 1;
+    select * from data_upload_outputs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = layer.table_of_contents_item_id)) and is_reporting_type(type) limit 1;
   $$;
 
 
@@ -19986,23 +19950,6 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
--- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = stableId
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -20377,7 +20324,7 @@ CREATE FUNCTION public.trigger_queue_preprocess_source_on_rcl() RETURNS trigger
     
     -- if no ReportingFlatgeobufV1 data upload output exists for this data source,
     -- enqueue a preprocess job for this data source
-    if not exists (select 1 from data_upload_outputs where data_source_id = ds_id and type = 'ReportingFlatgeobufV1'::data_upload_output_type) then
+    if not exists (select 1 from data_upload_outputs where data_source_id = ds_id and is_reporting_type(type)) then
       insert into source_processing_jobs (data_source_id, project_id) values (ds_id, (select project_id from data_sources where id = ds_id)) on conflict do nothing returning job_key into source_processing_job_key;
       if source_processing_job_key is not null then
         PERFORM graphile_worker.add_job(
@@ -20415,7 +20362,7 @@ CREATE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete() RETURN
   BEGIN
     IF NEW.state = 'complete' AND (OLD.state IS NULL OR OLD.state != 'complete') THEN
       -- get the completed source url
-      select url into completed_source_url from data_upload_outputs where type = 'ReportingFlatgeobufV1'::data_upload_output_type and data_source_id = NEW.data_source_id limit 1;
+      select url into completed_source_url from data_upload_outputs where is_reporting_type(type) and data_source_id = NEW.data_source_id limit 1;
       if completed_source_url is null then
         raise exception 'Completed source url not found';
       end if;
@@ -22435,15 +22382,6 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
--- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.original_source_id (
-    data_source_id integer
-);
-
-
---
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -22635,15 +22573,6 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
-);
-
-
---
--- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.published_toc_item_id (
-    id integer
 );
 
 
@@ -25108,13 +25037,6 @@ CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR 
 
 
 --
--- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
-
-
---
 -- Name: invite_emails before_invite_emails_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -25749,7 +25671,7 @@ ALTER TABLE ONLY public.data_upload_outputs
 --
 
 ALTER TABLE ONLY public.data_upload_outputs
-    ADD CONSTRAINT data_upload_outputs_source_processing_job_key_fkey FOREIGN KEY (source_processing_job_key) REFERENCES public.source_processing_jobs(job_key) ON DELETE CASCADE;
+    ADD CONSTRAINT data_upload_outputs_source_processing_job_key_fkey FOREIGN KEY (source_processing_job_key) REFERENCES public.source_processing_jobs(job_key) ON DELETE SET NULL;
 
 
 --
@@ -27385,6 +27307,12 @@ ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
+
+--
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -29157,17 +29085,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -32198,6 +32126,7 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -33125,14 +33054,6 @@ GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
 
 
 --
--- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
-
-
---
 -- Name: FUNCTION get_spatial_metric(metric_id bigint); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33382,6 +33303,14 @@ REVOKE ALL ON FUNCTION public.is_contained_2d(public.box2df, public.geometry) FR
 --
 
 REVOKE ALL ON FUNCTION public.is_contained_2d(public.geometry, public.box2df) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION is_reporting_type(type public.data_upload_output_type); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.is_reporting_type(type public.data_upload_output_type) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.is_reporting_type(type public.data_upload_output_type) TO anon;
 
 
 --
@@ -39072,13 +39001,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) TO anon;
-
-
---
--- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
 
 
 --

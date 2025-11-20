@@ -195,7 +195,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                   const epsg = obj.epsg || null;
                   await pgPool.query(
                     `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key, epsg)
-                     values ($1, 'ReportingFlatgeobufV1', $2, $3, $4, $5, false, $6, $4, $7, $8)
+                     values ($1, $9, $2, $3, $4, $5, false, $6, $4, $7, $8)
                     `,
                     [
                       data_source_id,
@@ -206,6 +206,9 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                       project_id,
                       jobKey,
                       epsg,
+                      (obj.key as string).endsWith(".fgb")
+                        ? "ReportingFlatgeobufV1"
+                        : "ReportingCOG",
                     ]
                   );
                   await pgPool.query(

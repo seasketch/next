@@ -294,7 +294,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               data_sources s
             inner join data_layers l on l.data_source_id = s.id
             inner join table_of_contents_items items on items.data_layer_id = l.id
-            left join data_upload_outputs o on o.data_source_id = s.id and o.type = 'ReportingFlatgeobufV1'
+            left join data_upload_outputs o on o.data_source_id = s.id and is_reporting_type(o.type)
             where
               s.id = $1
           `,
@@ -353,7 +353,7 @@ async function getOverlaySources(reportId: number, pool: Pool) {
       inner join data_layers dl on dl.id = t.data_layer_id
       inner join data_sources ds on ds.id = dl.data_source_id
       left join source_processing_jobs spj on spj.data_source_id = ds.id
-      left join data_upload_outputs duo on duo.data_source_id = ds.id and duo.type = 'ReportingFlatgeobufV1'
+      left join data_upload_outputs duo on duo.data_source_id = ds.id and is_reporting_type(duo.type)
       where 
         report_card_id in (select report_card_ids_for_report($1))
       `,
