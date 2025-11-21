@@ -67,6 +67,7 @@ export type OverlayWorkerPayload = {
         jobKey: string;
         subject: Omit<EnhanceSubject<S>, "geographies" | "sketches">;
         queueUrl: string;
+        epsg?: number;
     } : never : never;
 }[keyof MetricTypeMap];
 export type OverlayWorkerResponse = {

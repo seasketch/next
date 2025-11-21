@@ -93,7 +93,6 @@ export default async function calculateSpatialMetric(
             metric.subject.hash,
             helpers
           );
-          console.log("metric.parameters", metric.parameters);
           await callOverlayWorker({
             type: metric.type,
             jobKey: metric.jobKey,
@@ -148,7 +147,7 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
   return await helpers.withPgClient(async (client) => {
     const result = await client.query(
       `SELECT 
-        encode(ST_AsGeoBuf(fragments.*), 'base64') AS geobuf 
+        encode(ST_AsGeoBuf(fragments.*), 'base64') AS geobuf
       FROM fragments 
       WHERE hash = $1 limit 1`,
       [fragmentHash]

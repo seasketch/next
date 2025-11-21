@@ -13,7 +13,7 @@ type AdminConfig = ReportCardConfiguration<{
     min?: boolean;
     max?: boolean;
     mean?: boolean;
-    stdev?: boolean;
+    sum?: boolean;
     histogram?: boolean;
   };
 }>;
@@ -36,7 +36,7 @@ export default function RasterBandStatisticsCardAdmin({
     min: true,
     max: true,
     mean: true,
-    stdev: true,
+    sum: true,
     histogram: true,
   };
 
@@ -108,13 +108,13 @@ export default function RasterBandStatisticsCardAdmin({
           <div className="flex items-center justify-between">
             <div>
               <label className="text-sm font-medium text-gray-900">
-                {t("Standard Deviation")}
+                {t("Sum")}
               </label>
             </div>
             <Switch
-              isToggled={Boolean(displayStats.stdev)}
+              isToggled={Boolean(displayStats.sum)}
               onClick={(enabled: boolean) =>
-                updateDisplayStats("stdev", enabled)
+                updateDisplayStats("sum", enabled)
               }
             />
           </div>
@@ -140,3 +140,4 @@ export default function RasterBandStatisticsCardAdmin({
     </div>
   );
 }
+

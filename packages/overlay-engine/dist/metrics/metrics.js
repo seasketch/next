@@ -34,6 +34,7 @@ function computeStatsFromIdentifiedValues(identifiedValues) {
             histogram: [],
             count: 0,
             countDistinct: 0,
+            sum: 0,
             values: [],
         };
     }
@@ -47,6 +48,7 @@ function computeStatsFromIdentifiedValues(identifiedValues) {
         histogram: equalIntervalBuckets(values, 49),
         count: values.length,
         countDistinct: distinctValues.length,
+        sum: values.reduce((acc, v) => acc + v, 0),
         values: Array.from(distinctValues).slice(0, 100),
     };
 }

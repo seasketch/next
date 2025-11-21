@@ -17,6 +17,8 @@ import {
 } from "../../src/utils/helpers";
 import { compareResults } from "./compareResults";
 import simplify from "@turf/simplify";
+import { reprojectFeatureTo6933 } from "../../src/utils/reproject";
+import { calculateRasterStats } from "../../src/rasterStats";
 
 // const writer = new DebuggingFgbWriter("./classified-features.fgb", [
 //   { name: "classification", type: "string" },
@@ -285,6 +287,22 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         );
         const results = await processor.calculate();
         expect(results).toBe(true);
+      });
+    });
+
+    describe("Raster metrics", () => {
+      it("Should calculate raster stats", async () => {
+        const {
+          intersectionFeature: intersectionFeatureGeojson,
+          differenceSources,
+        } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
+          pageSize: "5MB",
+        });
+        const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
+        // const source = "https://uploads.seasketch.org/gebco-cog.tif";
+        const f = reprojectFeatureTo6933(intersectionFeatureGeojson);
+        const stats = await calculateRasterStats(source, f);
+        expect(stats.bands[0].count).toBeCloseTo(8130600);
       });
     });
   });

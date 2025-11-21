@@ -51,6 +51,7 @@ const lru_cache_1 = require("lru-cache");
 const OverlayEngineBatchProcessor_1 = require("overlay-engine/src/OverlayEngineBatchProcessor");
 const simplify_1 = __importDefault(require("@turf/simplify"));
 const helpers_1 = require("overlay-engine/src/utils/helpers");
+const reproject_1 = require("overlay-engine/src/utils/reproject");
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
@@ -190,6 +191,29 @@ async function handler(payload) {
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
                 return;
             }
+            case "raster_stats": {
+                if (!payload.sourceUrl) {
+                    throw new Error("sourceUrl is required for raster_stats");
+                }
+                if (!payload.epsg) {
+                    throw new Error("epsg is required for raster_stats");
+                }
+                if (payload.epsg !== 6933) {
+                    throw new Error(`Support for projection EPSG:${payload.epsg} not implemented in worker.`);
+                }
+                const { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
+                // if (subjectIsGeography(payload.subject)) {
+                //   throw new Error(
+                //     `raster_stats for geographies not implemented in worker yet.`
+                //   );
+                // } else {
+                const f = (0, reproject_1.reprojectFeatureTo6933)(intersectionFeature);
+                const result = await (0, overlay_engine_1.calculateRasterStats)(payload.sourceUrl, f);
+                await (0, messaging_1.flushMessages)();
+                await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
+                return;
+                // }
+            }
             default:
                 throw new Error(`Unknown payload type: ${payload.type}`);
         }
@@ -197,7 +221,11 @@ async function handler(payload) {
     catch (e) {
         console.log("caught error in overlay worker", e);
         console.error(e);
-        await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error ? e.message : "Unknown error", payload.queueUrl);
+        await (0, messaging_1.sendErrorMessage)(payload.jobKey, e instanceof Error
+            ? e.message
+            : typeof e === "string"
+                ? e
+                : "Unknown error", payload.queueUrl);
         // throw e;
     }
     finally {

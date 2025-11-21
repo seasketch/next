@@ -118,8 +118,7 @@ export default function ReportTaskLineItem({
       )}
       {state === SpatialMetricState.Complete &&
         value !== null &&
-        value !== undefined &&
-        isAdmin && (
+        value !== undefined && (
           <div>
             <div className="font-semibold text-white mb-1">{t("Value")}</div>
             <JSONPreview value={value} />

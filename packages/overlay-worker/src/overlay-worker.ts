@@ -278,22 +278,22 @@ export default async function handler(
             payload.subject as MetricSubjectFragment | MetricSubjectGeography,
             helpers
           );
-        if (subjectIsGeography(payload.subject)) {
-          throw new Error(
-            `raster_stats for geographies not implemented in worker yet.`
-          );
-        } else {
-          const f = reprojectFeatureTo6933(intersectionFeature);
-          const result = await calculateRasterStats(payload.sourceUrl, f);
-          await flushMessages();
-          await sendResultMessage(
-            payload.jobKey,
-            result,
-            payload.queueUrl,
-            Date.now() - startTime
-          );
-          return;
-        }
+        // if (subjectIsGeography(payload.subject)) {
+        //   throw new Error(
+        //     `raster_stats for geographies not implemented in worker yet.`
+        //   );
+        // } else {
+        const f = reprojectFeatureTo6933(intersectionFeature);
+        const result = await calculateRasterStats(payload.sourceUrl, f);
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          result,
+          payload.queueUrl,
+          Date.now() - startTime
+        );
+        return;
+        // }
       }
       default:
         throw new Error(`Unknown payload type: ${(payload as any).type}`);
@@ -303,7 +303,11 @@ export default async function handler(
     console.error(e);
     await sendErrorMessage(
       payload.jobKey,
-      e instanceof Error ? e.message : "Unknown error",
+      e instanceof Error
+        ? e.message
+        : typeof e === "string"
+        ? e
+        : "Unknown error",
       payload.queueUrl
     );
     // throw e;

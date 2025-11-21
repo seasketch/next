@@ -17,6 +17,7 @@ type AdminConfig = ReportCardConfiguration<{
     stdDev?: boolean;
     count?: boolean;
     countDistinct?: boolean;
+    sum?: boolean;
   };
 }>;
 
@@ -141,6 +142,19 @@ export default function ColumnStatisticsCardAdmin({
               isToggled={Boolean(displayStats.count)}
               onClick={(enabled: boolean) =>
                 updateDisplayStats("count", enabled)
+              }
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="text-sm font-medium text-gray-900">
+                {t("Sum")}
+              </label>
+            </div>
+            <Switch
+              isToggled={Boolean(displayStats.sum)}
+              onClick={(enabled: boolean) =>
+                updateDisplayStats("sum", enabled)
               }
             />
           </div>

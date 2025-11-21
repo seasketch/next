@@ -33,6 +33,7 @@ export type ColumnStatisticsCardConfiguration = ReportCardConfiguration<{
     stdDev?: boolean;
     count?: boolean;
     countDistinct?: boolean;
+    sum?: boolean;
   };
 }>;
 
@@ -95,6 +96,7 @@ export function ColumnStatisticsCard({
           m.parameters?.valueColumn
       );
 
+      console.log("fragmentMetrics", fragmentMetrics);
       // Collect IdentifiedValues by groupBy value across all fragments
       const valuesByClass: { [classKey: string]: IdentifiedValues[] } = {};
       for (const metric of fragmentMetrics) {
@@ -278,6 +280,11 @@ export function ColumnStatisticsCard({
                     <Trans ns="reports">Mean</Trans>
                   </th>
                 )}
+                {displayStats.sum && (
+                  <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <Trans ns="reports">Sum</Trans>
+                  </th>
+                )}
                 {displayStats.median && (
                   <th className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <Trans ns="reports">Median</Trans>
@@ -351,6 +358,22 @@ export function ColumnStatisticsCard({
                         <Skeleton className="w-16 h-4" />
                       ) : (
                         formatStatValue(getStatValue(row.stats, "mean"))
+                      )}
+                    </td>
+                  )}
+                  {displayStats.sum && "sum" in row.stats && (
+                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
+                      {loading ? (
+                        <Skeleton className="w-16 h-4" />
+                      ) : (
+                        formatStatValue(
+                          getStatValue(
+                            row.stats,
+                            "sum" as keyof ReturnType<
+                              typeof computeStatsFromIdentifiedValues
+                            >
+                          )
+                        )
                       )}
                     </td>
                   )}

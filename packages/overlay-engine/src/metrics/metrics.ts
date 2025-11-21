@@ -111,19 +111,32 @@ export type RasterBandStats = {
   max: number;
   mean: number;
   median: number;
-  mode: number;
-  modes: number[];
   range: number;
-  histogram: [number, number | null][];
+  /**
+   * [value, count]. Note that histogram length will be restricted to a maximum
+   * number of entries, so not every value will be represented, though the
+   * overall distribution will be preserved.
+   */
+  histogram: [number, number];
   // count of no-data and invalid values
   invalid: number;
-  std: number;
   sum: number;
 };
 
+/**
+ * It is important to note that results could be spread across multiple
+ * fragments, and multiple sketches in a collection. Clients will need to
+ * combine these statistics in a thoughtful way, such as weighing mean values by
+ * count.
+ */
 export type RasterStats = OverlayMetricBase & {
   type: "raster_stats";
-  value: { bands: RasterBandStats[] };
+  value: {
+    /**
+     * Note that if there is no overlap with raster pixels, bands will be empty.
+     */
+    bands: RasterBandStats[];
+  };
 };
 
 export type Metric =
@@ -175,6 +188,7 @@ export function computeStatsFromIdentifiedValues(
   histogram: [number, number | null][];
   count: number;
   countDistinct: number;
+  sum: number;
   values: number[];
 } {
   // De-duplicate by __oidx (first element of tuple), keeping the first occurrence
@@ -197,6 +211,7 @@ export function computeStatsFromIdentifiedValues(
       histogram: [],
       count: 0,
       countDistinct: 0,
+      sum: 0,
       values: [],
     };
   }
@@ -212,6 +227,7 @@ export function computeStatsFromIdentifiedValues(
     histogram: equalIntervalBuckets(values, 49),
     count: values.length,
     countDistinct: distinctValues.length,
+    sum: values.reduce((acc, v) => acc + v, 0),
     values: Array.from(distinctValues).slice(0, 100),
   };
 }

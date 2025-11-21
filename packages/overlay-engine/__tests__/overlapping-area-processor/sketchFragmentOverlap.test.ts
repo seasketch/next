@@ -745,17 +745,15 @@ describe("sketchFragmentOverlap", () => {
 
 describe("Raster metrics", () => {
   it("Should calculate raster stats", async () => {
-    // const source = "https://uploads.seasketch.org/fiji_GEBCO_bathymetry.tif";
     const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
+    // const source = "https://uploads.seasketch.org/gebco-cog.tif";
     const prepared = prepareSketch(
       require("./sketches/Kanacea-Island.geojson.json")
     );
     const f = reprojectFeatureTo6933(prepared.feature);
     const stats = await calculateRasterStats(source, f);
-    console.log(stats);
-    // console.log(stats[0].mean, stats[0].min, stats[0].max);
-    expect(stats[0].mean).toBeCloseTo(-20.6666);
-    expect(stats[0].min).toBeCloseTo(-207);
-    expect(stats[0].max).toBeCloseTo(54);
+    expect(stats.bands[0].mean).toBeCloseTo(-20.6666);
+    expect(stats.bands[0].min).toBeCloseTo(-207);
+    expect(stats.bands[0].max).toBeCloseTo(54);
   });
 });

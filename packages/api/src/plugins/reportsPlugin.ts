@@ -648,8 +648,8 @@ async function getOrCreateReportDependencies(
             "raster_stats",
             overlaySource,
             layer.layerParameters,
-            [],
-            // geogs.map((g) => g.id),
+            // [],
+            geogs.map((g) => g.id),
             fragments,
             projectId
           );
