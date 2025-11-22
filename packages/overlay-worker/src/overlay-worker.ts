@@ -1,5 +1,6 @@
 import {
   calculateArea,
+  calculateDistanceToShore,
   calculateFragmentOverlap,
   calculateGeographyOverlap,
   calculateRasterStats,
@@ -294,6 +295,38 @@ export default async function handler(
         );
         return;
         // }
+      }
+      case "distance_to_shore": {
+        console.log("distance_to_shore", payload);
+        if (!payload.sourceUrl) {
+          throw new Error("sourceUrl is required for distance_to_shore");
+        }
+        if (subjectIsGeography(payload.subject)) {
+          throw new Error("distance_to_shore for geographies not implemented.");
+        }
+        const { intersectionFeature, differenceSources } =
+          await subjectsForAnalysis(
+            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+            helpers
+          );
+        const source = await sourceCache.get<Feature<Polygon>>(
+          payload.sourceUrl,
+          {
+            pageSize: "5MB",
+          }
+        );
+        const result = await calculateDistanceToShore(
+          intersectionFeature,
+          source
+        );
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          result,
+          payload.queueUrl,
+          Date.now() - startTime
+        );
+        return;
       }
       default:
         throw new Error(`Unknown payload type: ${(payload as any).type}`);

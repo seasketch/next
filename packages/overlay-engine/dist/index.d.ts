@@ -9,4 +9,5 @@ export { Metric, MetricType, TotalAreaMetric, OverlayAreaMetric, CountMetric, Pr
 export { createUniqueIdIndex, countUniqueIds, mergeUniqueIdIndexes, } from "./utils/uniqueIdIndex";
 export { initializeGeographySources } from "./geographies/geographies";
 export { calculateRasterStats } from "./rasterStats";
+export { calculateDistanceToShore } from "./calculateDistanceToShore";
 //# sourceMappingURL=index.d.ts.map

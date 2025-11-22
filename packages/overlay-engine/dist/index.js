@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateRasterStats = exports.initializeGeographySources = exports.mergeUniqueIdIndexes = exports.countUniqueIds = exports.createUniqueIdIndex = exports.computeStatsFromIdentifiedValues = exports.subjectIsGeography = exports.subjectIsFragment = exports.calculateFragmentOverlap = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.calculateGeographyOverlap = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
+exports.calculateDistanceToShore = exports.calculateRasterStats = exports.initializeGeographySources = exports.mergeUniqueIdIndexes = exports.countUniqueIds = exports.createUniqueIdIndex = exports.computeStatsFromIdentifiedValues = exports.subjectIsGeography = exports.subjectIsFragment = exports.calculateFragmentOverlap = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.calculateGeographyOverlap = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
 var prepareSketch_1 = require("./utils/prepareSketch");
 Object.defineProperty(exports, "prepareSketch", { enumerable: true, get: function () { return prepareSketch_1.prepareSketch; } });
 var unionAtAntimeridian_1 = require("./utils/unionAtAntimeridian");
@@ -30,4 +30,6 @@ var geographies_2 = require("./geographies/geographies");
 Object.defineProperty(exports, "initializeGeographySources", { enumerable: true, get: function () { return geographies_2.initializeGeographySources; } });
 var rasterStats_1 = require("./rasterStats");
 Object.defineProperty(exports, "calculateRasterStats", { enumerable: true, get: function () { return rasterStats_1.calculateRasterStats; } });
+var calculateDistanceToShore_1 = require("./calculateDistanceToShore");
+Object.defineProperty(exports, "calculateDistanceToShore", { enumerable: true, get: function () { return calculateDistanceToShore_1.calculateDistanceToShore; } });
 //# sourceMappingURL=index.js.map

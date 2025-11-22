@@ -66,7 +66,8 @@ export default async function calculateSpatialMetric(
       metric.type === "presence" ||
       metric.type === "presence_table" ||
       metric.type === "column_values" ||
-      metric.type === "raster_stats"
+      metric.type === "raster_stats" ||
+      metric.type === "distance_to_shore"
     ) {
       // If there is no processed source URL yet, do nothing. The preprocessSource task/trigger will handle it.
       if (!metric.sourceUrl) {

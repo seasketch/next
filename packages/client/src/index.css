@@ -10355,6 +10355,10 @@ select{
   line-height:1.25
 }
 
+.leading-\[24px\]{
+  line-height:24px
+}
+
 .tracking-tight{
   letter-spacing:-0.025em
 }

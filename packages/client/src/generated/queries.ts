@@ -14822,6 +14822,7 @@ export enum SpatialMetricType {
   ColumnValues = 'COLUMN_VALUES',
   ContextualizedMean = 'CONTEXTUALIZED_MEAN',
   Count = 'COUNT',
+  DistanceToShore = 'DISTANCE_TO_SHORE',
   OverlayArea = 'OVERLAY_AREA',
   Presence = 'PRESENCE',
   PresenceTable = 'PRESENCE_TABLE',

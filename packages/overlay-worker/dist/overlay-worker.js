@@ -214,6 +214,23 @@ async function handler(payload) {
                 return;
                 // }
             }
+            case "distance_to_shore": {
+                console.log("distance_to_shore", payload);
+                if (!payload.sourceUrl) {
+                    throw new Error("sourceUrl is required for distance_to_shore");
+                }
+                if (subjectIsGeography(payload.subject)) {
+                    throw new Error("distance_to_shore for geographies not implemented.");
+                }
+                const { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
+                const source = await sourceCache.get(payload.sourceUrl, {
+                    pageSize: "5MB",
+                });
+                const result = await (0, overlay_engine_1.calculateDistanceToShore)(intersectionFeature, source);
+                await (0, messaging_1.flushMessages)();
+                await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
+                return;
+            }
             default:
                 throw new Error(`Unknown payload type: ${payload.type}`);
         }

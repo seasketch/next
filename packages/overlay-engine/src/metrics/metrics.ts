@@ -1,3 +1,4 @@
+import { LineString } from "geojson";
 import {
   min,
   max,
@@ -14,7 +15,8 @@ export type MetricType =
   | "presence"
   | "presence_table"
   | "column_values"
-  | "raster_stats";
+  | "raster_stats"
+  | "distance_to_shore";
 
 type MetricBase = {
   type: MetricType;
@@ -139,6 +141,14 @@ export type RasterStats = OverlayMetricBase & {
   };
 };
 
+export type DistanceToShoreMetric = OverlayMetricBase & {
+  type: "distance_to_shore";
+  value: {
+    meters: number;
+    geojsonLine: LineString;
+  };
+};
+
 export type Metric =
   | TotalAreaMetric
   | OverlayAreaMetric
@@ -146,7 +156,8 @@ export type Metric =
   | PresenceMetric
   | PresenceTableMetric
   | ColumnValuesMetric
-  | RasterStats;
+  | RasterStats
+  | DistanceToShoreMetric;
 
 export type MetricTypeMap = {
   total_area: TotalAreaMetric;
@@ -156,6 +167,7 @@ export type MetricTypeMap = {
   presence_table: PresenceTableMetric;
   column_values: ColumnValuesMetric;
   raster_stats: RasterStats;
+  distance_to_shore: DistanceToShoreMetric;
 };
 
 export function subjectIsFragment(

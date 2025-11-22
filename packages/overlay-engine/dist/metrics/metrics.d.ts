@@ -1,4 +1,5 @@
-export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats";
+import { LineString } from "geojson";
+export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore";
 type MetricBase = {
     type: MetricType;
     subject: MetricSubjectFragment | MetricSubjectGeography;
@@ -106,7 +107,14 @@ export type RasterStats = OverlayMetricBase & {
         bands: RasterBandStats[];
     };
 };
-export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats;
+export type DistanceToShoreMetric = OverlayMetricBase & {
+    type: "distance_to_shore";
+    value: {
+        meters: number;
+        geojsonLine: LineString;
+    };
+};
+export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats | DistanceToShoreMetric;
 export type MetricTypeMap = {
     total_area: TotalAreaMetric;
     overlay_area: OverlayAreaMetric;
@@ -115,6 +123,7 @@ export type MetricTypeMap = {
     presence_table: PresenceTableMetric;
     column_values: ColumnValuesMetric;
     raster_stats: RasterStats;
+    distance_to_shore: DistanceToShoreMetric;
 };
 export declare function subjectIsFragment(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
 export declare function subjectIsGeography(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;

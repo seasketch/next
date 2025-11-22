@@ -48,3 +48,4 @@ export {
 } from "./utils/uniqueIdIndex";
 export { initializeGeographySources } from "./geographies/geographies";
 export { calculateRasterStats } from "./rasterStats";
+export { calculateDistanceToShore } from "./calculateDistanceToShore";

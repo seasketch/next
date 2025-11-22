@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 import { makeFetchRangeFn } from "../../scripts/optimizedFetchRangeFn";
-import { SourceCache } from "fgb-source";
+import { createSource, SourceCache } from "fgb-source";
 import {
   ClippingFn,
   ClippingLayerOption,
@@ -24,6 +24,7 @@ import { WorkerPool } from "../../src/workers/pool";
 import simplify from "@turf/simplify";
 import { calculateRasterStats } from "../../src/rasterStats";
 import { reprojectFeatureTo6933 } from "../../src/utils/reproject";
+import { calculateDistanceToShore } from "../../src/calculateDistanceToShore";
 
 const insideBioregion = require("./sketches/Inside-bioregion-2.geojson.json");
 
@@ -755,5 +756,25 @@ describe("Raster metrics", () => {
     expect(stats.bands[0].mean).toBeCloseTo(-20.6666);
     expect(stats.bands[0].min).toBeCloseTo(-207);
     expect(stats.bands[0].max).toBeCloseTo(54);
+  });
+});
+
+describe("Distance to shore metrics", () => {
+  it("Should calculate distance to shore", async () => {
+    const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    const source = await createSource<Feature<Polygon>>(sourceUrl);
+    const prepared = prepareSketch(
+      require("./sketches/Kanacea-Island.geojson.json")
+    );
+
+    const result = await calculateDistanceToShore(prepared.feature, source);
+    expect(result.meters).toBe(0);
+    const offshoreNorth = prepareSketch(
+      require("./sketches/Offshore-North.geojson.json")
+    ).feature;
+    const result2 = await calculateDistanceToShore(offshoreNorth, source);
+    console.log("distance2", result2);
+    expect(result2.meters).toBeGreaterThan(0);
+    expect(result2.meters).toBeLessThan(190000);
   });
 });

@@ -1,6 +1,7 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
+import { MetricType } from "overlay-engine";
 import { Pool } from "pg";
 
 const geographyMetricTopicFromContext = async (args: any, context: any) => {
@@ -648,7 +649,6 @@ async function getOrCreateReportDependencies(
             "raster_stats",
             overlaySource,
             layer.layerParameters,
-            // [],
             geogs.map((g) => g.id),
             fragments,
             projectId
@@ -657,6 +657,21 @@ async function getOrCreateReportDependencies(
           results.metrics.push(...metrics);
         }
         break;
+      }
+      case "DistanceToShore": {
+        const metrics = await getOrCreateMetricsOfType(
+          pool,
+          "distance_to_shore",
+          {
+            sourceUrl: "https://uploads.seasketch.org/land-big-2.fgb",
+          } as ReportOverlaySourcePartial,
+          {},
+          [],
+          fragments,
+          projectId
+        );
+        cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+        results.metrics.push(...metrics);
       }
       default:
         // do nothing. some cards like sketchAttributes do not have dependencies
@@ -678,7 +693,6 @@ async function getOrCreateSpatialMetric(
   sourceProcessingJobDependency: string | null,
   projectId: number
 ) {
-  console.log("parameters", parameters);
   const result = await pool.query(
     `
     select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int) as metric
@@ -698,13 +712,7 @@ async function getOrCreateSpatialMetric(
 
 async function getOrCreateMetricsOfType(
   pool: Pool,
-  type:
-    | "overlay_area"
-    | "count"
-    | "presence"
-    | "presence_table"
-    | "column_values"
-    | "raster_stats",
+  type: MetricType,
   overlaySource: ReportOverlaySourcePartial,
   parameters:
     | {

@@ -19,7 +19,8 @@ export type ReportCardType =
   | "Presence"
   | "FeatureList"
   | "ColumnStatistics"
-  | "RasterBandStatistics";
+  | "RasterBandStatistics"
+  | "DistanceToShore";
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
  * used to render a card in a report. It is used to determine the type of card,
@@ -154,6 +155,7 @@ export function registerCards() {
   import("./FeatureListCard");
   import("./ColumnStatisticsCard");
   import("./RasterBandStatisticsCard");
+  import("./DistanceToShoreCard");
 }
 
 /**
