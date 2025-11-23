@@ -44,7 +44,7 @@ type LayerType =
   | "heatmap"
   | "heatmap+points";
 
-interface INaturalistLayerConfig {
+type INaturalistLayerConfig = {
   projectId: string | null;
   taxonIds: number[];
   d1: string | null;
@@ -55,7 +55,7 @@ interface INaturalistLayerConfig {
   type: LayerType;
   zoomCutoff: number;
   showCallToAction: boolean;
-}
+};
 
 const INATURALIST_LEGEND_STATE_KEY = "inaturalist-legend-collapsed";
 
