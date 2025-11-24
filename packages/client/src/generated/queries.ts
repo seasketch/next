@@ -1666,6 +1666,43 @@ export type CreateGroupPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `createInaturalistTableOfContentsItem` mutation. */
+export type CreateInaturalistTableOfContentsItemInput = {
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  metadata?: Maybe<Scalars['JSON']>;
+  params?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createInaturalistTableOfContentsItem` mutation. */
+export type CreateInaturalistTableOfContentsItemPayload = {
+  __typename?: 'CreateInaturalistTableOfContentsItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `createInaturalistTableOfContentsItem` mutation. */
+export type CreateInaturalistTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the create `InteractivitySetting` mutation. */
 export type CreateInteractivitySettingInput = {
   /**
@@ -3243,6 +3280,8 @@ export enum DataSourceTypes {
   Geojson = 'GEOJSON',
   /** MapBox GL Style "image" source */
   Image = 'IMAGE',
+  /** Data source is iNaturalist data, available via their map services api. Refer to query_parameters for request parameters. */
+  Inaturalist = 'INATURALIST',
   /** MapBox GL Style "raster" source */
   Raster = 'RASTER',
   /** MapBox GL Style "raster" source */
@@ -7696,6 +7735,7 @@ export type Mutation = {
   createGeographyClippingLayer?: Maybe<CreateGeographyClippingLayerPayload>;
   /** Creates a single `Group`. */
   createGroup?: Maybe<CreateGroupPayload>;
+  createInaturalistTableOfContentsItem?: Maybe<CreateInaturalistTableOfContentsItemPayload>;
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
   createMapBookmark?: Maybe<CreateMapBookmarkPayload>;
@@ -8491,6 +8531,12 @@ export type MutationCreateGeographyClippingLayerArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateGroupArgs = {
   input: CreateGroupInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateInaturalistTableOfContentsItemArgs = {
+  input: CreateInaturalistTableOfContentsItemInput;
 };
 
 
@@ -20780,6 +20826,26 @@ export type DraftTableOfContentsItemsForPickerQuery = (
   )> }
 );
 
+export type CreateINaturalistTableOfContentsItemMutationVariables = Exact<{
+  slug: Scalars['String'];
+  params: Scalars['JSON'];
+  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
+  title: Scalars['String'];
+  metadata?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type CreateINaturalistTableOfContentsItemMutation = (
+  { __typename?: 'Mutation' }
+  & { createInaturalistTableOfContentsItem?: Maybe<(
+    { __typename?: 'CreateInaturalistTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & FullAdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -28573,6 +28639,17 @@ export const DraftTableOfContentsItemsForPickerDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const CreateINaturalistTableOfContentsItemDocument = /*#__PURE__*/ gql`
+    mutation createINaturalistTableOfContentsItem($slug: String!, $params: JSON!, $bounds: [BigFloat]!, $title: String!, $metadata: JSON) {
+  createInaturalistTableOfContentsItem(
+    input: {slug: $slug, params: $params, bounds: $bounds, title: $title, metadata: $metadata}
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -31310,6 +31387,7 @@ export const namedOperations = {
     SetProjectDataHostingRetentionPeriod: 'SetProjectDataHostingRetentionPeriod',
     CopyDataLibraryTemplate: 'CopyDataLibraryTemplate',
     DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
+    createINaturalistTableOfContentsItem: 'createINaturalistTableOfContentsItem',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

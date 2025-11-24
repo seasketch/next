@@ -1,15 +1,21 @@
 import { Trans, useTranslation } from "react-i18next";
 import AddRemoteServiceMapModal from "./AddRemoteServiceMapModal";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import { Map, Popup } from "mapbox-gl";
 import Switch from "../../components/Switch";
 import Warning from "../../components/Warning";
+import Spinner from "../../components/Spinner";
 import INaturalistProjectAutocomplete from "./INaturalistProjectAutocomplete";
 import INaturalistTaxonAutocomplete from "./INaturalistTaxonAutocomplete";
 import { CaretDownIcon } from "@radix-ui/react-icons";
 import { useLocalForage } from "../../useLocalForage";
 import INaturalistLegendContent from "../../dataLayers/legends/INaturalistLegendContent";
 import INaturalistProjectCallToAction from "./INaturalistProjectCallToAction";
+import { DraftTableOfContentsDocument } from "../../generated/graphql";
+import * as GeneratedGraphql from "../../generated/graphql";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import getSlug from "../../getSlug";
+import { MapContext } from "../../dataLayers/MapContextManager";
 
 // Zoom level cutoff for switching between grid/heatmap and points layers
 // Grid/heatmap layers are shown below this zoom, points layers at this zoom and above
@@ -64,9 +70,29 @@ export default function AddINaturalistLayerModal({
 }: {
   onRequestClose: () => void;
 }) {
+  // Access generated hook via the compiled module to avoid type/export mismatches
+  const useCreateINaturalistTableOfContentsItemMutation = (
+    GeneratedGraphql as any
+  ).useCreateINaturalistTableOfContentsItemMutation as any;
   const { t } = useTranslation("admin:data");
+  const slug = getSlug();
   const [map, setMap] = useState<Map | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number | null>(null);
+
+  const mapContext = useContext(MapContext);
+  const onError = useGlobalErrorHandler();
+  const [mutation, mutationState] =
+    useCreateINaturalistTableOfContentsItemMutation({
+      // onError,
+      refetchQueries: slug
+        ? [
+            {
+              query: DraftTableOfContentsDocument,
+              variables: { slug },
+            },
+          ]
+        : [],
+    });
 
   const [config, setConfig] = useState<INaturalistLayerConfig>({
     projectId: null,
@@ -86,6 +112,7 @@ export default function AddINaturalistLayerModal({
   );
   const [selectedTaxa, setSelectedTaxa] = useState<TaxonResult[]>([]);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const currentSourceIds = useRef<string[]>([]);
   const currentLayerIds = useRef<string[]>([]);
@@ -755,6 +782,7 @@ export default function AddINaturalistLayerModal({
     };
   }, [map, t]);
 
+  /* eslint-disable i18next/no-literal-string */
   const handleSave = () => {
     // Validate
     if (!config.projectId && config.taxonIds.length === 0) {
@@ -765,6 +793,7 @@ export default function AddINaturalistLayerModal({
     }
 
     setValidationError(null);
+    setSaveError(null);
 
     // Output configuration object
     const layerConfig = {
@@ -781,9 +810,235 @@ export default function AddINaturalistLayerModal({
 
     // eslint-disable-next-line no-console
     console.log("iNaturalist Layer Configuration:", layerConfig);
-    // TODO: Replace with GraphQL mutation when backend is ready
-    onRequestClose();
+
+    if (!slug) {
+      setValidationError(
+        t("Project slug is missing. Please reload the page and try again.")
+      );
+      return;
+    }
+
+    // Derive bounds from current map view if available, otherwise fall back to
+    // a global extent
+    let bounds: number[] | null = null;
+    if (map) {
+      const b = map.getBounds().toArray();
+      bounds = [b[0][0], b[0][1], b[1][0], b[1][1]];
+    } else {
+      bounds = [-180, -90, 180, 90];
+    }
+
+    // Build a human-readable title from project/taxa selections
+    const taxonNames = selectedTaxa.map(
+      (t) => t.preferred_common_name || t.name
+    );
+    const firstTaxonName = taxonNames[0];
+    // eslint-disable-next-line i18next/no-literal-string
+    let titleText = "iNaturalist observations";
+
+    if (selectedProject && firstTaxonName) {
+      if (taxonNames.length === 1) {
+        // eslint-disable-next-line i18next/no-literal-string
+        titleText = `${firstTaxonName} – ${selectedProject.title}`;
+      } else {
+        // eslint-disable-next-line i18next/no-literal-string
+        titleText = `${selectedProject.title} – ${firstTaxonName} + ${
+          taxonNames.length - 1
+        } more taxa`;
+      }
+    } else if (selectedProject) {
+      // eslint-disable-next-line i18next/no-literal-string
+      titleText = selectedProject.title;
+    } else if (firstTaxonName) {
+      if (taxonNames.length === 1) {
+        // eslint-disable-next-line i18next/no-literal-string
+        titleText = `${firstTaxonName} observations`;
+      } else {
+        // eslint-disable-next-line i18next/no-literal-string
+        titleText = `${firstTaxonName} and ${taxonNames.length - 1} more taxa`;
+      }
+    }
+
+    // Build ProseMirror metadata document with links to iNaturalist
+    const content: any[] = [];
+
+    content.push({
+      type: "paragraph",
+      content: [
+        {
+          type: "text",
+          text:
+            // eslint-disable-next-line i18next/no-literal-string
+            "This layer is generated from an iNaturalist API query. The selections below summarize the project, taxa, and filters used.",
+        },
+      ],
+    });
+
+    let primaryLinkLabel: "project" | "taxon" | null = null;
+    let primaryLinkHref: string | null = null;
+
+    if (selectedProject) {
+      const projectUrl = `https://www.inaturalist.org/projects/${
+        selectedProject.slug || selectedProject.id
+      }`;
+      primaryLinkLabel = "project";
+      primaryLinkHref = projectUrl;
+
+      if (selectedProject.description) {
+        content.push({
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              // eslint-disable-next-line i18next/no-literal-string
+              text: selectedProject.description,
+            },
+          ],
+        });
+      }
+    }
+
+    if (selectedTaxa.length > 0) {
+      const taxaNodes: any[] = [];
+      selectedTaxa.forEach((taxon, index) => {
+        const taxonUrl = `https://www.inaturalist.org/taxa/${taxon.id}`;
+        const label = taxon.preferred_common_name || taxon.name;
+        if (index > 0) {
+          taxaNodes.push({
+            type: "text",
+            text: ", ",
+          });
+        }
+        taxaNodes.push({
+          type: "text",
+          text: label,
+          marks: [
+            {
+              type: "link",
+              attrs: { href: taxonUrl, title: null },
+            },
+          ],
+        });
+      });
+
+      if (!primaryLinkHref) {
+        const firstTaxon = selectedTaxa[0];
+        primaryLinkLabel = "taxon";
+        primaryLinkHref = `https://www.inaturalist.org/taxa/${firstTaxon.id}`;
+      }
+
+      content.push({
+        type: "paragraph",
+        content: taxaNodes,
+      });
+    }
+
+    const paramsSummaryParts: string[] = [];
+    if (layerConfig.projectId) {
+      // eslint-disable-next-line i18next/no-literal-string
+      paramsSummaryParts.push(`project_id=${layerConfig.projectId}`);
+    }
+    if (layerConfig.taxonIds.length > 0) {
+      // eslint-disable-next-line i18next/no-literal-string
+      paramsSummaryParts.push(`taxon_id=${layerConfig.taxonIds.join(",")}`);
+    }
+    if (layerConfig.d1 || layerConfig.d2) {
+      paramsSummaryParts.push(
+        // eslint-disable-next-line i18next/no-literal-string
+        `date_range=${layerConfig.d1 || "…"} to ${layerConfig.d2 || "…"}`
+      );
+    }
+    paramsSummaryParts.push(
+      // eslint-disable-next-line i18next/no-literal-string
+      `verifiable=${layerConfig.verifiable ? "true" : "false"}`
+    );
+    if (layerConfig.color) {
+      // eslint-disable-next-line i18next/no-literal-string
+      paramsSummaryParts.push(`color=${layerConfig.color}`);
+    }
+    // eslint-disable-next-line i18next/no-literal-string
+    paramsSummaryParts.push(`presentation=${layerConfig.type}`);
+    if (
+      layerConfig.type === "grid+points" ||
+      layerConfig.type === "heatmap+points"
+    ) {
+      // eslint-disable-next-line i18next/no-literal-string
+      paramsSummaryParts.push(`zoom_cutoff=${layerConfig.zoomCutoff}`);
+    }
+    if (layerConfig.showCallToAction) {
+      // eslint-disable-next-line i18next/no-literal-string
+      paramsSummaryParts.push("show_call_to_action=true");
+    }
+
+    if (paramsSummaryParts.length > 0) {
+      if (primaryLinkHref) {
+        const linkText =
+          primaryLinkLabel === "project"
+            ? "View this project on iNaturalist.org"
+            : "View this taxon on iNaturalist.org";
+        content.push({
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: linkText,
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: primaryLinkHref, title: null },
+                },
+              ],
+            },
+          ],
+        });
+      }
+
+      content.push({
+        type: "paragraph",
+        content: [
+          {
+            type: "text",
+            // eslint-disable-next-line i18next/no-literal-string
+            text: `Filters: ${paramsSummaryParts.join("; ")}.`,
+          },
+        ],
+      });
+    }
+
+    const metadataDoc = {
+      type: "doc",
+      content,
+    };
+
+    mutation({
+      variables: {
+        slug,
+        params: layerConfig,
+        bounds,
+        title: titleText,
+        metadata: metadataDoc,
+      },
+    })
+      .then((response: unknown) => {
+        const result: any = response;
+        const stableId =
+          result.data?.createInaturalistTableOfContentsItem?.tableOfContentsItem
+            ?.stableId;
+        if (stableId && mapContext.manager) {
+          mapContext.manager.showTocItems([stableId]);
+        }
+        onRequestClose();
+      })
+      .catch((err: unknown) => {
+        onError(err as Error);
+        setSaveError(
+          t(
+            "There was a problem saving this iNaturalist layer. Please try again."
+          )
+        );
+      });
   };
+  /* eslint-enable i18next/no-literal-string */
 
   const canSave = config.projectId !== null || config.taxonIds.length > 0;
   const hasProject = config.projectId !== null;
@@ -839,6 +1094,7 @@ export default function AddINaturalistLayerModal({
           {validationError && (
             <Warning level="error">{validationError}</Warning>
           )}
+          {saveError && <Warning level="error">{saveError}</Warning>}
 
           <div className="space-y-4">
             <INaturalistProjectAutocomplete
@@ -1068,10 +1324,17 @@ export default function AddINaturalistLayerModal({
           <button
             type="button"
             onClick={handleSave}
-            disabled={!canSave}
+            disabled={!canSave || mutationState.loading}
             className="px-4 py-2 text-sm font-medium text-white bg-primary-500 border border-transparent rounded-md shadow-sm hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("Add Layer to Project Overlays")}
+            <span className="inline-flex items-center space-x-2">
+              <span>
+                {mutationState.loading
+                  ? t("Adding iNaturalist layer…")
+                  : t("Add Layer to Project Overlays")}
+              </span>
+              {mutationState.loading && <Spinner mini color="white" />}
+            </span>
           </button>
         </div>
       </div>

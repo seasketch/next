@@ -1888,6 +1888,47 @@ type CreateGroupPayload {
   query: Query
 }
 
+"""All input for the `createInaturalistTableOfContentsItem` mutation."""
+input CreateInaturalistTableOfContentsItemInput {
+  bounds: [BigFloat]
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  metadata: JSON
+  params: JSON
+  slug: String
+  title: String
+}
+
+"""The output of our `createInaturalistTableOfContentsItem` mutation."""
+type CreateInaturalistTableOfContentsItemPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
+  """
+  dataLayer: DataLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItem: TableOfContentsItem
+
+  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
+  tableOfContentsItemEdge(
+    """The method to use when ordering `TableOfContentsItem`."""
+    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): TableOfContentsItemsEdge
+}
+
 """All input for the create `InteractivitySetting` mutation."""
 input CreateInteractivitySettingInput {
   """
@@ -3885,6 +3926,11 @@ enum DataSourceTypes {
 
   """MapBox GL Style "image" source"""
   IMAGE
+
+  """
+  Data source is iNaturalist data, available via their map services api. Refer to query_parameters for request parameters.
+  """
+  INATURALIST
 
   """MapBox GL Style "raster" source"""
   RASTER
@@ -9079,6 +9125,12 @@ type Mutation {
     """
     input: CreateGroupInput!
   ): CreateGroupPayload
+  createInaturalistTableOfContentsItem(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateInaturalistTableOfContentsItemInput!
+  ): CreateInaturalistTableOfContentsItemPayload
 
   """Creates a single `InteractivitySetting`."""
   createInteractivitySetting(
