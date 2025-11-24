@@ -107,7 +107,10 @@ export function RasterBandStatisticsCard({
     }
     const results = [] as HistogramEntry[][];
     for (const band of metricBands) {
-      const histogram = band.histogram;
+      const histogram: [number, number][] = band.histogram as unknown as [
+        number,
+        number
+      ][];
       const idx = metricBands.indexOf(band);
       results[idx] = [];
       const buckets = rasterInfo?.bands[idx]?.stats?.histogram;
@@ -122,9 +125,10 @@ export function RasterBandStatisticsCard({
         results[idx].push(entry);
       }
       for (const h of histogram) {
+        const [hValue, hCount] = h;
         for (const entry of results[idx]) {
-          if (entry.value >= h[0] && h[1] !== null) {
-            entry.count += h[1];
+          if (entry.value >= hValue && hCount !== null) {
+            entry.count += hCount;
             break;
           }
         }

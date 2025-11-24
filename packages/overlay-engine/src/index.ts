@@ -39,6 +39,7 @@ export {
   MetricSubjectGeography,
   SourceType,
   UniqueIdIndex,
+  DistanceToShoreMetric,
   computeStatsFromIdentifiedValues,
 } from "./metrics/metrics";
 export {

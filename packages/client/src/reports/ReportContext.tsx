@@ -1,3 +1,4 @@
+/* eslint-disable i18next/no-literal-string */
 import {
   createContext,
   useContext,
@@ -5,6 +6,7 @@ import {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
 } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -28,6 +30,13 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ApolloError } from "@apollo/client";
+import type { AnyLayer, AnySourceData } from "mapbox-gl";
+import { MapContext } from "../dataLayers/MapContextManager";
+
+export type ReportMapStyle = {
+  sources: { [id: string]: AnySourceData };
+  layers: AnyLayer[];
+};
 
 export interface ReportContextState {
   /**
@@ -94,6 +103,16 @@ export interface ReportContextState {
   userIsAdmin: boolean;
   recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
   recalculateState: { loading: boolean; error: ApolloError | undefined };
+  /**
+   * Set or clear a map style associated with a given report card. Styles are
+   * automatically namespaced so they don't collide with other report cards or
+   * the main overlay list.
+   */
+  setCardMapStyle: (
+    cardId: number,
+    styleId: string,
+    style: ReportMapStyle | null
+  ) => void;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -108,6 +127,12 @@ export function useReportState(
   initialSelectedTabId?: number
 ): ReportContextState | undefined {
   const projectMetadata = useCurrentProjectMetadata();
+  const mapContext = useContext(MapContext);
+  const cardMapStylesRef = useRef<{
+    [cardId: number]: {
+      [styleId: string]: { sources: string[]; layers: string[] };
+    };
+  }>({});
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
@@ -303,6 +328,83 @@ export function useReportState(
     [dependencies]
   );
 
+  const setCardMapStyle = useCallback(
+    (cardId: number, styleId: string, style: ReportMapStyle | null) => {
+      const manager = mapContext.manager;
+      if (!manager) {
+        return;
+      }
+
+      // Namespace by report, sketch, and card so multiple open reports can't
+      // clobber each other's dynamic layers or sources.
+      const reportIdPart = data?.report?.id ?? "report";
+      const sketchIdPart = selectedSketchId ?? "sketch";
+      // eslint-disable-next-line i18next/no-literal-string
+      const basePrefix = `report-style-${reportIdPart}-${sketchIdPart}-${cardId}-${styleId}`;
+
+      const perCard = cardMapStylesRef.current[cardId];
+      const existing = perCard?.[styleId];
+      if (existing) {
+        for (const sourceId of existing.sources) {
+          manager.removeSource(sourceId);
+        }
+        for (const layerId of existing.layers) {
+          manager.removeLayer(layerId);
+        }
+        if (perCard) {
+          delete perCard[styleId];
+          if (Object.keys(perCard).length === 0) {
+            delete cardMapStylesRef.current[cardId];
+          }
+        }
+      }
+
+      if (!style) {
+        return;
+      }
+
+      const sourceIds: string[] = [];
+      const layerIds: string[] = [];
+
+      for (const [sourceId, source] of Object.entries(style.sources || {})) {
+        const namespacedId = `${basePrefix}-source-${sourceId}`;
+        manager.addSource(namespacedId, source as AnySourceData);
+        sourceIds.push(namespacedId);
+      }
+
+      for (const layer of style.layers || []) {
+        const originalId = layer.id;
+        const namespacedLayerId = `${basePrefix}-layer-${originalId}`;
+        const anyLayer = layer as any;
+        const originalSource: any = anyLayer.source;
+        const namespacedSource =
+          typeof originalSource === "string"
+            ? `${basePrefix}-source-${originalSource}`
+            : originalSource;
+
+        const clonedLayer: AnyLayer = {
+          ...anyLayer,
+          id: namespacedLayerId,
+          ...(namespacedSource !== undefined
+            ? { source: namespacedSource }
+            : {}),
+        };
+
+        manager.addLayer(clonedLayer);
+        layerIds.push(namespacedLayerId);
+      }
+
+      if (!cardMapStylesRef.current[cardId]) {
+        cardMapStylesRef.current[cardId] = {};
+      }
+      cardMapStylesRef.current[cardId][styleId] = {
+        sources: sourceIds,
+        layers: layerIds,
+      };
+    },
+    [data?.report?.id, mapContext.manager, selectedSketchId]
+  );
+
   if (!data?.sketch) {
     return undefined;
   } else {
@@ -347,6 +449,7 @@ export function useReportState(
       geographies: data.report.geographies || [],
       report: data.report as ReportConfiguration,
       getDependencies,
+      setCardMapStyle,
     };
   }
 }
@@ -359,4 +462,43 @@ export function useReportContext(): ReportContextState {
     );
   }
   return context;
+}
+
+export function useReportStyleToggle(
+  cardId: number,
+  styleId: string,
+  style: ReportMapStyle | null | undefined
+) {
+  const { setCardMapStyle } = useReportContext();
+  const [visible, setVisible] = useState(false);
+
+  const toggle = useCallback(() => {
+    setVisible((prev) => !prev);
+  }, []);
+
+  useEffect(() => {
+    if (!style && visible) {
+      setVisible(false);
+    }
+  }, [style, visible]);
+
+  useEffect(() => {
+    if (!style || !visible) {
+      setCardMapStyle(cardId, styleId, null);
+    } else {
+      setCardMapStyle(cardId, styleId, style);
+    }
+  }, [visible, style, cardId, styleId, setCardMapStyle]);
+
+  useEffect(() => {
+    return () => {
+      setCardMapStyle(cardId, styleId, null);
+    };
+  }, [cardId, styleId, setCardMapStyle]);
+
+  return {
+    visible,
+    toggle,
+    setVisible,
+  };
 }

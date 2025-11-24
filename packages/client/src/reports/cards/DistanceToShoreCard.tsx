@@ -1,11 +1,18 @@
 import { ReportCardConfiguration, ReportCardProps } from "./cards";
 import { registerReportCardType } from "../registerCard";
 import { Trans, useTranslation } from "react-i18next";
-import { RulerSquareIcon, ValueNoneIcon } from "@radix-ui/react-icons";
-import { lazy, useMemo } from "react";
+import {
+  LayersIcon,
+  RulerSquareIcon,
+  ValueNoneIcon,
+} from "@radix-ui/react-icons";
+import { lazy, useCallback, useMemo } from "react";
 import { subjectIsFragment } from "overlay-engine";
 import Skeleton from "../../components/Skeleton";
 import { useUnits, LengthDisplayUnit } from "../hooks/useUnits";
+import { DistanceToShoreMetric } from "overlay-engine";
+import { ReportMapStyle, useReportStyleToggle } from "../ReportContext";
+import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
 
 export type DistanceToShoreCardConfiguration = ReportCardConfiguration<{
   /**
@@ -38,6 +45,32 @@ export function DistanceToShoreCard({
     unit,
   });
 
+  const formatDistance = useCallback(
+    (value: number | null): string => {
+      if (value === null) {
+        return "-";
+      }
+      if (value === 0) {
+        return "0";
+      }
+      if (value % 1 === 0) {
+        return value.toLocaleString();
+      }
+      if (value > 2) {
+        return value.toLocaleString(undefined, {
+          maximumFractionDigits: 1,
+          minimumFractionDigits: 0,
+        });
+      } else {
+        return value.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+          minimumFractionDigits: 0,
+        });
+      }
+    },
+    [unitLabel]
+  );
+
   const minDistanceMeters = useMemo(() => {
     if (loading) {
       return null;
@@ -56,21 +89,98 @@ export function DistanceToShoreCard({
     return Number.isFinite(min) ? min : null;
   }, [metrics, loading]);
 
-  const formatDistance = (value: number | null): string => {
-    if (value === null) {
-      return "-";
+  const minDistanceLineFeature = useMemo(() => {
+    if (loading) {
+      return null;
     }
-    if (value === 0) {
-      return "0";
+    const distanceMetrics = metrics.filter(
+      (metric) =>
+        metric.type === "distance_to_shore" && subjectIsFragment(metric.subject)
+    );
+    // get the metric with the smallest value
+    let minMetric: DistanceToShoreMetric["value"] | null = null;
+    for (const metric of distanceMetrics) {
+      const value = (metric.value as any)?.meters;
+      if (
+        minMetric === null ||
+        (typeof value === "number" && value >= 0 && value < minMetric?.meters)
+      ) {
+        minMetric = metric.value;
+      }
     }
-    if (value % 1 === 0) {
-      return value.toLocaleString();
+    if (minMetric === null) {
+      return null;
+    } else {
+      console.log(
+        minMetric.meters,
+        `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`
+      );
+      return {
+        ...minMetric.geojsonLine,
+        properties: {
+          distance: `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`,
+        },
+      };
     }
-    return value.toLocaleString(undefined, {
-      maximumFractionDigits: 3,
-      minimumFractionDigits: 0,
-    });
-  };
+    return minMetric?.geojsonLine;
+  }, [metrics, loading, formatDistance]);
+  const mapStyle = useMemo<ReportMapStyle | null>(() => {
+    if (!minDistanceLineFeature) {
+      return null;
+    }
+    return {
+      sources: {
+        "distance-to-shore": {
+          type: "geojson",
+          data: {
+            type: "FeatureCollection",
+            features: [minDistanceLineFeature] as any[],
+          },
+        },
+      },
+      layers: [
+        {
+          id: "distance-to-shore-outline",
+          type: "line",
+          source: "distance-to-shore",
+          paint: {
+            "line-color": "white",
+            "line-width": 4,
+            "line-opacity": 0.5,
+          },
+        },
+        {
+          id: "distance-to-shore-line",
+          type: "line",
+          source: "distance-to-shore",
+          paint: {
+            "line-color": "rgb(46, 115, 182)",
+            "line-width": 2,
+          },
+        },
+        {
+          id: "distance-to-shore-line-label",
+          type: "symbol",
+          source: "distance-to-shore",
+          layout: {
+            "text-field": "{distance}",
+            "text-font": ["Open Sans Regular"],
+            "text-size": 12,
+            "symbol-placement": "line-center",
+            "text-keep-upright": true,
+          },
+          paint: {
+            "text-color": "black",
+            "text-halo-color": "rgba(255, 255, 255, 0.8)",
+            "text-halo-width": 2,
+          },
+        },
+      ],
+    };
+  }, [minDistanceLineFeature, unitLabel, formatDistance]);
+
+  const { visible: mapVisible, toggle: toggleMapVisibility } =
+    useReportStyleToggle(config.id, "shortest-path", mapStyle);
 
   // Convert from meters to display value.
   // For kilometers mode, show meters when under 1 km.
@@ -100,12 +210,37 @@ export function DistanceToShoreCard({
           </span>
         </div>
       ) : (
-        <p className="text-[15px] leading-[24px] py-2">
-          <Trans ns="reports">Minimum distance to shore:</Trans>{" "}
-          <span className="tabular-nums font-semibold">
-            {formatDistance(displayValue)} {displayLabel}
-          </span>
-        </p>
+        <>
+          <p className="text-[15px] leading-[24px] py-2">
+            <Trans ns="reports">Minimum distance to shore:</Trans>{" "}
+            <span className="tabular-nums font-semibold">
+              {formatDistance(displayValue)} {displayLabel}
+            </span>
+          </p>
+          {mapStyle && (
+            <div className="flex items-center space-x-2 px-1 py-1 mt-1">
+              <LayersIcon className="w-4 h-4 text-gray-600 flex-shrink-0" />
+              <VisibilityCheckboxAnimated
+                id={`distance-to-shore-${config.id}`}
+                onClick={toggleMapVisibility}
+                disabled={!mapStyle}
+                visibility={mapVisible}
+                loading={false}
+                error={undefined}
+                className="flex-none"
+              />
+              <button
+                type="button"
+                className="text-sm text-gray-700 cursor-pointer select-none flex-1 text-left"
+                onClick={toggleMapVisibility}
+              >
+                {t("Show shortest path on the map", {
+                  defaultValue: "Show shortest path on the map",
+                })}
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -119,7 +119,7 @@ export type RasterBandStats = {
    * number of entries, so not every value will be represented, though the
    * overall distribution will be preserved.
    */
-  histogram: [number, number];
+  histogram: [number, number][];
   // count of no-data and invalid values
   invalid: number;
   sum: number;

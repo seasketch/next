@@ -10343,6 +10343,10 @@ select{
   line-height:2.25rem
 }
 
+.leading-\[24px\]{
+  line-height:24px
+}
+
 .leading-none{
   line-height:1
 }
@@ -10353,10 +10357,6 @@ select{
 
 .leading-tight{
   line-height:1.25
-}
-
-.leading-\[24px\]{
-  line-height:24px
 }
 
 .tracking-tight{
