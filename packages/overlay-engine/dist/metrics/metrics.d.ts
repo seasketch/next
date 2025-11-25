@@ -1,4 +1,4 @@
-import { LineString } from "geojson";
+import { Feature, LineString } from "geojson";
 export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore";
 type MetricBase = {
     type: MetricType;
@@ -111,7 +111,7 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
     type: "distance_to_shore";
     value: {
         meters: number;
-        geojsonLine: LineString;
+        geojsonLine: Feature<LineString>;
     };
 };
 export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats | DistanceToShoreMetric;

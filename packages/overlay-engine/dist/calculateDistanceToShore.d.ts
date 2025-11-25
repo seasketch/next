@@ -1,6 +1,7 @@
 import { Feature, Polygon, Position } from "geojson";
 import { OverlayWorkerHelpers } from "./utils/helpers";
 import { FlatGeobufSource } from "fgb-source";
+import { H3Index } from "h3-js";
 /**
  * Calculates the distance from a given feature in the ocean to the nearest
  * point on land. Only supports Points, Polygons, and Lines (Multi* variants
@@ -28,6 +29,8 @@ import { FlatGeobufSource } from "fgb-source";
  *   - geojsonLine: LineString from closest point on the subject feature to the
  *     closest point along the shoreline (or null when distance is 0 or
  *     unbounded).
+ *   - rings: H3 cell indexes searched during the H3-based phase, grouped by
+ *     ring distance from the origin (empty array when H3 search is not used).
  */
 export declare function calculateDistanceToShore(feature: GeoJSON.Feature, land: FlatGeobufSource<Feature<Polygon>>, options?: {
     helpers?: OverlayWorkerHelpers;
@@ -42,5 +45,17 @@ export declare function calculateDistanceToShore(feature: GeoJSON.Feature, land:
         };
         properties: {};
     } | null;
+    rings: H3Index[][];
+} | {
+    meters: number;
+    geojsonLine: {
+        type: string;
+        geometry: {
+            type: string;
+            coordinates: Position[];
+        };
+        properties: {};
+    } | null;
+    rings?: undefined;
 }>;
 //# sourceMappingURL=calculateDistanceToShore.d.ts.map

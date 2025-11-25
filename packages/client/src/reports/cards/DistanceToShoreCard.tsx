@@ -13,6 +13,52 @@ import { useUnits, LengthDisplayUnit } from "../hooks/useUnits";
 import { DistanceToShoreMetric } from "overlay-engine";
 import { ReportMapStyle, useReportStyleToggle } from "../ReportContext";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import { cellsToMultiPolygon } from "h3-js";
+
+function unwrapLineStringForDisplay(
+  line: DistanceToShoreMetric["value"]["geojsonLine"]
+): DistanceToShoreMetric["value"]["geojsonLine"] {
+  if (!line || !line.geometry || line.geometry.type !== "LineString") {
+    return line;
+  }
+
+  const coords = line.geometry.coordinates;
+  if (!coords || coords.length === 0) {
+    return line;
+  }
+
+  const result: typeof coords = [coords[0]];
+  let prevLng = coords[0][0];
+  let offset = 0;
+
+  for (let i = 1; i < coords.length; i++) {
+    const [lng, lat] = coords[i];
+    let adj = lng + offset;
+
+    // Adjust longitude so that each step stays within [-180, 180] of the
+    // previous point, allowing coordinates to extend beyond the canonical
+    // range for uninterrupted display across the antimeridian.
+    while (adj - prevLng > 180) {
+      adj -= 360;
+      offset -= 360;
+    }
+    while (adj - prevLng < -180) {
+      adj += 360;
+      offset += 360;
+    }
+
+    result.push([adj, lat]);
+    prevLng = adj;
+  }
+
+  return {
+    ...line,
+    geometry: {
+      ...line.geometry,
+      coordinates: result,
+    },
+  };
+}
 
 export type DistanceToShoreCardConfiguration = ReportCardConfiguration<{
   /**
@@ -89,7 +135,11 @@ export function DistanceToShoreCard({
     return Number.isFinite(min) ? min : null;
   }, [metrics, loading]);
 
-  const minDistanceLineFeature = useMemo(() => {
+  /**
+   * The shortest path feature and associated H3 rings (if any) from the
+   * minimum-distance metric.
+   */
+  const minDistanceResult = useMemo(() => {
     if (loading) {
       return null;
     }
@@ -110,74 +160,148 @@ export function DistanceToShoreCard({
     }
     if (minMetric === null) {
       return null;
-    } else {
-      console.log(
-        minMetric.meters,
-        `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`
-      );
-      return {
-        ...minMetric.geojsonLine,
-        properties: {
-          distance: `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`,
-        },
-      };
     }
-    return minMetric?.geojsonLine;
-  }, [metrics, loading, formatDistance]);
+    console.log(
+      minMetric.meters,
+      `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`
+    );
+
+    const displayLine = unwrapLineStringForDisplay(minMetric.geojsonLine);
+
+    const lineFeature = {
+      ...displayLine,
+      properties: {
+        distance: `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`,
+      },
+    };
+    return {
+      lineFeature,
+      // rings: minMetric.rings,
+    };
+  }, [metrics, loading, formatDistance, unitLabel]);
+
   const mapStyle = useMemo<ReportMapStyle | null>(() => {
-    if (!minDistanceLineFeature) {
+    if (!minDistanceResult) {
       return null;
     }
-    return {
-      sources: {
-        "distance-to-shore": {
-          type: "geojson",
-          data: {
-            type: "FeatureCollection",
-            features: [minDistanceLineFeature] as any[],
-          },
+    const {
+      lineFeature,
+      // rings
+    } = minDistanceResult;
+
+    // Build GeoJSON features for each searched H3 ring, tagging each with a
+    // "level" property corresponding to its ring index so it can be
+    // visualized with graduated styling.
+    // const ringFeatures: any[] = [];
+    // if (Array.isArray(rings)) {
+    //   rings.forEach((ring, level) => {
+    //     if (!ring || ring.length === 0) return;
+    //     const multiPolygon = cellsToMultiPolygon(ring, true);
+    //     ringFeatures.push({
+    //       type: "Feature",
+    //       geometry: {
+    //         type: "MultiPolygon",
+    //         coordinates: multiPolygon as any,
+    //       },
+    //       properties: {
+    //         level,
+    //       },
+    //     });
+    //   });
+    // }
+
+    const sources: ReportMapStyle["sources"] = {
+      "distance-to-shore": {
+        type: "geojson",
+        data: {
+          type: "FeatureCollection",
+          features: [lineFeature] as any[],
         },
       },
-      layers: [
-        {
-          id: "distance-to-shore-outline",
-          type: "line",
-          source: "distance-to-shore",
-          paint: {
-            "line-color": "white",
-            "line-width": 4,
-            "line-opacity": 0.5,
-          },
-        },
-        {
-          id: "distance-to-shore-line",
-          type: "line",
-          source: "distance-to-shore",
-          paint: {
-            "line-color": "rgb(46, 115, 182)",
-            "line-width": 2,
-          },
-        },
-        {
-          id: "distance-to-shore-line-label",
-          type: "symbol",
-          source: "distance-to-shore",
-          layout: {
-            "text-field": "{distance}",
-            "text-font": ["Open Sans Regular"],
-            "text-size": 12,
-            "symbol-placement": "line-center",
-            "text-keep-upright": true,
-          },
-          paint: {
-            "text-color": "black",
-            "text-halo-color": "rgba(255, 255, 255, 0.8)",
-            "text-halo-width": 2,
-          },
-        },
-      ],
     };
-  }, [minDistanceLineFeature, unitLabel, formatDistance]);
+
+    // if (ringFeatures.length > 0) {
+    //   sources["distance-to-shore-rings"] = {
+    //     type: "geojson",
+    //     data: {
+    //       type: "FeatureCollection",
+    //       features: ringFeatures,
+    //     },
+    //   };
+    // }
+
+    const layers: ReportMapStyle["layers"] = [];
+
+    // if (ringFeatures.length > 0) {
+    //   layers.push({
+    //     id: "distance-to-shore-rings",
+    //     type: "fill",
+    //     source: "distance-to-shore-rings",
+    //     paint: {
+    //       // Slightly vary color by ring "level" so each ring can be
+    //       // distinguished visually.
+    //       "fill-color": [
+    //         "step",
+    //         ["get", "level"],
+    //         "rgba(46, 115, 182, 0.05)",
+    //         1,
+    //         "rgba(46, 115, 182, 0.08)",
+    //         2,
+    //         "rgba(46, 115, 182, 0.11)",
+    //         3,
+    //         "rgba(46, 115, 182, 0.14)",
+    //         4,
+    //         "rgba(46, 115, 182, 0.17)",
+    //       ],
+    //       "fill-opacity": 0.6,
+    //     },
+    //   });
+    // }
+
+    layers.push(
+      {
+        id: "distance-to-shore-outline",
+        type: "line",
+        source: "distance-to-shore",
+        paint: {
+          "line-color": "white",
+          "line-width": 4,
+          "line-opacity": 0.5,
+        },
+      },
+      {
+        id: "distance-to-shore-line",
+        type: "line",
+        source: "distance-to-shore",
+        paint: {
+          "line-color": "rgb(46, 115, 182)",
+          "line-width": 2,
+        },
+      },
+      {
+        id: "distance-to-shore-line-label",
+        type: "symbol",
+        source: "distance-to-shore",
+        layout: {
+          "text-field": "{distance}",
+          "text-font": ["Open Sans Regular"],
+          "text-size": 12,
+          "symbol-placement": "line-center",
+          "text-keep-upright": true,
+        },
+        paint: {
+          "text-color": "black",
+          "text-halo-color": "rgba(255, 255, 255, 0.8)",
+          "text-halo-width": 2,
+        },
+      }
+    );
+
+    return {
+      sources,
+      layers,
+    };
+  }, [minDistanceResult]);
 
   const { visible: mapVisible, toggle: toggleMapVisibility } =
     useReportStyleToggle(config.id, "shortest-path", mapStyle);

@@ -27,10 +27,9 @@ const EARTH_RADIUS_METERS = 6371008.8;
 const DEFAULT_H3_RESOLUTION = 6;
 /**
  * Maximum number of H3 "rings" (graph distance) to search outward
- * from the origin before giving up. At resolution 7 this is on the
- * order of a few dozen kilometers.
+ * from the origin before giving up.
  */
-const MAX_H3_RING = 250;
+const MAX_H3_RING = 50;
 /**
  * Minimum initial point buffer used for the small bbox search
  * (before falling back to H3). This is combined with the user
@@ -158,24 +157,114 @@ function initialH3CellsForGeometry(geometry, resolution) {
 /**
  * Convert a single H3 cell into a [minX, minY, maxX, maxY] bbox using the
  * GeoJSON-style [lng,lat] boundary returned by H3.
+ *
+ * Special handling is included for cells that cross the antimeridian:
+ * rather than returning a nearly world-spanning bbox like [-179, 179],
+ * we emit a bbox where minX > maxX (e.g. [170, -170]). This allows
+ * downstream helpers like `splitBBoxAntimeridian` to correctly split
+ * the box into two non-wrapping segments.
  */
 function bboxForCell(cell) {
     const boundary = (0, h3_js_1.cellToBoundary)(cell, true); // [lng,lat] pairs
-    let minX = Infinity;
-    let minY = Infinity;
-    let maxX = -Infinity;
-    let maxY = -Infinity;
+    let minLng = Infinity;
+    let maxLng = -Infinity;
+    let minLat = Infinity;
+    let maxLat = -Infinity;
     for (const [lng, lat] of boundary) {
-        if (lng < minX)
-            minX = lng;
-        if (lng > maxX)
-            maxX = lng;
-        if (lat < minY)
-            minY = lat;
-        if (lat > maxY)
-            maxY = lat;
+        if (lng < minLng)
+            minLng = lng;
+        if (lng > maxLng)
+            maxLng = lng;
+        if (lat < minLat)
+            minLat = lat;
+        if (lat > maxLat)
+            maxLat = lat;
     }
-    return [minX, minY, maxX, maxY];
+    const crossesAntimeridian = minLng < -160 && maxLng > 160;
+    // If the cell crosses the antimeridian, construct a bbox where minX > maxX
+    // so that downstream code can detect and split it.
+    if (crossesAntimeridian) {
+        let minPositiveLng = Infinity;
+        let maxNegativeLng = -Infinity;
+        for (const [lng] of boundary) {
+            if (lng >= 0 && lng < minPositiveLng) {
+                minPositiveLng = lng;
+            }
+            else if (lng < 0 && lng > maxNegativeLng) {
+                maxNegativeLng = lng;
+            }
+        }
+        // Fallback to the simple bbox if for some reason we didn't classify
+        // any positive/negative longitudes (shouldn't happen in practice).
+        if (!Number.isFinite(minPositiveLng) || !Number.isFinite(maxNegativeLng)) {
+            return [minLng, minLat, maxLng, maxLat];
+        }
+        return [minPositiveLng, minLat, maxNegativeLng, maxLat];
+    }
+    // Normal, non-antimeridian-crossing cell.
+    return [minLng, minLat, maxLng, maxLat];
+}
+/**
+ * Normalize longitudes of a single position into a window centered around
+ * `referenceLng`, so that the delta in degrees is always within [-180, 180].
+ * This is useful near the antimeridian where raw [lng,lat] differences can
+ * otherwise appear almost 360° apart.
+ */
+function normalizePositionLongitude(pos, referenceLng) {
+    const [lng, lat] = pos;
+    if (!Number.isFinite(referenceLng)) {
+        return pos;
+    }
+    let adj = lng;
+    while (adj - referenceLng > 180)
+        adj -= 360;
+    while (adj - referenceLng < -180)
+        adj += 360;
+    return [adj, lat];
+}
+/**
+ * Normalize all longitudes in a geometry into a band centered around
+ * `referenceLng`. This keeps subject and shoreline geometries in a
+ * consistent local coordinate space for planar segment distance
+ * calculations, especially when they lie on opposite sides of the
+ * antimeridian.
+ */
+function normalizeGeometryLongitudes(geometry, referenceLng) {
+    switch (geometry.type) {
+        case "Point":
+            return {
+                type: "Point",
+                coordinates: normalizePositionLongitude(geometry.coordinates, referenceLng),
+            };
+        case "MultiPoint":
+            return {
+                type: "MultiPoint",
+                coordinates: geometry.coordinates.map((p) => normalizePositionLongitude(p, referenceLng)),
+            };
+        case "LineString":
+            return {
+                type: "LineString",
+                coordinates: geometry.coordinates.map((p) => normalizePositionLongitude(p, referenceLng)),
+            };
+        case "MultiLineString":
+            return {
+                type: "MultiLineString",
+                coordinates: geometry.coordinates.map((line) => line.map((p) => normalizePositionLongitude(p, referenceLng))),
+            };
+        case "Polygon":
+            return {
+                type: "Polygon",
+                coordinates: geometry.coordinates.map((ring) => ring.map((p) => normalizePositionLongitude(p, referenceLng))),
+            };
+        case "MultiPolygon":
+            return {
+                type: "MultiPolygon",
+                coordinates: geometry.coordinates.map((poly) => poly.map((ring) => ring.map((p) => normalizePositionLongitude(p, referenceLng)))),
+            };
+        default:
+            // Fallback: return geometry unchanged for unsupported types.
+            return geometry;
+    }
 }
 /**
  * Add segments for a single ring or line (sequence of coordinates).
@@ -391,8 +480,15 @@ function nearestPointsBetweenGeometryAndPolygon(subjectGeom, landFeature) {
         };
     }
     // General case: subject is a line or polygon (possibly Multi*).
-    const subjectSegments = segmentsFromGeometryEdges(subjectGeom);
-    const shorelineSegments = segmentsFromGeometryEdges(landGeom);
+    // To avoid antimeridian artifacts when ranking candidate segment pairs,
+    // normalize both geometries into a local longitude band centered on one of
+    // the subject's sample points.
+    const subjectSamples = samplePositionsFromGeometry(subjectGeom);
+    const referenceLng = subjectSamples.length > 0 ? subjectSamples[0][0] : 0;
+    const normalizedSubject = normalizeGeometryLongitudes(subjectGeom, referenceLng);
+    const normalizedLand = normalizeGeometryLongitudes(landGeom, referenceLng);
+    const subjectSegments = segmentsFromGeometryEdges(normalizedSubject);
+    const shorelineSegments = segmentsFromGeometryEdges(normalizedLand);
     if (subjectSegments.length === 0 || shorelineSegments.length === 0) {
         return { meters: Infinity, origin: null, shoreline: null };
     }
@@ -410,10 +506,25 @@ function nearestPointsBetweenGeometryAndPolygon(subjectGeom, landFeature) {
         }
     }
     if (bestOrigin && bestShoreline) {
-        const meters = (0, distance_1.default)(bestOrigin, bestShoreline, {
+        // Wrap longitudes from the normalized space back into the standard
+        // [-180, 180] range before computing a geodesic distance.
+        const wrapLng = (lng) => ((((lng + 180) % 360) + 360) % 360) - 180;
+        const denormalizedOrigin = [
+            wrapLng(bestOrigin[0]),
+            bestOrigin[1],
+        ];
+        const denormalizedShoreline = [
+            wrapLng(bestShoreline[0]),
+            bestShoreline[1],
+        ];
+        const meters = (0, distance_1.default)(denormalizedOrigin, denormalizedShoreline, {
             units: "meters",
         });
-        return { meters, origin: bestOrigin, shoreline: bestShoreline };
+        return {
+            meters,
+            origin: denormalizedOrigin,
+            shoreline: denormalizedShoreline,
+        };
     }
     return { meters: Infinity, origin: null, shoreline: null };
 }
@@ -441,10 +552,11 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
     }
     const originCells = initialH3CellsForGeometry(feature.geometry, DEFAULT_H3_RESOLUTION);
     if (originCells.length === 0) {
-        return { meters: Infinity, origin: null, shoreline: null };
+        return { meters: Infinity, origin: null, shoreline: null, rings: [] };
     }
     const visited = new Set();
     let frontier = [];
+    const rings = [];
     for (const cell of originCells) {
         if (!visited.has(cell)) {
             visited.add(cell);
@@ -453,13 +565,24 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
     }
     let ring = 0;
     while (frontier.length > 0 && ring <= MAX_H3_RING) {
+        // Track the current ring of cells being searched.
+        rings.push([...frontier]);
         // 1. Identify which cells in this ring potentially contain land.
         const cellsWithLand = [];
         for (const cell of frontier) {
             const cellBBox = bboxForCell(cell);
-            const env = (0, bboxUtils_1.bboxToEnvelope)(cellBBox);
-            const estimate = land.search(env);
-            if (estimate.features > 0) {
+            const cleaned = (0, bboxUtils_1.cleanBBox)(cellBBox);
+            const split = (0, bboxUtils_1.splitBBoxAntimeridian)(cleaned);
+            let hasLand = false;
+            for (const part of split) {
+                const env = (0, bboxUtils_1.bboxToEnvelope)(part);
+                const estimate = land.search(env);
+                if (estimate.features > 0) {
+                    hasLand = true;
+                    break;
+                }
+            }
+            if (hasLand) {
                 cellsWithLand.push(cell);
             }
         }
@@ -472,36 +595,41 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
             const seenOffsets = new Set();
             for (const cell of cellsWithLand) {
                 const cellBBox = bboxForCell(cell);
-                const env = (0, bboxUtils_1.bboxToEnvelope)(cellBBox);
-                const queryPlan = land.createPlan(env);
-                for await (const landFeature of land.getFeaturesAsync(env, {
-                    queryPlan,
-                })) {
-                    const offset = landFeature.properties &&
-                        landFeature.properties.__offset;
-                    if (typeof offset === "number") {
-                        if (seenOffsets.has(offset)) {
-                            continue;
+                const cleaned = (0, bboxUtils_1.cleanBBox)(cellBBox);
+                const split = (0, bboxUtils_1.splitBBoxAntimeridian)(cleaned);
+                for (const part of split) {
+                    const env = (0, bboxUtils_1.bboxToEnvelope)(part);
+                    const queryPlan = land.createPlan(env);
+                    for await (const landFeature of land.getFeaturesAsync(env, {
+                        queryPlan,
+                    })) {
+                        const offset = landFeature.properties &&
+                            landFeature.properties.__offset;
+                        if (typeof offset === "number") {
+                            if (seenOffsets.has(offset)) {
+                                continue;
+                            }
+                            seenOffsets.add(offset);
                         }
-                        seenOffsets.add(offset);
-                    }
-                    // If the geometries actually intersect (feature on land or
-                    // touching shoreline), distance is zero.
-                    if ((0, boolean_intersects_1.default)(feature, landFeature)) {
-                        return { meters: 0, origin: null, shoreline: null };
-                    }
-                    const path = nearestPointsBetweenGeometryAndPolygon(feature.geometry, landFeature);
-                    if (path.meters < bestMeters) {
-                        bestMeters = path.meters;
-                        bestOrigin = path.origin;
-                        bestShoreline = path.shoreline;
-                        if (bestMeters <= minimumDistanceMeters) {
-                            // Within the "minimum distance" threshold, treat as zero.
-                            return {
-                                meters: 0,
-                                origin: bestOrigin,
-                                shoreline: bestShoreline,
-                            };
+                        // If the geometries actually intersect (feature on land or
+                        // touching shoreline), distance is zero.
+                        if ((0, boolean_intersects_1.default)(feature, landFeature)) {
+                            return { meters: 0, origin: null, shoreline: null, rings };
+                        }
+                        const path = nearestPointsBetweenGeometryAndPolygon(feature.geometry, landFeature);
+                        if (path.meters < bestMeters) {
+                            bestMeters = path.meters;
+                            bestOrigin = path.origin;
+                            bestShoreline = path.shoreline;
+                            if (bestMeters <= minimumDistanceMeters) {
+                                // Within the "minimum distance" threshold, treat as zero.
+                                return {
+                                    meters: 0,
+                                    origin: bestOrigin,
+                                    shoreline: bestShoreline,
+                                    rings,
+                                };
+                            }
                         }
                     }
                 }
@@ -510,6 +638,7 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
                 meters: bestMeters,
                 origin: bestOrigin,
                 shoreline: bestShoreline,
+                rings,
             };
         }
         // 3. No land in this ring; expand to the next ring via grid neighbors.
@@ -527,7 +656,7 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
         ring += 1;
     }
     // No land found within the configured H3 radius.
-    return { meters: Infinity, origin: null, shoreline: null };
+    return { meters: Infinity, origin: null, shoreline: null, rings };
 }
 /**
  * Calculates the distance from a given feature in the ocean to the nearest
@@ -556,6 +685,8 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
  *   - geojsonLine: LineString from closest point on the subject feature to the
  *     closest point along the shoreline (or null when distance is 0 or
  *     unbounded).
+ *   - rings: H3 cell indexes searched during the H3-based phase, grouped by
+ *     ring distance from the origin (empty array when H3 search is not used).
  */
 async function calculateDistanceToShore(feature, land, options) {
     var _a;
@@ -611,6 +742,7 @@ async function calculateDistanceToShore(feature, land, options) {
                 return {
                     meters: 0,
                     geojsonLine: null,
+                    rings: [],
                 };
             }
             const path = nearestPointsBetweenGeometryAndPolygon(feature.geometry, landFeature);
@@ -631,6 +763,7 @@ async function calculateDistanceToShore(feature, land, options) {
                                 properties: {},
                             }
                             : null,
+                        rings: [],
                     };
                 }
             }
@@ -646,6 +779,7 @@ async function calculateDistanceToShore(feature, land, options) {
                     },
                     properties: {},
                 },
+                rings: [],
             };
         }
     }
@@ -676,6 +810,7 @@ async function calculateDistanceToShore(feature, land, options) {
         return {
             meters: Infinity,
             geojsonLine: null,
+            rings: h3Result.rings,
         };
     }
     const finalMeters = h3Result.meters <= minimumDistanceMeters ? 0 : h3Result.meters;
@@ -691,6 +826,7 @@ async function calculateDistanceToShore(feature, land, options) {
                 properties: {},
             }
             : null,
+        // rings: h3Result.rings,
     };
 }
 //# sourceMappingURL=calculateDistanceToShore.js.map

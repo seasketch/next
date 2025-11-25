@@ -488,7 +488,6 @@ describe("sketchFragmentOverlap", () => {
           {}
         );
         const results = await processor.calculate();
-        console.log(results);
         expect(results["*"].count).toBe(3);
       });
     });
@@ -680,7 +679,6 @@ describe("sketchFragmentOverlap", () => {
       const prepared = prepareSketch(
         require("./sketches/CRDSS-Example-A.geojson.json")
       );
-      console.log("prepared", prepared);
       const processor = new OverlayEngineBatchProcessor(
         "count",
         1024 * 1024 * 2, // 5MB
@@ -773,8 +771,37 @@ describe("Distance to shore metrics", () => {
       require("./sketches/Offshore-North.geojson.json")
     ).feature;
     const result2 = await calculateDistanceToShore(offshoreNorth, source);
-    console.log("distance2", result2);
     expect(result2.meters).toBeGreaterThan(0);
     expect(result2.meters).toBeLessThan(190000);
+  });
+
+  it("Should be able to find an accurate shortest path, even at a point between vertices", async () => {
+    const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    const source = await createSource<Feature<Polygon>>(sourceUrl);
+    const prepared = prepareSketch(
+      require("./sketches/Midpoint-test-4.geojson.json")
+    );
+    const result = await calculateDistanceToShore(prepared.feature, source);
+    expect(result.meters).toBeCloseTo(1515.481);
+  });
+
+  it("Should be able to find the shore, even if very far away", async () => {
+    const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    const source = await createSource<Feature<Polygon>>(sourceUrl);
+    const prepared = prepareSketch(
+      require("./sketches/Distance-test.geojson.json")
+    );
+    const result = await calculateDistanceToShore(prepared.feature, source);
+    expect(result.meters).toBeCloseTo(213248.537548996);
+  });
+
+  it("Should be able to find the appropriate shoreline across the antimeridian", async () => {
+    const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    const source = await createSource<Feature<Polygon>>(sourceUrl);
+    const prepared = prepareSketch(
+      require("./sketches/Distance-test-3.geojson.json")
+    );
+    const result = await calculateDistanceToShore(prepared.feature, source);
+    expect(result.meters).toBeCloseTo(12843.832120885687);
   });
 });

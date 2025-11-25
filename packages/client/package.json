@@ -165,6 +165,7 @@
     "geojson-antimeridian-cut": "^0.1.0",
     "graphql": "^15.3.0",
     "graphql-request": "^3.7.0",
+    "h3-js": "^4.3.0",
     "i18next": "^19.7.0",
     "i18next-browser-languagedetector": "^6.1.2",
     "jest-junit": "^12.2.0",

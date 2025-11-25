@@ -45,10 +45,9 @@ const DEFAULT_H3_RESOLUTION = 6;
 
 /**
  * Maximum number of H3 "rings" (graph distance) to search outward
- * from the origin before giving up. At resolution 7 this is on the
- * order of a few dozen kilometers.
+ * from the origin before giving up.
  */
-const MAX_H3_RING = 250;
+const MAX_H3_RING = 50;
 
 /**
  * Minimum initial point buffer used for the small bbox search
@@ -195,22 +194,55 @@ function initialH3CellsForGeometry(
 /**
  * Convert a single H3 cell into a [minX, minY, maxX, maxY] bbox using the
  * GeoJSON-style [lng,lat] boundary returned by H3.
+ *
+ * Special handling is included for cells that cross the antimeridian:
+ * rather than returning a nearly world-spanning bbox like [-179, 179],
+ * we emit a bbox where minX > maxX (e.g. [170, -170]). This allows
+ * downstream helpers like `splitBBoxAntimeridian` to correctly split
+ * the box into two non-wrapping segments.
  */
 function bboxForCell(cell: H3Index): [number, number, number, number] {
   const boundary = cellToBoundary(cell, true); // [lng,lat] pairs
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
+
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+  let minLat = Infinity;
+  let maxLat = -Infinity;
 
   for (const [lng, lat] of boundary as [number, number][]) {
-    if (lng < minX) minX = lng;
-    if (lng > maxX) maxX = lng;
-    if (lat < minY) minY = lat;
-    if (lat > maxY) maxY = lat;
+    if (lng < minLng) minLng = lng;
+    if (lng > maxLng) maxLng = lng;
+    if (lat < minLat) minLat = lat;
+    if (lat > maxLat) maxLat = lat;
   }
 
-  return [minX, minY, maxX, maxY];
+  const crossesAntimeridian = minLng < -160 && maxLng > 160;
+
+  // If the cell crosses the antimeridian, construct a bbox where minX > maxX
+  // so that downstream code can detect and split it.
+  if (crossesAntimeridian) {
+    let minPositiveLng = Infinity;
+    let maxNegativeLng = -Infinity;
+
+    for (const [lng] of boundary as [number, number][]) {
+      if (lng >= 0 && lng < minPositiveLng) {
+        minPositiveLng = lng;
+      } else if (lng < 0 && lng > maxNegativeLng) {
+        maxNegativeLng = lng;
+      }
+    }
+
+    // Fallback to the simple bbox if for some reason we didn't classify
+    // any positive/negative longitudes (shouldn't happen in practice).
+    if (!Number.isFinite(minPositiveLng) || !Number.isFinite(maxNegativeLng)) {
+      return [minLng, minLat, maxLng, maxLat];
+    }
+
+    return [minPositiveLng, minLat, maxNegativeLng, maxLat];
+  }
+
+  // Normal, non-antimeridian-crossing cell.
+  return [minLng, minLat, maxLng, maxLat];
 }
 
 /**
@@ -231,6 +263,92 @@ type Segment = {
   a: Position;
   b: Position;
 };
+
+/**
+ * Normalize longitudes of a single position into a window centered around
+ * `referenceLng`, so that the delta in degrees is always within [-180, 180].
+ * This is useful near the antimeridian where raw [lng,lat] differences can
+ * otherwise appear almost 360° apart.
+ */
+function normalizePositionLongitude(
+  pos: Position,
+  referenceLng: number
+): Position {
+  const [lng, lat] = pos;
+
+  if (!Number.isFinite(referenceLng)) {
+    return pos;
+  }
+
+  let adj = lng;
+  while (adj - referenceLng > 180) adj -= 360;
+  while (adj - referenceLng < -180) adj += 360;
+
+  return [adj, lat];
+}
+
+/**
+ * Normalize all longitudes in a geometry into a band centered around
+ * `referenceLng`. This keeps subject and shoreline geometries in a
+ * consistent local coordinate space for planar segment distance
+ * calculations, especially when they lie on opposite sides of the
+ * antimeridian.
+ */
+function normalizeGeometryLongitudes(
+  geometry: Geometry,
+  referenceLng: number
+): Geometry {
+  switch (geometry.type) {
+    case "Point":
+      return {
+        type: "Point",
+        coordinates: normalizePositionLongitude(
+          geometry.coordinates,
+          referenceLng
+        ),
+      };
+    case "MultiPoint":
+      return {
+        type: "MultiPoint",
+        coordinates: geometry.coordinates.map((p) =>
+          normalizePositionLongitude(p, referenceLng)
+        ),
+      };
+    case "LineString":
+      return {
+        type: "LineString",
+        coordinates: geometry.coordinates.map((p) =>
+          normalizePositionLongitude(p, referenceLng)
+        ),
+      };
+    case "MultiLineString":
+      return {
+        type: "MultiLineString",
+        coordinates: geometry.coordinates.map((line) =>
+          line.map((p) => normalizePositionLongitude(p, referenceLng))
+        ),
+      };
+    case "Polygon":
+      return {
+        type: "Polygon",
+        coordinates: geometry.coordinates.map((ring) =>
+          ring.map((p) => normalizePositionLongitude(p, referenceLng))
+        ),
+      };
+    case "MultiPolygon":
+      return {
+        type: "MultiPolygon",
+        coordinates: geometry.coordinates.map((poly) =>
+          poly.map((ring) =>
+            ring.map((p) => normalizePositionLongitude(p, referenceLng))
+          )
+        ),
+      };
+    default:
+      // Fallback: return geometry unchanged for unsupported types.
+      return geometry;
+  }
+}
 
 /**
  * Add segments for a single ring or line (sequence of coordinates).
@@ -473,8 +591,23 @@ function nearestPointsBetweenGeometryAndPolygon(
   }
 
   // General case: subject is a line or polygon (possibly Multi*).
-  const subjectSegments = segmentsFromGeometryEdges(subjectGeom);
-  const shorelineSegments = segmentsFromGeometryEdges(landGeom as Geometry);
+  // To avoid antimeridian artifacts when ranking candidate segment pairs,
+  // normalize both geometries into a local longitude band centered on one of
+  // the subject's sample points.
+  const subjectSamples = samplePositionsFromGeometry(subjectGeom);
+  const referenceLng = subjectSamples.length > 0 ? subjectSamples[0][0] : 0;
+
+  const normalizedSubject = normalizeGeometryLongitudes(
+    subjectGeom,
+    referenceLng
+  );
+  const normalizedLand = normalizeGeometryLongitudes(
+    landGeom as Geometry,
+    referenceLng
+  );
+
+  const subjectSegments = segmentsFromGeometryEdges(normalizedSubject);
+  const shorelineSegments = segmentsFromGeometryEdges(normalizedLand);
 
   if (subjectSegments.length === 0 || shorelineSegments.length === 0) {
     return { meters: Infinity, origin: null, shoreline: null };
@@ -496,10 +629,31 @@ function nearestPointsBetweenGeometryAndPolygon(
   }
 
   if (bestOrigin && bestShoreline) {
-    const meters = distance(bestOrigin as any, bestShoreline as any, {
-      units: "meters",
-    });
-    return { meters, origin: bestOrigin, shoreline: bestShoreline };
+    // Wrap longitudes from the normalized space back into the standard
+    // [-180, 180] range before computing a geodesic distance.
+    const wrapLng = (lng: number) => ((((lng + 180) % 360) + 360) % 360) - 180;
+
+    const denormalizedOrigin: Position = [
+      wrapLng(bestOrigin[0]),
+      bestOrigin[1],
+    ];
+    const denormalizedShoreline: Position = [
+      wrapLng(bestShoreline[0]),
+      bestShoreline[1],
+    ];
+
+    const meters = distance(
+      denormalizedOrigin as any,
+      denormalizedShoreline as any,
+      {
+        units: "meters",
+      }
+    );
+    return {
+      meters,
+      origin: denormalizedOrigin,
+      shoreline: denormalizedShoreline,
+    };
   }
 
   return { meters: Infinity, origin: null, shoreline: null };
@@ -513,6 +667,12 @@ type H3SearchResult = {
   meters: number;
   origin: Position | null;
   shoreline: Position | null;
+  /**
+   * H3 cells searched, grouped by "ring" distance from the origin.
+   * - rings[0] is the initial set of origin cells
+   * - rings[1] is the first expanded ring, etc.
+   */
+  rings: H3Index[][];
 };
 
 /**
@@ -548,11 +708,12 @@ async function searchNearestLandWithH3(
   );
 
   if (originCells.length === 0) {
-    return { meters: Infinity, origin: null, shoreline: null };
+    return { meters: Infinity, origin: null, shoreline: null, rings: [] };
   }
 
   const visited = new Set<string>();
   let frontier: H3Index[] = [];
+  const rings: H3Index[][] = [];
 
   for (const cell of originCells) {
     if (!visited.has(cell)) {
@@ -564,15 +725,30 @@ async function searchNearestLandWithH3(
   let ring = 0;
 
   while (frontier.length > 0 && ring <= MAX_H3_RING) {
+    // Track the current ring of cells being searched.
+    rings.push([...frontier]);
+
     // 1. Identify which cells in this ring potentially contain land.
     const cellsWithLand: H3Index[] = [];
 
     for (const cell of frontier) {
       const cellBBox = bboxForCell(cell);
-      const env = bboxToEnvelope(cellBBox);
-      const estimate = land.search(env as any);
+      const cleaned = cleanBBox(cellBBox);
+      const split = splitBBoxAntimeridian(
+        cleaned as [number, number, number, number]
+      );
 
-      if (estimate.features > 0) {
+      let hasLand = false;
+      for (const part of split) {
+        const env = bboxToEnvelope(part);
+        const estimate = land.search(env as any);
+        if (estimate.features > 0) {
+          hasLand = true;
+          break;
+        }
+      }
+
+      if (hasLand) {
         cellsWithLand.push(cell);
       }
     }
@@ -587,47 +763,54 @@ async function searchNearestLandWithH3(
 
       for (const cell of cellsWithLand) {
         const cellBBox = bboxForCell(cell);
-        const env = bboxToEnvelope(cellBBox);
+        const cleaned = cleanBBox(cellBBox);
+        const split = splitBBoxAntimeridian(
+          cleaned as [number, number, number, number]
+        );
 
-        const queryPlan = land.createPlan(env as any);
+        for (const part of split) {
+          const env = bboxToEnvelope(part);
+          const queryPlan = land.createPlan(env as any);
 
-        for await (const landFeature of land.getFeaturesAsync(env as any, {
-          queryPlan,
-        })) {
-          const offset =
-            (landFeature as any).properties &&
-            (landFeature as any).properties.__offset;
+          for await (const landFeature of land.getFeaturesAsync(env as any, {
+            queryPlan,
+          })) {
+            const offset =
+              (landFeature as any).properties &&
+              (landFeature as any).properties.__offset;
 
-          if (typeof offset === "number") {
-            if (seenOffsets.has(offset)) {
-              continue;
+            if (typeof offset === "number") {
+              if (seenOffsets.has(offset)) {
+                continue;
+              }
+              seenOffsets.add(offset);
             }
-            seenOffsets.add(offset);
-          }
 
-          // If the geometries actually intersect (feature on land or
-          // touching shoreline), distance is zero.
-          if (booleanIntersects(feature as any, landFeature as any)) {
-            return { meters: 0, origin: null, shoreline: null };
-          }
+            // If the geometries actually intersect (feature on land or
+            // touching shoreline), distance is zero.
+            if (booleanIntersects(feature as any, landFeature as any)) {
+              return { meters: 0, origin: null, shoreline: null, rings };
+            }
 
-          const path = nearestPointsBetweenGeometryAndPolygon(
-            feature.geometry as Geometry,
-            landFeature as any
-          );
+            const path = nearestPointsBetweenGeometryAndPolygon(
+              feature.geometry as Geometry,
+              landFeature as any
+            );
 
-          if (path.meters < bestMeters) {
-            bestMeters = path.meters;
-            bestOrigin = path.origin;
-            bestShoreline = path.shoreline;
+            if (path.meters < bestMeters) {
+              bestMeters = path.meters;
+              bestOrigin = path.origin;
+              bestShoreline = path.shoreline;
 
-            if (bestMeters <= minimumDistanceMeters) {
-              // Within the "minimum distance" threshold, treat as zero.
-              return {
-                meters: 0,
-                origin: bestOrigin,
-                shoreline: bestShoreline,
-              };
+              if (bestMeters <= minimumDistanceMeters) {
+                // Within the "minimum distance" threshold, treat as zero.
+                return {
+                  meters: 0,
+                  origin: bestOrigin,
+                  shoreline: bestShoreline,
+                  rings,
+                };
+              }
             }
           }
         }
@@ -637,6 +820,7 @@ async function searchNearestLandWithH3(
         meters: bestMeters,
         origin: bestOrigin,
         shoreline: bestShoreline,
+        rings,
       };
     }
 
@@ -658,7 +842,7 @@ async function searchNearestLandWithH3(
   }
 
   // No land found within the configured H3 radius.
-  return { meters: Infinity, origin: null, shoreline: null };
+  return { meters: Infinity, origin: null, shoreline: null, rings };
 }
 
 /**
@@ -688,6 +872,8 @@ async function searchNearestLandWithH3(
  *   - geojsonLine: LineString from closest point on the subject feature to the
  *     closest point along the shoreline (or null when distance is 0 or
  *     unbounded).
+ *   - rings: H3 cell indexes searched during the H3-based phase, grouped by
+ *     ring distance from the origin (empty array when H3 search is not used).
  */
 export async function calculateDistanceToShore(
   feature: GeoJSON.Feature,
@@ -773,6 +959,7 @@ export async function calculateDistanceToShore(
         return {
           meters: 0,
           geojsonLine: null,
+          rings: [] as H3Index[][],
         };
       }
 
@@ -800,6 +987,7 @@ export async function calculateDistanceToShore(
                     properties: {},
                   }
                 : null,
+            rings: [] as H3Index[][],
           };
         }
       }
@@ -816,6 +1004,7 @@ export async function calculateDistanceToShore(
           },
           properties: {},
         },
+        rings: [] as H3Index[][],
       };
     }
   }
@@ -855,6 +1044,7 @@ export async function calculateDistanceToShore(
     return {
       meters: Infinity,
       geojsonLine: null,
+      rings: h3Result.rings,
     };
   }
 
@@ -874,5 +1064,6 @@ export async function calculateDistanceToShore(
             properties: {},
           }
         : null,
+    // rings: h3Result.rings,
   };
 }

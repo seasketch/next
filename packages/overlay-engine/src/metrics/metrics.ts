@@ -1,4 +1,4 @@
-import { LineString } from "geojson";
+import { Feature, LineString } from "geojson";
 import {
   min,
   max,
@@ -145,7 +145,8 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
   type: "distance_to_shore";
   value: {
     meters: number;
-    geojsonLine: LineString;
+    geojsonLine: Feature<LineString>;
+    // rings: string[][];
   };
 };
 
