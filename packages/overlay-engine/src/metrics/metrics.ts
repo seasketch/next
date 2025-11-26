@@ -101,7 +101,7 @@ export type ColumnValueStats = {
   max: number;
   mean: number;
   stdDev: number;
-  histogram: [number, number | null][];
+  histogram: [number, number][];
   countDistinct: number;
   sum: number;
   /**
@@ -307,5 +307,130 @@ export function combineRasterBandStats(
     histogram: combinedHistogram,
     invalid: totalInvalid,
     sum: totalSum,
+  };
+}
+
+/**
+ * Combines ColumnValueStats from multiple fragments into a single ColumnValueStats.
+ * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
+ * Otherwise, they are weighted by count.
+ */
+export function combineColumnValueStats(
+  statsArray: ColumnValueStats[]
+): ColumnValueStats | undefined {
+  if (statsArray.length === 0) {
+    return undefined;
+  }
+
+  if (statsArray.length === 1) {
+    return statsArray[0];
+  }
+
+  // Determine whether to weight by area or by count
+  const useAreaWeight = statsArray.some(
+    (s) => typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
+  );
+
+  let totalCount = 0;
+  let totalSum = 0;
+  let totalWeight = 0;
+  const mins: number[] = [];
+  const maxs: number[] = [];
+
+  // For variance/stdDev combination we use:
+  // E[x^2] = variance + mean^2, aggregated with the same weights as for the mean
+  let weightedMeanNumerator = 0;
+  let weightedSecondMoment = 0;
+
+  // Merge histograms by value
+  const histogramMap = new Map<number, number>();
+
+  for (const stats of statsArray) {
+    const weight =
+      useAreaWeight && typeof stats.totalAreaSqKm === "number"
+        ? Math.max(stats.totalAreaSqKm, 0)
+        : stats.count;
+
+    if (!isFinite(weight) || weight <= 0) {
+      continue;
+    }
+
+    totalCount += stats.count;
+    totalSum += stats.sum;
+    mins.push(stats.min);
+    maxs.push(stats.max);
+
+    if (isFinite(stats.mean)) {
+      weightedMeanNumerator += stats.mean * weight;
+    }
+    if (isFinite(stats.stdDev) && isFinite(stats.mean)) {
+      const variance = stats.stdDev * stats.stdDev;
+      weightedSecondMoment += (variance + stats.mean * stats.mean) * weight;
+    }
+
+    totalWeight += weight;
+
+    // Merge histogram entries
+    for (const [value, count] of stats.histogram) {
+      histogramMap.set(value, (histogramMap.get(value) || 0) + count);
+    }
+  }
+
+  // If all weights were zero, fall back to simple stats if possible
+  const combinedCount = totalCount;
+  const combinedSum = totalSum;
+
+  const combinedMin = mins.length > 0 ? min(mins) : NaN;
+  const combinedMax = maxs.length > 0 ? max(maxs) : NaN;
+
+  let combinedMean = NaN;
+  let combinedStdDev = NaN;
+
+  if (totalWeight > 0 && weightedMeanNumerator !== 0) {
+    combinedMean = weightedMeanNumerator / totalWeight;
+    if (weightedSecondMoment !== 0) {
+      const meanSquare = weightedSecondMoment / totalWeight;
+      const variance = meanSquare - combinedMean * combinedMean;
+      combinedStdDev = Math.sqrt(Math.max(variance, 0));
+    }
+  } else if (combinedCount > 0) {
+    combinedMean = combinedSum / combinedCount;
+    // stdDev cannot be reliably combined without additional information; leave as NaN
+  }
+
+  // Convert histogram map back to array and sort by value
+  let combinedHistogram: [number, number][] = Array.from(histogramMap.entries())
+    .map(([value, count]) => [value, count] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+
+  // Limit histogram size similarly to raster stats
+  const MAX_HISTOGRAM_ENTRIES = 200;
+  if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
+    combinedHistogram = combinedHistogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+  }
+
+  const countDistinct = histogramMap.size;
+
+  const totalAreaSqKm = useAreaWeight
+    ? statsArray.reduce(
+        (acc, s) =>
+          acc +
+          (typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
+            ? s.totalAreaSqKm
+            : 0),
+        0
+      )
+    : undefined;
+
+  return {
+    count: combinedCount,
+    min: combinedMin,
+    max: combinedMax,
+    mean: combinedMean,
+    stdDev: combinedStdDev,
+    histogram: combinedHistogram,
+    countDistinct,
+    sum: combinedSum,
+    totalAreaSqKm,
   };
 }

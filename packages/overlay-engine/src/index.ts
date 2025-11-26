@@ -31,6 +31,7 @@ export {
   PresenceMetric,
   PresenceTableMetric,
   ColumnValuesMetric,
+  ColumnValueStats,
   MetricTypeMap,
   subjectIsFragment,
   subjectIsGeography,
@@ -41,6 +42,7 @@ export {
   DistanceToShoreMetric,
   RasterBandStats,
   combineRasterBandStats,
+  combineColumnValueStats,
 } from "./metrics/metrics";
 export {
   createUniqueIdIndex,

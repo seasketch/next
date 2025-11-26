@@ -10,8 +10,8 @@ import Skeleton from "../../components/Skeleton";
 import {
   subjectIsFragment,
   ColumnValuesMetric,
-  IdentifiedValues,
-  computeStatsFromIdentifiedValues,
+  ColumnValueStats,
+  combineColumnValueStats,
 } from "overlay-engine";
 import {
   extractColorsForCategories,
@@ -69,9 +69,7 @@ export function ColumnStatisticsCard({
         sourceUrl: string;
         groupBy?: string;
         statistics: {
-          [classKey: string]: ReturnType<
-            typeof computeStatsFromIdentifiedValues
-          >;
+          [classKey: string]: ColumnValueStats;
         };
       };
     } = {};
@@ -96,19 +94,18 @@ export function ColumnStatisticsCard({
           m.parameters?.valueColumn
       );
 
-      console.log("fragmentMetrics", fragmentMetrics);
-      // Collect IdentifiedValues by groupBy value across all fragments
-      const valuesByClass: { [classKey: string]: IdentifiedValues[] } = {};
+      // Collect ColumnValueStats by groupBy value across all fragments
+      const statsByClass: { [classKey: string]: ColumnValueStats[] } = {};
       for (const metric of fragmentMetrics) {
         const columnValue = metric.value as ColumnValuesMetric["value"];
         if (columnValue && typeof columnValue === "object") {
           for (const classKey in columnValue) {
-            const identifiedValues = columnValue[classKey];
-            if (Array.isArray(identifiedValues)) {
-              if (!valuesByClass[classKey]) {
-                valuesByClass[classKey] = [];
+            const stats = columnValue[classKey];
+            if (stats) {
+              if (!statsByClass[classKey]) {
+                statsByClass[classKey] = [];
               }
-              valuesByClass[classKey].push(...identifiedValues);
+              statsByClass[classKey].push(stats);
             }
           }
         }
@@ -116,13 +113,13 @@ export function ColumnStatisticsCard({
 
       // Compute statistics for each class
       const statistics: {
-        [classKey: string]: ReturnType<typeof computeStatsFromIdentifiedValues>;
+        [classKey: string]: ColumnValueStats;
       } = {};
-      for (const classKey in valuesByClass) {
-        const identifiedValues = valuesByClass[classKey];
-        if (identifiedValues.length > 0) {
-          statistics[classKey] =
-            computeStatsFromIdentifiedValues(identifiedValues);
+      for (const classKey in statsByClass) {
+        const classStatsArray = statsByClass[classKey];
+        const combined = combineColumnValueStats(classStatsArray);
+        if (combined) {
+          statistics[classKey] = combined;
         }
       }
 
@@ -140,8 +137,8 @@ export function ColumnStatisticsCard({
   }, [reportingLayers, metrics, sources]);
 
   const getStatValue = (
-    stats: ReturnType<typeof computeStatsFromIdentifiedValues>,
-    statName: keyof ReturnType<typeof computeStatsFromIdentifiedValues>
+    stats: ColumnValueStats,
+    statName: keyof ColumnValueStats
   ): number | string => {
     const value = stats[statName];
     if (typeof value === "number") {
@@ -174,7 +171,7 @@ export function ColumnStatisticsCard({
       layerId: string;
       layerTitle: string;
       classKey: string;
-      stats: ReturnType<typeof computeStatsFromIdentifiedValues>;
+      stats: ColumnValueStats;
       color?: string;
       groupBy?: string;
     }> = [];
@@ -361,28 +358,12 @@ export function ColumnStatisticsCard({
                       )}
                     </td>
                   )}
-                  {displayStats.sum && "sum" in row.stats && (
+                  {displayStats.sum && (
                     <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
                       {loading ? (
                         <Skeleton className="w-16 h-4" />
                       ) : (
-                        formatStatValue(
-                          getStatValue(
-                            row.stats,
-                            "sum" as keyof ReturnType<
-                              typeof computeStatsFromIdentifiedValues
-                            >
-                          )
-                        )
-                      )}
-                    </td>
-                  )}
-                  {displayStats.median && (
-                    <td className="px-3 py-2 whitespace-nowrap text-right text-sm text-gray-900 tabular-nums">
-                      {loading ? (
-                        <Skeleton className="w-16 h-4" />
-                      ) : (
-                        formatStatValue(getStatValue(row.stats, "median"))
+                        formatStatValue(getStatValue(row.stats, "sum"))
                       )}
                     </td>
                   )}

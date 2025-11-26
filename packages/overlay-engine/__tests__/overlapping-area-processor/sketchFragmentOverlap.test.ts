@@ -541,13 +541,42 @@ describe("sketchFragmentOverlap", () => {
           "d15n"
         );
         const results = await processor.calculate();
-        console.log(results);
-        expect(results["*"].length).toBe(3);
-        // Verify that results are IdentifiedValues tuples [oidx, value]
-        expect(Array.isArray(results["*"][0])).toBe(true);
-        expect(results["*"][0].length).toBe(2);
-        expect(results["*"][0][0]).toBe(55);
-        expect(results["*"][0][1]).toBe(1.933);
+        // console.log(results);
+        expect(results["*"].count).toBe(3);
+        expect(results["*"].mean).toBeCloseTo(1.586);
+        expect(results["*"].max).toBeCloseTo(1.933);
+        expect(results["*"].min).toBeCloseTo(1.373);
+      });
+
+      it("Should include totalAreaSqKm for polygonal sources, and weigh statistics by intersected polygon area", async () => {
+        const source = await sourceCache.get<Feature<MultiPolygon>>(
+          "https://uploads.seasketch.org/testing-offshore-priority-areas.fgb",
+          {
+            pageSize: "5MB",
+          }
+        );
+        const prepared = prepareSketch(
+          require("./sketches/Offshore-North.geojson.json")
+        );
+        const processor = new OverlayEngineBatchProcessor(
+          "column_values",
+          1024 * 1024 * 2, // 5MB
+          prepared.feature,
+          source,
+          [],
+          {},
+          undefined,
+          pool,
+          undefined,
+          undefined,
+          "SSOLN"
+        );
+        const results = await processor.calculate();
+        // console.log(results);
+        expect(results["*"].totalAreaSqKm).toBeCloseTo(48774.93811324354);
+        expect(results["*"].mean).toBeCloseTo(9.428);
+        expect(results["*"].min).toBe(0);
+        expect(results["*"].max).toBe(10);
       });
     });
   });

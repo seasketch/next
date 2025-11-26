@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.downsampleHistogram = downsampleHistogram;
 exports.calculateRasterStats = calculateRasterStats;
 const geoblaze = require("geoblaze");
 function downsampleHistogram(histogram, maxEntries) {

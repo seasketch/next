@@ -3252,11 +3252,118 @@ function multiLineString(coordinates, properties, options = {}) {
   };
   return feature(geom, properties, options);
 }
+function radiansToLength(radians, units = "kilometers") {
+  const factor = factors[units];
+  if (!factor) {
+    throw new Error(units + " units is invalid");
+  }
+  return radians * factor;
+}
+function degreesToRadians(degrees) {
+  const normalisedDegrees = degrees % 360;
+  return normalisedDegrees * Math.PI / 180;
+}
 function isNumber(num) {
   return !isNaN(num) && num !== null && !Array.isArray(num);
 }
 
 // node_modules/@turf/meta/dist/esm/index.js
+function coordEach(geojson, callback, excludeWrapCoord) {
+  if (geojson === null) return;
+  var j, k, l, geometry, stopG, coords, geometryMaybeCollection, wrapShrink = 0, coordIndex = 0, isGeometryCollection, type = geojson.type, isFeatureCollection = type === "FeatureCollection", isFeature = type === "Feature", stop = isFeatureCollection ? geojson.features.length : 1;
+  for (var featureIndex = 0; featureIndex < stop; featureIndex++) {
+    geometryMaybeCollection = isFeatureCollection ? geojson.features[featureIndex].geometry : isFeature ? geojson.geometry : geojson;
+    isGeometryCollection = geometryMaybeCollection ? geometryMaybeCollection.type === "GeometryCollection" : false;
+    stopG = isGeometryCollection ? geometryMaybeCollection.geometries.length : 1;
+    for (var geomIndex = 0; geomIndex < stopG; geomIndex++) {
+      var multiFeatureIndex = 0;
+      var geometryIndex = 0;
+      geometry = isGeometryCollection ? geometryMaybeCollection.geometries[geomIndex] : geometryMaybeCollection;
+      if (geometry === null) continue;
+      coords = geometry.coordinates;
+      var geomType = geometry.type;
+      wrapShrink = excludeWrapCoord && (geomType === "Polygon" || geomType === "MultiPolygon") ? 1 : 0;
+      switch (geomType) {
+        case null:
+          break;
+        case "Point":
+          if (callback(
+            coords,
+            coordIndex,
+            featureIndex,
+            multiFeatureIndex,
+            geometryIndex
+          ) === false)
+            return false;
+          coordIndex++;
+          multiFeatureIndex++;
+          break;
+        case "LineString":
+        case "MultiPoint":
+          for (j = 0; j < coords.length; j++) {
+            if (callback(
+              coords[j],
+              coordIndex,
+              featureIndex,
+              multiFeatureIndex,
+              geometryIndex
+            ) === false)
+              return false;
+            coordIndex++;
+            if (geomType === "MultiPoint") multiFeatureIndex++;
+          }
+          if (geomType === "LineString") multiFeatureIndex++;
+          break;
+        case "Polygon":
+        case "MultiLineString":
+          for (j = 0; j < coords.length; j++) {
+            for (k = 0; k < coords[j].length - wrapShrink; k++) {
+              if (callback(
+                coords[j][k],
+                coordIndex,
+                featureIndex,
+                multiFeatureIndex,
+                geometryIndex
+              ) === false)
+                return false;
+              coordIndex++;
+            }
+            if (geomType === "MultiLineString") multiFeatureIndex++;
+            if (geomType === "Polygon") geometryIndex++;
+          }
+          if (geomType === "Polygon") multiFeatureIndex++;
+          break;
+        case "MultiPolygon":
+          for (j = 0; j < coords.length; j++) {
+            geometryIndex = 0;
+            for (k = 0; k < coords[j].length; k++) {
+              for (l = 0; l < coords[j][k].length - wrapShrink; l++) {
+                if (callback(
+                  coords[j][k][l],
+                  coordIndex,
+                  featureIndex,
+                  multiFeatureIndex,
+                  geometryIndex
+                ) === false)
+                  return false;
+                coordIndex++;
+              }
+              geometryIndex++;
+            }
+            multiFeatureIndex++;
+          }
+          break;
+        case "GeometryCollection":
+          for (j = 0; j < geometry.geometries.length; j++)
+            if (coordEach(geometry.geometries[j], callback, excludeWrapCoord) === false)
+              return false;
+          break;
+        default:
+          throw new Error("Unknown Geometry Type");
+      }
+    }
+  }
+}
 function geomEach(geojson, callback) {
   var i, j, g, geometry, stopG, geometryMaybeCollection, isGeometryCollection, featureProperties, featureBBox, featureId, featureIndex = 0, isFeatureCollection = geojson.type === "FeatureCollection", isFeature = geojson.type === "Feature", stop = isFeatureCollection ? geojson.features.length : 1;
   for (i = 0; i < stop; i++) {
@@ -3374,6 +3481,68 @@ function flattenEach(geojson, callback) {
         return false;
     }
   });
+}
+function segmentEach(geojson, callback) {
+  flattenEach(geojson, function(feature2, featureIndex, multiFeatureIndex) {
+    var segmentIndex = 0;
+    if (!feature2.geometry) return;
+    var type = feature2.geometry.type;
+    if (type === "Point" || type === "MultiPoint") return;
+    var previousCoords;
+    var previousFeatureIndex = 0;
+    var previousMultiIndex = 0;
+    var prevGeomIndex = 0;
+    if (coordEach(
+      feature2,
+      function(currentCoord, coordIndex, featureIndexCoord, multiPartIndexCoord, geometryIndex) {
+        if (previousCoords === void 0 || featureIndex > previousFeatureIndex || multiPartIndexCoord > previousMultiIndex || geometryIndex > prevGeomIndex) {
+          previousCoords = currentCoord;
+          previousFeatureIndex = featureIndex;
+          previousMultiIndex = multiPartIndexCoord;
+          prevGeomIndex = geometryIndex;
+          segmentIndex = 0;
+          return;
+        }
+        var currentSegment = lineString(
+          [previousCoords, currentCoord],
+          feature2.properties
+        );
+        if (callback(
+          currentSegment,
+          featureIndex,
+          multiFeatureIndex,
+          geometryIndex,
+          segmentIndex
+        ) === false)
+          return false;
+        segmentIndex++;
+        previousCoords = currentCoord;
+      }
+    ) === false)
+      return false;
+  });
+}
+function segmentReduce(geojson, callback, initialValue) {
+  var previousValue = initialValue;
+  var started = false;
+  segmentEach(
+    geojson,
+    function(currentSegment, featureIndex, multiFeatureIndex, geometryIndex, segmentIndex) {
+      if (started === false && initialValue === void 0)
+        previousValue = currentSegment;
+      else
+        previousValue = callback(
+          previousValue,
+          currentSegment,
+          featureIndex,
+          multiFeatureIndex,
+          geometryIndex,
+          segmentIndex
+        );
+      started = true;
+    }
+  );
+  return previousValue;
 }
 
 // node_modules/@turf/area/dist/esm/index.js
@@ -4136,6 +4305,34 @@ function booleanIntersects(feature1, feature2, {
 }
 var turf_boolean_intersects_default = booleanIntersects;
 
+// node_modules/@turf/distance/dist/esm/index.js
+function distance(from, to, options = {}) {
+  var coordinates1 = getCoord(from);
+  var coordinates2 = getCoord(to);
+  var dLat = degreesToRadians(coordinates2[1] - coordinates1[1]);
+  var dLon = degreesToRadians(coordinates2[0] - coordinates1[0]);
+  var lat1 = degreesToRadians(coordinates1[1]);
+  var lat2 = degreesToRadians(coordinates2[1]);
+  var a = Math.pow(Math.sin(dLat / 2), 2) + Math.pow(Math.sin(dLon / 2), 2) * Math.cos(lat1) * Math.cos(lat2);
+  return radiansToLength(
+    2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)),
+    options.units
+  );
+}
+
+// node_modules/@turf/length/dist/esm/index.js
+function length2(geojson, options = {}) {
+  return segmentReduce(
+    geojson,
+    (previousValue, segment) => {
+      const coords = segment.geometry.coordinates;
+      return previousValue + distance(coords[0], coords[1], options);
+    },
+    0
+  );
+}
+var index_default = length2;
+
 // src/workers/clipBatch.ts
 async function clipBatch({
   features,
@@ -4157,25 +4354,21 @@ async function clipBatch({
       if (classKey === "*") {
         continue;
       }
-      const area2 = await performClipping(
-        features.filter((f) => f.feature.properties?.[groupBy] === classKey),
+      const f = performClipping(
+        features.filter((f2) => f2.feature.properties?.[groupBy] === classKey),
         differenceMultiPolygon,
         subjectFeature
       );
-      results[classKey] += area2;
-      results["*"] += area2;
+      results[classKey] += turf_area_default(f) * 1e-6;
+      results["*"] += turf_area_default(f) * 1e-6;
     }
   } else {
-    const area2 = await performClipping(
-      features,
-      differenceMultiPolygon,
-      subjectFeature
-    );
-    results["*"] += area2;
+    const f = performClipping(features, differenceMultiPolygon, subjectFeature);
+    results["*"] += turf_area_default(f) * 1e-6;
   }
   return results;
 }
-async function performClipping(features, differenceGeoms, subjectFeature) {
+function performClipping(features, differenceGeoms, subjectFeature) {
   let product = [];
   let forClipping = [];
   for (const f of features) {
@@ -4198,15 +4391,14 @@ async function performClipping(features, differenceGeoms, subjectFeature) {
     }
   }
   const difference2 = difference(product, ...differenceGeoms);
-  const sqKm = turf_area_default({
+  return {
     type: "Feature",
     geometry: {
       type: "MultiPolygon",
       coordinates: difference2
     },
     properties: {}
-  }) * 1e-6;
-  return sqKm;
+  };
 }
 async function countFeatures({
   features,
@@ -4368,58 +4560,63 @@ async function collectColumnValues({
 }) {
   const results = { "*": [] };
   for (const f of features) {
-    if (f.requiresIntersection) {
-      throw new Error(
-        "Not implemented. If just collecting column values, they should never be added to the batch if unsure if they lie within the subject feature."
-      );
-    }
-    if (f.requiresDifference) {
-      if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
-        const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
-        for (const coord of coords) {
-          let anyMisses = false;
-          for (const poly of differenceMultiPolygon) {
-            const r = pointInPolygon(coord, poly);
-            if (r === false) {
-              anyMisses = true;
-              break;
+    if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+      if (f.requiresIntersection) {
+        throw new Error(
+          "Not implemented. If just collecting column values for points. They should never be added to the batch if unsure if they lie within the subject feature."
+        );
+      }
+      if (f.requiresDifference) {
+        if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
+          const coords = f.feature.geometry.type === "Point" ? [f.feature.geometry.coordinates] : f.feature.geometry.coordinates;
+          for (const coord of coords) {
+            let anyMisses = false;
+            for (const poly of differenceMultiPolygon) {
+              const r = pointInPolygon(coord, poly);
+              if (r === false) {
+                anyMisses = true;
+                break;
+              }
+            }
+            if (!anyMisses) {
+              continue;
             }
           }
-          if (!anyMisses) {
-            continue;
-          }
-        }
-      } else {
-        if (turf_boolean_intersects_default(f.feature, {
-          type: "Feature",
-          geometry: {
-            type: "MultiPolygon",
-            coordinates: differenceMultiPolygon
-          },
-          properties: {}
-        })) {
-          continue;
         }
       }
-    }
-    if (!("__oidx" in f.feature.properties || {})) {
-      throw new Error("Feature properties must contain __oidx");
-    }
-    const oidx = f.feature.properties.__oidx;
-    if (oidx === void 0 || oidx === null) {
-      throw new Error("Feature properties must contain __oidx");
+    } else if (f.feature.geometry.type === "Polygon" || f.feature.geometry.type === "MultiPolygon" || f.feature.geometry.type === "LineString" || f.feature.geometry.type === "MultiLineString") {
+      f.feature = performOperationsOnFeature(
+        f.feature,
+        f.requiresIntersection,
+        f.requiresDifference,
+        differenceMultiPolygon,
+        subjectFeature
+      );
     }
     const value = f.feature.properties?.[property];
+    const columnValue = [value];
+    if (f.feature.geometry.type === "Polygon" || f.feature.geometry.type === "MultiPolygon") {
+      const sqKm = turf_area_default(f.feature) * 1e-6;
+      if (isNaN(sqKm) || sqKm === 0) {
+        continue;
+      }
+      columnValue.push(sqKm);
+    } else if (f.feature.geometry.type === "LineString" || f.feature.geometry.type === "MultiLineString") {
+      const length3 = index_default(f.feature);
+      if (isNaN(length3) || length3 === 0) {
+        continue;
+      }
+      columnValue.push(length3);
+    }
     if (typeof value === "number") {
-      const identifiedValue = [oidx, value];
-      results["*"].push(identifiedValue);
+      results["*"].push(columnValue);
       if (groupBy) {
         const classKey = f.feature.properties?.[groupBy];
         if (classKey) {
           if (!(classKey in results)) {
             results[classKey] = [];
           }
-          results[classKey].push(identifiedValue);
+          results[classKey].push(columnValue);
         }
       }
     }
@@ -4492,6 +4689,32 @@ function pick(object, keys) {
     acc[key] = object[key];
     return acc;
   }, {});
+}
+function performOperationsOnFeature(feature2, requiresIntersection, requiresDifference, differenceMultiPolygon, subjectFeature) {
+  let result = JSON.parse(JSON.stringify(feature2));
+  if (result.geometry.type === "Polygon" || result.geometry.type === "MultiPolygon") {
+    let geom = result.geometry.type === "Polygon" ? [result.geometry.coordinates] : result.geometry.coordinates;
+    if (requiresIntersection) {
+      geom = intersection2(
+        geom,
+        subjectFeature.geometry.coordinates
+      );
+    }
+    if (requiresDifference) {
+      geom = difference(geom, ...differenceMultiPolygon);
+    }
+    result.geometry = {
+      type: "MultiPolygon",
+      coordinates: geom
+    };
+  } else if (feature2.geometry.type === "LineString" || feature2.geometry.type === "MultiLineString") {
+    throw new Error("Not implemented");
+  } else {
+    throw new Error(
+      `Unsupported geometry type: ${feature2.geometry.type}`
+    );
+  }
+  return result;
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {

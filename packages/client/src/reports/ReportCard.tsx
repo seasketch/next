@@ -41,6 +41,8 @@ import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReport
 import Badge from "../components/Badge";
 import Button from "../components/Button";
 import CollapsibleFooter from "./components/CollapsibleFooter";
+import { ErrorBoundary } from "@sentry/react";
+import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -577,16 +579,22 @@ export function ReportCardFactory({
       tint={config.tint}
       icon={config.icon}
     >
-      <CardComponent
-        config={config}
-        dragHandleProps={dragHandleProps}
-        cardId={config.id}
-        onUpdate={onUpdate}
-        metrics={metrics}
-        sources={sources}
-        loading={loading}
-        errors={errors}
-      />
+      <ErrorBoundary
+        fallback={
+          <ErrorBoundaryFallback title={t("Failed to render report card")} />
+        }
+      >
+        <CardComponent
+          config={config}
+          dragHandleProps={dragHandleProps}
+          cardId={config.id}
+          onUpdate={onUpdate}
+          metrics={metrics}
+          sources={sources}
+          loading={loading}
+          errors={errors}
+        />
+      </ErrorBoundary>
     </ReportCard>
   );
 }

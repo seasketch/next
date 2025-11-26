@@ -2,9 +2,9 @@ import { Feature, MultiPolygon, Polygon } from "geojson";
 import { RasterBandStats } from "./metrics/metrics";
 const geoblaze = require("geoblaze");
 
-type HistogramEntry = [number, number];
+export type HistogramEntry = [number, number];
 
-function downsampleHistogram(
+export function downsampleHistogram(
   histogram: HistogramEntry[],
   maxEntries: number
 ): HistogramEntry[] {

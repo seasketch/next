@@ -13,7 +13,6 @@ type AdminConfig = ReportCardConfiguration<{
     min?: boolean;
     max?: boolean;
     mean?: boolean;
-    median?: boolean;
     stdDev?: boolean;
     count?: boolean;
     countDistinct?: boolean;
@@ -109,19 +108,6 @@ export default function ColumnStatisticsCardAdmin({
           <div className="flex items-center justify-between">
             <div>
               <label className="text-sm font-medium text-gray-900">
-                {t("Median")}
-              </label>
-            </div>
-            <Switch
-              isToggled={Boolean(displayStats.median)}
-              onClick={(enabled: boolean) =>
-                updateDisplayStats("median", enabled)
-              }
-            />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-900">
                 {t("Standard Deviation")}
               </label>
             </div>
@@ -153,9 +139,7 @@ export default function ColumnStatisticsCardAdmin({
             </div>
             <Switch
               isToggled={Boolean(displayStats.sum)}
-              onClick={(enabled: boolean) =>
-                updateDisplayStats("sum", enabled)
-              }
+              onClick={(enabled: boolean) => updateDisplayStats("sum", enabled)}
             />
           </div>
           <div className="flex items-center justify-between">

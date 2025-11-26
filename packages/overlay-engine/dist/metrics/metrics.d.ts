@@ -72,7 +72,7 @@ export type ColumnValueStats = {
     max: number;
     mean: number;
     stdDev: number;
-    histogram: [number, number | null][];
+    histogram: [number, number][];
     countDistinct: number;
     sum: number;
     /**
@@ -152,5 +152,11 @@ export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
  * @returns Combined RasterBandStats, or undefined if the array is empty
  */
 export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats | undefined;
+/**
+ * Combines ColumnValueStats from multiple fragments into a single ColumnValueStats.
+ * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
+ * Otherwise, they are weighted by count.
+ */
+export declare function combineColumnValueStats(statsArray: ColumnValueStats[]): ColumnValueStats | undefined;
 export {};
 //# sourceMappingURL=metrics.d.ts.map

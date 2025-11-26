@@ -15,6 +15,7 @@ const p_queue_1 = __importDefault(require("p-queue"));
 const pool_1 = require("./workers/pool");
 Object.defineProperty(exports, "createClippingWorkerPool", { enumerable: true, get: function () { return pool_1.createClippingWorkerPool; } });
 const truncate_1 = __importDefault(require("@turf/truncate"));
+const rasterStats_1 = require("./rasterStats");
 const uniqueIdIndex_1 = require("./utils/uniqueIdIndex");
 const layers = {
     classifiedFeatures: {
@@ -120,9 +121,7 @@ class OverlayEngineBatchProcessor {
         this.maxBatchSize = maxBatchSize;
         this.subjectFeature = subjectFeature;
         this.helpers = (0, helpers_1.guaranteeHelpers)(helpers);
-        console.time("build container index");
         this.containerIndex = new containerIndex_1.ContainerIndex(subjectFeature);
-        console.timeEnd("build container index");
         const boxes = this.containerIndex.getBBoxPolygons();
         let id = 0;
         for (const box of boxes.features) {
@@ -233,7 +232,10 @@ class OverlayEngineBatchProcessor {
                         // clip against the subject feature. We know it intersects in some
                         // way, so we'll count it.
                         requiresIntersection =
-                            this.operation === "overlay_area" ? true : false;
+                            this.operation === "overlay_area" ||
+                                this.operation === "column_values"
+                                ? true
+                                : false;
                     }
                     else {
                         // Requires no clipping against the subject feature, but still may need
@@ -461,11 +463,11 @@ class OverlayEngineBatchProcessor {
                 results[classKey].push(...batchData[classKey]);
             }
         }
-        // Sort all results by oidx (first element of tuple)
+        // calculate statistics for each class
         for (const classKey in results) {
-            results[classKey].sort((a, b) => a[0] - b[0]);
+            columnStats[classKey] = calculateColumnValueStats(results[classKey]);
         }
-        return columnStats;
+        this.results = columnStats;
     }
     /**
      * Finalizes count results by converting interim ID arrays to UniqueIdIndex
@@ -531,21 +533,16 @@ class OverlayEngineBatchProcessor {
         }
     }
     addColumnValuesFeatureToResults(feature) {
-        var _a, _b;
+        var _a, _b, _c;
         const value = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.columnValuesProperty];
         const results = this.getColumnValuesResults();
         if (typeof value === "number") {
-            if (!("__oidx" in feature.properties || {})) {
-                throw new Error("Feature properties must contain __oidx");
-            }
-            const oidx = feature.properties.__oidx;
-            if (oidx === undefined || oidx === null) {
-                throw new Error("Feature properties must contain __oidx");
-            }
             const columnValue = [value];
             if (feature.geometry.type === "Polygon" ||
                 feature.geometry.type === "MultiPolygon") {
-                const sqKm = (0, area_1.default)(feature) * 1e-6;
+                const sqKm = ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__area)
+                    ? feature.properties.__area
+                    : (0, area_1.default)(feature) * 1e-6;
                 if (isNaN(sqKm) || sqKm === 0) {
                     return;
                 }
@@ -553,7 +550,7 @@ class OverlayEngineBatchProcessor {
             }
             results["*"].push(columnValue);
             if (this.groupBy) {
-                const classKey = (_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy];
+                const classKey = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c[this.groupBy];
                 if (classKey) {
                     if (!(classKey in results)) {
                         results[classKey] = [];
@@ -681,4 +678,81 @@ class OverlayEngineBatchProcessor {
     }
 }
 exports.OverlayEngineBatchProcessor = OverlayEngineBatchProcessor;
+function calculateColumnValueStats(values) {
+    const count = values.length;
+    if (count === 0) {
+        return {
+            count: 0,
+            min: NaN,
+            max: NaN,
+            mean: NaN,
+            stdDev: NaN,
+            histogram: [],
+            countDistinct: 0,
+            sum: 0,
+        };
+    }
+    let min = Infinity;
+    let max = -Infinity;
+    let sum = 0;
+    let weightedSum = 0;
+    let totalWeight = 0;
+    const histogramMap = new Map();
+    for (const entry of values) {
+        const value = entry[0];
+        const weight = entry.length > 1 ? entry[1] : undefined;
+        if (value < min)
+            min = value;
+        if (value > max)
+            max = value;
+        sum += value;
+        if (typeof weight === "number" && isFinite(weight) && weight > 0) {
+            weightedSum += value * weight;
+            totalWeight += weight;
+        }
+        const histogramContribution = typeof weight === "number" && isFinite(weight) && weight > 0 ? weight : 1;
+        histogramMap.set(value, (histogramMap.get(value) || 0) + histogramContribution);
+    }
+    const mean = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
+    // Standard deviation - weighted if we have weights, otherwise unweighted
+    let varianceNumerator = 0;
+    if (totalWeight > 0) {
+        for (const entry of values) {
+            const value = entry[0];
+            const weight = entry.length > 1 ? entry[1] : undefined;
+            if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
+                continue;
+            }
+            const diff = value - mean;
+            varianceNumerator += weight * diff * diff;
+        }
+        varianceNumerator = varianceNumerator / totalWeight;
+    }
+    else {
+        for (const entry of values) {
+            const value = entry[0];
+            const diff = value - mean;
+            varianceNumerator += diff * diff;
+        }
+        varianceNumerator = varianceNumerator / count;
+    }
+    const stdDev = Math.sqrt(varianceNumerator);
+    let histogram = Array.from(histogramMap.entries()).sort((a, b) => a[0] - b[0]);
+    const MAX_HISTOGRAM_ENTRIES = 200;
+    if (histogram.length > MAX_HISTOGRAM_ENTRIES) {
+        histogram = (0, rasterStats_1.downsampleHistogram)(histogram, MAX_HISTOGRAM_ENTRIES);
+    }
+    const countDistinct = histogramMap.size;
+    return {
+        count,
+        min,
+        max,
+        mean,
+        stdDev,
+        histogram,
+        countDistinct,
+        sum,
+        totalAreaSqKm: totalWeight > 0 ? totalWeight : undefined,
+    };
+}
 //# sourceMappingURL=OverlayEngineBatchProcessor.js.map
