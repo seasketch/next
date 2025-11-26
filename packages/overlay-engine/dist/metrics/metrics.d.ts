@@ -66,14 +66,26 @@ export type PresenceTableMetric = OverlayMetricBase & {
         exceededLimit: boolean;
     };
 };
-/**
- * The first number is the feature __oidx, the second is the value
- */
-export type IdentifiedValues = [number, number];
+export type ColumnValueStats = {
+    count: number;
+    min: number;
+    max: number;
+    mean: number;
+    stdDev: number;
+    histogram: [number, number | null][];
+    countDistinct: number;
+    sum: number;
+    /**
+     * If the source layer is polygonal, includes the total area of overlapped
+     * polygons in square meters. This is used to weight statistics when combining
+     * across fragments.
+     */
+    totalAreaSqKm?: number;
+};
 export type ColumnValuesMetric = OverlayMetricBase & {
     type: "column_values";
     value: {
-        [groupBy: string]: IdentifiedValues[];
+        [groupBy: string]: ColumnValueStats;
     };
 };
 export type RasterBandStats = {
@@ -129,21 +141,16 @@ export declare function subjectIsFragment(subject: any | MetricSubjectFragment |
 export declare function subjectIsGeography(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
 /**
- * Computes statistics from a list of IdentifiedValues. This function can be used
- * both server-side and client-side to calculate accurate statistics for overlapping
- * fragments and multiple sketches in a collection by de-duplicating based on __oidx.
+ * Combines RasterBandStats from multiple fragments into a single RasterBandStats.
+ * This function correctly weights mean values by count (or equivalently, uses sum/count)
+ * to produce accurate aggregate statistics when fragments have different areas.
+ *
+ * For example, if fragment 1 has mean=5 and count=100, and fragment 2 has mean=20 and count=25,
+ * the combined mean should be (5*100 + 20*25) / (100+25) = 1000/125 = 8, not (5+20)/2 = 12.5.
+ *
+ * @param statsArray - Array of RasterBandStats from different fragments
+ * @returns Combined RasterBandStats, or undefined if the array is empty
  */
-export declare function computeStatsFromIdentifiedValues(identifiedValues: IdentifiedValues[]): {
-    min: number;
-    max: number;
-    mean: number;
-    median: number;
-    stdDev: number;
-    histogram: [number, number | null][];
-    count: number;
-    countDistinct: number;
-    sum: number;
-    values: number[];
-};
+export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats | undefined;
 export {};
 //# sourceMappingURL=metrics.d.ts.map

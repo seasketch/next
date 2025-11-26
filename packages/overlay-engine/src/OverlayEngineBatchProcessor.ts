@@ -27,6 +27,7 @@ import * as clipping from "polyclip-ts";
 import {
   clipBatch,
   collectColumnValues,
+  ColumnValues,
   countFeatures,
   pick,
   testForPresenceInSubject,
@@ -41,7 +42,7 @@ import {
   PresenceTableMetric,
   PresenceTableValue,
   ColumnValuesMetric,
-  IdentifiedValues,
+  ColumnValueStats,
 } from "./metrics/metrics";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 
@@ -134,7 +135,7 @@ export class OverlayEngineBatchProcessor<
   }[];
   helpers: GuaranteedOverlayWorkerHelpers;
   groupBy?: string;
-  results: OperationResultType<TOp>;
+  results: OperationResultType<TOp> | { [classKey: string]: ColumnValues[] };
   // Interim storage for count operation IDs (before converting to UniqueIdIndex)
   private countInterimIds: { [groupBy: string]: number[] } = {};
   batchData!: BatchData;
@@ -171,10 +172,10 @@ export class OverlayEngineBatchProcessor<
   }
 
   private getColumnValuesResults(): {
-    [classKey: string]: IdentifiedValues[];
+    [classKey: string]: ColumnValues[];
   } {
     return this.results as unknown as {
-      [classKey: string]: IdentifiedValues[];
+      [classKey: string]: ColumnValues[];
     };
   }
 
@@ -188,7 +189,9 @@ export class OverlayEngineBatchProcessor<
   }
 
   // Initialize results based on operation type
-  private initializeResults(op: OperationType): OperationResultType<TOp> {
+  private initializeResults(
+    op: OperationType
+  ): OperationResultType<TOp> | { [classKey: string]: ColumnValues[] } {
     if (op === "count") {
       // Initialize interim ID storage
       this.countInterimIds = { "*": [] };
@@ -203,8 +206,8 @@ export class OverlayEngineBatchProcessor<
       return false as unknown as OperationResultType<TOp>;
     } else if (op === "column_values") {
       return {
-        "*": [] as IdentifiedValues[],
-      } as unknown as OperationResultType<TOp>;
+        "*": [],
+      } as unknown as { [classKey: string]: ColumnValues[] };
     } else if (op === "overlay_area") {
       return { "*": 0 } as unknown as OperationResultType<TOp>;
     } else {
@@ -484,7 +487,7 @@ export class OverlayEngineBatchProcessor<
         } else if (this.isColumnValuesOperation()) {
           this.mergeColumnValuesBatchResults(resolvedBatchData);
         }
-        resolve(this.results);
+        resolve(this.results as OperationResultType<TOp>);
       } catch (e) {
         reject(e);
       }
@@ -556,7 +559,7 @@ export class OverlayEngineBatchProcessor<
     batch: BatchData,
     differenceMultiPolygon: clipping.Geom[]
   ): Promise<{
-    [classKey: string]: IdentifiedValues[];
+    [classKey: string]: ColumnValues[];
   }> {
     return collectColumnValues({
       features: batch.features,
@@ -652,8 +655,9 @@ export class OverlayEngineBatchProcessor<
   }
 
   private mergeColumnValuesBatchResults(
-    batchResults: { [classKey: string]: IdentifiedValues[] }[]
+    batchResults: { [classKey: string]: ColumnValues[] }[]
   ) {
+    const columnStats = {} as { [classKey: string]: ColumnValueStats };
     const results = this.getColumnValuesResults();
     for (const batchData of batchResults) {
       for (const classKey in batchData) {
@@ -667,6 +671,7 @@ export class OverlayEngineBatchProcessor<
     for (const classKey in results) {
       results[classKey].sort((a, b) => a[0] - b[0]);
     }
+    return columnStats;
   }
 
   /**
@@ -760,15 +765,26 @@ export class OverlayEngineBatchProcessor<
       if (oidx === undefined || oidx === null) {
         throw new Error("Feature properties must contain __oidx");
       }
-      const identifiedValue: IdentifiedValues = [oidx, value];
-      results["*"].push(identifiedValue);
+      const columnValue: ColumnValues = [value];
+      if (
+        feature.geometry.type === "Polygon" ||
+        feature.geometry.type === "MultiPolygon"
+      ) {
+        const sqKm =
+          calcArea(feature as Feature<Polygon | MultiPolygon>) * 1e-6;
+        if (isNaN(sqKm) || sqKm === 0) {
+          return;
+        }
+        columnValue.push(sqKm);
+      }
+      results["*"].push(columnValue);
       if (this.groupBy) {
         const classKey = feature.properties?.[this.groupBy];
         if (classKey) {
           if (!(classKey in results)) {
             results[classKey] = [];
           }
-          results[classKey].push(identifiedValue);
+          results[classKey].push(columnValue);
         }
       }
     }

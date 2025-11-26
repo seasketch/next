@@ -11,6 +11,7 @@ import { useTranslation } from "react-i18next";
 import MapLayerVisibilityControl from "../components/MapLayerVisibilityControl";
 import { RasterInfoHistogram } from "../../admin/data/RasterInfoModal";
 import { RasterBandStats } from "overlay-engine/dist/metrics/metrics";
+import { combineRasterBandStats, subjectIsFragment } from "overlay-engine";
 
 export type RasterBandStatisticsCardConfiguration = ReportCardConfiguration<{
   /**
@@ -58,26 +59,56 @@ export function RasterBandStatisticsCard({
   };
 
   // Get metric data (statistics for the sketch area)
+  // Combine statistics from all fragments to get accurate aggregate statistics
   const metricBands = useMemo((): RasterBandStats[] | undefined => {
-    const rasterMetric = metrics.find((m) => m.type === "raster_stats");
-    return rasterMetric && "value" in rasterMetric
-      ? (rasterMetric.value as { bands: RasterBandStats[] }).bands
-      : undefined;
-  }, [metrics]);
+    // Find all raster_stats metrics from fragments for the current layer
+    const layer = reportingLayers[0];
+    const source = sources.find(
+      (s) => s.tableOfContentsItemId === layer.tableOfContentsItemId
+    );
+    if (!source) {
+      return undefined;
+    }
 
-  const sumByBand = useMemo((): number[] | undefined => {
-    const sums: number[] = [];
-    for (const metric of metrics) {
-      if (metric.type !== "raster_stats") continue;
+    const fragmentMetrics = metrics.filter(
+      (m) =>
+        subjectIsFragment(m.subject) &&
+        m.type === "raster_stats" &&
+        m.sourceUrl === source.sourceUrl
+    );
+
+    if (fragmentMetrics.length === 0) {
+      return undefined;
+    }
+
+    // Collect all bands from all fragments
+    const bandsByIndex: { [index: number]: RasterBandStats[] } = {};
+    for (const metric of fragmentMetrics) {
       if (!("value" in metric)) continue;
       const bands = (metric.value as { bands?: RasterBandStats[] }).bands;
       if (!bands) continue;
       bands.forEach((band, i) => {
-        sums[i] = (sums[i] ?? 0) + (band.sum ?? 0);
+        if (!bandsByIndex[i]) {
+          bandsByIndex[i] = [];
+        }
+        bandsByIndex[i].push(band);
       });
     }
-    return sums.length > 0 ? sums : undefined;
-  }, [metrics]);
+
+    // Combine bands for each index
+    const combinedBands: RasterBandStats[] = [];
+    const indices = Object.keys(bandsByIndex)
+      .map(Number)
+      .sort((a, b) => a - b);
+    for (const index of indices) {
+      const combined = combineRasterBandStats(bandsByIndex[index]);
+      if (combined) {
+        combinedBands[index] = combined;
+      }
+    }
+
+    return combinedBands.length > 0 ? combinedBands : undefined;
+  }, [metrics, reportingLayers, sources]);
 
   // Get raster metadata (for band names, color interpretation, etc.)
   const rasterInfo = useMemo(() => {
@@ -268,7 +299,7 @@ export function RasterBandStatisticsCard({
                         {loading ? (
                           <Skeleton className="w-16 h-4" />
                         ) : (
-                          formatStatValue(sumByBand?.[index] ?? null)
+                          formatStatValue(metricBand.sum)
                         )}
                       </td>
                     )}

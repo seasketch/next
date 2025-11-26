@@ -541,6 +541,7 @@ describe("sketchFragmentOverlap", () => {
           "d15n"
         );
         const results = await processor.calculate();
+        console.log(results);
         expect(results["*"].length).toBe(3);
         // Verify that results are IdentifiedValues tuples [oidx, value]
         expect(Array.isArray(results["*"][0])).toBe(true);

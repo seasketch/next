@@ -48,6 +48,7 @@ const area_1 = __importDefault(require("@turf/area"));
 const node_worker_threads_1 = require("node:worker_threads");
 const point_in_polygon_hao_1 = __importDefault(require("point-in-polygon-hao"));
 const boolean_intersects_1 = __importDefault(require("@turf/boolean-intersects"));
+const length_1 = __importDefault(require("@turf/length"));
 async function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
     var _a;
     const results = { "*": 0 };
@@ -64,18 +65,18 @@ async function clipBatch({ features, differenceMultiPolygon, subjectFeature, gro
             if (classKey === "*") {
                 continue;
             }
-            const area = await performClipping(features.filter((f) => { var _a; return ((_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy]) === classKey; }), differenceMultiPolygon, subjectFeature);
-            results[classKey] += area;
-            results["*"] += area;
+            const f = performClipping(features.filter((f) => { var _a; return ((_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy]) === classKey; }), differenceMultiPolygon, subjectFeature);
+            results[classKey] += (0, area_1.default)(f) * 1e-6;
+            results["*"] += (0, area_1.default)(f) * 1e-6;
         }
     }
     else {
-        const area = await performClipping(features, differenceMultiPolygon, subjectFeature);
-        results["*"] += area;
+        const f = performClipping(features, differenceMultiPolygon, subjectFeature);
+        results["*"] += (0, area_1.default)(f) * 1e-6;
     }
     return results;
 }
-async function performClipping(features, differenceGeoms, subjectFeature) {
+function performClipping(features, differenceGeoms, subjectFeature) {
     let product = [];
     let forClipping = [];
     for (const f of features) {
@@ -99,15 +100,14 @@ async function performClipping(features, differenceGeoms, subjectFeature) {
         }
     }
     const difference = clipping.difference(product, ...differenceGeoms);
-    const sqKm = (0, area_1.default)({
+    return {
         type: "Feature",
         geometry: {
             type: "MultiPolygon",
             coordinates: difference,
         },
         properties: {},
-    }) * 1e-6;
-    return sqKm;
+    };
 }
 async function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
     var _a;
@@ -260,62 +260,66 @@ async function collectColumnValues({ features, differenceMultiPolygon, subjectFe
     var _a, _b;
     const results = { "*": [] };
     for (const f of features) {
-        if (f.requiresIntersection) {
-            throw new Error("Not implemented. If just collecting column values, they should never be added to the batch if unsure if they lie within the subject feature.");
-        }
-        if (f.requiresDifference) {
-            if (f.feature.geometry.type === "Point" ||
-                f.feature.geometry.type === "MultiPoint") {
-                const coords = f.feature.geometry.type === "Point"
-                    ? [f.feature.geometry.coordinates]
-                    : f.feature.geometry.coordinates;
-                for (const coord of coords) {
-                    let anyMisses = false;
-                    for (const poly of differenceMultiPolygon) {
-                        const r = (0, point_in_polygon_hao_1.default)(coord, poly);
-                        if (r === false) {
-                            anyMisses = true;
-                            break;
+        if (f.feature.geometry.type === "Point" ||
+            f.feature.geometry.type === "MultiPoint") {
+            if (f.requiresIntersection) {
+                throw new Error("Not implemented. If just collecting column values for points. They should never be added to the batch if unsure if they lie within the subject feature.");
+            }
+            if (f.requiresDifference) {
+                if (f.feature.geometry.type === "Point" ||
+                    f.feature.geometry.type === "MultiPoint") {
+                    const coords = f.feature.geometry.type === "Point"
+                        ? [f.feature.geometry.coordinates]
+                        : f.feature.geometry.coordinates;
+                    for (const coord of coords) {
+                        let anyMisses = false;
+                        for (const poly of differenceMultiPolygon) {
+                            const r = (0, point_in_polygon_hao_1.default)(coord, poly);
+                            if (r === false) {
+                                anyMisses = true;
+                                break;
+                            }
+                        }
+                        if (!anyMisses) {
+                            continue;
                         }
                     }
-                    if (!anyMisses) {
-                        continue;
-                    }
-                }
-            }
-            else {
-                // for any other geometry type, we'll use booleanIntersects to check if
-                // the feature intersects the difference feature
-                if ((0, boolean_intersects_1.default)(f.feature, {
-                    type: "Feature",
-                    geometry: {
-                        type: "MultiPolygon",
-                        coordinates: differenceMultiPolygon,
-                    },
-                    properties: {},
-                })) {
-                    continue;
                 }
             }
         }
-        if (!("__oidx" in f.feature.properties || {})) {
-            throw new Error("Feature properties must contain __oidx");
-        }
-        const oidx = f.feature.properties.__oidx;
-        if (oidx === undefined || oidx === null) {
-            throw new Error("Feature properties must contain __oidx");
+        else if (f.feature.geometry.type === "Polygon" ||
+            f.feature.geometry.type === "MultiPolygon" ||
+            f.feature.geometry.type === "LineString" ||
+            f.feature.geometry.type === "MultiLineString") {
+            f.feature = performOperationsOnFeature(f.feature, f.requiresIntersection, f.requiresDifference, differenceMultiPolygon, subjectFeature);
         }
         const value = (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[property];
+        const columnValue = [value];
+        if (f.feature.geometry.type === "Polygon" ||
+            f.feature.geometry.type === "MultiPolygon") {
+            const sqKm = (0, area_1.default)(f.feature) * 1e-6;
+            if (isNaN(sqKm) || sqKm === 0) {
+                continue;
+            }
+            columnValue.push(sqKm);
+        }
+        else if (f.feature.geometry.type === "LineString" ||
+            f.feature.geometry.type === "MultiLineString") {
+            const length = (0, length_1.default)(f.feature);
+            if (isNaN(length) || length === 0) {
+                continue;
+            }
+            columnValue.push(length);
+        }
         if (typeof value === "number") {
-            const identifiedValue = [oidx, value];
-            results["*"].push(identifiedValue);
+            results["*"].push(columnValue);
             if (groupBy) {
                 const classKey = (_b = f.feature.properties) === null || _b === void 0 ? void 0 : _b[groupBy];
                 if (classKey) {
                     if (!(classKey in results)) {
                         results[classKey] = [];
                     }
-                    results[classKey].push(identifiedValue);
+                    results[classKey].push(columnValue);
                 }
             }
         }
@@ -393,4 +397,59 @@ function pick(object, keys) {
         return acc;
     }, {});
 }
+function performOperationsOnFeature(feature, requiresIntersection, requiresDifference, differenceMultiPolygon, subjectFeature) {
+    // Clone the feature to avoid modifying the original
+    let result = JSON.parse(JSON.stringify(feature));
+    if (result.geometry.type === "Polygon" ||
+        result.geometry.type === "MultiPolygon") {
+        let geom = result.geometry.type === "Polygon"
+            ? [result.geometry.coordinates]
+            : result.geometry.coordinates;
+        if (requiresIntersection) {
+            geom = clipping.intersection(geom, subjectFeature.geometry.coordinates);
+        }
+        if (requiresDifference) {
+            geom = clipping.difference(geom, ...differenceMultiPolygon);
+        }
+        result.geometry = {
+            type: "MultiPolygon",
+            coordinates: geom,
+        };
+    }
+    else if (feature.geometry.type === "LineString" ||
+        feature.geometry.type === "MultiLineString") {
+        throw new Error("Not implemented");
+    }
+    else {
+        throw new Error(`Unsupported geometry type: ${feature.geometry.type}`);
+    }
+    return result;
+}
+// export function lineOverlap(
+//   poly: Feature<Polygon | MultiPolygon>,
+//   line: FeatureWithMetadata<Feature<LineString | MultiLineString>>
+// ): FeatureWithMetadata<Feature<LineString | MultiLineString>> | null {
+//   // Line fully within polygon
+//   if (booleanWithin(line, poly)) {
+//     return line;
+//   }
+//   // Line fully outside polygon
+//   if (booleanDisjoint(poly, line)) {
+//     return null;
+//   }
+//   // Line intersects polygon
+//   const splitLines = lineSplit(line, poly);
+//   for (const segment of splitLines.features) {
+//     if (
+//       segment.geometry.type === "LineString" &&
+//       turfLength(segment, { units: "meters" }) > 0.2 &&
+//       booleanWithin(
+//         lineSliceAlong(segment, 0.1, 0.1, { units: "meters" }),
+//         poly
+//       )
+//     ) {
+//       results.push(segment);
+//     }
+//   }
+// }
 //# sourceMappingURL=clipBatch.js.map

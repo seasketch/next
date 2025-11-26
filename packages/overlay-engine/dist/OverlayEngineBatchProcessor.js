@@ -451,6 +451,7 @@ class OverlayEngineBatchProcessor {
         }
     }
     mergeColumnValuesBatchResults(batchResults) {
+        const columnStats = {};
         const results = this.getColumnValuesResults();
         for (const batchData of batchResults) {
             for (const classKey in batchData) {
@@ -464,6 +465,7 @@ class OverlayEngineBatchProcessor {
         for (const classKey in results) {
             results[classKey].sort((a, b) => a[0] - b[0]);
         }
+        return columnStats;
     }
     /**
      * Finalizes count results by converting interim ID arrays to UniqueIdIndex
@@ -540,15 +542,23 @@ class OverlayEngineBatchProcessor {
             if (oidx === undefined || oidx === null) {
                 throw new Error("Feature properties must contain __oidx");
             }
-            const identifiedValue = [oidx, value];
-            results["*"].push(identifiedValue);
+            const columnValue = [value];
+            if (feature.geometry.type === "Polygon" ||
+                feature.geometry.type === "MultiPolygon") {
+                const sqKm = (0, area_1.default)(feature) * 1e-6;
+                if (isNaN(sqKm) || sqKm === 0) {
+                    return;
+                }
+                columnValue.push(sqKm);
+            }
+            results["*"].push(columnValue);
             if (this.groupBy) {
                 const classKey = (_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy];
                 if (classKey) {
                     if (!(classKey in results)) {
                         results[classKey] = [];
                     }
-                    results[classKey].push(identifiedValue);
+                    results[classKey].push(columnValue);
                 }
             }
         }

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateDistanceToShore = exports.calculateRasterStats = exports.initializeGeographySources = exports.mergeUniqueIdIndexes = exports.countUniqueIds = exports.createUniqueIdIndex = exports.computeStatsFromIdentifiedValues = exports.subjectIsGeography = exports.subjectIsFragment = exports.calculateFragmentOverlap = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.calculateGeographyOverlap = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
+exports.calculateDistanceToShore = exports.calculateRasterStats = exports.initializeGeographySources = exports.mergeUniqueIdIndexes = exports.countUniqueIds = exports.createUniqueIdIndex = exports.combineRasterBandStats = exports.subjectIsGeography = exports.subjectIsFragment = exports.calculateFragmentOverlap = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.calculateGeographyOverlap = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
 var prepareSketch_1 = require("./utils/prepareSketch");
 Object.defineProperty(exports, "prepareSketch", { enumerable: true, get: function () { return prepareSketch_1.prepareSketch; } });
 var unionAtAntimeridian_1 = require("./utils/unionAtAntimeridian");
@@ -21,7 +21,7 @@ Object.defineProperty(exports, "calculateFragmentOverlap", { enumerable: true, g
 var metrics_1 = require("./metrics/metrics");
 Object.defineProperty(exports, "subjectIsFragment", { enumerable: true, get: function () { return metrics_1.subjectIsFragment; } });
 Object.defineProperty(exports, "subjectIsGeography", { enumerable: true, get: function () { return metrics_1.subjectIsGeography; } });
-Object.defineProperty(exports, "computeStatsFromIdentifiedValues", { enumerable: true, get: function () { return metrics_1.computeStatsFromIdentifiedValues; } });
+Object.defineProperty(exports, "combineRasterBandStats", { enumerable: true, get: function () { return metrics_1.combineRasterBandStats; } });
 var uniqueIdIndex_1 = require("./utils/uniqueIdIndex");
 Object.defineProperty(exports, "createUniqueIdIndex", { enumerable: true, get: function () { return uniqueIdIndex_1.createUniqueIdIndex; } });
 Object.defineProperty(exports, "countUniqueIds", { enumerable: true, get: function () { return uniqueIdIndex_1.countUniqueIds; } });

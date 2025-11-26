@@ -95,15 +95,27 @@ export type PresenceTableMetric = OverlayMetricBase & {
   };
 };
 
-/**
- * The first number is the feature __oidx, the second is the value
- */
-export type IdentifiedValues = [number, number];
+export type ColumnValueStats = {
+  count: number;
+  min: number;
+  max: number;
+  mean: number;
+  stdDev: number;
+  histogram: [number, number | null][];
+  countDistinct: number;
+  sum: number;
+  /**
+   * If the source layer is polygonal, includes the total area of overlapped
+   * polygons in square meters. This is used to weight statistics when combining
+   * across fragments.
+   */
+  totalAreaSqKm?: number;
+};
 
 export type ColumnValuesMetric = OverlayMetricBase & {
   type: "column_values";
   value: {
-    [groupBy: string]: IdentifiedValues[];
+    [groupBy: string]: ColumnValueStats;
   };
 };
 
@@ -185,66 +197,6 @@ export function subjectIsGeography(
 
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
 
-/**
- * Computes statistics from a list of IdentifiedValues. This function can be used
- * both server-side and client-side to calculate accurate statistics for overlapping
- * fragments and multiple sketches in a collection by de-duplicating based on __oidx.
- */
-export function computeStatsFromIdentifiedValues(
-  identifiedValues: IdentifiedValues[]
-): {
-  min: number;
-  max: number;
-  mean: number;
-  median: number;
-  stdDev: number;
-  histogram: [number, number | null][];
-  count: number;
-  countDistinct: number;
-  sum: number;
-  values: number[];
-} {
-  // De-duplicate by __oidx (first element of tuple), keeping the first occurrence
-  const uniqueMap = new Map<number, number>();
-  for (const [oidx, value] of identifiedValues) {
-    if (!uniqueMap.has(oidx)) {
-      uniqueMap.set(oidx, value);
-    }
-  }
-
-  const values = Array.from(uniqueMap.values());
-
-  if (values.length === 0) {
-    return {
-      min: Infinity,
-      max: -Infinity,
-      mean: NaN,
-      median: NaN,
-      stdDev: NaN,
-      histogram: [],
-      count: 0,
-      countDistinct: 0,
-      sum: 0,
-      values: [],
-    };
-  }
-
-  const distinctValues = Array.from(new Set(values));
-
-  return {
-    min: min(values),
-    max: max(values),
-    mean: mean(values),
-    median: median(values),
-    stdDev: standardDeviation(values),
-    histogram: equalIntervalBuckets(values, 49),
-    count: values.length,
-    countDistinct: distinctValues.length,
-    sum: values.reduce((acc, v) => acc + v, 0),
-    values: Array.from(distinctValues).slice(0, 100),
-  };
-}
-
 function equalIntervalBuckets(
   data: number[],
   numBuckets: number,
@@ -279,4 +231,81 @@ function breaksToBuckets(
   }
   buckets.push([max, null]);
   return buckets;
+}
+
+/**
+ * Combines RasterBandStats from multiple fragments into a single RasterBandStats.
+ * This function correctly weights mean values by count (or equivalently, uses sum/count)
+ * to produce accurate aggregate statistics when fragments have different areas.
+ *
+ * For example, if fragment 1 has mean=5 and count=100, and fragment 2 has mean=20 and count=25,
+ * the combined mean should be (5*100 + 20*25) / (100+25) = 1000/125 = 8, not (5+20)/2 = 12.5.
+ *
+ * @param statsArray - Array of RasterBandStats from different fragments
+ * @returns Combined RasterBandStats, or undefined if the array is empty
+ */
+export function combineRasterBandStats(
+  statsArray: RasterBandStats[]
+): RasterBandStats | undefined {
+  if (statsArray.length === 0) {
+    return undefined;
+  }
+
+  if (statsArray.length === 1) {
+    return statsArray[0];
+  }
+
+  // Combine counts and sums
+  let totalCount = 0;
+  let totalSum = 0;
+  let totalInvalid = 0;
+  const mins: number[] = [];
+  const maxs: number[] = [];
+
+  // Merge histograms by value
+  const histogramMap = new Map<number, number>();
+
+  for (const stats of statsArray) {
+    totalCount += stats.count;
+    totalSum += stats.sum;
+    totalInvalid += stats.invalid;
+    mins.push(stats.min);
+    maxs.push(stats.max);
+
+    // Merge histogram entries
+    for (const [value, count] of stats.histogram) {
+      histogramMap.set(value, (histogramMap.get(value) || 0) + count);
+    }
+  }
+
+  // Convert histogram map back to array and sort by value
+  const combinedHistogram: [number, number][] = Array.from(
+    histogramMap.entries()
+  )
+    .map(([value, count]) => [value, count] as [number, number])
+    .sort((a, b) => a[0] - b[0]);
+
+  // Calculate combined mean using sum/count (not average of means)
+  const combinedMean = totalCount > 0 ? totalSum / totalCount : NaN;
+
+  // Calculate combined range
+  const combinedMin = min(mins);
+  const combinedMax = max(maxs);
+  const combinedRange = combinedMax - combinedMin;
+
+  // For median, we can't easily combine without the full dataset, so we'll use NaN
+  // or could potentially estimate from the combined histogram, but that's complex
+  const combinedMedian = NaN;
+
+  return {
+    count: totalCount,
+    min: combinedMin,
+    max: combinedMax,
+    mean: combinedMean,
+    median: combinedMedian,
+    range: combinedRange,
+    histogram: combinedHistogram,
+    invalid: totalInvalid,
+    sum: totalSum,
+  };
 }

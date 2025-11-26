@@ -1,7 +1,7 @@
 import { FeatureWithMetadata } from "fgb-source";
 import { Feature, Geometry, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
-import { PresenceTableValue, IdentifiedValues } from "../metrics/metrics";
+import { PresenceTableValue } from "../metrics/metrics";
 export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
@@ -18,7 +18,7 @@ export declare function performClipping(features: {
     feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
     requiresIntersection: boolean;
     requiresDifference: boolean;
-}[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>): Promise<number>;
+}[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>): Feature<MultiPolygon>;
 export declare function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;
@@ -54,6 +54,14 @@ export declare function createPresenceTable({ features, differenceMultiPolygon, 
     exceededLimit: boolean;
     values: PresenceTableValue[];
 }>;
+export type ColumnValues = [
+    /** column value */
+    number,
+    number
+] | [
+    /** column value */
+    number
+];
 export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;
@@ -65,7 +73,7 @@ export declare function collectColumnValues({ features, differenceMultiPolygon, 
     property: string;
     groupBy?: string;
 }): Promise<{
-    [classKey: string]: IdentifiedValues[];
+    [classKey: string]: ColumnValues[];
 }>;
 export declare function pick(object: any, keys?: string[]): any;
 //# sourceMappingURL=clipBatch.d.ts.map

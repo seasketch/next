@@ -3,6 +3,7 @@ import { Feature, MultiPolygon, Polygon, Geometry } from "geojson";
 import { ContainerIndex } from "./utils/containerIndex";
 import { GuaranteedOverlayWorkerHelpers, OverlayWorkerHelpers } from "./utils/helpers";
 import { Cql2Query } from "./cql2";
+import { ColumnValues } from "./workers/clipBatch";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 import { OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, PresenceTableValue, ColumnValuesMetric } from "./metrics/metrics";
@@ -59,7 +60,9 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     }[];
     helpers: GuaranteedOverlayWorkerHelpers;
     groupBy?: string;
-    results: OperationResultType<TOp>;
+    results: OperationResultType<TOp> | {
+        [classKey: string]: ColumnValues[];
+    };
     private countInterimIds;
     batchData: BatchData;
     batchPromises: Promise<any>[];
