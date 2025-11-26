@@ -38,11 +38,8 @@ function downsampleHistogram(histogram, maxEntries) {
     return result;
 }
 async function calculateRasterStats(sourceUrl, feature) {
-    console.time("parse raster");
     try {
         const raster = await geoblaze.parse(sourceUrl);
-        console.timeEnd("parse raster");
-        console.time("calculate stats");
         const stats = await geoblaze.stats(raster, feature, {
             stats: [
                 "count",
@@ -56,7 +53,6 @@ async function calculateRasterStats(sourceUrl, feature) {
                 "sum",
             ],
         });
-        console.timeEnd("calculate stats");
         return {
             bands: stats.map((stat) => {
                 const rawHistogram = Array.isArray(stat.histogram)
@@ -87,9 +83,6 @@ async function calculateRasterStats(sourceUrl, feature) {
         else {
             throw e;
         }
-    }
-    finally {
-        console.timeEnd("calculate raster stats");
     }
 }
 //# sourceMappingURL=rasterStats.js.map

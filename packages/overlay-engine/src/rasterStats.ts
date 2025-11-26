@@ -50,11 +50,8 @@ export async function calculateRasterStats(
   sourceUrl: string,
   feature: Feature<Polygon | MultiPolygon>
 ): Promise<{ bands: RasterBandStats[] }> {
-  console.time("parse raster");
   try {
     const raster = await geoblaze.parse(sourceUrl);
-    console.timeEnd("parse raster");
-    console.time("calculate stats");
     const stats = await geoblaze.stats(raster, feature, {
       stats: [
         "count",
@@ -68,7 +65,6 @@ export async function calculateRasterStats(
         "sum",
       ],
     });
-    console.timeEnd("calculate stats");
     return {
       bands: stats.map((stat: any) => {
         const rawHistogram: HistogramEntry[] = Array.isArray(stat.histogram)
@@ -101,7 +97,5 @@ export async function calculateRasterStats(
     } else {
       throw e;
     }
-  } finally {
-    console.timeEnd("calculate raster stats");
   }
 }
