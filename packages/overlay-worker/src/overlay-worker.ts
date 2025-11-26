@@ -38,11 +38,14 @@ import {
   OverlayEngineBatchProcessor,
 } from "overlay-engine/src/OverlayEngineBatchProcessor";
 import simplify from "@turf/simplify";
+import buffer from "@turf/buffer";
 import {
   GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
 } from "overlay-engine/src/utils/helpers";
 import { reprojectFeatureTo6933 } from "overlay-engine/src/utils/reproject";
+
+const SIMPLIFICATION_TOLERANCE = 0.000018;
 
 const pool = new Pool(`https://uploads.seasketch.org`, {
   // 10 second timeout for body
@@ -120,6 +123,7 @@ export default async function handler(
     includedProperties?: string[];
     resultsLimit?: number;
     valueColumn?: string;
+    bufferDistanceKm?: number;
   }
 ) {
   console.log("Overlay worker (v2) received payload", payload);
@@ -194,11 +198,16 @@ export default async function handler(
             pageSize: "5MB",
           }
         );
+        const bufferedIntersectionFeature = applySubjectBuffer(
+          intersectionFeature,
+          payload.bufferDistanceKm
+        );
+
         const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
           1024 * 1024 * 1, // 5MB
-          simplify(intersectionFeature, {
-            tolerance: 0.002,
+          simplify(bufferedIntersectionFeature, {
+            tolerance: SIMPLIFICATION_TOLERANCE,
           }),
           source,
           differenceSources,
@@ -241,7 +250,7 @@ export default async function handler(
           payload.type,
           1024 * 1024 * 1, // 5MB
           simplify(intersectionFeature, {
-            tolerance: 0.002,
+            tolerance: SIMPLIFICATION_TOLERANCE,
           }),
           source,
           differenceSources,
@@ -489,4 +498,31 @@ async function subjectsForAnalysis(
   } else {
     throw new Error("Unknown subject type. Must be geography or fragment.");
   }
+}
+
+function applySubjectBuffer(
+  feature: Feature<Polygon | MultiPolygon>,
+  bufferDistanceKm?: number
+): Feature<Polygon | MultiPolygon> {
+  if (
+    typeof bufferDistanceKm !== "number" ||
+    !isFinite(bufferDistanceKm) ||
+    bufferDistanceKm <= 0
+  ) {
+    return feature;
+  }
+  try {
+    const buffered = buffer(feature, bufferDistanceKm, { units: "kilometers" });
+    if (
+      buffered &&
+      buffered.geometry &&
+      (buffered.geometry.type === "Polygon" ||
+        buffered.geometry.type === "MultiPolygon")
+    ) {
+      return buffered as Feature<Polygon | MultiPolygon>;
+    }
+  } catch (err) {
+    console.warn("Failed to buffer subject feature", err);
+  }
+  return feature;
 }

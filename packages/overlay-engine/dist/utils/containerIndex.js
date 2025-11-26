@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContainerIndex = void 0;
 // @ts-ignore
 const flatbush_1 = __importDefault(require("flatbush"));
-const robust_segment_intersect_1 = __importDefault(require("robust-segment-intersect"));
+const segIntersect = __importStar(require("robust-segment-intersect"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const boolean_point_in_polygon_1 = __importDefault(require("@turf/boolean-point-in-polygon"));
 const helpers_1 = require("@turf/helpers");
@@ -70,14 +103,15 @@ class ContainerIndex {
         this.index.finish();
     }
     /**
-     * Classify a candidate polygon:
+     * Classify a candidate geometry (polygonal or linear):
      *  - 'outside': bbox disjoint OR all sampled vertices outside and no boundary crossings
      *  - 'inside':  no boundary crossings & all sampled vertices inside
      *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices
      */
     classify(candidate) {
-        if (candidate.geometry.type === "Point" ||
-            candidate.geometry.type === "MultiPoint") {
+        const geom = candidate.geometry;
+        const geomType = geom.type;
+        if (geomType === "Point" || geomType === "MultiPoint") {
             const inside = this.pointInPolygon(candidate);
             if (inside) {
                 return "inside";
@@ -86,13 +120,20 @@ class ContainerIndex {
                 return "outside";
             }
         }
+        const isPolygonal = geomType === "Polygon" || geomType === "MultiPolygon";
+        const isLinear = geomType === "LineString" || geomType === "MultiLineString";
+        if (!isPolygonal && !isLinear) {
+            throw new Error(`Unsupported geometry type: ${geomType}`);
+        }
         const candBBox = (0, bbox_1.default)(candidate);
         if (!bboxesOverlap(candBBox, this.containerBBox)) {
             return "outside";
         }
-        const polygonCandidate = candidate;
+        const polygonCandidate = isPolygonal
+            ? candidate
+            : null;
         // Edge-crossing check (exact, robust). Any hit => 'mixed'
-        for (const seg of iterateSegments(candidate.geometry)) {
+        for (const seg of Array.from(iterateSegments(geom))) {
             const [a, b] = seg;
             const minx = Math.min(a[0], b[0]);
             const miny = Math.min(a[1], b[1]);
@@ -104,14 +145,17 @@ class ContainerIndex {
                 const sb = this.segsB[h];
                 // robust-segment-intersect treats touching as true
                 // Convert Position to Coord (only x,y coordinates)
-                if ((0, robust_segment_intersect_1.default)([a[0], a[1]], [b[0], b[1]], [sa[0], sa[1]], [sb[0], sb[1]])) {
+                if (segIntersect.default([a[0], a[1]], [b[0], b[1]], [sa[0], sa[1]], [sb[0], sb[1]])) {
                     return "mixed";
                 }
             }
         }
         // No boundary crossings: test multiple representative vertices
         // const vertices = sampleRepresentativeVertices(candidate.geometry, 1);
-        const vertices = [firstVertex(candidate.geometry)];
+        const vertices = classificationVertices(geom);
+        if (vertices.length === 0) {
+            return "outside";
+        }
         // console.log("vertices", vertices);
         let insideCount = 0;
         let outsideCount = 0;
@@ -141,7 +185,9 @@ class ContainerIndex {
         // If all vertices are outside, check if container is inside candidate
         // (cheap test: if candidate bbox contains container bbox, sample container points)
         if (outsideCount > 0) {
-            if (bboxContains(candBBox, this.containerBBox)) {
+            if (isPolygonal &&
+                polygonCandidate &&
+                bboxContains(candBBox, this.containerBBox)) {
                 // Sample a few representative points from container to check if it's inside candidate
                 const containerPoints = sampleRepresentativeVertices(this.container.geometry, 5);
                 let containerInsideCount = 0;
@@ -158,7 +204,10 @@ class ContainerIndex {
             return "outside";
         }
         // If all vertices are inside, check if candidate overlaps any holes
-        if (insideCount > 0 && this.holeRings.length > 0) {
+        if (insideCount > 0 &&
+            isPolygonal &&
+            polygonCandidate &&
+            this.holeRings.length > 0) {
             // Check if candidate bbox overlaps any hole bboxes
             let hasHoleOverlap = false;
             for (let i = 0; i < this.holeRings.length; i++) {
@@ -233,6 +282,7 @@ class ContainerIndex {
      */
     pointInPolygon(pointFeature) {
         const geom = pointFeature.geometry;
+        const geomType = geom.type;
         if (geom.type === "Point") {
             return this.pointInPolygonSingle(geom.coordinates);
         }
@@ -246,7 +296,7 @@ class ContainerIndex {
             return false;
         }
         else {
-            throw new Error(`Unsupported geometry type: ${geom["type"]}. Expected Point or MultiPoint.`);
+            throw new Error(`Unsupported geometry type: ${geomType}. Expected Point or MultiPoint.`);
         }
     }
     /**
@@ -386,6 +436,17 @@ function* iterateSegments(geom) {
             }
         }
     }
+    else if (geom.type === "LineString") {
+        const line = geom.coordinates;
+        for (let i = 0; i < line.length - 1; i++)
+            yield [line[i], line[i + 1]];
+    }
+    else if (geom.type === "MultiLineString") {
+        for (const line of geom.coordinates) {
+            for (let i = 0; i < line.length - 1; i++)
+                yield [line[i], line[i + 1]];
+        }
+    }
     else {
         throw new Error(`Unsupported geometry type: ${geom.type}`);
     }
@@ -400,6 +461,30 @@ function firstVertex(geom) {
         return ring[0];
     }
     throw new Error(`Unsupported geometry type: ${geom.type}`);
+}
+function classificationVertices(geom) {
+    const geomType = geom.type;
+    if (geom.type === "LineString") {
+        return lineEndpointSamples(geom.coordinates);
+    }
+    else if (geom.type === "MultiLineString") {
+        const vertices = [];
+        for (const line of geom.coordinates) {
+            vertices.push(...lineEndpointSamples(line));
+        }
+        return vertices;
+    }
+    else if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+        return [firstVertex(geom)];
+    }
+    throw new Error(`Unsupported geometry type: ${geomType}`);
+}
+function lineEndpointSamples(line) {
+    if (line.length === 0)
+        return [];
+    if (line.length === 1)
+        return [line[0]];
+    return [line[0], line[line.length - 1]];
 }
 /**
  * Sample multiple representative vertices from a geometry to better determine

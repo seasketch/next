@@ -17,6 +17,7 @@ Object.defineProperty(exports, "createClippingWorkerPool", { enumerable: true, g
 const truncate_1 = __importDefault(require("@turf/truncate"));
 const rasterStats_1 = require("./rasterStats");
 const uniqueIdIndex_1 = require("./utils/uniqueIdIndex");
+const length_1 = __importDefault(require("@turf/length"));
 const layers = {
     classifiedFeatures: {
         name: "classified-features",
@@ -207,7 +208,7 @@ class OverlayEngineBatchProcessor {
                     (0, truncate_1.default)(feature, { mutate: true });
                     this.helpers.progress((this.progress / this.progressTarget) * 100, `Processing features: (${this.progress}/${this.progressTarget} bytes)`);
                     let requiresIntersection = false;
-                    // ContainerIndex.classify supports Polygon, MultiPolygon, Point, and MultiPoint
+                    // ContainerIndex.classify supports Polygon, MultiPolygon, Point, MultiPoint, LineString, and MultiLineString
                     const classification = this.containerIndex.classify(feature);
                     if (this.helpers.logFeature) {
                         this.helpers.logFeature(layers.classifiedFeatures, {
@@ -295,8 +296,10 @@ class OverlayEngineBatchProcessor {
                     this.batchPromises.push(this.processBatch(this.batchData, differenceMultiPolygon));
                     this.resetBatchData();
                 }
+                console.log("current results", this.results);
                 const resolvedBatchData = await Promise.all(this.batchPromises);
                 this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
+                console.log("resolvedBatchData", resolvedBatchData);
                 if (this.isOverlayAreaOperation()) {
                     this.mergeOverlayBatchResults(resolvedBatchData);
                 }
@@ -561,18 +564,33 @@ class OverlayEngineBatchProcessor {
         }
     }
     addOverlayFeatureToTotals(feature) {
-        var _a, _b;
+        var _a;
         // get area in square kilometers
-        const area = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area)
-            ? feature.properties.__area
-            : (0, area_1.default)(feature) * 1e-6;
+        const size = this.getSize(feature);
         const results = this.getOverlayResults();
-        results["*"] = (results["*"] || 0) + area;
+        results["*"] = (results["*"] || 0) + size;
         if (this.groupBy) {
-            const classKey = (_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy];
+            const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy];
             if (classKey) {
-                results[classKey] = (results[classKey] || 0) + area;
+                results[classKey] = (results[classKey] || 0) + size;
             }
+        }
+    }
+    getSize(feature) {
+        var _a, _b;
+        if (feature.geometry.type === "Polygon" ||
+            feature.geometry.type === "MultiPolygon") {
+            return (0, area_1.default)(feature) * 1e-6;
+        }
+        else if (feature.geometry.type === "LineString" ||
+            feature.geometry.type === "MultiLineString") {
+            console.log("feature property length", (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__lengthKm);
+            console.log("turf length", (0, length_1.default)(feature, { units: "kilometers" }));
+            return (((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__lengthKm) ||
+                (0, length_1.default)(feature, { units: "kilometers" }));
+        }
+        else {
+            throw new Error(`Unsupported geometry type: ${feature.geometry.type}`);
         }
     }
     addCountFeatureToTotals(feature) {

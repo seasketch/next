@@ -5,6 +5,7 @@ import {
   LineString,
   MultiLineString,
   MultiPolygon,
+  Point,
   Polygon,
   Position,
 } from "geojson";
@@ -18,7 +19,7 @@ import turfLength from "@turf/length";
 import booleanWithin from "@turf/boolean-within";
 import booleanDisjoint from "@turf/boolean-disjoint";
 import lineSplit from "@turf/line-split";
-import lineSliceAlong from "@turf/line-slice-along";
+import along from "@turf/along";
 
 export async function clipBatch({
   features,
@@ -27,7 +28,9 @@ export async function clipBatch({
   groupBy,
 }: {
   features: {
-    feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+    feature: FeatureWithMetadata<
+      Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    >;
     requiresIntersection: boolean;
     requiresDifference: boolean;
   }[];
@@ -49,65 +52,118 @@ export async function clipBatch({
       if (classKey === "*") {
         continue;
       }
-      const f = performClipping(
+      const size = calculatedClippedOverlapSize(
         features.filter((f) => f.feature.properties?.[groupBy!] === classKey),
         differenceMultiPolygon,
         subjectFeature
       );
-      results[classKey] += calcArea(f) * 1e-6;
-      results["*"] += calcArea(f) * 1e-6;
+      results[classKey] += size;
+      results["*"] += size;
     }
   } else {
-    const f = performClipping(features, differenceMultiPolygon, subjectFeature);
-    results["*"] += calcArea(f) * 1e-6;
+    const size = calculatedClippedOverlapSize(
+      features,
+      differenceMultiPolygon,
+      subjectFeature
+    );
+    results["*"] += size;
   }
+  console.log("clipBatch results", results);
   return results;
 }
 
-export function performClipping(
+function calcSize(
+  feature: Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+) {
+  if (
+    feature.geometry.type === "Polygon" ||
+    feature.geometry.type === "MultiPolygon"
+  ) {
+    return calcArea(feature) * 1e-6;
+  } else if (
+    feature.geometry.type === "LineString" ||
+    feature.geometry.type === "MultiLineString"
+  ) {
+    return turfLength(feature, { units: "kilometers" });
+  }
+  return 0;
+}
+
+export function calculatedClippedOverlapSize(
   features: {
-    feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon>>;
+    feature: FeatureWithMetadata<
+      Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    >;
     requiresIntersection: boolean;
     requiresDifference: boolean;
   }[],
   differenceGeoms: clipping.Geom[],
   subjectFeature: Feature<Polygon | MultiPolygon>
-) {
-  let product: clipping.Geom = [];
-  let forClipping: clipping.Geom = [];
-  for (const f of features) {
-    const target = f.requiresIntersection ? forClipping : product;
-    if (f.feature.geometry.type === "Polygon") {
-      // @ts-ignore
-      target.push(f.feature.geometry.coordinates);
-    } else {
-      for (const poly of f.feature.geometry.coordinates) {
+): number {
+  if (
+    features[0].feature.geometry.type === "Polygon" ||
+    features[0].feature.geometry.type === "MultiPolygon"
+  ) {
+    let product: clipping.Geom = [];
+    let forClipping: clipping.Geom = [];
+    for (const f of features) {
+      const target = f.requiresIntersection ? forClipping : product;
+      if (f.feature.geometry.type === "Polygon") {
         // @ts-ignore
-        target.push(poly as clipping.Geom);
+        target.push(f.feature.geometry.coordinates);
+      } else {
+        for (const poly of f.feature.geometry.coordinates) {
+          // @ts-ignore
+          target.push(poly as clipping.Geom);
+        }
       }
     }
-  }
-  if (forClipping.length > 0) {
-    const result = clipping.intersection(
-      forClipping,
-      subjectFeature.geometry.coordinates as clipping.Geom
-    );
-    if (result.length > 0) {
-      // @ts-ignore
-      product.push(...result);
+    if (forClipping.length > 0) {
+      const result = clipping.intersection(
+        forClipping,
+        subjectFeature.geometry.coordinates as clipping.Geom
+      );
+      if (result.length > 0) {
+        // @ts-ignore
+        product.push(...result);
+      }
     }
+
+    const difference = clipping.difference(product, ...differenceGeoms);
+
+    return calcSize({
+      type: "Feature",
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: difference,
+      },
+      properties: {},
+    } as Feature<MultiPolygon>);
+  } else if (
+    features[0].feature.geometry.type === "LineString" ||
+    features[0].feature.geometry.type === "MultiLineString"
+  ) {
+    let totalLength = 0;
+    for (const f of features) {
+      const processed = performOperationsOnFeature(
+        f.feature,
+        f.requiresIntersection,
+        f.requiresDifference,
+        differenceGeoms,
+        subjectFeature
+      );
+      if (
+        processed.geometry.type === "LineString" ||
+        processed.geometry.type === "MultiLineString"
+      ) {
+        totalLength += calcSize(
+          processed as Feature<LineString | MultiLineString>
+        );
+      }
+    }
+    return totalLength;
   }
-
-  const difference = clipping.difference(product, ...differenceGeoms);
-
-  return {
-    type: "Feature",
-    geometry: {
-      type: "MultiPolygon",
-      coordinates: difference,
-    },
-    properties: {},
-  } as Feature<MultiPolygon>;
+  return 0;
 }
 
 export async function countFeatures({
@@ -558,16 +614,191 @@ function performOperationsOnFeature(
       coordinates: geom as Position[][][],
     };
   } else if (
-    feature.geometry.type === "LineString" ||
-    feature.geometry.type === "MultiLineString"
+    result.geometry.type === "LineString" ||
+    result.geometry.type === "MultiLineString"
   ) {
-    throw new Error("Not implemented");
+    let multiLine = toMultiLineCoordinates(result.geometry);
+    if (requiresIntersection) {
+      multiLine = clipLinesWithPolygon(multiLine, subjectFeature, "intersect");
+    }
+    if (requiresDifference && differenceMultiPolygon.length > 0) {
+      for (const geom of differenceMultiPolygon) {
+        if (multiLine.length === 0) {
+          break;
+        }
+        if (!geom || geom.length === 0) {
+          continue;
+        }
+        const differenceFeature = geomToMultiPolygonFeature(geom);
+        multiLine = clipLinesWithPolygon(
+          multiLine,
+          differenceFeature,
+          "difference"
+        );
+      }
+    }
+    result.geometry = {
+      type: "MultiLineString",
+      coordinates: multiLine,
+    };
   } else {
     throw new Error(
       `Unsupported geometry type: ${(feature.geometry as any).type}`
     );
   }
   return result as typeof feature;
+}
+
+type MultiLineCoordinates = Position[][];
+type LineClipMode = "intersect" | "difference";
+
+function toMultiLineCoordinates(
+  geometry: LineString | MultiLineString
+): MultiLineCoordinates {
+  if (geometry.type === "LineString") {
+    return [cloneLineCoordinates(geometry.coordinates)];
+  }
+  return geometry.coordinates.map((line) => cloneLineCoordinates(line));
+}
+
+function clipLinesWithPolygon(
+  lines: MultiLineCoordinates,
+  polygon: Feature<Polygon | MultiPolygon>,
+  mode: LineClipMode
+): MultiLineCoordinates {
+  if (lines.length === 0) {
+    return [];
+  }
+  const keepInside = mode === "intersect";
+  const result: MultiLineCoordinates = [];
+  for (const coords of lines) {
+    const filtered = filterLineStringAgainstPolygon(
+      coords,
+      polygon,
+      keepInside
+    );
+    if (filtered.length > 0) {
+      result.push(...filtered);
+    }
+  }
+  return result;
+}
+
+function filterLineStringAgainstPolygon(
+  coords: Position[],
+  polygon: Feature<Polygon | MultiPolygon>,
+  keepInside: boolean
+): MultiLineCoordinates {
+  if (coords.length < 2) {
+    return [];
+  }
+  const line: Feature<LineString> = {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: coords,
+    },
+    properties: {},
+  };
+  // Line fully within polygon
+  if (booleanWithin(line, polygon)) {
+    return keepInside ? [cloneLineCoordinates(coords)] : [];
+  }
+  // Line fully outside polygon
+  if (booleanDisjoint(polygon, line)) {
+    return keepInside ? [] : [cloneLineCoordinates(coords)];
+  }
+  // Line intersects polygon - split and check each segment
+  const split = lineSplit(line, polygon);
+  const segments: MultiLineCoordinates = [];
+  for (const segment of split.features) {
+    if (segment.geometry.type !== "LineString") {
+      continue;
+    }
+    if (segment.geometry.coordinates.length < 2) {
+      continue;
+    }
+    const segmentFeature = segment as Feature<LineString>;
+    // Filter out very small segments (< 0.2 meters) to avoid precision issues
+    const segmentLengthKm = turfLength(segmentFeature, {
+      units: "kilometers",
+    });
+    const segmentLengthMeters = segmentLengthKm * 1000;
+    if (segmentLengthMeters <= 0.2) {
+      continue;
+    }
+
+    const samplePoint = samplePointOnSegment(segmentFeature, segmentLengthKm);
+    const inside = samplePoint
+      ? booleanWithin(samplePoint, polygon)
+      : booleanWithin(segmentFeature, polygon);
+
+    if ((keepInside && inside) || (!keepInside && !inside)) {
+      segments.push(cloneLineCoordinates(segment.geometry.coordinates));
+    }
+  }
+  return segments;
+}
+
+function cloneLineCoordinates(coords: Position[]): Position[] {
+  return coords.map((pt) => pt.slice() as Position);
+}
+
+function samplePointOnSegment(
+  segment: Feature<LineString>,
+  segmentLengthKm: number
+): Feature<Point> | null {
+  const distanceKm = Math.max(segmentLengthKm / 2, 1e-6);
+  try {
+    const sampled = along(segment, distanceKm, { units: "kilometers" });
+    if (sampled?.geometry?.type === "Point") {
+      return sampled as Feature<Point>;
+    }
+  } catch (err) {
+    // Fall through to manual midpoint fallback
+  }
+
+  const coords = segment.geometry.coordinates;
+  if (!coords || coords.length === 0) {
+    return null;
+  }
+  const midIdx = Math.floor(coords.length / 2);
+  const midpoint = coords[midIdx];
+  if (!midpoint) {
+    return null;
+  }
+  return {
+    type: "Feature",
+    geometry: {
+      type: "Point",
+      coordinates: midpoint,
+    },
+    properties: {},
+  };
+}
+
+function geomToMultiPolygonFeature(
+  geom: clipping.Geom
+): Feature<Polygon | MultiPolygon> {
+  return {
+    type: "Feature",
+    geometry: {
+      type: "MultiPolygon",
+      coordinates: geomToMultiPolygonCoordinates(geom),
+    },
+    properties: {},
+  };
+}
+
+function geomToMultiPolygonCoordinates(geom: clipping.Geom): Position[][][] {
+  if (!geom || geom.length === 0) {
+    return [];
+  }
+  const indicator = (geom as any)?.[0]?.[0]?.[0];
+  if (Array.isArray(indicator)) {
+    return geom as Position[][][];
+  }
+  return [geom as Position[][]];
 }
 
 // export function lineOverlap(

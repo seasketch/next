@@ -4,6 +4,7 @@ export default function handler(payload: OverlayWorkerPayload & {
     includedProperties?: string[];
     resultsLimit?: number;
     valueColumn?: string;
+    bufferDistanceKm?: number;
 }): Promise<void>;
 export declare function validatePayload(data: any): OverlayWorkerPayload;
 export declare function subjectIsFragment(subject: any): subject is MetricSubjectFragment & FragmentSubjectPayload;

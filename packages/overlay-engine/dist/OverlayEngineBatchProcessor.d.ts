@@ -107,6 +107,7 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     addIndividualFeatureToResults(feature: FeatureWithMetadata<Feature<Geometry>>): void;
     private addColumnValuesFeatureToResults;
     private addOverlayFeatureToTotals;
+    private getSize;
     addCountFeatureToTotals(feature: FeatureWithMetadata<Feature<Geometry>>): void;
     addPresenceTableFeatureToResults(feature: Pick<FeatureWithMetadata<Feature<Geometry>>, "properties">): void;
     addToPresenceTableResults(value: PresenceTableValue): void;

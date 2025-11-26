@@ -14,6 +14,7 @@ import time
 from subdivide import process_file
 from points import process_points
 from raster import process_raster
+from lines import process_lines
 import fiona
 
 # Cached AWS clients (reused across messages and invocations)
@@ -503,8 +504,14 @@ def handler(event, context):
                 elif geom_type in ('Polygon', 'MultiPolygon'):
                     print(f"Detected geometry type: {geom_type}, routing to subdivision processor")
                     process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress)
+                elif geom_type in ('LineString', 'MultiLineString'):
+                    print(f"Detected geometry type: {geom_type}, routing to line subdivision processor")
+                    process_lines(input_path, output_path, max_nodes, progress_callback=_overall_progress)
                 else:
-                    raise ValueError(f"Unsupported geometry type: {geom_type}. Supported types: Point, MultiPoint, Polygon, MultiPolygon")
+                    raise ValueError(
+                        f"Unsupported geometry type: {geom_type}. "
+                        "Supported types: Point, MultiPoint, LineString, MultiLineString, Polygon, MultiPolygon"
+                    )
 
             if object_key:
                 print(f"Uploading to {object_key}")

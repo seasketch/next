@@ -487,11 +487,21 @@ async function getOrCreateReportDependencies(
               `Overlay source not found for card layer: ${layer.id}`
             );
           }
+          let parameters = layer.layerParameters;
+          const bufferMeters = card.component_settings?.bufferMeters;
+          if (typeof bufferMeters === "number" && bufferMeters > 0) {
+            const bufferDistanceKm = bufferMeters / 1000;
+            parameters = {
+              ...(parameters || {}),
+              bufferDistanceKm,
+            };
+          }
+
           const metrics = await getOrCreateMetricsOfType(
             pool,
             "overlay_area",
             overlaySource,
-            layer.layerParameters,
+            parameters,
             geogs.map((g) => g.id),
             fragments,
             projectId
@@ -719,6 +729,8 @@ async function getOrCreateMetricsOfType(
         groupBy?: string | null;
         includedProperties?: string[] | null;
         valueColumn?: string | null;
+        bufferDistanceKm?: number | null;
+        resultsLimit?: number | null;
       }
     | undefined,
   geographyIds: number[],

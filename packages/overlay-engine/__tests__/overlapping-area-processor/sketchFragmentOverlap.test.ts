@@ -25,6 +25,7 @@ import simplify from "@turf/simplify";
 import { calculateRasterStats } from "../../src/rasterStats";
 import { reprojectFeatureTo6933 } from "../../src/utils/reproject";
 import { calculateDistanceToShore } from "../../src/calculateDistanceToShore";
+import buffer from "@turf/buffer";
 
 const insideBioregion = require("./sketches/Inside-bioregion-2.geojson.json");
 
@@ -587,7 +588,7 @@ describe("sketchFragmentOverlap", () => {
     let helpers: OverlayWorkerHelpers;
     let subjectWriter: DebuggingFgbWriter;
     let fragmentWriter: DebuggingFgbWriter;
-    let clippingFn: ClippingFn;
+    let pool: WorkerPool<any, any>;
 
     beforeAll(async () => {
       writer = new DebuggingFgbWriter(
@@ -630,6 +631,10 @@ describe("sketchFragmentOverlap", () => {
           }
         },
       };
+      pool = createClippingWorkerPool(
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
+        5
+      );
     });
 
     afterAll(async () => {
@@ -637,6 +642,7 @@ describe("sketchFragmentOverlap", () => {
       await writer.close();
       await bboxWriter.close();
       await subjectWriter.close();
+      await pool.destroy();
     });
 
     const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
@@ -678,6 +684,87 @@ describe("sketchFragmentOverlap", () => {
       const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(11.06, 1);
       // console.log(results);
+    });
+
+    it("Should calculate overlap size for lines", async () => {
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-linear-kelp.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const prepared = prepareSketch(
+        require("./sketches/Long-Beach.geojson.json")
+      );
+      const processor = new OverlayEngineBatchProcessor(
+        "overlay_area",
+        1024 * 1024 * 2, // 5MB
+        prepared.feature,
+        source,
+        [],
+        helpers,
+        undefined,
+        pool
+      );
+      const results = await processor.calculate();
+      expect(results["*"]).toBeCloseTo(2.37853578);
+      // console.log(results);
+    });
+
+    it("West Anacapa shore types should be similar to @seasketch/geoprocessing results", async () => {
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-shoretypes.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const prepared = prepareSketch(
+        require("./sketches/West-Anacapa-Island.geojson.json")
+      );
+      const processor = new OverlayEngineBatchProcessor(
+        "overlay_area",
+        1024 * 1024 * 2, // 5MB
+        simplify(prepared.feature, { tolerance: 0.000018 }),
+        source,
+        [],
+        helpers,
+        "MapClass",
+        pool
+      );
+      const results = await processor.calculate();
+      console.log("results", results);
+      expect(results["*"]).toBeGreaterThan(12);
+      expect(results["Rocky Shores"]).toBeGreaterThan(11);
+      expect(results["Beaches"]).toBeGreaterThan(1);
+    });
+
+    it("Should capture more shoretype length when using a buffer", async () => {
+      const source = await sourceCache.get<Feature<MultiPolygon>>(
+        "https://uploads.seasketch.org/testing-shoretypes.fgb",
+        {
+          pageSize: "5MB",
+        }
+      );
+      const prepared = prepareSketch(
+        require("./sketches/West-Anacapa-Island.geojson.json")
+      );
+      const processor = new OverlayEngineBatchProcessor(
+        "overlay_area",
+        1024 * 1024 * 2, // 5MB
+        buffer(simplify(prepared.feature, { tolerance: 0.000018 }), 250, {
+          units: "meters",
+        }),
+        source,
+        [],
+        helpers,
+        "MapClass",
+        pool
+      );
+      const results = await processor.calculate();
+      console.log("results", results);
+      expect(results["*"]).toBeGreaterThan(15);
+      expect(results["Rocky Shores"]).toBeGreaterThan(14);
+      expect(results["Beaches"]).toBeGreaterThan(1.7);
     });
   });
 

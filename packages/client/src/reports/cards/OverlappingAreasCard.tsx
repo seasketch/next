@@ -16,17 +16,22 @@ import {
 } from "../utils/colors";
 import { AnyLayer } from "mapbox-gl";
 import { useTranslation } from "react-i18next";
-import { useUnits } from "../hooks/useUnits";
+import { useUnits, AreaDisplayUnit } from "../hooks/useUnits";
 import MapLayerVisibilityControl from "../components/MapLayerVisibilityControl";
+
+// Restricted length units for overlap measurements (only km and mi supported)
+type OverlapLengthUnit = "km" | "mi";
 
 export type OverlappingAreasCardConfiguration = ReportCardConfiguration<{
   /**
-   * The unit of measurement to display the area in.
+   * The unit of measurement to display overlap values in.
+   * For polygon layers: "km" | "mi" | "acres" | "ha"
+   * For line layers: "km" | "mi"
    * @default "km"
    */
-  unit?: "km" | "mi" | "acres" | "ha";
+  unit?: AreaDisplayUnit | OverlapLengthUnit;
   /**
-   * When true, the list will include categories with 0 area.
+   * When true, the list will include categories with 0 overlap.
    * When false, categories with zero overlap are hidden.
    * @default false
    */
@@ -36,6 +41,11 @@ export type OverlappingAreasCardConfiguration = ReportCardConfiguration<{
    * @default "overlap"
    */
   sortBy?: "overlap" | "name";
+  /**
+   * Optional buffer distance (in meters) applied to the sketch before measuring
+   * overlap. When omitted or zero, no buffer is applied.
+   */
+  bufferMeters?: number;
 }>;
 
 export type OverlappingAreasCardProps =
@@ -45,6 +55,13 @@ export type OverlappingAreasCardProps =
 const OverlappingAreasCardAdmin = lazy(
   () => import("./OverlappingAreasCardAdmin")
 );
+
+/**
+ * Helper function to determine if a geometry type is a polygon type
+ */
+function isPolygonGeometry(geometry: string): boolean {
+  return geometry === "Polygon" || geometry === "MultiPolygon";
+}
 
 export function OverlappingAreasCard({
   config,
@@ -59,11 +76,33 @@ export function OverlappingAreasCard({
 
   const formatters = useNumberFormatters();
 
-  const { unitLabel, convertFromBase } = useUnits({
-    category: "area",
-    unit: config.componentSettings?.unit ?? "km",
-  });
+  // Determine geometry type from the first reporting layer's geostats metadata
+  const geometryType = useMemo(() => {
+    if (reportingLayers.length === 0) return null;
+    const firstLayer = reportingLayers[0];
+    const meta =
+      firstLayer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    if (!meta || isRasterInfo(meta)) return null;
+    const geostats = meta.layers[0] as GeostatsLayer;
+    return geostats.geometry;
+  }, [reportingLayers]);
 
+  // Determine unit category based on geometry type
+  const isPolygonLayer = geometryType ? isPolygonGeometry(geometryType) : true; // Default to area for backwards compatibility
+
+  const { unitLabel, convertFromBase } = useUnits(
+    isPolygonLayer
+      ? {
+          category: "area",
+          unit: (config.componentSettings?.unit ?? "km") as AreaDisplayUnit,
+        }
+      : {
+          category: "length",
+          unit: (config.componentSettings?.unit ?? "km") as "km" | "mi",
+        }
+  );
+
+  // Sum overlap values by layer and category
   const sumSketchOverlaysByClass = useMemo(() => {
     let layers: { [layer: string]: { [classKey: string]: number } } = {};
     if (metrics.length > 0) {
@@ -96,6 +135,9 @@ export function OverlappingAreasCard({
     }
   }, [metrics]);
 
+  const sketchClassPrimaryGeographyId =
+    reportContext.sketchClass?.clippingGeographies?.[0]?.id;
+
   const items = useMemo(() => {
     const items: {
       title: string;
@@ -103,8 +145,6 @@ export function OverlappingAreasCard({
       color?: string;
       percentage?: number;
     }[] = [];
-    const sketchClassPrimaryGeographyId =
-      reportContext.sketchClass?.clippingGeographies?.[0]?.id;
 
     for (const layer of reportingLayers) {
       const source = sources.find(
@@ -132,16 +172,19 @@ export function OverlappingAreasCard({
           )
         : null;
 
-      const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-      if (!meta) {
+      // Determine if this layer is polygon or line geometry
+      const layerMeta =
+        layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+      if (!layerMeta) {
         throw new Error(
           `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
         );
       }
+
       if (layer.layerParameters?.groupBy) {
         // get values for groupBy
-        if (!isRasterInfo(meta)) {
-          const geostats = meta.layers[0] as GeostatsLayer;
+        if (!isRasterInfo(layerMeta)) {
+          const geostats = layerMeta.layers[0] as GeostatsLayer;
           const attr = geostats.attributes.find(
             (a) => a.attribute === layer.layerParameters.groupBy
           );
@@ -169,13 +212,15 @@ export function OverlappingAreasCard({
           const values = Object.keys(attr.values);
           for (const value of values) {
             const geographyTotal = (geographyMetric?.value as any)?.[value];
-            const area = sumSketchOverlaysByClass?.[sourceUrl]?.[value];
-            if (area && area > 0) {
+            const overlapValue = sumSketchOverlaysByClass?.[sourceUrl]?.[value];
+            if (overlapValue && overlapValue > 0) {
               items.push({
                 title: value,
-                value: area,
+                value: overlapValue,
                 color: colors[value],
-                percentage: geographyTotal ? area / geographyTotal : undefined,
+                percentage: geographyTotal
+                  ? overlapValue / geographyTotal
+                  : undefined,
               });
             } else if (config.componentSettings?.showZeroOverlapCategories) {
               items.push({ title: value, color: colors[value], percentage: 0 });
@@ -187,13 +232,15 @@ export function OverlappingAreasCard({
           );
         }
       } else {
-        const area = sumSketchOverlaysByClass?.[sourceUrl]?.["*"];
+        const overlapValue = sumSketchOverlaysByClass?.[sourceUrl]?.["*"];
         const geographyTotal = (geographyMetric?.value as any)?.["*"];
-        if (area && area > 0) {
+        if (overlapValue && overlapValue > 0) {
           items.push({
             title: "All features",
-            value: area,
-            percentage: geographyTotal ? area / geographyTotal : undefined,
+            value: overlapValue,
+            percentage: geographyTotal
+              ? overlapValue / geographyTotal
+              : undefined,
             color: extractColorForLayers(
               layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
             ),
@@ -217,6 +264,7 @@ export function OverlappingAreasCard({
     config.componentSettings,
     metrics,
     sources,
+    sketchClassPrimaryGeographyId,
   ]);
 
   return (
@@ -300,7 +348,7 @@ const defaultBody = {
       content: [
         {
           type: "text",
-          text: "Overlapping Areas",
+          text: "Measure Overlap",
         },
       ],
     },
@@ -321,11 +369,11 @@ registerReportCardType({
   adminComponent: OverlappingAreasCardAdmin,
   defaultSettings: defaultComponentSettings,
   defaultBody: defaultBody,
-  label: <Trans ns="admin:sketching">Measure Overlapping Areas</Trans>,
+  label: <Trans ns="admin:sketching">Measure Overlap</Trans>,
   description: (
     <Trans ns="admin:sketching">
-      Analyze overlap with vector layers. For example, display types of habitats
-      captured along with targets for protection.
+      Quantify overlap with polygon or line layers. For example, display types
+      of habitats captured along with targets for protection.
     </Trans>
   ),
   icon: OverlappingAreasCardIcon,

@@ -1,6 +1,6 @@
-import type { Feature, Polygon, MultiPolygon, Point, MultiPoint, FeatureCollection } from "geojson";
+import type { Feature, Polygon, MultiPolygon, Point, MultiPoint, LineString, MultiLineString, FeatureCollection } from "geojson";
 export type ContainerFeature = Feature<Polygon | MultiPolygon>;
-export type CandidateFeature = Feature<Polygon | MultiPolygon | Point | MultiPoint>;
+export type CandidateFeature = Feature<Polygon | MultiPolygon | Point | MultiPoint | LineString | MultiLineString>;
 export type Classification = "inside" | "outside" | "mixed";
 /**
  * ContainerIndex
@@ -20,7 +20,7 @@ export declare class ContainerIndex {
     bboxPolygons: FeatureCollection<Polygon, {}>;
     constructor(container: ContainerFeature);
     /**
-     * Classify a candidate polygon:
+     * Classify a candidate geometry (polygonal or linear):
      *  - 'outside': bbox disjoint OR all sampled vertices outside and no boundary crossings
      *  - 'inside':  no boundary crossings & all sampled vertices inside
      *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices

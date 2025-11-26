@@ -50,8 +50,10 @@ const undici_1 = require("undici");
 const lru_cache_1 = require("lru-cache");
 const OverlayEngineBatchProcessor_1 = require("overlay-engine/src/OverlayEngineBatchProcessor");
 const simplify_1 = __importDefault(require("@turf/simplify"));
+const buffer_1 = __importDefault(require("@turf/buffer"));
 const helpers_1 = require("overlay-engine/src/utils/helpers");
 const reproject_1 = require("overlay-engine/src/utils/reproject");
+const SIMPLIFICATION_TOLERANCE = 0.000018;
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
@@ -160,9 +162,10 @@ async function handler(payload) {
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
+                const bufferedIntersectionFeature = applySubjectBuffer(intersectionFeature, payload.bufferDistanceKm);
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor("overlay_area", 1024 * 1024 * 1, // 5MB
-                (0, simplify_1.default)(intersectionFeature, {
-                    tolerance: 0.002,
+                (0, simplify_1.default)(bufferedIntersectionFeature, {
+                    tolerance: SIMPLIFICATION_TOLERANCE,
                 }), source, differenceSources, helpers, payload.groupBy, workerPool);
                 const area = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
@@ -184,7 +187,7 @@ async function handler(payload) {
                 const columnValuesProperty = payload.type === "column_values" ? payload.valueColumn : undefined;
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor(payload.type, 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(intersectionFeature, {
-                    tolerance: 0.002,
+                    tolerance: SIMPLIFICATION_TOLERANCE,
                 }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedProperties, payload.resultsLimit, columnValuesProperty);
                 const result = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
@@ -346,5 +349,25 @@ async function subjectsForAnalysis(subject, helpers) {
     else {
         throw new Error("Unknown subject type. Must be geography or fragment.");
     }
+}
+function applySubjectBuffer(feature, bufferDistanceKm) {
+    if (typeof bufferDistanceKm !== "number" ||
+        !isFinite(bufferDistanceKm) ||
+        bufferDistanceKm <= 0) {
+        return feature;
+    }
+    try {
+        const buffered = (0, buffer_1.default)(feature, bufferDistanceKm, { units: "kilometers" });
+        if (buffered &&
+            buffered.geometry &&
+            (buffered.geometry.type === "Polygon" ||
+                buffered.geometry.type === "MultiPolygon")) {
+            return buffered;
+        }
+    }
+    catch (err) {
+        console.warn("Failed to buffer subject feature", err);
+    }
+    return feature;
 }
 //# sourceMappingURL=overlay-worker.js.map

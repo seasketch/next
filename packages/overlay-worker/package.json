@@ -29,8 +29,10 @@
   },
   "dependencies": {
     "@aws-sdk/client-sqs": "^3.873.0",
+    "@turf/along": "^7.3.0",
     "@turf/area": "^7.2.0",
     "@turf/boolean-valid": "^7.2.0",
+    "@turf/buffer": "^7.3.0",
     "@turf/simplify": "^7.2.0",
     "@types/geobuf": "^3.0.4",
     "@types/geojson": "^7946.0.16",

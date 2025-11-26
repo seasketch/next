@@ -13,6 +13,7 @@ import {
   Geometry,
 } from "geojson";
 import { ContainerIndex } from "./utils/containerIndex";
+import type { CandidateFeature } from "./utils/containerIndex";
 import {
   GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
@@ -46,6 +47,7 @@ import {
 } from "./metrics/metrics";
 import { downsampleHistogram } from "./rasterStats";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
+import turfLength from "@turf/length";
 
 export { createClippingWorkerPool };
 
@@ -361,9 +363,9 @@ export class OverlayEngineBatchProcessor<
             `Processing features: (${this.progress}/${this.progressTarget} bytes)`
           );
           let requiresIntersection = false;
-          // ContainerIndex.classify supports Polygon, MultiPolygon, Point, and MultiPoint
+          // ContainerIndex.classify supports Polygon, MultiPolygon, Point, MultiPoint, LineString, and MultiLineString
           const classification = this.containerIndex.classify(
-            feature as Feature<Polygon | MultiPolygon | Point | MultiPoint>
+            feature as CandidateFeature
           );
           if (this.helpers.logFeature) {
             this.helpers.logFeature(layers.classifiedFeatures, {
@@ -469,9 +471,11 @@ export class OverlayEngineBatchProcessor<
           );
           this.resetBatchData();
         }
+        console.log("current results", this.results);
         const resolvedBatchData = await Promise.all(this.batchPromises);
         this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
 
+        console.log("resolvedBatchData", resolvedBatchData);
         if (this.isOverlayAreaOperation()) {
           this.mergeOverlayBatchResults(resolvedBatchData);
         } else if (this.isCountOperation()) {
@@ -790,16 +794,35 @@ export class OverlayEngineBatchProcessor<
     feature: FeatureWithMetadata<Feature<Geometry>>
   ) {
     // get area in square kilometers
-    const area = feature.properties?.__area
-      ? feature.properties.__area
-      : calcArea(feature as Feature<Polygon | MultiPolygon>) * 1e-6;
+    const size = this.getSize(feature);
     const results = this.getOverlayResults();
-    results["*"] = (results["*"] || 0) + area;
+    results["*"] = (results["*"] || 0) + size;
     if (this.groupBy) {
       const classKey = feature.properties?.[this.groupBy];
       if (classKey) {
-        results[classKey] = (results[classKey] || 0) + area;
+        results[classKey] = (results[classKey] || 0) + size;
       }
+    }
+  }
+
+  private getSize(feature: FeatureWithMetadata<Feature<Geometry>>) {
+    if (
+      feature.geometry.type === "Polygon" ||
+      feature.geometry.type === "MultiPolygon"
+    ) {
+      return calcArea(feature as Feature<Polygon | MultiPolygon>) * 1e-6;
+    } else if (
+      feature.geometry.type === "LineString" ||
+      feature.geometry.type === "MultiLineString"
+    ) {
+      console.log("feature property length", feature.properties?.__lengthKm);
+      console.log("turf length", turfLength(feature, { units: "kilometers" }));
+      return (
+        feature.properties?.__lengthKm ||
+        turfLength(feature, { units: "kilometers" })
+      );
+    } else {
+      throw new Error(`Unsupported geometry type: ${feature.geometry.type}`);
     }
   }
 

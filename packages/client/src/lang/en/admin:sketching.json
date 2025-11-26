@@ -52,6 +52,14 @@
   "This Sketch Class can still be deleted since it has fewer than 10 sketches. All related sketches will be deleted.": "This Sketch Class can still be deleted since it has fewer than 10 sketches. All related sketches will be deleted.",
   "This form can be customized to collect important information about sketches from your users. The name field is the only form element required by SeaSketch which cannot be modified.": "This form can be customized to collect important information about sketches from your users. The name field is the only form element required by SeaSketch which cannot be modified.",
   "You can only delete sketch classes if they have not been used to create more than 10 sketches.": "You can only delete sketch classes if they have not been used to create more than 10 sketches.",
+  "Apply buffer": "Apply buffer",
+  "Apply buffer before measuring overlap": "Apply buffer before measuring overlap",
+  "Buffer the sketch before measuring overlap. Distance is applied in meters.": "Buffer the sketch before measuring overlap. Distance is applied in meters.",
+  "Enter meters": "Enter meters",
+  "Expands the sketch by buffering it outward before overlap is calculated. Enter the buffer distance in meters.": "Expands the sketch by buffering it outward before overlap is calculated. Enter the buffer distance in meters.",
   "if": "if",
-  "last published ": "last published "
+  "last published ": "last published ",
+  "meters": "meters",
+  "Buffers should only be used to capture overlap with features outside of the sketch geography. For example, intertidal areas on shore that would otherwise not overlap the sketch.": "Buffers should only be used to capture overlap with features outside of the sketch geography. For example, intertidal areas on shore that would otherwise not overlap the sketch.",
+  "Otherwise there is a chance that sketches split into multiple fragments across the antimeridian or geography bounds would result in double-counting where their buffered areas overlap each other.": "Otherwise there is a chance that sketches split into multiple fragments across the antimeridian or geography bounds would result in double-counting where their buffered areas overlap each other."
 }

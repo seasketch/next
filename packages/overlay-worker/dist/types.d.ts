@@ -60,7 +60,7 @@ type ReplaceStableId<T> = T extends {
     sourceUrl: string;
     sourceType: SourceType;
 } : Omit<T, "value" | "count">;
-export type OverlayWorkerPayload = {
+type BaseOverlayWorkerPayload = {
     [K in keyof MetricTypeMap]: ReplaceStableId<MetricTypeMap[K]> extends infer R ? R extends {
         subject: infer S;
     } ? Omit<R, "subject"> & {
@@ -70,6 +70,12 @@ export type OverlayWorkerPayload = {
         epsg?: number;
     } : never : never;
 }[keyof MetricTypeMap];
+export type OverlayWorkerPayload = BaseOverlayWorkerPayload & {
+    bufferDistanceKm?: number;
+    resultsLimit?: number;
+    includedProperties?: string[];
+    valueColumn?: string;
+};
 export type OverlayWorkerResponse = {
     /**
      * Identifier for the job. Referenced in OverlayWorkerMessage notifications

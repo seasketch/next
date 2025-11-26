@@ -96,7 +96,7 @@ type ReplaceStableId<T> = T extends { stableId: any }
 
 // Create a type that omits value and count from all metric types
 // and conditionally adds subject payloads based on subject type
-export type OverlayWorkerPayload = {
+type BaseOverlayWorkerPayload = {
   [K in keyof MetricTypeMap]: ReplaceStableId<MetricTypeMap[K]> extends infer R
     ? R extends { subject: infer S }
       ? Omit<R, "subject"> & {
@@ -108,6 +108,13 @@ export type OverlayWorkerPayload = {
       : never
     : never;
 }[keyof MetricTypeMap];
+
+export type OverlayWorkerPayload = BaseOverlayWorkerPayload & {
+  bufferDistanceKm?: number;
+  resultsLimit?: number;
+  includedProperties?: string[];
+  valueColumn?: string;
+};
 
 export type OverlayWorkerResponse = {
   /**

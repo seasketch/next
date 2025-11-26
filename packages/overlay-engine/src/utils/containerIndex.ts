@@ -1,7 +1,7 @@
 // @ts-ignore
 import Flatbush from "flatbush";
-import segIntersect from "robust-segment-intersect";
-import turfBbox, { bbox } from "@turf/bbox";
+import * as segIntersect from "robust-segment-intersect";
+import turfBbox from "@turf/bbox";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import { point as turfPoint } from "@turf/helpers";
 
@@ -11,13 +11,14 @@ import type {
   MultiPolygon,
   Point,
   MultiPoint,
+  LineString,
+  MultiLineString,
   Position,
   BBox,
   Geometry,
   FeatureCollection,
 } from "geojson";
 import bboxPolygon from "@turf/bbox-polygon";
-import pip from "point-in-polygon-hao";
 
 type Pt = Position; // [x, y]
 type LinearRing = Pt[];
@@ -25,7 +26,7 @@ type Rings = LinearRing[];
 
 export type ContainerFeature = Feature<Polygon | MultiPolygon>;
 export type CandidateFeature = Feature<
-  Polygon | MultiPolygon | Point | MultiPoint
+  Polygon | MultiPolygon | Point | MultiPoint | LineString | MultiLineString
 >;
 export type Classification = "inside" | "outside" | "mixed";
 
@@ -107,16 +108,16 @@ export class ContainerIndex {
   }
 
   /**
-   * Classify a candidate polygon:
+   * Classify a candidate geometry (polygonal or linear):
    *  - 'outside': bbox disjoint OR all sampled vertices outside and no boundary crossings
    *  - 'inside':  no boundary crossings & all sampled vertices inside
    *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices
    */
   classify(candidate: CandidateFeature): Classification {
-    if (
-      candidate.geometry.type === "Point" ||
-      candidate.geometry.type === "MultiPoint"
-    ) {
+    const geom = candidate.geometry;
+    const geomType = geom.type;
+
+    if (geomType === "Point" || geomType === "MultiPoint") {
       const inside = this.pointInPolygon(
         candidate as Feature<Point | MultiPoint>
       );
@@ -127,15 +128,25 @@ export class ContainerIndex {
       }
     }
 
+    const isPolygonal = geomType === "Polygon" || geomType === "MultiPolygon";
+    const isLinear =
+      geomType === "LineString" || geomType === "MultiLineString";
+
+    if (!isPolygonal && !isLinear) {
+      throw new Error(`Unsupported geometry type: ${geomType}`);
+    }
+
     const candBBox = turfBbox(candidate);
     if (!bboxesOverlap(candBBox, this.containerBBox)) {
       return "outside";
     }
 
-    const polygonCandidate = candidate as Feature<Polygon | MultiPolygon>;
+    const polygonCandidate = isPolygonal
+      ? (candidate as Feature<Polygon | MultiPolygon>)
+      : null;
 
     // Edge-crossing check (exact, robust). Any hit => 'mixed'
-    for (const seg of iterateSegments(candidate.geometry)) {
+    for (const seg of Array.from(iterateSegments(geom))) {
       const [a, b] = seg;
       const minx = Math.min(a[0], b[0]);
       const miny = Math.min(a[1], b[1]);
@@ -148,7 +159,7 @@ export class ContainerIndex {
         // robust-segment-intersect treats touching as true
         // Convert Position to Coord (only x,y coordinates)
         if (
-          segIntersect(
+          (segIntersect as any).default(
             [a[0], a[1]],
             [b[0], b[1]],
             [sa[0], sa[1]],
@@ -162,7 +173,10 @@ export class ContainerIndex {
 
     // No boundary crossings: test multiple representative vertices
     // const vertices = sampleRepresentativeVertices(candidate.geometry, 1);
-    const vertices = [firstVertex(candidate.geometry)];
+    const vertices = classificationVertices(geom);
+    if (vertices.length === 0) {
+      return "outside";
+    }
     // console.log("vertices", vertices);
 
     let insideCount = 0;
@@ -194,7 +208,11 @@ export class ContainerIndex {
     // If all vertices are outside, check if container is inside candidate
     // (cheap test: if candidate bbox contains container bbox, sample container points)
     if (outsideCount > 0) {
-      if (bboxContains(candBBox, this.containerBBox)) {
+      if (
+        isPolygonal &&
+        polygonCandidate &&
+        bboxContains(candBBox, this.containerBBox)
+      ) {
         // Sample a few representative points from container to check if it's inside candidate
         const containerPoints = sampleRepresentativeVertices(
           this.container.geometry,
@@ -215,7 +233,12 @@ export class ContainerIndex {
     }
 
     // If all vertices are inside, check if candidate overlaps any holes
-    if (insideCount > 0 && this.holeRings.length > 0) {
+    if (
+      insideCount > 0 &&
+      isPolygonal &&
+      polygonCandidate &&
+      this.holeRings.length > 0
+    ) {
       // Check if candidate bbox overlaps any hole bboxes
       let hasHoleOverlap = false;
       for (let i = 0; i < this.holeRings.length; i++) {
@@ -302,6 +325,7 @@ export class ContainerIndex {
    */
   pointInPolygon(pointFeature: Feature<Point | MultiPoint>): boolean {
     const geom = pointFeature.geometry;
+    const geomType = geom.type;
 
     if (geom.type === "Point") {
       return this.pointInPolygonSingle(geom.coordinates);
@@ -315,7 +339,7 @@ export class ContainerIndex {
       return false;
     } else {
       throw new Error(
-        `Unsupported geometry type: ${geom["type"]}. Expected Point or MultiPoint.`
+        `Unsupported geometry type: ${geomType}. Expected Point or MultiPoint.`
       );
     }
   }
@@ -463,6 +487,13 @@ function* iterateSegments(geom: Geometry): Generator<[Pt, Pt]> {
         for (let i = 0; i < r.length - 1; i++) yield [r[i], r[i + 1]];
       }
     }
+  } else if (geom.type === "LineString") {
+    const line = geom.coordinates;
+    for (let i = 0; i < line.length - 1; i++) yield [line[i], line[i + 1]];
+  } else if (geom.type === "MultiLineString") {
+    for (const line of geom.coordinates) {
+      for (let i = 0; i < line.length - 1; i++) yield [line[i], line[i + 1]];
+    }
   } else {
     throw new Error(`Unsupported geometry type: ${geom.type}`);
   }
@@ -477,6 +508,28 @@ function firstVertex(geom: Geometry): Pt {
     return ring[0];
   }
   throw new Error(`Unsupported geometry type: ${geom.type}`);
+}
+
+function classificationVertices(geom: Geometry): Pt[] {
+  const geomType = geom.type;
+  if (geom.type === "LineString") {
+    return lineEndpointSamples(geom.coordinates);
+  } else if (geom.type === "MultiLineString") {
+    const vertices: Pt[] = [];
+    for (const line of geom.coordinates) {
+      vertices.push(...lineEndpointSamples(line));
+    }
+    return vertices;
+  } else if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+    return [firstVertex(geom)];
+  }
+  throw new Error(`Unsupported geometry type: ${geomType}`);
+}
+
+function lineEndpointSamples(line: Position[]): Pt[] {
+  if (line.length === 0) return [];
+  if (line.length === 1) return [line[0]];
+  return [line[0], line[line.length - 1]];
 }
 
 /**
