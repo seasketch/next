@@ -5,6 +5,44 @@ exports.subjectIsGeography = subjectIsGeography;
 exports.combineRasterBandStats = combineRasterBandStats;
 exports.combineColumnValueStats = combineColumnValueStats;
 const simple_statistics_1 = require("simple-statistics");
+/**
+ * Downsamples a histogram of [value, count] pairs to a maximum number of
+ * entries, preserving the overall distribution across the full value range.
+ * This mirrors the approach used in rasterStats downsampling.
+ */
+function downsampleColumnHistogram(histogram, maxEntries) {
+    if (histogram.length === 0 || histogram.length <= maxEntries) {
+        return histogram;
+    }
+    const sorted = [...histogram].sort((a, b) => a[0] - b[0]);
+    const minValue = sorted[0][0];
+    const maxValue = sorted[sorted.length - 1][0];
+    if (!isFinite(minValue) || !isFinite(maxValue) || minValue === maxValue) {
+        const totalCount = sorted.reduce((acc, [, count]) => acc + count, 0);
+        return [[minValue, totalCount]];
+    }
+    const numBins = maxEntries;
+    const binCounts = new Array(numBins).fill(0);
+    const span = maxValue - minValue;
+    for (const [value, count] of sorted) {
+        const normalized = (value - minValue) / span;
+        let binIndex = Math.round(normalized * (numBins - 1));
+        if (binIndex < 0)
+            binIndex = 0;
+        if (binIndex >= numBins)
+            binIndex = numBins - 1;
+        binCounts[binIndex] += count;
+    }
+    const result = [];
+    for (let i = 0; i < numBins; i++) {
+        const count = binCounts[i];
+        if (count === 0)
+            continue;
+        const value = minValue + (span * i) / (numBins - 1);
+        result.push([value, count]);
+    }
+    return result;
+}
 function subjectIsFragment(subject) {
     return "hash" in subject;
 }
@@ -132,13 +170,16 @@ function combineColumnValueStats(statsArray) {
         mins.push(stats.min);
         maxs.push(stats.max);
         if (isFinite(stats.mean)) {
+            // Only include fragments with a finite mean in the weighted
+            // mean/stdDev calculation. Fragments with NaN mean still
+            // contribute to count/sum but are ignored for weighting.
             weightedMeanNumerator += stats.mean * weight;
+            totalWeight += weight;
+            if (isFinite(stats.stdDev)) {
+                const variance = stats.stdDev * stats.stdDev;
+                weightedSecondMoment += (variance + stats.mean * stats.mean) * weight;
+            }
         }
-        if (isFinite(stats.stdDev) && isFinite(stats.mean)) {
-            const variance = stats.stdDev * stats.stdDev;
-            weightedSecondMoment += (variance + stats.mean * stats.mean) * weight;
-        }
-        totalWeight += weight;
         // Merge histogram entries
         for (const [value, count] of stats.histogram) {
             histogramMap.set(value, (histogramMap.get(value) || 0) + count);
@@ -167,10 +208,10 @@ function combineColumnValueStats(statsArray) {
     let combinedHistogram = Array.from(histogramMap.entries())
         .map(([value, count]) => [value, count])
         .sort((a, b) => a[0] - b[0]);
-    // Limit histogram size similarly to raster stats
+    // Limit histogram size similarly to raster stats by downsampling
     const MAX_HISTOGRAM_ENTRIES = 200;
     if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
-        combinedHistogram = combinedHistogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+        combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
     }
     const countDistinct = histogramMap.size;
     const totalAreaSqKm = useAreaWeight
