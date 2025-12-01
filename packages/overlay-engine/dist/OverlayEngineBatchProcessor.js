@@ -296,10 +296,8 @@ class OverlayEngineBatchProcessor {
                     this.batchPromises.push(this.processBatch(this.batchData, differenceMultiPolygon));
                     this.resetBatchData();
                 }
-                console.log("current results", this.results);
                 const resolvedBatchData = await Promise.all(this.batchPromises);
                 this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
-                console.log("resolvedBatchData", resolvedBatchData);
                 if (this.isOverlayAreaOperation()) {
                     this.mergeOverlayBatchResults(resolvedBatchData);
                 }
@@ -577,16 +575,14 @@ class OverlayEngineBatchProcessor {
         }
     }
     getSize(feature) {
-        var _a, _b;
+        var _a;
         if (feature.geometry.type === "Polygon" ||
             feature.geometry.type === "MultiPolygon") {
             return (0, area_1.default)(feature) * 1e-6;
         }
         else if (feature.geometry.type === "LineString" ||
             feature.geometry.type === "MultiLineString") {
-            console.log("feature property length", (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__lengthKm);
-            console.log("turf length", (0, length_1.default)(feature, { units: "kilometers" }));
-            return (((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__lengthKm) ||
+            return (((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__lengthKm) ||
                 (0, length_1.default)(feature, { units: "kilometers" }));
         }
         else {

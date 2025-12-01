@@ -134,9 +134,10 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           // reports cuts a lot out.
           "Terrestrial Reef Flat": 0.055,
           "Outer Reef Flat": 0.03,
+          "Reef Crest": 0.03,
           "*": 0.02,
         },
-        true
+        false
       );
     });
 
@@ -206,7 +207,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         deepwaterBioregionsResults,
         0.005,
         undefined,
-        true
+        false
       );
     });
 

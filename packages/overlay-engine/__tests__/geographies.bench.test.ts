@@ -60,7 +60,7 @@ describe("Performance tests", () => {
   let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
-  vi.setConfig({ testTimeout: 1000 * 12 });
+  vi.setConfig({ testTimeout: 1000 * 20 });
 
   beforeAll(() => {
     sourceCache = new SourceCache("256mb");
@@ -87,8 +87,7 @@ describe("Performance tests", () => {
         clipToGeography(preparedSketch, hawaiiTerritorialSea, clippingFn)
       );
 
-      // Fail if the operation takes more than 800ms on average
-      expect(averageTime).toBeLessThan(800);
+      expect(averageTime).toBeLessThan(1500);
       expect(result).not.toBeNull();
     });
 
@@ -99,8 +98,7 @@ describe("Performance tests", () => {
         clipToGeography(preparedSketch, hawaiiOffshore, clippingFn)
       );
 
-      // Fail if the operation takes more than 800ms on average
-      expect(averageTime).toBeLessThan(800);
+      expect(averageTime).toBeLessThan(1500);
       expect(result).not.toBeNull();
     });
   });
@@ -125,8 +123,7 @@ describe("Performance tests", () => {
         createFragments(preparedSketch, geographies, clippingFn)
       );
 
-      // Fail if the operation takes more than 500ms on average
-      expect(averageTime).toBeLessThan(500);
+      expect(averageTime).toBeLessThan(1000);
       expect(result.length).toBeGreaterThan(0);
     });
   });

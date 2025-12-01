@@ -471,11 +471,9 @@ export class OverlayEngineBatchProcessor<
           );
           this.resetBatchData();
         }
-        console.log("current results", this.results);
         const resolvedBatchData = await Promise.all(this.batchPromises);
         this.helpers.log(`Resolved ${resolvedBatchData.length} batches`);
 
-        console.log("resolvedBatchData", resolvedBatchData);
         if (this.isOverlayAreaOperation()) {
           this.mergeOverlayBatchResults(resolvedBatchData);
         } else if (this.isCountOperation()) {
@@ -815,8 +813,6 @@ export class OverlayEngineBatchProcessor<
       feature.geometry.type === "LineString" ||
       feature.geometry.type === "MultiLineString"
     ) {
-      console.log("feature property length", feature.properties?.__lengthKm);
-      console.log("turf length", turfLength(feature, { units: "kilometers" }));
       return (
         feature.properties?.__lengthKm ||
         turfLength(feature, { units: "kilometers" })

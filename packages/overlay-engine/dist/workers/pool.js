@@ -96,7 +96,6 @@ class WorkerPool {
 }
 exports.WorkerPool = WorkerPool;
 function createClippingWorkerPool(workerPath, size = Math.max(1, (node_os_1.default.availableParallelism() || node_os_1.default.cpus().length) - 1)) {
-    console.log(`Creating worker pool with ${size} workers`);
     return new WorkerPool(workerPath, size);
 }
 //# sourceMappingURL=pool.js.map

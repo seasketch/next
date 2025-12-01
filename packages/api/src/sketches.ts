@@ -853,9 +853,7 @@ export async function createOrUpdateSketch({
     pgClient as unknown as Pool,
     sketchId!,
     false
-  ).then(() => {
-    console.log("started metric calculations for sketch", sketchId);
-  });
+  );
 
   return sketchId!;
 }

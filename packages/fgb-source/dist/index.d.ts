@@ -527,6 +527,10 @@ declare class SourceCache {
      * ```
      */
     get<T = Feature<Geometry, GeoJsonProperties>>(key: string, options?: CreateSourceOptions): Promise<FlatGeobufSource<T>>;
+    /**
+     * Clear all cached sources and in-flight requests. Useful for testing or resetting state.
+     */
+    clear(): void;
 }
 
 export { type CreateSourceOptions, type FeatureReference, type FeatureWithMetadata, type FetchRangeByKeyFn, type FetchRangeFn, FlatGeobufSource, type PackedRTreeDetails, SourceCache, type SourceCacheOptions, createSource };

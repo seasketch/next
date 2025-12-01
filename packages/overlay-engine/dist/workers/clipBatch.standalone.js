@@ -5673,7 +5673,6 @@ async function clipBatch({
     );
     results["*"] += size;
   }
-  console.log("clipBatch results", results);
   return results;
 }
 function calcSize(feature2) {

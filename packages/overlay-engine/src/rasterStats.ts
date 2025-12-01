@@ -1,7 +1,5 @@
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { RasterBandStats } from "./metrics/metrics";
-const geoblaze = require("geoblaze");
-
 export type HistogramEntry = [number, number];
 
 export function downsampleHistogram(
@@ -46,11 +44,22 @@ export function downsampleHistogram(
   return result;
 }
 
+let _geoblaze: any;
+
+function getGeoblaze() {
+  if (!_geoblaze) {
+    _geoblaze = require("geoblaze");
+  }
+  return _geoblaze;
+}
+
 export async function calculateRasterStats(
   sourceUrl: string,
   feature: Feature<Polygon | MultiPolygon>
 ): Promise<{ bands: RasterBandStats[] }> {
   try {
+    const geoblaze = getGeoblaze();
+
     const raster = await geoblaze.parse(sourceUrl);
     const stats = await geoblaze.stats(raster, feature, {
       stats: [

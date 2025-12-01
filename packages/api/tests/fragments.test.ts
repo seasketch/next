@@ -24,6 +24,9 @@ import calcArea from "@turf/area";
 import fetch, { Headers, Request, Response } from "node-fetch";
 import * as fs from "fs";
 import * as path from "path";
+import bbox from "@turf/bbox";
+import { makeFetchRangeFn } from "overlay-engine/scripts/optimizedFetchRangeFn";
+import { vi } from "vitest";
 
 if (!global.fetch) {
   // @ts-ignore
@@ -37,6 +40,12 @@ if (!global.fetch) {
 }
 
 const pool = createPool("test");
+
+vi.setConfig({ testTimeout: 1000 * 20 });
+
+const sourceCache = new SourceCache("256mb", {
+  fetchRangeFn: makeFetchRangeFn(`https://uploads.seasketch.org`).fetchRangeFn,
+});
 
 // Test geometries
 const polygon = JSON.stringify(
@@ -925,7 +934,6 @@ const territorialSeaUrl =
   "https://uploads.seasketch.org/territorial-sea-land-joined.fgb";
 const landUrl = "https://uploads.seasketch.org/land-big-2.fgb";
 
-const sourceCache = new SourceCache("256mb");
 const clippingFn: ClippingFn = async (sketch, source, op, query) => {
   const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
     source
@@ -4189,15 +4197,12 @@ async function createSketch(
     select 
       f.hash, 
       ST_AsGeoJSON(f.geometry) as geometry,
-      coalesce(array_agg(distinct sf.sketch_id) filter (where sf.sketch_id is not null), array[]::int[]) as sketch_ids,
-      coalesce(array_agg(distinct fg.geography_id) filter (where fg.geography_id is not null), array[]::int[]) as geography_ids
+      coalesce((select array_agg(sf.sketch_id order by sf.sketch_id) from sketch_fragments sf where sf.fragment_hash = f.hash), array[]::int[]) as sketch_ids,
+      coalesce((select array_agg(fg.geography_id order by fg.geography_id) from fragment_geographies fg where fg.fragment_hash = f.hash), array[]::int[]) as geography_ids
     from fragments f
-    left join sketch_fragments sf on f.hash = sf.fragment_hash
-    left join fragment_geographies fg on f.hash = fg.fragment_hash
     where f.hash = any(
       select fragment_hash from sketch_fragments where sketch_id = ${newSketchId}
     )
-    group by f.hash, f.geometry
   `)
   ).rows.map((f) => ({
     type: "Feature",
@@ -4250,15 +4255,12 @@ async function copySketch(
     select 
       f.hash, 
       ST_AsGeoJSON(f.geometry) as geometry,
-      coalesce(array_agg(distinct sf.sketch_id) filter (where sf.sketch_id is not null), array[]::int[]) as sketch_ids,
-      coalesce(array_agg(distinct fg.geography_id) filter (where fg.geography_id is not null), array[]::int[]) as geography_ids
+      coalesce((select array_agg(sf.sketch_id order by sf.sketch_id) from sketch_fragments sf where sf.fragment_hash = f.hash), array[]::int[]) as sketch_ids,
+      coalesce((select array_agg(fg.geography_id order by fg.geography_id) from fragment_geographies fg where fg.fragment_hash = f.hash), array[]::int[]) as geography_ids
     from fragments f
-    left join sketch_fragments sf on f.hash = sf.fragment_hash
-    left join fragment_geographies fg on f.hash = fg.fragment_hash
     where f.hash = any(
       select fragment_hash from sketch_fragments where sketch_id = ${copyId}
     )
-    group by f.hash, f.geometry
   `)
   ).rows.map((f) => ({
     type: "Feature",
@@ -4403,7 +4405,7 @@ function sketchIdsFromFragments(fragments: readonly ReturnedFragment[]) {
       sketchIds.add(sketchId);
     }
   }
-  return [...sketchIds];
+  return Array.from(sketchIds);
 }
 
 function geographyIdsFromFragments(fragments: readonly ReturnedFragment[]) {
@@ -4413,7 +4415,7 @@ function geographyIdsFromFragments(fragments: readonly ReturnedFragment[]) {
       geographyIds.add(geographyId);
     }
   }
-  return [...geographyIds];
+  return Array.from(geographyIds);
 }
 
 function hashesFromFragments(fragments: readonly ReturnedFragment[]) {
@@ -4421,7 +4423,7 @@ function hashesFromFragments(fragments: readonly ReturnedFragment[]) {
   for (const f of fragments) {
     hashes.add(f.hash);
   }
-  return [...hashes];
+  return Array.from(hashes);
 }
 
 // Helper function to validate fragment coordinates
@@ -4522,12 +4524,17 @@ function compareWithExpectedOutput(
 
       expect(currentFragments.length).toBe(expectedFragments.length);
 
+      const sortKey = (fragment: SketchFragment) => {
+        const box = bbox(fragment.geometry);
+        return box[0] + box[1] + box[2] + box[3];
+      };
+
       // Sort fragments by hash for consistent comparison
-      const sortedCurrentFragments = [...currentFragments].sort((a, b) =>
-        a.properties.__hash.localeCompare(b.properties.__hash)
+      const sortedCurrentFragments = [...currentFragments].sort(
+        (a, b) => sortKey(a) - sortKey(b)
       );
-      const sortedExpectedFragments = [...expectedFragments].sort((a, b) =>
-        a.properties.__hash.localeCompare(b.properties.__hash)
+      const sortedExpectedFragments = [...expectedFragments].sort(
+        (a, b) => sortKey(a) - sortKey(b)
       );
 
       for (let i = 0; i < sortedCurrentFragments.length; i++) {
@@ -4603,17 +4610,14 @@ async function fragmentsForCollection(
     select 
       f.hash, 
       ST_AsGeoJSON(f.geometry) as geometry,
-      coalesce(array_agg(distinct sf.sketch_id) filter (where sf.sketch_id is not null), array[]::int[]) as sketch_ids,
-      coalesce(array_agg(distinct fg.geography_id) filter (where fg.geography_id is not null), array[]::int[]) as geography_ids
+      coalesce((select array_agg(sf.sketch_id order by sf.sketch_id) from sketch_fragments sf where sf.fragment_hash = f.hash), array[]::int[]) as sketch_ids,
+      coalesce((select array_agg(fg.geography_id order by fg.geography_id) from fragment_geographies fg where fg.fragment_hash = f.hash), array[]::int[]) as geography_ids
     from fragments f
-    left join sketch_fragments sf on f.hash = sf.fragment_hash
-    left join fragment_geographies fg on f.hash = fg.fragment_hash
     where f.hash in (
       select fragment_hash from sketch_fragments where sketch_id in (
         select unnest(get_child_sketches_recursive(${collectionId}, 'sketch'))
       )
     )
-    group by f.hash, f.geometry
   `)
   ).rows.map((f) => ({
     type: "Feature",

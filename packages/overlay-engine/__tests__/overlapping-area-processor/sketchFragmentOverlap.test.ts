@@ -160,7 +160,7 @@ describe("sketchFragmentOverlap", () => {
           pool
         );
         const results = await processor.calculate();
-        compareResults(results, naitabaGeomorphologyResults, 0.005, {}, true);
+        compareResults(results, naitabaGeomorphologyResults, 0.005, {}, false);
       });
     });
 
@@ -732,7 +732,6 @@ describe("sketchFragmentOverlap", () => {
         pool
       );
       const results = await processor.calculate();
-      console.log("results", results);
       expect(results["*"]).toBeGreaterThan(12);
       expect(results["Rocky Shores"]).toBeGreaterThan(11);
       expect(results["Beaches"]).toBeGreaterThan(1);
@@ -761,7 +760,6 @@ describe("sketchFragmentOverlap", () => {
         pool
       );
       const results = await processor.calculate();
-      console.log("results", results);
       expect(results["*"]).toBeGreaterThan(15);
       expect(results["Rocky Shores"]).toBeGreaterThan(14);
       expect(results["Beaches"]).toBeGreaterThan(1.7);

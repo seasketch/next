@@ -118,6 +118,5 @@ export function createClippingWorkerPool(
   workerPath: string,
   size = Math.max(1, (os.availableParallelism() || os.cpus().length) - 1)
 ): WorkerPool<any, any> {
-  console.log(`Creating worker pool with ${size} workers`);
   return new WorkerPool(workerPath, size);
 }

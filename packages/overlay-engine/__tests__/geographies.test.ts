@@ -14,7 +14,11 @@ import { GeographySettings, SketchFragment } from "../src/fragments";
 import { saveOutput, readOutput, compareFragments } from "./test-helpers";
 import { eezUrl, landUrl, territorialSeaUrl } from "./constants";
 import { vi } from "vitest";
+import { makeFetchRangeFn } from "../scripts/optimizedFetchRangeFn";
 
+const sourceCache = new SourceCache("128mb", {
+  fetchRangeFn: makeFetchRangeFn(`https://uploads.seasketch.org`).fetchRangeFn,
+});
 // Geography configurations
 const hawaiiTerritorialSea: ClippingLayerOption[] = [
   {
@@ -78,14 +82,12 @@ function countCoordinates(geom: MultiPolygon | Polygon) {
   }
 }
 
-describe("clipToGeography", () => {
-  vi.setConfig({ testTimeout: 1000 * 12 });
+vi.setConfig({ testTimeout: 1000 * 20 });
 
-  let sourceCache: SourceCache;
+describe("clipToGeography", () => {
   let clippingFn: ClippingFn;
 
   beforeAll(() => {
-    sourceCache = new SourceCache("128mb");
     clippingFn = async (sketch, source, op, query) => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source
@@ -190,11 +192,9 @@ describe("clipToGeography", () => {
 });
 
 describe("clipToGeographies", () => {
-  let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
   beforeAll(() => {
-    sourceCache = new SourceCache("128mb");
     clippingFn = async (sketch, source, op, query) => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source

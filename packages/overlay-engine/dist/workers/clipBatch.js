@@ -78,7 +78,6 @@ async function clipBatch({ features, differenceMultiPolygon, subjectFeature, gro
         const size = calculatedClippedOverlapSize(features, differenceMultiPolygon, subjectFeature);
         results["*"] += size;
     }
-    console.log("clipBatch results", results);
     return results;
 }
 function calcSize(feature) {

@@ -991,7 +991,6 @@ function SuperUserSettings() {
 
   const [updateFeatureFlags, updateFeatureFlagsState] =
     useUpdateFeatureFlagsMutation({
-      // @ts-ignore
       optimisticResponse: (input: UpdateFeatureFlagsMutationVariables) => {
         return {
           __typename: "Mutation",

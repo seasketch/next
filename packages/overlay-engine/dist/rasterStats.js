@@ -2,7 +2,6 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.downsampleHistogram = downsampleHistogram;
 exports.calculateRasterStats = calculateRasterStats;
-const geoblaze = require("geoblaze");
 function downsampleHistogram(histogram, maxEntries) {
     if (histogram.length === 0 || histogram.length <= maxEntries) {
         return histogram;
@@ -37,8 +36,16 @@ function downsampleHistogram(histogram, maxEntries) {
     }
     return result;
 }
+let _geoblaze;
+function getGeoblaze() {
+    if (!_geoblaze) {
+        _geoblaze = require("geoblaze");
+    }
+    return _geoblaze;
+}
 async function calculateRasterStats(sourceUrl, feature) {
     try {
+        const geoblaze = getGeoblaze();
         const raster = await geoblaze.parse(sourceUrl);
         const stats = await geoblaze.stats(raster, feature, {
             stats: [

@@ -28,7 +28,10 @@ describe("report_card_layers minimal flow", () => {
         const card = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tab.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
 
         // 3) Create an allowed layer (seasketch-vector) and a TOC item in same project
@@ -44,26 +47,26 @@ describe("report_card_layers minimal flow", () => {
           "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
         const makeId = nanoid.customAlphabet(alphabet, 9);
         const stableId = makeId();
-        await conn.oneFirst<number>(
+        const tocItemId = await conn.oneFirst<number>(
           sql`insert into table_of_contents_items (project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'Layer', false, ${layerId}, ${stableId}) returning id`
         );
 
         // 4) Link the card to the TOC item via join table
         await conn.any(
-          sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${card.id}, ${stableId})`
+          sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${card.id}, ${tocItemId})`
         );
         await clearSession(conn);
 
-        // 5) Assert link exists using report_cards_layers()
+        // 5) Assert link exists using report_cards_reporting_layers()
         const count = await conn.oneFirst<number>(
-          sql`select count(*) from report_cards rc, LATERAL report_cards_layers(rc) t where rc.id = ${card.id}`
+          sql`select count(*) from report_cards rc, LATERAL report_cards_reporting_layers(rc) t where rc.id = ${card.id}`
         );
         expect(count).toBe(1);
       }
     );
   });
 
-  test("rejects invalid toc_stable_id", async () => {
+  test("rejects invalid table_of_contents_item_id", async () => {
     await projectTransaction(
       pool,
       "public",
@@ -82,25 +85,28 @@ describe("report_card_layers minimal flow", () => {
         const card = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tab.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
 
-        // Attempt to link to non-existent stable_id
+        // Attempt to link to non-existent table_of_contents_item_id
         await conn.any(sql`SAVEPOINT before_invalid`);
         await expect(
           conn.any(
-            sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${
+            sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${
               card.id
-            }, ${"does-not-exist"})`
+            }, ${999999})`
           )
-        ).rejects.toThrow(/toc_stable_id/i);
+        ).rejects.toThrow(/table of contents item id/i);
         await conn.any(sql`ROLLBACK to before_invalid`);
         await clearSession(conn);
       }
     );
   });
 
-  test("rejects cross-project toc_stable_id", async () => {
+  test("rejects cross-project table_of_contents_item_id", async () => {
     await projectTransaction(
       pool,
       "public",
@@ -119,7 +125,10 @@ describe("report_card_layers minimal flow", () => {
         const cardA = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tabA.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
         await clearSession(conn);
 
@@ -143,16 +152,16 @@ describe("report_card_layers minimal flow", () => {
           "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
         const makeId = nanoid.customAlphabet(alphabet, 9);
         const stableIdB = makeId();
-        await conn.oneFirst<number>(
+        const tocItemIdB = await conn.oneFirst<number>(
           sql`insert into table_of_contents_items (project_id, title, is_folder, data_layer_id, stable_id) values (${projectB}, 'LayerB', false, ${layerB}, ${stableIdB}) returning id`
         );
         await clearSession(conn);
 
-        // Attempt to link card in project A to TOC stable_id from project B
+        // Attempt to link card in project A to TOC item from project B
         await conn.any(sql`SAVEPOINT before_cross`);
         await expect(
           conn.any(
-            sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${cardA.id}, ${stableIdB})`
+            sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${cardA.id}, ${tocItemIdB})`
           )
         ).rejects.toThrow(/same project/i);
         await conn.any(sql`ROLLBACK to before_cross`);
@@ -179,7 +188,10 @@ describe("report_card_layers minimal flow", () => {
         const card = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tab.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
 
         // Create a TOC item with a disallowed data source type, e.g., 'vector'
@@ -195,14 +207,14 @@ describe("report_card_layers minimal flow", () => {
           "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
         const makeId = nanoid.customAlphabet(alphabet, 9);
         const stableId = makeId();
-        await conn.oneFirst<number>(
+        const tocItemId = await conn.oneFirst<number>(
           sql`insert into table_of_contents_items (project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'BadLayer', false, ${layer}, ${stableId}) returning id`
         );
 
         await conn.any(sql`SAVEPOINT before_disallowed`);
         await expect(
           conn.any(
-            sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${card.id}, ${stableId})`
+            sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${card.id}, ${tocItemId})`
           )
         ).rejects.toThrow(/supported data layer type/i);
         await conn.any(sql`ROLLBACK to before_disallowed`);
@@ -229,7 +241,10 @@ describe("report_card_layers minimal flow", () => {
         const card = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tab.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
         const source = await conn.oneFirst<number>(
           sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/data.pmtiles', 'upload', 0) returning id`
@@ -244,11 +259,11 @@ describe("report_card_layers minimal flow", () => {
           9
         );
         const stableId = makeId();
-        await conn.oneFirst<number>(
+        const tocItemId = await conn.oneFirst<number>(
           sql`insert into table_of_contents_items (project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'Layer', false, ${layer}, ${stableId}) returning id`
         );
         await conn.any(
-          sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${card.id}, ${stableId})`
+          sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${card.id}, ${tocItemId})`
         );
 
         // delete card via helper
@@ -256,7 +271,7 @@ describe("report_card_layers minimal flow", () => {
         await clearSession(conn);
 
         const count = await conn.oneFirst<number>(
-          sql`select count(*) from report_cards rc, LATERAL report_cards_layers(rc) t where rc.id = ${card.id}`
+          sql`select count(*) from report_cards rc, LATERAL report_cards_reporting_layers(rc) t where rc.id = ${card.id}`
         );
         expect(count).toBe(0);
       }
@@ -281,7 +296,10 @@ describe("report_card_layers minimal flow", () => {
         const draftCard = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tab.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
         const src = await conn.oneFirst<number>(
           sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/data.pmtiles', 'upload', 0) returning id`
@@ -300,9 +318,36 @@ describe("report_card_layers minimal flow", () => {
           sql`insert into table_of_contents_items (project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'Layer', false, ${lyr}, ${stableId}) returning id`
         );
         await conn.any(
-          sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${draftCard.id}, ${stableId})`
+          sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${draftCard.id}, ${tocId})`
         );
 
+        // Create data_upload_outputs for the data source (required for publishing)
+        await conn.any(sql`set role = postgres`);
+        await conn.any(
+          sql`insert into data_upload_outputs (
+            data_source_id, 
+            project_id,
+            type, 
+            url,
+            remote, 
+            is_original, 
+            size,
+            filename
+          ) values (
+            ${src}, 
+            ${projectId},
+            ${sql`'ReportingFlatgeobufV1'::data_upload_output_type`}, 
+            ${"https://example.com/data.fgb"},
+            ${"s3://bucket/data.fgb"}, 
+            false, 
+            ${0},
+            ${"data.fgb"}
+          )`
+        );
+        await conn.any(sql`set role = seasketch_user`);
+
+        // Publish TOC first (required before publishing report)
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
         // Publish report to create published copy of cards
         await conn.any(sql`select publish_report(${sc})`);
         const publishedReportId = await conn.oneFirst<number>(
@@ -311,24 +356,22 @@ describe("report_card_layers minimal flow", () => {
         // Find the published copy of the draft card (same tab/card positions)
         // Resolve draft positions using SECURITY DEFINER functions (no direct table access)
         // No need to resolve positions; verify layer link exists on any published card
-
-        // Publish TOC so published items exist for report_cards_layers(), then delete draft
-        await conn.any(sql`select publish_table_of_contents(${projectId})`);
         // Now delete the draft TOC item via provided function
         await conn.any(sql`select delete_table_of_contents_branch(${tocId})`);
         await clearSession(conn);
 
         const draftCount = await conn.oneFirst<number>(
-          sql`select count(*) from report_cards rc, LATERAL report_cards_layers(rc) t where rc.id = ${draftCard.id}`
+          sql`select count(*) from report_cards rc, LATERAL report_cards_reporting_layers(rc) t where rc.id = ${draftCard.id}`
         );
         const publishedCount = await conn.oneFirst<number>(
           sql`select count(*)
               from reports r
               cross join lateral reports_tabs(r) t
               cross join lateral report_tabs_cards(t) c
-              cross join lateral report_cards_layers(c) l
+              cross join lateral report_cards_reporting_layers(c) l
+              join table_of_contents_items tci on tci.id = l.table_of_contents_item_id
               where r.id = ${publishedReportId}
-                and l.stable_id = ${stableId}`
+                and tci.stable_id = ${stableId}`
         );
         expect(draftCount).toBe(0);
         expect(publishedCount).toBe(1);
@@ -355,7 +398,10 @@ describe("report_card_layers minimal flow", () => {
         const draftCard = await conn.one<{ id: number }>(
           sql`select * from add_report_card(${tab.id}, ${sql.json(
             {}
-          )}, ${"Test"}, ${sql.json({ type: "doc", content: [] })})`
+          )}, ${"Test"}, ${sql.json({
+            type: "doc",
+            content: [],
+          })}, ARRAY[]::public.report_layer_input[])`
         );
         const src = await conn.oneFirst<number>(
           sql`insert into data_sources (project_id, type, url, import_type, byte_length) values (${projectId}, 'seasketch-vector', 'https://example.com/data.pmtiles', 'upload', 0) returning id`
@@ -374,10 +420,35 @@ describe("report_card_layers minimal flow", () => {
           sql`insert into table_of_contents_items (project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'Layer', false, ${lyr}, ${stableId}) returning id`
         );
         await conn.any(
-          sql`insert into report_card_layers (report_card_id, toc_stable_id) values (${draftCard.id}, ${stableId})`
+          sql`insert into report_card_layers (report_card_id, table_of_contents_item_id) values (${draftCard.id}, ${tocDraftId})`
         );
 
-        // Publish TOC and Report
+        // Create data_upload_outputs for the data source (required for publishing)
+        await conn.any(sql`set role = postgres`);
+        await conn.any(
+          sql`insert into data_upload_outputs (
+            data_source_id, 
+            project_id,
+            type, 
+            url,
+            remote, 
+            is_original, 
+            size,
+            filename
+          ) values (
+            ${src}, 
+            ${projectId},
+            ${sql`'ReportingFlatgeobufV1'::data_upload_output_type`}, 
+            ${"https://example.com/data.fgb"},
+            ${"s3://bucket/data.fgb"}, 
+            false, 
+            ${0},
+            ${"data.fgb"}
+          )`
+        );
+        await conn.any(sql`set role = seasketch_user`);
+
+        // Publish TOC and Report (TOC must be published first)
         await conn.any(sql`select publish_table_of_contents(${projectId})`);
         await conn.any(sql`select publish_report(${sc})`);
 
@@ -403,14 +474,15 @@ describe("report_card_layers minimal flow", () => {
               from reports r
               cross join lateral reports_tabs(r) t
               cross join lateral report_tabs_cards(t) c
-              cross join lateral report_cards_layers(c) l
+              cross join lateral report_cards_reporting_layers(c) l
+              join table_of_contents_items tci on tci.id = l.table_of_contents_item_id
               where r.id = ${publishedReportId}
-                and l.stable_id = ${stableId}`
+                and tci.stable_id = ${stableId}`
         );
         expect(publishedCount).toBe(1);
         // Draft link should be gone
         const draftCount = await conn.oneFirst<number>(
-          sql`select count(*) from report_cards rc, LATERAL report_cards_layers(rc) t where rc.id = ${draftCard.id}`
+          sql`select count(*) from report_cards rc, LATERAL report_cards_reporting_layers(rc) t where rc.id = ${draftCard.id}`
         );
         expect(draftCount).toBe(0);
       }

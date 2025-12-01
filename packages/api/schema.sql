@@ -11256,11 +11256,13 @@ CREATE FUNCTION public.get_fragments_for_sketch(sketch_id integer) RETURNS TABLE
       SELECT sketch_fragments.sketch_id
       FROM sketch_fragments
       WHERE sketch_fragments.fragment_hash = fragments.hash
+      ORDER BY sketch_fragments.sketch_id
     ) AS sketch_ids,
     ARRAY(
       SELECT fragment_geographies.geography_id
       FROM fragment_geographies
       WHERE fragment_geographies.fragment_hash = fragments.hash
+      ORDER BY fragment_geographies.geography_id
     ) AS geography_ids
     FROM fragments
     WHERE
@@ -13251,11 +13253,13 @@ CREATE FUNCTION public.overlapping_fragments_for_collection(input_collection_id 
       FROM sketch_fragments
       WHERE sketch_fragments.fragment_hash = fragments.hash
       AND sketch_fragments.sketch_id IN (SELECT id FROM sketches_in_collection)
+      ORDER BY sketch_fragments.sketch_id
     ) AS sketch_ids,
     ARRAY(
       SELECT fragment_geographies.geography_id
       FROM fragment_geographies
       WHERE fragment_geographies.fragment_hash = fragments.hash
+      ORDER BY fragment_geographies.geography_id
     ) AS geography_ids
   FROM fragments
   WHERE
@@ -15744,6 +15748,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
 
       -- create a temporary table of report_card_layer references so that 
       -- existing published reports aren't broken by the publish operation.
+      -- Drop if exists in case this function is called multiple times in the same transaction
+      DROP TABLE IF EXISTS _rcl_snapshot;
       CREATE TEMP TABLE _rcl_snapshot (
         report_card_id integer,
         table_of_contents_item_id integer,
