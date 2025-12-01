@@ -933,7 +933,6 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
-    'column_stats',
     'column_values',
     'raster_stats',
     'distance_to_shore'
@@ -2158,10 +2157,11 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
+    feature_flags jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -2271,6 +2271,13 @@ COMMENT ON COLUMN public.projects.data_hosting_quota IS '@omit';
 --
 
 COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis.';
+
+
+--
+-- Name: COLUMN projects.feature_flags; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.feature_flags IS '@omit';
 
 
 --
@@ -4049,7 +4056,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.encoding is not null and new.type != 'raster-dem' then
       raise 'encoding property only allowed on raster-dem sources';
     end if;
-    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster') then
+    if new.tile_size is not null and (new.type != 'raster' and new.type != 'raster-dem' and new.type != 'vector' and new.type != 'seasketch-mvt' and new.type != 'seasketch-raster' and new.type != 'inaturalist') then
       raise 'tile_size property is not allowed for "%" sources', (new.type);
     end if;
     if (new.type != 'geojson' and new.type != 'seasketch-vector') and (new.buffer is not null or new.cluster is not null or new.cluster_max_zoom is not null or new.cluster_properties is not null or new.cluster_radius is not null or new.generate_id is not null or new.line_metrics is not null or new.promote_id is not null or new.tolerance is not null) then
@@ -4064,7 +4071,7 @@ CREATE FUNCTION public.before_insert_or_update_data_sources_trigger() RETURNS tr
     if new.urls is not null and new.type != 'video' then
       raise 'urls property not allowed on % sources', (new.type);
     end if;
-    if new.query_parameters is not null and (new.type != 'arcgis-vector' and new.type != 'arcgis-dynamic-mapserver') then
+    if new.query_parameters is not null and (new.type != 'arcgis-vector' and new.type != 'arcgis-dynamic-mapserver' and new.type != 'inaturalist') then
       raise 'query_parameters property not allowed on % sources', (new.type);
     end if;
     if new.use_device_pixel_ratio is not null and (new.type != 'arcgis-dynamic-mapserver' and new.type != 'arcgis-raster-tiles') then
@@ -7347,6 +7354,79 @@ begin
     access_control_lists(project_id, forum_id_write, type)
     values(new.project_id, new.id, 'public'::access_control_list_type);
   return new;
+end;
+$$;
+
+
+--
+-- Name: create_inaturalist_table_of_contents_item(text, jsonb, numeric[], text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_inaturalist_table_of_contents_item(slug text, params jsonb, bounds numeric[], title text, metadata jsonb DEFAULT NULL::jsonb) RETURNS public.table_of_contents_items
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  pid int;
+  source_id int;
+  layer_id int;
+  item table_of_contents_items;
+  stableid text := create_stable_id();
+  default_metadata constant jsonb := '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"This layer is generated from an iNaturalist API query. See "},{"type":"text","text":"the iNaturalist API documentation","marks":[{"type":"link","attrs":{"href":"https://www.inaturalist.org/pages/api_v1","title":null}}]},{"type":"text","text":" for more information."}]}]}'::jsonb;
+begin
+  select id into pid from projects where projects.slug = create_inaturalist_table_of_contents_item.slug;
+  if session_is_admin(pid) = false then
+    raise exception 'Permission denied. Must be a project admin';
+  end if;
+
+  insert into data_sources (
+    type, 
+    query_parameters,
+    project_id,
+    bounds,
+    tile_size,
+    created_by,
+    attribution
+  ) values (
+    'inaturalist', 
+    params,
+    pid,
+    bounds,
+    256,
+    nullif(current_setting('session.user_id', TRUE), '')::integer,
+    '<a href="https://www.inaturalist.org" target="_blank" rel="noopener noreferrer">iNaturalist</a>'
+  ) returning id into source_id;
+
+  insert into data_layers (
+    project_id,
+    data_source_id
+  ) values (
+    pid,
+    source_id
+  ) returning id into layer_id;
+  
+  insert into table_of_contents_items (
+    project_id,
+    title,
+    data_layer_id,
+    stable_id,
+    is_draft,
+    metadata,
+    is_folder,
+    bounds,
+    enable_download
+  ) values (
+    pid,
+    title,
+    layer_id,
+    stableid,
+    true,
+    coalesce(metadata, default_metadata),
+    false,
+    bounds,
+    false
+  ) returning * into item;
+
+  return item;
 end;
 $$;
 
@@ -11543,57 +11623,6 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
-
-
---
--- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-  draft_tab_id integer;
-  draft_tab_position integer;
-  draft_card_position integer;
-  sketch_class_id integer;
-  published_report_id integer;
-  published_tab_id integer;
-  published_card_id integer;
-BEGIN
-  -- Gather draft card/tab positions and sketch_class
-  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
-  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
-  FROM public.report_cards rc
-  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
-  JOIN public.reports r ON r.id = rt.report_id
-  WHERE rc.id = draft_report_card_id;
-
-  -- Determine the published report id
-  SELECT sc.report_id
-  INTO published_report_id
-  FROM public.sketch_classes sc
-  WHERE sc.id = sketch_class_id;
-
-  IF published_report_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  -- Match the tab by position in the published report
-  SELECT id
-  INTO published_tab_id
-  FROM public.report_tabs
-  WHERE report_id = published_report_id AND position = draft_tab_position;
-
-  -- Match the card by position within the matched tab
-  SELECT id
-  INTO published_card_id
-  FROM public.report_cards
-  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
-
-  RETURN published_card_id;
-END
-$$;
 
 
 --
@@ -20003,23 +20032,6 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
--- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = stableId
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -20653,6 +20665,46 @@ CREATE FUNCTION public.update_data_hosting_quota(project_id integer, quota bigin
     set data_hosting_quota = quota
     where id = project_id
     returning *;
+  $$;
+
+
+--
+-- Name: update_feature_flags(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_feature_flags(slug text, flags jsonb) RETURNS public.projects
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      project_id int;
+      key text;
+      project projects;
+    begin
+      select id into project_id from projects where projects.slug = update_feature_flags.slug;
+      if project_id is null then
+        raise exception 'Project not found';
+      end if;
+      if session_is_admin(project_id) then
+        -- flags should be a javascript object, keyed by the string name of the 
+        -- flag, with a boolean value.
+        -- First, validate the flags object.
+        if jsonb_typeof(flags) != 'object' then
+          raise exception 'Flags must be a JSON object';
+        end if;
+        -- Make sure all values are booleans.
+        for key in select jsonb_object_keys(flags) as key loop
+          if jsonb_typeof(flags->key) != 'boolean' then
+            raise exception 'Flags must be a JSON object with boolean values. Invalid flag: %', key;
+          end if;
+        end loop;
+        -- Update the project with the new flags, merging given flags with 
+        -- existing flags.
+        update projects set feature_flags = feature_flags || flags where id = project_id returning * into project;
+        return project;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
   $$;
 
 
@@ -22452,15 +22504,6 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
--- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.original_source_id (
-    data_source_id integer
-);
-
-
---
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -22652,15 +22695,6 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
-);
-
-
---
--- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.published_toc_item_id (
-    id integer
 );
 
 
@@ -25125,13 +25159,6 @@ CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR 
 
 
 --
--- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
-
-
---
 -- Name: invite_emails before_invite_emails_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -25766,7 +25793,7 @@ ALTER TABLE ONLY public.data_upload_outputs
 --
 
 ALTER TABLE ONLY public.data_upload_outputs
-    ADD CONSTRAINT data_upload_outputs_source_processing_job_key_fkey FOREIGN KEY (source_processing_job_key) REFERENCES public.source_processing_jobs(job_key) ON DELETE CASCADE;
+    ADD CONSTRAINT data_upload_outputs_source_processing_job_key_fkey FOREIGN KEY (source_processing_job_key) REFERENCES public.source_processing_jobs(job_key) ON DELETE SET NULL;
 
 
 --
@@ -27402,6 +27429,12 @@ ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
+
+--
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -29174,17 +29207,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -29199,6 +29232,13 @@ GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_use
 --
 
 GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.feature_flags; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(feature_flags) ON TABLE public.projects TO anon;
 
 
 --
@@ -30975,6 +31015,14 @@ REVOKE ALL ON FUNCTION public.create_forum_acl() FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION create_inaturalist_table_of_contents_item(slug text, params jsonb, bounds numeric[], title text, metadata jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_inaturalist_table_of_contents_item(slug text, params jsonb, bounds numeric[], title text, metadata jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_inaturalist_table_of_contents_item(slug text, params jsonb, bounds numeric[], title text, metadata jsonb) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_map_bookmark(slug text, "isPublic" boolean, style jsonb, "visibleDataLayers" text[], "selectedBasemap" integer, "basemapOptionalLayerStates" jsonb, "cameraOptions" jsonb, "mapDimensions" integer[], "visibleSketches" integer[], "sidebarState" jsonb, "basemapName" text, "layerNames" jsonb, "sketchNames" jsonb, "clientGeneratedThumbnail" text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32215,6 +32263,7 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -33139,14 +33188,6 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
-
-
---
--- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -39100,13 +39141,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
--- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -39421,6 +39455,14 @@ GRANT ALL ON FUNCTION public.update_basemap_offline_tile_settings("projectId" in
 
 REVOKE ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_data_hosting_quota(project_id integer, quota bigint) TO seasketch_superuser;
+
+
+--
+-- Name: FUNCTION update_feature_flags(slug text, flags jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_feature_flags(slug text, flags jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_feature_flags(slug text, flags jsonb) TO seasketch_user;
 
 
 --

@@ -48,6 +48,7 @@ import AboutPagePlugin from "./plugins/aboutPagePlugin";
 import ReplacePMTilesPlugin from "./plugins/replacePMTilesPlugin";
 import GeographyPlugin from "./plugins/GeographyPlugin";
 import ReportsPlugin from "./plugins/reportsPlugin";
+import FeatureFlagsPlugin from "./plugins/featureFlagsPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -109,6 +110,7 @@ export default function graphileOptions(): PostGraphileOptions {
       ReplacePMTilesPlugin,
       GeographyPlugin,
       ReportsPlugin,
+      FeatureFlagsPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

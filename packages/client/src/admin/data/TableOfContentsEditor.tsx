@@ -743,13 +743,6 @@ function Header({
                 >
                   {t("Remote GeoJSON...")}
                 </MenuBarItem>
-                <MenuBarItem
-                  onClick={() => {
-                    setShowINaturalistModal(true);
-                  }}
-                >
-                  {t("iNaturalist observations...")}
-                </MenuBarItem>
               </MenuBarSubmenu>
               <MenuBarSeparator />
               <MenuBarLabel>

@@ -38,6 +38,9 @@ fragment ProjectMetadata on Project {
   enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
+  featureFlags {
+    iNaturalistLayers
+  }
 }
 
 fragment ProjectPublicDetailsMetadata on PublicProjectDetail {

@@ -87,3 +87,14 @@ mutation UpdateShowLegendByDefault($projectId: Int!, $show: Boolean!) {
     }
   }
 }
+
+mutation UpdateFeatureFlags($slug: String!, $flags: JSON!) {
+  updateFeatureFlags(input: { slug: $slug, flags: $flags }) {
+    project {
+      id
+      featureFlags {
+        iNaturalistLayers
+      }
+    }
+  }
+}

@@ -10,6 +10,7 @@ import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { XIcon } from "@heroicons/react/outline";
 import Spinner from "../../components/Spinner";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 
 export default function DataLibraryModal({
   onRequestClose,
@@ -18,6 +19,7 @@ export default function DataLibraryModal({
   onRequestClose: () => void;
   onOpenINaturalistModal?: () => void;
 }) {
+  const metadata = useCurrentProjectMetadata();
   const { t } = useTranslation("admin:data");
   return (
     <Modal title={t("Data Library")} onRequestClose={onRequestClose}>
@@ -64,27 +66,29 @@ export default function DataLibraryModal({
               onRequestClose={onRequestClose}
             />
           </DataLibraryEntry>
-          <DataLibraryEntry title={t("iNaturalist")}>
-            <DataLibraryEntryDescription>
-              <p>
-                {t(
-                  "Create layers from iNaturalist observations, filtered by projects or specific taxa. Display observations as grids, points, or heatmaps."
-                )}
-              </p>
-            </DataLibraryEntryDescription>
-            <DataLibraryEntryImage
-              alt={t("iNaturalist logo")}
-              src="/logos/inaturalist.png"
-            />
-            <DataLibraryCustomActionButton
-              onClick={() => {
-                onRequestClose();
-                if (onOpenINaturalistModal) {
-                  onOpenINaturalistModal();
-                }
-              }}
-            />
-          </DataLibraryEntry>
+          {metadata?.data?.project?.featureFlags?.iNaturalistLayers && (
+            <DataLibraryEntry title={t("iNaturalist")}>
+              <DataLibraryEntryDescription>
+                <p>
+                  {t(
+                    "Create layers from iNaturalist observations, filtered by projects or specific taxa. Display observations as grids, points, or heatmaps."
+                  )}
+                </p>
+              </DataLibraryEntryDescription>
+              <DataLibraryEntryImage
+                alt={t("iNaturalist logo")}
+                src="/logos/inaturalist.png"
+              />
+              <DataLibraryCustomActionButton
+                onClick={() => {
+                  onRequestClose();
+                  if (onOpenINaturalistModal) {
+                    onOpenINaturalistModal();
+                  }
+                }}
+              />
+            </DataLibraryEntry>
+          )}
         </div>
       </div>
     </Modal>
