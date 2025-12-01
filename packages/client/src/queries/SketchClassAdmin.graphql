@@ -724,3 +724,16 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
     }
   }
 }
+
+query LegacyReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+}

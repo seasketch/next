@@ -22985,6 +22985,24 @@ export type ReportContextQuery = (
   )> }
 );
 
+export type LegacyReportContextQueryVariables = Exact<{
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type LegacyReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled'>
+      & ReportContextSketchClassDetailsFragment
+    )> }
+    & ReportContextSketchDetailsFragment
+  )> }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
@@ -35652,6 +35670,49 @@ export function useReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type ReportContextQueryHookResult = ReturnType<typeof useReportContextQuery>;
 export type ReportContextLazyQueryHookResult = ReturnType<typeof useReportContextLazyQuery>;
 export type ReportContextQueryResult = Apollo.QueryResult<ReportContextQuery, ReportContextQueryVariables>;
+export const LegacyReportContextDocument = gql`
+    query LegacyReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+}
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}`;
+
+/**
+ * __useLegacyReportContextQuery__
+ *
+ * To run a query within a React component, call `useLegacyReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLegacyReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLegacyReportContextQuery({
+ *   variables: {
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useLegacyReportContextQuery(baseOptions: Apollo.QueryHookOptions<LegacyReportContextQuery, LegacyReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LegacyReportContextQuery, LegacyReportContextQueryVariables>(LegacyReportContextDocument, options);
+      }
+export function useLegacyReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LegacyReportContextQuery, LegacyReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LegacyReportContextQuery, LegacyReportContextQueryVariables>(LegacyReportContextDocument, options);
+        }
+export type LegacyReportContextQueryHookResult = ReturnType<typeof useLegacyReportContextQuery>;
+export type LegacyReportContextLazyQueryHookResult = ReturnType<typeof useLegacyReportContextLazyQuery>;
+export type LegacyReportContextQueryResult = Apollo.QueryResult<LegacyReportContextQuery, LegacyReportContextQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -39385,6 +39446,7 @@ export const namedOperations = {
     AvailableReportLayers: 'AvailableReportLayers',
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
+    LegacyReportContext: 'LegacyReportContext',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',

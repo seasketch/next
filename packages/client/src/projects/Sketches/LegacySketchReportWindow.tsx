@@ -4,7 +4,7 @@ import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import Skeleton from "../../components/Skeleton";
 import {
   SketchGeometryType,
-  useReportContextQuery,
+  useLegacyReportContextQuery,
 } from "../../generated/graphql";
 import useAccessToken from "../../useAccessToken";
 import Warning from "../../components/Warning";
@@ -34,9 +34,8 @@ export default function LegacySketchReportWindow({
 }) {
   const mapContext = useContext(MapContext);
   const token = useAccessToken();
-  const { data, loading } = useReportContextQuery({
+  const { data, loading, error } = useLegacyReportContextQuery({
     variables: {
-      reportId: 1,
       sketchId: sketchId,
     },
     fetchPolicy: "cache-first",
@@ -49,13 +48,13 @@ export default function LegacySketchReportWindow({
     () =>
       languages.filter(
         (f) =>
-          !data?.sketchClass?.project?.supportedLanguages ||
-          data?.sketchClass?.project?.supportedLanguages.find(
+          !data?.sketch?.sketchClass?.project?.supportedLanguages ||
+          data?.sketch?.sketchClass?.project?.supportedLanguages.find(
             (o) => o === f.code
           ) ||
           f.code === "EN"
       ),
-    [data?.sketchClass?.project?.supportedLanguages, languages]
+    [data?.sketch?.sketchClass?.project?.supportedLanguages, languages]
   );
 
   const { i18n } = useTranslation();
@@ -112,7 +111,7 @@ export default function LegacySketchReportWindow({
             };
             return acc;
           }, {} as { [key: string]: { value: any } }),
-          data?.sketchClass?.form?.logicRules || []
+          data?.sketch?.sketchClass?.form?.logicRules || []
         );
 
         // Removing user attributes hidden by logic rules
@@ -122,7 +121,7 @@ export default function LegacySketchReportWindow({
 
         const initMessage = {
           type: "SeaSketchReportingMessageEventType",
-          client: data?.sketchClass?.geoprocessingClientName,
+          client: data?.sketch?.sketchClass?.geoprocessingClientName,
           language: lang?.selectedLang?.code || "en",
           geometryUri,
           visibleLayers:
@@ -134,10 +133,11 @@ export default function LegacySketchReportWindow({
             updatedAt: data?.sketch?.updatedAt,
             sketchClassId: sketchClassId,
             isCollection:
-              data?.sketchClass?.geometryType === SketchGeometryType.Collection,
+              data?.sketch?.sketchClass?.geometryType ===
+              SketchGeometryType.Collection,
             userAttributes: userAttributes,
             // TODO: populate this from map context
-            ...(data?.sketchClass?.geometryType ===
+            ...(data?.sketch?.sketchClass?.geometryType ===
             SketchGeometryType.Collection
               ? {
                   childProperties: data.sketch?.childProperties || [],
@@ -186,8 +186,8 @@ export default function LegacySketchReportWindow({
     sketchId,
     frameId,
     token,
-    data?.sketchClass?.geoprocessingClientName,
-    data?.sketchClass?.geometryType,
+    data?.sketch?.sketchClass?.geoprocessingClientName,
+    data?.sketch?.sketchClass?.geometryType,
     data?.sketch?.name,
     data?.sketch?.createdAt,
     data?.sketch?.updatedAt,
@@ -245,16 +245,16 @@ export default function LegacySketchReportWindow({
         </button>
       </div>
       <div className="flex-1" style={{ backgroundColor: "#efefef" }}>
-        {data?.sketchClass?.geoprocessingClientUrl && (
+        {data?.sketch?.sketchClass?.geoprocessingClientUrl && (
           <iframe
             ref={iframe}
             name={frameId}
             title={`${data.sketch?.name} Reports`}
             className={iframeLoading ? "w-0 h-0" : `w-full h-full`}
-            src={data.sketchClass.geoprocessingClientUrl}
+            src={data.sketch.sketchClass.geoprocessingClientUrl}
           />
         )}
-        {!loading && !data?.sketchClass?.geoprocessingClientUrl ? (
+        {!loading && !data?.sketch?.sketchClass?.geoprocessingClientUrl ? (
           <div className="p-4">
             <Warning>
               <Trans ns="sketching">Reports not configured</Trans>
