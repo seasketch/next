@@ -1,7 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
 import { Children, isValidElement } from "react";
-import Button from "../../components/Button";
 import { PlusIcon } from "@radix-ui/react-icons";
 import {
   DraftTableOfContentsDocument,
@@ -11,12 +10,16 @@ import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { XIcon } from "@heroicons/react/outline";
 import Spinner from "../../components/Spinner";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 
 export default function DataLibraryModal({
   onRequestClose,
+  onOpenINaturalistModal,
 }: {
   onRequestClose: () => void;
+  onOpenINaturalistModal?: () => void;
 }) {
+  const metadata = useCurrentProjectMetadata();
   const { t } = useTranslation("admin:data");
   return (
     <Modal title={t("Data Library")} onRequestClose={onRequestClose}>
@@ -63,6 +66,29 @@ export default function DataLibraryModal({
               onRequestClose={onRequestClose}
             />
           </DataLibraryEntry>
+          {metadata?.data?.project?.featureFlags?.iNaturalistLayers && (
+            <DataLibraryEntry title={t("iNaturalist")}>
+              <DataLibraryEntryDescription>
+                <p>
+                  {t(
+                    "Create layers from iNaturalist observations, filtered by projects or specific taxa. Display observations as grids, points, or heatmaps."
+                  )}
+                </p>
+              </DataLibraryEntryDescription>
+              <DataLibraryEntryImage
+                alt={t("iNaturalist logo")}
+                src="/logos/inaturalist.png"
+              />
+              <DataLibraryCustomActionButton
+                onClick={() => {
+                  onRequestClose();
+                  if (onOpenINaturalistModal) {
+                    onOpenINaturalistModal();
+                  }
+                }}
+              />
+            </DataLibraryEntry>
+          )}
         </div>
       </div>
     </Modal>
@@ -86,8 +112,12 @@ function DataLibraryEntry({
       isValidElement(child) && child.type === DataLibraryEntryDescription
   );
   const actionButton = Children.toArray(children).find(
-    (child) => isValidElement(child) && child.type === DataLibraryActionButton
+    (child) =>
+      isValidElement(child) &&
+      (child.type === DataLibraryActionButton ||
+        child.type === DataLibraryCustomActionButton)
   );
+  const isINaturalist = title === t("iNaturalist");
   return (
     <div className="flex border rounded p-2">
       <div className="flex-1 space-y-1">
@@ -95,14 +125,26 @@ function DataLibraryEntry({
         {description}
         <div className="space-x-2 pt-1">
           {actionButton}
-          {/* <Button small primary label= /> */}
-          <a
-            target="_blank"
-            href="https://coralreefwatch.noaa.gov/index.php"
-            className="text-primary-500 underline text-sm"
-          >
-            {t("source website")}
-          </a>
+          {!isINaturalist && (
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href="https://coralreefwatch.noaa.gov/index.php"
+              className="text-primary-500 underline text-sm"
+            >
+              {t("source website")}
+            </a>
+          )}
+          {isINaturalist && (
+            <a
+              target="_blank"
+              rel="noreferrer"
+              href="https://www.inaturalist.org"
+              className="text-primary-500 underline text-sm"
+            >
+              {t("source website")}
+            </a>
+          )}
         </div>
       </div>
       <div className="flex w-32 items-center justify-center">
@@ -155,6 +197,19 @@ function DataLibraryActionButton({
     >
       <span>{t("add to project")}</span>
       {copyTemplateState.loading ? <Spinner mini /> : <PlusIcon />}
+    </button>
+  );
+}
+
+function DataLibraryCustomActionButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation("admin:data");
+  return (
+    <button
+      onClick={onClick}
+      className="text-sm rounded-full border border-blue-500 text-blue-800 bg-blue-100 hover:bg-blue-200 px-2 py-0.5 inline-flex items-center space-x-1"
+    >
+      <span>{t("create layer")}</span>
+      <PlusIcon />
     </button>
   );
 }

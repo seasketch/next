@@ -75,6 +75,13 @@ const LazyDataLibraryModal = React.lazy(
   () => import(/* webpackChunkName: "DataLibrary" */ "./DataLibraryModal")
 );
 
+const LazyINaturalistModal = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "INaturalistLayer" */ "./AddINaturalistLayerModal"
+    )
+);
+
 export default function TableOfContentsEditor() {
   const history = useHistory();
   const { slug } = useParams<{ slug: string }>();
@@ -624,6 +631,7 @@ function Header({
   const [remoteGeoJSONModalOpen, setRemoteGeoJSONModalOpen] = useState(false);
   const projectId = useProjectId();
   const [showDataLibrary, setShowDataLibrary] = useState(false);
+  const [showINaturalistModal, setShowINaturalistModal] = useState(false);
 
   const { confirm } = useDialog();
   return (
@@ -873,6 +881,14 @@ function Header({
         <Suspense fallback={<FullScreenLoadingSpinner />}>
           <LazyDataLibraryModal
             onRequestClose={() => setShowDataLibrary(false)}
+            onOpenINaturalistModal={() => setShowINaturalistModal(true)}
+          />
+        </Suspense>
+      )}
+      {showINaturalistModal && (
+        <Suspense fallback={<FullScreenLoadingSpinner />}>
+          <LazyINaturalistModal
+            onRequestClose={() => setShowINaturalistModal(false)}
           />
         </Suspense>
       )}

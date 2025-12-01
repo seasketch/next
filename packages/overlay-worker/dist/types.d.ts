@@ -1,12 +1,17 @@
-import { MetricTypeMap, ClippingLayerOption, MetricSubjectFragment, MetricSubjectGeography } from "overlay-engine";
+import { MetricTypeMap, ClippingLayerOption, MetricSubjectFragment, MetricSubjectGeography, SourceType } from "overlay-engine";
 export type OverlayWorkerMessageType = "result" | "error" | "progress" | "begin";
 export type OverlayEngineWorkerBaseMessage = {
     type: OverlayWorkerMessageType;
     jobKey: string;
+    queueUrl: string;
 };
 export type OverlayEngineWorkerResultMessage = OverlayEngineWorkerBaseMessage & {
     type: "result";
     result: any;
+    /**
+     * The duration of the job in milliseconds, as measured by the worker.
+     */
+    duration?: number;
 };
 export type OverlayEngineWorkerErrorMessage = OverlayEngineWorkerBaseMessage & {
     type: "error";
@@ -16,6 +21,7 @@ export type OverlayEngineWorkerProgressMessage = OverlayEngineWorkerBaseMessage 
     type: "progress";
     progress: number;
     message?: string;
+    eta?: string;
 };
 export type OverlayEngineWorkerBeginMessage = OverlayEngineWorkerBaseMessage & {
     type: "begin";
@@ -47,12 +53,29 @@ export type FragmentSubjectPayload = {
      */
     geometryUrl?: string;
 };
-export type OverlayWorkerPayload = {
-    [K in keyof MetricTypeMap]: Omit<MetricTypeMap[K], "value" | "count"> & {
+type EnhanceSubject<S> = S extends MetricSubjectFragment ? MetricSubjectFragment & FragmentSubjectPayload : S extends MetricSubjectGeography ? MetricSubjectGeography & GeographySubjectPayload : S;
+type ReplaceStableId<T> = T extends {
+    stableId: any;
+} ? Omit<T, "value" | "count" | "stableId"> & {
+    sourceUrl: string;
+    sourceType: SourceType;
+} : Omit<T, "value" | "count">;
+type BaseOverlayWorkerPayload = {
+    [K in keyof MetricTypeMap]: ReplaceStableId<MetricTypeMap[K]> extends infer R ? R extends {
+        subject: infer S;
+    } ? Omit<R, "subject"> & {
         jobKey: string;
-        subject: MetricTypeMap[K]["subject"] extends MetricSubjectFragment ? MetricSubjectFragment & FragmentSubjectPayload : MetricTypeMap[K]["subject"] extends MetricSubjectGeography ? MetricSubjectGeography & GeographySubjectPayload : MetricTypeMap[K]["subject"];
-    };
+        subject: Omit<EnhanceSubject<S>, "geographies" | "sketches">;
+        queueUrl: string;
+        epsg?: number;
+    } : never : never;
 }[keyof MetricTypeMap];
+export type OverlayWorkerPayload = BaseOverlayWorkerPayload & {
+    bufferDistanceKm?: number;
+    resultsLimit?: number;
+    includedProperties?: string[];
+    valueColumn?: string;
+};
 export type OverlayWorkerResponse = {
     /**
      * Identifier for the job. Referenced in OverlayWorkerMessage notifications
@@ -67,4 +90,5 @@ export type OverlayWorkerResponse = {
      */
     logsExpiresAt: string;
 };
+export {};
 //# sourceMappingURL=types.d.ts.map

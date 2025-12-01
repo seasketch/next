@@ -226,7 +226,7 @@ export async function rasterInfoForBands(
         standardDeviations: {},
         geometricInterval: {},
         histogram: equalIntervalBuckets(
-          sampledPixelValues,
+          sampledPixelValues.sort((a, b) => a - b),
           49,
           stats.max,
           true

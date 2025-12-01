@@ -1,6 +1,6 @@
 import RTreeIndex, {
   calculatePackedRTreeDetails,
-  OffsetAndLength,
+  FeatureReference,
 } from "./rtree";
 import { ByteBuffer } from "flatbuffers";
 import { GeometryType } from "flatgeobuf/lib/mjs/generic.js";
@@ -11,7 +11,7 @@ import {
 } from "geojson";
 import { HeaderMeta } from "flatgeobuf";
 import { fromByteBuffer } from "flatgeobuf/lib/mjs/header-meta.js";
-import { FetchManager, FetchRangeFn } from "./fetch-manager";
+import { FetchRangeFn } from "./fetch-manager";
 import {
   createQueryPlan,
   executeQueryPlan,
@@ -30,6 +30,7 @@ import {
   SIZE_PREFIX_LEN,
   DEFAULT_CACHE_SIZE,
   MAGIC_BYTES,
+  VALIDATE_FEATURE_DATA,
 } from "./constants";
 import bytes from "bytes";
 
@@ -102,6 +103,11 @@ export type CreateSourceOptions = {
    * Use this to control how aggressively ranges are merged.
    */
   overfetchBytes?: ByteSize;
+  /**
+   * Page size to use for internal page-cached range fetching. Defaults to 5MB.
+   * Accepts a number of bytes or a string like "5MB".
+   */
+  pageSize?: ByteSize;
 };
 
 /**
@@ -135,7 +141,7 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   /** Url for fgb, unless fetchRangeFn is specified  */
   private url?: string;
   /** Custom method provided to createSource used to fetch fgb byte ranges */
-  private fetchRangeFn?: FetchRangeFn;
+  private fetchRangeFn: FetchRangeFn;
   /** fgb header metadata */
   header: HeaderMeta;
   /** Spatial index for bounding box queries */
@@ -143,9 +149,10 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   /** offset from the start of the fgb to the first feature data byte */
   private featureDataOffset: number;
   /** Manages fetching and caching of byte ranges */
-  private fetchManager: FetchManager;
+  // private fetchManager: FetchManager;
   /** Amount of space allowed between features before splitting requests */
   private overfetchBytes?: number;
+  private pages: number[];
 
   /**
    * Should not be called directly. Instead initialize using createSource(),
@@ -157,35 +164,77 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     index: RTreeIndex,
     featureDataOffset: number,
     maxCacheSize: ByteSize = DEFAULT_CACHE_SIZE,
-    overfetchBytes?: ByteSize
+    overfetchBytes?: ByteSize,
+    pageSize?: ByteSize
   ) {
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
+      this.fetchRangeFn = this.defaultFetchRange;
     } else {
       this.fetchRangeFn = urlOrFetchRangeFn;
     }
+
     this.header = header;
     this.index = index;
+
     this.featureDataOffset = featureDataOffset;
-    this.fetchManager = new FetchManager(
-      urlOrFetchRangeFn,
-      parseByteSize(maxCacheSize)
-    );
     this.overfetchBytes = parseByteSize(overfetchBytes);
+    const offsets = this.index.getFeatureOffsets();
+
+    // console.log("offset length", offsets.length);
+    const pages: number[] = [this.featureDataOffset];
+    const pageSizeLimit = parseByteSize(pageSize || "1MB")!;
+    let currentRefs = [];
+    for (let i = 0; i < offsets.length; i++) {
+      const offset = offsets[i];
+      const fileOffset = offset + this.featureDataOffset;
+      let pageBytes = fileOffset - pages[pages.length - 1];
+      if (
+        currentRefs.length > 0 &&
+        (pageBytes > pageSizeLimit || i === offsets.length - 1)
+      ) {
+        // console.log(`Over limit (${pageBytes} > ${pageSizeLimit})`);
+        // console.log("pushing page", pages.length, fileOffset, currentRefs);
+        pages.push(fileOffset);
+        currentRefs = [];
+      } else {
+        currentRefs.push(fileOffset);
+      }
+    }
+    this.pages = pages;
+    // console.log("pages", pageSizeLimit, this.pages);
+  }
+
+  private async defaultFetchRange(
+    range: [number, number | null]
+  ): Promise<ArrayBuffer> {
+    if (!this.url) {
+      throw new Error("Misconfiguration: fetchRange called without url");
+    }
+    const response = await fetch(this.url, {
+      headers: {
+        Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+      },
+    });
+    return response.arrayBuffer();
   }
 
   /**
-   * Get cache statistics
+   * Prefetch and cache all pages needed for features intersecting the envelope.
+   * This uses getFeaturesAsync with warmCache:true under the hood to trigger
+   * range fetches without parsing or yielding features.
    */
-  get cacheStats() {
-    return this.fetchManager.cacheStats;
-  }
-
-  /**
-   * Clear the feature data cache
-   */
-  clearCache() {
-    this.fetchManager.clearCache();
+  async prefetch(bbox: Envelope | Envelope[]): Promise<void> {
+    console.log("prefetching", bbox);
+    // Drain the async iterator to ensure all range requests are issued
+    for await (const f of this.getFeaturesAsync(bbox, {
+      warmCache: true,
+    })) {
+      // no-op: warmCache prevents yielding
+      // wait for next tick
+      // await new Promise((resolve) => setTimeout(resolve, 0));
+      // console.log("prefetched", f);
+    }
   }
 
   /**
@@ -215,6 +264,28 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     return GeometryType[this.header.geometryType] as keyof typeof GeometryType;
   }
 
+  createPlan(bbox: Envelope | Envelope[]) {
+    if (!Array.isArray(bbox)) {
+      bbox = [bbox];
+    }
+    const offsets: FeatureReference[] = [];
+    const addedIds = new Set<number>();
+    for (const b of bbox) {
+      if (!this.index) {
+        throw new Error("Spatial index not available");
+      }
+      const results = this.index.search(b.minX, b.minY, b.maxX, b.maxY);
+      for (const result of results) {
+        if (!addedIds.has(result[0])) {
+          addedIds.add(result[0]);
+          offsets.push(result);
+        }
+      }
+    }
+    const pagePlan = this.getQueryPlan(offsets);
+    return pagePlan;
+  }
+
   /**
    * Get features within a bounding box. Features are streamed to minimize
    * memory usage. Each feature is deserialized to GeoJSON before being yielded.
@@ -239,41 +310,37 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
    */
   async *getFeaturesAsync(
     bbox: Envelope | Envelope[],
-    options?: QueryPlanOptions & {
+    options?: {
       /**
        * If set true, the cache will be warmed by fetching all features in the
        * bounding box. These features are not parsed or yielded.
        */
       warmCache?: boolean;
+      queryPlan?: QueryPlan;
     }
   ): AsyncGenerator<FeatureWithMetadata<T>> {
-    // extract queryplanoptions and QueryExecutionOptions into separate objects
-    options = {
-      ...QUERY_PLAN_DEFAULTS,
-      ...options,
-      overfetchBytes: this.overfetchBytes ?? options?.overfetchBytes,
-    };
-    if (!Array.isArray(bbox)) {
-      bbox = [bbox];
-    }
-    const offsets: OffsetAndLength[] = [];
-    for (const b of bbox) {
-      if (!this.index) {
-        throw new Error("Spatial index not available");
-      }
-      const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
-      for (const result of results) {
-        offsets.push(result);
-      }
-    }
-    const plan = createQueryPlan(offsets, this.featureDataOffset, options);
-    plan.requests.sort((a, b) => a.range[0] - b.range[0]);
-    for await (const [data, offset] of executeQueryPlan(
-      plan.requests,
-      this.fetchManager.fetchRange.bind(this.fetchManager),
-      options
+    const queryPlan = options?.queryPlan ?? this.createPlan(bbox);
+    // console.log(
+    //   "pagePlan",
+    //   pagePlan.map((p) => ({
+    //     pageIndex: p.pageIndex,
+    //     features: p.features.length,
+    //     firstRef: p.features[0][0],
+    //     lastRef: p.features[p.features.length - 1][0],
+    //     range: `${p.range[0]}-${p.range[1]}`,
+    //     adjustedRange: `${p.range[0] - this.featureDataOffset}-${
+    //       p.range[1] ? p.range[1] - this.featureDataOffset : null
+    //     }`,
+    //   }))
+    // );
+    // throw new Error("stop");
+    for await (const [data, offset, length, bbox] of executeQueryPlan2(
+      queryPlan.pages,
+      this.fetchRangeFn,
+      this.featureDataOffset,
+      3
     )) {
-      if (options.warmCache) {
+      if (options?.warmCache) {
         continue;
       }
       const bytes = new Uint8Array(data.buffer);
@@ -282,12 +349,51 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         bytes.slice(data.byteOffset, data.byteOffset + data.byteLength),
         0
       );
-      const feature = parseFeatureData(offset, bytesAligned, this.header);
+      const feature = parseFeatureData(offset, bytesAligned, this.header, bbox);
       yield feature as unknown as FeatureWithMetadata<T>;
     }
   }
 
-  async countAndBytesForQuery(bbox: Envelope | Envelope[]) {
+  async *queryAsync(
+    bbox: Envelope | Envelope[],
+    options?: {
+      queryPlan?: QueryPlan;
+    }
+  ) {
+    const queryPlan = options?.queryPlan ?? this.createPlan(bbox);
+    for await (const [data, offset, length, bbox] of executeQueryPlan2(
+      queryPlan.pages,
+      this.fetchRangeFn,
+      this.featureDataOffset,
+      3
+    )) {
+      const bytes = new Uint8Array(data.buffer);
+      const bytesAligned = new Uint8Array(data.byteLength);
+      bytesAligned.set(
+        bytes.slice(data.byteOffset, data.byteOffset + data.byteLength),
+        0
+      );
+      yield {
+        bbox,
+        bytes: bytesAligned,
+        getProperties: () =>
+          parseProperties(
+            new ByteBuffer(bytesAligned),
+            this.header.columns,
+            offset
+          ),
+        getFeature: (): FeatureWithMetadata<T> =>
+          parseFeatureData(
+            offset,
+            bytesAligned,
+            this.header,
+            bbox
+          ) as unknown as FeatureWithMetadata<T>,
+      };
+    }
+  }
+
+  search(bbox: Envelope | Envelope[]) {
     if (!this.index) {
       throw new Error("Spatial index not available");
     }
@@ -295,9 +401,9 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       bbox = [bbox];
     }
     let offsetsSet = new Set<string>();
-    let offsetAndLengths: OffsetAndLength[] = [];
+    let offsetAndLengths: FeatureReference[] = [];
     for (const b of bbox) {
-      const results = await this.index.search(b.minX, b.minY, b.maxX, b.maxY);
+      const results = this.index.search(b.minX, b.minY, b.maxX, b.maxY);
       for (const result of results) {
         const key = `${result[0]}-${result[1]}`;
         if (!offsetsSet.has(key)) {
@@ -306,12 +412,13 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
         }
       }
     }
-    const plan = createQueryPlan(offsetAndLengths, this.featureDataOffset, {
-      overfetchBytes: 0,
-    });
     return {
-      bytes: plan.bytes,
-      features: plan.features,
+      bytes: offsetAndLengths.reduce(
+        (acc, [offset, length]) => acc + (length ? length : 0),
+        0
+      ),
+      features: offsetAndLengths.length,
+      refs: offsetAndLengths,
     };
   }
 
@@ -339,10 +446,8 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       };
     }
   > {
-    const data = await this.fetchManager.fetchRange([
-      this.featureDataOffset,
-      null,
-    ]);
+    // console.log("# scanAllFeatures");
+    const data = await this.fetchRangeFn!([this.featureDataOffset, null]);
     // iterate through the data, checking the size prefix to determine the
     // length of each feature, parsing and yielding each feature
     const view = new DataView(data);
@@ -362,6 +467,11 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
     }
   }
 
+  /**
+   * This method returns an async generator for feature properties only.
+   * This is useful for performance when you only need the properties of features.
+   * It avoids parsing geometry data, which can be expensive.
+   */
   async *getFeatureProperties(): AsyncGenerator<{
     properties: GeoJsonProperties & {
       __byteLength: number;
@@ -374,15 +484,11 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       };
     };
   }> {
-    /**
-     * This method returns an async generator for feature properties only.
-     * This is useful for performance when you only need the properties of features.
-     * It avoids parsing geometry data, which can be expensive.
-     */
-    const data = await this.fetchManager.fetchRange([
-      this.featureDataOffset,
-      null,
-    ]);
+    if (!this.fetchRangeFn) {
+      throw new Error("fetchRangeFn not set");
+    }
+    // console.log("# getFeatureProperties");
+    const data = await this.fetchRangeFn([this.featureDataOffset, null]);
     const view = new DataView(data);
     let offset = 0;
     while (offset < data.byteLength) {
@@ -397,7 +503,74 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       offset += size + SIZE_PREFIX_LEN;
     }
   }
+
+  getQueryPlan(refs: FeatureReference[]) {
+    const pageRequests: PageRequestPlan[] = [];
+    // sort offsets in ascending order
+    const sortedRefs = refs.sort((a, b) => a[0] - b[0]);
+    let currentPageIndex = 0;
+    // console.log("getPagePlanpages", this.pages);
+    // console.log(
+    //   "sortedRefs",
+    //   sortedRefs.length,
+    //   sortedRefs[0],
+    //   sortedRefs[sortedRefs.length - 1]
+    // );
+    for (const ref of sortedRefs) {
+      const fileOffset = ref[0] + this.featureDataOffset;
+      // first, figure out if you are adding this offset to the current page,
+      // or if you are starting a new page
+      if (
+        pageRequests.length === 0 ||
+        fileOffset >= this.pages[currentPageIndex + 1]
+      ) {
+        // first, adjust the currentPageIndex if needed
+        while (
+          this.pages[currentPageIndex + 1] !== null &&
+          this.pages[currentPageIndex + 1] <= fileOffset
+        ) {
+          currentPageIndex++;
+        }
+        pageRequests.push({
+          pageIndex: currentPageIndex,
+          range: [
+            this.pages[currentPageIndex],
+            this.pages[currentPageIndex + 1]
+              ? this.pages[currentPageIndex + 1] - 1
+              : null,
+          ],
+          features: [ref],
+        });
+      } else {
+        const existingPage = pageRequests[pageRequests.length - 1];
+        existingPage.features.push(ref);
+      }
+    }
+    return {
+      pages: pageRequests,
+      requests: pageRequests.length,
+      estimatedBytes: estimateBytesFromPagePlan(
+        pageRequests,
+        this.featureDataOffset
+      ),
+    };
+  }
 }
+
+type PageRequestPlan = {
+  pageIndex: number;
+  range: [number, number | null];
+  features: FeatureReference[];
+};
+
+type QueryPlan = {
+  pages: PageRequestPlan[];
+  requests: number;
+  estimatedBytes: {
+    requested: number;
+    features: number;
+  };
+};
 
 /**
  * Create a FlatGeobufSource from a URL or a custom fetchRange function. The
@@ -420,6 +593,7 @@ export async function createSource<
   const initialHeaderRequestLength =
     parseByteSize(options?.initialHeaderRequestLength) ?? HEADER_FETCH_SIZE;
   const overfetchBytes = parseByteSize(options?.overfetchBytes);
+  const pageSize = parseByteSize(options?.pageSize);
   const fetchRange =
     fetchRangeFnOption && typeof fetchRangeFnOption === "function"
       ? (range: [number, number | null]) => {
@@ -431,6 +605,7 @@ export async function createSource<
           }).then((response) => response.arrayBuffer());
         };
 
+  // console.log("fetching header");
   let headerData = await fetchRange([0, initialHeaderRequestLength]);
 
   const view = new DataView(headerData);
@@ -471,13 +646,189 @@ export async function createSource<
   }
   const indexData = headerData.slice(indexOffset, indexOffset + indexSize);
   const index = new RTreeIndex(indexData, rtreeDetails);
+  // console.log("fetched header and index. creating source.");
   const source = new FlatGeobufSource<T>(
     fetchRange,
     header,
     index,
     indexOffset + indexSize,
     maxCacheSize,
-    overfetchBytes
+    overfetchBytes,
+    pageSize
   );
   return source;
+}
+
+export async function* executeQueryPlan2(
+  plan: PageRequestPlan[],
+  fetchRange: FetchRangeFn,
+  featureDataOffset: number,
+  maxConcurrency: number = 8
+): AsyncGenerator<
+  [globalThis.DataView, number, number, [number, number, number, number]]
+> {
+  // Bounded concurrency with safe rejection handling to avoid unhandled rejections
+  const startFetch = (i: number) => {
+    // console.log("startFetch", plan[i].pageIndex, plan[i].range);
+    const { range, features, pageIndex } = plan[i];
+    return fetchRange(range)
+      .then((data) => ({
+        ok: true as const,
+        data,
+        features,
+        pageIndex,
+        i,
+        range,
+      }))
+      .catch((error) => {
+        console.log("error inside startFetch", i, error);
+        return { ok: false as const, error, i, pageIndex };
+      });
+  };
+
+  const inFlight = new Map<
+    number,
+    Promise<
+      | {
+          ok: true;
+          data: ArrayBuffer;
+          features: PageRequestPlan["features"];
+          pageIndex: number;
+          i: number;
+          range: [number, number | null];
+        }
+      | { ok: false; error: unknown; i: number; pageIndex: number }
+    >
+  >();
+  const pagesInFlight = new Set<number>();
+
+  try {
+    let nextToStart = 0;
+    const limit = Math.max(1, Math.min(maxConcurrency, plan.length));
+    // console.log("initial startFetch kickoff");
+    while (nextToStart < plan.length && inFlight.size < limit) {
+      pagesInFlight.add(plan[nextToStart].pageIndex);
+      inFlight.set(nextToStart, startFetch(nextToStart));
+      nextToStart++;
+    }
+
+    while (inFlight.size > 0) {
+      // console.log("waiting for pages to fetch", [...pagesInFlight]);
+      const winner = await Promise.race(inFlight.values());
+      inFlight.delete(winner.i);
+      pagesInFlight.delete(winner.pageIndex);
+
+      if (nextToStart < plan.length) {
+        // console.log("starting next fetch within while loop", nextToStart);
+        pagesInFlight.add(plan[nextToStart].pageIndex);
+        inFlight.set(nextToStart, startFetch(nextToStart));
+        nextToStart++;
+      }
+
+      if (!("ok" in winner) || winner.ok === false) {
+        console.log("error in winner", winner);
+        // Ensure no unhandled rejections from remaining in-flight requests
+        await Promise.allSettled(Array.from(inFlight.values()));
+        throw "error" in winner
+          ? winner.error
+          : new Error("Unknown fetch error");
+      }
+
+      const { data, pageIndex, features, range } = winner;
+      const view = new DataView(data);
+
+      let i = 0;
+      // console.log(
+      //   `begining parsing of page ${pageIndex}. Ref range: ${features[0][0]}-${
+      //     features[features.length - 1][0]
+      //   }. Page range: ${range[0]}-${range[1]}, bytes=${
+      //     data.byteLength
+      //   }. Last ref = ${features[features.length - 1]}`
+      // );
+      // console.log("processing features of page", pageIndex);
+      for (let [offset, length, bbox] of features) {
+        // console.log(`parsing feature ${offset} ${length}`);
+        const adjustedOffset = offset - range[0] + featureDataOffset;
+        if (length === null) {
+          length = view.buffer.byteLength - adjustedOffset;
+        }
+
+        let featureView = new DataView(data, adjustedOffset, length);
+        if (VALIDATE_FEATURE_DATA) {
+          const size = featureView.getUint32(0, true);
+          if (size !== length - SIZE_PREFIX_LEN) {
+            throw new Error(
+              `Feature data size mismatch: expected ${length}, size prefix was ${size}`
+            );
+          }
+        }
+        yield [featureView, offset, length, bbox];
+
+        i++;
+        // Yield control to event loop after each feature to allow other promises to resolve
+        // This ensures pending fetch promises can complete their cleanup without blocking
+        // if (i % 1000 === 0) {
+        //   // process.nextTick(() => {});
+        //   await new Promise((resolve) => setTimeout(resolve, 0));
+        // }
+      }
+      // console.log(`finished parsing page ${pageIndex}`);
+      // console.log("finished processing features of page", pageIndex);
+    }
+  } finally {
+    // Cleanup: ensure all in-flight promises are handled to prevent unhandled rejections
+    // when consumer breaks out of the loop early
+    if (inFlight.size > 0) {
+      await Promise.allSettled(Array.from(inFlight.values()));
+    }
+  }
+}
+
+function estimateBytesFromPagePlan(
+  pagePlan: PageRequestPlan[],
+  leafNodesStartingOffset: number
+): {
+  requested: number;
+  features: number;
+} {
+  return {
+    requested: pagePlan.reduce(
+      (acc, page) => acc + bytesForPage(page, leafNodesStartingOffset),
+      0
+    ),
+    features: pagePlan.reduce(
+      (acc, page) =>
+        acc +
+        page.features.reduce((bytes, feature) => bytes + (feature[1] ?? 0), 0),
+      0
+    ),
+  };
+}
+
+/**
+ * Returns the total bytes in the range request for a page. If the page has a
+ * null end point, the end position of the second to last feature is used.
+ * @param page PagePlan
+ */
+function bytesForPage(
+  page: PageRequestPlan,
+  leafNodesStartingOffset: number
+): number {
+  const start = page.range[0];
+  let end = page.range[1];
+  if (end === null && page.features.length > 1) {
+    const secondToLastFeature = page.features[page.features.length - 2];
+    if (!secondToLastFeature[1]) {
+      throw new Error("Second to last feature has no length");
+    }
+    const fLength = secondToLastFeature[1];
+    const fEndOffset =
+      secondToLastFeature[0] + fLength + leafNodesStartingOffset;
+    // guess that the last feature is the same size as the second to last
+    end = fEndOffset + fLength;
+  } else {
+    // guess that the last feature is 1200 bytes
+    end = start + 1200;
+  }
+  return end - start;
 }

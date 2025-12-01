@@ -13,7 +13,7 @@
   "EditPolygonDesktop": "Arraste os pontos para modificar",
   "EditPolygonTouch": "Clique ou toque em um polígono para editar",
   "FinishPolygonDesktop": "Clique no ponto inicial ou clique duas vezes no último ponto para terminar",
-  "Invalid Shape": "Poílgono inválido",
+  "Invalid Shape": "Polígono inválido",
   "InvalidShapeInstructions": "Se seu polígono for inválido, ficará vermelho. Quando isso acontecer, certifique-se de que não haja cruzamentos, conforme indicado pelos símbolos X. Se você continuar tendo problemas, considere excluir seu polígono e começar de novo.",
   "NoSelectionPoint": "Clique em um ponto para editar",
   "Okay": "OK",

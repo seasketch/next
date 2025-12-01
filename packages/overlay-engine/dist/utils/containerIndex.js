@@ -1,4 +1,37 @@
 "use strict";
+var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    var desc = Object.getOwnPropertyDescriptor(m, k);
+    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
+      desc = { enumerable: true, get: function() { return m[k]; } };
+    }
+    Object.defineProperty(o, k2, desc);
+}) : (function(o, m, k, k2) {
+    if (k2 === undefined) k2 = k;
+    o[k2] = m[k];
+}));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -6,7 +39,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ContainerIndex = void 0;
 // @ts-ignore
 const flatbush_1 = __importDefault(require("flatbush"));
-const robust_segment_intersect_1 = __importDefault(require("robust-segment-intersect"));
+const segIntersect = __importStar(require("robust-segment-intersect"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const boolean_point_in_polygon_1 = __importDefault(require("@turf/boolean-point-in-polygon"));
 const helpers_1 = require("@turf/helpers");
@@ -27,7 +60,19 @@ class ContainerIndex {
         };
         this.container = container;
         this.rings = extractRings(container.geometry);
+        this.holeRings = extractHoleRings(container.geometry);
         this.containerBBox = (0, bbox_1.default)(container);
+        // Precompute bboxes for holes (for cheap filtering)
+        this.holeBBoxes = this.holeRings.map((ring) => {
+            let minx = Infinity, miny = Infinity, maxx = -Infinity, maxy = -Infinity;
+            for (const pt of ring) {
+                minx = Math.min(minx, pt[0]);
+                miny = Math.min(miny, pt[1]);
+                maxx = Math.max(maxx, pt[0]);
+                maxy = Math.max(maxy, pt[1]);
+            }
+            return [minx, miny, maxx, maxy];
+        });
         // Build segment list & Flatbush index
         const boxes = [];
         const boxFeatures = [];
@@ -58,18 +103,38 @@ class ContainerIndex {
         this.index.finish();
     }
     /**
-     * Classify a candidate polygon:
+     * Classify a candidate geometry (polygonal or linear):
      *  - 'outside': bbox disjoint OR all sampled vertices outside and no boundary crossings
      *  - 'inside':  no boundary crossings & all sampled vertices inside
      *  - 'mixed':   any edge crosses/touches container boundary OR vertex on boundary OR mixed inside/outside vertices
      */
     classify(candidate) {
+        const geom = candidate.geometry;
+        const geomType = geom.type;
+        if (geomType === "Point" || geomType === "MultiPoint") {
+            const inside = this.pointInPolygon(candidate);
+            if (inside) {
+                return "inside";
+            }
+            else {
+                return "outside";
+            }
+        }
+        const isPolygonal = geomType === "Polygon" || geomType === "MultiPolygon";
+        const isLinear = geomType === "LineString" || geomType === "MultiLineString";
+        if (!isPolygonal && !isLinear) {
+            throw new Error(`Unsupported geometry type: ${geomType}`);
+        }
         const candBBox = (0, bbox_1.default)(candidate);
         if (!bboxesOverlap(candBBox, this.containerBBox)) {
             return "outside";
         }
+        const polygonCandidate = isPolygonal
+            ? candidate
+            : null;
         // Edge-crossing check (exact, robust). Any hit => 'mixed'
-        for (const [a, b] of iterateSegments(candidate.geometry)) {
+        for (const seg of Array.from(iterateSegments(geom))) {
+            const [a, b] = seg;
             const minx = Math.min(a[0], b[0]);
             const miny = Math.min(a[1], b[1]);
             const maxx = Math.max(a[0], b[0]);
@@ -80,14 +145,17 @@ class ContainerIndex {
                 const sb = this.segsB[h];
                 // robust-segment-intersect treats touching as true
                 // Convert Position to Coord (only x,y coordinates)
-                if ((0, robust_segment_intersect_1.default)([a[0], a[1]], [b[0], b[1]], [sa[0], sa[1]], [sb[0], sb[1]])) {
+                if (segIntersect.default([a[0], a[1]], [b[0], b[1]], [sa[0], sa[1]], [sb[0], sb[1]])) {
                     return "mixed";
                 }
             }
         }
         // No boundary crossings: test multiple representative vertices
         // const vertices = sampleRepresentativeVertices(candidate.geometry, 1);
-        const vertices = [firstVertex(candidate.geometry)];
+        const vertices = classificationVertices(geom);
+        if (vertices.length === 0) {
+            return "outside";
+        }
         // console.log("vertices", vertices);
         let insideCount = 0;
         let outsideCount = 0;
@@ -114,20 +182,196 @@ class ContainerIndex {
         // If we have both inside and outside vertices, classify as mixed
         if (insideCount > 0 && outsideCount > 0)
             return "mixed";
-        // If all vertices are outside, classify as outside
-        if (outsideCount > 0)
+        // If all vertices are outside, check if container is inside candidate
+        // (cheap test: if candidate bbox contains container bbox, sample container points)
+        if (outsideCount > 0) {
+            if (isPolygonal &&
+                polygonCandidate &&
+                bboxContains(candBBox, this.containerBBox)) {
+                // Sample a few representative points from container to check if it's inside candidate
+                const containerPoints = sampleRepresentativeVertices(this.container.geometry, 5);
+                let containerInsideCount = 0;
+                for (const pt of containerPoints) {
+                    if ((0, boolean_point_in_polygon_1.default)((0, helpers_1.point)(pt), polygonCandidate)) {
+                        containerInsideCount++;
+                    }
+                }
+                // If at least one container point is inside candidate, it's mixed
+                if (containerInsideCount > 0) {
+                    return "mixed";
+                }
+            }
             return "outside";
-        // If all vertices are inside, classify as inside
+        }
+        // If all vertices are inside, check if candidate overlaps any holes
+        if (insideCount > 0 &&
+            isPolygonal &&
+            polygonCandidate &&
+            this.holeRings.length > 0) {
+            // Check if candidate bbox overlaps any hole bboxes
+            let hasHoleOverlap = false;
+            for (let i = 0; i < this.holeRings.length; i++) {
+                const holeBBox = this.holeBBoxes[i];
+                if (bboxesOverlap(candBBox, holeBBox)) {
+                    hasHoleOverlap = true;
+                    break;
+                }
+            }
+            if (hasHoleOverlap) {
+                // Strategy 1: Sample points from candidate and check if any are inside holes
+                const candidatePoints = sampleRepresentativeVertices(candidate.geometry, 5);
+                for (const pt of candidatePoints) {
+                    // Check if this point is inside any hole (which means it's "outside" the container)
+                    // First filter by bbox overlap for efficiency
+                    for (let i = 0; i < this.holeRings.length; i++) {
+                        const holeBBox = this.holeBBoxes[i];
+                        // Quick bbox check: if point is outside hole bbox, skip expensive test
+                        if (pt[0] < holeBBox[0] ||
+                            pt[0] > holeBBox[2] ||
+                            pt[1] < holeBBox[1] ||
+                            pt[1] > holeBBox[3]) {
+                            continue;
+                        }
+                        // Point is within hole bbox, do precise point-in-polygon test
+                        const holeRing = this.holeRings[i];
+                        const holePoly = {
+                            type: "Polygon",
+                            coordinates: [holeRing],
+                        };
+                        const holeFeature = {
+                            type: "Feature",
+                            geometry: holePoly,
+                            properties: {},
+                        };
+                        // If point is inside a hole, the candidate overlaps the hole
+                        if ((0, boolean_point_in_polygon_1.default)((0, helpers_1.point)(pt), holeFeature)) {
+                            return "mixed";
+                        }
+                    }
+                }
+                // Strategy 2: If candidate bbox contains a hole bbox, check if hole points are inside candidate
+                // (catches case where candidate completely contains a hole)
+                for (let i = 0; i < this.holeRings.length; i++) {
+                    const holeBBox = this.holeBBoxes[i];
+                    if (bboxContains(candBBox, holeBBox)) {
+                        // Sample a few points from the hole and check if they're inside the candidate
+                        const holeRing = this.holeRings[i];
+                        const holePoints = sampleRepresentativeVertices({
+                            type: "Polygon",
+                            coordinates: [holeRing],
+                        }, 3);
+                        for (const holePt of holePoints) {
+                            if ((0, boolean_point_in_polygon_1.default)((0, helpers_1.point)(holePt), polygonCandidate)) {
+                                return "mixed";
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        // If all vertices are inside and no hole overlap detected, classify as inside
         return "inside";
     }
+    /**
+     * Test whether a point (or multipoint) feature is within the container polygon.
+     * Uses the container bbox and hole bboxes for efficient filtering.
+     *
+     * @param pointFeature - A Point or MultiPoint feature to test
+     * @returns For Point: true if the point is inside the container (and not in any holes).
+     *          For MultiPoint: true if ANY point is inside the container (and not in any holes).
+     */
+    pointInPolygon(pointFeature) {
+        const geom = pointFeature.geometry;
+        const geomType = geom.type;
+        if (geom.type === "Point") {
+            return this.pointInPolygonSingle(geom.coordinates);
+        }
+        else if (geom.type === "MultiPoint") {
+            // For MultiPoint, return true if ANY point is inside
+            for (const coord of geom.coordinates) {
+                if (this.pointInPolygonSingle(coord)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+        else {
+            throw new Error(`Unsupported geometry type: ${geomType}. Expected Point or MultiPoint.`);
+        }
+    }
+    /**
+     * Test whether a single point coordinate is within the container polygon.
+     * Uses bbox filtering and hole bboxes for efficiency.
+     */
+    pointInPolygonSingle(coord) {
+        const [x, y] = coord;
+        // Quick bbox rejection: if point is outside container bbox, it's definitely outside
+        if (x < this.containerBBox[0] ||
+            x > this.containerBBox[2] ||
+            y < this.containerBBox[1] ||
+            y > this.containerBBox[3]) {
+            return false;
+        }
+        // Check if point is inside the container polygon
+        const point = (0, helpers_1.point)(coord);
+        if (!(0, boolean_point_in_polygon_1.default)(point, this.container)) {
+            return false;
+        }
+        // If there are holes, check if the point is inside any hole
+        // (if so, it's outside the container)
+        if (this.holeRings.length > 0) {
+            // Use hole bboxes for efficient filtering
+            for (let i = 0; i < this.holeRings.length; i++) {
+                const holeBBox = this.holeBBoxes[i];
+                // Quick bbox check: if point is outside hole bbox, skip expensive test
+                if (x < holeBBox[0] ||
+                    x > holeBBox[2] ||
+                    y < holeBBox[1] ||
+                    y > holeBBox[3]) {
+                    continue;
+                }
+                // Point is within hole bbox, do precise point-in-polygon test
+                const holeRing = this.holeRings[i];
+                const holePoly = {
+                    type: "Polygon",
+                    coordinates: [holeRing],
+                };
+                const holeFeature = {
+                    type: "Feature",
+                    geometry: holePoly,
+                    properties: {},
+                };
+                // If point is inside a hole, it's outside the container
+                if ((0, boolean_point_in_polygon_1.default)(point, holeFeature)) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
     getBBoxPolygons() {
-        return this.bboxPolygons;
+        const result = {
+            type: "FeatureCollection",
+            features: [...this.bboxPolygons.features],
+        };
+        // Add hole bboxes
+        for (const holeBBox of this.holeBBoxes) {
+            result.features.push((0, bbox_polygon_1.default)(holeBBox));
+        }
+        return result;
     }
 }
 exports.ContainerIndex = ContainerIndex;
 function bboxesOverlap(a, b) {
     // axis-aligned bbox overlap test
     return !(a[0] > b[2] || a[2] < b[0] || a[1] > b[3] || a[3] < b[1]);
+}
+function bboxContains(outer, inner) {
+    // Check if outer bbox completely contains inner bbox
+    return (outer[0] <= inner[0] &&
+        outer[1] <= inner[1] &&
+        outer[2] >= inner[2] &&
+        outer[3] >= inner[3]);
 }
 function extractRings(geom) {
     if (geom.type === "Polygon") {
@@ -142,6 +386,27 @@ function extractRings(geom) {
         return rings;
     }
     throw new Error(`Unsupported geometry type: ${geom.type}`);
+}
+function extractHoleRings(geom) {
+    const holes = [];
+    if (geom.type === "Polygon") {
+        // Skip first ring (outer), collect rest (holes)
+        for (let i = 1; i < geom.coordinates.length; i++) {
+            holes.push(ensureClosed(geom.coordinates[i]));
+        }
+    }
+    else if (geom.type === "MultiPolygon") {
+        for (const poly of geom.coordinates) {
+            // Skip first ring (outer), collect rest (holes)
+            for (let i = 1; i < poly.length; i++) {
+                holes.push(ensureClosed(poly[i]));
+            }
+        }
+    }
+    else {
+        throw new Error(`Unsupported geometry type: ${geom.type}`);
+    }
+    return holes;
 }
 function ensureClosed(ring) {
     if (ring.length === 0)
@@ -171,6 +436,17 @@ function* iterateSegments(geom) {
             }
         }
     }
+    else if (geom.type === "LineString") {
+        const line = geom.coordinates;
+        for (let i = 0; i < line.length - 1; i++)
+            yield [line[i], line[i + 1]];
+    }
+    else if (geom.type === "MultiLineString") {
+        for (const line of geom.coordinates) {
+            for (let i = 0; i < line.length - 1; i++)
+                yield [line[i], line[i + 1]];
+        }
+    }
     else {
         throw new Error(`Unsupported geometry type: ${geom.type}`);
     }
@@ -185,6 +461,30 @@ function firstVertex(geom) {
         return ring[0];
     }
     throw new Error(`Unsupported geometry type: ${geom.type}`);
+}
+function classificationVertices(geom) {
+    const geomType = geom.type;
+    if (geom.type === "LineString") {
+        return lineEndpointSamples(geom.coordinates);
+    }
+    else if (geom.type === "MultiLineString") {
+        const vertices = [];
+        for (const line of geom.coordinates) {
+            vertices.push(...lineEndpointSamples(line));
+        }
+        return vertices;
+    }
+    else if (geom.type === "Polygon" || geom.type === "MultiPolygon") {
+        return [firstVertex(geom)];
+    }
+    throw new Error(`Unsupported geometry type: ${geomType}`);
+}
+function lineEndpointSamples(line) {
+    if (line.length === 0)
+        return [];
+    if (line.length === 1)
+        return [line[0]];
+    return [line[0], line[line.length - 1]];
 }
 /**
  * Sample multiple representative vertices from a geometry to better determine

@@ -23,6 +23,7 @@ import {
 } from "./test-features";
 import { readOutput, compareFragments, saveOutput } from "./test-helpers";
 import { landUrl } from "./constants";
+import { makeFetchRangeFn } from "../scripts/optimizedFetchRangeFn";
 
 const eezUrl = "https://uploads.seasketch.org/eez-land-joined.fgb";
 const territorialSeaUrl =
@@ -74,15 +75,17 @@ const fijiGeographies: GeographySettings[] = [
   },
 ];
 
-// set test timeout to 10 seconds
-vi.setConfig({ testTimeout: 10000 });
+// set test timeout to 20 seconds
+vi.setConfig({ testTimeout: 30000 });
+
+const sourceCache = new SourceCache("256mb", {
+  fetchRangeFn: makeFetchRangeFn(`https://uploads.seasketch.org`).fetchRangeFn,
+});
 
 describe("createFragments", () => {
-  let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
   beforeAll(() => {
-    sourceCache = new SourceCache("256mb");
     clippingFn = async (sketch, source, op, query) => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source
@@ -264,11 +267,9 @@ const fsmGeographies: GeographySettings[] = [
 ];
 
 describe("FSM test features", () => {
-  let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
   beforeAll(() => {
-    sourceCache = new SourceCache("256mb");
     clippingFn = async (sketch, source, op, query) => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source
@@ -446,11 +447,9 @@ const caGeographies: GeographySettings[] = [
 ];
 
 describe("CA use case", () => {
-  let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
   beforeAll(() => {
-    sourceCache = new SourceCache("256mb");
     clippingFn = async (sketch, source, op, query) => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source
@@ -499,11 +498,9 @@ describe("CA use case", () => {
 });
 
 describe("eliminateOverlap", () => {
-  let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
   beforeAll(() => {
-    sourceCache = new SourceCache("128mb");
     clippingFn = async (sketch, source, op, query) => {
       const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
         source

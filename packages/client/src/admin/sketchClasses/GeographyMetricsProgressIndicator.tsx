@@ -57,7 +57,8 @@ export default function GeographyMetricsProgressIndicator() {
     (m) =>
       subjectIsGeography(m.subject) &&
       (m.state === SpatialMetricState.Processing ||
-        m.state === SpatialMetricState.Queued)
+        m.state === SpatialMetricState.Queued ||
+        m.state === SpatialMetricState.DependencyNotReady)
   );
 
   const [recentProcessingCount, setRecentProcessingCount] = useState(0);
@@ -138,7 +139,6 @@ export default function GeographyMetricsProgressIndicator() {
 
 function nameForGeography(
   subject: {
-    type: "geography";
     id: number;
   },
   geographies: Pick<Geography, "id" | "name">[]
@@ -159,5 +159,7 @@ function labelForState(state: SpatialMetricState) {
       return "Complete";
     case SpatialMetricState.Error:
       return "Error";
+    case SpatialMetricState.DependencyNotReady:
+      return "Awaiting Dependency";
   }
 }

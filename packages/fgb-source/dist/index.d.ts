@@ -2,27 +2,21 @@ import { GeometryType } from 'flatgeobuf/lib/mjs/generic.js';
 import { Feature, GeoJsonProperties, Geometry } from 'geojson';
 import { HeaderMeta } from 'flatgeobuf';
 
-type FetchRangeFn = (range: [number, number | null]) => Promise<ArrayBuffer>;
 /**
- * Statistics about the LRU cache and in-flight requests.
- * Used to monitor cache performance and memory usage.
- */
-type CacheStats = {
-    /** Current number of items in the cache */
-    count: number;
-    /** Total size of cached items in bytes */
-    calculatedSize: number;
-    /** Maximum size of the cache which stores feature data in bytes */
-    maxSize: number;
-    /** Number of requests currently in flight */
-    inFlightRequests: number;
-};
-
-/**
- * Byte offsets to fetch feature data from the fgb file, as [offset, length].
+ * Byte offsets to fetch feature data from the fgb file, as [offset, length,
+ * bbox].
  * The length is null if the feature is the last in the file.
  */
-type OffsetAndLength = [number, number | null];
+type FeatureReference = [
+    number,
+    number | null,
+    [
+        number,
+        number,
+        number,
+        number
+    ]
+];
 /**
  * RTreeIndex provides spatial indexing for FlatGeobuf files.
  *
@@ -76,7 +70,7 @@ declare class RTreeIndex {
      * @param maxY - Maximum Y coordinate of the search box
      * @returns Promise resolving to array of [offset, length] tuples
      */
-    search(minX: number, minY: number, maxX: number, maxY: number): Promise<OffsetAndLength[]>;
+    search(minX: number, minY: number, maxX: number, maxY: number): FeatureReference[];
     /**
      * Get the data for a node at the specified index.
      *
@@ -85,6 +79,27 @@ declare class RTreeIndex {
      * @private
      */
     private getNodeData;
+    /**
+     * Returns the byte offsets of all features in the index.
+     * @returns Array of byte offsets
+     */
+    getFeatureOffsets(): number[];
+    /**
+     * Returns the byte offset (relative to feature data start) of the last feature.
+     */
+    getLastFeatureOffset(): number;
+    /**
+     * Returns the byte offset (relative to feature data start) of the first feature.
+     * This is determined by finding the first leaf node in the R-tree.
+     */
+    getFirstLeafNode(): {
+        minX: number;
+        minY: number;
+        maxX: number;
+        maxY: number;
+        offset: number;
+        isLeaf: boolean;
+    };
 }
 /**
  * Details about the structure of a packed R-tree index.
@@ -122,15 +137,7 @@ interface PackedRTreeDetails {
     levels: number[];
 }
 
-/**
- * Options for query planning and execution.
- */
-type QueryPlanOptions = {
-    /** Maximum number of bytes to overfetch when merging ranges */
-    overfetchBytes?: number;
-    /** Skip validation of feature data size prefixes */
-    skipValidation?: boolean;
-};
+type FetchRangeFn = (range: [number, number | null]) => Promise<ArrayBuffer>;
 
 /**
  * Feature with additional metadata from the FlatGeobuf file.
@@ -207,6 +214,11 @@ type CreateSourceOptions = {
      * Use this to control how aggressively ranges are merged.
      */
     overfetchBytes?: ByteSize;
+    /**
+     * Page size to use for internal page-cached range fetching. Defaults to 5MB.
+     * Accepts a number of bytes or a string like "5MB".
+     */
+    pageSize?: ByteSize;
 };
 /**
  * FlatGeobuf data source class. Provides methods to query features from a
@@ -228,7 +240,7 @@ declare class FlatGeobufSource<T = Feature> {
     /** Url for fgb, unless fetchRangeFn is specified  */
     private url?;
     /** Custom method provided to createSource used to fetch fgb byte ranges */
-    private fetchRangeFn?;
+    private fetchRangeFn;
     /** fgb header metadata */
     header: HeaderMeta;
     /** Spatial index for bounding box queries */
@@ -236,22 +248,21 @@ declare class FlatGeobufSource<T = Feature> {
     /** offset from the start of the fgb to the first feature data byte */
     private featureDataOffset;
     /** Manages fetching and caching of byte ranges */
-    private fetchManager;
     /** Amount of space allowed between features before splitting requests */
     private overfetchBytes?;
+    private pages;
     /**
      * Should not be called directly. Instead initialize using createSource(),
      * which will generate the necessary metadata and spatial index.
      */
-    constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize);
+    constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize, pageSize?: ByteSize);
+    private defaultFetchRange;
     /**
-     * Get cache statistics
+     * Prefetch and cache all pages needed for features intersecting the envelope.
+     * This uses getFeaturesAsync with warmCache:true under the hood to trigger
+     * range fetches without parsing or yielding features.
      */
-    get cacheStats(): CacheStats;
-    /**
-     * Clear the feature data cache
-     */
-    clearCache(): void;
+    prefetch(bbox: Envelope | Envelope[]): Promise<void>;
     /**
      * Bounds of the source, as determined from the spatial index.
      */
@@ -270,6 +281,14 @@ declare class FlatGeobufSource<T = Feature> {
      * Geometry type of the source.
      */
     get geometryType(): keyof typeof GeometryType;
+    createPlan(bbox: Envelope | Envelope[]): {
+        pages: PageRequestPlan[];
+        requests: number;
+        estimatedBytes: {
+            requested: number;
+            features: number;
+        };
+    };
     /**
      * Get features within a bounding box. Features are streamed to minimize
      * memory usage. Each feature is deserialized to GeoJSON before being yielded.
@@ -292,17 +311,32 @@ declare class FlatGeobufSource<T = Feature> {
      * }
      * ```
      */
-    getFeaturesAsync(bbox: Envelope | Envelope[], options?: QueryPlanOptions & {
+    getFeaturesAsync(bbox: Envelope | Envelope[], options?: {
         /**
          * If set true, the cache will be warmed by fetching all features in the
          * bounding box. These features are not parsed or yielded.
          */
         warmCache?: boolean;
+        queryPlan?: QueryPlan;
     }): AsyncGenerator<FeatureWithMetadata<T>>;
-    countAndBytesForQuery(bbox: Envelope | Envelope[]): Promise<{
+    queryAsync(bbox: Envelope | Envelope[], options?: {
+        queryPlan?: QueryPlan;
+    }): AsyncGenerator<{
+        bbox: [number, number, number, number];
+        bytes: Uint8Array<ArrayBuffer>;
+        getProperties: () => {
+            [name: string]: any;
+        } & {
+            __byteLength: number;
+            __offset: number;
+        };
+        getFeature: () => FeatureWithMetadata<T>;
+    }, void, unknown>;
+    search(bbox: Envelope | Envelope[]): {
         bytes: number;
         features: number;
-    }>;
+        refs: FeatureReference[];
+    };
     /**
      * Scan all features in the source. Does not use the spatial index, but
      * rather fetches the entire feature data section and iterates through it.
@@ -325,6 +359,11 @@ declare class FlatGeobufSource<T = Feature> {
             __offset: number;
         };
     }>;
+    /**
+     * This method returns an async generator for feature properties only.
+     * This is useful for performance when you only need the properties of features.
+     * It avoids parsing geometry data, which can be expensive.
+     */
     getFeatureProperties(): AsyncGenerator<{
         properties: GeoJsonProperties & {
             __byteLength: number;
@@ -337,7 +376,28 @@ declare class FlatGeobufSource<T = Feature> {
             };
         };
     }>;
+    getQueryPlan(refs: FeatureReference[]): {
+        pages: PageRequestPlan[];
+        requests: number;
+        estimatedBytes: {
+            requested: number;
+            features: number;
+        };
+    };
 }
+type PageRequestPlan = {
+    pageIndex: number;
+    range: [number, number | null];
+    features: FeatureReference[];
+};
+type QueryPlan = {
+    pages: PageRequestPlan[];
+    requests: number;
+    estimatedBytes: {
+        requested: number;
+        features: number;
+    };
+};
 /**
  * Create a FlatGeobufSource from a URL or a custom fetchRange function. The
  * Promise will not be resolved until the source is fully initialized, loading
@@ -467,6 +527,10 @@ declare class SourceCache {
      * ```
      */
     get<T = Feature<Geometry, GeoJsonProperties>>(key: string, options?: CreateSourceOptions): Promise<FlatGeobufSource<T>>;
+    /**
+     * Clear all cached sources and in-flight requests. Useful for testing or resetting state.
+     */
+    clear(): void;
 }
 
-export { type CreateSourceOptions, type FetchRangeByKeyFn, type FetchRangeFn, FlatGeobufSource, type PackedRTreeDetails, SourceCache, type SourceCacheOptions, createSource };
+export { type CreateSourceOptions, type FeatureReference, type FeatureWithMetadata, type FetchRangeByKeyFn, type FetchRangeFn, FlatGeobufSource, type PackedRTreeDetails, SourceCache, type SourceCacheOptions, createSource };

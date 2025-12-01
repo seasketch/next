@@ -41,7 +41,7 @@ exports.consolidateCql2Queries = consolidateCql2Queries;
  */
 function evaluateCql2JSONQuery(query, properties) {
     if (query === null || query === undefined) {
-        throw new Error("Query cannot be null or undefined");
+        return true;
     }
     if (typeof query !== "object") {
         throw new Error(`Invalid query format: ${query}`);

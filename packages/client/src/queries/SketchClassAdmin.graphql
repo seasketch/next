@@ -59,6 +59,7 @@ fragment SketchingDetails on SketchClass {
   clippingGeographies {
     ...GeographyDetails
   }
+  reportId
 }
 
 fragment SketchingGeographyDetails on SketchClass {
@@ -375,6 +376,34 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
+fragment ReportingLayerDetails on ReportCardLayer {
+  tableOfContentsItemId
+  layerParameters
+  processedOutput {
+    url
+    size
+    type
+  }
+  tableOfContentsItem {
+    id
+    title
+    dataSourceType
+    stableId
+    dataLayer {
+      id
+      mapboxGlStyles
+      dataSource {
+        id
+        geostats
+        type
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+
 fragment ReportCardDetails on ReportCard {
   id
   position
@@ -384,6 +413,12 @@ fragment ReportCardDetails on ReportCard {
   tint
   icon
   body
+  reportingLayers: reportCardLayers {
+    ...ReportingLayerDetails
+  }
+  collapsibleFooterEnabled
+  collapsibleFooterBody
+  displayMapLayerVisibilityControls
 }
 
 fragment ReportTabDetails on ReportTab {
@@ -413,6 +448,11 @@ query DraftReport($sketchClassId: Int!) {
     report {
       createdAt
     }
+  }
+}
+
+query DraftReportDebuggingMaterials($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
     project {
       id
       geographies {
@@ -420,12 +460,12 @@ query DraftReport($sketchClassId: Int!) {
         name
         translatedProps
       }
-      mySketches {
-        id
-        name
-        sketchClassId
-        createdAt
-      }
+    }
+    mySketches {
+      id
+      name
+      sketchClassId
+      createdAt
     }
   }
 }
@@ -487,6 +527,7 @@ mutation AddReportCard(
   $componentSettings: JSON!
   $cardType: String!
   $body: JSON!
+  $layers: [ReportLayerInputRecordInput!]!
 ) {
   addReportCard(
     input: {
@@ -494,6 +535,7 @@ mutation AddReportCard(
       componentSettings: $componentSettings
       cardType: $cardType
       body: $body
+      layers: $layers
     }
   ) {
     reportCard {
@@ -521,6 +563,9 @@ mutation UpdateReportCard(
   $tint: String
   $icon: String
   $cardType: String
+  $collapsibleFooterEnabled: Boolean
+  $collapsibleFooterBody: JSON
+  $displayMapLayerVisibilityControls: Boolean
 ) {
   updateReportCard(
     input: {
@@ -531,6 +576,9 @@ mutation UpdateReportCard(
       tint: $tint
       icon: $icon
       cardType: $cardType
+      collapsibleFooterEnabled: $collapsibleFooterEnabled
+      collapsibleFooterBody: $collapsibleFooterBody
+      displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls
     }
   ) {
     reportCard {
@@ -558,6 +606,134 @@ mutation PublishReport($sketchClassId: Int!) {
   publishReport(input: { sketchClassId: $sketchClassId }) {
     sketchClass {
       ...AdminSketchingDetails
+    }
+  }
+}
+
+query AvailableReportLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    availableReportLayers {
+      title
+      id
+      dataSourceType
+      dataLayer {
+        id
+        mapboxGlStyles
+        dataSource {
+          id
+          geostats
+        }
+      }
+    }
+  }
+}
+
+fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+  errorMessage
+  startedAt
+  durationSeconds
+  eta
+}
+
+query SourceProcessingJobs($projectId: Int!) {
+  project(id: $projectId) {
+    sourceProcessingJobs {
+      ...SourceProcessingJobDetails
+    }
+  }
+}
+
+subscription ReportOverlaySourcesSubscription($projectId: Int!) {
+  reportOverlaySources(projectId: $projectId) {
+    jobKey
+    source {
+      ...OverlaySourceDetails
+    }
+  }
+}
+
+mutation RecalculateSpatialMetrics(
+  $metricIds: [BigInt!]!
+  $preprocessSources: Boolean!
+) {
+  recalculateSpatialMetrics(
+    input: { metricIds: $metricIds, preprocessSources: $preprocessSources }
+  ) {
+    boolean
+  }
+}
+
+fragment OverlaySourceDetails on ReportOverlaySource {
+  tableOfContentsItemId
+  tableOfContentsItem {
+    title
+    stableId
+  }
+  geostats
+  mapboxGlStyles
+  sourceProcessingJob {
+    ...SourceProcessingJobDetails
+  }
+  sourceUrl
+  output {
+    size
+    url
+    createdAt
+  }
+}
+
+query ReportContext($reportId: Int!, $sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+  report(id: $reportId) {
+    id
+    tabs {
+      ...ReportTabDetails
+    }
+    geographies {
+      id
+      name
+      translatedProps
+    }
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+
+query LegacyReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
     }
   }
 }

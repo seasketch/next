@@ -182,7 +182,22 @@ function SketchEditorModal({
     },
   });
 
-  const [updateSketch, updateSketchState] = useUpdateSketchMutation({});
+  const [updateSketch, updateSketchState] = useUpdateSketchMutation({
+    update: (cache, { data }) => {
+      const reportId = sketchClass?.reportId;
+      if (data?.updateSketch && reportId) {
+        const reportEntityId = cache.identify({
+          __typename: "Report",
+          id: reportId,
+        });
+        cache.evict({
+          id: reportEntityId,
+          fieldName: "dependencies",
+          args: { sketchId: data.updateSketch.id },
+        });
+      }
+    },
+  });
 
   const extraRequestParams = useMemo(() => {
     if (

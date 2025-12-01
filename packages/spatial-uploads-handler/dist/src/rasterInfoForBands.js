@@ -195,7 +195,7 @@ async function rasterInfoForBands(filepath) {
                 quantiles: {},
                 standardDeviations: {},
                 geometricInterval: {},
-                histogram: (0, stats_1.equalIntervalBuckets)(sampledPixelValues, 49, stats.max, true),
+                histogram: (0, stats_1.equalIntervalBuckets)(sampledPixelValues.sort((a, b) => a - b), 49, stats.max, true),
                 categories: categoryBuckets,
             },
             maximum: stats.max,

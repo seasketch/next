@@ -27,7 +27,6 @@ import {
 } from "@radix-ui/react-icons";
 import { FormLanguageContext } from "../formElements/FormElement";
 import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
-import languages from "../lang/supported";
 
 interface ReportTabManagementModalProps {
   isOpen: boolean;

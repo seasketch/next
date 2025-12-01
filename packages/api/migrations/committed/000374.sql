@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:2ca2fd961964107591546ea8a56a3caae241ae1e
 --! Hash: sha1:63c3f6742da551ee49d725c9437202a31531e0b4
 
@@ -92,4 +93,4 @@ create or replace function projects_center_geojson(project projects)
   select ST_AsGeoJSON(ST_Centroid(region))::json from projects where id = project.id;
   $$;
 
-  grant execute on function projects_center_geojson to anon;
+grant execute on function projects_center_geojson to anon;

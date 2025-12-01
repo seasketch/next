@@ -1,9 +1,12 @@
+/* eslint-disable i18next/no-literal-string */
 import {
   createContext,
   useContext,
   useState,
   useEffect,
   useCallback,
+  useMemo,
+  useRef,
 } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -11,17 +14,29 @@ import {
   ReportContextSketchClassDetailsFragment,
   ReportContextSketchDetailsFragment,
   Sketch,
-  SpatialMetricDependency,
-  SpatialMetricState,
   useGeographyMetricSubscriptionSubscription,
-  useGetOrCreateSpatialMetricsMutation,
+  useRecalculateSpatialMetricsMutation,
   useSketchMetricSubscriptionSubscription,
-  useSketchReportingDetailsQuery,
+  OverlaySourceDetailsFragment,
+  useReportContextQuery,
+  ReportContextDocument,
+  SketchGeometryType,
+  useReportOverlaySourcesSubscriptionSubscription,
+  SpatialMetricState,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
-import { Metric, MetricSubjectFragment } from "overlay-engine";
+import { MetricSubjectFragment } from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { ApolloError } from "@apollo/client";
+import type { AnyLayer, AnySourceData } from "mapbox-gl";
+import { MapContext } from "../dataLayers/MapContextManager";
+
+export type ReportMapStyle = {
+  sources: { [id: string]: AnySourceData };
+  layers: AnyLayer[];
+};
 
 export interface ReportContextState {
   /**
@@ -56,7 +71,7 @@ export interface ReportContextState {
   /**
    * Whether the report is in admin/editable mode
    */
-  adminMode: boolean;
+  adminMode?: boolean;
 
   /**
    * The ID of the card currently selected for editing
@@ -74,67 +89,82 @@ export interface ReportContextState {
   deleteCard?: (cardId: number) => void;
   geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
 
-  /**
-   * Function to add a metric dependency
-   */
-  addMetricDependency: (
-    hookId: number,
-    dependency: SpatialMetricDependency
-  ) => void;
-
-  /**
-   * Function to remove a metric dependency
-   */
-  removeMetricDependency: (
-    hookId: number,
-    dependency: SpatialMetricDependency
-  ) => void;
-
-  /**
-   * The current metric dependencies, debounced
-   */
-  metricDependencies: SpatialMetricDependency[];
   selectedSketchId: number | null;
-  sketch?: ReportContextSketchDetailsFragment;
-  sketchClass?: ReportContextSketchClassDetailsFragment;
-  metrics: LocalMetrics;
+  sketch: ReportContextSketchDetailsFragment;
+  sketchClass: ReportContextSketchClassDetailsFragment;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  overlaySources: OverlaySourceDetailsFragment[];
+  getDependencies: (cardId: number) => {
+    metrics: CompatibleSpatialMetricDetailsFragment[];
+    overlaySources: OverlaySourceDetailsFragment[];
+    loading: boolean;
+    errors: string[];
+  };
+  userIsAdmin: boolean;
+  recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
+  recalculateState: { loading: boolean; error: ApolloError | undefined };
+  /**
+   * Set or clear a map style associated with a given report card. Styles are
+   * automatically namespaced so they don't collide with other report cards or
+   * the main overlay list.
+   */
+  setCardMapStyle: (
+    cardId: number,
+    styleId: string,
+    style: ReportMapStyle | null
+  ) => void;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
-
-type LocalMetric = Metric & {
-  id: number;
-  state: SpatialMetricState;
-  createdAt: Date;
-  updatedAt: Date | null;
-  errorMessage?: string;
-  progress?: number;
-  jobKey?: string;
-};
-
-type LocalMetrics = LocalMetric[];
 
 /**
  * Custom hook to manage report state
  */
 export function useReportState(
-  report: ReportConfiguration | undefined,
+  reportId: number | undefined,
   sketchClassId: number,
   selectedSketchId: number | null,
   initialSelectedTabId?: number
-) {
-  const [selectedTabId, setSelectedTabId] = useState<number>(
-    initialSelectedTabId || report?.tabs?.[0]?.id || 0
-  );
+): ReportContextState | undefined {
+  const projectMetadata = useCurrentProjectMetadata();
+  const mapContext = useContext(MapContext);
+  const cardMapStylesRef = useRef<{
+    [cardId: number]: {
+      [styleId: string]: { sources: string[]; layers: string[] };
+    };
+  }>({});
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
 
-  const [metrics, setMetrics] = useState<LocalMetrics>([]);
+  useReportOverlaySourcesSubscriptionSubscription({
+    variables: {
+      projectId: projectMetadata.data?.project?.id!,
+    },
+    skip: !projectMetadata.data?.project?.id,
+  });
+
+  const onError = useGlobalErrorHandler();
+
+  const { data, refetch } = useReportContextQuery({
+    variables: {
+      reportId: reportId!,
+      sketchId: selectedSketchId!,
+    },
+    skip: !reportId || !selectedSketchId,
+    onError,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const [selectedTabId, setSelectedTabId] = useState<number>(
+    initialSelectedTabId || data?.report?.tabs?.[0]?.id || 0
+  );
 
   // Get the selected tab based on selectedTabId, fallback to first tab
-  const selectedTab = report?.tabs?.find((tab) => tab.id === selectedTabId) ||
-    report?.tabs?.[0] || {
+  const selectedTab = data?.report?.tabs?.find(
+    (tab) => tab.id === selectedTabId
+  ) ||
+    data?.report?.tabs?.[0] || {
       id: 0,
       title: "Default Tab",
       position: 0,
@@ -142,21 +172,12 @@ export function useReportState(
       alternateLanguageSettings: {},
     };
 
-  const onError = useGlobalErrorHandler();
-  const sketchReportingDetails = useSketchReportingDetailsQuery({
-    variables: {
-      id: selectedSketchId!,
-      sketchClassId,
-    },
-    skip: !selectedSketchId,
-    onError,
-  });
-
-  useEffect(() => {
-    if (selectedSketchId) {
-      setMetrics([]);
-    }
-  }, [selectedSketchId]);
+  const [recalculateMutation, recalculateState] =
+    useRecalculateSpatialMetricsMutation({
+      onError: onError,
+      refetchQueries: [ReportContextDocument],
+      awaitRefetchQueries: true,
+    });
 
   const projectId = useProjectId();
 
@@ -165,29 +186,6 @@ export function useReportState(
       projectId: projectId!,
     },
     skip: !projectId,
-    onData: ({ data }) => {
-      const metric = data.data?.geographyMetrics?.metric
-        ? parseMetric(data.data.geographyMetrics.metric)
-        : null;
-      if (metric) {
-        setMetrics((prev) => {
-          const newVal = prev.map((existing) => {
-            if (
-              existing.id === metric.id &&
-              (existing.state !== SpatialMetricState.Complete ||
-                metric.state === SpatialMetricState.Complete)
-            ) {
-              return {
-                ...existing,
-                ...metric,
-              };
-            }
-            return existing;
-          });
-          return newVal;
-        });
-      }
-    },
   });
 
   useSketchMetricSubscriptionSubscription({
@@ -195,162 +193,265 @@ export function useReportState(
       sketchId: selectedSketchId!,
     },
     skip: !selectedSketchId,
-    onData: ({ data }) => {
-      const metric = data.data?.sketchMetrics?.metric
-        ? parseMetric(data.data.sketchMetrics.metric)
-        : null;
-      if (metric) {
-        setMetrics((prev) => {
-          const newVal = prev.map((existing) => {
-            if (
-              existing.id === metric.id &&
-              (existing.state !== SpatialMetricState.Complete ||
-                metric.state === SpatialMetricState.Complete)
-            ) {
-              return {
-                ...existing,
-                ...metric,
-              };
-            }
-            return existing;
-          });
-
-          return newVal;
-        });
-      }
-    },
   });
 
   // Update selectedTabId if the current one is no longer valid
   useEffect(() => {
-    if (!report?.tabs) return;
+    if (!data?.report?.tabs) return;
 
-    const currentTabExists = report.tabs.some(
+    const currentTabExists = data.report.tabs.some(
       (tab) => tab.id === selectedTabId
     );
-    if (!currentTabExists && report.tabs[0]?.id) {
-      setSelectedTabId(report.tabs[0].id);
+    if (!currentTabExists && data.report.tabs[0]?.id) {
+      setSelectedTabId(data.report.tabs[0].id);
     }
-  }, [report?.tabs, selectedTabId]);
+  }, [data?.report?.tabs, selectedTabId]);
 
-  const [metricDependencies, setMetricDependencies] = useState<
-    (SpatialMetricDependency & { hash: string; hooks: number[] })[]
-  >([]);
-
-  // Adds a metric dependency to metricDependencies, tracking the card it
-  // belongs to. Multiple cards can share the same dependency, it should only be
-  // added once, tracking all the cards that share the same dependency.
-  const addMetricDependency = useCallback(
-    (hookId: number, dependency: SpatialMetricDependency) => {
-      const hash = hashMetricDependency(dependency);
-      setMetricDependencies((currentDependencies) => {
-        const existingDependency = currentDependencies.find(
-          (d) => d.hash === hash
-        );
-        if (existingDependency) {
-          return currentDependencies.map((d) =>
-            d.hash === hash ? { ...d, hooks: [...d.hooks, hookId] } : d
-          );
-        } else {
-          return [
-            ...currentDependencies,
-            { ...dependency, hash, hooks: [hookId] },
-          ];
-        }
+  const recalculate = useCallback(
+    (metricIds: number[], preprocessSources?: boolean) => {
+      return recalculateMutation({
+        variables: {
+          metricIds,
+          preprocessSources: preprocessSources || false,
+        },
+        refetchQueries: [ReportContextDocument],
+        awaitRefetchQueries: true,
+        onCompleted: () => {
+          // When there are a lot of metrics to recalculate, some appear in the
+          // client as "stuck" in the queued state. This is a hack to force a
+          // refetch. I'm not really sure why this occurs, but this seems to
+          // fix the issue.
+          setTimeout(() => {
+            refetch();
+          }, 1500);
+        },
       });
     },
-    []
+    [recalculateMutation, refetch]
   );
 
-  // Removes a metric dependency from metricDependencies, assuming no cards
-  // reference it anymore.
-  const removeMetricDependency = useCallback(
-    (hookId: number, dependency: SpatialMetricDependency) => {
-      const hash = hashMetricDependency(dependency);
-      setMetricDependencies((currentDependencies) => {
-        const existingDependency = currentDependencies.find(
-          (d) => d.hash === hash
+  const metricsInProgress = useMemo(() => {
+    return (
+      (data?.report?.dependencies?.metrics || []).find(
+        (m) =>
+          m.state === SpatialMetricState.Queued ||
+          m.state === SpatialMetricState.Processing
+      ) !== undefined
+    );
+  }, [data?.report?.dependencies?.metrics]);
+
+  useEffect(() => {
+    if (metricsInProgress) {
+      const interval = setInterval(() => {
+        refetch();
+      }, 10000);
+      return () => clearInterval(interval);
+    }
+  }, [metricsInProgress, refetch]);
+
+  const dependencies = useMemo(() => {
+    let dependencies: {
+      [cardId: number]: {
+        metrics: CompatibleSpatialMetricDetailsFragment[];
+        overlaySources: OverlaySourceDetailsFragment[];
+        loading: boolean;
+        errors: string[];
+      };
+    } = {};
+    if (
+      data?.report?.dependencies?.cardDependencyLists &&
+      data?.report?.dependencies?.metrics &&
+      data?.report?.dependencies?.overlaySources
+    ) {
+      for (const cardDependencyList of data.report.dependencies
+        .cardDependencyLists) {
+        const overlays = data.report.dependencies.overlaySources.filter(
+          (overlay) =>
+            cardDependencyList.overlaySources.includes(
+              overlay.tableOfContentsItemId
+            )
         );
-        if (existingDependency) {
-          const updatedHooks = existingDependency.hooks.filter(
-            (id) => id !== hookId
-          );
-          if (updatedHooks.length === 0) {
-            return currentDependencies.filter((d) => d.hash !== hash);
-          } else {
-            return currentDependencies.map((d) =>
-              d.hash === hash ? { ...d, hooks: updatedHooks } : d
+        const metrics = data.report.dependencies.metrics.filter((metric) =>
+          cardDependencyList.metrics.includes(metric.id)
+        );
+        let loading = false;
+        let errors: string[] = [];
+        for (const overlay of overlays) {
+          if (!overlay.output) {
+            loading = true;
+          }
+          if (overlay.sourceProcessingJob?.state === SpatialMetricState.Error) {
+            errors.push(
+              overlay.sourceProcessingJob?.errorMessage || "Unknown error"
             );
           }
         }
-        return currentDependencies;
-      });
+        for (const metric of metrics) {
+          if (metric.state === SpatialMetricState.Error) {
+            errors.push(metric.errorMessage || "Unknown error");
+          }
+          if (
+            metric.state !== SpatialMetricState.Complete &&
+            metric.state !== SpatialMetricState.Error
+          ) {
+            loading = true;
+          }
+        }
+        dependencies[cardDependencyList.cardId] = {
+          metrics,
+          overlaySources: overlays,
+          loading,
+          errors,
+        };
+      }
+    }
+    return dependencies;
+  }, [
+    data?.report?.dependencies?.cardDependencyLists,
+    data?.report?.dependencies?.metrics,
+    data?.report?.dependencies?.overlaySources,
+  ]);
+
+  const getDependencies = useCallback(
+    (cardId: number) => {
+      if (cardId in dependencies) {
+        return dependencies[cardId];
+      } else {
+        return {
+          metrics: [],
+          overlaySources: [],
+          loading: false,
+          errors: [],
+        };
+      }
     },
-    []
+    [dependencies]
   );
 
-  const [currentMetricDependencies, setCurrentMetricDependencies] = useState<
-    SpatialMetricDependency[]
-  >([]);
+  const setCardMapStyle = useCallback(
+    (cardId: number, styleId: string, style: ReportMapStyle | null) => {
+      const manager = mapContext.manager;
+      if (!manager) {
+        return;
+      }
 
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      const deps = metricDependencies.map((d) => {
-        const dep = {
-          ...d,
-        } as any;
-        delete dep.hash;
-        delete dep.hooks;
-        return dep as SpatialMetricDependency;
-      });
-      setCurrentMetricDependencies(deps);
-    }, 5);
+      // Namespace by report, sketch, and card so multiple open reports can't
+      // clobber each other's dynamic layers or sources.
+      const reportIdPart = data?.report?.id ?? "report";
+      const sketchIdPart = selectedSketchId ?? "sketch";
+      // eslint-disable-next-line i18next/no-literal-string
+      const basePrefix = `report-style-${reportIdPart}-${sketchIdPart}-${cardId}-${styleId}`;
 
-    return () => clearTimeout(handler);
-  }, [metricDependencies]);
+      const perCard = cardMapStylesRef.current[cardId];
+      const existing = perCard?.[styleId];
+      if (existing) {
+        for (const sourceId of existing.sources) {
+          manager.removeSource(sourceId);
+        }
+        for (const layerId of existing.layers) {
+          manager.removeLayer(layerId);
+        }
+        if (perCard) {
+          delete perCard[styleId];
+          if (Object.keys(perCard).length === 0) {
+            delete cardMapStylesRef.current[cardId];
+          }
+        }
+      }
 
-  const [getOrCreateSpatialMetrics, mutationState] =
-    useGetOrCreateSpatialMetricsMutation();
+      if (!style) {
+        return;
+      }
 
-  useEffect(() => {
-    if (currentMetricDependencies.length > 0) {
-      getOrCreateSpatialMetrics({
-        variables: {
-          dependencies: currentMetricDependencies,
-        },
-      }).then((results) => {
-        setMetrics((prev) => {
-          return updateMetricsList(
-            prev,
-            results.data?.getOrCreateSpatialMetrics?.metrics || []
-          );
-        });
-      });
+      const sourceIds: string[] = [];
+      const layerIds: string[] = [];
+
+      for (const [sourceId, source] of Object.entries(style.sources || {})) {
+        const namespacedId = `${basePrefix}-source-${sourceId}`;
+        manager.addSource(namespacedId, source as AnySourceData);
+        sourceIds.push(namespacedId);
+      }
+
+      for (const layer of style.layers || []) {
+        const originalId = layer.id;
+        const namespacedLayerId = `${basePrefix}-layer-${originalId}`;
+        const anyLayer = layer as any;
+        const originalSource: any = anyLayer.source;
+        const namespacedSource =
+          typeof originalSource === "string"
+            ? `${basePrefix}-source-${originalSource}`
+            : originalSource;
+
+        const clonedLayer: AnyLayer = {
+          ...anyLayer,
+          id: namespacedLayerId,
+          ...(namespacedSource !== undefined
+            ? { source: namespacedSource }
+            : {}),
+        };
+
+        manager.addLayer(clonedLayer);
+        layerIds.push(namespacedLayerId);
+      }
+
+      if (!cardMapStylesRef.current[cardId]) {
+        cardMapStylesRef.current[cardId] = {};
+      }
+      cardMapStylesRef.current[cardId][styleId] = {
+        sources: sourceIds,
+        layers: layerIds,
+      };
+    },
+    [data?.report?.id, mapContext.manager, selectedSketchId]
+  );
+
+  if (!data?.sketch) {
+    return undefined;
+  } else {
+    if (!data.report) {
+      throw new Error("Report not found");
+    } else if (!data.sketch.sketchClass) {
+      throw new Error("Sketch class not found");
+    } else if (!data.report.dependencies) {
+      throw new Error("Report dependencies not found");
     }
-  }, [currentMetricDependencies, setMetrics, getOrCreateSpatialMetrics]);
-
-  return {
-    selectedTabId,
-    setSelectedTabId,
-    selectedTab,
-    selectedForEditing,
-    setSelectedForEditing,
-    addMetricDependency,
-    removeMetricDependency,
-    metricDependencies: currentMetricDependencies,
-    selectedSketchId,
-    sketch: sketchReportingDetails.data
-      ?.sketch as ReportContextSketchDetailsFragment,
-    sketchClass: sketchReportingDetails.data
-      ?.sketchClass as ReportContextSketchClassDetailsFragment,
-    childSketches: sketchReportingDetails.data?.sketch?.children || [],
-    siblingSketches: sketchReportingDetails.data?.sketch?.siblings || [],
-    relatedFragments:
-      (sketchReportingDetails.data?.sketch
-        ?.relatedFragments as MetricSubjectFragment[]) || [],
-    loading: sketchReportingDetails.loading,
-    metrics,
-  };
+    return {
+      selectedTabId,
+      setSelectedTabId,
+      selectedTab: selectedTab as ReportConfiguration["tabs"][0],
+      selectedForEditing,
+      setSelectedForEditing,
+      selectedSketchId,
+      sketch: data.sketch!,
+      sketchClass: data.sketch.sketchClass!,
+      childSketches: (data.sketch.children || []) as Pick<
+        Sketch,
+        "id" | "name" | "sketchClassId"
+      >[],
+      siblingSketches: (data.sketch.siblings || []) as Pick<
+        Sketch,
+        "id" | "name" | "sketchClassId"
+      >[],
+      relatedFragments: (data.sketch.relatedFragments ||
+        []) as MetricSubjectFragment[],
+      metrics: (data.report.dependencies.metrics ||
+        []) as CompatibleSpatialMetricDetailsFragment[],
+      userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
+      recalculate,
+      recalculateState: {
+        loading: recalculateState.loading,
+        error: recalculateState.error || undefined,
+      },
+      isCollection: Boolean(
+        data.sketch.sketchClass?.geometryType === SketchGeometryType.Collection
+      ),
+      overlaySources: data.report.dependencies.overlaySources,
+      geographies: data.report.geographies || [],
+      report: data.report as ReportConfiguration,
+      getDependencies,
+      setCardMapStyle,
+    };
+  }
 }
 
 export function useReportContext(): ReportContextState {
@@ -363,50 +464,41 @@ export function useReportContext(): ReportContextState {
   return context;
 }
 
-function hashMetricDependency(dependency: SpatialMetricDependency): string {
-  const data = JSON.stringify(dependency);
+export function useReportStyleToggle(
+  cardId: number,
+  styleId: string,
+  style: ReportMapStyle | null | undefined
+) {
+  const { setCardMapStyle } = useReportContext();
+  const [visible, setVisible] = useState(false);
 
-  // Simple djb2 hash algorithm - works in both browser and Node.js
-  let hash = 5381;
-  for (let i = 0; i < data.length; i++) {
-    hash = (hash << 5) + hash + data.charCodeAt(i);
-    // Convert to 32-bit integer
-    hash = hash & hash;
-  }
+  const toggle = useCallback(() => {
+    setVisible((prev) => !prev);
+  }, []);
 
-  // Convert to positive hex string
-  return Math.abs(hash).toString(16);
-}
-
-function updateMetricsList(
-  prev: LocalMetrics,
-  newMetrics: CompatibleSpatialMetricDetailsFragment[]
-): LocalMetrics {
-  const newList = newMetrics.map((m) => {
-    const existing = prev.find((p) => p.id === m.id);
-    if (
-      existing &&
-      (existing.state !== SpatialMetricState.Complete ||
-        m.state === SpatialMetricState.Complete)
-    ) {
-      return {
-        ...existing,
-        ...parseMetric(m),
-      };
-    } else {
-      return parseMetric(m);
+  useEffect(() => {
+    if (!style && visible) {
+      setVisible(false);
     }
-  });
-  return newList;
-}
+  }, [style, visible]);
 
-function parseMetric(m: CompatibleSpatialMetricDetailsFragment): LocalMetric {
+  useEffect(() => {
+    if (!style || !visible) {
+      setCardMapStyle(cardId, styleId, null);
+    } else {
+      setCardMapStyle(cardId, styleId, style);
+    }
+  }, [visible, style, cardId, styleId, setCardMapStyle]);
+
+  useEffect(() => {
+    return () => {
+      setCardMapStyle(cardId, styleId, null);
+    };
+  }, [cardId, styleId, setCardMapStyle]);
+
   return {
-    ...m,
-    id: parseInt(m.id),
-    state: m.state,
-    createdAt: new Date(m.createdAt!),
-    updatedAt: m.updatedAt ? new Date(m.updatedAt) : null,
-    errorMessage: m.errorMessage || undefined,
-  } as LocalMetric;
+    visible,
+    toggle,
+    setVisible,
+  };
 }

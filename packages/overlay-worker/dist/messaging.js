@@ -10,10 +10,10 @@ const client_sqs_1 = require("@aws-sdk/client-sqs");
 const sqs = new client_sqs_1.SQSClient({ region: process.env.AWS_REGION });
 // Tracks in-flight SQS send operations so they can be flushed later
 const pendingSendOperations = new Set();
-async function sendMessage(msg) {
-    const queueUrl = process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL;
+function sendMessage(msg) {
+    const queueUrl = msg.queueUrl;
     if (!queueUrl) {
-        throw new Error("OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL is not set");
+        throw new Error("Payload is missing queueUrl");
     }
     const command = new client_sqs_1.SendMessageCommand({
         QueueUrl: queueUrl,
@@ -21,40 +21,53 @@ async function sendMessage(msg) {
     });
     const sendPromise = sqs.send(command);
     pendingSendOperations.add(sendPromise);
-    sendPromise.finally(() => pendingSendOperations.delete(sendPromise));
-    await sendPromise;
+    sendPromise
+        .then((v) => {
+        if (msg.type === "result") {
+            console.log("result message sent", v);
+        }
+    })
+        .finally(() => pendingSendOperations.delete(sendPromise));
+    return sendPromise;
 }
-async function sendResultMessage(jobKey, result) {
+async function sendResultMessage(jobKey, result, queueUrl, duration) {
+    console.log("sending result message", result);
     const msg = {
         type: "result",
         result,
         jobKey,
+        queueUrl,
+        duration,
     };
     await sendMessage(msg);
 }
-async function sendProgressMessage(jobKey, progress, message) {
+async function sendProgressMessage(jobKey, progress, queueUrl, message, eta) {
     const msg = {
         type: "progress",
         progress,
         message,
         jobKey,
+        queueUrl,
+        eta: eta ? eta.toISOString() : undefined,
     };
-    await sendMessage(msg);
+    return sendMessage(msg);
 }
-async function sendErrorMessage(jobKey, error) {
+async function sendErrorMessage(jobKey, error, queueUrl) {
     const msg = {
         type: "error",
         error,
         jobKey,
+        queueUrl,
     };
     await sendMessage(msg);
 }
-async function sendBeginMessage(jobKey, logfileUrl, logsExpiresAt) {
+async function sendBeginMessage(jobKey, logfileUrl, logsExpiresAt, queueUrl) {
     const msg = {
         type: "begin",
         logfileUrl,
         logsExpiresAt,
         jobKey,
+        queueUrl,
     };
     await sendMessage(msg);
 }

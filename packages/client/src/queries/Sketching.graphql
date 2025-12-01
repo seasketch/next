@@ -240,9 +240,6 @@ fragment ReportContextSketchClassDetails on SketchClass {
       ...LogicRuleDetails
     }
   }
-  report {
-    ...ReportDetails
-  }
   project {
     id
     supportedLanguages
@@ -251,6 +248,9 @@ fragment ReportContextSketchClassDetails on SketchClass {
       name
       translatedProps
     }
+  }
+  clippingGeographies {
+    id
   }
 }
 
@@ -263,6 +263,9 @@ query SketchReportingDetails($id: Int!, $sketchClassId: Int!) {
     geoprocessingClientName
     geoprocessingClientUrl
     geoprocessingProjectUrl
+    report {
+      ...ReportDetails
+    }
   }
 }
 
@@ -311,20 +314,31 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   updatedAt
   value
   state
-  stableId
-  groupBy
-  includedProperties
   errorMessage
   progress
   jobKey
+  sourceUrl
+  parameters {
+    groupBy
+    includedColumns
+    valueColumn
+    bufferDistanceKm
+    maxResults
+    maxDistanceKm
+  }
+  sourceProcessingJobDependency
+  eta
+  startedAt
+  durationSeconds
 }
 
-mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {
-  getOrCreateSpatialMetrics(inputs: $dependencies) {
-    metrics {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
+fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
+  id
+  updatedAt
+  state
+  value
+  errorMessage
+  progress
 }
 
 subscription GeographyMetricSubscription($projectId: Int!) {

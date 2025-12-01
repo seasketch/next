@@ -831,6 +831,13 @@ export type CancelBackgroundJobPayload = {
   query?: Maybe<Query>;
 };
 
+export type CardDependencyLists = {
+  __typename?: 'CardDependencyLists';
+  cardId: Scalars['Int'];
+  metrics: Array<Scalars['BigInt']>;
+  overlaySources: Array<Scalars['Int']>;
+};
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -914,14 +921,18 @@ export type CommunityGuidelinePatch = {
 
 export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
+  completedAt?: Maybe<Scalars['Datetime']>;
   createdAt: Scalars['Datetime'];
+  durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
-  groupBy?: Maybe<Scalars['String']>;
+  eta?: Maybe<Scalars['Datetime']>;
   id: Scalars['BigInt'];
-  includedProperties?: Maybe<Array<Scalars['String']>>;
   jobKey?: Maybe<Scalars['String']>;
+  parameters: MetricParameters;
   progress?: Maybe<Scalars['Int']>;
-  stableId?: Maybe<Scalars['String']>;
+  sourceProcessingJobDependency?: Maybe<Scalars['String']>;
+  sourceUrl?: Maybe<Scalars['String']>;
+  startedAt?: Maybe<Scalars['Datetime']>;
   state: SpatialMetricState;
   subject: MetricSubject;
   type: Scalars['String'];
@@ -1657,6 +1668,43 @@ export type CreateGroupPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `createInaturalistTableOfContentsItem` mutation. */
+export type CreateInaturalistTableOfContentsItemInput = {
+  bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  metadata?: Maybe<Scalars['JSON']>;
+  params?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createInaturalistTableOfContentsItem` mutation. */
+export type CreateInaturalistTableOfContentsItemPayload = {
+  __typename?: 'CreateInaturalistTableOfContentsItemPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `createInaturalistTableOfContentsItem` mutation. */
+export type CreateInaturalistTableOfContentsItemPayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 /** All input for the create `InteractivitySetting` mutation. */
 export type CreateInteractivitySettingInput = {
   /**
@@ -2008,6 +2056,8 @@ export type CreateReportCardLayerPayload = {
   reportCardLayer?: Maybe<ReportCardLayer>;
   /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
   reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
+  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
 };
 
 
@@ -2762,6 +2812,13 @@ export type DataSource = Node & {
    * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
    */
   scheme?: Maybe<TileScheme>;
+  /** Reads a single `SourceProcessingJob` that is related to this `DataSource`. */
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
+  /**
+   * Reads and enables pagination through a set of `SourceProcessingJob`.
+   * @deprecated Please use sourceProcessingJob instead
+   */
+  sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
   supportsDynamicLayers: Scalars['Boolean'];
   /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
@@ -2862,6 +2919,24 @@ export type DataSourceQuotaUsedArgs = {
 export type DataSourceRelatedTableOfContentsItemsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceSourceProcessingJobsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SourceProcessingJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SourceProcessingJobsOrderBy>>;
 };
 
 export enum DataSourceImportTypes {
@@ -3141,6 +3216,8 @@ export enum DataSourceTypes {
   Geojson = 'GEOJSON',
   /** MapBox GL Style "image" source */
   Image = 'IMAGE',
+  /** Data source is iNaturalist data, available via their map services api. Refer to query_parameters for request parameters. */
+  Inaturalist = 'INATURALIST',
   /** MapBox GL Style "raster" source */
   Raster = 'RASTER',
   /** MapBox GL Style "raster" source */
@@ -3250,6 +3327,8 @@ export type DataUploadOutput = Node & {
   /** Reads a single `DataSource` that is related to this `DataUploadOutput`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId?: Maybe<Scalars['Int']>;
+  epsg?: Maybe<Scalars['Int']>;
+  fgbHeaderSize?: Maybe<Scalars['Int']>;
   filename: Scalars['String'];
   id: Scalars['Int'];
   isCustomUpload?: Maybe<Scalars['Boolean']>;
@@ -3260,6 +3339,7 @@ export type DataUploadOutput = Node & {
   projectId?: Maybe<Scalars['Int']>;
   remote: Scalars['String'];
   size: Scalars['BigInt'];
+  sourceProcessingJobKey?: Maybe<Scalars['String']>;
   type: DataUploadOutputType;
   url: Scalars['String'];
 };
@@ -3271,6 +3351,8 @@ export enum DataUploadOutputType {
   NetCdf = 'NET_CDF',
   Pmtiles = 'PMTILES',
   Png = 'PNG',
+  ReportingCog = 'REPORTING_COG',
+  ReportingFlatgeobufV1 = 'REPORTING_FLATGEOBUF_V1',
   Xmlmetadata = 'XMLMETADATA',
   ZippedShapefile = 'ZIPPED_SHAPEFILE'
 }
@@ -5239,6 +5321,11 @@ export type FailDataUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
 };
 
+export type FeatureFlags = {
+  __typename?: 'FeatureFlags';
+  iNaturalistLayers?: Maybe<Scalars['Boolean']>;
+};
+
 export enum FieldRuleOperator {
   Contains = 'CONTAINS',
   Equal = 'EQUAL',
@@ -6698,7 +6785,13 @@ export type GetPublishedCardIdFromDraftInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  draftReportCardId?: Maybe<Scalars['Int']>;
+  pOverlaySourceUrl?: Maybe<Scalars['String']>;
+  pParameters?: Maybe<Scalars['JSON']>;
+  pProjectId?: Maybe<Scalars['Int']>;
+  pSourceProcessingJobDependency?: Maybe<Scalars['String']>;
+  pSubjectFragmentId?: Maybe<Scalars['String']>;
+  pSubjectGeographyId?: Maybe<Scalars['Int']>;
+  pType?: Maybe<SpatialMetricType>;
 };
 
 /** The output of our `getPublishedCardIdFromDraft` mutation. */
@@ -6709,9 +6802,14 @@ export type GetPublishedCardIdFromDraftPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  integer?: Maybe<Scalars['Int']>;
+  json?: Maybe<Scalars['JSON']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type GetOrCreateSpatialMetricsResults = {
+  __typename?: 'GetOrCreateSpatialMetricsResults';
+  metrics: Array<CompatibleSpatialMetric>;
 };
 
 export type GoogleMapsTileApiSession = Node & {
@@ -7079,6 +7177,29 @@ export enum InviteStatus {
   Unsubscribed = 'UNSUBSCRIBED'
 }
 
+/** All input for the `isReportingType` mutation. */
+export type IsReportingTypeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  type?: Maybe<DataUploadOutputType>;
+};
+
+/** The output of our `isReportingType` mutation. */
+export type IsReportingTypePayload = {
+  __typename?: 'IsReportingTypePayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 
 /** All input for the `joinProject` mutation. */
 export type JoinProjectInput = {
@@ -7434,6 +7555,16 @@ export type MergeTranslatedPropsPayload = {
   query?: Maybe<Query>;
 };
 
+export type MetricParameters = {
+  __typename?: 'MetricParameters';
+  bufferDistanceKm?: Maybe<Scalars['Float']>;
+  groupBy?: Maybe<Scalars['String']>;
+  includedColumns?: Maybe<Array<Scalars['String']>>;
+  maxDistanceKm?: Maybe<Scalars['Float']>;
+  maxResults?: Maybe<Scalars['Int']>;
+  valueColumn?: Maybe<Scalars['String']>;
+};
+
 export type MetricSubject = FragmentSubject | GeographySubject;
 
 /** All input for the `modifySurveyAnswers` mutation. */
@@ -7572,6 +7703,7 @@ export type Mutation = {
   createGeographyClippingLayer?: Maybe<CreateGeographyClippingLayerPayload>;
   /** Creates a single `Group`. */
   createGroup?: Maybe<CreateGroupPayload>;
+  createInaturalistTableOfContentsItem?: Maybe<CreateInaturalistTableOfContentsItemPayload>;
   /** Creates a single `InteractivitySetting`. */
   createInteractivitySetting?: Maybe<CreateInteractivitySettingPayload>;
   createMapBookmark?: Maybe<CreateMapBookmarkPayload>;
@@ -7792,8 +7924,7 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
-  /** Create or update spatial metrics. */
-  getOrCreateSpatialMetrics: GetOrCreateSpatialMetricsResults;
+  getOrCreateSpatialMetric?: Maybe<GetOrCreateSpatialMetricPayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
@@ -7804,6 +7935,7 @@ export type Mutation = {
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
+  isReportingType?: Maybe<IsReportingTypePayload>;
   /**
    * Adds current user to the list of participants for a project, sharing their
    * profile with administrators in user listings. Their profile will also be shared
@@ -7849,6 +7981,7 @@ export type Mutation = {
    * control lists to create a new table of contents that will be displayed to project users.
    */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
+  recalculateSpatialMetrics?: Maybe<RecalculateSpatialMetricsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
   removeGroupFromAcl?: Maybe<RemoveGroupFromAclPayload>;
   /** Remove the given user from a group. Must be an administrator of the project. */
@@ -7972,6 +8105,7 @@ export type Mutation = {
   updateDataSourceByNodeId?: Maybe<UpdateDataSourcePayload>;
   /** Updates a single `EmailNotificationPreference` using a unique key and a patch. */
   updateEmailNotificationPreferenceByUserId?: Maybe<UpdateEmailNotificationPreferencePayload>;
+  updateFeatureFlags?: Maybe<UpdateFeatureFlagsPayload>;
   /** Updates a single `Form` using a unique key and a patch. */
   updateForm?: Maybe<UpdateFormPayload>;
   /** Updates a single `Form` using its globally unique id and a patch. */
@@ -8370,6 +8504,12 @@ export type MutationCreateGeographyClippingLayerArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateGroupArgs = {
   input: CreateGroupInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateInaturalistTableOfContentsItemArgs = {
+  input: CreateInaturalistTableOfContentsItemInput;
 };
 
 
@@ -9013,8 +9153,8 @@ export type MutationGetChildFoldersRecursiveArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetOrCreateSpatialMetricsArgs = {
-  inputs: Array<SpatialMetricDependency>;
+export type MutationGetOrCreateSpatialMetricArgs = {
+  input: GetOrCreateSpatialMetricInput;
 };
 
 
@@ -9051,6 +9191,12 @@ export type MutationGrantAdminAccessArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationImportArcgisServicesArgs = {
   input: ImportArcgisServicesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationIsReportingTypeArgs = {
+  input: IsReportingTypeInput;
 };
 
 
@@ -9135,6 +9281,12 @@ export type MutationPublishReportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationPublishTableOfContentsArgs = {
   input: PublishTableOfContentsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRecalculateSpatialMetricsArgs = {
+  input: RecalculateSpatialMetricsInput;
 };
 
 
@@ -9460,6 +9612,12 @@ export type MutationUpdateDataSourceByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateEmailNotificationPreferenceByUserIdArgs = {
   input: UpdateEmailNotificationPreferenceByUserIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateFeatureFlagsArgs = {
+  input: UpdateFeatureFlagsInput;
 };
 
 
@@ -10400,8 +10558,8 @@ export type Project = Node & {
   admins?: Maybe<Array<User>>;
   /** Reads and enables pagination through a set of `ApiKey`. */
   apiKeysConnection: ApiKeysConnection;
-  /** Reads and enables pagination through a set of `ReportingLayer`. */
-  availableReportLayers?: Maybe<Array<ReportingLayer>>;
+  /** Reads and enables pagination through a set of `TableOfContentsItem`. */
+  availableReportLayers?: Maybe<Array<TableOfContentsItem>>;
   /** Reads and enables pagination through a set of `Basemap`. */
   basemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -10448,6 +10606,7 @@ export type Project = Node & {
   enableDownloadByDefault: Scalars['Boolean'];
   enableReportBuilder?: Maybe<Scalars['Boolean']>;
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
+  featureFlags?: Maybe<FeatureFlags>;
   /** Reads and enables pagination through a set of `Forum`. */
   forums: Array<Forum>;
   /** Reads and enables pagination through a set of `Geography`. */
@@ -10571,6 +10730,10 @@ export type Project = Node & {
   sketchGeometryToken?: Maybe<Scalars['String']>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
+  /** Reads and enables pagination through a set of `SourceProcessingJob`. */
+  sourceProcessingJobs?: Maybe<Array<SourceProcessingJob>>;
+  /** Reads and enables pagination through a set of `SourceProcessingJob`. */
+  sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
   supportedLanguages: Array<Maybe<Scalars['String']>>;
@@ -10934,6 +11097,31 @@ export type ProjectSketchClassesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSourceProcessingJobsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectSourceProcessingJobsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SourceProcessingJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SourceProcessingJobsOrderBy>>;
 };
 
 
@@ -11698,6 +11886,7 @@ export type Query = Node & {
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
+  extensionToSourceType?: Maybe<Scalars['String']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
@@ -11825,9 +12014,6 @@ export type Query = Node & {
   report?: Maybe<Report>;
   /** Reads a single `Report` using its globally unique `ID`. */
   reportByNodeId?: Maybe<Report>;
-  reportCardLayer?: Maybe<ReportCardLayer>;
-  /** Reads a single `ReportCardLayer` using its globally unique `ID`. */
-  reportCardLayerByNodeId?: Maybe<ReportCardLayer>;
   /** Reads and enables pagination through a set of `ReportCardLayer`. */
   reportCardLayersConnection?: Maybe<ReportCardLayersConnection>;
   /** Reads and enables pagination through a set of `Report`. */
@@ -11850,6 +12036,12 @@ export type Query = Node & {
   sketchFolderByNodeId?: Maybe<SketchFolder>;
   /** Reads and enables pagination through a set of `SketchFolder`. */
   sketchFoldersConnection?: Maybe<SketchFoldersConnection>;
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
+  sourceProcessingJobByDataSourceId?: Maybe<SourceProcessingJob>;
+  /** Reads a single `SourceProcessingJob` using its globally unique `ID`. */
+  sourceProcessingJobByNodeId?: Maybe<SourceProcessingJob>;
+  /** Reads and enables pagination through a set of `SourceProcessingJob`. */
+  sourceProcessingJobsConnection?: Maybe<SourceProcessingJobsConnection>;
   sprite?: Maybe<Sprite>;
   /** Reads a single `Sprite` using its globally unique `ID`. */
   spriteByNodeId?: Maybe<Sprite>;
@@ -12164,6 +12356,12 @@ export type QueryEmailNotificationPreferencesConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtensionToSourceTypeArgs = {
+  url?: Maybe<Scalars['String']>;
 };
 
 
@@ -12710,19 +12908,6 @@ export type QueryReportByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
-export type QueryReportCardLayerArgs = {
-  reportCardId: Scalars['Int'];
-  tocStableId: Scalars['String'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryReportCardLayerByNodeIdArgs = {
-  nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
 export type QueryReportCardLayersConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
   before?: Maybe<Scalars['Cursor']>;
@@ -12823,6 +13008,36 @@ export type QuerySketchFoldersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobArgs = {
+  jobKey: Scalars['String'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobByDataSourceIdArgs = {
+  dataSourceId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySourceProcessingJobsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<SourceProcessingJobCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<SourceProcessingJobsOrderBy>>;
 };
 
 
@@ -13101,6 +13316,30 @@ export enum RasterDemEncoding {
   Terrarium = 'TERRARIUM'
 }
 
+/** All input for the `recalculateSpatialMetrics` mutation. */
+export type RecalculateSpatialMetricsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  metricIds?: Maybe<Array<Maybe<Scalars['BigInt']>>>;
+  preprocessSources?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `recalculateSpatialMetrics` mutation. */
+export type RecalculateSpatialMetricsPayload = {
+  __typename?: 'RecalculateSpatialMetricsPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -13267,6 +13506,9 @@ export type ReorderReportTabsPayload = {
 export type Report = Node & {
   __typename?: 'Report';
   createdAt: Scalars['Datetime'];
+  dependencies: ReportOverlayDependencies;
+  /** Reads and enables pagination through a set of `Geography`. */
+  geographies?: Maybe<Array<Geography>>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -13280,6 +13522,17 @@ export type Report = Node & {
 };
 
 
+export type ReportDependenciesArgs = {
+  sketchId?: Maybe<Scalars['Int']>;
+};
+
+
+export type ReportGeographiesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
 export type ReportTabsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -13289,7 +13542,10 @@ export type ReportCard = Node & {
   __typename?: 'ReportCard';
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
+  collapsibleFooterBody: Scalars['JSON'];
+  collapsibleFooterEnabled: Scalars['Boolean'];
   componentSettings: Scalars['JSON'];
+  displayMapLayerVisibilityControls: Scalars['Boolean'];
   icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   isDraft: Scalars['Boolean'];
@@ -13297,7 +13553,7 @@ export type ReportCard = Node & {
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
   /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayersConnection: ReportCardLayersConnection;
+  reportCardLayers: Array<ReportCardLayer>;
   /** Reads and enables pagination through a set of `ReportingLayer`. */
   reportingLayers?: Maybe<Array<ReportingLayer>>;
   reportTabId: Scalars['Int'];
@@ -13307,12 +13563,9 @@ export type ReportCard = Node & {
 };
 
 
-export type ReportCardReportCardLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
+export type ReportCardReportCardLayersArgs = {
   condition?: Maybe<ReportCardLayerCondition>;
   first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
@@ -13323,13 +13576,14 @@ export type ReportCardReportingLayersArgs = {
   offset?: Maybe<Scalars['Int']>;
 };
 
-export type ReportCardLayer = Node & {
+export type ReportCardLayer = {
   __typename?: 'ReportCardLayer';
-  groupBy?: Maybe<Scalars['String']>;
-  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
-  nodeId: Scalars['ID'];
+  layerParameters: Scalars['JSON'];
+  processedOutput?: Maybe<DataUploadOutput>;
   reportCardId: Scalars['Int'];
-  tocStableId: Scalars['String'];
+  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemId: Scalars['Int'];
 };
 
 /**
@@ -13339,22 +13593,15 @@ export type ReportCardLayer = Node & {
 export type ReportCardLayerCondition = {
   /** Checks for equality with the object’s `reportCardId` field. */
   reportCardId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `tocStableId` field. */
-  tocStableId?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `tableOfContentsItemId` field. */
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
 };
 
 /** An input for mutations affecting `ReportCardLayer` */
 export type ReportCardLayerInput = {
-  groupBy?: Maybe<Scalars['String']>;
+  layerParameters?: Maybe<Scalars['JSON']>;
   reportCardId: Scalars['Int'];
-  tocStableId: Scalars['String'];
-};
-
-/** Represents an update to a `ReportCardLayer`. Fields that are set will be updated. */
-export type ReportCardLayerPatch = {
-  groupBy?: Maybe<Scalars['String']>;
-  reportCardId?: Maybe<Scalars['Int']>;
-  tocStableId?: Maybe<Scalars['String']>;
+  tableOfContentsItemId: Scalars['Int'];
 };
 
 /** A connection to a list of `ReportCardLayer` values. */
@@ -13382,12 +13629,10 @@ export type ReportCardLayersEdge = {
 /** Methods to use when ordering `ReportCardLayer`. */
 export enum ReportCardLayersOrderBy {
   Natural = 'NATURAL',
-  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
-  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
   ReportCardIdAsc = 'REPORT_CARD_ID_ASC',
   ReportCardIdDesc = 'REPORT_CARD_ID_DESC',
-  TocStableIdAsc = 'TOC_STABLE_ID_ASC',
-  TocStableIdDesc = 'TOC_STABLE_ID_DESC'
+  TableOfContentsItemIdAsc = 'TABLE_OF_CONTENTS_ITEM_ID_ASC',
+  TableOfContentsItemIdDesc = 'TABLE_OF_CONTENTS_ITEM_ID_DESC'
 }
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
@@ -13407,9 +13652,38 @@ export type ReportInput = {
 
 /** An input for mutations affecting `ReportLayerInputRecord` */
 export type ReportLayerInputRecordInput = {
-  groupBy?: Maybe<Scalars['String']>;
+  layerParameters?: Maybe<Scalars['JSON']>;
   reportCardId?: Maybe<Scalars['Int']>;
-  tocStableId?: Maybe<Scalars['String']>;
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+};
+
+export type ReportOverlayDependencies = {
+  __typename?: 'ReportOverlayDependencies';
+  cardDependencyLists: Array<CardDependencyLists>;
+  metrics: Array<CompatibleSpatialMetric>;
+  overlaySources: Array<ReportOverlaySource>;
+  ready: Scalars['Boolean'];
+};
+
+export type ReportOverlaySource = {
+  __typename?: 'ReportOverlaySource';
+  geostats: Scalars['JSON'];
+  mapboxGlStyles: Scalars['JSON'];
+  output?: Maybe<DataUploadOutput>;
+  outputId: Scalars['Int'];
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
+  sourceProcessingJobId?: Maybe<Scalars['String']>;
+  sourceUrl?: Maybe<Scalars['String']>;
+  tableOfContentsItem: TableOfContentsItem;
+  tableOfContentsItemId: Scalars['Int'];
+};
+
+export type ReportOverlaySourcesSubscriptionPayload = {
+  __typename?: 'ReportOverlaySourcesSubscriptionPayload';
+  dataSourceId: Scalars['Int'];
+  jobKey: Scalars['String'];
+  projectId: Scalars['Int'];
+  source: ReportOverlaySource;
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -13446,13 +13720,11 @@ export type ReportingLayer = {
   groupBy?: Maybe<Scalars['String']>;
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   meta?: Maybe<Scalars['JSON']>;
-  remote?: Maybe<Scalars['String']>;
-  size?: Maybe<Scalars['BigInt']>;
-  stableId?: Maybe<Scalars['String']>;
+  processingJobId?: Maybe<Scalars['String']>;
+  sourceProcessingJob?: Maybe<SourceProcessingJob>;
   tableOfContentsItemId?: Maybe<Scalars['Int']>;
   title?: Maybe<Scalars['String']>;
-  type?: Maybe<DataUploadOutputType>;
-  url?: Maybe<Scalars['String']>;
+  type?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `Report` values. */
@@ -14142,6 +14414,8 @@ export type SketchClass = Node & {
    * [Expressions](https://docs.mapbox.com/help/glossary/expression/).
    */
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
+  /** Reads and enables pagination through a set of `Sketch`. */
+  mySketches?: Maybe<Array<Sketch>>;
   /** Label chosen by project admins that is shown to users. */
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -14162,6 +14436,13 @@ export type SketchClass = Node & {
   translatedProps: Scalars['JSON'];
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
+};
+
+
+/** Sketch Classes act as a schema for sketches drawn by users. */
+export type SketchClassMySketchesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -14387,21 +14668,103 @@ export enum SortByDirection {
   Desc = 'DESC'
 }
 
-export type SpatialMetricDependency = {
-  geographyIds?: Maybe<Array<Scalars['Int']>>;
-  groupBy?: Maybe<Scalars['String']>;
-  includedProperties?: Maybe<Array<Scalars['String']>>;
-  includeSiblings?: Maybe<Scalars['Boolean']>;
-  sketchId?: Maybe<Scalars['Int']>;
-  stableId?: Maybe<Scalars['String']>;
-  type: Scalars['String'];
+export type SourceProcessingJob = Node & {
+  __typename?: 'SourceProcessingJob';
+  completedAt?: Maybe<Scalars['Datetime']>;
+  createdAt: Scalars['Datetime'];
+  /** Reads a single `DataSource` that is related to this `SourceProcessingJob`. */
+  dataSource?: Maybe<DataSource>;
+  dataSourceId: Scalars['Int'];
+  duration?: Maybe<Interval>;
+  durationSeconds?: Maybe<Scalars['Float']>;
+  errorMessage?: Maybe<Scalars['String']>;
+  eta?: Maybe<Scalars['Datetime']>;
+  jobKey: Scalars['String'];
+  layerTitle?: Maybe<Scalars['String']>;
+  logsExpiresAt?: Maybe<Scalars['Datetime']>;
+  logsUrl?: Maybe<Scalars['String']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  progressMessage?: Maybe<Scalars['String']>;
+  progressPercentage: Scalars['Int'];
+  /** Reads a single `Project` that is related to this `SourceProcessingJob`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  startedAt?: Maybe<Scalars['Datetime']>;
+  state: SpatialMetricState;
+  updatedAt: Scalars['Datetime'];
 };
+
+/**
+ * A condition to be used against `SourceProcessingJob` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type SourceProcessingJobCondition = {
+  /** Checks for equality with the object’s `dataSourceId` field. */
+  dataSourceId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `jobKey` field. */
+  jobKey?: Maybe<Scalars['String']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `updatedAt` field. */
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
+
+/** A connection to a list of `SourceProcessingJob` values. */
+export type SourceProcessingJobsConnection = {
+  __typename?: 'SourceProcessingJobsConnection';
+  /** A list of edges which contains the `SourceProcessingJob` and cursor to aid in pagination. */
+  edges: Array<SourceProcessingJobsEdge>;
+  /** A list of `SourceProcessingJob` objects. */
+  nodes: Array<SourceProcessingJob>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `SourceProcessingJob` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `SourceProcessingJob` edge in the connection. */
+export type SourceProcessingJobsEdge = {
+  __typename?: 'SourceProcessingJobsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `SourceProcessingJob` at the end of the edge. */
+  node: SourceProcessingJob;
+};
+
+/** Methods to use when ordering `SourceProcessingJob`. */
+export enum SourceProcessingJobsOrderBy {
+  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
+  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
+  JobKeyAsc = 'JOB_KEY_ASC',
+  JobKeyDesc = 'JOB_KEY_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC',
+  UpdatedAtAsc = 'UPDATED_AT_ASC',
+  UpdatedAtDesc = 'UPDATED_AT_DESC'
+}
 
 export enum SpatialMetricState {
   Complete = 'COMPLETE',
+  DependencyNotReady = 'DEPENDENCY_NOT_READY',
   Error = 'ERROR',
   Processing = 'PROCESSING',
   Queued = 'QUEUED'
+}
+
+export enum SpatialMetricType {
+  ColumnValues = 'COLUMN_VALUES',
+  ContextualizedMean = 'CONTEXTUALIZED_MEAN',
+  Count = 'COUNT',
+  DistanceToShore = 'DISTANCE_TO_SHORE',
+  OverlayArea = 'OVERLAY_AREA',
+  Presence = 'PRESENCE',
+  PresenceTable = 'PRESENCE_TABLE',
+  RasterStats = 'RASTER_STATS',
+  TotalArea = 'TOTAL_AREA'
 }
 
 /**
@@ -14525,6 +14888,7 @@ export type Subscription = {
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
+  reportOverlaySources?: Maybe<ReportOverlaySourcesSubscriptionPayload>;
   sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
@@ -14547,6 +14911,12 @@ export type SubscriptionForumActivityArgs = {
 
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionGeographyMetricsArgs = {
+  projectId: Scalars['Int'];
+};
+
+
+/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
+export type SubscriptionReportOverlaySourcesArgs = {
   projectId: Scalars['Int'];
 };
 
@@ -15126,6 +15496,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  /** Reads and enables pagination through a set of `ReportCardLayer`. */
+  reportCardLayers: Array<ReportCardLayer>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
   /** Position in the layer list */
@@ -15208,6 +15580,24 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
 export type TableOfContentsItemQuotaUsedArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemReportCardLayersArgs = {
+  condition?: Maybe<ReportCardLayerCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -16162,6 +16552,40 @@ export type UpdateEmailNotificationPreferencePayloadEmailNotificationPreferenceE
   orderBy?: Maybe<Array<EmailNotificationPreferencesOrderBy>>;
 };
 
+/** All input for the `updateFeatureFlags` mutation. */
+export type UpdateFeatureFlagsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  flags?: Maybe<Scalars['JSON']>;
+  slug?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateFeatureFlags` mutation. */
+export type UpdateFeatureFlagsPayload = {
+  __typename?: 'UpdateFeatureFlagsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataSourcesBucket` that is related to this `Project`. */
+  dataSourcesBucket?: Maybe<DataSourcesBucket>;
+  project?: Maybe<Project>;
+  /** An edge for our `Project`. May be used by Relay 1. */
+  projectEdge?: Maybe<ProjectsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateFeatureFlags` mutation. */
+export type UpdateFeatureFlagsPayloadProjectEdgeArgs = {
+  orderBy?: Maybe<Array<ProjectsOrderBy>>;
+};
+
 /** All input for the `updateFormByNodeId` mutation. */
 export type UpdateFormByNodeIdInput = {
   /**
@@ -17011,7 +17435,10 @@ export type UpdateReportCardInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
+  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   componentSettings?: Maybe<Scalars['JSON']>;
+  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
 };
@@ -20385,6 +20812,26 @@ export type DraftTableOfContentsItemsForPickerQuery = (
   )> }
 );
 
+export type CreateINaturalistTableOfContentsItemMutationVariables = Exact<{
+  slug: Scalars['String'];
+  params: Scalars['JSON'];
+  bounds: Array<Maybe<Scalars['BigFloat']>> | Maybe<Scalars['BigFloat']>;
+  title: Scalars['String'];
+  metadata?: Maybe<Scalars['JSON']>;
+}>;
+
+
+export type CreateINaturalistTableOfContentsItemMutation = (
+  { __typename?: 'Mutation' }
+  & { createInaturalistTableOfContentsItem?: Maybe<(
+    { __typename?: 'CreateInaturalistTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & FullAdminOverlayFragment
+    )> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -21606,7 +22053,10 @@ export type ProjectMetadataFragment = (
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
-  )>>> }
+  )>>>, featureFlags?: Maybe<(
+    { __typename?: 'FeatureFlags' }
+    & Pick<FeatureFlags, 'iNaturalistLayers'>
+  )> }
 );
 
 export type ProjectPublicDetailsMetadataFragment = (
@@ -21878,7 +22328,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'reportId'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -22279,9 +22729,37 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
+export type ReportingLayerDetailsFragment = (
+  { __typename?: 'ReportCardLayer' }
+  & Pick<ReportCardLayer, 'tableOfContentsItemId' | 'layerParameters'>
+  & { processedOutput?: Maybe<(
+    { __typename?: 'DataUploadOutput' }
+    & Pick<DataUploadOutput, 'url' | 'size' | 'type'>
+  )>, tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'title' | 'dataSourceType' | 'stableId'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'geostats' | 'type'>
+        & { sourceProcessingJob?: Maybe<(
+          { __typename?: 'SourceProcessingJob' }
+          & SourceProcessingJobDetailsFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body'>
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody' | 'displayMapLayerVisibilityControls'>
+  & { reportingLayers: Array<(
+    { __typename?: 'ReportCardLayer' }
+    & ReportingLayerDetailsFragment
+  )> }
 );
 
 export type ReportTabDetailsFragment = (
@@ -22317,17 +22795,30 @@ export type DraftReportQuery = (
     )>, report?: Maybe<(
       { __typename?: 'Report' }
       & Pick<Report, 'createdAt'>
-    )>, project?: Maybe<(
+    )> }
+  )> }
+);
+
+export type DraftReportDebuggingMaterialsQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type DraftReportDebuggingMaterialsQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id'>
       & { geographies: Array<(
         { __typename?: 'Geography' }
         & Pick<Geography, 'id' | 'name' | 'translatedProps'>
-      )>, mySketches?: Maybe<Array<(
-        { __typename?: 'Sketch' }
-        & Pick<Sketch, 'id' | 'name' | 'sketchClassId' | 'createdAt'>
-      )>> }
-    )> }
+      )> }
+    )>, mySketches?: Maybe<Array<(
+      { __typename?: 'Sketch' }
+      & Pick<Sketch, 'id' | 'name' | 'sketchClassId' | 'createdAt'>
+    )>> }
   )> }
 );
 
@@ -22419,6 +22910,7 @@ export type AddReportCardMutationVariables = Exact<{
   componentSettings: Scalars['JSON'];
   cardType: Scalars['String'];
   body: Scalars['JSON'];
+  layers: Array<ReportLayerInputRecordInput> | ReportLayerInputRecordInput;
 }>;
 
 
@@ -22458,6 +22950,9 @@ export type UpdateReportCardMutationVariables = Exact<{
   tint?: Maybe<Scalars['String']>;
   icon?: Maybe<Scalars['String']>;
   cardType?: Maybe<Scalars['String']>;
+  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
+  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
+  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -22515,6 +23010,157 @@ export type PublishReportMutation = (
       { __typename?: 'SketchClass' }
       & AdminSketchingDetailsFragment
     )> }
+  )> }
+);
+
+export type AvailableReportLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type AvailableReportLayersQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { availableReportLayers?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'title' | 'id' | 'dataSourceType'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'geostats'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
+export type SourceProcessingJobDetailsFragment = (
+  { __typename?: 'SourceProcessingJob' }
+  & Pick<SourceProcessingJob, 'jobKey' | 'state' | 'progressPercentage' | 'progressMessage' | 'createdAt' | 'errorMessage' | 'startedAt' | 'durationSeconds' | 'eta'>
+);
+
+export type SourceProcessingJobsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type SourceProcessingJobsQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & { sourceProcessingJobs?: Maybe<Array<(
+      { __typename?: 'SourceProcessingJob' }
+      & SourceProcessingJobDetailsFragment
+    )>> }
+  )> }
+);
+
+export type ReportOverlaySourcesSubscriptionSubscriptionVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ReportOverlaySourcesSubscriptionSubscription = (
+  { __typename?: 'Subscription' }
+  & { reportOverlaySources?: Maybe<(
+    { __typename?: 'ReportOverlaySourcesSubscriptionPayload' }
+    & Pick<ReportOverlaySourcesSubscriptionPayload, 'jobKey'>
+    & { source: (
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    ) }
+  )> }
+);
+
+export type RecalculateSpatialMetricsMutationVariables = Exact<{
+  metricIds: Array<Scalars['BigInt']> | Scalars['BigInt'];
+  preprocessSources: Scalars['Boolean'];
+}>;
+
+
+export type RecalculateSpatialMetricsMutation = (
+  { __typename?: 'Mutation' }
+  & { recalculateSpatialMetrics?: Maybe<(
+    { __typename?: 'RecalculateSpatialMetricsPayload' }
+    & Pick<RecalculateSpatialMetricsPayload, 'boolean'>
+  )> }
+);
+
+export type OverlaySourceDetailsFragment = (
+  { __typename?: 'ReportOverlaySource' }
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & { tableOfContentsItem: (
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'title' | 'stableId'>
+  ), sourceProcessingJob?: Maybe<(
+    { __typename?: 'SourceProcessingJob' }
+    & SourceProcessingJobDetailsFragment
+  )>, output?: Maybe<(
+    { __typename?: 'DataUploadOutput' }
+    & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt'>
+  )> }
+);
+
+export type ReportContextQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled'>
+      & ReportContextSketchClassDetailsFragment
+    )> }
+    & ReportContextSketchDetailsFragment
+  )>, report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { tabs?: Maybe<Array<(
+      { __typename?: 'ReportTab' }
+      & ReportTabDetailsFragment
+    )>>, geographies?: Maybe<Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'translatedProps'>
+    )>>, dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { overlaySources: Array<(
+        { __typename?: 'ReportOverlaySource' }
+        & OverlaySourceDetailsFragment
+      )>, metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricDetailsFragment
+      )>, cardDependencyLists: Array<(
+        { __typename?: 'CardDependencyLists' }
+        & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )> }
+    ) }
+  )> }
+);
+
+export type LegacyReportContextQueryVariables = Exact<{
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type LegacyReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled'>
+      & ReportContextSketchClassDetailsFragment
+    )> }
+    & ReportContextSketchDetailsFragment
   )> }
 );
 
@@ -22776,9 +23422,6 @@ export type ReportContextSketchClassDetailsFragment = (
       { __typename?: 'FormLogicRule' }
       & LogicRuleDetailsFragment
     )>> }
-  )>, report?: Maybe<(
-    { __typename?: 'Report' }
-    & ReportDetailsFragment
   )>, project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'supportedLanguages'>
@@ -22786,7 +23429,10 @@ export type ReportContextSketchClassDetailsFragment = (
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps'>
     )> }
-  )> }
+  )>, clippingGeographies: Array<Maybe<(
+    { __typename?: 'Geography' }
+    & Pick<Geography, 'id'>
+  )>> }
 );
 
 export type SketchReportingDetailsQueryVariables = Exact<{
@@ -22803,6 +23449,10 @@ export type SketchReportingDetailsQuery = (
   )>, sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & ReportDetailsFragment
+    )> }
     & ReportContextSketchClassDetailsFragment
   )> }
 );
@@ -22851,30 +23501,22 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'stableId' | 'groupBy' | 'includedProperties' | 'errorMessage' | 'progress' | 'jobKey'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
   ) | (
     { __typename?: 'GeographySubject' }
     & GeographySubjectDetailsFragment
+  ), parameters: (
+    { __typename?: 'MetricParameters' }
+    & Pick<MetricParameters, 'groupBy' | 'includedColumns' | 'valueColumn' | 'bufferDistanceKm' | 'maxResults' | 'maxDistanceKm'>
   ) }
 );
 
-export type GetOrCreateSpatialMetricsMutationVariables = Exact<{
-  dependencies: Array<SpatialMetricDependency> | SpatialMetricDependency;
-}>;
-
-
-export type GetOrCreateSpatialMetricsMutation = (
-  { __typename?: 'Mutation' }
-  & { getOrCreateSpatialMetrics: (
-    { __typename?: 'GetOrCreateSpatialMetricsResults' }
-    & { metrics: Array<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  ) }
+export type MinimalSpatialMetricDetailsFragment = (
+  { __typename?: 'CompatibleSpatialMetric' }
+  & Pick<CompatibleSpatialMetric, 'id' | 'updatedAt' | 'state' | 'value' | 'errorMessage' | 'progress'>
 );
 
 export type GeographyMetricSubscriptionSubscriptionVariables = Exact<{
@@ -23948,6 +24590,27 @@ export type UpdateShowLegendByDefaultMutation = (
     & { project?: Maybe<(
       { __typename?: 'Project' }
       & Pick<Project, 'id' | 'showLegendByDefault'>
+    )> }
+  )> }
+);
+
+export type UpdateFeatureFlagsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  flags: Scalars['JSON'];
+}>;
+
+
+export type UpdateFeatureFlagsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateFeatureFlags?: Maybe<(
+    { __typename?: 'UpdateFeatureFlagsPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id'>
+      & { featureFlags?: Maybe<(
+        { __typename?: 'FeatureFlags' }
+        & Pick<FeatureFlags, 'iNaturalistLayers'>
+      )> }
     )> }
   )> }
 );
@@ -25537,6 +26200,9 @@ export const ProjectMetadataFragmentDoc = gql`
   enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
+  featureFlags {
+    iNaturalistLayers
+  }
 }
     `;
 export const ProjectPublicDetailsMetadataFragmentDoc = gql`
@@ -25800,6 +26466,7 @@ export const SketchingDetailsFragmentDoc = gql`
   clippingGeographies {
     ...GeographyDetails
   }
+  reportId
 }
     ${SketchFormElementFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}
@@ -25852,6 +26519,107 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
+export const SourceProcessingJobDetailsFragmentDoc = gql`
+    fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+  errorMessage
+  startedAt
+  durationSeconds
+  eta
+}
+    `;
+export const ReportingLayerDetailsFragmentDoc = gql`
+    fragment ReportingLayerDetails on ReportCardLayer {
+  tableOfContentsItemId
+  layerParameters
+  processedOutput {
+    url
+    size
+    type
+  }
+  tableOfContentsItem {
+    id
+    title
+    dataSourceType
+    stableId
+    dataLayer {
+      id
+      mapboxGlStyles
+      dataSource {
+        id
+        geostats
+        type
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+export const ReportCardDetailsFragmentDoc = gql`
+    fragment ReportCardDetails on ReportCard {
+  id
+  position
+  type
+  componentSettings
+  alternateLanguageSettings
+  tint
+  icon
+  body
+  reportingLayers: reportCardLayers {
+    ...ReportingLayerDetails
+  }
+  collapsibleFooterEnabled
+  collapsibleFooterBody
+  displayMapLayerVisibilityControls
+}
+    ${ReportingLayerDetailsFragmentDoc}`;
+export const ReportTabDetailsFragmentDoc = gql`
+    fragment ReportTabDetails on ReportTab {
+  id
+  position
+  title
+  alternateLanguageSettings
+  cards {
+    ...ReportCardDetails
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export const ReportDetailsFragmentDoc = gql`
+    fragment ReportDetails on Report {
+  id
+  createdAt
+  updatedAt
+  tabs {
+    ...ReportTabDetails
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
+export const OverlaySourceDetailsFragmentDoc = gql`
+    fragment OverlaySourceDetails on ReportOverlaySource {
+  tableOfContentsItemId
+  tableOfContentsItem {
+    title
+    stableId
+  }
+  geostats
+  mapboxGlStyles
+  sourceProcessingJob {
+    ...SourceProcessingJobDetails
+  }
+  sourceUrl
+  output {
+    size
+    url
+    createdAt
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -25947,39 +26715,6 @@ export const ReportContextSketchDetailsFragmentDoc = gql`
   }
 }
     `;
-export const ReportCardDetailsFragmentDoc = gql`
-    fragment ReportCardDetails on ReportCard {
-  id
-  position
-  type
-  componentSettings
-  alternateLanguageSettings
-  tint
-  icon
-  body
-}
-    `;
-export const ReportTabDetailsFragmentDoc = gql`
-    fragment ReportTabDetails on ReportTab {
-  id
-  position
-  title
-  alternateLanguageSettings
-  cards {
-    ...ReportCardDetails
-  }
-}
-    ${ReportCardDetailsFragmentDoc}`;
-export const ReportDetailsFragmentDoc = gql`
-    fragment ReportDetails on Report {
-  id
-  createdAt
-  updatedAt
-  tabs {
-    ...ReportTabDetails
-  }
-}
-    ${ReportTabDetailsFragmentDoc}`;
 export const ReportContextSketchClassDetailsFragmentDoc = gql`
     fragment ReportContextSketchClassDetails on SketchClass {
   id
@@ -26002,9 +26737,6 @@ export const ReportContextSketchClassDetailsFragmentDoc = gql`
       ...LogicRuleDetails
     }
   }
-  report {
-    ...ReportDetails
-  }
   project {
     id
     supportedLanguages
@@ -26014,9 +26746,11 @@ export const ReportContextSketchClassDetailsFragmentDoc = gql`
       translatedProps
     }
   }
+  clippingGeographies {
+    id
+  }
 }
-    ${LogicRuleDetailsFragmentDoc}
-${ReportDetailsFragmentDoc}`;
+    ${LogicRuleDetailsFragmentDoc}`;
 export const ProjectSketchesFragmentDoc = gql`
     fragment ProjectSketches on Project {
   sketchClasses {
@@ -26050,15 +26784,35 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
   updatedAt
   value
   state
-  stableId
-  groupBy
-  includedProperties
   errorMessage
   progress
   jobKey
+  sourceUrl
+  parameters {
+    groupBy
+    includedColumns
+    valueColumn
+    bufferDistanceKm
+    maxResults
+    maxDistanceKm
+  }
+  sourceProcessingJobDependency
+  eta
+  startedAt
+  durationSeconds
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
+export const MinimalSpatialMetricDetailsFragmentDoc = gql`
+    fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
+  id
+  updatedAt
+  state
+  value
+  errorMessage
+  progress
+}
+    `;
 export const SurveyListDetailsFragmentDoc = gql`
     fragment SurveyListDetails on Survey {
   id
@@ -31162,6 +31916,47 @@ export function useDraftTableOfContentsItemsForPickerLazyQuery(baseOptions?: Apo
 export type DraftTableOfContentsItemsForPickerQueryHookResult = ReturnType<typeof useDraftTableOfContentsItemsForPickerQuery>;
 export type DraftTableOfContentsItemsForPickerLazyQueryHookResult = ReturnType<typeof useDraftTableOfContentsItemsForPickerLazyQuery>;
 export type DraftTableOfContentsItemsForPickerQueryResult = Apollo.QueryResult<DraftTableOfContentsItemsForPickerQuery, DraftTableOfContentsItemsForPickerQueryVariables>;
+export const CreateINaturalistTableOfContentsItemDocument = gql`
+    mutation createINaturalistTableOfContentsItem($slug: String!, $params: JSON!, $bounds: [BigFloat]!, $title: String!, $metadata: JSON) {
+  createInaturalistTableOfContentsItem(
+    input: {slug: $slug, params: $params, bounds: $bounds, title: $title, metadata: $metadata}
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}
+    ${FullAdminOverlayFragmentDoc}`;
+export type CreateINaturalistTableOfContentsItemMutationFn = Apollo.MutationFunction<CreateINaturalistTableOfContentsItemMutation, CreateINaturalistTableOfContentsItemMutationVariables>;
+
+/**
+ * __useCreateINaturalistTableOfContentsItemMutation__
+ *
+ * To run a mutation, you first call `useCreateINaturalistTableOfContentsItemMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateINaturalistTableOfContentsItemMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createINaturalistTableOfContentsItemMutation, { data, loading, error }] = useCreateINaturalistTableOfContentsItemMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      params: // value for 'params'
+ *      bounds: // value for 'bounds'
+ *      title: // value for 'title'
+ *      metadata: // value for 'metadata'
+ *   },
+ * });
+ */
+export function useCreateINaturalistTableOfContentsItemMutation(baseOptions?: Apollo.MutationHookOptions<CreateINaturalistTableOfContentsItemMutation, CreateINaturalistTableOfContentsItemMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateINaturalistTableOfContentsItemMutation, CreateINaturalistTableOfContentsItemMutationVariables>(CreateINaturalistTableOfContentsItemDocument, options);
+      }
+export type CreateINaturalistTableOfContentsItemMutationHookResult = ReturnType<typeof useCreateINaturalistTableOfContentsItemMutation>;
+export type CreateINaturalistTableOfContentsItemMutationResult = Apollo.MutationResult<CreateINaturalistTableOfContentsItemMutation>;
+export type CreateINaturalistTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<CreateINaturalistTableOfContentsItemMutation, CreateINaturalistTableOfContentsItemMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34396,20 +35191,6 @@ export const DraftReportDocument = gql`
     report {
       createdAt
     }
-    project {
-      id
-      geographies {
-        id
-        name
-        translatedProps
-      }
-      mySketches {
-        id
-        name
-        sketchClassId
-        createdAt
-      }
-    }
   }
 }
     ${ReportDetailsFragmentDoc}`;
@@ -34441,6 +35222,54 @@ export function useDraftReportLazyQuery(baseOptions?: Apollo.LazyQueryHookOption
 export type DraftReportQueryHookResult = ReturnType<typeof useDraftReportQuery>;
 export type DraftReportLazyQueryHookResult = ReturnType<typeof useDraftReportLazyQuery>;
 export type DraftReportQueryResult = Apollo.QueryResult<DraftReportQuery, DraftReportQueryVariables>;
+export const DraftReportDebuggingMaterialsDocument = gql`
+    query DraftReportDebuggingMaterials($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    project {
+      id
+      geographies {
+        id
+        name
+        translatedProps
+      }
+    }
+    mySketches {
+      id
+      name
+      sketchClassId
+      createdAt
+    }
+  }
+}
+    `;
+
+/**
+ * __useDraftReportDebuggingMaterialsQuery__
+ *
+ * To run a query within a React component, call `useDraftReportDebuggingMaterialsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDraftReportDebuggingMaterialsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftReportDebuggingMaterialsQuery({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useDraftReportDebuggingMaterialsQuery(baseOptions: Apollo.QueryHookOptions<DraftReportDebuggingMaterialsQuery, DraftReportDebuggingMaterialsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DraftReportDebuggingMaterialsQuery, DraftReportDebuggingMaterialsQueryVariables>(DraftReportDebuggingMaterialsDocument, options);
+      }
+export function useDraftReportDebuggingMaterialsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DraftReportDebuggingMaterialsQuery, DraftReportDebuggingMaterialsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DraftReportDebuggingMaterialsQuery, DraftReportDebuggingMaterialsQueryVariables>(DraftReportDebuggingMaterialsDocument, options);
+        }
+export type DraftReportDebuggingMaterialsQueryHookResult = ReturnType<typeof useDraftReportDebuggingMaterialsQuery>;
+export type DraftReportDebuggingMaterialsLazyQueryHookResult = ReturnType<typeof useDraftReportDebuggingMaterialsLazyQuery>;
+export type DraftReportDebuggingMaterialsQueryResult = Apollo.QueryResult<DraftReportDebuggingMaterialsQuery, DraftReportDebuggingMaterialsQueryVariables>;
 export const CreateDraftReportDocument = gql`
     mutation CreateDraftReport($sketchClassId: Int!) {
   createDraftReport(input: {sketchClassId: $sketchClassId}) {
@@ -34625,9 +35454,9 @@ export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderRe
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
 export const AddReportCardDocument = gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!, $layers: [ReportLayerInputRecordInput!]!) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body, layers: $layers}
   ) {
     reportCard {
       id
@@ -34654,6 +35483,7 @@ export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutat
  *      componentSettings: // value for 'componentSettings'
  *      cardType: // value for 'cardType'
  *      body: // value for 'body'
+ *      layers: // value for 'layers'
  *   },
  * });
  */
@@ -34702,9 +35532,9 @@ export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReord
 export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
 export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
 export const UpdateReportCardDocument = gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON, $displayMapLayerVisibilityControls: Boolean) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
   ) {
     reportCard {
       ...ReportCardDetails
@@ -34734,6 +35564,9 @@ export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCar
  *      tint: // value for 'tint'
  *      icon: // value for 'icon'
  *      cardType: // value for 'cardType'
+ *      collapsibleFooterEnabled: // value for 'collapsibleFooterEnabled'
+ *      collapsibleFooterBody: // value for 'collapsibleFooterBody'
+ *      displayMapLayerVisibilityControls: // value for 'displayMapLayerVisibilityControls'
  *   },
  * });
  */
@@ -34849,6 +35682,274 @@ export function usePublishReportMutation(baseOptions?: Apollo.MutationHookOption
 export type PublishReportMutationHookResult = ReturnType<typeof usePublishReportMutation>;
 export type PublishReportMutationResult = Apollo.MutationResult<PublishReportMutation>;
 export type PublishReportMutationOptions = Apollo.BaseMutationOptions<PublishReportMutation, PublishReportMutationVariables>;
+export const AvailableReportLayersDocument = gql`
+    query AvailableReportLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    availableReportLayers {
+      title
+      id
+      dataSourceType
+      dataLayer {
+        id
+        mapboxGlStyles
+        dataSource {
+          id
+          geostats
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useAvailableReportLayersQuery__
+ *
+ * To run a query within a React component, call `useAvailableReportLayersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useAvailableReportLayersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useAvailableReportLayersQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useAvailableReportLayersQuery(baseOptions: Apollo.QueryHookOptions<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>(AvailableReportLayersDocument, options);
+      }
+export function useAvailableReportLayersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>(AvailableReportLayersDocument, options);
+        }
+export type AvailableReportLayersQueryHookResult = ReturnType<typeof useAvailableReportLayersQuery>;
+export type AvailableReportLayersLazyQueryHookResult = ReturnType<typeof useAvailableReportLayersLazyQuery>;
+export type AvailableReportLayersQueryResult = Apollo.QueryResult<AvailableReportLayersQuery, AvailableReportLayersQueryVariables>;
+export const SourceProcessingJobsDocument = gql`
+    query SourceProcessingJobs($projectId: Int!) {
+  project(id: $projectId) {
+    sourceProcessingJobs {
+      ...SourceProcessingJobDetails
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+
+/**
+ * __useSourceProcessingJobsQuery__
+ *
+ * To run a query within a React component, call `useSourceProcessingJobsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSourceProcessingJobsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSourceProcessingJobsQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useSourceProcessingJobsQuery(baseOptions: Apollo.QueryHookOptions<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>(SourceProcessingJobsDocument, options);
+      }
+export function useSourceProcessingJobsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>(SourceProcessingJobsDocument, options);
+        }
+export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourceProcessingJobsQuery>;
+export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
+export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
+export const ReportOverlaySourcesSubscriptionDocument = gql`
+    subscription ReportOverlaySourcesSubscription($projectId: Int!) {
+  reportOverlaySources(projectId: $projectId) {
+    jobKey
+    source {
+      ...OverlaySourceDetails
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
+
+/**
+ * __useReportOverlaySourcesSubscriptionSubscription__
+ *
+ * To run a query within a React component, call `useReportOverlaySourcesSubscriptionSubscription` and pass it any options that fit your needs.
+ * When your component renders, `useReportOverlaySourcesSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportOverlaySourcesSubscriptionSubscription({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useReportOverlaySourcesSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useSubscription<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>(ReportOverlaySourcesSubscriptionDocument, options);
+      }
+export type ReportOverlaySourcesSubscriptionSubscriptionHookResult = ReturnType<typeof useReportOverlaySourcesSubscriptionSubscription>;
+export type ReportOverlaySourcesSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ReportOverlaySourcesSubscriptionSubscription>;
+export const RecalculateSpatialMetricsDocument = gql`
+    mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!) {
+  recalculateSpatialMetrics(
+    input: {metricIds: $metricIds, preprocessSources: $preprocessSources}
+  ) {
+    boolean
+  }
+}
+    `;
+export type RecalculateSpatialMetricsMutationFn = Apollo.MutationFunction<RecalculateSpatialMetricsMutation, RecalculateSpatialMetricsMutationVariables>;
+
+/**
+ * __useRecalculateSpatialMetricsMutation__
+ *
+ * To run a mutation, you first call `useRecalculateSpatialMetricsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRecalculateSpatialMetricsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [recalculateSpatialMetricsMutation, { data, loading, error }] = useRecalculateSpatialMetricsMutation({
+ *   variables: {
+ *      metricIds: // value for 'metricIds'
+ *      preprocessSources: // value for 'preprocessSources'
+ *   },
+ * });
+ */
+export function useRecalculateSpatialMetricsMutation(baseOptions?: Apollo.MutationHookOptions<RecalculateSpatialMetricsMutation, RecalculateSpatialMetricsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RecalculateSpatialMetricsMutation, RecalculateSpatialMetricsMutationVariables>(RecalculateSpatialMetricsDocument, options);
+      }
+export type RecalculateSpatialMetricsMutationHookResult = ReturnType<typeof useRecalculateSpatialMetricsMutation>;
+export type RecalculateSpatialMetricsMutationResult = Apollo.MutationResult<RecalculateSpatialMetricsMutation>;
+export type RecalculateSpatialMetricsMutationOptions = Apollo.BaseMutationOptions<RecalculateSpatialMetricsMutation, RecalculateSpatialMetricsMutationVariables>;
+export const ReportContextDocument = gql`
+    query ReportContext($reportId: Int!, $sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+  report(id: $reportId) {
+    id
+    tabs {
+      ...ReportTabDetails
+    }
+    geographies {
+      id
+      name
+      translatedProps
+    }
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}
+${ReportTabDetailsFragmentDoc}
+${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useReportContextQuery__
+ *
+ * To run a query within a React component, call `useReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportContextQuery({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useReportContextQuery(baseOptions: Apollo.QueryHookOptions<ReportContextQuery, ReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReportContextQuery, ReportContextQueryVariables>(ReportContextDocument, options);
+      }
+export function useReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportContextQuery, ReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReportContextQuery, ReportContextQueryVariables>(ReportContextDocument, options);
+        }
+export type ReportContextQueryHookResult = ReturnType<typeof useReportContextQuery>;
+export type ReportContextLazyQueryHookResult = ReturnType<typeof useReportContextLazyQuery>;
+export type ReportContextQueryResult = Apollo.QueryResult<ReportContextQuery, ReportContextQueryVariables>;
+export const LegacyReportContextDocument = gql`
+    query LegacyReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+      geoprocessingClientName
+      geoprocessingClientUrl
+      geoprocessingProjectUrl
+      isGeographyClippingEnabled
+    }
+  }
+}
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}`;
+
+/**
+ * __useLegacyReportContextQuery__
+ *
+ * To run a query within a React component, call `useLegacyReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLegacyReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLegacyReportContextQuery({
+ *   variables: {
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useLegacyReportContextQuery(baseOptions: Apollo.QueryHookOptions<LegacyReportContextQuery, LegacyReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LegacyReportContextQuery, LegacyReportContextQueryVariables>(LegacyReportContextDocument, options);
+      }
+export function useLegacyReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LegacyReportContextQuery, LegacyReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LegacyReportContextQuery, LegacyReportContextQueryVariables>(LegacyReportContextDocument, options);
+        }
+export type LegacyReportContextQueryHookResult = ReturnType<typeof useLegacyReportContextQuery>;
+export type LegacyReportContextLazyQueryHookResult = ReturnType<typeof useLegacyReportContextLazyQuery>;
+export type LegacyReportContextQueryResult = Apollo.QueryResult<LegacyReportContextQuery, LegacyReportContextQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -35197,10 +36298,14 @@ export const SketchReportingDetailsDocument = gql`
     geoprocessingClientName
     geoprocessingClientUrl
     geoprocessingProjectUrl
+    report {
+      ...ReportDetails
+    }
   }
 }
     ${ReportContextSketchDetailsFragmentDoc}
-${ReportContextSketchClassDetailsFragmentDoc}`;
+${ReportContextSketchClassDetailsFragmentDoc}
+${ReportDetailsFragmentDoc}`;
 
 /**
  * __useSketchReportingDetailsQuery__
@@ -35275,41 +36380,6 @@ export function useCopyTocItemMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CopyTocItemMutationHookResult = ReturnType<typeof useCopyTocItemMutation>;
 export type CopyTocItemMutationResult = Apollo.MutationResult<CopyTocItemMutation>;
 export type CopyTocItemMutationOptions = Apollo.BaseMutationOptions<CopyTocItemMutation, CopyTocItemMutationVariables>;
-export const GetOrCreateSpatialMetricsDocument = gql`
-    mutation GetOrCreateSpatialMetrics($dependencies: [SpatialMetricDependency!]!) {
-  getOrCreateSpatialMetrics(inputs: $dependencies) {
-    metrics {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-export type GetOrCreateSpatialMetricsMutationFn = Apollo.MutationFunction<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>;
-
-/**
- * __useGetOrCreateSpatialMetricsMutation__
- *
- * To run a mutation, you first call `useGetOrCreateSpatialMetricsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useGetOrCreateSpatialMetricsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [getOrCreateSpatialMetricsMutation, { data, loading, error }] = useGetOrCreateSpatialMetricsMutation({
- *   variables: {
- *      dependencies: // value for 'dependencies'
- *   },
- * });
- */
-export function useGetOrCreateSpatialMetricsMutation(baseOptions?: Apollo.MutationHookOptions<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>(GetOrCreateSpatialMetricsDocument, options);
-      }
-export type GetOrCreateSpatialMetricsMutationHookResult = ReturnType<typeof useGetOrCreateSpatialMetricsMutation>;
-export type GetOrCreateSpatialMetricsMutationResult = Apollo.MutationResult<GetOrCreateSpatialMetricsMutation>;
-export type GetOrCreateSpatialMetricsMutationOptions = Apollo.BaseMutationOptions<GetOrCreateSpatialMetricsMutation, GetOrCreateSpatialMetricsMutationVariables>;
 export const GeographyMetricSubscriptionDocument = gql`
     subscription GeographyMetricSubscription($projectId: Int!) {
   geographyMetrics(projectId: $projectId) {
@@ -37422,6 +38492,45 @@ export function useUpdateShowLegendByDefaultMutation(baseOptions?: Apollo.Mutati
 export type UpdateShowLegendByDefaultMutationHookResult = ReturnType<typeof useUpdateShowLegendByDefaultMutation>;
 export type UpdateShowLegendByDefaultMutationResult = Apollo.MutationResult<UpdateShowLegendByDefaultMutation>;
 export type UpdateShowLegendByDefaultMutationOptions = Apollo.BaseMutationOptions<UpdateShowLegendByDefaultMutation, UpdateShowLegendByDefaultMutationVariables>;
+export const UpdateFeatureFlagsDocument = gql`
+    mutation UpdateFeatureFlags($slug: String!, $flags: JSON!) {
+  updateFeatureFlags(input: {slug: $slug, flags: $flags}) {
+    project {
+      id
+      featureFlags {
+        iNaturalistLayers
+      }
+    }
+  }
+}
+    `;
+export type UpdateFeatureFlagsMutationFn = Apollo.MutationFunction<UpdateFeatureFlagsMutation, UpdateFeatureFlagsMutationVariables>;
+
+/**
+ * __useUpdateFeatureFlagsMutation__
+ *
+ * To run a mutation, you first call `useUpdateFeatureFlagsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateFeatureFlagsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateFeatureFlagsMutation, { data, loading, error }] = useUpdateFeatureFlagsMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      flags: // value for 'flags'
+ *   },
+ * });
+ */
+export function useUpdateFeatureFlagsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateFeatureFlagsMutation, UpdateFeatureFlagsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateFeatureFlagsMutation, UpdateFeatureFlagsMutationVariables>(UpdateFeatureFlagsDocument, options);
+      }
+export type UpdateFeatureFlagsMutationHookResult = ReturnType<typeof useUpdateFeatureFlagsMutation>;
+export type UpdateFeatureFlagsMutationResult = Apollo.MutationResult<UpdateFeatureFlagsMutation>;
+export type UpdateFeatureFlagsMutationOptions = Apollo.BaseMutationOptions<UpdateFeatureFlagsMutation, UpdateFeatureFlagsMutationVariables>;
 export const UserAdminCountsDocument = gql`
     query UserAdminCounts($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -38572,6 +39681,11 @@ export const namedOperations = {
     SketchClassLogicRuleDetails: 'SketchClassLogicRuleDetails',
     SketchClassGeographyEditorDetails: 'SketchClassGeographyEditorDetails',
     DraftReport: 'DraftReport',
+    DraftReportDebuggingMaterials: 'DraftReportDebuggingMaterials',
+    AvailableReportLayers: 'AvailableReportLayers',
+    SourceProcessingJobs: 'SourceProcessingJobs',
+    ReportContext: 'ReportContext',
+    LegacyReportContext: 'LegacyReportContext',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -38674,6 +39788,7 @@ export const namedOperations = {
     SetProjectDataHostingRetentionPeriod: 'SetProjectDataHostingRetentionPeriod',
     CopyDataLibraryTemplate: 'CopyDataLibraryTemplate',
     DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
+    createINaturalistTableOfContentsItem: 'createINaturalistTableOfContentsItem',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
@@ -38724,6 +39839,7 @@ export const namedOperations = {
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
     PublishReport: 'PublishReport',
+    RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -38731,7 +39847,6 @@ export const namedOperations = {
     RenameFolder: 'RenameFolder',
     UpdateTocItemsParent: 'UpdateTocItemsParent',
     CopyTocItem: 'CopyTocItem',
-    GetOrCreateSpatialMetrics: 'GetOrCreateSpatialMetrics',
     RetryFailedSpatialMetrics: 'RetryFailedSpatialMetrics',
     CreateSurvey: 'CreateSurvey',
     UpdateSurveyBaseSettings: 'UpdateSurveyBaseSettings',
@@ -38770,6 +39885,7 @@ export const namedOperations = {
     UpdateHideOverlays: 'UpdateHideOverlays',
     UpdateShowScalebarByDefault: 'UpdateShowScalebarByDefault',
     UpdateShowLegendByDefault: 'UpdateShowLegendByDefault',
+    UpdateFeatureFlags: 'UpdateFeatureFlags',
     CreateGroup: 'CreateGroup',
     toggleAdminAccess: 'toggleAdminAccess',
     setUserGroups: 'setUserGroups',
@@ -38790,6 +39906,7 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
+    ReportOverlaySourcesSubscription: 'ReportOverlaySourcesSubscription',
     GeographyMetricSubscription: 'GeographyMetricSubscription',
     SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
@@ -38869,9 +39986,12 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
+    ReportingLayerDetails: 'ReportingLayerDetails',
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
+    SourceProcessingJobDetails: 'SourceProcessingJobDetails',
+    OverlaySourceDetails: 'OverlaySourceDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',
@@ -38882,6 +40002,7 @@ export const namedOperations = {
     GeographySubjectDetails: 'GeographySubjectDetails',
     FragmentSubjectDetails: 'FragmentSubjectDetails',
     CompatibleSpatialMetricDetails: 'CompatibleSpatialMetricDetails',
+    MinimalSpatialMetricDetails: 'MinimalSpatialMetricDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',
     FormElementDetails: 'FormElementDetails',

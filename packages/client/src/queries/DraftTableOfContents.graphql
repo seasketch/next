@@ -1008,3 +1008,25 @@ query DraftTableOfContentsItemsForPicker($slug: String!) {
     }
   }
 }
+
+mutation createINaturalistTableOfContentsItem(
+  $slug: String!
+  $params: JSON!
+  $bounds: [BigFloat]!
+  $title: String!
+  $metadata: JSON
+) {
+  createInaturalistTableOfContentsItem(
+    input: {
+      slug: $slug
+      params: $params
+      bounds: $bounds
+      title: $title
+      metadata: $metadata
+    }
+  ) {
+    tableOfContentsItem {
+      ...FullAdminOverlay
+    }
+  }
+}

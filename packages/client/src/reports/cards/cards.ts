@@ -2,6 +2,11 @@ import { ReportCardIcon } from "../ReportCard";
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
+import {
+  CompatibleSpatialMetricDetailsFragment,
+  OverlaySourceDetailsFragment,
+  ReportingLayerDetailsFragment,
+} from "../../generated/graphql";
 
 export type ProsemirrorBodyJSON = any;
 
@@ -9,8 +14,13 @@ export type ReportCardType =
   | "Attributes"
   | "TextBlock"
   | "Size"
-  | "PolygonOverlap";
-
+  | "OverlappingAreas"
+  | "FeatureCount"
+  | "Presence"
+  | "FeatureList"
+  | "ColumnStatistics"
+  | "RasterBandStatistics"
+  | "DistanceToShore";
 /**
  * A ReportCardConfiguration is a configuration object for a card that is
  * used to render a card in a report. It is used to determine the type of card,
@@ -57,6 +67,26 @@ export type ReportCardConfiguration<T> = {
    * The icon of the card.
    */
   icon?: ReportCardIcon;
+  /**
+   * The reporting layers of the card.
+   */
+  reportingLayers: ReportingLayerDetailsFragment[];
+  /**
+   * Whether the collapsible footer ("Learn More" element) is enabled.
+   * @default false
+   */
+  collapsibleFooterEnabled?: boolean;
+  /**
+   * The prosemirror body content for the collapsible footer.
+   * The first element should be a footerTitle node containing the title text.
+   * Supports localization via alternateLanguageSettings.
+   */
+  collapsibleFooterBody?: ProsemirrorBodyJSON;
+  /**
+   * Whether to display the linked data layer map visibility controls.
+   * @default true
+   */
+  displayMapLayerVisibilityControls?: boolean;
 };
 
 export type ReportTabConfiguration = {
@@ -107,6 +137,10 @@ export type ReportConfiguration = {
 
 export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
   config: T;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: string[];
 };
 
 // Import card implementations
@@ -114,8 +148,14 @@ export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
 export function registerCards() {
   import("./SketchAttributesCard");
   import("./SizeCard");
-  import("./PolygonOverlapCard");
+  import("./OverlappingAreasCard");
   import("./TextBlockCard");
+  import("./FeatureCountCard");
+  import("./PresenceCard");
+  import("./FeatureListCard");
+  import("./ColumnStatisticsCard");
+  import("./RasterBandStatisticsCard");
+  import("./DistanceToShoreCard");
 }
 
 /**

@@ -36,15 +36,18 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.calculateGeographyOverlap = void 0;
 exports.clipToGeography = clipToGeography;
 exports.clipSketchToPolygons = clipSketchToPolygons;
 exports.clipToGeographies = clipToGeographies;
+exports.initializeGeographySources = initializeGeographySources;
 const cql2_1 = require("../cql2");
 const polygonClipping = __importStar(require("polygon-clipping"));
 const fragments_1 = require("../fragments");
 const area_1 = __importDefault(require("@turf/area"));
 const unionAtAntimeridian_1 = require("../utils/unionAtAntimeridian");
 const polygonClipping_1 = require("../utils/polygonClipping");
+const helpers_1 = require("../utils/helpers");
 /**
  * Clips a sketch to a geography defined by one or more clipping layers.
  *
@@ -492,6 +495,83 @@ async function clipToGeographies(preparedSketch, geographies, geographiesForClip
     return {
         clipped: (0, unionAtAntimeridian_1.unionAtAntimeridian)(clipped),
         fragments,
+    };
+}
+var calculateOverlap_1 = require("./calculateOverlap");
+Object.defineProperty(exports, "calculateGeographyOverlap", { enumerable: true, get: function () { return calculateOverlap_1.calculateGeographyOverlap; } });
+/**
+ * Initializes sources in a sourceCache for all clipping layers in a given
+ * geography, and calculates the intersection feature.
+ *
+ * @param geography - The geography to initialize sources for
+ * @param sourceCache - The source cache to use
+ */
+async function initializeGeographySources(geography, sourceCache, helpers, sourceOptions) {
+    helpers = (0, helpers_1.guaranteeHelpers)(helpers);
+    // Kick off prefetches and capture any errors for later propagation.
+    const prefetchResults = geography.map((clippingLayer) => sourceCache
+        .get(clippingLayer.source, {
+        initialHeaderRequestLength: clippingLayer.headerSizeHint,
+        ...sourceOptions,
+    })
+        .then(() => ({ ok: true }))
+        .catch((error) => {
+        console.error("console.error - error initializing geography source", clippingLayer.source);
+        return { ok: false, error };
+    }));
+    const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
+    const differenceLayers = geography.filter((l) => l.op === "DIFFERENCE");
+    const intersectionFeatures = [];
+    let intersectionFeatureBytes = 0;
+    await Promise.all(intersectionLayers.map(async (l) => {
+        const source = await sourceCache.get(l.source, sourceOptions);
+        helpers.log("Processing intersection layer");
+        for await (const { properties, getFeature, } of source.getFeatureProperties()) {
+            if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {
+                intersectionFeatures.push(getFeature());
+                intersectionFeatureBytes += (properties === null || properties === void 0 ? void 0 : properties.__byteLength) || 0;
+            }
+        }
+        helpers.log("Completed intersection layer");
+        helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
+    }));
+    // If any prefetch failed, propagate the first error now via awaited control flow
+    for (const r of await Promise.all(prefetchResults)) {
+        if (!r.ok) {
+            if (r.error) {
+                throw r.error;
+            }
+            else {
+                throw new Error("Unknown error initializing geography source");
+            }
+        }
+    }
+    const differenceSources = await Promise.all(differenceLayers.map(async (layer) => {
+        const diffSource = await sourceCache.get(layer.source, {
+            pageSize: "10MB",
+        });
+        return {
+            cql2Query: layer.cql2Query,
+            source: diffSource,
+            layerId: layer.source,
+        };
+    }));
+    const intersectionFeatureGeojson = {
+        type: "Feature",
+        geometry: {
+            type: "MultiPolygon",
+            coordinates: intersectionFeatures.length === 1
+                ? intersectionFeatures[0].geometry
+                    .coordinates
+                : (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates)),
+        },
+        properties: {},
+    };
+    return {
+        intersectionFeature: intersectionFeatureGeojson,
+        intersectionLayers,
+        differenceLayers,
+        differenceSources,
     };
 }
 //# sourceMappingURL=geographies.js.map

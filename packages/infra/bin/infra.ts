@@ -17,6 +17,7 @@ import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 import { SQSStack } from "../lib/SQSStack";
 import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
+import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -170,7 +171,17 @@ const overlayWorker = new OverlayWorkerLambdaStack(
   "SeaSketchOverlayWorker",
   {
     env,
-    devQueue: sqs.devOverlayEngineWorkerQueue,
+    devQueues: sqs.devOverlayEngineWorkerQueues,
+    productionQueue: sqs.productionOverlayEngineWorkerQueue,
+  }
+);
+
+const subdivideWorker = new SubdivideWorkerLambdaStack(
+  app,
+  "SeaSketchSubdivisionWorker",
+  {
+    env,
+    devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
   }
 );
@@ -191,6 +202,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   overlayWorkerArn: overlayWorker.fn.functionArn,
   normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
   uploadHandler: uploadHandler.fn,
+  subdivisionWorkerLambdaArn: subdivideWorker.fn.functionArn,
 });
 
 uploadHandler.fn.grantInvoke;

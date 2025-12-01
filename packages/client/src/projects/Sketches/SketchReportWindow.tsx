@@ -1,24 +1,16 @@
 import { XIcon } from "@heroicons/react/outline";
-import { useContext, useMemo } from "react";
+import { useMemo } from "react";
 import Skeleton from "../../components/Skeleton";
-import {
-  SketchGeometryType,
-  SketchingDetailsFragment,
-  useSketchReportingDetailsQuery,
-} from "../../generated/graphql";
-import useAccessToken from "../../useAccessToken";
+import { useSketchReportingDetailsQuery } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
-import { MapContext } from "../../dataLayers/MapContextManager";
 import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { ReportWindowUIState } from "./LegacySketchReportWindow";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportContext, useReportState } from "../../reports/ReportContext";
 import { ReportTabs } from "../../reports/ReportTabs";
-import { ReportConfiguration } from "../../reports/cards/cards";
 import { ReportBody } from "../../reports/ReportBody";
 import { registerCards } from "../../reports/cards/cards";
-import { MetricSubjectFragment } from "overlay-engine";
 
 registerCards();
 
@@ -39,8 +31,6 @@ export default function SketchReportWindow({
   reportingAccessToken?: string | null;
   onClick?: (metaKey: boolean, id: number) => void;
 }) {
-  const mapContext = useContext(MapContext);
-  const token = useAccessToken();
   const { data, loading } = useSketchReportingDetailsQuery({
     variables: {
       id: sketchId,
@@ -50,7 +40,7 @@ export default function SketchReportWindow({
   });
 
   const reportState = useReportState(
-    (data?.sketchClass?.report as any) || undefined,
+    (data?.sketchClass?.report?.id as number) || undefined,
     data?.sketchClass?.id || 0,
     data?.sketch?.id || 0
   );
@@ -65,7 +55,7 @@ export default function SketchReportWindow({
           ) ||
           f.code === "EN"
       ),
-    [data?.sketchClass?.project?.supportedLanguages, languages]
+    [data?.sketchClass?.project?.supportedLanguages]
   );
 
   const { i18n } = useTranslation();
@@ -115,15 +105,9 @@ export default function SketchReportWindow({
             <XIcon className="w-5 h-5 text-black" />
           </button>
         </div>
-        {data?.sketchClass?.report && data?.sketch && (
+        {reportState && (
           <ReportContext.Provider
             value={{
-              report: data?.sketchClass
-                ?.report as unknown as ReportConfiguration,
-              adminMode: false,
-              isCollection:
-                data.sketchClass.geometryType === SketchGeometryType.Collection,
-              geographies: data.sketchClass?.project?.geographies || [],
               ...reportState,
             }}
           >

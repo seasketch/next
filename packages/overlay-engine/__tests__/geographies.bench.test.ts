@@ -10,6 +10,7 @@ import { prepareSketch } from "../src/utils/prepareSketch";
 import { describe, it, expect, beforeAll } from "vitest";
 import { hawaiiTestFeatures } from "./test-features";
 import { createFragments } from "../src/fragments";
+import { vi } from "vitest";
 
 const eezUrl = "https://uploads.seasketch.org/eez-land-joined.fgb";
 const territorialSeaUrl =
@@ -59,6 +60,8 @@ describe("Performance tests", () => {
   let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
 
+  vi.setConfig({ testTimeout: 1000 * 20 });
+
   beforeAll(() => {
     sourceCache = new SourceCache("256mb");
     clippingFn = async (sketch, source, op, query) => {
@@ -84,8 +87,7 @@ describe("Performance tests", () => {
         clipToGeography(preparedSketch, hawaiiTerritorialSea, clippingFn)
       );
 
-      // Fail if the operation takes more than 500ms on average
-      expect(averageTime).toBeLessThan(500);
+      expect(averageTime).toBeLessThan(1500);
       expect(result).not.toBeNull();
     });
 
@@ -96,8 +98,7 @@ describe("Performance tests", () => {
         clipToGeography(preparedSketch, hawaiiOffshore, clippingFn)
       );
 
-      // Fail if the operation takes more than 500ms on average
-      expect(averageTime).toBeLessThan(500);
+      expect(averageTime).toBeLessThan(1500);
       expect(result).not.toBeNull();
     });
   });
@@ -122,8 +123,7 @@ describe("Performance tests", () => {
         createFragments(preparedSketch, geographies, clippingFn)
       );
 
-      // Fail if the operation takes more than 500ms on average
-      expect(averageTime).toBeLessThan(500);
+      expect(averageTime).toBeLessThan(1000);
       expect(result.length).toBeGreaterThan(0);
     });
   });

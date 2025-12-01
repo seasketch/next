@@ -103,7 +103,7 @@ export class SourceCache {
     this.cache = new LRUCache({
       maxSize: this.sizeLimitBytes,
       sizeCalculation: (source, key) => {
-        const size = source.indexSizeBytes + source.cacheStats.maxSize;
+        const size = source.indexSizeBytes;
         return size;
       },
       dispose: (value, key, reason) => {
@@ -168,8 +168,9 @@ export class SourceCache {
     options?: CreateSourceOptions
   ): Promise<FlatGeobufSource<T>> {
     // Check cache first
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!;
+    const cached = this.cache.get(key);
+    if (cached) {
+      return cached;
     }
 
     // Check for in-flight request
@@ -182,21 +183,23 @@ export class SourceCache {
     const mergedOptions: CreateSourceOptions = {
       ...this.defaultOptions,
       ...options,
+      maxCacheSize:
+        options?.maxCacheSize ||
+        this.defaultOptions?.maxCacheSize ||
+        this.sizeLimitBytes / 4,
     };
 
     // Create new request
-    const request = (async () => {
-      try {
-        const source = await createSource<T>(key, mergedOptions);
+    const request = createSource<T>(key, mergedOptions)
+      .then((source) => {
         this.cache.set(key, source);
         return source;
-      } finally {
-        // Clean up in-flight request map
+      })
+      .catch((e) => {
+        console.log("caught error in source cache get", key);
         this.inFlightRequests.delete(key);
-      }
-    })();
-
-    // Store request in in-flight map
+        throw e;
+      });
     this.inFlightRequests.set(key, request);
     return request;
   }

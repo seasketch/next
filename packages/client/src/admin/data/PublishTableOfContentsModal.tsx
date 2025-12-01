@@ -1,7 +1,6 @@
 import { useTranslation, Trans } from "react-i18next";
 import Modal from "../../components/Modal";
 import {
-  DraftTableOfContentsDocument,
   PublishedTableOfContentsDocument,
   usePublishTableOfContentsMutation,
 } from "../../generated/graphql";

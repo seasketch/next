@@ -169,13 +169,18 @@ div[attachments="forumAttachments"] {
   opacity: 0.3;
 }
 
-.ProseMirror h1.empty-report-title-node::before {
+.ProseMirror .ProseMirror h1.empty-report-title-node::before {
   content: "Card Title...";
 }
 
 .ReportCardBody h1[data-report-title="yes"],
 .ReportCardBodyEditor h1[data-report-title="yes"] {
-  @apply text-base font-medium max-w-3/4 truncate py-2 pb-0;
+  @apply text-base font-medium max-w-[95%] truncate py-2 pb-0;
+}
+
+.loading .ReportCardBody h1[data-report-title="yes"],
+.loading .ReportCardBodyEditor h1[data-report-title="yes"] {
+  @apply max-w-[calc(100%-120px)] truncate;
 }
 
 .ReportCardBody h1[data-report-title="yes"] {
@@ -194,6 +199,10 @@ div[attachments="forumAttachments"] {
   @apply pl-6;
 }
 
+.ProseMirrorBody.ReportCardBody a {
+  @apply text-primary-600 no-underline font-medium hover:underline;
+}
+
 .ReportCardBody p,
 .ReportCardBodyEditor p {
   @apply text-black;
@@ -202,4 +211,80 @@ div[attachments="forumAttachments"] {
 .ReportCardBodyEditor p:first-of-type,
 .ReportCardBody p:first-of-type {
   /* @apply pt-0 mt-0; */
+}
+
+/* Footer Title */
+.ProseMirror .empty-footer-title-node::before {
+  position: absolute;
+  opacity: 0.5;
+  cursor: text;
+}
+
+.ProseMirror .empty-footer-title-node:hover::before {
+  opacity: 0.3;
+}
+
+.ProseMirror h2.empty-footer-title-node::before {
+  content: "Learn More...";
+}
+
+.ReportCardBody h2[data-footer-title="yes"],
+.ReportCardBodyEditor h2[data-footer-title="yes"] {
+  @apply text-sm font-medium;
+}
+
+.ReportCardBody h2[data-footer-title="yes"] {
+  @apply pointer-events-none;
+  display: none; /* Hide the title in rendered view since it's shown as button label */
+}
+
+/* Show footer title in editor */
+.ReportCardBodyEditor h2[data-footer-title="yes"] {
+  display: block;
+  @apply mb-2;
+}
+
+.ProseMirrorFooterHideBody
+  > [contenteditable="true"]
+  > *:not([data-footer-title="yes"]) {
+  display: none;
+}
+
+[data-presence-block="yes"],
+[data-absence-block="yes"] {
+  @apply hidden;
+}
+
+.Presence.ReportCard.editing [data-presence-block="yes"] {
+  @apply outline-1 outline-green-500/50 outline outline-offset-4 rounded-sm;
+}
+
+.Presence.ReportCard.editing [data-absence-block="yes"] {
+  @apply outline-1 outline-red-500/50 outline outline-offset-4 rounded-sm mt-4;
+}
+
+.Presence.ReportCard.editing [data-presence-block="yes"] {
+  @apply block;
+}
+
+.Presence.ReportCard.editing [data-absence-block="yes"] {
+  @apply block;
+}
+
+.Presence.ReportCard.editing [data-presence-block="yes"]::before {
+  content: "Content to show when features overlap";
+  @apply text-green-500;
+}
+
+.Presence.ReportCard.editing [data-absence-block="yes"]::before {
+  content: "Content to show when overlapping features are absent";
+  @apply text-red-500;
+}
+
+.Presence.ReportCard.isPresent [data-presence-block="yes"] {
+  @apply block;
+}
+
+.Presence.ReportCard.isAbsent [data-absence-block="yes"] {
+  @apply block;
 }

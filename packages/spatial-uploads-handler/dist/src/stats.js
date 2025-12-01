@@ -10,7 +10,8 @@ const simple_statistics_1 = require("simple-statistics");
 function equalIntervalBuckets(data, numBuckets, max, fraction = false) {
     const breaks = (0, simple_statistics_1.equalIntervalBreaks)(data, numBuckets);
     breaks.pop();
-    return breaksToBuckets(max || Math.max(...data), breaks, data, fraction);
+    max = max !== undefined ? max : Math.max(...data);
+    return breaksToBuckets(max, breaks, data, fraction);
 }
 function quantileBuckets(data, numBuckets, min, max, fraction = false, includeDuplicates = false) {
     if (data.length <= numBuckets) {

@@ -12,10 +12,10 @@ const sqs = new SQSClient({ region: process.env.AWS_REGION });
 // Tracks in-flight SQS send operations so they can be flushed later
 const pendingSendOperations = new Set<Promise<unknown>>();
 
-export async function sendMessage(msg: OverlayEngineWorkerMessage) {
-  const queueUrl = process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL;
+export function sendMessage(msg: OverlayEngineWorkerMessage) {
+  const queueUrl = msg.queueUrl;
   if (!queueUrl) {
-    throw new Error("OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL is not set");
+    throw new Error("Payload is missing queueUrl");
   }
   const command = new SendMessageCommand({
     QueueUrl: queueUrl,
@@ -23,15 +23,29 @@ export async function sendMessage(msg: OverlayEngineWorkerMessage) {
   });
   const sendPromise = sqs.send(command);
   pendingSendOperations.add(sendPromise);
-  sendPromise.finally(() => pendingSendOperations.delete(sendPromise));
-  await sendPromise;
+  sendPromise
+    .then((v) => {
+      if (msg.type === "result") {
+        console.log("result message sent", v);
+      }
+    })
+    .finally(() => pendingSendOperations.delete(sendPromise));
+  return sendPromise;
 }
 
-export async function sendResultMessage(jobKey: string, result: any) {
+export async function sendResultMessage(
+  jobKey: string,
+  result: any,
+  queueUrl: string,
+  duration?: number
+) {
+  console.log("sending result message", result);
   const msg: OverlayEngineWorkerResultMessage = {
     type: "result",
     result,
     jobKey,
+    queueUrl,
+    duration,
   };
   await sendMessage(msg);
 }
@@ -39,22 +53,31 @@ export async function sendResultMessage(jobKey: string, result: any) {
 export async function sendProgressMessage(
   jobKey: string,
   progress: number,
-  message?: string
+  queueUrl: string,
+  message?: string,
+  eta?: Date
 ) {
   const msg: OverlayEngineWorkerProgressMessage = {
     type: "progress",
     progress,
     message,
     jobKey,
+    queueUrl,
+    eta: eta ? eta.toISOString() : undefined,
   };
-  await sendMessage(msg);
+  return sendMessage(msg);
 }
 
-export async function sendErrorMessage(jobKey: string, error: string) {
+export async function sendErrorMessage(
+  jobKey: string,
+  error: string,
+  queueUrl: string
+) {
   const msg: OverlayEngineWorkerErrorMessage = {
     type: "error",
     error,
     jobKey,
+    queueUrl,
   };
   await sendMessage(msg);
 }
@@ -62,13 +85,15 @@ export async function sendErrorMessage(jobKey: string, error: string) {
 export async function sendBeginMessage(
   jobKey: string,
   logfileUrl: string,
-  logsExpiresAt: string
+  logsExpiresAt: string,
+  queueUrl: string
 ) {
   const msg: OverlayEngineWorkerBeginMessage = {
     type: "begin",
     logfileUrl,
     logsExpiresAt,
     jobKey,
+    queueUrl,
   };
   await sendMessage(msg);
 }

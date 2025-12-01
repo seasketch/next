@@ -724,7 +724,7 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
   if (process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL) {
     try {
       const { startOverlayEngineWorkerMessageConsumer } = await import(
-        "./overlayEngineWorkers/messageQueueConsumer"
+        "./overlayEngine/messageQueueConsumer"
       );
       startOverlayEngineWorkerMessageConsumer(loadersPool);
       console.log(

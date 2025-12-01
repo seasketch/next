@@ -1,8 +1,13 @@
 /**
- * Byte offsets to fetch feature data from the fgb file, as [offset, length].
+ * Byte offsets to fetch feature data from the fgb file, as [offset, length,
+ * bbox].
  * The length is null if the feature is the last in the file.
  */
-export type OffsetAndLength = [number, number | null];
+export type FeatureReference = [
+  number,
+  number | null,
+  [number, number, number, number]
+];
 
 /**
  * Size of each node item in the R-tree index in bytes.
@@ -86,12 +91,12 @@ export default class RTreeIndex {
    * @param maxY - Maximum Y coordinate of the search box
    * @returns Promise resolving to array of [offset, length] tuples
    */
-  async search(minX: number, minY: number, maxX: number, maxY: number) {
+  search(minX: number, minY: number, maxX: number, maxY: number) {
     // Search starts at the root node, position 0. The search is a top-down
     let nodeIndex: number | undefined = 0;
     // The queue is used to store the node offsets that need to be searched
     const queue: number[] = [];
-    const results: OffsetAndLength[] = [];
+    const results: FeatureReference[] = [];
 
     while (nodeIndex !== undefined) {
       // Each node contains nodeSize children (by default 16). Here we calculate
@@ -133,7 +138,11 @@ export default class RTreeIndex {
             const nextLeaf = this.getNodeData(nextLeafPosition);
             length = nextLeaf.offset - node.offset;
           }
-          results.push([node.offset, length]);
+          results.push([
+            node.offset,
+            length,
+            [node.minX, node.minY, node.maxX, node.maxY],
+          ]);
         } else {
           queue.push(Number(node.offset));
         }
@@ -164,6 +173,40 @@ export default class RTreeIndex {
       offset: Number(this.view.getBigUint64(byteIndex + 32, true)),
       isLeaf: index >= this.details.levels[this.details.levels.length - 2],
     };
+  }
+
+  /**
+   * Returns the byte offsets of all features in the index.
+   * @returns Array of byte offsets
+   */
+  getFeatureOffsets() {
+    const leafStart = this.details.levels[this.details.levels.length - 2];
+    const offsets: number[] = [];
+    for (let i = 0; i < this.details.featureCount; i++) {
+      const byteIndex =
+        i * NODE_ITEM_BYTE_LENGTH + leafStart * NODE_ITEM_BYTE_LENGTH;
+      const offset = Number(this.view.getBigUint64(byteIndex + 32, true));
+      offsets.push(offset);
+    }
+    return offsets;
+  }
+
+  /**
+   * Returns the byte offset (relative to feature data start) of the last feature.
+   */
+  getLastFeatureOffset(): number {
+    const lastIndex = this.details.numNodes - 1;
+    const node = this.getNodeData(lastIndex);
+    return Number(node.offset);
+  }
+
+  /**
+   * Returns the byte offset (relative to feature data start) of the first feature.
+   * This is determined by finding the first leaf node in the R-tree.
+   */
+  getFirstLeafNode() {
+    const firstLeafIndex = this.details.levels[this.details.levels.length - 2];
+    return this.getNodeData(firstLeafIndex);
   }
 }
 

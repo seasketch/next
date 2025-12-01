@@ -13,23 +13,16 @@ import {
   clipSketchToPolygons,
   clipToGeographies,
 } from "overlay-engine";
-import { PoolClient } from "pg";
+import { Pool, PoolClient } from "pg";
 import bbox from "@turf/bbox";
 import { PendingFragmentResult } from "overlay-engine/dist/fragments";
+import { startMetricCalculationsForSketch } from "./plugins/reportsPlugin";
+import { makeNodeFetchRangeFn } from "./nodeFetchRangeFn";
 
 // Initialize source cache for clipping operations
 const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
-  fetchRangeFn: async (key: string, range: [number, number | null]) => {
-    const response = await fetch(`https://uploads.seasketch.org/${key}`, {
-      headers: range
-        ? new Headers({
-            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-          })
-        : undefined,
-    });
-    const arrayBuffer = await response.arrayBuffer();
-    return arrayBuffer;
-  },
+  fetchRangeFn: makeNodeFetchRangeFn(`https://uploads.seasketch.org/`)
+    .fetchRangeFn,
 });
 
 // Lazy load clipping worker manager
@@ -682,13 +675,13 @@ export async function createOrUpdateSketch({
   );
 
   // Filter out layers that are not used for clipping this sketch class.
-  const clippingGeographyLayers = [
-    ...new Set(
+  const clippingGeographyLayers = Array.from(
+    new Set(
       clippingLayers
         .filter((l: any) => l.for_clipping)
         .map((l: any) => l.geography_id)
-    ),
-  ];
+    )
+  );
 
   if (sketchId) {
     // collection_id is not updatable, so we need to check if the sketch is
@@ -846,6 +839,12 @@ export async function createOrUpdateSketch({
     fragmentDeletionScope,
     pgClient,
     sketchId
+  );
+
+  startMetricCalculationsForSketch(
+    pgClient as unknown as Pool,
+    sketchId!,
+    false
   );
 
   return sketchId!;

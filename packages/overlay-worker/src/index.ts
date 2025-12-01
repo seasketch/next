@@ -11,4 +11,8 @@ export {
   OverlayEngineWorkerMessage,
   FragmentSubjectPayload,
   GeographySubjectPayload,
+  OverlayEngineWorkerProgressMessage,
+  OverlayEngineWorkerBeginMessage,
+  OverlayEngineWorkerResultMessage,
+  OverlayEngineWorkerErrorMessage,
 } from "./types";

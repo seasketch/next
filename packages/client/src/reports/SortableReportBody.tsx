@@ -93,6 +93,8 @@ export function SortableReportBody({
                   ? { ...card, ...localCardEdits }
                   : card;
 
+              const { metrics, loading, errors, overlaySources } =
+                context.getDependencies(card.id);
               return (
                 <Draggable
                   key={card.id}
@@ -127,6 +129,10 @@ export function SortableReportBody({
                             onCardUpdate(card.id, update);
                           }
                         }}
+                        metrics={metrics}
+                        sources={overlaySources}
+                        loading={loading}
+                        errors={errors}
                       />
                     </div>
                   )}

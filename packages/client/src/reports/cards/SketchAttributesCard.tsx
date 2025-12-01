@@ -7,7 +7,7 @@ import {
 import { useContext } from "react";
 import { useReportContext } from "../ReportContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import { Trans, useTranslation } from "react-i18next";
+import { TFunction, Trans, useTranslation } from "react-i18next";
 import { lazy } from "react";
 import { DocumentSearchIcon } from "@heroicons/react/outline";
 
@@ -65,13 +65,7 @@ export function SketchAttributesCard({
   }
 
   return (
-    <ReportCard
-      dragHandleProps={dragHandleProps}
-      cardId={config.id}
-      onUpdate={onUpdate}
-      backgroundTint={nameOnly ? "yellow" : undefined}
-      config={config}
-    >
+    <>
       {nameOnly ? (
         <>
           <p>
@@ -86,7 +80,7 @@ export function SketchAttributesCard({
           {sortedFormElements.length === 0 ? (
             <p className="text-gray-500 italic">{t("No attributes found")}</p>
           ) : (
-            <div className="space-y-3 mt-2">
+            <div className="space-y-3 mt-2 mb-2">
               {sortedFormElements.map((element) => {
                 let label = element.generatedLabel;
                 if (
@@ -120,7 +114,7 @@ export function SketchAttributesCard({
                         displayType === "inline" ? "text-right" : ""
                       }`}
                     >
-                      {formatValue(value, element.typeId)}
+                      {formatValue(value, element.typeId, t)}
                     </div>
                   </div>
                 );
@@ -129,19 +123,29 @@ export function SketchAttributesCard({
           )}
         </div>
       )}
-    </ReportCard>
+    </>
   );
 }
 
-function formatValue(value: any, typeId: string) {
+function formatValue(value: any, typeId: string, t: TFunction) {
   if (Array.isArray(value)) {
     return value.join(", ");
   } else if (typeof value === "boolean") {
-    return value ? "Yes" : "No";
+    return value ? t("Yes") : t("No");
   } else if (typeof value === "object") {
     return JSON.stringify(value);
   } else if (typeof value === "number") {
-    return value.toFixed(2);
+    return Number.isInteger(value) ? value.toString() : value.toFixed(2);
+  } else if (typeof value === "string" && value.startsWith("[")) {
+    try {
+      const listValues = JSON.parse(value);
+      const displayValues = listValues.map((listValue: any) => {
+        return formatValue(listValue, typeId, t);
+      });
+      return displayValues.join(", ");
+    } catch (error) {
+      return value;
+    }
   } else if (typeof value === "string") {
     return value;
   }

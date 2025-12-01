@@ -1,47 +1,81 @@
-import debounce from "lodash.debounce";
-import {
-  sendErrorMessage,
-  sendProgressMessage,
-  sendResultMessage,
-} from "./messaging";
+import { sendProgressMessage } from "./messaging";
+import { EtaEstimator } from "./EtaEstimator";
 
 // Debounces progress messages to avoid spamming the database and client
 export class ProgressNotifier {
   private jobKey: string;
   private progress = 0;
+  private lastNotifiedProgress = 0;
+  private messageLastSent?: number;
+  private maxWaitMs: number;
   private message?: string;
+  private queueUrl: string;
+  private etaEstimator: EtaEstimator | null = null;
+  private eta: null | Date = null;
   private sendMessage = () => {};
 
-  constructor(jobKey: string, debounceMs: number, maxWaitMs: number) {
+  constructor(jobKey: string, maxWaitMs: number, queueUrl: string) {
+    this.messageLastSent = new Date().getTime();
+    this.maxWaitMs = maxWaitMs;
     this.jobKey = jobKey;
-    // this.sendMessage = () => {
-    //   console.log("Sending progress message", this.progress, this.message);
-    //   sendProgressMessage(this.jobKey, this.progress, this.message);
-    // };
-    this.sendMessage = debounce(
-      () => {
-        sendProgressMessage(this.jobKey, this.progress, this.message);
-      },
-      debounceMs,
-      {
-        maxWait: maxWaitMs,
-      }
-    );
+    this.queueUrl = queueUrl;
   }
 
   notify(progress: number, message?: string) {
-    let hasChanged = false;
-    if (progress >= this.progress && message !== this.message) {
-      this.message = message;
-      hasChanged = true;
+    let sendNotification = false;
+    if (progress === 0) {
+      this.etaEstimator = new EtaEstimator({
+        totalUnits: 100,
+      });
     }
+    const timeSinceLastSent = Date.now() - (this.messageLastSent || 0);
+
+    const exceedsMaxWait = timeSinceLastSent > this.maxWaitMs;
+    // only send notification if one of these criteria are met:
+    // 1. it has been more than maxWaitMs since the last notification
+    if (
+      (Math.round(progress) > Math.round(this.lastNotifiedProgress) &&
+        exceedsMaxWait) ||
+      timeSinceLastSent > this.maxWaitMs * 5
+    ) {
+      sendNotification = true;
+    }
+    // 2. The progress has increased by 10% or more since the last notification
+    if (progress > this.lastNotifiedProgress + 5) {
+      sendNotification = true;
+    }
+
     if (progress > this.progress) {
-      this.progress = progress;
-      hasChanged = true;
+      if (this.etaEstimator) {
+        const state = this.etaEstimator.update(progress);
+        this.eta = state.eta;
+      }
+    } else if (sendNotification) {
+      // Refresh ETA on time-based notifications even without new progress
+      if (this.etaEstimator) {
+        const state = this.etaEstimator.getState();
+        this.eta = state.eta;
+      }
     }
-    if (hasChanged) {
-      this.sendMessage();
+    this.progress = progress;
+    this.message = message;
+    if (sendNotification) {
+      this.lastNotifiedProgress = this.progress;
+      this.messageLastSent = new Date().getTime();
+      return this.sendNotification();
+    } else {
+      return Promise.resolve();
     }
+  }
+
+  sendNotification() {
+    return sendProgressMessage(
+      this.jobKey,
+      this.progress,
+      this.queueUrl,
+      this.message,
+      this.eta || undefined
+    );
   }
 
   flush() {

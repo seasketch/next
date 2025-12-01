@@ -4,7 +4,7 @@ import { Feature } from "geojson";
  * Progress is a number between 0 and 100, and message is an optional message
  * to be displayed to the user.
  */
-export type OverlayWorkerProgressCallback = (progress: number, message?: string) => void;
+export type OverlayWorkerProgressCallback = (progress: number, message?: string) => Promise<void>;
 /**
  * A callback function that can be used to log messages to the caller. Should be
  * used instead of console.log, so that the caller can decide whether to log to
@@ -33,6 +33,8 @@ export type OverlayWorkerHelpers = {
     progress?: OverlayWorkerProgressCallback;
     log?: OverlayWorkerLogCallback;
     logFeature?: OverlayWorkerLogFeatureCallback;
+    time?: (message: string) => void;
+    timeEnd?: (message: string) => void;
 };
 /**
  * A guaranteed version of OverlayWorkerHelpers where log and progress are always
@@ -42,6 +44,8 @@ export type GuaranteedOverlayWorkerHelpers = {
     progress: OverlayWorkerProgressCallback;
     log: OverlayWorkerLogCallback;
     logFeature?: OverlayWorkerLogFeatureCallback;
+    time: (message: string) => void;
+    timeEnd: (message: string) => void;
 };
 /**
  * Transforms optional helpers into guaranteed interface with no-op functions for log and progress.

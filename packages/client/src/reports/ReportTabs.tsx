@@ -221,7 +221,9 @@ export function ReportTabs({
           setSelectedTabId(parseInt(value));
         }
       }}
-      className={`w-full ${isDisabled ? "pointer-events-none" : ""}`}
+      className={`shadow-md z-[2] w-full ${
+        isDisabled ? "pointer-events-none" : ""
+      }`}
     >
       <Tabs.List
         ref={containerRef}

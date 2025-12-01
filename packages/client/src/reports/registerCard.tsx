@@ -1,7 +1,13 @@
 import { ReportCardType, ReportCardConfiguration } from "./cards/cards";
 import { MetricType } from "overlay-engine";
 import { ReactElement, FunctionComponent } from "react";
-import { SketchClassDetailsFragment } from "../generated/graphql";
+import {
+  CompatibleSpatialMetricDetailsFragment,
+  DataSourceTypes,
+  DataUploadOutputType,
+  OverlaySourceDetailsFragment,
+  SketchClassDetailsFragment,
+} from "../generated/graphql";
 
 export type ReportCardConfigUpdateCallback = (
   update:
@@ -13,6 +19,10 @@ export type ReportCardConfigUpdateCallback = (
 
 export type ReportCardComponent<T> = React.ComponentType<{
   config: ReportCardConfiguration<T>;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: string[];
   dragHandleProps?: any;
   cardId?: number;
   onUpdate?: ReportCardConfigUpdateCallback;
@@ -52,6 +62,15 @@ export interface ReportCardRegistration<T> {
   getExportData?: (settings: T, data: any) => any;
   requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
+  supportedReportingLayerTypes: DataSourceTypes[];
+  minimumReportingLayerCount: number;
+  maximumReportingLayerCount?: number;
+  /**
+   * Required layer parameters that must be set when selecting layers.
+   * Each parameter name corresponds to a property that must exist in layerParameters.
+   * Example: ["valueColumn"] means each layer must have layerParameters.valueColumn set.
+   */
+  requiredLayerParameters?: string[];
 }
 
 export const registeredCards: Map<
@@ -74,8 +93,16 @@ export interface RegisterReportCardConfig<T> {
     componentSettings: T;
     sketchClass?: SketchClassDetailsFragment | undefined | null;
   }>;
-  requiredMetrics?: (componentSettings: T) => MetricType[];
   order?: number;
+  supportedReportingLayerTypes?: DataSourceTypes[];
+  minimumReportingLayerCount?: number;
+  maximumReportingLayerCount?: number;
+  /**
+   * Required layer parameters that must be set when selecting layers.
+   * Each parameter name corresponds to a property that must exist in layerParameters.
+   * Example: ["valueColumn"] means each layer must have layerParameters.valueColumn set.
+   */
+  requiredLayerParameters?: string[];
 }
 
 export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
@@ -91,8 +118,11 @@ export function registerReportCardType<T>(config: RegisterReportCardConfig<T>) {
     label: config.label,
     description: config.description,
     icon: config.icon,
-    requiredMetrics: config.requiredMetrics,
     order: config.order,
+    supportedReportingLayerTypes: config.supportedReportingLayerTypes || [],
+    minimumReportingLayerCount: config.minimumReportingLayerCount || 0,
+    maximumReportingLayerCount: config.maximumReportingLayerCount,
+    requiredLayerParameters: config.requiredLayerParameters,
   });
 }
 

@@ -46,18 +46,21 @@ export function validateFeatureData(view: DataView, size: number) {
  * @param offset - Offset of the feature in the file, used as the feature ID
  * @param bytesAligned - Uint8Array of the feature data, with the size prefix
  * @param header - FlatGeobuf header metadata
+ * @param bbox - Bounding box of the feature
  * @returns GeoJSON Feature with metadata
  */
 export function parseFeatureData(
   offset: number,
   bytesAligned: Uint8Array,
-  header: HeaderMeta
+  header: HeaderMeta,
+  bbox?: [number, number, number, number]
 ): FeatureWithMetadata<any> {
   const bb = new ByteBuffer(bytesAligned);
   bb.setPosition(SIZE_PREFIX_LEN);
   const feature = fromFeature(offset, Feature.getRootAsFeature(bb), header);
   return {
     ...feature,
+    bbox: bbox,
     properties: {
       ...feature.properties,
       __byteLength: bytesAligned.byteLength,

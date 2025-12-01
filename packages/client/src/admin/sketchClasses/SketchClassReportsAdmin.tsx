@@ -13,9 +13,10 @@ import {
   useProjectMetadataQuery,
   useMoveCardToTabMutation,
   usePublishReportMutation,
-  SketchTocDetailsFragment,
-  useSketchReportingDetailsQuery,
-  SketchGeometryType,
+  useDraftReportDebuggingMaterialsQuery,
+  ReportingLayerDetailsFragment,
+  ReportContextDocument,
+  usePublishTableOfContentsMutation,
 } from "../../generated/graphql";
 import { PlusCircleIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -24,7 +25,6 @@ import {
   MenuBarItemClasses,
 } from "../../components/Menubar";
 import {
-  ReportConfiguration,
   registerCards,
   ReportCardType,
   ReportCardConfiguration,
@@ -43,6 +43,7 @@ import { AddCardModal } from "../../reports/AddCardModal";
 import Button from "../../components/Button";
 import DropdownButton from "../../components/DropdownButton";
 import useDialog from "../../components/useDialog";
+import useProjectId from "../../useProjectId";
 import Spinner from "../../components/Spinner";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
@@ -50,8 +51,6 @@ import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
-import { MetricSubjectFragment } from "overlay-engine";
-import GeographyMetricsProgressIndicator from "./GeographyMetricsProgressIndicator";
 
 registerCards();
 
@@ -61,8 +60,9 @@ export default function SketchClassReportsAdmin({
   sketchClass: SketchingDetailsFragment;
 }) {
   const { t, i18n } = useTranslation("admin:sketching");
-  const { confirmDelete } = useDialog();
+  const { confirmDelete, confirm, loadingMessage } = useDialog();
   const slug = getSlug();
+  const projectId = useProjectId();
 
   const onError = useGlobalErrorHandler();
   const { data, loading } = useDraftReportQuery({
@@ -72,9 +72,17 @@ export default function SketchClassReportsAdmin({
     onError,
   });
 
+  const { data: debuggingMaterialsData } =
+    useDraftReportDebuggingMaterialsQuery({
+      variables: {
+        sketchClassId: sketchClass.id,
+      },
+      onError,
+    });
+
   const sketchesForDemonstration = useMemo(() => {
     const sketches =
-      data?.sketchClass?.project?.mySketches?.filter(
+      debuggingMaterialsData?.sketchClass?.mySketches?.filter(
         (sketch) => sketch.sketchClassId === sketchClass.id
       ) || [];
 
@@ -84,7 +92,7 @@ export default function SketchClassReportsAdmin({
       const dateB = new Date(b.createdAt).getTime();
       return dateB - dateA; // Most recent first
     });
-  }, [data, sketchClass.id]);
+  }, [debuggingMaterialsData, sketchClass.id]);
 
   const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
 
@@ -118,7 +126,7 @@ export default function SketchClassReportsAdmin({
       refetchQueries: [DraftReportDocument],
     });
 
-  const [addReportCard, addReportCardState] = useAddReportCardMutation({
+  const [addReportCard] = useAddReportCardMutation({
     awaitRefetchQueries: true,
     refetchQueries: [DraftReportDocument],
   });
@@ -133,15 +141,50 @@ export default function SketchClassReportsAdmin({
     awaitRefetchQueries: true,
   });
 
-  const [deleteCardMutation, deleteCardMutationState] =
-    useDeleteReportCardMutation({
-      onError,
-      refetchQueries: [DraftReportDocument],
-      awaitRefetchQueries: true,
-    });
+  const [deleteCardMutation] = useDeleteReportCardMutation({
+    onError,
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
+  });
+
+  const [publishTableOfContents] = usePublishTableOfContentsMutation();
 
   const [publishReport, publishReportState] = usePublishReportMutation({
-    onError,
+    onError: (err) => {
+      const message = err?.message || "";
+      if (
+        message
+          .toLowerCase()
+          .includes("references data layers that have not yet been published")
+      ) {
+        confirm(t("Report contains unpublished layers"), {
+          description: t(
+            "This report references data layers from the draft layer list that have not yet been published. Would you like to publish the overlays now?"
+          ),
+          primaryButtonText: t("Publish draft layers and report"),
+          secondaryButtonText: t("Cancel"),
+          onSubmit: async () => {
+            const { hideLoadingMessage } = loadingMessage(
+              t("Publishing overlays...")
+            );
+            try {
+              await publishTableOfContents({
+                variables: { projectId: projectId! },
+              });
+              hideLoadingMessage();
+              await publishReport({
+                variables: { sketchClassId: sketchClass.id },
+              });
+            } catch (e) {
+              hideLoadingMessage();
+              onError(e as any);
+            }
+          },
+        });
+        return;
+      }
+      onError(err);
+    },
     refetchQueries: [DraftReportDocument],
     awaitRefetchQueries: true,
   });
@@ -163,7 +206,7 @@ export default function SketchClassReportsAdmin({
 
   // Use the custom hook to manage report state
   const reportState = useReportState(
-    (draftReport as any) || undefined,
+    draftReport?.id || undefined,
     sketchClass.id,
     selectedSketchId
   );
@@ -211,7 +254,26 @@ export default function SketchClassReportsAdmin({
     }
   };
 
-  const handleCardSelect = async (cardType: string) => {
+  const handleCardSelect = async (
+    cardType: string,
+    selection?: {
+      layer: ReportingLayerDetailsFragment;
+      parameters: any;
+    }[]
+  ) => {
+    if (!reportState) {
+      console.error("No report state");
+      return;
+    }
+    if (
+      selection?.length &&
+      selection[0] &&
+      typeof selection[0].layer.tableOfContentsItemId !== "number"
+    ) {
+      console.error("Invalid selection");
+      return;
+    }
+    // debug: card selection
     if (!reportState.selectedTab) {
       console.error("No selected tab");
       return;
@@ -223,15 +285,68 @@ export default function SketchClassReportsAdmin({
       return;
     }
 
+    let body = registration.defaultBody || {};
+    if (selection && selection.length === 1) {
+      body = {
+        type: "doc",
+        content: [
+          {
+            type: "reportTitle",
+            content: [
+              {
+                type: "text",
+                text:
+                  selection[0].layer.tableOfContentsItem?.title || "Untitled",
+              },
+            ],
+          },
+          {
+            type: "presenceBlock",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  {
+                    type: "text",
+                    text: "✅ Found overlapping features in this sketch.",
+                  },
+                ],
+              },
+            ],
+          },
+          {
+            type: "absenceBlock",
+            content: [
+              {
+                type: "paragraph",
+                content: [
+                  { type: "text", text: "🚫 No overlapping features found." },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+    }
+
     try {
       await addReportCard({
         variables: {
           reportTabId: reportState.selectedTab.id,
           componentSettings: registration.defaultSettings,
           cardType: cardType,
-          body: registration.defaultBody || {},
+          body,
+          layers:
+            selection?.map((l) => ({
+              tableOfContentsItemId: l.layer.tableOfContentsItemId,
+              layerParameters: l.parameters,
+            })) || [],
         },
+        onError,
+        refetchQueries: [ReportContextDocument, DraftReportDocument],
+        awaitRefetchQueries: true,
       });
+      // If server requires a separate mutation to attach layers, that will be handled elsewhere.
       setAddCardModalOpen(false);
     } catch (error) {
       // Error is handled by onError
@@ -239,7 +354,7 @@ export default function SketchClassReportsAdmin({
   };
 
   const handleCancelEditing = () => {
-    reportState.setSelectedForEditing(null);
+    reportState?.setSelectedForEditing(null);
     setLocalCardEdits(null);
   };
 
@@ -251,7 +366,7 @@ export default function SketchClassReportsAdmin({
           prevState: ReportCardConfiguration<any>
         ) => ReportCardConfiguration<any>)
   ) => {
-    if (reportState.selectedForEditing === cardId) {
+    if (reportState?.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
         const baseState = (prevState ||
           selectedCardForEditing) as ReportCardConfiguration<any> | null;
@@ -288,12 +403,22 @@ export default function SketchClassReportsAdmin({
 
     if (!localCardEdits) {
       // cancel
-      reportState.setSelectedForEditing(null);
+      reportState?.setSelectedForEditing(null);
       setLocalCardEdits(null);
       return;
     }
 
     try {
+      // Ensure displayMapLayerVisibilityControls always has a value (defaults to true)
+      // This is required because the database column is NOT NULL
+      const displayMapLayerVisibilityControls =
+        localCardEdits.displayMapLayerVisibilityControls !== undefined
+          ? localCardEdits.displayMapLayerVisibilityControls
+          : selectedCardForEditing.displayMapLayerVisibilityControls !==
+            undefined
+          ? selectedCardForEditing.displayMapLayerVisibilityControls
+          : true;
+
       await updateReportCard({
         variables: {
           id: selectedCardForEditing.id,
@@ -305,13 +430,23 @@ export default function SketchClassReportsAdmin({
             selectedCardForEditing.alternateLanguageSettings,
           body: localCardEdits.body || selectedCardForEditing.body,
           cardType: localCardEdits.type || selectedCardForEditing.type,
-        },
+          collapsibleFooterEnabled:
+            localCardEdits.collapsibleFooterEnabled !== undefined
+              ? localCardEdits.collapsibleFooterEnabled
+              : selectedCardForEditing.collapsibleFooterEnabled !== undefined
+              ? selectedCardForEditing.collapsibleFooterEnabled
+              : false,
+          collapsibleFooterBody:
+            localCardEdits.collapsibleFooterBody ||
+            selectedCardForEditing.collapsibleFooterBody,
+          displayMapLayerVisibilityControls,
+        } as any, // Type assertion needed - the field exists in the GraphQL schema but TypeScript types may be out of sync
         refetchQueries: [DraftReportDocument],
         awaitRefetchQueries: true,
       });
 
       // Clear local edits and exit editing mode on successful save
-      reportState.setSelectedForEditing(null);
+      reportState?.setSelectedForEditing(null);
       setLocalCardEdits(null);
     } catch (error) {
       // Error is handled by onError
@@ -320,7 +455,7 @@ export default function SketchClassReportsAdmin({
 
   // Handle navigation blocking when editing
   useEffect(() => {
-    if (!reportState.selectedForEditing) return;
+    if (!reportState?.selectedForEditing) return;
 
     const message = t(
       "You have unsaved changes to a report card. Are you sure you want to leave?"
@@ -342,7 +477,7 @@ export default function SketchClassReportsAdmin({
       window.removeEventListener("beforeunload", handleBeforeUnload);
       unblock();
     };
-  }, [reportState.selectedForEditing, history, t]);
+  }, [reportState?.selectedForEditing, history, t]);
 
   if (!loading && !draftReport) {
     if (
@@ -388,7 +523,7 @@ export default function SketchClassReportsAdmin({
     new Date(data?.sketchClass?.draftReport?.updatedAt) >=
       new Date(data?.sketchClass?.report?.createdAt);
 
-  const selectedCardForEditing = reportState.selectedForEditing
+  const selectedCardForEditing = reportState?.selectedForEditing
     ? reportState.selectedTab?.cards.find(
         (card) => card.id === reportState.selectedForEditing
       )
@@ -400,15 +535,43 @@ export default function SketchClassReportsAdmin({
     ...(localCardEdits || {}),
   } as ReportCardConfiguration<any>;
 
+  if (sketchesForDemonstration.length === 0 && !loading) {
+    return (
+      <div className="flex-1 p-8 pt-16">
+        <div className="max-w-md text-center mx-auto">
+          <div className="mb-6">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+              <div className="w-6 h-6 text-blue-600">{SketchingIcon}</div>
+            </div>
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            {t("No sketches available for demonstration")}
+          </h3>
+          <p className="text-gray-600 mb-6">
+            {t(
+              "To author reports based on real data, you need to create sketches in your account first. Consider creating multiple sketches that represent different scenarios to test your reports thoroughly."
+            )}
+          </p>
+          <Button
+            label={t("Go to Sketching")}
+            onClick={() => {
+              window.location.href = `/${slug}/app/sketches`;
+            }}
+            primary
+          />
+        </div>
+      </div>
+    );
+  }
+  if (!reportState) {
+    return <div>{t("Loading...")}</div>;
+  }
   return (
     <ReportContext.Provider
       value={{
-        report: draftReport as unknown as ReportConfiguration,
         adminMode: true,
         ...reportState,
         deleteCard: handleDeleteCard,
-        isCollection: false,
-        geographies: data?.sketchClass?.project?.geographies || [],
       }}
     >
       <FormLanguageContext.Provider
@@ -426,7 +589,7 @@ export default function SketchClassReportsAdmin({
             (projectData?.project?.supportedLanguages as string[]) || [],
         }}
       >
-        <div className="flex flex-col w-full h-full">
+        <div className="flex flex-col w-full h-full overflow-y-hidden">
           {/* Header */}
           <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
             <div className="flex-none space-x-2">
@@ -460,19 +623,17 @@ export default function SketchClassReportsAdmin({
             <div className="flex-1 flex items-center justify-center">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">
-                  {t("Demo Sketch:")}
+                  {t("Demo Sketch") + ":"}
                 </span>
                 <DropdownButton
                   small
                   disabled={sketchesForDemonstration.length === 0}
                   label={
-                    selectedSketch ? (
-                      <Trans ns="admin:sketching">
-                        Displayed Sketch: {selectedSketch.name}
-                      </Trans>
-                    ) : (
-                      t("Select a sketch...")
-                    )
+                    selectedSketch
+                      ? <Trans ns="admin:sketching">Displayed Sketch</Trans> +
+                        ": " +
+                        selectedSketch.name
+                      : t("Select a sketch...")
                   }
                   options={sketchesForDemonstration.map((sketch) => ({
                     label: sketch.name,
@@ -486,7 +647,7 @@ export default function SketchClassReportsAdmin({
             <EditorLanguageSelector />
           </div>
           {/* Main */}
-          <div className="flex-1 flex relative">
+          <div className="flex-1 flex relative max-h-full overflow-hidden">
             {/* left sidebar */}
             <div
               className={`absolute left-0 top-0 bg-white flex-none border-r shadow-lg border-black/15 min-h-full flex flex-col w-72 transition-transform ${
@@ -575,10 +736,6 @@ export default function SketchClassReportsAdmin({
                   />
                 </div>
               </div>
-            ) : reportState.loading ? (
-              <div className="flex-1 p-8 pt-16">
-                <Spinner />
-              </div>
             ) : (
               <DragDropContext
                 onDragEnd={(result: DropResult) => {
@@ -655,7 +812,7 @@ export default function SketchClassReportsAdmin({
                   }
                 }}
               >
-                <div className="flex-1 p-8">
+                <div className="flex-1 p-8 max-h-full overflow-hidden">
                   {draftReport && !selectedSketch && selectedSketchId && (
                     <div className="max-w-md text-center mx-auto">
                       <div className="mb-6">
@@ -678,7 +835,7 @@ export default function SketchClassReportsAdmin({
                   {draftReport && selectedSketch && (
                     <>
                       <div
-                        className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 ${
+                        className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col ${
                           reportState.selectedForEditing
                             ? "3xl:translate-x-0 translate-x-36"
                             : ""
@@ -760,17 +917,34 @@ export default function SketchClassReportsAdmin({
                         {/* report tabs */}
                         <ReportTabs enableDragDrop={true} />
                         {/* report body */}
-                        <SortableReportBody
-                          selectedTab={reportState.selectedTab}
-                          selectedForEditing={reportState.selectedForEditing}
-                          localCardEdits={localCardEdits}
-                          onCardUpdate={handleCardUpdate}
-                          optimisticCardOrder={
-                            optimisticCardOrder[
-                              reportState.selectedTab?.id || 0
-                            ]
-                          }
-                        />
+                        <div className="relative max-h-full overflow-y-auto">
+                          {draftReport.tabs?.map((tab) => {
+                            const isActive =
+                              tab.id === reportState.selectedTab?.id;
+                            return (
+                              <div
+                                key={tab.id}
+                                className={`absolute top-0 w-full ${
+                                  isActive
+                                    ? "relative left-0"
+                                    : "-left-[10000px]"
+                                }`}
+                              >
+                                <SortableReportBody
+                                  selectedTab={tab}
+                                  selectedForEditing={
+                                    reportState.selectedForEditing
+                                  }
+                                  localCardEdits={localCardEdits}
+                                  onCardUpdate={handleCardUpdate}
+                                  optimisticCardOrder={
+                                    optimisticCardOrder[tab.id]
+                                  }
+                                />
+                              </div>
+                            );
+                          })}
+                        </div>
                         {/* Add Card Modal */}
                         {draftReport && (
                           <AddCardModal
@@ -802,7 +976,7 @@ export default function SketchClassReportsAdmin({
             {/* right sidebar */}
             <div className="w-0 bg-white flex-none border-l shadow"></div>
             {/* bottom right geography metrics indicator */}
-            <GeographyMetricsProgressIndicator />
+            {/* <GeographyMetricsProgressIndicator /> */}
           </div>
 
           {/* Footer */}
@@ -830,7 +1004,7 @@ function AdminFactory({
   return <Component config={config} onUpdate={onUpdate} />;
 }
 
-function collectReportCardTitle(body: any) {
+export function collectReportCardTitle(body: any) {
   if (
     body.type === "doc" &&
     "content" in body &&

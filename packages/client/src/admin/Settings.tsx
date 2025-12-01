@@ -25,6 +25,8 @@ import {
   useUpdateEnableReportBuilderMutation,
   useUpdateShowScalebarByDefaultMutation,
   useUpdateShowLegendByDefaultMutation,
+  useUpdateFeatureFlagsMutation,
+  UpdateFeatureFlagsMutationVariables,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -987,6 +989,27 @@ function SuperUserSettings() {
     onError,
   });
 
+  const [updateFeatureFlags, updateFeatureFlagsState] =
+    useUpdateFeatureFlagsMutation({
+      optimisticResponse: (input: UpdateFeatureFlagsMutationVariables) => {
+        return {
+          __typename: "Mutation",
+          updateFeatureFlags: {
+            __typename: "UpdateFeatureFlagsPayload",
+            project: {
+              __typename: "Project",
+              id: data!.project!.id,
+              featureFlags: {
+                __typename: "FeatureFlags",
+                iNaturalistLayers: input.flags.iNaturalistLayers,
+              },
+            },
+          },
+        };
+      },
+      onError,
+    });
+
   const [updateQuota, updateQuotaState] = useUpdateDataHostingQuotaMutation({
     optimisticResponse: (data) => {
       return {
@@ -1176,6 +1199,25 @@ function SuperUserSettings() {
                 description={t(
                   "Amount of spatial data that can be uploaded to this project. We limit this amount initially to prevent abuse and to identify important projects."
                 )}
+              />
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={Boolean(
+                      data?.project?.featureFlags?.iNaturalistLayers
+                    )}
+                    onClick={(enabled) => {
+                      updateFeatureFlags({
+                        variables: {
+                          slug,
+                          flags: { iNaturalistLayers: enabled },
+                        },
+                      });
+                    }}
+                  />
+                }
+                title={t("Enable iNaturalist Layers")}
+                description={t("Enable iNaturalist layers for this project.")}
               />
             </div>
           </div>

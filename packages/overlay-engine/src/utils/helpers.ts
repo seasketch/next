@@ -8,7 +8,7 @@ import { Feature, Geometry } from "geojson";
 export type OverlayWorkerProgressCallback = (
   progress: number,
   message?: string
-) => void;
+) => Promise<void>;
 
 /**
  * A callback function that can be used to log messages to the caller. Should be
@@ -49,6 +49,8 @@ export type OverlayWorkerHelpers = {
   progress?: OverlayWorkerProgressCallback;
   log?: OverlayWorkerLogCallback;
   logFeature?: OverlayWorkerLogFeatureCallback;
+  time?: (message: string) => void;
+  timeEnd?: (message: string) => void;
 };
 
 /**
@@ -59,6 +61,8 @@ export type GuaranteedOverlayWorkerHelpers = {
   progress: OverlayWorkerProgressCallback;
   log: OverlayWorkerLogCallback;
   logFeature?: OverlayWorkerLogFeatureCallback;
+  time: (message: string) => void;
+  timeEnd: (message: string) => void;
 };
 
 /**
@@ -71,7 +75,9 @@ export function guaranteeHelpers(
 ): GuaranteedOverlayWorkerHelpers {
   return {
     log: helpers?.log || (() => {}),
-    progress: helpers?.progress || (() => {}),
+    progress: helpers?.progress || (async () => {}),
     logFeature: helpers?.logFeature,
+    time: helpers?.time || (() => {}),
+    timeEnd: helpers?.timeEnd || (() => {}),
   };
 }

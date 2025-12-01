@@ -236,6 +236,12 @@ function ApolloProviderWithToken(props: any) {
           SpriteImage: {
             keyFields: ["url"],
           },
+          SourceProcessingJob: {
+            keyFields: ["jobKey"],
+          },
+          ReportOverlaySource: {
+            keyFields: ["tableOfContentsItemId"],
+          },
         },
       });
 

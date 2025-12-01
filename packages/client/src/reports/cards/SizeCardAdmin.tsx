@@ -5,7 +5,9 @@ import Switch from "../../components/Switch";
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useCardLocalizedStringAdmin } from "./cards";
-import LocalizedTextInput from "./LocalizedTextInput";
+import AreaUnitSelect from "../components/AreaUnitSelect";
+import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
+import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
 
 export default function SizeCardAdmin({
   config,
@@ -40,15 +42,10 @@ export default function SizeCardAdmin({
           {t("Choose the unit used to display area values.")}
         </p>
         <div className="mt-2">
-          <select
-            className="w-full rounded-md border border-gray-300 bg-white px-2 py-1 text-sm"
-            value={unit}
-            onChange={(e) => updateSettings({ unit: e.target.value as any })}
-          >
-            <option value="km">{t("km²")}</option>
-            <option value="mi">{t("mi²")}</option>
-            <option value="acres">{t("acres")}</option>
-          </select>
+          <AreaUnitSelect
+            value={unit as any}
+            onChange={(unit) => updateSettings({ unit })}
+          />
         </div>
       </div>
 
@@ -103,6 +100,10 @@ export default function SizeCardAdmin({
           </p>
         </div> */}
       </div>
+
+      <MapLayerVisibilityControlsAdmin config={config} onUpdate={onUpdate} />
+
+      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

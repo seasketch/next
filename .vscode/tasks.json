@@ -15,6 +15,9 @@
     },
     {
       "type": "npm",
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
       "script": "start",
       "path": "packages/client/",
       "problemMatcher": [],
