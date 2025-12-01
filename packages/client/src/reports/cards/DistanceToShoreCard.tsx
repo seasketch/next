@@ -336,7 +336,7 @@ export function DistanceToShoreCard({
       ) : (
         <>
           <p className="text-[15px] leading-[24px] py-2">
-            <Trans ns="reports">Minimum distance to shore:</Trans>{" "}
+            <Trans ns="reports">Minimum distance to shore -</Trans>{" "}
             <span className="tabular-nums font-semibold">
               {formatDistance(displayValue)} {displayLabel}
             </span>

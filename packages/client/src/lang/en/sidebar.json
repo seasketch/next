@@ -1,10 +1,11 @@
 {
-  "Administration": "Administration",
+  "About": "About",
+  "About this Project": "About this Project",
+  "Accessibility": "Accessibility",
   "Cache Settings": "Cache Settings",
   "Contact Us": "Contact Us",
   "Contact support": "Contact support",
   "Discussion Forums": "Discussion Forums",
-  "Language": "Language",
   "Maps": "Maps",
   "My Profile": "My Profile",
   "Overlay Layers": "Overlay Layers",
@@ -12,7 +13,6 @@
   "Project Admin Dashboard": "Project Admin Dashboard",
   "Sign In": "Sign In",
   "Sign Out": "Sign Out",
-  "Sketches": "Sketches",
   "Sketching Tools": "Sketching Tools",
   "Terms of Use": "Terms of Use"
 }

@@ -623,19 +623,17 @@ export default function SketchClassReportsAdmin({
             <div className="flex-1 flex items-center justify-center">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">
-                  {t("Demo Sketch:")}
+                  {t("Demo Sketch") + ":"}
                 </span>
                 <DropdownButton
                   small
                   disabled={sketchesForDemonstration.length === 0}
                   label={
-                    selectedSketch ? (
-                      <Trans ns="admin:sketching">
-                        Displayed Sketch: {selectedSketch.name}
-                      </Trans>
-                    ) : (
-                      t("Select a sketch...")
-                    )
+                    selectedSketch
+                      ? <Trans ns="admin:sketching">Displayed Sketch</Trans> +
+                        ": " +
+                        selectedSketch.name
+                      : t("Select a sketch...")
                   }
                   options={sketchesForDemonstration.map((sketch) => ({
                     label: sketch.name,
