@@ -196,6 +196,11 @@ const languages: LangDetails[] = [
       code: "yap",
       localName: "Yapese",
     },
+    {
+      name: "Bislama",
+      code: "bis",
+      localName: "Bislama",
+    },
   ].sort((a, b) => a.name.localeCompare(b.name)),
 ];
 

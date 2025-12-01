@@ -1,10 +1,12 @@
 {
   "<0> cells</0> matching criteria": "<0> cells</0> matching criteria",
+  "Adjust the opacity if needed to better see layers underneath.": "Adjust the opacity if needed to better see layers underneath.",
   "Are you sure you want to delete \"{{name}}\"?": "Are you sure you want to delete \"{{name}}\"?",
   "Are you sure you want to start over and redraw your sketch?": "Are you sure you want to start over and redraw your sketch?",
   "Calculations are queued and should start momentarily.": "Calculations are queued and should start momentarily.",
   "Calculations will start once overlay layers are processed.": "Calculations will start once overlay layers are processed.",
   "Cancel": "Cancel",
+  "Cell Layer Opacity": "Cell Layer Opacity",
   "Cells matching criteria": "Cells matching criteria",
   "Choose a sketch to share...": "Choose a sketch to share...",
   "Completed": "Completed",
