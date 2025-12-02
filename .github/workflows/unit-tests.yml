@@ -6,7 +6,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: underbluewaters/seasketch_db_base:0.0.1
+        image: underbluewaters/seasketch_db_base:latest
         ports:
           - "5432:5432"
         env:
