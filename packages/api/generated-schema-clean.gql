@@ -7777,41 +7777,6 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
-"""All input for the `getOrCreateSpatialMetric` mutation."""
-input GetOrCreateSpatialMetricInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  pOverlaySourceUrl: String
-  pParameters: JSON
-  pProjectId: Int
-  pSourceProcessingJobDependency: String
-  pSubjectFragmentId: String
-  pSubjectGeographyId: Int
-  pType: SpatialMetricType
-}
-
-"""The output of our `getOrCreateSpatialMetric` mutation."""
-type GetOrCreateSpatialMetricPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  json: JSON
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
-type GetOrCreateSpatialMetricsResults {
-  metrics: [CompatibleSpatialMetric!]!
-}
-
 type GoogleMapsTileApiSession implements Node {
   expiresAt: Datetime!
   id: Int!
@@ -9848,12 +9813,6 @@ type Mutation {
     """
     input: GetChildFoldersRecursiveInput!
   ): GetChildFoldersRecursivePayload
-  getOrCreateSpatialMetric(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: GetOrCreateSpatialMetricInput!
-  ): GetOrCreateSpatialMetricPayload
 
   """
   Use to create new sprites. If an existing sprite in the database for this
@@ -15928,17 +15887,6 @@ enum SpatialMetricState {
   ERROR
   PROCESSING
   QUEUED
-}
-
-enum SpatialMetricType {
-  COLUMN_VALUES
-  CONTEXTUALIZED_MEAN
-  COUNT
-  DISTANCE_TO_SHORE
-  OVERLAY_AREA
-  PRESENCE
-  PRESENCE_TABLE
-  TOTAL_AREA
 }
 
 """

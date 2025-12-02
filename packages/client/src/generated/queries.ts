@@ -4383,51 +4383,6 @@ export type DeleteReportCardInput = {
   clientMutationId?: Maybe<Scalars['String']>;
 };
 
-/** All input for the `deleteReportCardLayerByNodeId` mutation. */
-export type DeleteReportCardLayerByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `ReportCardLayer` to be deleted. */
-  nodeId: Scalars['ID'];
-};
-
-/** All input for the `deleteReportCardLayer` mutation. */
-export type DeleteReportCardLayerInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  reportCardId: Scalars['Int'];
-  tocStableId: Scalars['String'];
-};
-
-/** The output of our delete `ReportCardLayer` mutation. */
-export type DeleteReportCardLayerPayload = {
-  __typename?: 'DeleteReportCardLayerPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedReportCardLayerNodeId?: Maybe<Scalars['ID']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `ReportCardLayer` that was deleted by this mutation. */
-  reportCardLayer?: Maybe<ReportCardLayer>;
-  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
-  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
-};
-
-
-/** The output of our delete `ReportCardLayer` mutation. */
-export type DeleteReportCardLayerPayloadReportCardLayerEdgeArgs = {
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
-};
-
 /** The output of our `deleteReportCard` mutation. */
 export type DeleteReportCardPayload = {
   __typename?: 'DeleteReportCardPayload';
@@ -6771,45 +6726,6 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
-export type GetOrCreateSpatialMetricsResults = {
-  __typename?: 'GetOrCreateSpatialMetricsResults';
-  metrics: Array<CompatibleSpatialMetric>;
-};
-
-/** All input for the `getPublishedCardIdFromDraft` mutation. */
-export type GetPublishedCardIdFromDraftInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  pOverlaySourceUrl?: Maybe<Scalars['String']>;
-  pParameters?: Maybe<Scalars['JSON']>;
-  pProjectId?: Maybe<Scalars['Int']>;
-  pSourceProcessingJobDependency?: Maybe<Scalars['String']>;
-  pSubjectFragmentId?: Maybe<Scalars['String']>;
-  pSubjectGeographyId?: Maybe<Scalars['Int']>;
-  pType?: Maybe<SpatialMetricType>;
-};
-
-/** The output of our `getPublishedCardIdFromDraft` mutation. */
-export type GetPublishedCardIdFromDraftPayload = {
-  __typename?: 'GetPublishedCardIdFromDraftPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  json?: Maybe<Scalars['JSON']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
-export type GetOrCreateSpatialMetricsResults = {
-  __typename?: 'GetOrCreateSpatialMetricsResults';
-  metrics: Array<CompatibleSpatialMetric>;
-};
-
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7854,10 +7770,6 @@ export type Mutation = {
   /** Deletes a single `Report` using its globally unique id. */
   deleteReportByNodeId?: Maybe<DeleteReportPayload>;
   deleteReportCard?: Maybe<DeleteReportCardPayload>;
-  /** Deletes a single `ReportCardLayer` using a unique key. */
-  deleteReportCardLayer?: Maybe<DeleteReportCardLayerPayload>;
-  /** Deletes a single `ReportCardLayer` using its globally unique id. */
-  deleteReportCardLayerByNodeId?: Maybe<DeleteReportCardLayerPayload>;
   deleteReportTab?: Maybe<DeleteReportTabPayload>;
   /** Deletes a single `Sketch` using a unique key. */
   deleteSketch?: Maybe<DeleteSketchPayload>;
@@ -7922,14 +7834,12 @@ export type Mutation = {
   failDataUpload?: Maybe<FailDataUploadPayload>;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
-  getOrCreateSpatialMetric?: Maybe<GetOrCreateSpatialMetricPayload>;
   /**
    * Use to create new sprites. If an existing sprite in the database for this
    * project has a matching md5 hash no new Sprite will be created.
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
-  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8178,10 +8088,6 @@ export type Mutation = {
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
   updateReportCard?: Maybe<UpdateReportCardPayload>;
-  /** Updates a single `ReportCardLayer` using a unique key and a patch. */
-  updateReportCardLayer?: Maybe<UpdateReportCardLayerPayload>;
-  /** Updates a single `ReportCardLayer` using its globally unique id and a patch. */
-  updateReportCardLayerByNodeId?: Maybe<UpdateReportCardLayerPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -8947,18 +8853,6 @@ export type MutationDeleteReportCardArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteReportCardLayerArgs = {
-  input: DeleteReportCardLayerInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteReportCardLayerByNodeIdArgs = {
-  input: DeleteReportCardLayerByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteReportTabArgs = {
   input: DeleteReportTabInput;
 };
@@ -9151,12 +9045,6 @@ export type MutationGetChildFoldersRecursiveArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetOrCreateSpatialMetricArgs = {
-  input: GetOrCreateSpatialMetricInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationGetOrCreateSpriteArgs = {
   height: Scalars['Int'];
   pixelRatio: Scalars['Int'];
@@ -9171,12 +9059,6 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationGetPublishedCardIdFromDraftArgs = {
-  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -9851,18 +9733,6 @@ export type MutationUpdateReportByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateReportCardArgs = {
   input: UpdateReportCardInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateReportCardLayerArgs = {
-  input: UpdateReportCardLayerInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateReportCardLayerByNodeIdArgs = {
-  input: UpdateReportCardLayerByNodeIdInput;
 };
 
 
@@ -14753,18 +14623,6 @@ export enum SpatialMetricState {
   Queued = 'QUEUED'
 }
 
-export enum SpatialMetricType {
-  ColumnValues = 'COLUMN_VALUES',
-  ContextualizedMean = 'CONTEXTUALIZED_MEAN',
-  Count = 'COUNT',
-  DistanceToShore = 'DISTANCE_TO_SHORE',
-  OverlayArea = 'OVERLAY_AREA',
-  Presence = 'PRESENCE',
-  PresenceTable = 'PRESENCE_TABLE',
-  RasterStats = 'RASTER_STATS',
-  TotalArea = 'TOTAL_AREA'
-}
-
 /**
  * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
  * sprite, the actual images are in cloud storage referenced by the URL parameter.
@@ -17439,54 +17297,6 @@ export type UpdateReportCardInput = {
   displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
   icon?: Maybe<Scalars['String']>;
   tint?: Maybe<Scalars['String']>;
-};
-
-/** All input for the `updateReportCardLayerByNodeId` mutation. */
-export type UpdateReportCardLayerByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `ReportCardLayer` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `ReportCardLayer` being updated. */
-  patch: ReportCardLayerPatch;
-};
-
-/** All input for the `updateReportCardLayer` mutation. */
-export type UpdateReportCardLayerInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** An object where the defined keys will be set on the `ReportCardLayer` being updated. */
-  patch: ReportCardLayerPatch;
-  reportCardId: Scalars['Int'];
-  tocStableId: Scalars['String'];
-};
-
-/** The output of our update `ReportCardLayer` mutation. */
-export type UpdateReportCardLayerPayload = {
-  __typename?: 'UpdateReportCardLayerPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `ReportCardLayer` that was updated by this mutation. */
-  reportCardLayer?: Maybe<ReportCardLayer>;
-  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
-  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
-};
-
-
-/** The output of our update `ReportCardLayer` mutation. */
-export type UpdateReportCardLayerPayloadReportCardLayerEdgeArgs = {
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 /** The output of our `updateReportCard` mutation. */

@@ -98,10 +98,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         durationSeconds: Float
       }
 
-      type GetOrCreateSpatialMetricsResults {
-        metrics: [CompatibleSpatialMetric!]!
-      }
-
       type GeographyMetricSubscriptionPayload {
         geographyId: Int!
         projectId: Int!

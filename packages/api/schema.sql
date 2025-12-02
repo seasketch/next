@@ -11436,6 +11436,13 @@ $$;
 
 
 --
+-- Name: FUNCTION get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer) IS '@omit';
+
+
+--
 -- Name: get_or_create_user_by_sub(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11625,57 +11632,6 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
-
-
---
--- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-  draft_tab_id integer;
-  draft_tab_position integer;
-  draft_card_position integer;
-  sketch_class_id integer;
-  published_report_id integer;
-  published_tab_id integer;
-  published_card_id integer;
-BEGIN
-  -- Gather draft card/tab positions and sketch_class
-  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
-  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
-  FROM public.report_cards rc
-  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
-  JOIN public.reports r ON r.id = rt.report_id
-  WHERE rc.id = draft_report_card_id;
-
-  -- Determine the published report id
-  SELECT sc.report_id
-  INTO published_report_id
-  FROM public.sketch_classes sc
-  WHERE sc.id = sketch_class_id;
-
-  IF published_report_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  -- Match the tab by position in the published report
-  SELECT id
-  INTO published_tab_id
-  FROM public.report_tabs
-  WHERE report_id = published_report_id AND position = draft_tab_position;
-
-  -- Match the card by position within the matched tab
-  SELECT id
-  INTO published_card_id
-  FROM public.report_cards
-  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
-
-  RETURN published_card_id;
-END
-$$;
 
 
 --
@@ -22756,17 +22712,6 @@ CREATE TABLE public.projects_shared_basemaps (
 
 
 --
--- Name: report_card_layers; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.report_card_layers (
-    report_card_id integer NOT NULL,
-    toc_stable_id text NOT NULL,
-    group_by text
-);
-
-
---
 -- Name: report_cards_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -23746,14 +23691,6 @@ ALTER TABLE ONLY public.projects_shared_basemaps
 
 ALTER TABLE ONLY public.projects
     ADD CONSTRAINT projects_slug_key UNIQUE (slug);
-
-
---
--- Name: report_card_layers report_card_layers_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.report_card_layers
-    ADD CONSTRAINT report_card_layers_pkey PRIMARY KEY (report_card_id, toc_stable_id);
 
 
 --
@@ -27599,32 +27536,6 @@ CREATE POLICY projects_shared_basemaps_select ON public.projects_shared_basemaps
 --
 
 CREATE POLICY projects_update ON public.projects FOR UPDATE TO seasketch_user USING (public.session_is_admin(id)) WITH CHECK (public.session_is_admin(id));
-
-
---
--- Name: report_card_layers; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.report_card_layers ENABLE ROW LEVEL SECURITY;
-
---
--- Name: report_card_layers report_card_layers_admin; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY report_card_layers_admin ON public.report_card_layers TO seasketch_user USING (public.session_is_admin(( SELECT table_of_contents_items.project_id
-   FROM public.table_of_contents_items
-  WHERE (table_of_contents_items.stable_id = report_card_layers.toc_stable_id)
- LIMIT 1)));
-
-
---
--- Name: report_card_layers report_card_layers_select; Type: POLICY; Schema: public; Owner: -
---
-
-CREATE POLICY report_card_layers_select ON public.report_card_layers FOR SELECT USING (public.session_has_project_access(( SELECT table_of_contents_items.project_id
-   FROM public.table_of_contents_items
-  WHERE (table_of_contents_items.stable_id = report_card_layers.toc_stable_id)
- LIMIT 1)));
 
 
 --
@@ -33290,14 +33201,6 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
-
-
---
--- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -40182,13 +40085,6 @@ GRANT SELECT ON TABLE public.project_participants TO seasketch_user;
 
 GRANT SELECT ON TABLE public.projects_shared_basemaps TO anon;
 GRANT ALL ON TABLE public.projects_shared_basemaps TO seasketch_user;
-
-
---
--- Name: TABLE report_card_layers; Type: ACL; Schema: public; Owner: -
---
-
-GRANT ALL ON TABLE public.report_card_layers TO seasketch_user;
 
 
 --

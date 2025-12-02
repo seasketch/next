@@ -161,10 +161,6 @@ export function DistanceToShoreCard({
     if (minMetric === null) {
       return null;
     }
-    console.log(
-      minMetric.meters,
-      `${formatDistance(minMetric.meters / 1000)} ${unitLabel}`
-    );
 
     const displayLine = unwrapLineStringForDisplay(minMetric.geojsonLine);
 
