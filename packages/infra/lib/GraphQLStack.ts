@@ -257,7 +257,7 @@ export class GraphQLStack extends cdk.Stack {
       new PolicyStatement({
         actions: ["lambda:InvokeFunction"],
         effect: iam.Effect.ALLOW,
-        resources: [props.overlayWorkerArn],
+        resources: [props.overlayWorkerArn, props.subdivisionWorkerLambdaArn],
       })
     );
 
