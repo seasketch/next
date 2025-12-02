@@ -75,7 +75,7 @@ class WorkerPool {
         try {
             worker.terminate().catch(() => void 0);
         }
-        catch (_a) { }
+        catch { }
         this.idle.push(this.createWorker());
         this.dispatch();
     }

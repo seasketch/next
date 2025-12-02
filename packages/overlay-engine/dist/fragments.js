@@ -212,7 +212,7 @@ function splitFragments(a, b, numericPropertiesToMerge) {
     const differenceA = polygonClipping.difference([a.geometry.coordinates], [b.geometry.coordinates]);
     const differenceB = polygonClipping.difference([b.geometry.coordinates], [a.geometry.coordinates]);
     const newFragments = [];
-    if ((intersection === null || intersection === void 0 ? void 0 : intersection.length) > 0) {
+    if (intersection?.length > 0) {
         // create a new fragment with the merged geography ids
         for (const geometry of geometryFromCoords(intersection)) {
             newFragments.push({
@@ -225,7 +225,7 @@ function splitFragments(a, b, numericPropertiesToMerge) {
                 geometry,
             });
         }
-        if ((differenceA === null || differenceA === void 0 ? void 0 : differenceA.length) > 0) {
+        if (differenceA?.length > 0) {
             for (const geometry of geometryFromCoords(differenceA)) {
                 newFragments.push({
                     ...a,
@@ -237,7 +237,7 @@ function splitFragments(a, b, numericPropertiesToMerge) {
                 });
             }
         }
-        if ((differenceB === null || differenceB === void 0 ? void 0 : differenceB.length) > 0) {
+        if (differenceB?.length > 0) {
             for (const geometry of geometryFromCoords(differenceB)) {
                 newFragments.push({
                     ...b,

@@ -689,12 +689,11 @@ async function searchNearestLandWithH3(feature, land, minimumDistanceMeters) {
  *     ring distance from the origin (empty array when H3 search is not used).
  */
 async function calculateDistanceToShore(feature, land, options) {
-    var _a;
-    const helpers = (0, helpers_1.guaranteeHelpers)(options === null || options === void 0 ? void 0 : options.helpers);
+    const helpers = (0, helpers_1.guaranteeHelpers)(options?.helpers);
     if (!feature.geometry) {
         throw new Error("calculateDistanceToShore: feature.geometry is required");
     }
-    const minimumDistanceMeters = (_a = options === null || options === void 0 ? void 0 : options.miminumDistanceMeters) !== null && _a !== void 0 ? _a : 0;
+    const minimumDistanceMeters = options?.miminumDistanceMeters ?? 0;
     // ---------------------------------------------------------------------------
     // 1) Cheap initial proximity check using the FlatGeobuf spatial index
     // ---------------------------------------------------------------------------

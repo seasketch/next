@@ -54,12 +54,11 @@ const boolean_disjoint_1 = __importDefault(require("@turf/boolean-disjoint"));
 const line_split_1 = __importDefault(require("@turf/line-split"));
 const along_1 = __importDefault(require("@turf/along"));
 async function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
-    var _a;
     const results = { "*": 0 };
     if (groupBy) {
         const classKeys = ["*"];
         for (const f of features) {
-            const classKey = (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy];
+            const classKey = f.feature.properties?.[groupBy];
             if (classKey && !classKeys.includes(classKey)) {
                 classKeys.push(classKey);
                 results[classKey] = 0;
@@ -69,7 +68,7 @@ async function clipBatch({ features, differenceMultiPolygon, subjectFeature, gro
             if (classKey === "*") {
                 continue;
             }
-            const size = calculatedClippedOverlapSize(features.filter((f) => { var _a; return ((_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy]) === classKey; }), differenceMultiPolygon, subjectFeature);
+            const size = calculatedClippedOverlapSize(features.filter((f) => f.feature.properties?.[groupBy] === classKey), differenceMultiPolygon, subjectFeature);
             results[classKey] += size;
             results["*"] += size;
         }
@@ -141,7 +140,6 @@ function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature)
     return 0;
 }
 async function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
-    var _a;
     const results = { "*": new Set() };
     for (const f of features) {
         if (f.requiresIntersection) {
@@ -186,7 +184,7 @@ async function countFeatures({ features, differenceMultiPolygon, subjectFeature,
             throw new Error("Feature properties must contain __oidx");
         }
         if (groupBy) {
-            const classKey = (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy];
+            const classKey = f.feature.properties?.[groupBy];
             if (classKey) {
                 if (!(classKey in results)) {
                     results[classKey] = new Set();
@@ -288,7 +286,6 @@ async function createPresenceTable({ features, differenceMultiPolygon, subjectFe
     return results;
 }
 async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }) {
-    var _a, _b;
     const results = { "*": [] };
     for (const f of features) {
         if (f.feature.geometry.type === "Point" ||
@@ -324,7 +321,7 @@ async function collectColumnValues({ features, differenceMultiPolygon, subjectFe
             f.feature.geometry.type === "MultiLineString") {
             f.feature = performOperationsOnFeature(f.feature, f.requiresIntersection, f.requiresDifference, differenceMultiPolygon, subjectFeature);
         }
-        const value = (_a = f.feature.properties) === null || _a === void 0 ? void 0 : _a[property];
+        const value = f.feature.properties?.[property];
         const columnValue = [value];
         if (f.feature.geometry.type === "Polygon" ||
             f.feature.geometry.type === "MultiPolygon") {
@@ -345,7 +342,7 @@ async function collectColumnValues({ features, differenceMultiPolygon, subjectFe
         if (typeof value === "number") {
             results["*"].push(columnValue);
             if (groupBy) {
-                const classKey = (_b = f.feature.properties) === null || _b === void 0 ? void 0 : _b[groupBy];
+                const classKey = f.feature.properties?.[groupBy];
                 if (classKey) {
                     if (!(classKey in results)) {
                         results[classKey] = [];
@@ -357,7 +354,7 @@ async function collectColumnValues({ features, differenceMultiPolygon, subjectFe
     }
     return results;
 }
-node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.on("message", async (job) => {
+node_worker_threads_1.parentPort?.on("message", async (job) => {
     try {
         const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
         let result;
@@ -408,10 +405,10 @@ node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort ==
         else {
             throw new Error(`Unknown operation type: ${operation}`);
         }
-        node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.postMessage({ ok: true, result });
+        node_worker_threads_1.parentPort?.postMessage({ ok: true, result });
     }
     catch (err) {
-        node_worker_threads_1.parentPort === null || node_worker_threads_1.parentPort === void 0 ? void 0 : node_worker_threads_1.parentPort.postMessage({
+        node_worker_threads_1.parentPort?.postMessage({
             ok: false,
             error: { message: err.message, stack: err.stack },
         });
@@ -548,11 +545,10 @@ function cloneLineCoordinates(coords) {
     return coords.map((pt) => pt.slice());
 }
 function samplePointOnSegment(segment, segmentLengthKm) {
-    var _a;
     const distanceKm = Math.max(segmentLengthKm / 2, 1e-6);
     try {
         const sampled = (0, along_1.default)(segment, distanceKm, { units: "kilometers" });
-        if (((_a = sampled === null || sampled === void 0 ? void 0 : sampled.geometry) === null || _a === void 0 ? void 0 : _a.type) === "Point") {
+        if (sampled?.geometry?.type === "Point") {
             return sampled;
         }
     }
@@ -588,11 +584,10 @@ function geomToMultiPolygonFeature(geom) {
     };
 }
 function geomToMultiPolygonCoordinates(geom) {
-    var _a, _b;
     if (!geom || geom.length === 0) {
         return [];
     }
-    const indicator = (_b = (_a = geom === null || geom === void 0 ? void 0 : geom[0]) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b[0];
+    const indicator = geom?.[0]?.[0]?.[0];
     if (Array.isArray(indicator)) {
         return geom;
     }

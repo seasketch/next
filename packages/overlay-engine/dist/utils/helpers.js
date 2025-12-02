@@ -8,11 +8,11 @@ exports.guaranteeHelpers = guaranteeHelpers;
  */
 function guaranteeHelpers(helpers) {
     return {
-        log: (helpers === null || helpers === void 0 ? void 0 : helpers.log) || (() => { }),
-        progress: (helpers === null || helpers === void 0 ? void 0 : helpers.progress) || (async () => { }),
-        logFeature: helpers === null || helpers === void 0 ? void 0 : helpers.logFeature,
-        time: (helpers === null || helpers === void 0 ? void 0 : helpers.time) || (() => { }),
-        timeEnd: (helpers === null || helpers === void 0 ? void 0 : helpers.timeEnd) || (() => { }),
+        log: helpers?.log || (() => { }),
+        progress: helpers?.progress || (async () => { }),
+        logFeature: helpers?.logFeature,
+        time: helpers?.time || (() => { }),
+        timeEnd: helpers?.timeEnd || (() => { }),
     };
 }
 //# sourceMappingURL=helpers.js.map

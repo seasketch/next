@@ -116,21 +116,19 @@ function splitRect(rect, axis = "x") {
 }
 // Helper function to convert BBox to Rect (2D only)
 function bboxToRect(bbox) {
-    var _a, _b, _c, _d;
     // BBox is [minX, minY, maxX, maxY] for 2D
     // Ensure we have valid numbers
-    const minX = (_a = bbox[0]) !== null && _a !== void 0 ? _a : 0;
-    const minY = (_b = bbox[1]) !== null && _b !== void 0 ? _b : 0;
-    const maxX = (_c = bbox[2]) !== null && _c !== void 0 ? _c : 0;
-    const maxY = (_d = bbox[3]) !== null && _d !== void 0 ? _d : 0;
+    const minX = bbox[0] ?? 0;
+    const minY = bbox[1] ?? 0;
+    const maxX = bbox[2] ?? 0;
+    const maxY = bbox[3] ?? 0;
     return [minX, minY, maxX, maxY];
 }
 // Build cover
 function coverWithRectangles(geojson, { target = 100, minWidth = 1e-4, // degrees
 minHeight = 1e-4, bbox = null, } = {}) {
-    var _a;
     const poly = toPC(geojson);
-    console.log(`Polygon has ${poly.length} parts, first part has ${((_a = poly[0]) === null || _a === void 0 ? void 0 : _a.length) || 0} rings`);
+    console.log(`Polygon has ${poly.length} parts, first part has ${poly[0]?.length || 0} rings`);
     // start from overall bbox (or given)
     const B = bbox
         ? bboxToRect(bbox)

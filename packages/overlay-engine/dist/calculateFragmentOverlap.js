@@ -50,7 +50,6 @@ const calculateOverlap_1 = require("./geographies/calculateOverlap");
  * @deprecated Use the OverlappingAreaBatchedClippingProcessor instead.
  */
 async function calculateFragmentOverlap(fragment, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
-    var _a, _b;
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);
     if (sourceType !== "FlatGeobuf") {
         throw new Error(`Unsupported source type: ${sourceType}`);
@@ -74,7 +73,7 @@ async function calculateFragmentOverlap(fragment, sourceCache, sourceUrl, source
     helpers.log(`Querying source. Estimated features: ${estimate.features}, estimated bytes: ${estimate.bytes}`);
     helpers.progress(0, `Processing ${estimate.features} features`);
     const queryPlan = source.createPlan(envelope);
-    console.log(`Query plan: ${queryPlan.pages.length} pages, ${queryPlan.pages.reduce((acc, page) => { var _a, _b; return acc + ((_a = page.range[1]) !== null && _a !== void 0 ? _a : 0) - ((_b = page.range[0]) !== null && _b !== void 0 ? _b : 0); }, 0)} bytes`);
+    console.log(`Query plan: ${queryPlan.pages.length} pages, ${queryPlan.pages.reduce((acc, page) => acc + (page.range[1] ?? 0) - (page.range[0] ?? 0), 0)} bytes`);
     helpers.time("time to first feature");
     let clippingPerformed = 0;
     const clippingBatchProcessor = new BatchProcessor(1024 * 1024 * 5, (batch) => {
@@ -132,12 +131,12 @@ async function calculateFragmentOverlap(fragment, sourceCache, sourceUrl, source
             clippingBatchProcessor.addFeature(feature);
         }
         else {
-            if (((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area) === undefined) {
+            if (feature.properties?.__area === undefined) {
                 console.warn(`undefined area in completely-inside feature. ${featuresProcessed}/${estimate.features}`);
             }
             // completely inside
             totalAreas[classKey] +=
-                ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__area) || (0, area_1.default)(feature) / 1000000;
+                feature.properties?.__area || (0, area_1.default)(feature) / 1000000;
         }
     }
     clippingBatchProcessor.flush();
@@ -155,14 +154,13 @@ class BatchProcessor {
         this.processBatch = processBatch;
     }
     addFeature(feature) {
-        var _a;
         if (this.batch.length >= this.batchSize) {
             this.processBatch(this.batch);
             this.batch = [];
             this.bytes = 0;
         }
         this.batch.push(feature);
-        this.bytes += ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__byteLength) || 0;
+        this.bytes += feature.properties?.__byteLength || 0;
     }
     flush() {
         this.processBatch(this.batch);

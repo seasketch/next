@@ -97,7 +97,6 @@ class OverlayEngineBatchProcessor {
         }
     }
     constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool, includedProperties, resultsLimit, columnValuesProperty) {
-        var _a;
         /**
          * Current weight of the batch. Once the weight exceeds the batch size, the
          * batch is processed. These values should be based on the complexity of the
@@ -136,7 +135,7 @@ class OverlayEngineBatchProcessor {
         this.results = this.initializeResults(operation);
         this.resetBatchData();
         this.queue = new p_queue_1.default({
-            concurrency: ((_a = this.pool) === null || _a === void 0 ? void 0 : _a.size) || 1,
+            concurrency: this.pool?.size || 1,
         });
         if (this.helpers.logFeature) {
             this.helpers.logFeature(layers.subjectFeature, subjectFeature);
@@ -170,7 +169,6 @@ class OverlayEngineBatchProcessor {
     }
     async calculate() {
         return new Promise(async (resolve, reject) => {
-            var _a, _b, _c;
             try {
                 this.progress = 0;
                 // Step 1. Create query plan for fetching features from the intersection
@@ -179,7 +177,7 @@ class OverlayEngineBatchProcessor {
                 // batch size to use when clipping.
                 const envelopes = (0, bboxUtils_1.splitBBoxAntimeridian)((0, bbox_1.default)(this.subjectFeature.geometry)).map(bboxUtils_1.bboxToEnvelope);
                 const queryPlan = this.intersectionSource.createPlan(envelopes);
-                const concurrency = ((_a = this.pool) === null || _a === void 0 ? void 0 : _a.size) || 1;
+                const concurrency = this.pool?.size || 1;
                 // The default max batch size is helpful when working with very large
                 // datasets. For example, if clipping to 100MB of features, we may want to
                 // work in batches of 5MB, rather than 100MB / 6 threads. That could cause
@@ -216,7 +214,7 @@ class OverlayEngineBatchProcessor {
                             geometry: feature.geometry,
                             properties: {
                                 classification,
-                                groupBy: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b[this.groupBy || ""]) || "",
+                                groupBy: feature.properties?.[this.groupBy || ""] || "",
                             },
                         });
                     }
@@ -266,7 +264,7 @@ class OverlayEngineBatchProcessor {
                             // feature is entirely within the subject feature, so we can skip
                             // clipping. Just need to add it to the appropriate total(s).
                             this.addIndividualFeatureToResults(feature);
-                            this.progress += ((_c = feature.properties) === null || _c === void 0 ? void 0 : _c.__byteLength) || 0;
+                            this.progress += feature.properties?.__byteLength || 0;
                         }
                     }
                     else {
@@ -534,14 +532,13 @@ class OverlayEngineBatchProcessor {
         }
     }
     addColumnValuesFeatureToResults(feature) {
-        var _a, _b, _c;
-        const value = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.columnValuesProperty];
+        const value = feature.properties?.[this.columnValuesProperty];
         const results = this.getColumnValuesResults();
         if (typeof value === "number") {
             const columnValue = [value];
             if (feature.geometry.type === "Polygon" ||
                 feature.geometry.type === "MultiPolygon") {
-                const sqKm = ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b.__area)
+                const sqKm = feature.properties?.__area
                     ? feature.properties.__area
                     : (0, area_1.default)(feature) * 1e-6;
                 if (isNaN(sqKm) || sqKm === 0) {
@@ -551,7 +548,7 @@ class OverlayEngineBatchProcessor {
             }
             results["*"].push(columnValue);
             if (this.groupBy) {
-                const classKey = (_c = feature.properties) === null || _c === void 0 ? void 0 : _c[this.groupBy];
+                const classKey = feature.properties?.[this.groupBy];
                 if (classKey) {
                     if (!(classKey in results)) {
                         results[classKey] = [];
@@ -562,27 +559,25 @@ class OverlayEngineBatchProcessor {
         }
     }
     addOverlayFeatureToTotals(feature) {
-        var _a;
         // get area in square kilometers
         const size = this.getSize(feature);
         const results = this.getOverlayResults();
         results["*"] = (results["*"] || 0) + size;
         if (this.groupBy) {
-            const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy];
+            const classKey = feature.properties?.[this.groupBy];
             if (classKey) {
                 results[classKey] = (results[classKey] || 0) + size;
             }
         }
     }
     getSize(feature) {
-        var _a;
         if (feature.geometry.type === "Polygon" ||
             feature.geometry.type === "MultiPolygon") {
             return (0, area_1.default)(feature) * 1e-6;
         }
         else if (feature.geometry.type === "LineString" ||
             feature.geometry.type === "MultiLineString") {
-            return (((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__lengthKm) ||
+            return (feature.properties?.__lengthKm ||
                 (0, length_1.default)(feature, { units: "kilometers" }));
         }
         else {
@@ -590,7 +585,6 @@ class OverlayEngineBatchProcessor {
         }
     }
     addCountFeatureToTotals(feature) {
-        var _a;
         if (!("__oidx" in feature.properties || {})) {
             throw new Error("Feature properties must contain __oidx");
         }
@@ -604,7 +598,7 @@ class OverlayEngineBatchProcessor {
         }
         // Count the feature (or points in MultiPoint)
         if (this.groupBy) {
-            const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[this.groupBy];
+            const classKey = feature.properties?.[this.groupBy];
             if (classKey) {
                 if (!(classKey in this.countInterimIds)) {
                     this.countInterimIds[classKey] = [];
@@ -616,8 +610,7 @@ class OverlayEngineBatchProcessor {
         }
     }
     addPresenceTableFeatureToResults(feature) {
-        var _a;
-        const id = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__oidx;
+        const id = feature.properties?.__oidx;
         if (id === undefined || id === null) {
             throw new Error("Feature properties must contain __oidx");
         }
@@ -657,18 +650,16 @@ class OverlayEngineBatchProcessor {
         }
     }
     addFeatureToBatch(feature, requiresIntersection, requiresDifference) {
-        var _a;
         this.batchData.features.push({
             feature,
             requiresIntersection,
             requiresDifference,
         });
         this.batchData.weight += this.weightForFeature(feature);
-        this.batchData.progressWorth += ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__byteLength) || 1000;
+        this.batchData.progressWorth += feature.properties?.__byteLength || 1000;
     }
     weightForFeature(feature) {
-        var _a;
-        let weight = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__byteLength;
+        let weight = feature.properties?.__byteLength;
         if (weight === undefined || weight === null) {
             // base weight on number of vertices/points in the feature
             if (feature.geometry.type === "Polygon") {

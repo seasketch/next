@@ -33,7 +33,6 @@ const layers = {
     },
 };
 async function calculateArea(geography, sourceCache, helpersOption) {
-    var _a, _b;
     // Transform optional helpers into guaranteed interface with no-op functions for log and progress
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);
     const { intersectionFeature: intersectionFeatureGeojson, differenceLayers } = await (0, geographies_1.initializeGeographySources)(geography, sourceCache, helpers);
@@ -101,7 +100,7 @@ async function calculateArea(geography, sourceCache, helpersOption) {
                             geometry: f.geometry,
                             properties: {
                                 category: classification,
-                                id: (_a = f.properties) === null || _a === void 0 ? void 0 : _a.__offset,
+                                id: f.properties?.__offset,
                             },
                         });
                     }
@@ -119,7 +118,7 @@ async function calculateArea(geography, sourceCache, helpersOption) {
                                 mixedGeoms.push(poly);
                             }
                         }
-                        mixedGeomsBytes += ((_b = f.properties) === null || _b === void 0 ? void 0 : _b.__byteLength) || 0;
+                        mixedGeomsBytes += f.properties?.__byteLength || 0;
                         if (mixedGeomsBytes > 200000) {
                             overlappingDifferenceFeaturesSqKm += handleMixedGeoms(mixedGeoms, simplified.geometry.coordinates);
                             mixedGeoms = [];

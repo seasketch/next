@@ -102,7 +102,6 @@ const CLIPPING_BATCH_SIZE = 1024 * 1024 * 4; // 2MB
  * @deprecated Use the OverlappingAreaBatchedClippingProcessor instead.
  */
 async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sourceType, groupBy, helpersOption) {
-    var _a, _b;
     let differenceReferences = 0;
     const loggedDifferenceFeatures = new Set();
     const helpers = (0, helpers_1.guaranteeHelpers)(helpersOption);
@@ -181,8 +180,7 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
     helpers.progress(progress, `Processing ${estimate.features} features`);
     const areaByClassId = { "*": 0 };
     function addFeatureToTotals(feature, hasChanged) {
-        var _a;
-        let area = ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__area) || 0;
+        let area = feature.properties?.__area || 0;
         if (hasChanged) {
             area = (0, area_1.default)(feature) * 1e-6;
         }
@@ -199,7 +197,6 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
         .coordinates;
     const batch = new DifferenceClippingBatch(differenceLayers.map((d) => d.source));
     async function processBatch() {
-        var _a, _b;
         const refscount = Object.values(batch.offsets).reduce((acc, curr) => acc + curr.length, 0);
         console.log(`processing batch #${batch.id}`, batch.features.length, batch.bytes + " bytes", `${refscount} offsets`);
         const diffGeoms = [];
@@ -236,8 +233,8 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                 helpers.logFeature(layers.batchedOriginalFeatures, {
                     ...feature,
                     properties: {
-                        id: (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__offset,
-                        category: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b[groupBy || ""]) || "original-feature",
+                        id: feature.properties?.__offset,
+                        category: feature.properties?.[groupBy || ""] || "original-feature",
                     },
                 });
             }
@@ -358,8 +355,8 @@ async function calculateGeographyOverlap(geography, sourceCache, sourceUrl, sour
                 helpers.logFeature(layers.unbatchedFeatures, {
                     ...feature,
                     properties: {
-                        id: (_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__offset,
-                        category: ((_b = feature.properties) === null || _b === void 0 ? void 0 : _b[groupBy || ""]) || "unbatched-feature",
+                        id: feature.properties?.__offset,
+                        category: feature.properties?.[groupBy || ""] || "unbatched-feature",
                     },
                 });
             }
@@ -395,9 +392,8 @@ class DifferenceClippingBatch {
         this.offsets = this.layerIds.reduce((l, id) => ({ ...l, [id]: [] }), {});
     }
     addFeature(feature) {
-        var _a;
         this.features.push(feature);
-        this.bytes += ((_a = feature.properties) === null || _a === void 0 ? void 0 : _a.__byteLength) || 0;
+        this.bytes += feature.properties?.__byteLength || 0;
         this.bbox = combineBBoxes(this.bbox, feature.bbox);
     }
     addDifferenceFeatureReferences(layerId, refs) {
@@ -411,14 +407,13 @@ class DifferenceClippingBatch {
     }
 }
 function groupGeomsByClassKey(features, groupBy) {
-    var _a;
     const geoms = {
         "*": [],
     };
     for (const feature of features) {
         const area = (0, area_1.default)(feature) * 1e-6;
         if (groupBy) {
-            const classKey = (_a = feature.properties) === null || _a === void 0 ? void 0 : _a[groupBy];
+            const classKey = feature.properties?.[groupBy];
             if (classKey) {
                 if (!(classKey in geoms)) {
                     geoms[classKey] = [];

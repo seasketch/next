@@ -529,7 +529,7 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
         for await (const { properties, getFeature, } of source.getFeatureProperties()) {
             if ((0, cql2_1.evaluateCql2JSONQuery)(l.cql2Query, properties)) {
                 intersectionFeatures.push(getFeature());
-                intersectionFeatureBytes += (properties === null || properties === void 0 ? void 0 : properties.__byteLength) || 0;
+                intersectionFeatureBytes += properties?.__byteLength || 0;
             }
         }
         helpers.log("Completed intersection layer");
