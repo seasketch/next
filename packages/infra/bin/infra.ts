@@ -203,6 +203,8 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
   uploadHandler: uploadHandler.fn,
   subdivisionWorkerLambdaArn: subdivideWorker.fn.functionArn,
+  overlayEngineWorkerSqsQueueUrl:
+    sqs.productionOverlayEngineWorkerQueue.queueUrl,
 });
 
 uploadHandler.fn.grantInvoke;
