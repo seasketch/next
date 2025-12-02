@@ -11,6 +11,7 @@ import { HostedZone } from "aws-cdk-lib/aws-route53";
 import { ApplicationProtocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { AwsLogDriver } from "aws-cdk-lib/aws-ecs";
 import { Construct } from "constructs";
+import { Queue } from "aws-cdk-lib/aws-sqs";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -38,7 +39,7 @@ export class GraphQLStack extends cdk.Stack {
       overlayWorkerArn: string;
       uploadHandler: lambda.DockerImageFunction;
       subdivisionWorkerLambdaArn: string;
-      overlayEngineWorkerSqsQueueUrl: string;
+      overlayEngineWorkerSqsQueue: Queue;
     }
   ) {
     super(scope, id, props);
@@ -175,7 +176,7 @@ export class GraphQLStack extends cdk.Stack {
               process.env.GOOGLE_MAPS_2D_TILE_API_KEY,
             SUBDIVISION_WORKER_LAMBDA_ARN: props.subdivisionWorkerLambdaArn,
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
-              props.overlayEngineWorkerSqsQueueUrl,
+              props.overlayEngineWorkerSqsQueue.queueUrl,
           },
           containerPort: 3857,
         },
@@ -257,6 +258,18 @@ export class GraphQLStack extends cdk.Stack {
         actions: ["lambda:InvokeFunction"],
         effect: iam.Effect.ALLOW,
         resources: [props.overlayWorkerArn],
+      })
+    );
+
+    service.taskDefinition.taskRole.addToPrincipalPolicy(
+      new PolicyStatement({
+        actions: [
+          "sqs:ReceiveMessage",
+          "sqs:DeleteMessage",
+          "sqs:GetQueueAttributes",
+        ],
+        effect: iam.Effect.ALLOW,
+        resources: [props.overlayEngineWorkerSqsQueue.queueArn],
       })
     );
 
