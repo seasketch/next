@@ -623,7 +623,7 @@ export default function SketchClassReportsAdmin({
             <div className="flex-1 flex items-center justify-center">
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-600">
-                  {t("Demo Sketch") + ":"}
+                  {t("Demo Sketch")}
                 </span>
                 <DropdownButton
                   small
