@@ -630,9 +630,7 @@ export default function SketchClassReportsAdmin({
                   disabled={sketchesForDemonstration.length === 0}
                   label={
                     selectedSketch
-                      ? <Trans ns="admin:sketching">Displayed Sketch</Trans> +
-                        ": " +
-                        selectedSketch.name
+                      ? selectedSketch.name
                       : t("Select a sketch...")
                   }
                   options={sketchesForDemonstration.map((sketch) => ({
