@@ -25,8 +25,7 @@ import fetch, { Headers, Request, Response } from "node-fetch";
 import * as fs from "fs";
 import * as path from "path";
 import bbox from "@turf/bbox";
-import { makeFetchRangeFn } from "overlay-engine/scripts/optimizedFetchRangeFn";
-import { vi } from "vitest";
+import { makeNodeFetchRangeFn } from "../src/nodeFetchRangeFn";
 
 if (!global.fetch) {
   // @ts-ignore
@@ -41,10 +40,11 @@ if (!global.fetch) {
 
 const pool = createPool("test");
 
-vi.setConfig({ testTimeout: 1000 * 20 });
+jest.setTimeout(1000 * 20);
 
 const sourceCache = new SourceCache("256mb", {
-  fetchRangeFn: makeFetchRangeFn(`https://uploads.seasketch.org`).fetchRangeFn,
+  fetchRangeFn: makeNodeFetchRangeFn(`https://uploads.seasketch.org`)
+    .fetchRangeFn,
 });
 
 // Test geometries
