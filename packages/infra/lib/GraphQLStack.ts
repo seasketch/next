@@ -38,6 +38,7 @@ export class GraphQLStack extends cdk.Stack {
       overlayWorkerArn: string;
       uploadHandler: lambda.DockerImageFunction;
       subdivisionWorkerLambdaArn: string;
+      overlayEngineWorkerSqsQueueUrl: string;
     }
   ) {
     super(scope, id, props);
@@ -173,6 +174,8 @@ export class GraphQLStack extends cdk.Stack {
             GOOGLE_MAPS_2D_TILE_API_KEY:
               process.env.GOOGLE_MAPS_2D_TILE_API_KEY,
             SUBDIVISION_WORKER_LAMBDA_ARN: props.subdivisionWorkerLambdaArn,
+            OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
+              props.overlayEngineWorkerSqsQueueUrl,
           },
           containerPort: 3857,
         },
