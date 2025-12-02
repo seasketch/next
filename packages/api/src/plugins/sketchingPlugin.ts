@@ -501,14 +501,8 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const sketchClass = rows[0];
           // Check to see if preprocessing is required. If so, do it
           let geometry: Feature;
-          if (sketchClass.preprocessing_endpoint) {
-            // submit for geoprocessing
-            const response = await preprocess(
-              sketchClass.preprocessing_endpoint,
-              userGeom
-            );
-            geometry = response;
-          } else if (sketchClass.is_geography_clipping_enabled) {
+
+          if (sketchClass.is_geography_clipping_enabled) {
             const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,
@@ -529,6 +523,13 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 }
               );
             return row;
+          } else if (sketchClass.preprocessing_endpoint) {
+            // submit for geoprocessing
+            const response = await preprocess(
+              sketchClass.preprocessing_endpoint,
+              userGeom
+            );
+            geometry = response;
           } else {
             geometry = userGeom;
           }
