@@ -394,7 +394,13 @@ async function getOrCreateReportDependencies(
       `select get_fragment_hashes_for_sketch($1)`,
       [sketchId]
     );
-    fragments.push(...sketchFragmentsRows[0].get_fragment_hashes_for_sketch);
+    if (
+      sketchFragmentsRows.length > 0 &&
+      sketchFragmentsRows[0].get_fragment_hashes_for_sketch &&
+      Array.isArray(sketchFragmentsRows[0].get_fragment_hashes_for_sketch)
+    ) {
+      fragments.push(...sketchFragmentsRows[0].get_fragment_hashes_for_sketch);
+    }
   }
 
   // Retrieve all geographies related to the project
