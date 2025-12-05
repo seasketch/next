@@ -1,7 +1,7 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
-import { MetricType } from "overlay-engine";
+import { MetricDependency, MetricType } from "overlay-engine";
 import { Pool } from "pg";
 
 const geographyMetricTopicFromContext = async (args: any, context: any) => {
@@ -328,6 +328,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
  * @returns An array of ReportOverlaySourcePartial objects
  */
 async function getOverlaySources(reportId: number, pool: Pool) {
+  return [];
   const rows = await pool.query<{
     table_of_contents_item_id: number;
     geostats: GeostatsLayer | RasterInfo;
@@ -418,18 +419,9 @@ async function getOrCreateReportDependencies(
         rc.id, 
         rc.type, 
         rc.component_settings,
-        coalesce(
-          jsonb_agg(
-            jsonb_build_object(
-              'id', rcl.table_of_contents_item_id,
-              'layerParameters', rcl.layer_parameters
-            )
-          ) filter (where rcl.report_card_id is not null),
-          '[]'::jsonb
-        ) as layers
+        rc.body
       from 
         report_cards rc
-        left join report_card_layers rcl on rc.id = rcl.report_card_id
       where 
         rc.id in (select report_card_ids_for_report($1))
       group by rc.id, rc.type, rc.component_settings`,
@@ -439,37 +431,37 @@ async function getOrCreateReportDependencies(
   // first, create total_area metrics. These will be calculated for all
   // geographies and fragments, regardless of configuration.
 
-  const totalAreaMetrics: any[] = [];
-  // First, create total_area metrics. These will be calculated for all
-  // geographies and fragments, regardless of configuration.
-  for (const geography of geogs) {
-    const metricId = await getOrCreateSpatialMetric(
-      pool,
-      null,
-      geography.id,
-      "total_area",
-      null,
-      {},
-      null,
-      projectId
-    );
-    totalAreaMetrics.push(metricId);
-  }
-  for (const fragment of fragments) {
-    const metricId = await getOrCreateSpatialMetric(
-      pool,
-      fragment,
-      null,
-      "total_area",
-      null,
-      {},
-      null,
-      projectId
-    );
-    totalAreaMetrics.push(metricId);
-  }
+  // const totalAreaMetrics: any[] = [];
+  // // First, create total_area metrics. These will be calculated for all
+  // // geographies and fragments, regardless of configuration.
+  // for (const geography of geogs) {
+  //   const metricId = await getOrCreateSpatialMetric(
+  //     pool,
+  //     null,
+  //     geography.id,
+  //     "total_area",
+  //     null,
+  //     {},
+  //     null,
+  //     projectId
+  //   );
+  //   totalAreaMetrics.push(metricId);
+  // }
+  // for (const fragment of fragments) {
+  //   const metricId = await getOrCreateSpatialMetric(
+  //     pool,
+  //     fragment,
+  //     null,
+  //     "total_area",
+  //     null,
+  //     {},
+  //     null,
+  //     projectId
+  //   );
+  //   totalAreaMetrics.push(metricId);
+  // }
 
-  results.metrics.push(...totalAreaMetrics);
+  // results.metrics.push(...totalAreaMetrics);
 
   for (const card of cards.rows) {
     const cardDependencyList = {
@@ -477,245 +469,309 @@ async function getOrCreateReportDependencies(
       metrics: [] as number[],
       overlaySources: [] as number[],
     };
-    switch (card.type) {
-      case "OverlappingAreas": {
-        for (const layer of card.layers) {
-          cardDependencyList.overlaySources.push(layer.id);
-          const overlaySource = overlaySources.find(
-            (source) => source.tableOfContentsItemId === layer.id
-          );
-          if (!overlaySource) {
-            throw new Error(
-              `Overlay source not found for card layer: ${layer.id}`
-            );
-          }
-          let parameters = layer.layerParameters;
-          const bufferMeters = card.component_settings?.bufferMeters;
-          if (typeof bufferMeters === "number" && bufferMeters > 0) {
-            const bufferDistanceKm = bufferMeters / 1000;
-            parameters = {
-              ...(parameters || {}),
-              bufferDistanceKm,
-            };
-          }
+    const dependencies = extractMetricDependenciesFromReportBody(card.body);
 
-          const metrics = await getOrCreateMetricsOfType(
+    for (const dependency of dependencies) {
+      if (dependency.subjectType === "fragments") {
+        for (const fragment of fragments) {
+          const metric = await getOrCreateSpatialMetric({
             pool,
-            "overlay_area",
-            overlaySource,
-            parameters,
-            geogs.map((g) => g.id),
-            fragments,
-            projectId
-          );
-          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-          results.metrics.push(...metrics);
-        }
-        break;
-      }
-      case "Size": {
-        cardDependencyList.metrics.push(...totalAreaMetrics.map((m) => m.id));
-        break;
-      }
-      case "FeatureCount": {
-        for (const layer of card.layers) {
-          cardDependencyList.overlaySources.push(layer.id);
-          const overlaySource = overlaySources.find(
-            (source) => source.tableOfContentsItemId === layer.id
-          );
-          if (!overlaySource) {
-            throw new Error(
-              `Overlay source not found for card layer: ${layer.id}`
-            );
+            subjectFragmentId: fragment,
+            type: dependency.type,
+            parameters: dependency.parameters || {},
+            projectId,
+          });
+          cardDependencyList.metrics.push(metric.id);
+          if (!results.metrics.find((m) => m.id === metric.id)) {
+            results.metrics.push(metric);
           }
-          const metrics = await getOrCreateMetricsOfType(
+        }
+      } else if (dependency.subjectType === "geographies") {
+        // If the metric dependency specifies a valid list of geographies, use
+        // it. Otherwise, calculate metrics for all geographies in the project.
+        let geographyIds = geogs.map((g) => g.id);
+        if (dependency.geographies && dependency.geographies.length > 0) {
+          geographyIds = [];
+          for (const geographyId of dependency.geographies) {
+            if (!geogs.find((g) => g.id === geographyId)) {
+              continue;
+            }
+            geographyIds.push(geographyId);
+          }
+        }
+        for (const geographyId of geographyIds) {
+          const metric = await getOrCreateSpatialMetric({
             pool,
-            "count",
-            overlaySource,
-            layer.layerParameters,
-            geogs.map((g) => g.id),
-            fragments,
-            projectId
-          );
-          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-          results.metrics.push(...metrics);
+            subjectGeographyId: geographyId,
+            type: dependency.type,
+            parameters: dependency.parameters || {},
+            projectId,
+          });
+          cardDependencyList.metrics.push(metric.id);
+          if (!results.metrics.find((m) => m.id === metric.id)) {
+            results.metrics.push(metric);
+          }
         }
-        break;
+      } else {
+        throw new Error(`Unknown subject type: ${dependency.subjectType}`);
       }
-      case "Presence": {
-        for (const layer of card.layers) {
-          cardDependencyList.overlaySources.push(layer.id);
-          const overlaySource = overlaySources.find(
-            (source) => source.tableOfContentsItemId === layer.id
-          );
-          if (!overlaySource) {
-            throw new Error(
-              `Overlay source not found for card layer: ${layer.id}`
-            );
-          }
-          const metrics = await getOrCreateMetricsOfType(
-            pool,
-            "presence",
-            overlaySource,
-            layer.layerParameters,
-            [],
-            fragments,
-            projectId
-          );
-          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-          results.metrics.push(...metrics);
-        }
-        break;
-      }
-      case "FeatureList": {
-        for (const layer of card.layers) {
-          cardDependencyList.overlaySources.push(layer.id);
-          const overlaySource = overlaySources.find(
-            (source) => source.tableOfContentsItemId === layer.id
-          );
-          if (!overlaySource) {
-            throw new Error(
-              `Overlay source not found for card layer: ${layer.id}`
-            );
-          }
-          let parameters = layer.layerParameters;
-          // NOTE:
-          // This works just fine if you send it, but I'm just including all
-          // props for now so metrics don't need to be recalculated when the
-          // included properties change. At this point the results size doesn't
-          // matter as much.
-          //
-          // if (
-          //   card.component_settings.includedProperties &&
-          //   card.component_settings.includedProperties.length > 0
-          // ) {
-          //   parameters = {
-          //     ...parameters,
-          //     includedProperties:
-          //       card.component_settings.includedProperties.sort(),
-          //   };
-          // }
-          if (card.component_settings.resultsLimit) {
-            parameters = {
-              ...parameters,
-              resultsLimit: card.component_settings.resultsLimit,
-            };
-          }
-          const metrics = await getOrCreateMetricsOfType(
-            pool,
-            "presence_table",
-            overlaySource,
-            parameters,
-            [],
-            fragments,
-            projectId
-          );
-          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-          results.metrics.push(...metrics);
-        }
-        break;
-      }
-      case "ColumnStatistics": {
-        for (const layer of card.layers) {
-          cardDependencyList.overlaySources.push(layer.id);
-          const overlaySource = overlaySources.find(
-            (source) => source.tableOfContentsItemId === layer.id
-          );
-          if (!overlaySource) {
-            throw new Error(
-              `Overlay source not found for card layer: ${layer.id}`
-            );
-          }
-          if (!layer.layerParameters?.valueColumn) {
-            throw new Error(
-              `ColumnStatistics card requires valueColumn parameter for layer: ${layer.id}`
-            );
-          }
-          const metrics = await getOrCreateMetricsOfType(
-            pool,
-            "column_values",
-            overlaySource,
-            layer.layerParameters,
-            geogs.map((g) => g.id),
-            fragments,
-            projectId
-          );
-          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-          results.metrics.push(...metrics);
-        }
-        break;
-      }
-      case "RasterBandStatistics": {
-        for (const layer of card.layers) {
-          cardDependencyList.overlaySources.push(layer.id);
-          const overlaySource = overlaySources.find(
-            (source) => source.tableOfContentsItemId === layer.id
-          );
-          if (!overlaySource) {
-            throw new Error(
-              `Overlay source not found for card layer: ${layer.id}`
-            );
-          }
-          const metrics = await getOrCreateMetricsOfType(
-            pool,
-            "raster_stats",
-            overlaySource,
-            layer.layerParameters,
-            geogs.map((g) => g.id),
-            fragments,
-            projectId
-          );
-          cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-          results.metrics.push(...metrics);
-        }
-        break;
-      }
-      case "DistanceToShore": {
-        const metrics = await getOrCreateMetricsOfType(
-          pool,
-          "distance_to_shore",
-          {
-            sourceUrl: "https://uploads.seasketch.org/land-big-2.fgb",
-          } as ReportOverlaySourcePartial,
-          {},
-          [],
-          fragments,
-          projectId
-        );
-        cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-        results.metrics.push(...metrics);
-      }
-      default:
-        // do nothing. some cards like sketchAttributes do not have dependencies
-        break;
     }
+
+    // switch (card.type) {
+    //   case "OverlappingAreas": {
+    //     for (const layer of card.layers) {
+    //       cardDependencyList.overlaySources.push(layer.id);
+    //       const overlaySource = overlaySources.find(
+    //         (source) => source.tableOfContentsItemId === layer.id
+    //       );
+    //       if (!overlaySource) {
+    //         throw new Error(
+    //           `Overlay source not found for card layer: ${layer.id}`
+    //         );
+    //       }
+    //       let parameters = layer.layerParameters;
+    //       const bufferMeters = card.component_settings?.bufferMeters;
+    //       if (typeof bufferMeters === "number" && bufferMeters > 0) {
+    //         const bufferDistanceKm = bufferMeters / 1000;
+    //         parameters = {
+    //           ...(parameters || {}),
+    //           bufferDistanceKm,
+    //         };
+    //       }
+
+    //       const metrics = await getOrCreateMetricsOfType(
+    //         pool,
+    //         "overlay_area",
+    //         overlaySource,
+    //         parameters,
+    //         geogs.map((g) => g.id),
+    //         fragments,
+    //         projectId
+    //       );
+    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //       results.metrics.push(...metrics);
+    //     }
+    //     break;
+    //   }
+    //   case "Size": {
+    //     cardDependencyList.metrics.push(...totalAreaMetrics.map((m) => m.id));
+    //     break;
+    //   }
+    //   case "FeatureCount": {
+    //     for (const layer of card.layers) {
+    //       cardDependencyList.overlaySources.push(layer.id);
+    //       const overlaySource = overlaySources.find(
+    //         (source) => source.tableOfContentsItemId === layer.id
+    //       );
+    //       if (!overlaySource) {
+    //         throw new Error(
+    //           `Overlay source not found for card layer: ${layer.id}`
+    //         );
+    //       }
+    //       const metrics = await getOrCreateMetricsOfType(
+    //         pool,
+    //         "count",
+    //         overlaySource,
+    //         layer.layerParameters,
+    //         geogs.map((g) => g.id),
+    //         fragments,
+    //         projectId
+    //       );
+    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //       results.metrics.push(...metrics);
+    //     }
+    //     break;
+    //   }
+    //   case "Presence": {
+    //     for (const layer of card.layers) {
+    //       cardDependencyList.overlaySources.push(layer.id);
+    //       const overlaySource = overlaySources.find(
+    //         (source) => source.tableOfContentsItemId === layer.id
+    //       );
+    //       if (!overlaySource) {
+    //         throw new Error(
+    //           `Overlay source not found for card layer: ${layer.id}`
+    //         );
+    //       }
+    //       const metrics = await getOrCreateMetricsOfType(
+    //         pool,
+    //         "presence",
+    //         overlaySource,
+    //         layer.layerParameters,
+    //         [],
+    //         fragments,
+    //         projectId
+    //       );
+    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //       results.metrics.push(...metrics);
+    //     }
+    //     break;
+    //   }
+    //   case "FeatureList": {
+    //     for (const layer of card.layers) {
+    //       cardDependencyList.overlaySources.push(layer.id);
+    //       const overlaySource = overlaySources.find(
+    //         (source) => source.tableOfContentsItemId === layer.id
+    //       );
+    //       if (!overlaySource) {
+    //         throw new Error(
+    //           `Overlay source not found for card layer: ${layer.id}`
+    //         );
+    //       }
+    //       let parameters = layer.layerParameters;
+    //       // NOTE:
+    //       // This works just fine if you send it, but I'm just including all
+    //       // props for now so metrics don't need to be recalculated when the
+    //       // included properties change. At this point the results size doesn't
+    //       // matter as much.
+    //       //
+    //       // if (
+    //       //   card.component_settings.includedProperties &&
+    //       //   card.component_settings.includedProperties.length > 0
+    //       // ) {
+    //       //   parameters = {
+    //       //     ...parameters,
+    //       //     includedProperties:
+    //       //       card.component_settings.includedProperties.sort(),
+    //       //   };
+    //       // }
+    //       if (card.component_settings.resultsLimit) {
+    //         parameters = {
+    //           ...parameters,
+    //           resultsLimit: card.component_settings.resultsLimit,
+    //         };
+    //       }
+    //       const metrics = await getOrCreateMetricsOfType(
+    //         pool,
+    //         "presence_table",
+    //         overlaySource,
+    //         parameters,
+    //         [],
+    //         fragments,
+    //         projectId
+    //       );
+    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //       results.metrics.push(...metrics);
+    //     }
+    //     break;
+    //   }
+    //   case "ColumnStatistics": {
+    //     for (const layer of card.layers) {
+    //       cardDependencyList.overlaySources.push(layer.id);
+    //       const overlaySource = overlaySources.find(
+    //         (source) => source.tableOfContentsItemId === layer.id
+    //       );
+    //       if (!overlaySource) {
+    //         throw new Error(
+    //           `Overlay source not found for card layer: ${layer.id}`
+    //         );
+    //       }
+    //       if (!layer.layerParameters?.valueColumn) {
+    //         throw new Error(
+    //           `ColumnStatistics card requires valueColumn parameter for layer: ${layer.id}`
+    //         );
+    //       }
+    //       const metrics = await getOrCreateMetricsOfType(
+    //         pool,
+    //         "column_values",
+    //         overlaySource,
+    //         layer.layerParameters,
+    //         geogs.map((g) => g.id),
+    //         fragments,
+    //         projectId
+    //       );
+    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //       results.metrics.push(...metrics);
+    //     }
+    //     break;
+    //   }
+    //   case "RasterBandStatistics": {
+    //     for (const layer of card.layers) {
+    //       cardDependencyList.overlaySources.push(layer.id);
+    //       const overlaySource = overlaySources.find(
+    //         (source) => source.tableOfContentsItemId === layer.id
+    //       );
+    //       if (!overlaySource) {
+    //         throw new Error(
+    //           `Overlay source not found for card layer: ${layer.id}`
+    //         );
+    //       }
+    //       const metrics = await getOrCreateMetricsOfType(
+    //         pool,
+    //         "raster_stats",
+    //         overlaySource,
+    //         layer.layerParameters,
+    //         geogs.map((g) => g.id),
+    //         fragments,
+    //         projectId
+    //       );
+    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //       results.metrics.push(...metrics);
+    //     }
+    //     break;
+    //   }
+    //   case "DistanceToShore": {
+    //     const metrics = await getOrCreateMetricsOfType(
+    //       pool,
+    //       "distance_to_shore",
+    //       {
+    //         sourceUrl: "https://uploads.seasketch.org/land-big-2.fgb",
+    //       } as ReportOverlaySourcePartial,
+    //       {},
+    //       [],
+    //       fragments,
+    //       projectId
+    //     );
+    //     cardDependencyList.metrics.push(...metrics.map((m) => m.id));
+    //     results.metrics.push(...metrics);
+    //   }
+    //   default:
+    //     // do nothing. some cards like sketchAttributes do not have dependencies
+    //     break;
+    // }
+
     results.cardDependencyLists.push(cardDependencyList);
   }
 
+  // add all metrics to the results
   return results;
 }
 
-async function getOrCreateSpatialMetric(
-  pool: Pool,
-  subjectFragmentId: string | null,
-  subjectGeographyId: number | null,
-  type: string,
-  overlaySourceUrl: string | null,
-  parameters: any,
-  sourceProcessingJobDependency: string | null,
-  projectId: number
-) {
+async function getOrCreateSpatialMetric({
+  pool,
+  subjectFragmentId,
+  subjectGeographyId,
+  type,
+  overlaySourceUrl,
+  parameters,
+  sourceProcessingJobDependency,
+  projectId,
+}: {
+  pool: Pool;
+  subjectFragmentId?: string;
+  subjectGeographyId?: number;
+  type: string;
+  overlaySourceUrl?: string;
+  parameters: any;
+  sourceProcessingJobDependency?: string;
+  projectId: number;
+}): Promise<any> {
+  if (!subjectFragmentId && !subjectGeographyId) {
+    throw new Error(
+      "Either subjectFragmentId or subjectGeographyId must be provided"
+    );
+  }
   const result = await pool.query(
     `
     select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int) as metric
   `,
     [
-      subjectFragmentId,
-      subjectGeographyId,
+      subjectFragmentId || null,
+      subjectGeographyId || null,
       type,
-      overlaySourceUrl,
+      overlaySourceUrl || null,
       parameters,
-      sourceProcessingJobDependency,
+      sourceProcessingJobDependency || null,
       projectId,
     ]
   );
@@ -742,30 +798,28 @@ async function getOrCreateMetricsOfType(
   const metrics: any[] = [];
   // first, create geography metrics
   for (const geographyId of geographyIds) {
-    const metric = await getOrCreateSpatialMetric(
+    const metric = await getOrCreateSpatialMetric({
       pool,
-      null,
-      geographyId,
+      subjectGeographyId: geographyId,
       type,
-      overlaySource.sourceUrl || null,
+      overlaySourceUrl: overlaySource.sourceUrl,
       parameters,
-      overlaySource.sourceProcessingJobId || null,
-      projectId
-    );
+      sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
+      projectId,
+    });
     metrics.push(metric);
   }
   // then, fragment metrics
   for (const fragmentHash of fragmentHashes) {
-    const metric = await getOrCreateSpatialMetric(
+    const metric = await getOrCreateSpatialMetric({
       pool,
-      fragmentHash,
-      null,
+      subjectFragmentId: fragmentHash,
       type,
-      overlaySource.sourceUrl || null,
+      overlaySourceUrl: overlaySource.sourceUrl,
       parameters,
-      overlaySource.sourceProcessingJobId || null,
-      projectId
-    );
+      sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
+      projectId,
+    });
     metrics.push(metric);
   }
   return metrics;
@@ -804,3 +858,39 @@ export async function startMetricCalculationsForSketch(
 }
 
 export default ReportsPlugin;
+
+export function extractMetricDependenciesFromReportBody(
+  node: ProsemirrorNode,
+  dependencies: MetricDependency[] = []
+) {
+  if (typeof node !== "object" || node === null || !node.type) {
+    throw new Error("Invalid node");
+  }
+  if (node.type === "metric" && node.attrs?.metrics) {
+    const metrics = node.attrs.metrics;
+    if (!Array.isArray(metrics)) {
+      throw new Error("Invalid metrics");
+    }
+    if (metrics.length > 0) {
+      if (typeof metrics[0] !== "object") {
+        throw new Error("Invalid metric");
+      }
+      dependencies.push(...metrics);
+    }
+  }
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) {
+      extractMetricDependenciesFromReportBody(child, dependencies);
+    }
+  }
+  return dependencies;
+}
+
+type ProsemirrorNode = {
+  type: string;
+  attrs?: Record<string, any>;
+  content?: ProsemirrorNode[];
+};
+type ProsemirrorDocument = ProsemirrorNode & {
+  type: "doc";
+};

@@ -159,8 +159,12 @@ export const defaultSlashCommandItems: SlashCommandItem[] = [
     isEnabled: (schema) => Boolean(schema.nodes.metric),
     run: ({ view, range }) => {
       return insertMetric(view, range, {
-        type: "total_area",
-        geography: null,
+        metrics: [
+          {
+            type: "total_area",
+            subjectType: "fragments",
+          },
+        ],
       });
     },
     group: "Metrics",

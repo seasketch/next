@@ -5,6 +5,7 @@ import {
   MetricSubjectGeography,
   SourceType,
 } from "overlay-engine";
+import { MetricDependencyParameters } from "overlay-engine/src/metrics/metrics";
 
 export type OverlayWorkerMessageType =
   | "result"
@@ -109,12 +110,8 @@ type BaseOverlayWorkerPayload = {
     : never;
 }[keyof MetricTypeMap];
 
-export type OverlayWorkerPayload = BaseOverlayWorkerPayload & {
-  bufferDistanceKm?: number;
-  resultsLimit?: number;
-  includedProperties?: string[];
-  valueColumn?: string;
-};
+export type OverlayWorkerPayload = BaseOverlayWorkerPayload &
+  MetricDependencyParameters;
 
 export type OverlayWorkerResponse = {
   /**

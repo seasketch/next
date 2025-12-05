@@ -1,3 +1,4 @@
+import { createPortal } from "react-dom";
 import { memo, useMemo } from "react";
 import { SlashCommandItem } from "./plugin";
 
@@ -41,14 +42,17 @@ function SlashCommandPaletteComponent({
     });
   }, [items]);
 
-  if (!isVisible || !anchor) {
+  const portalTarget =
+    typeof document !== "undefined" ? document.body : undefined;
+
+  if (!isVisible || !anchor || !portalTarget) {
     return null;
   }
 
   if (items.length === 0) {
-    return (
+    return createPortal(
       <div
-        className="absolute z-20 w-64 rounded-md border border-gray-200 bg-white shadow-lg"
+        className="fixed z-20 w-64 rounded-md border border-gray-200 bg-white shadow-lg"
         style={{ top: anchor.top, left: anchor.left }}
         role="menu"
       >
@@ -56,16 +60,17 @@ function SlashCommandPaletteComponent({
           {/* eslint-disable-next-line i18next/no-literal-string */}
           {query ? `No matches for "${query}"` : "No commands available"}
         </div>
-      </div>
+      </div>,
+      portalTarget
     );
   }
 
   // Track the current index as we iterate through groups
   let currentIndex = 0;
 
-  return (
+  return createPortal(
     <div
-      className="absolute z-20 w-64 rounded-md border border-gray-200 bg-white shadow-lg max-h-96 overflow-y-auto"
+      className="fixed z-20 w-64 rounded-md border border-gray-200 bg-white shadow-lg max-h-96 overflow-y-auto"
       style={{ top: anchor.top, left: anchor.left }}
       role="menu"
     >
@@ -110,7 +115,8 @@ function SlashCommandPaletteComponent({
           </div>
         );
       })}
-    </div>
+    </div>,
+    portalTarget
   );
 }
 

@@ -149,7 +149,6 @@ export type AddReportCardInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
-  layers?: Maybe<Array<Maybe<ReportLayerInputRecordInput>>>;
   reportTabId?: Maybe<Scalars['Int']>;
 };
 
@@ -1832,6 +1831,39 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` to be created by this mutation. */
+  originalSourceId: OriginalSourceIdInput;
+};
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayload = {
+  __typename?: 'CreateOriginalSourceIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` that was created by this mutation. */
+  originalSourceId?: Maybe<OriginalSourceId>;
+  /** An edge for our `OriginalSourceId`. May be used by Relay 1. */
+  originalSourceIdEdge?: Maybe<OriginalSourceIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -1965,6 +1997,39 @@ export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
 };
 
+/** All input for the create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` to be created by this mutation. */
+  publishedTocItemId: PublishedTocItemIdInput;
+};
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayload = {
+  __typename?: 'CreatePublishedTocItemIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` that was created by this mutation. */
+  publishedTocItemId?: Maybe<PublishedTocItemId>;
+  /** An edge for our `PublishedTocItemId`. May be used by Relay 1. */
+  publishedTocItemIdEdge?: Maybe<PublishedTocItemIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayloadPublishedTocItemIdEdgeArgs = {
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
+};
+
 /** All input for the `createRemoteGeojsonSource` mutation. */
 export type CreateRemoteGeojsonSourceInput = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
@@ -2029,41 +2094,6 @@ export type CreateRemoteMvtSourcePayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
-};
-
-/** All input for the create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `ReportCardLayer` to be created by this mutation. */
-  reportCardLayer: ReportCardLayerInput;
-};
-
-/** The output of our create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerPayload = {
-  __typename?: 'CreateReportCardLayerPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `ReportCardLayer` that was created by this mutation. */
-  reportCardLayer?: Maybe<ReportCardLayer>;
-  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
-  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
-  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-};
-
-
-/** The output of our create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerPayloadReportCardLayerEdgeArgs = {
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 /** All input for the create `Report` mutation. */
@@ -6728,6 +6758,29 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7627,6 +7680,8 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /** Creates a single `OriginalSourceId`. */
+  createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -7650,12 +7705,12 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  /** Creates a single `PublishedTocItemId`. */
+  createPublishedTocItemId?: Maybe<CreatePublishedTocItemIdPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
   createReport?: Maybe<CreateReportPayload>;
-  /** Creates a single `ReportCardLayer`. */
-  createReportCardLayer?: Maybe<CreateReportCardLayerPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7842,6 +7897,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8444,6 +8500,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOriginalSourceIdArgs = {
+  input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   message: Scalars['JSON'];
   topicId: Scalars['Int'];
@@ -8475,6 +8537,12 @@ export type MutationCreateProjectsSharedBasemapArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreatePublishedTocItemIdArgs = {
+  input: CreatePublishedTocItemIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateRemoteGeojsonSourceArgs = {
   input: CreateRemoteGeojsonSourceInput;
 };
@@ -8489,12 +8557,6 @@ export type MutationCreateRemoteMvtSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateReportArgs = {
   input: CreateReportInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateReportCardLayerArgs = {
-  input: CreateReportCardLayerInput;
 };
 
 
@@ -9061,6 +9123,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -10197,6 +10265,43 @@ export enum OptionalBasemapLayersOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export type OriginalSourceId = {
+  __typename?: 'OriginalSourceId';
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OriginalSourceId` */
+export type OriginalSourceIdInput = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `OriginalSourceId` values. */
+export type OriginalSourceIdsConnection = {
+  __typename?: 'OriginalSourceIdsConnection';
+  /** A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination. */
+  edges: Array<OriginalSourceIdsEdge>;
+  /** A list of `OriginalSourceId` objects. */
+  nodes: Array<OriginalSourceId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OriginalSourceId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OriginalSourceId` edge in the connection. */
+export type OriginalSourceIdsEdge = {
+  __typename?: 'OriginalSourceIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OriginalSourceId` at the end of the edge. */
+  node: OriginalSourceId;
+};
+
+/** Methods to use when ordering `OriginalSourceId`. */
+export enum OriginalSourceIdsOrderBy {
+  Natural = 'NATURAL'
 }
 
 export type OutstandingSurveyInvites = {
@@ -11688,6 +11793,43 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+export type PublishedTocItemId = {
+  __typename?: 'PublishedTocItemId';
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `PublishedTocItemId` */
+export type PublishedTocItemIdInput = {
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `PublishedTocItemId` values. */
+export type PublishedTocItemIdsConnection = {
+  __typename?: 'PublishedTocItemIdsConnection';
+  /** A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination. */
+  edges: Array<PublishedTocItemIdsEdge>;
+  /** A list of `PublishedTocItemId` objects. */
+  nodes: Array<PublishedTocItemId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `PublishedTocItemId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `PublishedTocItemId` edge in the connection. */
+export type PublishedTocItemIdsEdge = {
+  __typename?: 'PublishedTocItemIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `PublishedTocItemId` at the end of the edge. */
+  node: PublishedTocItemId;
+};
+
+/** Methods to use when ordering `PublishedTocItemId`. */
+export enum PublishedTocItemIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
@@ -11845,6 +11987,8 @@ export type Query = Node & {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
+  /** Reads and enables pagination through a set of `OriginalSourceId`. */
+  originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -11876,6 +12020,8 @@ export type Query = Node & {
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
   publicSprites?: Maybe<Array<Sprite>>;
+  /** Reads and enables pagination through a set of `PublishedTocItemId`. */
+  publishedTocItemIdsConnection?: Maybe<PublishedTocItemIdsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -11884,8 +12030,6 @@ export type Query = Node & {
   report?: Maybe<Report>;
   /** Reads a single `Report` using its globally unique `ID`. */
   reportByNodeId?: Maybe<Report>;
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayersConnection?: Maybe<ReportCardLayersConnection>;
   /** Reads and enables pagination through a set of `Report`. */
   reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
@@ -12609,6 +12753,17 @@ export type QueryOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOriginalSourceIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -12766,6 +12921,17 @@ export type QueryPublicSpritesArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryPublishedTocItemIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryReportArgs = {
   id: Scalars['Int'];
 };
@@ -12774,18 +12940,6 @@ export type QueryReportArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryReportByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryReportCardLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -13422,88 +13576,11 @@ export type ReportCard = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayers: Array<ReportCardLayer>;
-  /** Reads and enables pagination through a set of `ReportingLayer`. */
-  reportingLayers?: Maybe<Array<ReportingLayer>>;
   reportTabId: Scalars['Int'];
   tint?: Maybe<Scalars['String']>;
   type: Scalars['String'];
   updatedAt: Scalars['Datetime'];
 };
-
-
-export type ReportCardReportCardLayersArgs = {
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
-};
-
-
-export type ReportCardReportingLayersArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-};
-
-export type ReportCardLayer = {
-  __typename?: 'ReportCardLayer';
-  layerParameters: Scalars['JSON'];
-  processedOutput?: Maybe<DataUploadOutput>;
-  reportCardId: Scalars['Int'];
-  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  tableOfContentsItemId: Scalars['Int'];
-};
-
-/**
- * A condition to be used against `ReportCardLayer` object types. All fields are
- * tested for equality and combined with a logical ‘and.’
- */
-export type ReportCardLayerCondition = {
-  /** Checks for equality with the object’s `reportCardId` field. */
-  reportCardId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `tableOfContentsItemId` field. */
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `ReportCardLayer` */
-export type ReportCardLayerInput = {
-  layerParameters?: Maybe<Scalars['JSON']>;
-  reportCardId: Scalars['Int'];
-  tableOfContentsItemId: Scalars['Int'];
-};
-
-/** A connection to a list of `ReportCardLayer` values. */
-export type ReportCardLayersConnection = {
-  __typename?: 'ReportCardLayersConnection';
-  /** A list of edges which contains the `ReportCardLayer` and cursor to aid in pagination. */
-  edges: Array<ReportCardLayersEdge>;
-  /** A list of `ReportCardLayer` objects. */
-  nodes: Array<ReportCardLayer>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `ReportCardLayer` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `ReportCardLayer` edge in the connection. */
-export type ReportCardLayersEdge = {
-  __typename?: 'ReportCardLayersEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `ReportCardLayer` at the end of the edge. */
-  node: ReportCardLayer;
-};
-
-/** Methods to use when ordering `ReportCardLayer`. */
-export enum ReportCardLayersOrderBy {
-  Natural = 'NATURAL',
-  ReportCardIdAsc = 'REPORT_CARD_ID_ASC',
-  ReportCardIdDesc = 'REPORT_CARD_ID_DESC',
-  TableOfContentsItemIdAsc = 'TABLE_OF_CONTENTS_ITEM_ID_ASC',
-  TableOfContentsItemIdDesc = 'TABLE_OF_CONTENTS_ITEM_ID_DESC'
-}
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ReportCondition = {
@@ -13518,13 +13595,6 @@ export type ReportInput = {
   createdAt?: Maybe<Scalars['Datetime']>;
   projectId: Scalars['Int'];
   sketchClassId: Scalars['Int'];
-};
-
-/** An input for mutations affecting `ReportLayerInputRecord` */
-export type ReportLayerInputRecordInput = {
-  layerParameters?: Maybe<Scalars['JSON']>;
-  reportCardId?: Maybe<Scalars['Int']>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
 };
 
 export type ReportOverlayDependencies = {
@@ -13583,18 +13653,6 @@ export type ReportTab = Node & {
 export type ReportTabCardsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-export type ReportingLayer = {
-  __typename?: 'ReportingLayer';
-  groupBy?: Maybe<Scalars['String']>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  meta?: Maybe<Scalars['JSON']>;
-  processingJobId?: Maybe<Scalars['String']>;
-  sourceProcessingJob?: Maybe<SourceProcessingJob>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-  title?: Maybe<Scalars['String']>;
-  type?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `Report` values. */
@@ -15354,8 +15412,7 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayers: Array<ReportCardLayer>;
+  reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
   /** Position in the layer list */
@@ -15438,24 +15495,6 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
 export type TableOfContentsItemQuotaUsedArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-
-/**
- * TableOfContentsItems represent a tree-view of folders and operational layers
- * that can be added to the map. Both layers and folders may be nested into other
- * folders for organization, and each folder has its own access control list.
- *
- * Items that represent data layers have a `DataLayer` relation, which in turn has
- * a reference to a `DataSource`. Usually these relations should be fetched in
- * batch only once the layer is turned on, using the
- * `dataLayersAndSourcesByLayerId` query.
- */
-export type TableOfContentsItemReportCardLayersArgs = {
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -22539,37 +22578,9 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
-export type ReportingLayerDetailsFragment = (
-  { __typename?: 'ReportCardLayer' }
-  & Pick<ReportCardLayer, 'tableOfContentsItemId' | 'layerParameters'>
-  & { processedOutput?: Maybe<(
-    { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'url' | 'size' | 'type'>
-  )>, tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'title' | 'dataSourceType' | 'stableId'>
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
-      & { dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'geostats' | 'type'>
-        & { sourceProcessingJob?: Maybe<(
-          { __typename?: 'SourceProcessingJob' }
-          & SourceProcessingJobDetailsFragment
-        )> }
-      )> }
-    )> }
-  )> }
-);
-
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
   & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody' | 'displayMapLayerVisibilityControls'>
-  & { reportingLayers: Array<(
-    { __typename?: 'ReportCardLayer' }
-    & ReportingLayerDetailsFragment
-  )> }
 );
 
 export type ReportTabDetailsFragment = (
@@ -22720,7 +22731,6 @@ export type AddReportCardMutationVariables = Exact<{
   componentSettings: Scalars['JSON'];
   cardType: Scalars['String'];
   body: Scalars['JSON'];
-  layers: Array<ReportLayerInputRecordInput> | ReportLayerInputRecordInput;
 }>;
 
 
@@ -26329,48 +26339,6 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
-export const SourceProcessingJobDetailsFragmentDoc = gql`
-    fragment SourceProcessingJobDetails on SourceProcessingJob {
-  jobKey
-  state
-  progressPercentage
-  progressMessage
-  createdAt
-  errorMessage
-  startedAt
-  durationSeconds
-  eta
-}
-    `;
-export const ReportingLayerDetailsFragmentDoc = gql`
-    fragment ReportingLayerDetails on ReportCardLayer {
-  tableOfContentsItemId
-  layerParameters
-  processedOutput {
-    url
-    size
-    type
-  }
-  tableOfContentsItem {
-    id
-    title
-    dataSourceType
-    stableId
-    dataLayer {
-      id
-      mapboxGlStyles
-      dataSource {
-        id
-        geostats
-        type
-        sourceProcessingJob {
-          ...SourceProcessingJobDetails
-        }
-      }
-    }
-  }
-}
-    ${SourceProcessingJobDetailsFragmentDoc}`;
 export const ReportCardDetailsFragmentDoc = gql`
     fragment ReportCardDetails on ReportCard {
   id
@@ -26381,14 +26349,11 @@ export const ReportCardDetailsFragmentDoc = gql`
   tint
   icon
   body
-  reportingLayers: reportCardLayers {
-    ...ReportingLayerDetails
-  }
   collapsibleFooterEnabled
   collapsibleFooterBody
   displayMapLayerVisibilityControls
 }
-    ${ReportingLayerDetailsFragmentDoc}`;
+    `;
 export const ReportTabDetailsFragmentDoc = gql`
     fragment ReportTabDetails on ReportTab {
   id
@@ -26410,6 +26375,19 @@ export const ReportDetailsFragmentDoc = gql`
   }
 }
     ${ReportTabDetailsFragmentDoc}`;
+export const SourceProcessingJobDetailsFragmentDoc = gql`
+    fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+  errorMessage
+  startedAt
+  durationSeconds
+  eta
+}
+    `;
 export const OverlaySourceDetailsFragmentDoc = gql`
     fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
@@ -35264,9 +35242,9 @@ export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderRe
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
 export const AddReportCardDocument = gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!, $layers: [ReportLayerInputRecordInput!]!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body, layers: $layers}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
   ) {
     reportCard {
       id
@@ -35293,7 +35271,6 @@ export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutat
  *      componentSettings: // value for 'componentSettings'
  *      cardType: // value for 'cardType'
  *      body: // value for 'body'
- *      layers: // value for 'layers'
  *   },
  * });
  */
@@ -39796,7 +39773,6 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
-    ReportingLayerDetails: 'ReportingLayerDetails',
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',

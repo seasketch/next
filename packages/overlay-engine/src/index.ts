@@ -43,6 +43,9 @@ export {
   RasterBandStats,
   combineRasterBandStats,
   combineColumnValueStats,
+  MetricDependency,
+  MetricDependencySubjectType,
+  MetricDependencyParameters,
 } from "./metrics/metrics";
 export {
   createUniqueIdIndex,

@@ -1,19 +1,13 @@
 import { EditorView } from "prosemirror-view";
 import { TextSelection } from "prosemirror-state";
 import { SlashCommandRange } from "./plugin";
+import { MetricDependency } from "overlay-engine";
 
 /**
  * Properties for creating a metric node.
  */
 export interface MetricProperties {
-  /**
-   * The metric type (e.g., "total_area", "overlay_area")
-   */
-  type: string;
-  /**
-   * The geography ID (optional, for geography-based metrics)
-   */
-  geography: string | null;
+  metrics: MetricDependency[];
 }
 
 /**
@@ -106,8 +100,7 @@ export function insertMetric(
   }
 
   const node = metricType.create({
-    type: properties.type,
-    geography: properties.geography,
+    metrics: properties.metrics,
   });
 
   let tr = state.tr.replaceRangeWith(range.from, range.to, node);
