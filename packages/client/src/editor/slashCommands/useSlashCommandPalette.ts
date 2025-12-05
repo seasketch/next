@@ -68,10 +68,9 @@ export function useSlashCommandPalette({
     }
     try {
       const startCoords = view.coordsAtPos(slashState.range.from);
-      const rootRect = root.getBoundingClientRect();
       setAnchor({
-        top: startCoords.bottom - rootRect.top + 8,
-        left: startCoords.left - rootRect.left,
+        top: startCoords.bottom + 8,
+        left: startCoords.left,
       });
     } catch (err) {
       setAnchor(null);

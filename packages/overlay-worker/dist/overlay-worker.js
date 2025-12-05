@@ -188,7 +188,7 @@ async function handler(payload) {
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor(payload.type, 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(intersectionFeature, {
                     tolerance: SIMPLIFICATION_TOLERANCE,
-                }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedProperties, payload.resultsLimit, columnValuesProperty);
+                }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedColumns, payload.maxResults, columnValuesProperty);
                 const result = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);

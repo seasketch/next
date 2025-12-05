@@ -19,6 +19,7 @@ export function createReportCardSchema(
   // Define the metric node spec
   const metricSpec: NodeSpec = {
     attrs: {
+      metrics: { default: [] },
       type: { default: "total_area" },
       geography: { default: null },
       style: { default: "decimal" },
@@ -37,46 +38,49 @@ export function createReportCardSchema(
         getAttrs: (dom: string | HTMLElement) => {
           if (typeof dom === "string") {
             return {
-              type: null,
-              geography: null,
+              metrics: [],
               style: "decimal",
               unit: undefined,
               minimumFractionDigits: 0,
               maximumFractionDigits: 2,
             };
           }
-          const type = dom.getAttribute("metric-type");
-          const geography = dom.getAttribute("metric-geography");
           const style = dom.getAttribute("metric-style") || "decimal";
           const unit = dom.getAttribute("metric-unit") || undefined;
           const minFrac = dom.getAttribute("metric-min-frac");
           const maxFrac = dom.getAttribute("metric-max-frac");
+          const metricDependencies = JSON.parse(
+            dom.getAttribute("metric-dependencies") || "[]"
+          );
           return {
-            type,
-            geography,
             style,
             unit: unit || undefined,
             minimumFractionDigits: minFrac ? parseInt(minFrac, 10) : 0,
             maximumFractionDigits: maxFrac ? parseInt(maxFrac, 10) : 2,
+            metrics: metricDependencies,
           };
         },
       },
     ],
     toDOM: (node: Node) => {
       const {
-        type,
-        geography,
         style,
         unit,
         minimumFractionDigits,
         maximumFractionDigits,
+        metrics,
       } = node.attrs;
 
       if (metricResolver) {
+        console.log("attrs", node.attrs);
+        const metric = metrics?.[0];
+        if (!metric) {
+          return ["span", {}, "Error: Metric attrs not found"];
+        }
         // Resolve the metric value using the resolver with formatting options
         const value = metricResolver.resolve(
-          type,
-          geography,
+          metric?.type ?? "total_area",
+          null,
           style,
           unit,
           minimumFractionDigits,
@@ -86,12 +90,11 @@ export function createReportCardSchema(
         return [
           "span",
           {
-            "metric-type": type,
-            "metric-geography": geography || "",
             "metric-style": style || "decimal",
             "metric-unit": unit || "",
             "metric-min-frac": minimumFractionDigits?.toString() || "0",
             "metric-max-frac": maximumFractionDigits?.toString() || "2",
+            "metric-dependencies": JSON.stringify(metrics),
             class:
               "metric font-semibold hover:bg-blue-300/20 rounded-sm cursor-pointer",
           },
@@ -102,14 +105,13 @@ export function createReportCardSchema(
         return [
           "span",
           {
-            "metric-type": type,
-            "metric-geography": geography,
             "metric-style": style || "decimal",
             "metric-unit": unit || "",
             "metric-min-frac": minimumFractionDigits?.toString() || "0",
             "metric-max-frac": maximumFractionDigits?.toString() || "2",
+            "metric-dependencies": JSON.stringify(metrics),
           },
-          `{${type}}`,
+          `{${metrics[0].type}}`,
         ];
       }
     },

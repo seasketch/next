@@ -376,34 +376,6 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
-fragment ReportingLayerDetails on ReportCardLayer {
-  tableOfContentsItemId
-  layerParameters
-  processedOutput {
-    url
-    size
-    type
-  }
-  tableOfContentsItem {
-    id
-    title
-    dataSourceType
-    stableId
-    dataLayer {
-      id
-      mapboxGlStyles
-      dataSource {
-        id
-        geostats
-        type
-        sourceProcessingJob {
-          ...SourceProcessingJobDetails
-        }
-      }
-    }
-  }
-}
-
 fragment ReportCardDetails on ReportCard {
   id
   position
@@ -413,9 +385,6 @@ fragment ReportCardDetails on ReportCard {
   tint
   icon
   body
-  reportingLayers: reportCardLayers {
-    ...ReportingLayerDetails
-  }
   collapsibleFooterEnabled
   collapsibleFooterBody
   displayMapLayerVisibilityControls
@@ -527,7 +496,6 @@ mutation AddReportCard(
   $componentSettings: JSON!
   $cardType: String!
   $body: JSON!
-  $layers: [ReportLayerInputRecordInput!]!
 ) {
   addReportCard(
     input: {
@@ -535,7 +503,6 @@ mutation AddReportCard(
       componentSettings: $componentSettings
       cardType: $cardType
       body: $body
-      layers: $layers
     }
   ) {
     reportCard {

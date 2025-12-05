@@ -158,5 +158,21 @@ export declare function combineRasterBandStats(statsArray: RasterBandStats[]): R
  * Otherwise, they are weighted by count.
  */
 export declare function combineColumnValueStats(statsArray: ColumnValueStats[]): ColumnValueStats | undefined;
+export type MetricDependencySubjectType = "fragments" | "geographies";
+export type MetricDependency = {
+    type: MetricType;
+    subjectType: MetricDependencySubjectType;
+    tableOfContentsItemId?: number;
+    geographies?: number[];
+    parameters?: MetricDependencyParameters;
+};
+export type MetricDependencyParameters = {
+    groupBy?: string;
+    includedColumns?: string[];
+    valueColumn?: string;
+    bufferDistanceKm?: number;
+    maxResults?: number;
+    maxDistanceKm?: number;
+};
 export {};
 //# sourceMappingURL=metrics.d.ts.map

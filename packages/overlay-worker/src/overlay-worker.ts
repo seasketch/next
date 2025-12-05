@@ -118,14 +118,7 @@ const workerPool = createClippingWorkerPool(
   process.env.PISCINA_WORKER_PATH || "worker.js"
 );
 
-export default async function handler(
-  payload: OverlayWorkerPayload & {
-    includedProperties?: string[];
-    resultsLimit?: number;
-    valueColumn?: string;
-    bufferDistanceKm?: number;
-  }
-) {
+export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker (v2) received payload", payload);
   const startTime = Date.now();
   const progressNotifier = new ProgressNotifier(
@@ -257,8 +250,8 @@ export default async function handler(
           helpers,
           payload.groupBy,
           workerPool,
-          payload.includedProperties,
-          payload.resultsLimit,
+          payload.includedColumns,
+          payload.maxResults,
           columnValuesProperty
         );
         const result = await processor.calculate();
