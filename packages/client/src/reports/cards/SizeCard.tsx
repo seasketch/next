@@ -184,7 +184,7 @@ export function SizeCard({
         <Skeleton className="w-full h-4" />
       ) : (
         <div>
-          <p className="text-[15px] line-height-[24px] py-2">
+          {/* <p className="text-[15px] line-height-[24px] py-2">
             {t("This area is ")}
             <span className="tabular-nums font-semibold">
               {formatters.area(convertFromBase(sizeCardData.area))} {unitLabel}
@@ -217,7 +217,7 @@ export function SizeCard({
                 {t(".")}
               </>
             )}
-          </p>
+          </p> */}
           {secondaryGeographies.length > 0 ? (
             <GeographiesTable
               config={config}

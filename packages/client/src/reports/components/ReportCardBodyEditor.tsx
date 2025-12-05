@@ -2,18 +2,26 @@ import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { formElements as editorConfig } from "../../editor/config";
 import { EditorView } from "prosemirror-view";
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../../editor/TooltipMenu";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ChevronRightIcon,
-} from "@radix-ui/react-icons";
-import { useContext } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import SlashCommandPalette from "../../editor/slashCommands/SlashCommandPalette";
+import { useSlashCommandPalette } from "../../editor/slashCommands/useSlashCommandPalette";
+import { defaultSlashCommandItems } from "../../editor/slashCommands/plugin";
+import { createReportCardEditorConfig } from "../../reports/utils/createReportCardEditorConfig";
+import { MetricResolver } from "../../reports/utils/resolveMetric";
 
 // Ensure legacy report bodies (saved before presenceBlock/absenceBlock existed) always
 // have both presenceBlock and absenceBlock nodes at the end, each with at least one paragraph.
@@ -100,6 +108,10 @@ interface ReportCardBodyEditorProps {
    * Callback to set the expanded state (only used for footer editor)
    */
   setIsExpanded?: Dispatch<SetStateAction<boolean>>;
+  /**
+   * Optional metric resolver for resolving metric node values
+   */
+  metricResolver?: MetricResolver;
 }
 
 export default function ReportCardBodyEditor({
@@ -110,9 +122,19 @@ export default function ReportCardBodyEditor({
   isFooter = false,
   isExpanded = false,
   setIsExpanded,
+  metricResolver,
 }: ReportCardBodyEditorProps) {
+  // Use metrics-aware config if resolver is provided, otherwise use base config
   const editorConfigKey = isFooter ? "reportCardFooter" : "reportCardBody";
-  const { schema, plugins } = editorConfig[editorConfigKey];
+  const baseConfig = editorConfig[editorConfigKey];
+
+  const { schema, plugins } = useMemo(() => {
+    if (metricResolver) {
+      return createReportCardEditorConfig(isFooter, metricResolver);
+    }
+    return baseConfig;
+  }, [isFooter, metricResolver, baseConfig]);
+
   const langContext = useContext(FormLanguageContext);
   const currentLangCode = langContext?.lang?.code || "EN";
 
@@ -121,10 +143,39 @@ export default function ReportCardBodyEditor({
   const [state, setState] = useState<EditorState>();
   const lastLangCodeRef = useRef<string>(currentLangCode);
   const lastBodyRef = useRef<any>(body);
+  const initialBodyRef = useRef<any>(body);
+  const saveRef = useRef<((doc: any) => void) | null>(null);
+  initialBodyRef.current = body;
+
+  const {
+    slashState,
+    slashItems,
+    selectedIndex: selectedSlashIndex,
+    anchor: paletteCoords,
+    handleSelect: handleSlashSelect,
+    handleHighlight: handleSlashHighlight,
+  } = useSlashCommandPalette({
+    schema,
+    editorState: state,
+    viewRef,
+    rootRef: root,
+    items: defaultSlashCommandItems,
+  });
+
+  const save = useDebouncedFn(
+    (doc: any) => {
+      onUpdate(doc.toJSON());
+    },
+    100,
+    { leading: true, trailing: true },
+    [onUpdate]
+  );
+  saveRef.current = save;
 
   useEffect(() => {
-    const doc = body
-      ? Node.fromJSON(schema, ensurePresenceBlockJson(body, schema))
+    const initialBody = initialBodyRef.current;
+    const doc = initialBody
+      ? Node.fromJSON(schema, ensurePresenceBlockJson(initialBody, schema))
       : undefined;
     const view = new EditorView(root.current!, {
       state: EditorState.create({
@@ -139,15 +190,16 @@ export default function ReportCardBodyEditor({
         setState(newState);
 
         if (transaction.docChanged) {
-          save(newState.doc);
+          saveRef.current?.(newState.doc);
         }
       },
     });
     viewRef.current = view;
+    setState(view.state);
     return () => {
       view.destroy();
     };
-  }, [isInput]); // Only recreate when isInput changes, not when body changes
+  }, [isInput, plugins, schema]);
 
   // Update editor state when language changes (body will be different for different languages)
   useEffect(() => {
@@ -174,20 +226,11 @@ export default function ReportCardBodyEditor({
     }
   }, [body, schema, plugins, currentLangCode]);
 
-  // Initialize refs on mount
+  // Keep refs up to date with latest props
   useEffect(() => {
     lastLangCodeRef.current = currentLangCode;
     lastBodyRef.current = body;
-  }, []);
-
-  const save = useDebouncedFn(
-    (doc: any) => {
-      onUpdate(doc.toJSON());
-    },
-    100,
-    { leading: true, trailing: true },
-    [onUpdate]
-  );
+  }, [body, currentLangCode]);
 
   return (
     <div className={`relative ${className}`}>
@@ -220,6 +263,15 @@ export default function ReportCardBodyEditor({
           }
         }}
       ></div>
+      <SlashCommandPalette
+        anchor={paletteCoords}
+        isVisible={Boolean(slashState?.active)}
+        items={slashItems}
+        query={slashState?.query ?? ""}
+        selectedIndex={selectedSlashIndex}
+        onSelect={handleSlashSelect}
+        onHighlight={handleSlashHighlight}
+      />
     </div>
   );
 }

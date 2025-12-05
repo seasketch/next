@@ -1144,6 +1144,20 @@ div[attachments="forumAttachments"] {
   display:block
 }
 
+/* Metric node selection styling */
+
+.ProseMirror span.metric.ProseMirror-selectednode{
+  --tw-bg-opacity:1;
+  background-color:rgb(219 234 254 / var(--tw-bg-opacity, 1))
+}
+
+.ProseMirror span.metric{
+  display:inline-block;
+  -webkit-user-select: all;
+          user-select: all
+  /* Make the entire node selectable */
+}
+
 input[type="number"].form-element-number-input {
   -webkit-appearance: textfield;
           appearance: textfield;
@@ -7385,6 +7399,10 @@ select{
   min-width:200px
 }
 
+.min-w-\[240px\]{
+  min-width:240px
+}
+
 .min-w-\[260px\]{
   min-width:260px
 }
@@ -12025,6 +12043,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(148 163 184 / var(--tw-text-opacity, 1))
 }
 
+.first\:border-t-0:first-child{
+  border-top-width:0px
+}
+
 .last\:border-none:last-child{
   border-style:none
 }
@@ -12132,6 +12154,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:bg-blue-200\/10:hover{
   background-color:rgb(191 219 254 / 0.1)
+}
+
+.hover\:bg-blue-300\/20:hover{
+  background-color:rgb(147 197 253 / 0.2)
 }
 
 .hover\:bg-blue-50:hover{

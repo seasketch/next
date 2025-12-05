@@ -2844,13 +2844,6 @@ var SourceCache = class {
     this.inFlightRequests.set(key, request);
     return request;
   }
-  /**
-   * Clear all cached sources and in-flight requests. Useful for testing or resetting state.
-   */
-  clear() {
-    this.cache.clear();
-    this.inFlightRequests.clear();
-  }
 };
 /*! Bundled license information:
 
