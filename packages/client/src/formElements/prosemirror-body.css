@@ -288,3 +288,13 @@ div[attachments="forumAttachments"] {
 .Presence.ReportCard.isAbsent [data-absence-block="yes"] {
   @apply block;
 }
+
+/* Metric node selection styling */
+.ProseMirror span.metric.ProseMirror-selectednode {
+  @apply bg-blue-100;
+}
+
+.ProseMirror span.metric {
+  @apply inline-block;
+  user-select: all; /* Make the entire node selectable */
+}

@@ -25,6 +25,7 @@ import {
   useEffect,
 } from "react";
 import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
+import { createMetricResolver } from "./utils/resolveMetric";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -100,6 +101,12 @@ export default function ReportCard({
   useEffect(() => {
     langCodeRef.current = langContext?.lang?.code || "EN";
   }, [langContext?.lang?.code]);
+
+  // Memoize the metric resolver to avoid recreating it on every render
+  const metricResolver = useMemo(
+    () => createMetricResolver(metrics),
+    [metrics]
+  );
 
   const [retryFailedMetrics, retryState] =
     useRetryFailedSpatialMetricsMutation();
@@ -337,6 +344,7 @@ export default function ReportCard({
             body={localizedBody}
             onUpdate={handleBodyUpdate}
             className={`${tint} ${icon ? "hasIcon" : ""}`}
+            metricResolver={metricResolver}
           />
         ) : (
           <div
@@ -344,7 +352,7 @@ export default function ReportCard({
               icon ? "hasIcon" : ""
             } ${tint ? tint : ""}`}
             dangerouslySetInnerHTML={{
-              __html: prosemirrorToHtml(localizedBody),
+              __html: prosemirrorToHtml(localizedBody, false, metricResolver),
             }}
           />
         )}

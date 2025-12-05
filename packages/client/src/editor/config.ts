@@ -3,7 +3,7 @@
  * This file must be manually made up-to-date with the contents of the client
  * schema.
  */
-import { Schema, Node, NodeSpec } from "prosemirror-model";
+import { Schema, Node } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
@@ -21,6 +21,10 @@ import { ApolloClient } from "@apollo/client";
 import { CreateFileUploadForAboutPageDocument } from "../generated/graphql";
 import axios from "axios";
 import PresenceAbsenceBlockPlaceholderPlugin from "./PresenceAbsenceBlockPlaceholderPlugin";
+import {
+  createSlashCommandPlugin,
+  defaultSlashCommandItems,
+} from "./slashCommands/plugin";
 
 let spec = baseSchema.spec;
 
@@ -455,6 +459,7 @@ export const formElements = {
   reportCardBody: {
     schema: reportCardBodySchema,
     plugins: [
+      createSlashCommandPlugin(defaultSlashCommandItems),
       ...exampleSetup({ schema: reportCardBodySchema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
       PresenceAbsenceBlockPlaceholderPlugin(),
@@ -463,6 +468,7 @@ export const formElements = {
   reportCardFooter: {
     schema: reportCardFooterSchema,
     plugins: [
+      createSlashCommandPlugin(defaultSlashCommandItems),
       ...exampleSetup({ schema: reportCardFooterSchema, menuBar: false }),
       FooterTitlePlaceholderPlugin(),
     ],
