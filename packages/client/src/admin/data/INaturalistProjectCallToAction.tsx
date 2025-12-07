@@ -13,8 +13,10 @@ interface INaturalistProject {
 
 export default function INaturalistProjectCallToAction({
   projectId,
+  onHide,
 }: {
   projectId: string;
+  onHide?: (projectId: string) => void;
 }) {
   const { t } = useTranslation("admin:data");
   const [project, setProject] = useState<INaturalistProject | null>(null);
@@ -62,6 +64,9 @@ export default function INaturalistProjectCallToAction({
   }
 
   if (hidden) {
+    if (onHide) {
+      onHide(projectId);
+    }
     return null;
   }
 

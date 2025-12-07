@@ -19,6 +19,7 @@ import {
   TooltipTrigger,
 } from "../../../components/Tooltip";
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
+import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
 
 export default function LayerSettings({
   item,
@@ -185,6 +186,10 @@ export default function LayerSettings({
           layer={layer}
           className="mt-5"
         />
+      )}
+
+      {source?.type === DataSourceTypes.Inaturalist && (
+        <INaturalistLayerSettingsForm item={item} />
       )}
 
       {item && (

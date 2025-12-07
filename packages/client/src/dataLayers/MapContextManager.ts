@@ -37,7 +37,6 @@ import {
   OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   OverlayFragment,
-  RenderUnderType,
   SketchPresentFragmentDoc,
   SpriteDetailsFragment,
   useProjectRegionQuery,
@@ -75,6 +74,10 @@ import { createBoundsRecursive } from "../projects/OverlayLayers";
 import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
 import { isExpression } from "./legends/utils";
 import CoordinatesControl from "./CoordinatesControl";
+import {
+  buildInaturalistSourcesAndLayers,
+  normalizeInaturalistParams,
+} from "./inaturalist";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -256,6 +259,8 @@ class MapContextManager extends EventEmitter {
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
     this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
+    this.internalState.inaturalistCallToActions =
+      initialState.inaturalistCallToActions || [];
   }
 
   getCustomGLSource(sourceId: number) {
@@ -958,6 +963,53 @@ class MapContextManager extends EventEmitter {
   }
 
   private updateStyleInfiniteLoopDetector = 0;
+  private inaturalistSourceIdMap: { [sourceId: string]: string[] } = {};
+
+  setDataSourceQueryParameters(id: number | string, params: any) {
+    const key = id.toString();
+    if (this.clientDataSources[key]) {
+      this.clientDataSources[key] = {
+        ...this.clientDataSources[key],
+        queryParameters: params,
+      } as any;
+      this.setState((prev) => ({
+        ...prev,
+        inaturalistCallToActions: this.computeInatCtas(),
+      }));
+      this.debouncedUpdateStyle();
+    }
+  }
+
+  private computeInatCtas() {
+    const ctas: { projectId: string; label?: string }[] = [];
+    const seen = new Set<string>();
+    for (const stableId in this.visibleLayers) {
+      const state = this.visibleLayers[stableId];
+      if (!state?.visible) continue;
+      const layer = this.layers[stableId];
+      if (!layer) continue;
+      const source =
+        this.archivedSource && this.archivedSource.dataLayerId === layer.id
+          ? this.archivedSource.dataSource
+          : this.clientDataSources[layer.dataSourceId];
+      if (source?.type === DataSourceTypes.Inaturalist) {
+        const params = normalizeInaturalistParams(
+          (source.queryParameters as any) || {}
+        );
+        if (params.showCallToAction && params.projectId) {
+          const key = params.projectId;
+          if (!seen.has(key)) {
+            seen.add(key);
+            ctas.push({
+              projectId: params.projectId,
+              label: this.tocItems[stableId]?.label,
+            });
+          }
+        }
+      }
+    }
+    return ctas;
+  }
 
   async updateStyle() {
     if (this.map && this.internalState.ready) {
@@ -979,7 +1031,7 @@ class MapContextManager extends EventEmitter {
         // add any custom sources event listeners
         this.map.setStyle(style);
         for (const id in this.customSources) {
-          const { visible, listenersAdded, customSource, sublayers } =
+          const { visible, listenersAdded, customSource } =
             this.customSources[id];
           // Make sure event listeners are added
           if (visible && !listenersAdded) {
@@ -1470,6 +1522,7 @@ class MapContextManager extends EventEmitter {
     style: Style;
     sprites: SpriteDetailsFragment[];
   }> {
+    this.inaturalistSourceIdMap = {};
     // this.resetLayersByZIndex();
     // get mapbox-gl-draw related layers and sources and make sure to include
     // them in the end. gl-draw has some magic to avoid their layers getting
@@ -1531,6 +1584,9 @@ class MapContextManager extends EventEmitter {
       await this.getComputedBaseStyle();
 
     let sprites: SpriteDetailsFragment[] = [];
+    const inaturalistGeneratedLayers: {
+      [layerId: string]: AnyLayer[];
+    } = {};
     let underLabels: any[] = baseStyle.layers.slice(0, labelsLayerIndex);
     let overLabels: any[] = baseStyle.layers.slice(labelsLayerIndex);
     let isUnderLabels = true;
@@ -1648,6 +1704,29 @@ class MapContextManager extends EventEmitter {
                       throw new Error("Not implemented");
                     }
                     break;
+                  case DataSourceTypes.Inaturalist: {
+                    const { sources: inatSources, layers: inatLayers } =
+                      buildInaturalistSourcesAndLayers(
+                        (source.queryParameters as any) || {},
+                        {
+                          sourceIdBase: source.id.toString(),
+                          layerIdBase: layer.tocId || source.id.toString(),
+                          attribution: source.attribution || "",
+                          opacity:
+                            this.visibleLayers[layerId]?.opacity !== undefined
+                              ? this.visibleLayers[layerId].opacity
+                              : 1,
+                        }
+                      );
+                    baseStyle.sources = {
+                      ...baseStyle.sources,
+                      ...inatSources,
+                    };
+                    this.inaturalistSourceIdMap[source.id.toString()] =
+                      Object.keys(inatSources);
+                    inaturalistGeneratedLayers[layerId] = inatLayers;
+                    break;
+                  }
                   case DataSourceTypes.ArcgisVector:
                   case DataSourceTypes.ArcgisRasterTiles:
                   case DataSourceTypes.ArcgisDynamicMapserver:
@@ -1805,6 +1884,12 @@ class MapContextManager extends EventEmitter {
                     glLayers = addInteractivityExpressions(glLayers);
                   }
                   layers.push(...glLayers);
+                }
+              } else if (source.type === DataSourceTypes.Inaturalist) {
+                const inatLayers = inaturalistGeneratedLayers[layerId];
+                if (inatLayers && !this.visibleLayers[layerId]?.hidden) {
+                  const targetLayers = isUnderLabels ? underLabels : overLabels;
+                  targetLayers.push(...inatLayers);
                 }
               } else if (
                 isCustomSourceType(source.type) &&
@@ -2238,6 +2323,10 @@ class MapContextManager extends EventEmitter {
     }
     for (const sourceId in sources) {
       let loading = !this.map!.isSourceLoaded(sourceId);
+      const extraInatSources = this.inaturalistSourceIdMap[sourceId];
+      if (extraInatSources && extraInatSources.length) {
+        loading = !extraInatSources.every((id) => this.map!.isSourceLoaded(id));
+      }
       if (sourceId in this.customSources) {
         const customSource =
           this.customSources[parseInt(sourceId)].customSource;
@@ -2634,6 +2723,7 @@ class MapContextManager extends EventEmitter {
       layerStatesByTocStaticId: { ...this.visibleLayers },
       sketchLayerStates: { ...this.internalState.sketchLayerStates },
       sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
+      inaturalistCallToActions: this.computeInatCtas(),
     }));
     this.debouncedUpdatePreferences();
     this.updateInteractivitySettings();
@@ -3173,6 +3263,43 @@ class MapContextManager extends EventEmitter {
                 changes = true;
               }
             }
+          } else if (source && source.type === DataSourceTypes.Inaturalist) {
+            const params = normalizeInaturalistParams(
+              (source.queryParameters as any) || {}
+            );
+            const modes =
+              params.type === "grid+points"
+                ? {
+                    kind: "split" as const,
+                    below: "grid" as const,
+                    above: "points" as const,
+                    cutoff: params.zoomCutoff,
+                  }
+                : params.type === "heatmap+points"
+                ? {
+                    kind: "split" as const,
+                    below: "heatmap" as const,
+                    above: "points" as const,
+                    cutoff: params.zoomCutoff,
+                  }
+                : {
+                    kind: "single" as const,
+                    layerType:
+                      params.type === "grid"
+                        ? ("grid" as const)
+                        : params.type === "heatmap"
+                        ? ("heatmap" as const)
+                        : ("points" as const),
+                  };
+
+            newLegendState[id] = {
+              id,
+              type: "InaturalistLegendItem",
+              label: this.tocItems[layer.tocId]?.label || "",
+              modes,
+              tableOfContentsItemDetails,
+            } as LegendItem;
+            changes = true;
           } else if (source && isCustomSourceType(source.type)) {
             const d = this.customSources[source.id];
             if (d && d.visible && d.customSource) {
@@ -3737,6 +3864,10 @@ export interface MapContextInterface {
   containerPortal: HTMLDivElement | null;
   loadingOverlay?: string | null;
   showLoadingOverlay?: boolean;
+  inaturalistCallToActions?: {
+    projectId: string;
+    label?: string;
+  }[];
   displayedMapBookmark?: {
     id: string;
     errors: {
@@ -3800,6 +3931,7 @@ export function useMapContext(options?: MapContextOptions) {
     digitizingLockState: DigitizingLockState.Free,
     sketchClassLayerStates: {},
     showScale: defaultShowScale,
+    inaturalistCallToActions: [],
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -3902,6 +4034,7 @@ export const MapContext = createContext<MapContextInterface>({
       containerPortal: null,
       legends: {},
       digitizingLockState: DigitizingLockState.Free,
+      inaturalistCallToActions: [],
     },
     (state) => {}
   ),
@@ -3913,6 +4046,7 @@ export const MapContext = createContext<MapContextInterface>({
   containerPortal: null,
   legends: {},
   digitizingLockState: DigitizingLockState.Free,
+  inaturalistCallToActions: [],
 });
 
 async function loadImage(

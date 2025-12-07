@@ -393,6 +393,8 @@ export function humanizeSourceType(
       return "GeoJSON hosted on SeaSketch";
     case DataSourceTypes.Video:
       return "Remote Video";
+    case DataSourceTypes.Inaturalist:
+      return "iNaturalist Map Service";
     default:
       return type;
   }

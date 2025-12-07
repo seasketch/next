@@ -213,64 +213,94 @@ export default function LayerTableOfContentsItemEditor(
           />
         </div>
       )}
-      {item && selectedTab === "interactivity" && (
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <div className="mt-5">
-            {source &&
-              layer &&
-              source.type !== DataSourceTypes.ArcgisRasterTiles && (
-                <InteractivitySettings
-                  id={layer.interactivitySettingsId}
-                  dataSourceId={layer.dataSourceId}
-                  sublayer={layer.sublayer}
-                  geostats={geostats}
-                />
-              )}
-            {source &&
-              layer &&
-              source.type === DataSourceTypes.ArcgisRasterTiles && (
-                <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4">
-                  <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
-                  <div>
-                    <Trans ns="admin:data">
-                      Popups and other interactivity options are not supported
-                      for tiled ArcGIS sources.
-                    </Trans>
+      {item &&
+        selectedTab === "interactivity" &&
+        source &&
+        source.type === DataSourceTypes.Inaturalist && (
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4 m-4 mt-5">
+              <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
+              <div className="flex-1">
+                <Trans ns="admin:data">
+                  Interactivity settings are not available for iNaturalist
+                  sources.
+                </Trans>
+              </div>
+            </div>
+          </div>
+        )}
+      {item &&
+        selectedTab === "interactivity" &&
+        source &&
+        source.type !== DataSourceTypes.Inaturalist && (
+          <div className="flex-1 overflow-y-auto px-4 pb-4">
+            <div className="mt-5">
+              {source &&
+                layer &&
+                source.type !== DataSourceTypes.ArcgisRasterTiles && (
+                  <InteractivitySettings
+                    id={layer.interactivitySettingsId}
+                    dataSourceId={layer.dataSourceId}
+                    sublayer={layer.sublayer}
+                    geostats={geostats}
+                  />
+                )}
+              {source &&
+                layer &&
+                source.type === DataSourceTypes.ArcgisRasterTiles && (
+                  <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4">
+                    <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
+                    <div>
+                      <Trans ns="admin:data">
+                        Popups and other interactivity options are not supported
+                        for tiled ArcGIS sources.
+                      </Trans>
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+            </div>
+            <div className="mt-5">
+              <MutableRadioGroup
+                value={layer?.renderUnder}
+                legend={t(`Basemap Integration`)}
+                mutate={mutateLayer}
+                mutationStatus={mutateLayerState}
+                propName={"renderUnder"}
+                variables={{ id: layer?.id }}
+                items={[
+                  {
+                    value: RenderUnderType.Labels,
+                    label: t("Show Under Labels"),
+                    description: t(
+                      "Display this layer under any text labels on the basemap."
+                    ),
+                  },
+                  {
+                    value: RenderUnderType.None,
+                    label: t("Cover Basemap"),
+                    description: t(
+                      "Render this layer above the basemap entirely."
+                    ),
+                  },
+                ]}
+              />
+            </div>
           </div>
-          <div className="mt-5">
-            <MutableRadioGroup
-              value={layer?.renderUnder}
-              legend={t(`Basemap Integration`)}
-              mutate={mutateLayer}
-              mutationStatus={mutateLayerState}
-              propName={"renderUnder"}
-              variables={{ id: layer?.id }}
-              items={[
-                {
-                  value: RenderUnderType.Labels,
-                  label: t("Show Under Labels"),
-                  description: t(
-                    "Display this layer under any text labels on the basemap."
-                  ),
-                },
-                {
-                  value: RenderUnderType.None,
-                  label: t("Cover Basemap"),
-                  description: t(
-                    "Render this layer above the basemap entirely."
-                  ),
-                },
-              ]}
-            />
-          </div>
-        </div>
-      )}
+        )}
 
       {item && selectedTab === "style" && (
         <div className="h-full overflow-hidden">
+          {source && source.type === DataSourceTypes.Inaturalist && (
+            <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4 m-4 mt-5">
+              <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
+              <div className="flex-1">
+                <Trans ns="admin:data">
+                  Styling is not available for iNaturalist sources, as image
+                  tiles displayed as styled by the iNaturalist web service.
+                </Trans>
+              </div>
+            </div>
+          )}
           {source &&
             (source.type === DataSourceTypes.Geojson ||
               source.type === DataSourceTypes.SeasketchVector ||

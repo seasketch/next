@@ -53,6 +53,9 @@ export default function LayerVersioning({
     },
   });
 
+  const isInaturalist =
+    item.dataLayer?.dataSource?.type === DataSourceTypes.Inaturalist;
+
   const [changelogState, setChangelogState] = useState({
     content: "",
     submitted: true,
@@ -71,6 +74,11 @@ export default function LayerVersioning({
         onlyIfNotVisible: true,
       });
     }
+    if (isInaturalist) {
+      jobContext.setDisabled(true);
+    } else {
+      jobContext.setDisabled(false);
+    }
     if (!item.copiedFromDataLibraryTemplateId) {
       jobContext.setUploadType("replace", item.id);
     }
@@ -82,6 +90,7 @@ export default function LayerVersioning({
     item.stableId,
     item.dataLayer?.dataSourceId,
     item.copiedFromDataLibraryTemplateId,
+    isInaturalist,
   ]);
 
   const versions = useMemo(() => {
@@ -246,43 +255,56 @@ export default function LayerVersioning({
         </div>
 
         <>
-          <div className="py-4 px-4 text-gray-500 text-sm space-y-4">
-            {versions.length === 1 && versions[0].version === 1 && (
+          {isInaturalist && (
+            <div className="py-4 px-4 text-gray-500 text-sm space-y-4">
               <p>
                 <Trans ns="admin:data">
-                  This is the first version of this data source. SeaSketch can
-                  track changes to this layer as you upload new revisions,
-                  enabling you to monitor changes over time and rollback to
-                  previous versions.
+                  iNaturalist layers read data directly from the iNaturalist
+                  API. As such, they cannot be edited or versioned.
                 </Trans>
               </p>
-            )}
-            <p>
-              {item.copiedFromDataLibraryTemplateId ? (
-                <Warning level="warning">
+            </div>
+          )}
+          {!isInaturalist && (
+            <div className="py-4 px-4 text-gray-500 text-sm space-y-4">
+              {versions.length === 1 && versions[0].version === 1 && (
+                <p>
                   <Trans ns="admin:data">
-                    This layer was added from the SeaSketch Data Library. As
-                    such, it cannot be edited. Updates from the original source
-                    will be automatically applied by the SeaSketch team.
+                    This is the first version of this data source. SeaSketch can
+                    track changes to this layer as you upload new revisions,
+                    enabling you to monitor changes over time and rollback to
+                    previous versions.
                   </Trans>
-                </Warning>
-              ) : (
-                <Trans ns="admin:data">
-                  Drag & Drop a spatial data file here to create a new version
-                  of this layer, or{" "}
-                  <button
-                    className="underline text-primary-500"
-                    onClick={() => {
-                      jobContext.browseForFiles(false);
-                    }}
-                  >
-                    browse for files on your computer
-                  </button>
-                  .
-                </Trans>
+                </p>
               )}
-            </p>
-          </div>
+              <p>
+                {item.copiedFromDataLibraryTemplateId ? (
+                  <Warning level="warning">
+                    <Trans ns="admin:data">
+                      This layer was added from the SeaSketch Data Library. As
+                      such, it cannot be edited. Updates from the original
+                      source will be automatically applied by the SeaSketch
+                      team.
+                    </Trans>
+                  </Warning>
+                ) : (
+                  <Trans ns="admin:data">
+                    Drag & Drop a spatial data file here to create a new version
+                    of this layer, or{" "}
+                    <button
+                      className="underline text-primary-500"
+                      onClick={() => {
+                        jobContext.browseForFiles(false);
+                      }}
+                    >
+                      browse for files on your computer
+                    </button>
+                    .
+                  </Trans>
+                )}
+              </p>
+            </div>
+          )}
         </>
       </VersionsContainer>
       {data?.projectBySlug?.projectBackgroundJobs.find(

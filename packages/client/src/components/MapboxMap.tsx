@@ -6,6 +6,7 @@ import React, {
   useRef,
   useContext,
   ReactNode,
+  useMemo,
 } from "react";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +20,7 @@ import SidebarPopup from "../dataLayers/SidebarPopup";
 import clsx from "clsx";
 import * as Popover from "@radix-ui/react-popover";
 import { Cross2Icon } from "@radix-ui/react-icons";
+import INaturalistProjectCallToAction from "../admin/data/INaturalistProjectCallToAction";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -50,11 +52,22 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
   >(null);
+  const [hiddenInatCtas, setHiddenInatCtas] = useState<Set<string>>(
+    () => new Set()
+  );
 
   const interactive =
     props.interactive === undefined ? true : props.interactive;
 
   const sidebar = currentSidebarState();
+  const visibleInatCtas = useMemo(() => {
+    if (!mapContext.inaturalistCallToActions) {
+      return [];
+    }
+    return mapContext.inaturalistCallToActions.filter(
+      (cta) => !hiddenInatCtas.has(cta.projectId)
+    );
+  }, [mapContext.inaturalistCallToActions, hiddenInatCtas]);
 
   useEffect(() => {
     if (mapContainer.current) {
@@ -253,6 +266,46 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             </motion.div>
           ) : null}
         </AnimatePresence>
+      </div>
+      <div className="pointer-events-none absolute bottom-4 left-0 w-full flex justify-center z-10">
+        {visibleInatCtas.length > 0 && (
+          <div
+            className="relative"
+            style={{
+              minHeight: 80 + Math.max(0, (visibleInatCtas.length - 1) * 10),
+              width: 400,
+            }}
+          >
+            {visibleInatCtas.map((cta, idx) => {
+              const offset = idx * 10;
+              const scale = Math.max(0.8, 1 - idx * 0.05);
+              return (
+                <div
+                  key={cta.projectId}
+                  className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
+                  style={{
+                    bottom: offset,
+                    transform: `translate(-50%, ${-offset}px) scale(${scale})`,
+                    transformOrigin: "bottom center",
+                    zIndex: 1000 - idx,
+                    transition: "transform 180ms ease, bottom 180ms ease",
+                  }}
+                >
+                  <INaturalistProjectCallToAction
+                    projectId={cta.projectId}
+                    onHide={(id) =>
+                      setHiddenInatCtas((prev) => {
+                        const next = new Set(prev);
+                        next.add(id);
+                        return next;
+                      })
+                    }
+                  />
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>

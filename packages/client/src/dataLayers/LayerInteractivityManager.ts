@@ -1,3 +1,4 @@
+/* eslint-disable i18next/no-literal-string */
 import mapboxgl, {
   Layer,
   Map,
@@ -24,6 +25,11 @@ import {
 import { EventEmitter } from "eventemitter3";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { identifyLayers } from "../admin/data/arcgis/arcgis";
+import {
+  fetchInaturalistUtfgrid,
+  renderInaturalistPopup,
+} from "./inaturalistInteractivity";
+import { normalizeInaturalistParams } from "./inaturalist";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -56,6 +62,12 @@ export default class LayerInteractivityManager extends EventEmitter {
   private basemap: BasemapDetailsFragment | undefined;
   private sketchLayerIds: string[] = [];
   private focusedSketchId?: number;
+  private inaturalistConfigs: {
+    params: ReturnType<typeof normalizeInaturalistParams>;
+    sourceId: string;
+    layerLabel?: string;
+  }[] = [];
+  private inaturalistPopup?: Popup;
   private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
   private tocItemLabels: { [stableId: string]: { label?: string } } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
@@ -130,10 +142,29 @@ export default class LayerInteractivityManager extends EventEmitter {
     } = {};
     const newInteractiveImageLayerIds: string[] = [];
     let newInteractiveVectorLayerIds: string[] = [];
+    const newInaturalistConfigs: {
+      params: ReturnType<typeof normalizeInaturalistParams>;
+      sourceId: string;
+      layerLabel?: string;
+    }[] = [];
     for (const layer of dataLayers) {
       if (layer && layer.dataSourceId) {
         const source = dataSources[layer.dataSourceId];
         if (source) {
+          if (source.type === DataSourceTypes.Inaturalist) {
+            newInaturalistConfigs.push({
+              params: normalizeInaturalistParams(
+                (source.queryParameters as any) || {}
+              ),
+              sourceId: source.id.toString(),
+              layerLabel:
+                (this.tocItemLabels || {})[
+                  (layer as any).tocId || layer.id.toString()
+                ]?.label ||
+                (layer as any).tocId ||
+                layer.id.toString(),
+            });
+          }
           if (
             layer.interactivitySettings &&
             layer.interactivitySettings.type !== InteractivityType.None
@@ -186,12 +217,18 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.basemap = basemap;
     this.interactiveImageLayerIds = newInteractiveImageLayerIds;
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
+    this.inaturalistConfigs = newInaturalistConfigs;
+    if (!this.inaturalistConfigs.length && this.inaturalistPopup) {
+      this.inaturalistPopup.remove();
+      this.inaturalistPopup = undefined;
+    }
     this.layers = newActiveLayers;
     this.imageSources = newActiveImageSources;
     this.map.off("mousemove", this.debouncedMouseMoveListener);
     if (
       this.interactiveVectorLayerIds.length > 0 ||
-      this.sketchLayerIds.length > 0
+      this.sketchLayerIds.length > 0 ||
+      this.inaturalistConfigs.length > 0
     ) {
       this.map.on("mousemove", this.debouncedMouseMoveListener);
     }
@@ -292,7 +329,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
     this.moving = false;
     if (this.lastMouseEvent) {
-      this.mouseMoveListener(this.lastMouseEvent);
+      void this.mouseMoveListener(this.lastMouseEvent);
     }
   };
 
@@ -359,7 +396,23 @@ export default class LayerInteractivityManager extends EventEmitter {
       }
     }
     let vectorPopupOpened = false;
+    const inatHit = await this.getTopInaturalistHit(e);
+    const inatDrawIndex = inatHit ? inatHit.layerIndex : -Infinity;
+
     if (top) {
+      const topVectorIndex = this.getLayerDrawIndex(top.layer.id);
+
+      if (inatHit && inatDrawIndex >= topVectorIndex) {
+        if (this.inaturalistPopup) {
+          this.inaturalistPopup.remove();
+          this.inaturalistPopup = undefined;
+        }
+        this.inaturalistPopup = await renderInaturalistPopup(
+          this.map,
+          inatHit.hit!
+        );
+        return;
+      }
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (
         interactivitySetting &&
@@ -473,14 +526,28 @@ export default class LayerInteractivityManager extends EventEmitter {
       }));
       this.setSelectedFeature(undefined);
     }
-    if (!vectorPopupOpened) {
+    let popupOpened = vectorPopupOpened;
+
+    if (!popupOpened && this.inaturalistConfigs.length) {
+      if (inatHit?.hit) {
+        if (this.inaturalistPopup) {
+          this.inaturalistPopup.remove();
+        }
+        this.inaturalistPopup = await renderInaturalistPopup(
+          this.map,
+          inatHit.hit
+        );
+        popupOpened = true;
+      }
+    }
+
+    if (!popupOpened) {
       // Are any image layers active that support identify tools?
       const interactiveImageLayers = this.interactiveImageLayerIds.map(
         (id) => this.layers[id]
       );
       interactiveImageLayers.sort((a, b) => a.zIndex - b.zIndex);
       if (interactiveImageLayers.length) {
-        // throw new Error("Not implemented");
         this.openImageServicePopups(
           [e.lngLat.lng, e.lngLat.lat],
           interactiveImageLayers
@@ -626,7 +693,7 @@ export default class LayerInteractivityManager extends EventEmitter {
             interactivitySetting?.type === InteractivityType.AllPropertiesPopup
           ) {
             const data = sublayerData[0];
-            let layerLabel: undefined | string;
+            let layerLabel: string | undefined;
             if (data) {
               const lyr = layers.find(
                 (l) =>
@@ -634,7 +701,7 @@ export default class LayerInteractivityManager extends EventEmitter {
                   l.dataSourceId === data.sourceId
               );
               // @ts-ignore
-              const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
+              layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
             }
 
             const properties = sublayerData[0]?.attributes || {};
@@ -710,11 +777,11 @@ export default class LayerInteractivityManager extends EventEmitter {
       if (this.moving) {
         return;
       }
-      this.mouseMoveListener(e);
+      void this.mouseMoveListener(e);
     }, backoff);
   };
 
-  private mouseMoveListener = (e: MapMouseEvent) => {
+  private mouseMoveListener = async (e: MapMouseEvent) => {
     if (this.moving) {
       return;
     }
@@ -728,6 +795,9 @@ export default class LayerInteractivityManager extends EventEmitter {
       }));
       delete this.previousInteractionTarget;
     };
+    const inatHit = await this.getTopInaturalistHit(e);
+    const inatDrawIndex = inatHit ? inatHit.layerIndex : -Infinity;
+
     // First, check sketch layers
     const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
       layers: this.sketchLayerIds,
@@ -746,8 +816,10 @@ export default class LayerInteractivityManager extends EventEmitter {
     const features = this.map!.queryRenderedFeatures(e.point, {
       layers: layerIds,
     });
+    let topVectorIndex = -Infinity;
     if (features.length && layerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
+      topVectorIndex = this.getLayerDrawIndex(top.layer.id);
       this.setHoveredFeature(top);
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (interactivitySetting) {
@@ -840,9 +912,61 @@ export default class LayerInteractivityManager extends EventEmitter {
       }
     } else {
       this.setHoveredFeature(undefined);
+      if (inatHit && inatDrawIndex >= topVectorIndex) {
+        this.map!.getCanvas().style.cursor = "pointer";
+        return;
+      }
       clear();
     }
   };
+
+  private async getTopInaturalistHit(e: MapMouseEvent) {
+    if (!this.inaturalistConfigs.length) {
+      return null;
+    }
+    let best: {
+      hit: Awaited<ReturnType<typeof fetchInaturalistUtfgrid>>;
+      layerIndex: number;
+    } | null = null;
+
+    for (const config of this.inaturalistConfigs) {
+      const hit = await fetchInaturalistUtfgrid(
+        this.map,
+        config.params,
+        e as any,
+        config.layerLabel
+      );
+      if (!hit) {
+        continue;
+      }
+      const layerIndex = this.getInatLayerDrawIndex(config.sourceId);
+      if (best === null || layerIndex > best.layerIndex) {
+        best = { hit, layerIndex };
+      }
+    }
+
+    return best;
+  }
+
+  private getInatLayerDrawIndex(sourceId: string) {
+    const layers = this.map.getStyle().layers || [];
+    // eslint-disable-next-line i18next/no-literal-string
+    const candidateSources = [
+      sourceId,
+      `${sourceId}-points`,
+      `${sourceId}-heatmap`,
+      `${sourceId}-grid`,
+    ];
+    return layers.reduce((max, l, idx) => {
+      const src: string | undefined =
+        // @ts-ignore
+        "source" in l ? (l as any).source?.toString() : undefined;
+      if (src && candidateSources.includes(src)) {
+        return Math.max(max, idx);
+      }
+      return max;
+    }, -Infinity);
+  }
 
   getInteractivitySettingForFeature(feature: MapboxGeoJSONFeature) {
     if (isSeaSketchLayerId(feature.layer.id)) {
@@ -868,6 +992,11 @@ export default class LayerInteractivityManager extends EventEmitter {
       } else {
       }
     }
+  }
+
+  private getLayerDrawIndex(layerId: string) {
+    const layers = this.map.getStyle().layers || [];
+    return layers.findIndex((l) => l.id === layerId);
   }
 }
 

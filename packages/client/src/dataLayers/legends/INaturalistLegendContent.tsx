@@ -14,18 +14,40 @@ function LegendRow({ swatch, label }: { swatch: ReactNode; label: ReactNode }) {
   );
 }
 
+export function INaturalistSourceLink() {
+  const { t } = useTranslation("homepage");
+
+  return (
+    <div className="flex items-center space-x-2">
+      <img
+        src="/logos/inaturalist-bird.png"
+        alt="iNaturalist"
+        className="w-4 h-4 -mt-0.5"
+      />
+      <a
+        href="https://inaturalist.org"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-xs text-gray-500 hover:underline"
+      >
+        {t("Data from iNaturalist.org")}
+      </a>
+    </div>
+  );
+}
+
 export default function INaturalistLegendContent({
   type,
 }: {
   type: INaturalistVisualizationType;
 }) {
-  const { t } = useTranslation("admin:data");
+  const { t } = useTranslation("homepage");
 
   if (type === "grid") {
     return (
       <div className="space-y-3">
         <div className="text-[0.7rem] uppercase tracking-wide font-semibold text-gray-500">
-          <Trans ns="admin:data">Grid Display</Trans>
+          <Trans ns="homepage">Grid Display</Trans>
         </div>
         <div className="space-y-1">
           <LegendRow
@@ -43,6 +65,13 @@ export default function INaturalistLegendContent({
             label={t("More observations per grid cell")}
           />
         </div>
+        <p className="text-xs text-gray-500">
+          <Trans ns="homepage">
+            Grid cells show observation density, not species density or
+            distribution.
+          </Trans>
+        </p>
+        <INaturalistSourceLink />
       </div>
     );
   }
@@ -64,6 +93,13 @@ export default function INaturalistLegendContent({
             <span>{t("More observations")}</span>
           </div>
         </div>
+        <p className="text-xs text-gray-500">
+          <Trans ns="homepage">
+            Heatmap shows observation density, not species density or
+            distribution.
+          </Trans>
+        </p>
+        <INaturalistSourceLink />
       </div>
     );
   }
@@ -169,6 +205,7 @@ export default function INaturalistLegendContent({
             label={t("Unknown")}
           />
         </div>
+        <INaturalistSourceLink />
       </div>
     </div>
   );

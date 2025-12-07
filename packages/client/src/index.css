@@ -12463,6 +12463,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
 }
 
+.hover\:text-primary-600:hover{
+  --tw-text-opacity:1;
+  color:rgb(36 105 172 / var(--tw-text-opacity, 1))
+}
+
 .hover\:underline:hover{
   -webkit-text-decoration-line:underline;
           text-decoration-line:underline

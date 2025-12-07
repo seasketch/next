@@ -26,7 +26,7 @@ import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import {
   TableOfContentsItemMenu,
   TocMenuItemType,
@@ -42,29 +42,45 @@ import {
   SketchClassItemMenu,
   SketchClassMenuItemType,
 } from "./SketchClassItemMenu";
+import InaturalistLegendPanel from "./legends/INaturalistLegend";
 
 require("../admin/data/arcgis/Accordion.css");
 
-interface CustomGLSourceSymbolLegend {
+interface BaseLegendItem {
+  id: string;
   label: string;
+  tableOfContentsItemDetails?: TocMenuItemType;
+  isSketchClass?: boolean;
+}
+
+interface CustomGLSourceSymbolLegend extends BaseLegendItem {
   type: "CustomGLSourceSymbolLegend";
   supportsDynamicRendering: DynamicRenderingSupportOptions;
   symbols: LegendSymbolItem[];
-  id: string;
 }
 
-interface GLStyleLegendItem {
-  label: string;
+interface GLStyleLegendItem extends BaseLegendItem {
   type: "GLStyleLegendItem";
   /** Table of contents item id */
-  id: string;
   legend?: LegendForGLLayers;
 }
 
-export type LegendItem = (GLStyleLegendItem | CustomGLSourceSymbolLegend) & {
-  tableOfContentsItemDetails?: TocMenuItemType;
-  isSketchClass?: boolean;
+export type InaturalistLegendItem = BaseLegendItem & {
+  type: "InaturalistLegendItem";
+  modes:
+    | { kind: "single"; layerType: "grid" | "points" | "heatmap" }
+    | {
+        kind: "split";
+        below: "grid" | "heatmap";
+        above: "points";
+        cutoff: number;
+      };
 };
+
+export type LegendItem =
+  | GLStyleLegendItem
+  | CustomGLSourceSymbolLegend
+  | InaturalistLegendItem;
 
 const PANEL_WIDTH = 180;
 
@@ -203,6 +219,8 @@ function LegendListItem({
       item.legend?.type === "SimpleGLLegend" &&
       item.legend.symbol) ||
     (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1);
+
+  const inatLegendType = useInaturalistLegendType(item, map);
   return (
     <ErrorBoundary>
       <li
@@ -331,6 +349,11 @@ function LegendListItem({
                   </li>
                 );
               })}
+            {item.type === "InaturalistLegendItem" && inatLegendType && (
+              <li>
+                <InaturalistLegendPanel type={inatLegendType} />
+              </li>
+            )}
           </ul>
         )}
       </li>
@@ -375,6 +398,38 @@ function PanelFactory({ panel, map }: { panel: GLLegendPanel; map?: Map }) {
       })()}
     </div>
   );
+}
+
+function useInaturalistLegendType(
+  item: LegendItem,
+  map?: Map
+): "grid" | "points" | "heatmap" | null {
+  const [currentZoom, setCurrentZoom] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (item.type !== "InaturalistLegendItem" || !map) {
+      return;
+    }
+    const handler = () => {
+      setCurrentZoom(map.getZoom());
+    };
+    handler();
+    map.on("move", handler);
+    return () => {
+      map.off("move", handler);
+    };
+  }, [item, map]);
+
+  return useMemo(() => {
+    if (item.type !== "InaturalistLegendItem") {
+      return null;
+    }
+    if (item.modes.kind === "single") {
+      return item.modes.layerType;
+    }
+    const zoom = currentZoom ?? item.modes.cutoff;
+    return zoom < item.modes.cutoff ? item.modes.below : item.modes.above;
+  }, [item, currentZoom]);
 }
 
 function Toggle({
