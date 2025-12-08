@@ -24,9 +24,9 @@ import {
   useRef,
   useEffect,
 } from "react";
-import { prosemirrorToHtml } from "./utils/prosemirrorToHtml";
 import { createMetricResolver } from "./utils/resolveMetric";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
+import ReportCardBodyViewer from "./components/ReportCardBodyViewer";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
@@ -289,7 +289,7 @@ export default function ReportCard({
           />
         </button>
       )}
-      <div className="absolute right-2 top-2">
+      <div className="absolute right-2 top-2 z-10">
         <div>
           {(!loading || Object.values(errors).length > 0) &&
             !selectedForEditing &&
@@ -347,13 +347,12 @@ export default function ReportCard({
             metricResolver={metricResolver}
           />
         ) : (
-          <div
+          <ReportCardBodyViewer
+            body={localizedBody}
+            metricResolver={metricResolver}
             className={`ReportCard ReportCardBody ProseMirrorBody ${
               icon ? "hasIcon" : ""
             } ${tint ? tint : ""}`}
-            dangerouslySetInnerHTML={{
-              __html: prosemirrorToHtml(localizedBody, false, metricResolver),
-            }}
           />
         )}
       </div>

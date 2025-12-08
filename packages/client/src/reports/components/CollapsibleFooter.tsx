@@ -2,8 +2,8 @@ import { useState, useContext, useCallback, useRef, useEffect } from "react";
 import { ReportCardConfiguration } from "../cards/cards";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import { prosemirrorToHtml } from "../utils/prosemirrorToHtml";
 import ReportCardBodyEditor from "./ReportCardBodyEditor";
+import ReportCardBodyViewer from "./ReportCardBodyViewer";
 import { useReportContext } from "../ReportContext";
 import {
   ChevronDownIcon,
@@ -177,11 +177,10 @@ export default function CollapsibleFooter({
             />
           ) : (
             localizedBody && (
-              <div
+              <ReportCardBodyViewer
+                body={localizedBody}
+                isFooter
                 className="ReportCardBody ProseMirrorBody"
-                dangerouslySetInnerHTML={{
-                  __html: prosemirrorToHtml(localizedBody, true),
-                }}
               />
             )
           )}

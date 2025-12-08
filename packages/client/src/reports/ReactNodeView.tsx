@@ -127,7 +127,7 @@ class ReactNodeView implements NodeView {
             decorations: this.decorations,
           }}
         >
-          <this.component {...props} />
+          <this.component {...props} node={this.node} />
         </ReactNodeViewContext.Provider>
       );
     };

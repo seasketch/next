@@ -19,11 +19,6 @@ function makeStats(partial: Partial<ColumnValueStats>): ColumnValueStats {
 }
 
 describe("combineColumnValueStats", () => {
-  it("returns undefined for empty array", () => {
-    const result = combineColumnValueStats([]);
-    expect(result).toBeUndefined();
-  });
-
   it("returns the single stats object unchanged when only one is provided", () => {
     const stats = makeStats({
       count: 10,

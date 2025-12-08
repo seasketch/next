@@ -27,6 +27,7 @@ import ReactNodeViewPortalsProvider, {
 } from "../ReactNodeView/PortalProvider";
 import { createReactNodeView } from "../ReactNodeView";
 import InlineMetric from "../nodeTypes/InlineMetric";
+import { ReportWidgetNodeViewRouter } from "../nodeTypes/routers";
 
 // Ensure legacy report bodies (saved before presenceBlock/absenceBlock existed) always
 // have both presenceBlock and absenceBlock nodes at the end, each with at least one paragraph.
@@ -200,7 +201,7 @@ function ReportCardBodyEditorInner({
             getPos,
             // @ts-ignore
             decorations,
-            component: InlineMetric,
+            component: ReportWidgetNodeViewRouter,
             onCreatePortal: createPortal,
             onDestroy: removePortal,
           });

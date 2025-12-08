@@ -5,7 +5,6 @@ import { ReportCardConfigUpdateCallback } from "../registerCard";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
-  ReportingLayerDetailsFragment,
 } from "../../generated/graphql";
 
 export type ProsemirrorBodyJSON = any;
@@ -70,7 +69,7 @@ export type ReportCardConfiguration<T> = {
   /**
    * The reporting layers of the card.
    */
-  reportingLayers: ReportingLayerDetailsFragment[];
+  reportingLayers: OverlaySourceDetailsFragment[];
   /**
    * Whether the collapsible footer ("Learn More" element) is enabled.
    * @default false

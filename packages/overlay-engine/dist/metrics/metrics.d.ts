@@ -151,7 +151,7 @@ export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
  * @param statsArray - Array of RasterBandStats from different fragments
  * @returns Combined RasterBandStats, or undefined if the array is empty
  */
-export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats | undefined;
+export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats;
 /**
  * Combines ColumnValueStats from multiple fragments into a single ColumnValueStats.
  * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
@@ -174,5 +174,6 @@ export type MetricDependencyParameters = {
     maxResults?: number;
     maxDistanceKm?: number;
 };
+export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
 export {};
 //# sourceMappingURL=metrics.d.ts.map

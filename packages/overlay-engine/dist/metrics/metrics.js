@@ -4,7 +4,9 @@ exports.subjectIsFragment = subjectIsFragment;
 exports.subjectIsGeography = subjectIsGeography;
 exports.combineRasterBandStats = combineRasterBandStats;
 exports.combineColumnValueStats = combineColumnValueStats;
+exports.combineMetricsForFragments = combineMetricsForFragments;
 const simple_statistics_1 = require("simple-statistics");
+const uniqueIdIndex_1 = require("../utils/uniqueIdIndex");
 /**
  * Downsamples a histogram of [value, count] pairs to a maximum number of
  * entries, preserving the overall distribution across the full value range.
@@ -84,7 +86,7 @@ function breaksToBuckets(max, breaks, values, fraction = false) {
  */
 function combineRasterBandStats(statsArray) {
     if (statsArray.length === 0) {
-        return undefined;
+        throw new Error("Cannot combine empty array of RasterBandStats");
     }
     if (statsArray.length === 1) {
         return statsArray[0];
@@ -231,5 +233,134 @@ function combineColumnValueStats(statsArray) {
         sum: combinedSum,
         totalAreaSqKm,
     };
+}
+function combineMetricsForFragments(metrics) {
+    // first, ensure that all metrics have the same type
+    const types = new Set(metrics.map((m) => m.type));
+    if (types.size !== 1) {
+        throw new Error(`All metrics must have the same type. Found types: ${Array.from(types).join(", ")}`);
+    }
+    const type = Array.from(types)[0];
+    // then, combine the values
+    switch (type) {
+        case "raster_stats": {
+            for (const metric of metrics) {
+                if (metric.value.bands.length > 1) {
+                    throw new Error("Multiple bands are not supported for raster_stats");
+                }
+            }
+            const values = metrics.map((m) => m.value.bands[0]);
+            return {
+                type: "raster_stats",
+                value: {
+                    bands: [combineRasterBandStats(values)],
+                },
+            };
+        }
+        case "column_values": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "column_values",
+                value: combineGroupedValues(values, (v) => combineColumnValueStats(v)),
+            };
+        }
+        case "total_area": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "total_area",
+                value: values.reduce((acc, v) => acc + v, 0),
+            };
+        }
+        case "count": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "count",
+                value: combineGroupedValues(values, (value) => {
+                    const mergedIndexes = (0, uniqueIdIndex_1.mergeUniqueIdIndexes)(...value.map((v) => v.uniqueIdIndex));
+                    const count = (0, uniqueIdIndex_1.countUniqueIds)(mergedIndexes);
+                    return {
+                        count,
+                        uniqueIdIndex: mergedIndexes,
+                    };
+                }),
+            };
+        }
+        case "distance_to_shore": {
+            const values = metrics.map((m) => m.value);
+            // return the closest
+            const closest = values.reduce((acc, v) => {
+                if (v.meters < acc.meters) {
+                    return v;
+                }
+                return acc;
+            }, values[0]);
+            return {
+                type: "distance_to_shore",
+                value: closest,
+            };
+        }
+        case "presence": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "presence",
+                value: values.some((v) => v),
+            };
+        }
+        case "presence_table": {
+            const values = metrics.map((m) => m.value);
+            const exceededLimit = values.some((v) => v.exceededLimit);
+            const features = [];
+            const ids = new Set();
+            for (const value of values) {
+                for (const feature of value.values) {
+                    if (!ids.has(feature.__id)) {
+                        ids.add(feature.__id);
+                        features.push(feature);
+                    }
+                }
+            }
+            return {
+                type: "presence_table",
+                value: {
+                    values: features,
+                    exceededLimit,
+                },
+            };
+        }
+        case "overlay_area": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "overlay_area",
+                value: combineGroupedValues(values, (v) => v.reduce((acc, v) => acc + v, 0)),
+            };
+        }
+        default:
+            throw new Error(`Unsupported metric type: ${type}`);
+    }
+}
+function combineGroupedValues(values, combineFn) {
+    const result = {};
+    const keys = new Set();
+    for (const value of values) {
+        if (typeof value === "object" && value !== null) {
+            for (const key in value) {
+                if (typeof key === "string") {
+                    keys.add(key);
+                }
+            }
+        }
+        else {
+            throw new Error("Value is not a grouped object");
+        }
+    }
+    for (const key of keys) {
+        const groupValues = values
+            .map((v) => v[key])
+            .filter((v) => v !== undefined);
+        if (groupValues.length > 0) {
+            result[key] = combineFn(groupValues);
+        }
+    }
+    return result;
 }
 //# sourceMappingURL=metrics.js.map

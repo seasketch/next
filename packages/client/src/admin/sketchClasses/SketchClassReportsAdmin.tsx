@@ -14,7 +14,6 @@ import {
   useMoveCardToTabMutation,
   usePublishReportMutation,
   useDraftReportDebuggingMaterialsQuery,
-  ReportingLayerDetailsFragment,
   ReportContextDocument,
   usePublishTableOfContentsMutation,
 } from "../../generated/graphql";
@@ -257,7 +256,7 @@ export default function SketchClassReportsAdmin({
   const handleCardSelect = async (
     cardType: string,
     selection?: {
-      layer: ReportingLayerDetailsFragment;
+      layer: any; // ReportingLayerDetailsFragment;
       parameters: any;
     }[]
   ) => {
@@ -336,11 +335,11 @@ export default function SketchClassReportsAdmin({
           componentSettings: registration.defaultSettings,
           cardType: cardType,
           body,
-          layers:
-            selection?.map((l) => ({
-              tableOfContentsItemId: l.layer.tableOfContentsItemId,
-              layerParameters: l.parameters,
-            })) || [],
+          // layers:
+          //   selection?.map((l) => ({
+          //     tableOfContentsItemId: l.layer.tableOfContentsItemId,
+          //     layerParameters: l.parameters,
+          //   })) || [],
         },
         onError,
         refetchQueries: [ReportContextDocument, DraftReportDocument],

@@ -4,9 +4,10 @@ import { setBlockType, toggleMark } from "prosemirror-commands";
 import { Mark, Node, Schema } from "prosemirror-model";
 import { EditorState, Transaction, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
-import { ReactNode } from "react";
+import { FC, ReactNode } from "react";
 import { TFunction, useTranslation } from "react-i18next";
 import { getActiveMarks } from "./EditorMenuBar";
+import { ReportWidgetTooltipControlsRouter } from "../reports/nodeTypes/routers";
 
 /**
  * Check if the selection is exclusively a metric node (no other content)
@@ -113,6 +114,13 @@ export default function TooltipMenu({
     state?.selection &&
     (state.selection.to - state.selection.from > 0 || isOnlyMetricNode)
   ) {
+    const docSize = view.state.doc.content.size;
+    const clampPos = (pos: number) => {
+      if (pos < 0) return 0;
+      if (pos > docSize) return docSize;
+      return pos;
+    };
+
     commands = Commands.filter((command) => {
       // Disable mark commands if selection is exclusively a metric node
       if (
@@ -143,6 +151,9 @@ export default function TooltipMenu({
         from = selectedMetric.pos;
         to = selectedMetric.pos + selectedMetric.node.nodeSize;
       }
+      from = clampPos(from);
+      to = clampPos(to);
+
       let start = view.coordsAtPos(from);
       const end = view.coordsAtPos(to);
       let box = view.dom.getBoundingClientRect();
@@ -155,12 +166,7 @@ export default function TooltipMenu({
   if (state) {
     activeMarks = getActiveMarks(state, [schema.marks.strong, schema.marks.em]);
   }
-  const updateMetricNode = (attrs: {
-    style?: string;
-    unit?: string;
-    minimumFractionDigits?: number;
-    maximumFractionDigits?: number;
-  }) => {
+  const updateMetricNode = (attrs: Record<string, any>) => {
     if (!selectedMetric || !state || !view) return;
 
     const { node, pos } = selectedMetric;
@@ -168,9 +174,10 @@ export default function TooltipMenu({
 
     const tr = state.tr.setNodeMarkup(pos, undefined, {
       ...node.attrs,
+      ...attrs,
       componentSettings: {
         ...node.attrs.componentSettings,
-        ...attrs,
+        ...attrs.componentSettings,
       },
     });
 
@@ -248,7 +255,7 @@ export default function TooltipMenu({
                 </button>
               ))}
               {isOnlyMetricNode && selectedMetric && state && view && (
-                <MetricFormattingControls
+                <ReportWidgetTooltipControlsRouter
                   node={selectedMetric.node}
                   onUpdate={updateMetricNode}
                 />
@@ -475,3 +482,13 @@ export function getActiveLinks(state: EditorState) {
     return links;
   }
 }
+
+export type ReportWidgetTooltipControlsProps = {
+  node: Node;
+  /**
+   * Update the metric node with arbitrary component-specific attributes.
+   */
+  onUpdate: (attrs: Record<string, any>) => void;
+};
+
+export type ReportWidgetTooltipControls = FC<ReportWidgetTooltipControlsProps>;

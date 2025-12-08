@@ -20,11 +20,6 @@ function makeBand(partial: Partial<RasterBandStats>): RasterBandStats {
 }
 
 describe("combineRasterBandStats", () => {
-  it("returns undefined for empty array", () => {
-    const result = combineRasterBandStats([]);
-    expect(result).toBeUndefined();
-  });
-
   it("returns the single band unchanged when only one is provided", () => {
     const band = makeBand({
       count: 10,
@@ -188,5 +183,3 @@ describe("combineRasterBandStats", () => {
     ]);
   });
 });
-
-

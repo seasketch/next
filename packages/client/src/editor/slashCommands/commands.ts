@@ -8,6 +8,7 @@ import { MetricDependency } from "overlay-engine";
  */
 export interface MetricProperties {
   metrics: MetricDependency[];
+  componentSettings: Record<string, any>;
 }
 
 /**
@@ -100,7 +101,7 @@ export function insertMetric(
   }
 
   const node = metricType.create({
-    metrics: properties.metrics,
+    ...properties,
   });
 
   let tr = state.tr.replaceRangeWith(range.from, range.to, node);

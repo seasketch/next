@@ -165,6 +165,37 @@ export const defaultSlashCommandItems: SlashCommandItem[] = [
             subjectType: "fragments",
           },
         ],
+        componentSettings: {
+          presentation: "total_area",
+        },
+      });
+    },
+    group: "Metrics",
+  },
+  {
+    id: "percent_of_clipping_geography",
+    title: "Percent of Geography",
+    description:
+      "Insert the area of the sketch or collection as a percentage of the geography.",
+    icon: React.createElement(SymbolIcon, {
+      className: "h-4 w-4",
+    }),
+    isEnabled: (schema) => Boolean(schema.nodes.metric),
+    run: ({ view, range }) => {
+      return insertMetric(view, range, {
+        componentSettings: {
+          presentation: "percent_area",
+        },
+        metrics: [
+          {
+            type: "total_area",
+            subjectType: "fragments",
+          },
+          {
+            type: "total_area",
+            subjectType: "geographies",
+          },
+        ],
       });
     },
     group: "Metrics",
