@@ -10,7 +10,7 @@ import { MetricResolver } from "./resolveMetric";
  */
 export function createReportCardSchema(
   isFooter: boolean,
-  metricResolver?: MetricResolver
+  _metricResolver?: MetricResolver
 ): Schema {
   const baseSchema = isFooter
     ? formElements.reportCardFooter.schema
@@ -19,101 +19,65 @@ export function createReportCardSchema(
   // Define the metric node spec
   const metricSpec: NodeSpec = {
     attrs: {
+      /**
+       * A list of metric dependencies used to resolve values. Shape is defined in
+       * overlay-engine MetricDependency.
+       */
       metrics: { default: [] },
-      type: { default: "total_area" },
-      geography: { default: null },
-      style: { default: "decimal" },
-      unit: { default: undefined },
-      // ignored for now
-      minimumFractionDigits: { default: 0 },
-      maximumFractionDigits: { default: 2 },
+      /**
+       * Component type to render (e.g., InlineMetric). Routing happens in React
+       * land via nodeViews.
+       */
+      type: { default: "InlineMetric" },
+      /**
+       * Arbitrary component-specific configuration.
+       */
+      componentSettings: { default: {} },
     },
     inline: true,
     group: "inline",
     draggable: true,
-    // selectable: true, // Explicitly mark as selectable
     parseDOM: [
       {
-        tag: "span[metric-type]",
+        tag: "span[data-report-react-node='metric']",
         getAttrs: (dom: string | HTMLElement) => {
           if (typeof dom === "string") {
             return {
               metrics: [],
-              style: "decimal",
-              unit: undefined,
-              minimumFractionDigits: 0,
-              maximumFractionDigits: 2,
+              type: "InlineMetric",
+              componentSettings: {},
             };
           }
-          const style = dom.getAttribute("metric-style") || "decimal";
-          const unit = dom.getAttribute("metric-unit") || undefined;
-          const minFrac = dom.getAttribute("metric-min-frac");
-          const maxFrac = dom.getAttribute("metric-max-frac");
-          const metricDependencies = JSON.parse(
-            dom.getAttribute("metric-dependencies") || "[]"
+          const metricsAttr = (dom as HTMLElement).getAttribute("data-metrics");
+          const componentType =
+            (dom as HTMLElement).getAttribute("data-component-type") ||
+            "InlineMetric";
+          const componentSettingsAttr = (dom as HTMLElement).getAttribute(
+            "data-component-settings"
           );
           return {
-            style,
-            unit: unit || undefined,
-            minimumFractionDigits: minFrac ? parseInt(minFrac, 10) : 0,
-            maximumFractionDigits: maxFrac ? parseInt(maxFrac, 10) : 2,
-            metrics: metricDependencies,
+            metrics: metricsAttr ? JSON.parse(metricsAttr) : [],
+            type: componentType,
+            componentSettings: componentSettingsAttr
+              ? JSON.parse(componentSettingsAttr)
+              : {},
           };
         },
       },
     ],
     toDOM: (node: Node) => {
-      const {
-        style,
-        unit,
-        minimumFractionDigits,
-        maximumFractionDigits,
-        metrics,
-      } = node.attrs;
+      const { metrics, type, componentSettings } = node.attrs;
 
-      if (metricResolver) {
-        console.log("attrs", node.attrs);
-        const metric = metrics?.[0];
-        if (!metric) {
-          return ["span", {}, "Error: Metric attrs not found"];
-        }
-        // Resolve the metric value using the resolver with formatting options
-        const value = metricResolver.resolve(
-          metric?.type ?? "total_area",
-          null,
-          style,
-          unit,
-          minimumFractionDigits,
-          maximumFractionDigits
-        );
-
-        return [
-          "span",
-          {
-            "metric-style": style || "decimal",
-            "metric-unit": unit || "",
-            "metric-min-frac": minimumFractionDigits?.toString() || "0",
-            "metric-max-frac": maximumFractionDigits?.toString() || "2",
-            "metric-dependencies": JSON.stringify(metrics),
-            class:
-              "metric font-semibold hover:bg-blue-300/20 rounded-sm cursor-pointer",
-          },
-          value === null ? "N/A" : value,
-        ];
-      } else {
-        // Basic display showing the attributes
-        return [
-          "span",
-          {
-            "metric-style": style || "decimal",
-            "metric-unit": unit || "",
-            "metric-min-frac": minimumFractionDigits?.toString() || "0",
-            "metric-max-frac": maximumFractionDigits?.toString() || "2",
-            "metric-dependencies": JSON.stringify(metrics),
-          },
-          `{${metrics[0].type}}`,
-        ];
-      }
+      return [
+        "span",
+        {
+          "data-report-react-node": "metric",
+          "data-component-type": type || "InlineMetric",
+          "data-metrics": JSON.stringify(metrics || []),
+          "data-component-settings": JSON.stringify(componentSettings || {}),
+        },
+        `{${metrics?.[0]?.type || "metric"}}`,
+      ];
     },
   };
 

@@ -22,6 +22,11 @@ import { useSlashCommandPalette } from "../../editor/slashCommands/useSlashComma
 import { defaultSlashCommandItems } from "../../editor/slashCommands/plugin";
 import { createReportCardEditorConfig } from "../../reports/utils/createReportCardEditorConfig";
 import { MetricResolver } from "../../reports/utils/resolveMetric";
+import ReactNodeViewPortalsProvider, {
+  useReactNodeViewPortals,
+} from "../ReactNodeView/PortalProvider";
+import { createReactNodeView } from "../ReactNodeView";
+import InlineMetric from "../nodeTypes/InlineMetric";
 
 // Ensure legacy report bodies (saved before presenceBlock/absenceBlock existed) always
 // have both presenceBlock and absenceBlock nodes at the end, each with at least one paragraph.
@@ -114,7 +119,7 @@ interface ReportCardBodyEditorProps {
   metricResolver?: MetricResolver;
 }
 
-export default function ReportCardBodyEditor({
+function ReportCardBodyEditorInner({
   body,
   onUpdate,
   isInput = false,
@@ -146,6 +151,8 @@ export default function ReportCardBodyEditor({
   const initialBodyRef = useRef<any>(body);
   const saveRef = useRef<((doc: any) => void) | null>(null);
   initialBodyRef.current = body;
+  const { createPortal, removePortal, setSelection } =
+    useReactNodeViewPortals();
 
   const {
     slashState,
@@ -183,6 +190,22 @@ export default function ReportCardBodyEditor({
         plugins,
         doc,
       }),
+      nodeViews: {
+        // @ts-ignore
+        metric(node, view, getPos, decorations) {
+          return createReactNodeView({
+            node,
+            view,
+            // @ts-ignore
+            getPos,
+            // @ts-ignore
+            decorations,
+            component: InlineMetric,
+            onCreatePortal: createPortal,
+            onDestroy: removePortal,
+          });
+        },
+      },
       dispatchTransaction: (transaction) => {
         const view = viewRef.current!;
         const newState = view.state.apply(transaction);
@@ -192,6 +215,15 @@ export default function ReportCardBodyEditor({
         if (transaction.docChanged) {
           saveRef.current?.(newState.doc);
         }
+
+        if (newState.selection) {
+          setSelection({
+            anchorPos: newState.selection.$anchor.pos,
+            headPos: newState.selection.$head.pos,
+          });
+        } else {
+          setSelection(null);
+        }
       },
     });
     viewRef.current = view;
@@ -199,7 +231,7 @@ export default function ReportCardBodyEditor({
     return () => {
       view.destroy();
     };
-  }, [isInput, plugins, schema]);
+  }, [isInput, plugins, schema, createPortal, removePortal, setSelection]);
 
   // Update editor state when language changes (body will be different for different languages)
   useEffect(() => {
@@ -273,5 +305,13 @@ export default function ReportCardBodyEditor({
         onHighlight={handleSlashHighlight}
       />
     </div>
+  );
+}
+
+export default function ReportCardBodyEditor(props: ReportCardBodyEditorProps) {
+  return (
+    <ReactNodeViewPortalsProvider>
+      <ReportCardBodyEditorInner {...props} />
+    </ReactNodeViewPortalsProvider>
   );
 }

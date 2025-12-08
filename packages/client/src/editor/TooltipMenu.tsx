@@ -168,7 +168,10 @@ export default function TooltipMenu({
 
     const tr = state.tr.setNodeMarkup(pos, undefined, {
       ...node.attrs,
-      ...attrs,
+      componentSettings: {
+        ...node.attrs.componentSettings,
+        ...attrs,
+      },
     });
 
     // After updating the node, ensure the selection still spans the metric node
@@ -272,7 +275,7 @@ function MetricFormattingControls({
 }) {
   const { t } = useTranslation("admin:sketching");
   const attrs = node.attrs;
-  const type = attrs.type;
+  const metricType = attrs.metrics?.[0]?.type;
   // const [style, setStyle] = useState(attrs.style || "decimal");
   // const [minFrac, setMinFrac] = useState(attrs.minimumFractionDigits ?? 0);
   // const [maxFrac, setMaxFrac] = useState(attrs.maximumFractionDigits ?? 2);
@@ -288,13 +291,13 @@ function MetricFormattingControls({
 
   return (
     <>
-      {type === "total_area" && (
+      {metricType === "total_area" && (
         <>
           {/* <label className="block text-xs font-semibold text-gray-300 mb-1">
               {t("Unit")}
             </label> */}
           <select
-            value={attrs.unit || "square-kilometer"}
+            value={attrs.componentSettings?.unit || "square-kilometer"}
             onChange={(e) => onUpdate({ unit: e.target.value })}
             onMouseDown={(e) => e.stopPropagation()}
             onClick={(e) => e.stopPropagation()}
