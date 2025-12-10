@@ -1,7 +1,11 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
-import { MetricDependency, MetricType } from "overlay-engine";
+import {
+  hashMetricDependency,
+  MetricDependency,
+  MetricType,
+} from "overlay-engine";
 import { Pool } from "pg";
 
 const geographyMetricTopicFromContext = async (args: any, context: any) => {
@@ -96,6 +100,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         startedAt: Datetime
         completedAt: Datetime
         durationSeconds: Float
+        dependencyHash: String!
       }
 
       type GeographyMetricSubscriptionPayload {
@@ -146,7 +151,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         )})
       }
 
-      type NodeDependency {
+      input NodeDependency {
         # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore"
         type: String!
         # "fragments" or "geographies"
@@ -154,13 +159,13 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         tableOfContentsItemId: Int
         geographies: [Int!]
         parameters: JSON
+        hash: String!
       }
 
       type CardDependencyLists {
         cardId: Int!
         metrics: [BigInt!]!
         overlaySources: [Int!]!
-        nodeDependencies: [NodeDependency!]!
       }
 
       type ReportOverlayDependencies {
@@ -170,8 +175,18 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         cardDependencyLists: [CardDependencyLists!]!
       }
 
+      # Used to add additional dependencies when an admin is authoring a report
+      # with an updated prosemirror document. Clients are responsible for 
+      # determining if the card's currently available dependencies satisfy all
+      # node requirements. If not, they can request dependencies again with this
+      # explicit draft list of extra dependencies.
+      input AdditionalCardDependenciesList {
+        cardId: Int!
+        nodeDependencies: [NodeDependency!]!
+      }
+
       extend type Report {
-        dependencies(sketchId: Int): ReportOverlayDependencies! @requires(columns: ["id", "project_id", "sketch_class_id"])
+        dependencies(sketchId: Int, additionalDependencies: AdditionalCardDependenciesList): ReportOverlayDependencies! @requires(columns: ["id", "project_id", "sketch_class_id"])
       }
 
     `,
@@ -184,7 +199,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             report.id,
             pgClient,
             report.projectId,
-            args.sketchId
+            args.sketchId,
+            args.additionalDependencies
           );
           return deps;
         },
@@ -383,7 +399,11 @@ async function getOrCreateReportDependencies(
   reportId: number,
   pool: Pool,
   projectId: number,
-  sketchId?: number
+  sketchId?: number,
+  additionalDependencies?: {
+    cardId: number;
+    nodeDependencies: MetricDependency[];
+  }
 ) {
   // Retrieve all overlay sources related to the report
   const overlaySources = await getOverlaySources(reportId, pool);
@@ -474,6 +494,8 @@ async function getOrCreateReportDependencies(
 
   // results.metrics.push(...totalAreaMetrics);
 
+  // TODO: Doesn't seem to consider overlays at all
+
   for (const card of cards.rows) {
     const cardDependencyList = {
       cardId: card.id,
@@ -482,51 +504,92 @@ async function getOrCreateReportDependencies(
     };
     const dependencies = extractMetricDependenciesFromReportBody(card.body);
 
-    for (const dependency of dependencies) {
-      if (dependency.subjectType === "fragments") {
-        for (const fragment of fragments) {
-          const metric = await getOrCreateSpatialMetric({
-            pool,
-            subjectFragmentId: fragment,
-            type: dependency.type,
-            parameters: dependency.parameters || {},
-            projectId,
-          });
-          cardDependencyList.metrics.push(metric.id);
-          if (!results.metrics.find((m) => m.id === metric.id)) {
-            results.metrics.push(metric);
-          }
-        }
-      } else if (dependency.subjectType === "geographies") {
-        // If the metric dependency specifies a valid list of geographies, use
-        // it. Otherwise, calculate metrics for all geographies in the project.
-        let geographyIds = geogs.map((g) => g.id);
-        if (dependency.geographies && dependency.geographies.length > 0) {
-          geographyIds = [];
-          for (const geographyId of dependency.geographies) {
-            if (!geogs.find((g) => g.id === geographyId)) {
-              continue;
-            }
-            geographyIds.push(geographyId);
-          }
-        }
-        for (const geographyId of geographyIds) {
-          const metric = await getOrCreateSpatialMetric({
-            pool,
-            subjectGeographyId: geographyId,
-            type: dependency.type,
-            parameters: dependency.parameters || {},
-            projectId,
-          });
-          cardDependencyList.metrics.push(metric.id);
-          if (!results.metrics.find((m) => m.id === metric.id)) {
-            results.metrics.push(metric);
-          }
-        }
-      } else {
-        throw new Error(`Unknown subject type: ${dependency.subjectType}`);
+    const { tableOfContentsItemIds, metrics, hashes } =
+      await createMetricsForDependencies(
+        pool,
+        dependencies,
+        projectId,
+        fragments,
+        geogs
+      );
+
+    // TODO: add overlay sources to the card dependency list
+    // add metrics to card dependency list
+    for (const metric of metrics) {
+      cardDependencyList.metrics.push(metric.id);
+      // Note that some performance optimization is possible here in order to
+      // skip runing the getOrCreateSpatialMetric function if the metric already
+      // exists. TODO for later.
+      if (!results.metrics.find((m) => m.id === metric.id)) {
+        results.metrics.push(metric);
       }
     }
+
+    // for (const dependency of dependencies) {
+    //   if (dependency.subjectType === "fragments") {
+    //     for (const fragment of fragments) {
+    //       const metric = await getOrCreateSpatialMetric({
+    //         pool,
+    //         subjectFragmentId: fragment,
+    //         type: dependency.type,
+    //         parameters: dependency.parameters || {},
+    //         projectId,
+    //       });
+    //       cardDependencyList.metrics.push(metric.id);
+    //       const dependencyHash = hashMetricDependency(dependency);
+    //       console.log("dependencyHash", dependencyHash, dependency);
+    //       const existingResult = results.metrics.find(
+    //         (m) => m.id === metric.id
+    //       );
+    //       if (!existingResult) {
+    //         metric.dependencyHashes = [hashMetricDependency(dependency)];
+    //         results.metrics.push(metric);
+    //       } else if (
+    //         !existingResult.dependencyHashes.includes(dependencyHash)
+    //       ) {
+    //         existingResult.dependencyHashes.push(dependencyHash);
+    //       }
+    //     }
+    //   } else if (dependency.subjectType === "geographies") {
+    //     // If the metric dependency specifies a valid list of geographies, use
+    //     // it. Otherwise, calculate metrics for all geographies in the project.
+    //     let geographyIds = geogs.map((g) => g.id);
+    //     if (dependency.geographies && dependency.geographies.length > 0) {
+    //       geographyIds = [];
+    //       for (const geographyId of dependency.geographies) {
+    //         if (!geogs.find((g) => g.id === geographyId)) {
+    //           continue;
+    //         }
+    //         geographyIds.push(geographyId);
+    //       }
+    //     }
+    //     for (const geographyId of geographyIds) {
+    //       const metric = await getOrCreateSpatialMetric({
+    //         pool,
+    //         subjectGeographyId: geographyId,
+    //         type: dependency.type,
+    //         parameters: dependency.parameters || {},
+    //         projectId,
+    //       });
+    //       cardDependencyList.metrics.push(metric.id);
+    //       const dependencyHash = hashMetricDependency(dependency);
+    //       console.log("dependencyHash", dependencyHash, dependency);
+    //       const existingResult = results.metrics.find(
+    //         (m) => m.id === metric.id
+    //       );
+    //       if (!existingResult) {
+    //         metric.dependencyHashes = [hashMetricDependency(dependency)];
+    //         results.metrics.push(metric);
+    //       } else if (
+    //         !existingResult.dependencyHashes.includes(dependencyHash)
+    //       ) {
+    //         existingResult.dependencyHashes.push(dependencyHash);
+    //       }
+    //     }
+    //   } else {
+    //     throw new Error(`Unknown subject type: ${dependency.subjectType}`);
+    //   }
+    // }
 
     // switch (card.type) {
     //   case "OverlappingAreas": {
@@ -744,6 +807,39 @@ async function getOrCreateReportDependencies(
     results.cardDependencyLists.push(cardDependencyList);
   }
 
+  // deal with additional dependencies
+  if (
+    additionalDependencies &&
+    additionalDependencies.cardId &&
+    additionalDependencies.nodeDependencies.length > 0
+  ) {
+    const { tableOfContentsItemIds, metrics, hashes } =
+      await createMetricsForDependencies(
+        pool,
+        additionalDependencies.nodeDependencies,
+        projectId,
+        fragments,
+        geogs
+      );
+    for (const metric of metrics) {
+      if (!results.metrics.find((m) => m.id === metric.id)) {
+        results.metrics.push(metric);
+      }
+      const cardDependencyList = results.cardDependencyLists.find(
+        (c) => c.cardId === additionalDependencies.cardId
+      );
+      if (cardDependencyList) {
+        if (!cardDependencyList.metrics.includes(metric.id)) {
+          cardDependencyList.metrics.push(metric.id);
+        }
+      }
+    }
+
+    // for (const tableOfContentsItemId of tableOfContentsItemIds) {
+    //   results.overlaySources.push(tableOfContentsItemId);
+    // }
+  }
+
   // add all metrics to the results
   return results;
 }
@@ -905,3 +1001,68 @@ type ProsemirrorNode = {
 type ProsemirrorDocument = ProsemirrorNode & {
   type: "doc";
 };
+
+async function createMetricsForDependencies(
+  pool: Pool,
+  dependencies: MetricDependency[],
+  projectId: number,
+  fragments: string[],
+  geogs: { id: number }[]
+) {
+  const tableOfContentsItemIds: number[] = [];
+  const metrics: any[] = [];
+  const hashes: string[] = [];
+  for (const dependency of dependencies) {
+    const dependencyHash = hashMetricDependency(dependency);
+    if (hashes.includes(dependencyHash)) {
+      continue;
+    }
+    hashes.push(dependencyHash);
+    if (
+      dependency.tableOfContentsItemId &&
+      !tableOfContentsItemIds.includes(dependency.tableOfContentsItemId)
+    ) {
+      tableOfContentsItemIds.push(dependency.tableOfContentsItemId);
+    }
+    if (dependency.subjectType === "fragments") {
+      for (const fragment of fragments) {
+        const metric = await getOrCreateSpatialMetric({
+          pool,
+          subjectFragmentId: fragment,
+          type: dependency.type,
+          parameters: dependency.parameters || {},
+          projectId,
+        });
+        metric.dependencyHash = dependencyHash;
+        metrics.push(metric);
+      }
+    } else if (dependency.subjectType === "geographies") {
+      // If the metric dependency specifies a valid list of geographies, use
+      // it. Otherwise, calculate metrics for all geographies in the project.
+      let geographyIds = geogs.map((g) => g.id);
+      if (dependency.geographies && dependency.geographies.length > 0) {
+        geographyIds = [];
+        for (const geographyId of dependency.geographies) {
+          if (!geogs.find((g) => g.id === geographyId)) {
+            continue;
+          }
+          geographyIds.push(geographyId);
+        }
+      }
+      for (const geographyId of geographyIds) {
+        const metric = await getOrCreateSpatialMetric({
+          pool,
+          subjectGeographyId: geographyId,
+          type: dependency.type,
+          parameters: dependency.parameters || {},
+          projectId,
+        });
+        metric.dependencyHash = dependencyHash;
+        metrics.push(metric);
+      }
+    } else {
+      throw new Error(`Unknown subject type: ${dependency.subjectType}`);
+    }
+  }
+  return { tableOfContentsItemIds, metrics, hashes };
+}

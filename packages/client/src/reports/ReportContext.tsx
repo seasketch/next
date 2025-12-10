@@ -25,13 +25,18 @@ import {
   SpatialMetricState,
 } from "../generated/graphql";
 import { ProsemirrorBodyJSON, ReportConfiguration } from "./cards/cards";
-import { MetricSubjectFragment } from "overlay-engine";
+import {
+  hashMetricDependency,
+  MetricDependency,
+  MetricSubjectFragment,
+} from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ApolloError } from "@apollo/client";
 import type { AnyLayer, AnySourceData } from "mapbox-gl";
 import { MapContext } from "../dataLayers/MapContextManager";
+import { Node } from "prosemirror-model";
 
 export type ReportMapStyle = {
   sources: { [id: string]: AnySourceData };
@@ -115,6 +120,8 @@ export interface ReportContextState {
   ) => void;
   setDraftReportCardBody: (cardId: number, body: any) => void;
   clearDraftReportCardBody: () => void;
+  additionalDependencies: MetricDependency[];
+  setAdditionalDependencies: (dependencies: MetricDependency[]) => void;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -139,6 +146,10 @@ export function useReportState(
     null
   );
 
+  const [additionalDependencies, setAdditionalDependencies] = useState<
+    MetricDependency[]
+  >([]);
+
   useReportOverlaySourcesSubscriptionSubscription({
     variables: {
       projectId: projectMetadata.data?.project?.id!,
@@ -148,10 +159,17 @@ export function useReportState(
 
   const onError = useGlobalErrorHandler();
 
-  const { data, refetch } = useReportContextQuery({
+  const { data, refetch, variables } = useReportContextQuery({
     variables: {
       reportId: reportId!,
       sketchId: selectedSketchId!,
+      additionalDependencies:
+        additionalDependencies && additionalDependencies.length > 0
+          ? {
+              cardId: selectedForEditing!,
+              nodeDependencies: additionalDependencies,
+            }
+          : undefined,
     },
     skip: !reportId || !selectedSketchId,
     onError,
@@ -427,6 +445,55 @@ export function useReportState(
   }, [_setDraftReportCardBody]);
 
   useEffect(() => {
+    if (draftReportCardBody) {
+      const deps = extractMetricDependenciesFromReportBody(draftReportCardBody);
+      console.log("widget dependencies", deps);
+      const currentMetricsForCard = getDependencies(
+        selectedForEditing!
+      ).metrics;
+      const missingDependencies: (MetricDependency & { hash: string })[] = [];
+      const hashes: string[] = [];
+      for (const dep of deps) {
+        const hash = hashMetricDependency(dep);
+        hashes.push(hash);
+        if (
+          !currentMetricsForCard.find(
+            (metric) => metric.dependencyHash === hash
+          )
+        ) {
+          missingDependencies.push({
+            ...dep,
+            hash,
+          });
+        }
+      }
+      console.log("missing dependencies", missingDependencies);
+      if (missingDependencies.length > 0) {
+        setAdditionalDependencies(missingDependencies);
+      } else if (
+        hashes.some((hash) =>
+          (variables?.additionalDependencies?.nodeDependencies || [])
+            .map((n) => n.hash)
+            .includes(hash)
+        )
+      ) {
+        // do nothing. the additional dependencies are already present.
+      } else {
+        setAdditionalDependencies([]);
+      }
+    } else {
+      setAdditionalDependencies([]);
+    }
+  }, [
+    draftReportCardBody,
+    setAdditionalDependencies,
+    data?.report?.dependencies,
+    getDependencies,
+    selectedForEditing,
+    variables,
+  ]);
+
+  useEffect(() => {
     // This functionality is relevant only for the admin interface, where an
     // admin is authoring a report with new report card widgets.
     //
@@ -447,6 +514,8 @@ export function useReportState(
       throw new Error("Report dependencies not found");
     }
     return {
+      additionalDependencies,
+      setAdditionalDependencies,
       setDraftReportCardBody,
       clearDraftReportCardBody,
       selectedTabId,
@@ -535,3 +604,39 @@ export function useReportStyleToggle(
     setVisible,
   };
 }
+
+export function extractMetricDependenciesFromReportBody(
+  node: ProsemirrorNode,
+  dependencies: MetricDependency[] = []
+) {
+  if (typeof node !== "object" || node === null || !node.type) {
+    throw new Error("Invalid node");
+  }
+  if (node.type === "metric" && node.attrs?.metrics) {
+    const metrics = node.attrs.metrics;
+    if (!Array.isArray(metrics)) {
+      throw new Error("Invalid metrics");
+    }
+    if (metrics.length > 0) {
+      if (typeof metrics[0] !== "object") {
+        throw new Error("Invalid metric");
+      }
+      dependencies.push(...metrics);
+    }
+  }
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) {
+      extractMetricDependenciesFromReportBody(child, dependencies);
+    }
+  }
+  return dependencies;
+}
+
+type ProsemirrorNode = {
+  type: string;
+  attrs?: Record<string, any>;
+  content?: ProsemirrorNode[];
+};
+type ProsemirrorDocument = ProsemirrorNode & {
+  type: "doc";
+};

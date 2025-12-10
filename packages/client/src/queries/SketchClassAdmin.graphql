@@ -649,7 +649,11 @@ fragment OverlaySourceDetails on ReportOverlaySource {
   }
 }
 
-query ReportContext($reportId: Int!, $sketchId: Int!) {
+query ReportContext(
+  $reportId: Int!
+  $sketchId: Int!
+  $additionalDependencies: AdditionalCardDependenciesList
+) {
   sketch(id: $sketchId) {
     ...ReportContextSketchDetails
     sketchClass {
@@ -670,7 +674,10 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
       name
       translatedProps
     }
-    dependencies(sketchId: $sketchId) {
+    dependencies(
+      sketchId: $sketchId
+      additionalDependencies: $additionalDependencies
+    ) {
       overlaySources {
         ...OverlaySourceDetails
       }

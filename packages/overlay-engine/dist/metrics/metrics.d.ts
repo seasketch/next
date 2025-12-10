@@ -174,6 +174,19 @@ export type MetricDependencyParameters = {
     maxResults?: number;
     maxDistanceKm?: number;
 };
+/**
+ * Creates a unique id for a given metric dependency. Any difference in
+ * MetricDependency properties, or parameters within MetricDependencyParameters
+ * will result in a different hash.
+ *
+ * This hash is set on CompatibleSpatialMetric objects in the GraphQL API so
+ * that clients can quickly determine which metrics are relevant to a given
+ * report card widget.
+ *
+ * @param dependency The dependency to hash
+ * @returns A unique id for the dependency
+ */
+export declare function hashMetricDependency(dependency: MetricDependency): string;
 export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
 export {};
 //# sourceMappingURL=metrics.d.ts.map

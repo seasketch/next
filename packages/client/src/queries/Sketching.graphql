@@ -330,6 +330,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   eta
   startedAt
   durationSeconds
+  dependencyHash
 }
 
 fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {

@@ -507,6 +507,61 @@ export type MetricDependencyParameters = {
   maxDistanceKm?: number;
 };
 
+/**
+ * Creates a unique id for a given metric dependency. Any difference in
+ * MetricDependency properties, or parameters within MetricDependencyParameters
+ * will result in a different hash.
+ *
+ * This hash is set on CompatibleSpatialMetric objects in the GraphQL API so
+ * that clients can quickly determine which metrics are relevant to a given
+ * report card widget.
+ *
+ * @param dependency The dependency to hash
+ * @returns A unique id for the dependency
+ */
+export function hashMetricDependency(dependency: MetricDependency): string {
+  const canonical = stableSerialize(dependency);
+  return fnv1a(canonical);
+}
+
+/**
+ * Produces a stable, order-independent string representation of a dependency.
+ * Object keys are sorted; arrays retain their order so that reordering values
+ * still produces a different hash.
+ */
+function stableSerialize(value: unknown): string {
+  if (value === null || typeof value !== "object") {
+    return JSON.stringify(value);
+  }
+
+  if (Array.isArray(value)) {
+    const isStringArray = value.every((item) => typeof item === "string");
+    const normalized = isStringArray ? [...value].sort() : value;
+    return `[${normalized.map((item) => stableSerialize(item)).join(",")}]`;
+  }
+
+  const entries = Object.keys(value)
+    .filter((key) => (value as any)[key] !== undefined && key !== "hash")
+    .sort()
+    .map(
+      (key) => `${JSON.stringify(key)}:${stableSerialize((value as any)[key])}`
+    );
+
+  return `{${entries.join(",")}}`;
+}
+
+/**
+ * Fast, cross-environment 32-bit FNV-1a hash. Returns an 8-char hex string.
+ */
+function fnv1a(input: string): string {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < input.length; i++) {
+    hash ^= input.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
 export function combineMetricsForFragments(
   metrics: Pick<Metric, "type" | "value">[]
 ): Pick<Metric, "type" | "value"> {

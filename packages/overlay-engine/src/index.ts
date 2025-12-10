@@ -47,6 +47,7 @@ export {
   MetricDependency,
   MetricDependencySubjectType,
   MetricDependencyParameters,
+  hashMetricDependency,
 } from "./metrics/metrics";
 export {
   createUniqueIdIndex,
