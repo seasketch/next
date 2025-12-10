@@ -5,7 +5,6 @@ import { FC } from "react";
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
 ) => {
-  console.log("ReportWidgetTooltipControlsRouter", props.node.type.name);
   switch (props.node.type.name) {
     case "metric":
       return <InlineMetricTooltipControls {...props} />;
@@ -15,7 +14,6 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
 };
 
 export const ReportWidgetNodeViewRouter: FC = (props: any) => {
-  console.log("ReportWidgetNodeViewRouter", props.node.type.name);
   switch (props.node.type.name) {
     case "metric":
       return <InlineMetric {...props} />;

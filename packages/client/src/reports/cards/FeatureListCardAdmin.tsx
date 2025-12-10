@@ -5,7 +5,6 @@ import { useMemo, useEffect } from "react";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import { useCardLocalizedStringAdmin } from "./cards";
 import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 import AttributeSelect from "../../admin/data/styleEditor/AttributeSelect";
 
 type AdminConfig = ReportCardConfiguration<{
@@ -36,18 +35,20 @@ export default function FeatureListCardAdmin({
 
   // Get available properties from geostats
   const availableProperties = useMemo(() => {
-    if (config.reportingLayers.length === 0) {
-      return [];
-    }
+    return [];
+    // if (config.reportingLayers.length === 0) {
+    //   return [];
+    // }
 
-    const layer = config.reportingLayers[0];
-    const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-    if (!meta || isRasterInfo(meta)) {
-      return [];
-    }
+    // const layer = config.reportingLayers[0];
+    // const meta = undefined;
+    // // layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    // if (!meta || isRasterInfo(meta)) {
+    //   return [];
+    // }
 
-    const geostats = meta.layers[0] as GeostatsLayer;
-    return geostats.attributes.map((attr) => attr.attribute).sort();
+    // const geostats = meta.layers[0] as GeostatsLayer;
+    // return geostats.attributes.map((attr) => attr.attribute).sort();
   }, [config.reportingLayers]);
 
   // Get geostats attributes for AttributeSelect component
@@ -57,15 +58,17 @@ export default function FeatureListCardAdmin({
     }
 
     const layer = config.reportingLayers[0];
-    const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    const meta = undefined;
+    // layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
     if (!meta || isRasterInfo(meta)) {
       return [];
     }
 
-    const geostats = meta.layers[0] as GeostatsLayer;
-    return [...geostats.attributes].sort((a, b) =>
-      a.attribute.localeCompare(b.attribute)
-    );
+    // const geostats = meta.layers[0] as GeostatsLayer;
+    // return [...geostats.attributes].sort((a, b) =>
+    //   a.attribute.localeCompare(b.attribute)
+    // );
+    return [];
   }, [config.reportingLayers]);
 
   const resultsLimit = config.componentSettings?.resultsLimit ?? 50;
@@ -85,34 +88,34 @@ export default function FeatureListCardAdmin({
   };
 
   // Auto-select first property as titleAttribute if not set and presentation is list
-  useEffect(() => {
-    if (
-      presentation === "list" &&
-      !titleAttribute &&
-      geostatsAttributes.length > 0
-    ) {
-      updateComponentSettings({
-        titleAttribute: geostatsAttributes[0].attribute,
-      });
-    }
-  }, [
-    presentation,
-    titleAttribute,
-    geostatsAttributes,
-    updateComponentSettings,
-  ]);
+  // useEffect(() => {
+  //   if (
+  //     presentation === "list" &&
+  //     !titleAttribute &&
+  //     geostatsAttributes.length > 0
+  //   ) {
+  //     updateComponentSettings({
+  //       titleAttribute: geostatsAttributes[0].attribute,
+  //     });
+  //   }
+  // }, [
+  //   presentation,
+  //   titleAttribute,
+  //   geostatsAttributes,
+  //   updateComponentSettings,
+  // ]);
 
   const handlePresentationChange = (newPresentation: "table" | "list") => {
-    const updates: any = { presentation: newPresentation };
-    // If switching to list and no titleAttribute is set, use first property
-    if (
-      newPresentation === "list" &&
-      !titleAttribute &&
-      geostatsAttributes.length > 0
-    ) {
-      updates.titleAttribute = geostatsAttributes[0].attribute;
-    }
-    updateSettings(updates);
+    // const updates: any = { presentation: newPresentation };
+    // // If switching to list and no titleAttribute is set, use first property
+    // if (
+    //   newPresentation === "list" &&
+    //   !titleAttribute &&
+    //   geostatsAttributes.length > 0
+    // ) {
+    //   updates.titleAttribute = geostatsAttributes[0].attribute;
+    // }
+    // updateSettings(updates);
   };
 
   const handleToggleAll = () => {
@@ -287,8 +290,6 @@ export default function FeatureListCardAdmin({
       )}
 
       <MapLayerVisibilityControlsAdmin config={config} onUpdate={onUpdate} />
-
-      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

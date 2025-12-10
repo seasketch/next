@@ -146,10 +146,21 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         )})
       }
 
+      type NodeDependency {
+        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore"
+        type: String!
+        # "fragments" or "geographies"
+        subjectType: String!
+        tableOfContentsItemId: Int
+        geographies: [Int!]
+        parameters: JSON
+      }
+
       type CardDependencyLists {
         cardId: Int!
         metrics: [BigInt!]!
         overlaySources: [Int!]!
+        nodeDependencies: 
       }
 
       type ReportOverlayDependencies {

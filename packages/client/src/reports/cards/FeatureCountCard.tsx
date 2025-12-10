@@ -117,70 +117,70 @@ export function FeatureCountCard({
       }
     }
 
-    const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-    if (!meta) {
-      throw new Error(
-        `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
-      );
-    }
+    // const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    // if (!meta) {
+    //   throw new Error(
+    //     `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
+    //   );
+    // }
 
-    if (layer.layerParameters?.groupBy) {
-      // get values for groupBy
-      if (!isRasterInfo(meta)) {
-        const geostats = meta.layers[0] as GeostatsLayer;
-        const attr = geostats.attributes.find(
-          (a) => a.attribute === layer.layerParameters.groupBy
-        );
-        if (!attr) {
-          throw new Error(
-            `Group by attribute ${
-              layer.layerParameters.groupBy
-            } not found in layer ${
-              layer.tableOfContentsItem?.title || "Untitled"
-            }`
-          );
-        }
-        if (!layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles) {
-          throw new Error(
-            `Layer ${
-              layer.tableOfContentsItem?.title || "Untitled"
-            } has no mapboxGL styles`
-          );
-        }
-        const colors = extractColorsForCategories(
-          Object.keys(attr.values),
-          attr,
-          layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
-        );
-        const values = Object.keys(attr.values);
-        for (const value of values) {
-          const count = sumCountsByClass[value];
-          if (count && count > 0) {
-            items.push({
-              title: value,
-              value: count,
-              color: colors[value],
-            });
-          } else if (config.componentSettings?.showZeroCountCategories) {
-            items.push({ title: value, color: colors[value], value: 0 });
-          }
-        }
-      } else {
-        throw new Error("FeatureCountCard does not support raster layers");
-      }
-    } else {
-      // No groupBy - show total count
-      const totalCount = sumCountsByClass["*"] || 0;
-      if (totalCount > 0) {
-        items.push({
-          title: "All features",
-          value: totalCount,
-          color: extractColorForLayers(
-            layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
-          ),
-        });
-      }
-    }
+    // if (layer.layerParameters?.groupBy) {
+    //   // get values for groupBy
+    //   if (!isRasterInfo(meta)) {
+    //     const geostats = meta.layers[0] as GeostatsLayer;
+    //     const attr = geostats.attributes.find(
+    //       (a) => a.attribute === layer.layerParameters.groupBy
+    //     );
+    //     if (!attr) {
+    //       throw new Error(
+    //         `Group by attribute ${
+    //           layer.layerParameters.groupBy
+    //         } not found in layer ${
+    //           layer.tableOfContentsItem?.title || "Untitled"
+    //         }`
+    //       );
+    //     }
+    //     if (!layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles) {
+    //       throw new Error(
+    //         `Layer ${
+    //           layer.tableOfContentsItem?.title || "Untitled"
+    //         } has no mapboxGL styles`
+    //       );
+    //     }
+    //     const colors = extractColorsForCategories(
+    //       Object.keys(attr.values),
+    //       attr,
+    //       layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
+    //     );
+    //     const values = Object.keys(attr.values);
+    //     for (const value of values) {
+    //       const count = sumCountsByClass[value];
+    //       if (count && count > 0) {
+    //         items.push({
+    //           title: value,
+    //           value: count,
+    //           color: colors[value],
+    //         });
+    //       } else if (config.componentSettings?.showZeroCountCategories) {
+    //         items.push({ title: value, color: colors[value], value: 0 });
+    //       }
+    //     }
+    //   } else {
+    //     throw new Error("FeatureCountCard does not support raster layers");
+    //   }
+    // } else {
+    //   // No groupBy - show total count
+    //   const totalCount = sumCountsByClass["*"] || 0;
+    //   if (totalCount > 0) {
+    //     items.push({
+    //       title: "All features",
+    //       value: totalCount,
+    //       color: extractColorForLayers(
+    //         layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
+    //       ),
+    //     });
+    //   }
+    // }
 
     // Apply sorting per configuration
     const sortBy = config.componentSettings?.sortBy || "count";

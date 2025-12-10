@@ -6338,6 +6338,10 @@ select{
   margin-bottom:-2rem
 }
 
+.-mb-\[3px\]{
+  margin-bottom:-3px
+}
+
 .-mb-px{
   margin-bottom:-1px
 }
@@ -8710,6 +8714,10 @@ select{
   border-color:rgb(37 99 235 / var(--tw-border-opacity, 1))
 }
 
+.border-blue-600\/30{
+  border-color:rgb(37 99 235 / 0.3)
+}
+
 .border-blue-700{
   --tw-border-opacity:1;
   border-color:rgb(29 78 216 / var(--tw-border-opacity, 1))
@@ -9080,6 +9088,10 @@ select{
 
 .bg-blue-500\/15{
   background-color:rgb(59 130 246 / 0.15)
+}
+
+.bg-blue-500\/20{
+  background-color:rgb(59 130 246 / 0.2)
 }
 
 .bg-blue-600{
@@ -11916,6 +11928,26 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
   }
 }
 
+.seasketch-skeleton-strong {
+  background: linear-gradient(
+    -100deg,
+    transparent,
+    rgba(21, 0, 159, 0.228),
+    rgba(20, 0, 180, 0.02)
+  );
+  background-size: 400% 400%;
+  animation: pulse 1.3s ease-in-out infinite;
+  @keyframes pulse {
+    0% {
+      background-position: 0% 0%;
+    }
+
+    100% {
+      background-position: -55% 0%;
+    }
+  }
+}
+
 .seasketch-skeleton::before {
   content: "d";
   opacity: 0;
@@ -12031,6 +12063,58 @@ input[type="checkbox"][indeterminate="true"]:checked {
   padding-left:0.75rem !important;
   padding-right:0.75rem !important;
   padding-top:1rem !important
+}
+
+/* Inline metric loading dots */
+
+.metric-dots {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.metric-loading-placeholder-for-height {
+  opacity: 0;
+}
+
+.metric-dot {
+  width: 2.5px;
+  height: 2.5px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 188, 0.5);
+  animation: metric-dot-hop 1.8s ease-in-out infinite;
+  transform-origin: center bottom;
+  /* margin-bottom: -16px; */
+  bottom: -3px;
+  position: relative;
+  /* display: none; */
+}
+
+.metric-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.metric-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes metric-dot-hop {
+  0%,
+  30% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+
+  15% {
+    transform: translateY(-5px);
+    opacity: 0.9;
+  }
+
+  30%,
+  100% {
+    /* hold/rest to create a visible pause */
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .placeholder\:text-gray-400::placeholder{
@@ -12154,10 +12238,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:bg-blue-200\/10:hover{
   background-color:rgb(191 219 254 / 0.1)
-}
-
-.hover\:bg-blue-300\/20:hover{
-  background-color:rgb(147 197 253 / 0.2)
 }
 
 .hover\:bg-blue-50:hover{

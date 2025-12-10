@@ -11,7 +11,6 @@ import {
   CrossCircledIcon,
   Pencil1Icon,
   TrashIcon,
-  ReloadIcon,
 } from "@radix-ui/react-icons";
 import ReportCardActionMenu from "./components/ReportCardActionMenu";
 import Modal from "../components/Modal";
@@ -24,7 +23,6 @@ import {
   useRef,
   useEffect,
 } from "react";
-import { createMetricResolver } from "./utils/resolveMetric";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import ReportCardBodyViewer from "./components/ReportCardBodyViewer";
 import {
@@ -41,7 +39,6 @@ import { CalculatorIcon } from "@heroicons/react/outline";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
-import CollapsibleFooter from "./components/CollapsibleFooter";
 import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 
@@ -102,12 +99,6 @@ export default function ReportCard({
     langCodeRef.current = langContext?.lang?.code || "EN";
   }, [langContext?.lang?.code]);
 
-  // Memoize the metric resolver to avoid recreating it on every render
-  const metricResolver = useMemo(
-    () => createMetricResolver(metrics),
-    [metrics]
-  );
-
   const [retryFailedMetrics, retryState] =
     useRetryFailedSpatialMetricsMutation();
 
@@ -140,7 +131,7 @@ export default function ReportCard({
       }
     }
     return { errors, failedMetrics, loading };
-  }, [metrics]);
+  }, [metrics, sources]);
 
   if (Object.keys(errors).length > 0) {
     tint = "text-red-500";
@@ -344,12 +335,12 @@ export default function ReportCard({
             body={localizedBody}
             onUpdate={handleBodyUpdate}
             className={`${tint} ${icon ? "hasIcon" : ""}`}
-            metricResolver={metricResolver}
+            metrics={metrics}
+            sources={sources}
           />
         ) : (
           <ReportCardBodyViewer
             body={localizedBody}
-            metricResolver={metricResolver}
             className={`ReportCard ReportCardBody ProseMirrorBody ${
               icon ? "hasIcon" : ""
             } ${tint ? tint : ""}`}
@@ -397,7 +388,6 @@ export default function ReportCard({
             <div>{loadingSkeleton}</div>
           </div>
         )}
-        <CollapsibleFooter config={config} onUpdate={onUpdate} />
       </div>
 
       {recalcOpen && (

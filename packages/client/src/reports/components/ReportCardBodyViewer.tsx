@@ -3,9 +3,7 @@ import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
 import { createReportCardSchema } from "../utils/createReportCardSchema";
-import { MetricResolver } from "../utils/resolveMetric";
 import { createReactNodeView } from "../ReactNodeView";
-import InlineMetric from "../nodeTypes/InlineMetric";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
 } from "../ReactNodeView/PortalProvider";
@@ -16,25 +14,18 @@ import { ReportWidgetNodeViewRouter } from "../nodeTypes/routers";
 type ReportCardBodyViewerProps = {
   body: any;
   className?: string;
-  isFooter?: boolean;
-  metricResolver?: MetricResolver;
 };
 
 function ReportCardBodyViewerInner({
   body,
   className = "",
-  isFooter = false,
-  metricResolver,
 }: ReportCardBodyViewerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const { createPortal, removePortal, setSelection } =
     useReactNodeViewPortals();
 
-  const schema = useMemo(
-    () => createReportCardSchema(isFooter, metricResolver),
-    [isFooter, metricResolver]
-  );
+  const schema = useMemo(() => createReportCardSchema(), []);
 
   const nodeViews = useMemo(
     () => ({
@@ -94,7 +85,7 @@ function ReportCardBodyViewerInner({
       view.destroy();
       viewRef.current = undefined;
     };
-  }, [schema, nodeViews, setSelection]);
+  }, [schema, nodeViews, setSelection, body]);
 
   // Update the document when the body changes
   // cb - removed. might not be needed

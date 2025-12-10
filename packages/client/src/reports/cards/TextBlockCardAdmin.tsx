@@ -6,7 +6,6 @@ import {
   CrossCircledIcon,
 } from "@radix-ui/react-icons";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 
 interface TextBlockCardAdminProps {
   config: TextBlockCardConfiguration;
@@ -86,8 +85,6 @@ export default function TextBlockCardAdmin({
           );
         })}
       </div>
-
-      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

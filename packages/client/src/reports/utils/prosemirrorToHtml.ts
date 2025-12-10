@@ -1,23 +1,16 @@
 import { DOMSerializer, Node } from "prosemirror-model";
 import { createReportCardSchema } from "./createReportCardSchema";
-import { MetricResolver } from "./resolveMetric";
 
 /**
  * Converts a Prosemirror JSON document to HTML string
  * @param body - The Prosemirror JSON document
- * @param isFooter - Whether this is a footer body (uses footer schema)
- * @param metricResolver - Optional resolver for metric values
  * @returns HTML string
  */
-export function prosemirrorToHtml(
-  body: any,
-  isFooter?: boolean,
-  metricResolver?: MetricResolver
-): string {
+export function prosemirrorToHtml(body: any): string {
   if (!body) return "";
 
   try {
-    const schema = createReportCardSchema(isFooter ?? false, metricResolver);
+    const schema = createReportCardSchema();
     const serializer = DOMSerializer.fromSchema(schema);
     const node = Node.fromJSON(schema, body);
     const fragment = serializer.serializeFragment(node.content);

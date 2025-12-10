@@ -9,7 +9,6 @@ import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
 import ReportTitlePlaceholderPlugin from "./ReportTitlePlaceholderPlugin";
-import FooterTitlePlaceholderPlugin from "./FooterTitlePlaceholderPlugin";
 import { tableNodes } from "prosemirror-tables";
 import {
   defaultSettings,
@@ -20,7 +19,6 @@ import {
 import { ApolloClient } from "@apollo/client";
 import { CreateFileUploadForAboutPageDocument } from "../generated/graphql";
 import axios from "axios";
-import PresenceAbsenceBlockPlaceholderPlugin from "./PresenceAbsenceBlockPlaceholderPlugin";
 import {
   createSlashCommandPlugin,
   defaultSlashCommandItems,
@@ -101,28 +99,9 @@ const reportCardBodySchema: Schema = new Schema({
           return ["h2", 0];
         },
       },
-      presenceBlock: {
-        // Require at least one block (e.g. a paragraph), but allow users to add more
-        content: "block+",
-        // group: "block",
-        defining: true,
-        parseDOM: [{ tag: "div[data-presence-block]" }],
-        toDOM: function (node: any) {
-          return ["div", { "data-presence-block": "yes" }, 0];
-        },
-      },
-      absenceBlock: {
-        content: "block+",
-        group: "block",
-        defining: true,
-        parseDOM: [{ tag: "div[data-absence-block]" }],
-        toDOM: function (node: any) {
-          return ["div", { "data-absence-block": "yes" }, 0];
-        },
-      },
     })
     .update("doc", {
-      content: "reportTitle block* presenceBlock absenceBlock",
+      content: "reportTitle block*",
     })
     .remove("heading"),
   // @ts-ignore
@@ -462,7 +441,6 @@ export const formElements = {
       createSlashCommandPlugin(defaultSlashCommandItems),
       ...exampleSetup({ schema: reportCardBodySchema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
-      PresenceAbsenceBlockPlaceholderPlugin(),
     ],
   },
   reportCardFooter: {
@@ -470,7 +448,6 @@ export const formElements = {
     plugins: [
       createSlashCommandPlugin(defaultSlashCommandItems),
       ...exampleSetup({ schema: reportCardFooterSchema, menuBar: false }),
-      FooterTitlePlaceholderPlugin(),
     ],
   },
 };

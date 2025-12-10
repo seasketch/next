@@ -80,11 +80,12 @@ export function OverlappingAreasCard({
   const geometryType = useMemo(() => {
     if (reportingLayers.length === 0) return null;
     const firstLayer = reportingLayers[0];
-    const meta =
-      firstLayer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-    if (!meta || isRasterInfo(meta)) return null;
-    const geostats = meta.layers[0] as GeostatsLayer;
-    return geostats.geometry;
+    const meta = undefined;
+    // firstLayer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    return null;
+    // if (!meta || isRasterInfo(meta)) return null;
+    // const geostats = meta.layers[0] as GeostatsLayer;
+    // return geostats.geometry;
   }, [reportingLayers]);
 
   // Determine unit category based on geometry type
@@ -145,119 +146,120 @@ export function OverlappingAreasCard({
       color?: string;
       percentage?: number;
     }[] = [];
-
-    for (const layer of reportingLayers) {
-      const source = sources.find(
-        (s) => s.tableOfContentsItemId === layer.tableOfContentsItemId
-      );
-      if (!source) {
-        continue;
-        // throw new Error(
-        //   `Source for layer ${layer.tableOfContentsItem?.title} not found`
-        // );
-      }
-      const sourceUrl = source.output?.url;
-      if (!sourceUrl) {
-        continue;
-      }
-      // get the geography-level total for this layer
-      const geographyMetric = sketchClassPrimaryGeographyId
-        ? (metrics || []).find(
-            (m) =>
-              subjectIsGeography(m.subject) &&
-              // @ts-ignore
-              m.subject.id === sketchClassPrimaryGeographyId &&
-              m.type === "overlay_area" &&
-              m.parameters?.groupBy === layer.layerParameters?.groupBy
-          )
-        : null;
-
-      // Determine if this layer is polygon or line geometry
-      const layerMeta =
-        layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-      if (!layerMeta) {
-        throw new Error(
-          `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
-        );
-      }
-
-      if (layer.layerParameters?.groupBy) {
-        // get values for groupBy
-        if (!isRasterInfo(layerMeta)) {
-          const geostats = layerMeta.layers[0] as GeostatsLayer;
-          const attr = geostats.attributes.find(
-            (a) => a.attribute === layer.layerParameters.groupBy
-          );
-          if (!attr) {
-            throw new Error(
-              `Group by attribute ${
-                layer.layerParameters.groupBy
-              } not found in layer ${
-                layer.tableOfContentsItem?.title || "Untitled"
-              }`
-            );
-          }
-          if (!layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles) {
-            throw new Error(
-              `Layer ${
-                layer.tableOfContentsItem?.title || "Untitled"
-              } has no mapboxGL styles`
-            );
-          }
-          const colors = extractColorsForCategories(
-            Object.keys(attr.values),
-            attr,
-            layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
-          );
-          const values = Object.keys(attr.values);
-          for (const value of values) {
-            const geographyTotal = (geographyMetric?.value as any)?.[value];
-            const overlapValue = sumSketchOverlaysByClass?.[sourceUrl]?.[value];
-            if (overlapValue && overlapValue > 0) {
-              items.push({
-                title: value,
-                value: overlapValue,
-                color: colors[value],
-                percentage: geographyTotal
-                  ? overlapValue / geographyTotal
-                  : undefined,
-              });
-            } else if (config.componentSettings?.showZeroOverlapCategories) {
-              items.push({ title: value, color: colors[value], percentage: 0 });
-            }
-          }
-        } else {
-          throw new Error(
-            "OverlappingAreasCard does not support raster layers"
-          );
-        }
-      } else {
-        const overlapValue = sumSketchOverlaysByClass?.[sourceUrl]?.["*"];
-        const geographyTotal = (geographyMetric?.value as any)?.["*"];
-        if (overlapValue && overlapValue > 0) {
-          items.push({
-            title: "All features",
-            value: overlapValue,
-            percentage: geographyTotal
-              ? overlapValue / geographyTotal
-              : undefined,
-            color: extractColorForLayers(
-              layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
-            ),
-          });
-        } else if (config.componentSettings?.showZeroOverlapCategories) {
-          items.push({ title: layer.tableOfContentsItem?.title || "Untitled" });
-        }
-      }
-    }
-    // Apply sorting per configuration
-    const sortBy = config.componentSettings?.sortBy || "overlap";
-    if (sortBy === "name") {
-      items.sort((a, b) => a.title.localeCompare(b.title));
-    } else {
-      items.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
-    }
     return items;
+
+    // for (const layer of reportingLayers) {
+    //   const source = sources.find(
+    //     (s) => s.tableOfContentsItemId === layer.tableOfContentsItemId
+    //   );
+    //   if (!source) {
+    //     continue;
+    //     // throw new Error(
+    //     //   `Source for layer ${layer.tableOfContentsItem?.title} not found`
+    //     // );
+    //   }
+    //   const sourceUrl = source.output?.url;
+    //   if (!sourceUrl) {
+    //     continue;
+    //   }
+    //   // get the geography-level total for this layer
+    //   const geographyMetric = sketchClassPrimaryGeographyId
+    //     ? (metrics || []).find(
+    //         (m) =>
+    //           subjectIsGeography(m.subject) &&
+    //           // @ts-ignore
+    //           m.subject.id === sketchClassPrimaryGeographyId &&
+    //           m.type === "overlay_area" &&
+    //           m.parameters?.groupBy === layer.layerParameters?.groupBy
+    //       )
+    //     : null;
+
+    //   // Determine if this layer is polygon or line geometry
+    //   const layerMeta =
+    //     layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    //   if (!layerMeta) {
+    //     throw new Error(
+    //       `Layer ${layer.tableOfContentsItem?.title} has no geostats metadata`
+    //     );
+    //   }
+
+    //   if (layer.layerParameters?.groupBy) {
+    //     // get values for groupBy
+    //     if (!isRasterInfo(layerMeta)) {
+    //       const geostats = layerMeta.layers[0] as GeostatsLayer;
+    //       const attr = geostats.attributes.find(
+    //         (a) => a.attribute === layer.layerParameters.groupBy
+    //       );
+    //       if (!attr) {
+    //         throw new Error(
+    //           `Group by attribute ${
+    //             layer.layerParameters.groupBy
+    //           } not found in layer ${
+    //             layer.tableOfContentsItem?.title || "Untitled"
+    //           }`
+    //         );
+    //       }
+    //       if (!layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles) {
+    //         throw new Error(
+    //           `Layer ${
+    //             layer.tableOfContentsItem?.title || "Untitled"
+    //           } has no mapboxGL styles`
+    //         );
+    //       }
+    //       const colors = extractColorsForCategories(
+    //         Object.keys(attr.values),
+    //         attr,
+    //         layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
+    //       );
+    //       const values = Object.keys(attr.values);
+    //       for (const value of values) {
+    //         const geographyTotal = (geographyMetric?.value as any)?.[value];
+    //         const overlapValue = sumSketchOverlaysByClass?.[sourceUrl]?.[value];
+    //         if (overlapValue && overlapValue > 0) {
+    //           items.push({
+    //             title: value,
+    //             value: overlapValue,
+    //             color: colors[value],
+    //             percentage: geographyTotal
+    //               ? overlapValue / geographyTotal
+    //               : undefined,
+    //           });
+    //         } else if (config.componentSettings?.showZeroOverlapCategories) {
+    //           items.push({ title: value, color: colors[value], percentage: 0 });
+    //         }
+    //       }
+    //     } else {
+    //       throw new Error(
+    //         "OverlappingAreasCard does not support raster layers"
+    //       );
+    //     }
+    //   } else {
+    //     const overlapValue = sumSketchOverlaysByClass?.[sourceUrl]?.["*"];
+    //     const geographyTotal = (geographyMetric?.value as any)?.["*"];
+    //     if (overlapValue && overlapValue > 0) {
+    //       items.push({
+    //         title: "All features",
+    //         value: overlapValue,
+    //         percentage: geographyTotal
+    //           ? overlapValue / geographyTotal
+    //           : undefined,
+    //         color: extractColorForLayers(
+    //           layer.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[]
+    //         ),
+    //       });
+    //     } else if (config.componentSettings?.showZeroOverlapCategories) {
+    //       items.push({ title: layer.tableOfContentsItem?.title || "Untitled" });
+    //     }
+    //   }
+    // }
+    // // Apply sorting per configuration
+    // const sortBy = config.componentSettings?.sortBy || "overlap";
+    // if (sortBy === "name") {
+    //   items.sort((a, b) => a.title.localeCompare(b.title));
+    // } else {
+    //   items.sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+    // }
+    // return items;
   }, [
     reportingLayers,
     sumSketchOverlaysByClass,

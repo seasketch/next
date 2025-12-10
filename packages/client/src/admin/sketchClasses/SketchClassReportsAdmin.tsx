@@ -131,7 +131,11 @@ export default function SketchClassReportsAdmin({
   });
 
   const [updateReportCard, updateReportCardState] = useUpdateReportCardMutation(
-    { onError }
+    {
+      onError,
+      awaitRefetchQueries: true,
+      refetchQueries: [ReportContextDocument],
+    }
   );
 
   const [reorderReportTabCards] = useReorderReportTabCardsMutation({
@@ -191,18 +195,7 @@ export default function SketchClassReportsAdmin({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [manageTabsModalOpen, setManageTabsModalOpen] = useState(false);
   const [addCardModalOpen, setAddCardModalOpen] = useState(false);
-  const [localCardEdits, setLocalCardEdits] =
-    useState<ReportCardConfiguration<any> | null>(null);
-
-  // Optimistic state for card ordering
-  const [optimisticCardOrder, setOptimisticCardOrder] = useState<{
-    [tabId: number]: number[];
-  }>({});
-
-  const history = useHistory();
-
   const draftReport = data?.sketchClass?.draftReport;
-
   // Use the custom hook to manage report state
   const reportState = useReportState(
     draftReport?.id || undefined,
@@ -214,6 +207,31 @@ export default function SketchClassReportsAdmin({
   const selectedSketch = sketchesForDemonstration.find(
     (sketch) => sketch.id === selectedSketchId
   );
+  const [localCardEdits, setLocalCardEdits] =
+    useState<ReportCardConfiguration<any> | null>(null);
+
+  useEffect(() => {
+    if (reportState?.selectedForEditing && localCardEdits?.body) {
+      reportState?.setDraftReportCardBody(
+        reportState.selectedForEditing,
+        localCardEdits?.body
+      );
+    } else {
+      reportState?.clearDraftReportCardBody();
+    }
+  }, [
+    localCardEdits?.body,
+    reportState?.selectedForEditing,
+    reportState?.setDraftReportCardBody,
+    reportState?.clearDraftReportCardBody,
+  ]);
+
+  // Optimistic state for card ordering
+  const [optimisticCardOrder, setOptimisticCardOrder] = useState<{
+    [tabId: number]: number[];
+  }>({});
+
+  const history = useHistory();
 
   const handleCardReorder = async (cardIds: number[], reportTabId: number) => {
     try {
@@ -299,31 +317,6 @@ export default function SketchClassReportsAdmin({
               },
             ],
           },
-          {
-            type: "presenceBlock",
-            content: [
-              {
-                type: "paragraph",
-                content: [
-                  {
-                    type: "text",
-                    text: "✅ Found overlapping features in this sketch.",
-                  },
-                ],
-              },
-            ],
-          },
-          {
-            type: "absenceBlock",
-            content: [
-              {
-                type: "paragraph",
-                content: [
-                  { type: "text", text: "🚫 No overlapping features found." },
-                ],
-              },
-            ],
-          },
         ],
       };
     }
@@ -354,6 +347,7 @@ export default function SketchClassReportsAdmin({
 
   const handleCancelEditing = () => {
     reportState?.setSelectedForEditing(null);
+    reportState?.clearDraftReportCardBody();
     setLocalCardEdits(null);
   };
 
@@ -367,6 +361,7 @@ export default function SketchClassReportsAdmin({
   ) => {
     if (reportState?.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
+        console.log("set local card edits", updatedConfig);
         const baseState = (prevState ||
           selectedCardForEditing) as ReportCardConfiguration<any> | null;
         if (!baseState) return null;
@@ -429,18 +424,9 @@ export default function SketchClassReportsAdmin({
             selectedCardForEditing.alternateLanguageSettings,
           body: localCardEdits.body || selectedCardForEditing.body,
           cardType: localCardEdits.type || selectedCardForEditing.type,
-          collapsibleFooterEnabled:
-            localCardEdits.collapsibleFooterEnabled !== undefined
-              ? localCardEdits.collapsibleFooterEnabled
-              : selectedCardForEditing.collapsibleFooterEnabled !== undefined
-              ? selectedCardForEditing.collapsibleFooterEnabled
-              : false,
-          collapsibleFooterBody:
-            localCardEdits.collapsibleFooterBody ||
-            selectedCardForEditing.collapsibleFooterBody,
           displayMapLayerVisibilityControls,
         } as any, // Type assertion needed - the field exists in the GraphQL schema but TypeScript types may be out of sync
-        refetchQueries: [DraftReportDocument],
+        refetchQueries: [DraftReportDocument, ReportContextDocument],
         awaitRefetchQueries: true,
       });
 

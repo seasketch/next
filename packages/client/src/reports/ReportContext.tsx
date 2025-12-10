@@ -24,7 +24,7 @@ import {
   useReportOverlaySourcesSubscriptionSubscription,
   SpatialMetricState,
 } from "../generated/graphql";
-import { ReportConfiguration } from "./cards/cards";
+import { ProsemirrorBodyJSON, ReportConfiguration } from "./cards/cards";
 import { MetricSubjectFragment } from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useProjectId from "../useProjectId";
@@ -113,6 +113,8 @@ export interface ReportContextState {
     styleId: string,
     style: ReportMapStyle | null
   ) => void;
+  setDraftReportCardBody: (cardId: number, body: any) => void;
+  clearDraftReportCardBody: () => void;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -405,6 +407,35 @@ export function useReportState(
     [data?.report?.id, mapContext.manager, selectedSketchId]
   );
 
+  const [draftReportCardBody, _setDraftReportCardBody] =
+    useState<ProsemirrorBodyJSON | null>(null);
+
+  const setDraftReportCardBody = useCallback(
+    (cardId: number, body: ProsemirrorBodyJSON) => {
+      if (selectedForEditing !== cardId) {
+        throw new Error("Card not selected for editing");
+      }
+      console.log("setDraftReportCardBody", cardId, body);
+      _setDraftReportCardBody(body);
+    },
+    [selectedForEditing]
+  );
+
+  const clearDraftReportCardBody = useCallback(() => {
+    console.log("clearing draft report card body");
+    _setDraftReportCardBody(null);
+  }, [_setDraftReportCardBody]);
+
+  useEffect(() => {
+    // This functionality is relevant only for the admin interface, where an
+    // admin is authoring a report with new report card widgets.
+    //
+    // If a draft report card body is specified, determine whether the
+    // dependencies it specifies are different from those provided by the
+    // current ReportContext query. If so, this draft body should be provided
+    // to the ReportContext query so that these new metrics can be calculated.
+  }, [draftReportCardBody, data?.report?.dependencies]);
+
   if (!data?.sketch) {
     return undefined;
   } else {
@@ -416,6 +447,8 @@ export function useReportState(
       throw new Error("Report dependencies not found");
     }
     return {
+      setDraftReportCardBody,
+      clearDraftReportCardBody,
       selectedTabId,
       setSelectedTabId,
       selectedTab: selectedTab as ReportConfiguration["tabs"][0],
@@ -447,7 +480,7 @@ export function useReportState(
       ),
       overlaySources: data.report.dependencies.overlaySources,
       geographies: data.report.geographies || [],
-      report: data.report as ReportConfiguration,
+      report: data.report as unknown as ReportConfiguration,
       getDependencies,
       setCardMapStyle,
     };

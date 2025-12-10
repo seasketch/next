@@ -1,20 +1,13 @@
 import { Schema, NodeSpec, Node } from "prosemirror-model";
 import { formElements } from "../../editor/config";
-import { MetricResolver } from "./resolveMetric";
 
 /**
  * Creates a report card schema with metric node support.
  * The metric node is always added to the schema.
- * If a metricResolver is provided, the toDOM function will resolve and display actual metric values.
  * Otherwise, it displays the type and geography attributes.
  */
-export function createReportCardSchema(
-  isFooter: boolean,
-  _metricResolver?: MetricResolver
-): Schema {
-  const baseSchema = isFooter
-    ? formElements.reportCardFooter.schema
-    : formElements.reportCardBody.schema;
+export function createReportCardSchema(): Schema {
+  const baseSchema = formElements.reportCardBody.schema;
 
   // Define the metric node spec
   const metricSpec: NodeSpec = {

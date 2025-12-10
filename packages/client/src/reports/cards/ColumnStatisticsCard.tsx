@@ -83,7 +83,8 @@ export function ColumnStatisticsCard({
       }
 
       const layerId = layer.tableOfContentsItemId.toString();
-      const groupBy = layer.layerParameters?.groupBy;
+      // const groupBy = layer.layerParameters?.groupBy;
+      const groupBy = undefined;
 
       // Find column_values metrics for fragments (sketch overlaps) for this layer
       const fragmentMetrics = metrics.filter(
@@ -178,29 +179,32 @@ export function ColumnStatisticsCard({
 
     for (const layerId in statisticsByLayer) {
       const layerData = statisticsByLayer[layerId];
-      const meta = reportingLayers.find(
-        (l) => l.tableOfContentsItemId.toString() === layerId
-      )?.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-      const mapboxGlStyles = reportingLayers.find(
-        (l) => l.tableOfContentsItemId.toString() === layerId
-      )?.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[];
+      const meta = undefined;
+      // reportingLayers.find(
+      //   (l) => l.tableOfContentsItemId.toString() === layerId
+      // )?.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+      const mapboxGlStyles = undefined;
+
+      // reportingLayers.find(
+      //   (l) => l.tableOfContentsItemId.toString() === layerId
+      // )?.tableOfContentsItem?.dataLayer?.mapboxGlStyles as AnyLayer[];
 
       let colors: { [key: string]: string } = {};
-      if (layerData.groupBy && meta && !isRasterInfo(meta)) {
-        const geostats = meta.layers[0] as GeostatsLayer;
-        const attr = geostats.attributes.find(
-          (a) => a.attribute === layerData.groupBy
-        );
-        if (attr && mapboxGlStyles) {
-          colors = extractColorsForCategories(
-            Object.keys(attr.values),
-            attr,
-            mapboxGlStyles
-          );
-        }
-      } else if (!layerData.groupBy && mapboxGlStyles) {
-        colors["*"] = extractColorForLayers(mapboxGlStyles);
-      }
+      // if (layerData.groupBy && meta && !isRasterInfo(meta)) {
+      //   const geostats = meta.layers[0] as GeostatsLayer;
+      //   const attr = geostats.attributes.find(
+      //     (a) => a.attribute === layerData.groupBy
+      //   );
+      //   if (attr && mapboxGlStyles) {
+      //     colors = extractColorsForCategories(
+      //       Object.keys(attr.values),
+      //       attr,
+      //       mapboxGlStyles
+      //     );
+      //   }
+      // } else if (!layerData.groupBy && mapboxGlStyles) {
+      //   colors["*"] = extractColorForLayers(mapboxGlStyles);
+      // }
 
       const classKeys = Object.keys(layerData.statistics).sort((a, b) => {
         if (a === "*") return -1;

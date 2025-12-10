@@ -1,5 +1,9 @@
 -- Enter migration here
 drop function if exists add_report_card;
+alter table report_cards drop column if exists collapsible_footer_body;
+alter table report_cards drop column if exists collapsible_footer_enabled;
+
+
 
 CREATE OR REPLACE FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) RETURNS public.report_cards
     LANGUAGE plpgsql SECURITY DEFINER
@@ -130,7 +134,7 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
             where report_tab_id = old_tab_id
             order by position
           loop
-            insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at, is_draft, collapsible_footer_body, collapsible_footer_enabled)
+            insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at, is_draft)
             values (
               new_tab_id_copy,
               source_card.body, 
@@ -141,9 +145,7 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
               source_card.tint, 
               source_card.icon,
               source_card.updated_at,
-              false,
-              source_card.collapsible_footer_body,
-              source_card.collapsible_footer_enabled
+              false
             ) returning id into new_report_card_id;
 
             -- TODO: Add validation that layers referenced in body are published
@@ -657,3 +659,28 @@ drop function if exists report_cards_reporting_layers;
 -- comment on function report_cards_reporting_layers is '@simpleCollections only';
 
 grant execute on function update_feature_flags to seasketch_user;
+
+
+
+drop function if exists update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, collapsible_footer_enabled boolean, collapsible_footer_body jsonb, display_map_layer_visibility_controls boolean);
+
+CREATE OR REPLACE FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, display_map_layer_visibility_controls boolean) RETURNS public.report_cards
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      updated_card report_cards;
+      tab_id int;
+    begin
+      select report_tab_id from report_cards where id = card_id into tab_id;
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
+        update report_cards set component_settings = update_report_card.component_settings, body = update_report_card.body, alternate_language_settings = update_report_card.alternate_language_settings, tint = update_report_card.tint, icon = update_report_card.icon, type = update_report_card.card_type, display_map_layer_visibility_controls = update_report_card.display_map_layer_visibility_controls where id = update_report_card.card_id returning * into updated_card;
+        return updated_card;
+      else
+        raise exception 'You are not authorized to update this card';
+      end if;
+    end;
+  $$;
+
+
+
+grant execute on function update_report_card to seasketch_user;

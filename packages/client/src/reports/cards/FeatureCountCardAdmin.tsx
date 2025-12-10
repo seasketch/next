@@ -5,7 +5,6 @@ import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useCardLocalizedStringAdmin } from "./cards";
 import Switch from "../../components/Switch";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
 import SortSelect from "../components/SortSelect";
 
@@ -35,9 +34,10 @@ export default function FeatureCountCardAdmin({
     updateComponentSettings(newSettings);
   };
 
-  const hasGroupBy = config.reportingLayers.some(
-    (l) => l.layerParameters?.groupBy
-  );
+  const hasGroupBy = false;
+  // config.reportingLayers.some(
+  //   (l) => l.layerParameters?.groupBy
+  // );
 
   return (
     <div className="space-y-6">
@@ -73,8 +73,6 @@ export default function FeatureCountCardAdmin({
       )}
 
       <MapLayerVisibilityControlsAdmin config={config} onUpdate={onUpdate} />
-
-      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

@@ -385,8 +385,6 @@ fragment ReportCardDetails on ReportCard {
   tint
   icon
   body
-  collapsibleFooterEnabled
-  collapsibleFooterBody
   displayMapLayerVisibilityControls
 }
 
@@ -530,8 +528,6 @@ mutation UpdateReportCard(
   $tint: String
   $icon: String
   $cardType: String
-  $collapsibleFooterEnabled: Boolean
-  $collapsibleFooterBody: JSON
   $displayMapLayerVisibilityControls: Boolean
 ) {
   updateReportCard(
@@ -543,8 +539,6 @@ mutation UpdateReportCard(
       tint: $tint
       icon: $icon
       cardType: $cardType
-      collapsibleFooterEnabled: $collapsibleFooterEnabled
-      collapsibleFooterBody: $collapsibleFooterBody
       displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls
     }
   ) {

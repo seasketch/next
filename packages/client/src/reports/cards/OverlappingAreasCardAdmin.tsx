@@ -6,7 +6,6 @@ import { useCardLocalizedStringAdmin } from "./cards";
 import Switch from "../../components/Switch";
 import AreaUnitSelect from "../components/AreaUnitSelect";
 import LengthUnitSelect from "../components/LengthUnitSelect";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
 import SortSelect from "../components/SortSelect";
 import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
@@ -64,21 +63,22 @@ export default function OverlappingAreasCardAdmin({
 
   // Determine geometry type from the first reporting layer's geostats metadata
   const geometryType = useMemo(() => {
-    if (config.reportingLayers.length === 0) return null;
-    const firstLayer = config.reportingLayers[0];
-    const meta =
-      firstLayer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-    if (!meta || isRasterInfo(meta)) return null;
-    const geostats = meta.layers[0] as GeostatsLayer;
-    return geostats.geometry;
+    return null;
+    // if (config.reportingLayers.length === 0) return null;
+    // const firstLayer = config.reportingLayers[0];
+    // const meta =
+    //   firstLayer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    // if (!meta || isRasterInfo(meta)) return null;
+    // const geostats = meta.layers[0] as GeostatsLayer;
+    // return geostats.geometry;
   }, [config.reportingLayers]);
 
   // Determine if this is a polygon or line layer
   const isPolygonLayer = geometryType ? isPolygonGeometry(geometryType) : true; // Default to polygon/area for backwards compatibility
 
-  let multipeCategories =
-    config.reportingLayers.some((l) => l.layerParameters?.groupBy) ||
-    config.reportingLayers.length > 1;
+  let multipeCategories = false;
+  // config.reportingLayers.some((l) => l.layerParameters?.groupBy) ||
+  // config.reportingLayers.length > 1;
   return (
     <div className="space-y-6">
       <div>
@@ -151,8 +151,6 @@ export default function OverlappingAreasCardAdmin({
       />
 
       <MapLayerVisibilityControlsAdmin config={config} onUpdate={onUpdate} />
-
-      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

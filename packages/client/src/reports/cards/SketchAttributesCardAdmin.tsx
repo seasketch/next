@@ -5,7 +5,6 @@ import { useReportContext } from "../../reports/ReportContext";
 import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 
 interface SketchAttributesCardAdminProps {
   config: SketchAttributesCardConfiguration;
@@ -177,7 +176,6 @@ export default function SketchAttributesCardAdmin({
         </div>
       </div>
 
-      {/* <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} /> */}
     </div>
   );
 }

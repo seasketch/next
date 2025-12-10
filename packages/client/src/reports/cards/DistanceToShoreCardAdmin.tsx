@@ -1,7 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards";
 import { ReportCardConfigUpdateCallback } from "../registerCard";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 import { LengthDisplayUnit } from "../hooks/useUnits";
 
 type AdminConfig = ReportCardConfiguration<{
@@ -53,7 +52,6 @@ export default function DistanceToShoreCardAdmin({
         </select>
       </div>
 
-      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

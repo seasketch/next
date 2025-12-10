@@ -1,8 +1,7 @@
+/* eslint-disable no-console */
 import { useMemo } from "react";
 import {
   Metric,
-  MetricDependency,
-  MetricType,
   TotalAreaMetric,
   combineMetricsForFragments,
   subjectIsFragment,
@@ -14,27 +13,8 @@ import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency"
 import { SpatialMetricState } from "../../generated/graphql";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
+import Skeleton from "../../components/Skeleton";
 import { useTranslation } from "react-i18next";
-
-type InlineMetricSettings = {
-  /**
-   * Defaults to "total_area"
-   */
-  presentation?:
-    | "total_area"
-    | "percent_area"
-    | "shortest_distance"
-    | "nearest_feature"
-    | "mean"
-    | "max"
-    | "min"
-    | "distinct_values"
-    | "area"
-    | "feature_count";
-  style?: keyof Intl.NumberFormatOptionsStyleRegistry;
-  minimumFractionDigits?: number;
-  column?: string;
-};
 
 export default function InlineMetric() {
   const { node } = useReactNodeView();
@@ -61,13 +41,29 @@ export default function InlineMetric() {
     if (!dependencies.length) {
       throw new Error("No metric dependencies configured");
     }
-    console.log("all metrics", reportContext.metrics);
     // First, check to see if there are any errors
     const metrics = filterMetricsByDependencies(
       reportContext.metrics,
       dependencies,
       overlaySourceUrls
     );
+
+    // check that there is at least one metric to satisfy each dependency
+    for (const dependency of dependencies) {
+      if (
+        filterMetricsByDependencies(
+          reportContext.metrics,
+          [dependency],
+          overlaySourceUrls
+        ).length === 0
+      ) {
+        return {
+          ...blankResult,
+          loading: true,
+        };
+      }
+    }
+
     if (metrics.length === 0) {
       return {
         ...blankResult,
@@ -93,7 +89,6 @@ export default function InlineMetric() {
         loading: true,
       };
     }
-    console.log("metrics", node?.attrs?.componentSettings, metrics);
     const presentation =
       node?.attrs?.componentSettings?.presentation || "total_area";
     switch (presentation) {
@@ -101,7 +96,6 @@ export default function InlineMetric() {
         const combined = combineMetricsForFragments(
           metrics as Pick<Metric, "type" | "value">[]
         ) as TotalAreaMetric;
-        console.log(`Returning total area: ${combined.value.toString()}`);
         return {
           ...blankResult,
           formattedValue: formatters.area(combined.value),
@@ -116,7 +110,6 @@ export default function InlineMetric() {
         const geographyMetrics = metrics.filter((m) =>
           subjectIsGeography(m.subject)
         );
-        console.log("geographyMetrics", geographyMetrics);
         const geographyArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsGeography(m.subject)) as Pick<
             Metric,
@@ -129,7 +122,6 @@ export default function InlineMetric() {
           minimumFractionDigits: 0,
           maximumFractionDigits: 2,
         }).format(percentArea);
-        console.log(`Returning percent area: ${formattedPercentArea}`);
         return {
           ...blankResult,
           formattedValue: formattedPercentArea,
@@ -142,13 +134,39 @@ export default function InlineMetric() {
     node?.attrs?.metrics,
     node?.attrs?.componentSettings,
     reportContext.overlaySources,
+    formatters,
   ]);
 
-  return (
-    <span className="metric font-semibold rounded-sm inline-block">
-      {formattedValue}
-    </span>
-  );
+  if (loading) {
+    return (
+      <div className="inline-block rounded border border-blue-600/30 w-12 h-content relative -mb-[3px] bg-blue-500/20">
+        <Skeleton
+          strong
+          className="inline-block border rounded absolute w-full h-full z-10"
+        />
+        <span className="absolute top-0 left-0 w-full h-full flex items-center justify-center z-20">
+          <span className="metric-dots" aria-hidden="true">
+            <span className="metric-dot" />
+            <span className="metric-dot" />
+            <span className="metric-dot" />
+          </span>
+        </span>
+        <span className="metric-loading-placeholder-for-height">20</span>
+      </div>
+    );
+  } else if (error) {
+    return (
+      <span className="metric font-semibold rounded-sm inline-block">
+        {error}
+      </span>
+    );
+  } else {
+    return (
+      <span className="metric font-semibold rounded-sm inline-block">
+        {formattedValue}
+      </span>
+    );
+  }
 }
 
 export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
@@ -157,7 +175,6 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 }) => {
   const presentation =
     node.attrs.componentSettings.presentation || "total_area";
-  console.log("InlineMetricTooltipControls", presentation);
   const { t } = useTranslation("admin:reports");
   if (presentation === "total_area") {
     return (
