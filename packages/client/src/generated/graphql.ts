@@ -834,6 +834,7 @@ export type CardDependencyLists = {
   __typename?: 'CardDependencyLists';
   cardId: Scalars['Int'];
   metrics: Array<Scalars['BigInt']>;
+  nodeDependencies: Array<NodeDependency>;
   overlaySources: Array<Scalars['Int']>;
 };
 
@@ -9998,6 +9999,15 @@ export type MutationUploadStyleArgs = {
 export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+};
+
+export type NodeDependency = {
+  __typename?: 'NodeDependency';
+  geographies?: Maybe<Array<Scalars['Int']>>;
+  parameters?: Maybe<Scalars['JSON']>;
+  subjectType: Scalars['String'];
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+  type: Scalars['String'];
 };
 
 export type OfflineSourceDetails = {
