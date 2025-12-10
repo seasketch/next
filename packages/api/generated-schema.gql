@@ -963,6 +963,7 @@ type CancelBackgroundJobPayload {
 type CardDependencyLists {
   cardId: Int!
   metrics: [BigInt!]!
+  nodeDependencies: [NodeDependency!]!
   overlaySources: [Int!]!
 }
 
@@ -11075,6 +11076,14 @@ interface Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+}
+
+type NodeDependency {
+  geographies: [Int!]
+  parameters: JSON
+  subjectType: String!
+  tableOfContentsItemId: Int
+  type: String!
 }
 
 type OfflineSourceDetails {

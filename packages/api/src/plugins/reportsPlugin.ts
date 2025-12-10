@@ -160,7 +160,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         cardId: Int!
         metrics: [BigInt!]!
         overlaySources: [Int!]!
-        nodeDependencies: 
+        nodeDependencies: [NodeDependency!]!
       }
 
       type ReportOverlayDependencies {
