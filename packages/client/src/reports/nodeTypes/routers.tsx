@@ -10,6 +10,7 @@ import {
 import { EditorView } from "prosemirror-view";
 import { MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
+import { Trans } from "react-i18next";
 
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
@@ -23,12 +24,18 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
 };
 
 export const ReportWidgetNodeViewRouter: FC = (props: any) => {
-  switch (props.node.type.name) {
-    case "metric":
+  switch (props.node.attrs.type) {
+    case "InlineMetric":
       return <InlineMetric {...props} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
-      return <span>Unknown node type: {props.node.type.name}</span>;
+      return (
+        <span className="bg-red-800 text-white px-1 py-0.5">
+          <Trans ns="admin:reports">
+            Unknown node type: {props.node.attrs.type}
+          </Trans>
+        </span>
+      );
   }
 };
 
@@ -57,6 +64,7 @@ export function buildReportCommandGroups({
           description: "The total area of the sketch",
           run: (state, dispatch, view) => {
             return insertMetric(view, state.selection.ranges[0], {
+              type: "InlineMetric",
               metrics: [
                 {
                   type: "total_area",
@@ -83,6 +91,7 @@ export function buildReportCommandGroups({
         description: "Total area as a fraction of the clipping geography.",
         run: (state, dispatch, view) => {
           return insertMetric(view, state.selection.ranges[0], {
+            type: "InlineMetric",
             componentSettings: {
               presentation: "percent_area",
             },
@@ -97,6 +106,32 @@ export function buildReportCommandGroups({
                 geographies: [clippingGeography],
               },
             ],
+          });
+        },
+      });
+    }
+    if (geographies && geographies.length > 1) {
+      sizeGroup.items.push({
+        id: "geography-size-table",
+        label: "Geography Size Table",
+        description: "A table of the sizes of the sketch in each geography.",
+        run: (state, dispatch, view) => {
+          return insertMetric(view, state.selection.ranges[0], {
+            metrics: [
+              // {
+              //   type: "total_area",
+              //   subjectType: "geographies",
+              //   geographies: geographies.map((g) => g.id),
+              // },
+              {
+                type: "total_area",
+                subjectType: "fragments",
+              },
+            ],
+            componentSettings: {
+              presentation: "total_area",
+            },
+            type: "GeographySizeTable",
           });
         },
       });
@@ -142,4 +177,5 @@ export function insertMetric(
 export interface MetricProperties {
   metrics: MetricDependency[];
   componentSettings: Record<string, any>;
+  type: string;
 }
