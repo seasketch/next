@@ -189,6 +189,21 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         dependencies(sketchId: Int, additionalDependencies: AdditionalCardDependenciesList): ReportOverlayDependencies! @requires(columns: ["id", "project_id", "sketch_class_id"])
       }
 
+      input DraftDependenciesInput {
+        nodeDependencies: [NodeDependency!]!
+        sketchId: Int
+      }
+
+      type DraftDependencies {
+        ready: Boolean!
+        overlaySources: [ReportOverlaySource!]!
+        metrics: [CompatibleSpatialMetric!]!
+      }
+
+      extend type Query {
+        draftReportDependencies(input: DraftDependenciesInput): DraftDependencies!
+      }
+
     `,
     resolvers: {
       Report: {
@@ -335,6 +350,71 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             sourceProcessingJobId: jobKey,
             outputId: result.rows[0].output_id,
             sourceUrl: result.rows[0].source_url,
+          };
+        },
+      },
+      Query: {
+        async draftReportDependencies(root, args, context, resolveInfo) {
+          const { pgClient } = context;
+          const pool = pgClient;
+          const sketchId = args.input.sketchId;
+          // First, make sure the sketch exists
+          const { rows: sketchRows } = await pgClient.query(
+            `select sketches.id, sketch_classes.project_id as project_id, session_is_admin(sketch_classes.project_id) as is_admin from sketches inner join sketch_classes on sketches.sketch_class_id = sketch_classes.id where sketches.id = $1`,
+            [sketchId]
+          );
+          if (sketchRows.length === 0) {
+            throw new Error("Sketch not found");
+          }
+          if (!sketchRows[0].is_admin) {
+            throw new Error(
+              "You are not authorized to access draft metrics for this sketch."
+            );
+          }
+          const sketch = sketchRows[0];
+          const projectId = sketch.project_id;
+
+          // Retrieve all fragments related to the sketch (if any)
+          const fragments: string[] = [];
+          if (sketchId) {
+            const { rows: sketchFragmentsRows } = await pool.query(
+              `select get_fragment_hashes_for_sketch($1)`,
+              [sketchId]
+            );
+            if (
+              sketchFragmentsRows.length > 0 &&
+              sketchFragmentsRows[0].get_fragment_hashes_for_sketch &&
+              Array.isArray(
+                sketchFragmentsRows[0].get_fragment_hashes_for_sketch
+              )
+            ) {
+              fragments.push(
+                ...sketchFragmentsRows[0].get_fragment_hashes_for_sketch
+              );
+            }
+          }
+
+          // Retrieve all geographies related to the project
+          const { rows: geogs } = await pool.query(
+            `select name, id from project_geography where project_id = $1`,
+            [projectId]
+          );
+          if (geogs.length === 0) {
+            throw new Error("No geographies found");
+          }
+
+          const { tableOfContentsItemIds, metrics, hashes } =
+            await createMetricsForDependencies(
+              pgClient,
+              args.input.nodeDependencies,
+              projectId,
+              fragments,
+              geogs
+            );
+          return {
+            overlaySources: [],
+            metrics,
+            ready: !metrics.find((m) => m.state !== "complete"),
           };
         },
       },

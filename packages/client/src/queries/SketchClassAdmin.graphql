@@ -705,3 +705,15 @@ query LegacyReportContext($sketchId: Int!) {
     }
   }
 }
+
+query DraftReportDependencies($input: DraftDependenciesInput) {
+  draftReportDependencies(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+    metrics {
+      ...CompatibleSpatialMetricDetails
+    }
+  }
+}

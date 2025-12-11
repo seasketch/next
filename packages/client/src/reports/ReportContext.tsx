@@ -23,6 +23,7 @@ import {
   SketchGeometryType,
   useReportOverlaySourcesSubscriptionSubscription,
   SpatialMetricState,
+  useDraftReportDependenciesQuery,
 } from "../generated/graphql";
 import { ProsemirrorBodyJSON, ReportConfiguration } from "./cards/cards";
 import {
@@ -167,11 +168,32 @@ export function useReportState(
         additionalDependencies && additionalDependencies.length > 0
           ? {
               cardId: selectedForEditing!,
-              nodeDependencies: additionalDependencies,
+              nodeDependencies: additionalDependencies.map((d) => ({
+                ...d,
+                hash: hashMetricDependency(d),
+              })),
             }
           : undefined,
     },
     skip: !reportId || !selectedSketchId,
+    onError,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const draftDependenciesQuery = useDraftReportDependenciesQuery({
+    variables: {
+      input: {
+        nodeDependencies: additionalDependencies.map((d) => ({
+          ...d,
+          hash: hashMetricDependency(d),
+        })),
+        sketchId: selectedSketchId!,
+      },
+    },
+    skip:
+      !additionalDependencies ||
+      additionalDependencies.length === 0 ||
+      !selectedSketchId,
     onError,
     fetchPolicy: "cache-and-network",
   });
