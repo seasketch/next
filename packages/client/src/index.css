@@ -8128,6 +8128,10 @@ select{
   gap:1px
 }
 
+.gap-0\.5{
+  gap:0.125rem
+}
+
 .gap-x-4{
   column-gap:1rem
 }
@@ -13102,6 +13106,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:opacity-50:disabled{
   opacity:0.5
+}
+
+.disabled\:opacity-30:disabled{
+  opacity:0.3
 }
 
 .group:hover .group-hover\:block{

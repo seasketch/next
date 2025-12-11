@@ -134,16 +134,16 @@ export type ReportCardProps<T extends ReportCardConfiguration<any>> = {
 // Import card implementations
 
 export function registerCards() {
-  import("./SketchAttributesCard");
-  import("./SizeCard");
-  import("./OverlappingAreasCard");
+  // import("./SketchAttributesCard");
+  // import("./SizeCard");
+  // import("./OverlappingAreasCard");
   import("./TextBlockCard");
-  import("./FeatureCountCard");
-  import("./PresenceCard");
-  import("./FeatureListCard");
-  import("./ColumnStatisticsCard");
-  import("./RasterBandStatisticsCard");
-  import("./DistanceToShoreCard");
+  // import("./FeatureCountCard");
+  // import("./PresenceCard");
+  // import("./FeatureListCard");
+  // import("./ColumnStatisticsCard");
+  // import("./RasterBandStatisticsCard");
+  // import("./DistanceToShoreCard");
 }
 
 /**

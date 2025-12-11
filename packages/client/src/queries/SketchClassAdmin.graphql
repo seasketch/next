@@ -649,11 +649,7 @@ fragment OverlaySourceDetails on ReportOverlaySource {
   }
 }
 
-query ReportContext(
-  $reportId: Int!
-  $sketchId: Int!
-  $additionalDependencies: AdditionalCardDependenciesList
-) {
+query ReportContext($reportId: Int!, $sketchId: Int!) {
   sketch(id: $sketchId) {
     ...ReportContextSketchDetails
     sketchClass {
@@ -674,10 +670,7 @@ query ReportContext(
       name
       translatedProps
     }
-    dependencies(
-      sketchId: $sketchId
-      additionalDependencies: $additionalDependencies
-    ) {
+    dependencies(sketchId: $sketchId) {
       overlaySources {
         ...OverlaySourceDetails
       }
@@ -715,5 +708,6 @@ query DraftReportDependencies($input: DraftDependenciesInput) {
     metrics {
       ...CompatibleSpatialMetricDetails
     }
+    sketchId
   }
 }

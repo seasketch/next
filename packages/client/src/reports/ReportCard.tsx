@@ -45,17 +45,18 @@ import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 export type ReportCardIcon = "info" | "warning" | "error";
 
 export type ReportCardComponentProps = {
-  tint?: string; // Any Tailwind text color class
+  // tint?: string; // Any Tailwind text color class
   backgroundTint?: "blue" | "yellow" | "red"; // Simple color enum
-  icon?: ReportCardIcon;
+  // icon?: ReportCardIcon;
   children?: React.ReactNode;
   dragHandleProps?: any; // Props from react-beautiful-dnd Draggable
-  cardId?: number; // ID of the card for edit functionality
+  // cardId?: number; // ID of the card for edit functionality
   onUpdate?: ReportCardConfigUpdateCallback; // Single update callback
   className?: string;
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
   skeleton?: React.ReactNode;
+  editorFooter?: React.ReactNode;
 };
 
 // Icon mapping for named icons (no color classes, will inherit from parent)
@@ -66,21 +67,24 @@ const iconMap = {
 };
 
 export default function ReportCard({
-  tint = "text-black",
   backgroundTint,
-  icon,
+  // icon,
   children,
   dragHandleProps,
-  cardId,
+  // cardId,
   onUpdate,
   config,
   className,
   metrics,
   sources,
   skeleton,
+  editorFooter,
 }: ReportCardComponentProps & {
   config: ReportCardConfiguration<any>;
 }) {
+  let tint = config.tint || "text-black";
+  const icon = config.icon;
+  const cardId = config.id;
   const { t } = useTranslation("admin:sketching");
   const {
     adminMode,
@@ -248,10 +252,12 @@ export default function ReportCard({
     <div
       className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
         adminMode && selectedForEditing === cardId ? "editing" : ""
-      } transition-opacity opacity-100 relative rounded w-full shadow-sm ${getBackgroundClasses()} group ${
-        isSelectedForEditing ? "ring-2 ring-opacity-80 ring-blue-500" : ""
+      } transition-all opacity-100 relative rounded w-full ${getBackgroundClasses()} group ${
+        isSelectedForEditing
+          ? "shadow-lg ring-1 ring-opacity-5 ring-black"
+          : "shadow-sm"
       } ${
-        isDisabled ? "opacity-60 pointer-events-none select-none" : ""
+        isDisabled ? "opacity-40 pointer-events-none select-none" : ""
       } ${className}`}
     >
       <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
@@ -330,22 +336,30 @@ export default function ReportCard({
         </div>
       </div>
       <div className={`px-4 pb-0 text-sm ${loading ? "loading" : ""}`}>
-        {adminMode && selectedForEditing === cardId ? (
-          <ReportCardBodyEditor
-            body={localizedBody}
-            onUpdate={handleBodyUpdate}
-            className={`${tint} ${icon ? "hasIcon" : ""}`}
-            metrics={metrics}
-            sources={sources}
-          />
-        ) : (
-          <ReportCardBodyViewer
-            body={localizedBody}
-            className={`ReportCard ReportCardBody ProseMirrorBody ${
-              icon ? "hasIcon" : ""
-            } ${tint ? tint : ""}`}
-          />
-        )}
+        <ErrorBoundary
+          fallback={
+            <ErrorBoundaryFallback
+              title={t("Failed to render report card body")}
+            />
+          }
+        >
+          {adminMode && selectedForEditing === cardId ? (
+            <ReportCardBodyEditor
+              body={localizedBody}
+              onUpdate={handleBodyUpdate}
+              className={`${tint} ${icon ? "hasIcon" : ""}`}
+              metrics={metrics}
+              sources={sources}
+            />
+          ) : (
+            <ReportCardBodyViewer
+              body={localizedBody}
+              className={`ReportCard ReportCardBody ProseMirrorBody ${
+                icon ? "hasIcon" : ""
+              } ${tint ? tint : ""}`}
+            />
+          )}
+        </ErrorBoundary>
       </div>
 
       <div className="p-4 text-sm pt-0 pb-2">
@@ -389,7 +403,11 @@ export default function ReportCard({
           </div>
         )}
       </div>
-
+      {editorFooter && (
+        <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner">
+          {editorFooter}
+        </div>
+      )}
       {recalcOpen && (
         <Modal
           open
@@ -522,76 +540,5 @@ export default function ReportCard({
         </Modal>
       )}
     </div>
-  );
-}
-
-export function ReportCardFactory({
-  config,
-  dragHandleProps,
-  onUpdate,
-  metrics,
-  sources,
-  loading,
-  errors,
-}: {
-  config: ReportCardConfiguration<any>;
-  dragHandleProps?: any;
-  onUpdate?: ReportCardConfigUpdateCallback;
-  metrics: CompatibleSpatialMetricDetailsFragment[];
-  sources: OverlaySourceDetailsFragment[];
-  loading: boolean;
-  errors: string[];
-}) {
-  const { t } = useTranslation("admin:sketching");
-  const cardType = config.type;
-  const CardComponent = getCardComponent(cardType);
-
-  if (!CardComponent) {
-    return (
-      <ReportCard
-        dragHandleProps={dragHandleProps}
-        cardId={config.id}
-        onUpdate={onUpdate}
-        config={config}
-        metrics={[]}
-        sources={[]}
-        backgroundTint="red"
-        tint="text-red-500"
-        icon="error"
-      >
-        <div>
-          <p>{t("Unknown Card Type: {{cardType}}", { cardType })}</p>
-        </div>
-      </ReportCard>
-    );
-  }
-  return (
-    <ReportCard
-      dragHandleProps={dragHandleProps}
-      cardId={config.id}
-      onUpdate={onUpdate}
-      config={config}
-      metrics={metrics}
-      sources={sources}
-      tint={config.tint}
-      icon={config.icon}
-    >
-      <ErrorBoundary
-        fallback={
-          <ErrorBoundaryFallback title={t("Failed to render report card")} />
-        }
-      >
-        <CardComponent
-          config={config}
-          dragHandleProps={dragHandleProps}
-          cardId={config.id}
-          onUpdate={onUpdate}
-          metrics={metrics}
-          sources={sources}
-          loading={loading}
-          errors={errors}
-        />
-      </ErrorBoundary>
-    </ReportCard>
   );
 }

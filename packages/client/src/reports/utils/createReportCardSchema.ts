@@ -1,5 +1,6 @@
 import { Schema, NodeSpec, Node } from "prosemirror-model";
 import { formElements } from "../../editor/config";
+import { addListNodes } from "prosemirror-schema-list";
 
 /**
  * Creates a report card schema with metric node support.
@@ -60,7 +61,6 @@ export function createReportCardSchema(): Schema {
     ],
     toDOM: (node: Node) => {
       const { metrics, type, componentSettings } = node.attrs;
-
       return [
         "span",
         {
@@ -75,13 +75,16 @@ export function createReportCardSchema(): Schema {
   };
 
   // Get the base nodes and add/update metric
-  // Check if metric already exists in the schema
-  const nodes = baseSchema.spec.nodes;
-  const metricExists = baseSchema.nodes.metric !== undefined;
+  const nodesWithLists = addListNodes(
+    baseSchema.spec.nodes,
+    "paragraph block*",
+    "block"
+  );
+  const metricExists = nodesWithLists.get("metric") !== undefined;
 
   const updatedNodes = metricExists
-    ? nodes.update("metric", metricSpec)
-    : nodes.append({ metric: metricSpec });
+    ? nodesWithLists.update("metric", metricSpec)
+    : nodesWithLists.append({ metric: metricSpec });
 
   // Create new schema with updated nodes
   return new Schema({

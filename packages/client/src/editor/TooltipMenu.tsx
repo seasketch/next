@@ -335,7 +335,18 @@ const Commands: Command[] = [
     id: "h1",
     icon: "H1",
     isDisabled: (schema, state) => {
-      return !setBlockType(schema.nodes.heading, { level: 1 })(state);
+      const parseDOM = schema.spec.nodes.get("heading")?.parseDOM;
+      let disable = true;
+      if (parseDOM && Array.isArray(parseDOM)) {
+        parseDOM.forEach((p) => {
+          if (p.tag === "h1") {
+            disable = false;
+          }
+        });
+      }
+      return (
+        !setBlockType(schema.nodes.heading, { level: 1 })(state) || disable
+      );
     },
     toggle: (schema, state, dispatch) => {
       setBlockType(schema.nodes.heading, { level: 1 })(state, dispatch);

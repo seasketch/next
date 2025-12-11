@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useReportContext } from "./ReportContext";
-import { ReportCardFactory } from "./ReportCard";
+import ReportCard from "./ReportCard";
 import { Draggable, Droppable } from "react-beautiful-dnd";
 import { ReportCardConfiguration } from "./cards/cards";
 
@@ -18,6 +18,7 @@ interface SortableReportBodyProps {
         ) => ReportCardConfiguration<any>)
   ) => void;
   optimisticCardOrder?: number[];
+  editorFooter?: React.ReactNode;
 }
 
 export function SortableReportBody({
@@ -26,6 +27,7 @@ export function SortableReportBody({
   localCardEdits,
   onCardUpdate,
   optimisticCardOrder,
+  editorFooter,
 }: SortableReportBodyProps) {
   const { t } = useTranslation("admin:sketching");
   const context = useReportContext();
@@ -119,7 +121,7 @@ export function SortableReportBody({
                         ...provided.draggableProps.style,
                       }}
                     >
-                      <ReportCardFactory
+                      <ReportCard
                         config={cardWithLocalEdits}
                         dragHandleProps={
                           selectedForEditing ? {} : provided.dragHandleProps
@@ -131,8 +133,13 @@ export function SortableReportBody({
                         }}
                         metrics={metrics}
                         sources={overlaySources}
-                        loading={loading}
-                        errors={errors}
+                        // loading={loading}
+                        // errors={errors}
+                        editorFooter={
+                          card.id === selectedForEditing
+                            ? editorFooter
+                            : undefined
+                        }
                       />
                     </div>
                   )}

@@ -7,20 +7,23 @@ import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../../editor/TooltipMenu";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import SlashCommandPalette from "../../editor/slashCommands/SlashCommandPalette";
-import { useSlashCommandPalette } from "../../editor/slashCommands/useSlashCommandPalette";
-import { defaultSlashCommandItems } from "../../editor/slashCommands/plugin";
-import { createReportCardEditorConfig } from "../../reports/utils/createReportCardEditorConfig";
+import { exampleSetup } from "prosemirror-example-setup";
+import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlugin";
+import { createReportCardSchema } from "../utils/createReportCardSchema";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
 } from "../ReactNodeView/PortalProvider";
 import { createReactNodeView } from "../ReactNodeView";
-import { ReportWidgetNodeViewRouter } from "../nodeTypes/routers";
+import {
+  ReportWidgetNodeViewRouter,
+  buildReportCommandGroups,
+} from "../nodeTypes/routers";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
 } from "../../generated/graphql";
-import { useReportContext } from "../ReportContext";
+import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
+import { ReportContext } from "../ReportContext";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -55,14 +58,19 @@ function ReportCardBodyEditorInner({
   sources,
 }: ReportCardBodyEditorProps) {
   const { schema, plugins } = useMemo(() => {
-    return createReportCardEditorConfig();
+    const schema = createReportCardSchema();
+    const plugins = [
+      ...exampleSetup({ schema, menuBar: false }),
+      ReportTitlePlaceholderPlugin(),
+    ];
+    return { schema, plugins };
   }, []);
 
   const langContext = useContext(FormLanguageContext);
   const currentLangCode = langContext?.lang?.code || "EN";
 
-  const { setDraftReportCardBody, clearDraftReportCardBody } =
-    useReportContext();
+  const reportContext = useContext(ReportContext);
+
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<EditorState>();
@@ -74,21 +82,6 @@ function ReportCardBodyEditorInner({
   const { createPortal, removePortal, setSelection } =
     useReactNodeViewPortals();
 
-  const {
-    slashState,
-    slashItems,
-    selectedIndex: selectedSlashIndex,
-    anchor: paletteCoords,
-    handleSelect: handleSlashSelect,
-    handleHighlight: handleSlashHighlight,
-  } = useSlashCommandPalette({
-    schema,
-    editorState: state,
-    viewRef,
-    rootRef: root,
-    items: defaultSlashCommandItems,
-  });
-
   const save = useDebouncedFn(
     (doc: any) => {
       onUpdate(doc.toJSON());
@@ -99,10 +92,33 @@ function ReportCardBodyEditorInner({
   );
   saveRef.current = save;
 
+  const contextualGroups = useMemo(
+    () =>
+      buildReportCommandGroups({
+        sources,
+        geographies: reportContext?.geographies,
+        clippingGeography:
+          reportContext?.sketchClass?.clippingGeographies?.[0]?.id,
+        sketchClassGeometryType: reportContext?.sketchClass?.geometryType,
+      }),
+    [
+      sources,
+      reportContext?.geographies,
+      reportContext?.sketchClass?.clippingGeographies,
+      reportContext?.sketchClass?.geometryType,
+    ]
+  );
+
+  const { palette: commandPalette } = useSlashCommandPalette({
+    viewRef,
+    state,
+    schema,
+    groups: contextualGroups,
+  });
+
   useEffect(() => {
     const initialBody = initialBodyRef.current;
     const doc = initialBody ? Node.fromJSON(schema, initialBody) : undefined;
-    console.log("create editor view");
     const view = new EditorView(root.current!, {
       state: EditorState.create({
         schema,
@@ -183,16 +199,8 @@ function ReportCardBodyEditorInner({
   return (
     <div className={`relative ${className}`}>
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
+      {commandPalette}
       <div className={`ProseMirrorBody ReportCardBodyEditor `} ref={root}></div>
-      <SlashCommandPalette
-        anchor={paletteCoords}
-        isVisible={Boolean(slashState?.active)}
-        items={slashItems}
-        query={slashState?.query ?? ""}
-        selectedIndex={selectedSlashIndex}
-        onSelect={handleSlashSelect}
-        onHighlight={handleSlashHighlight}
-      />
     </div>
   );
 }

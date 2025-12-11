@@ -101,11 +101,6 @@ type AddGroupToAclPayload {
   tableOfContentsItem: TableOfContentsItem
 }
 
-input AdditionalCardDependenciesList {
-  cardId: Int!
-  nodeDependencies: [NodeDependency!]!
-}
-
 """All input for the `addReportCard` mutation."""
 input AddReportCardInput {
   body: JSON
@@ -5809,15 +5804,16 @@ type DownloadOption {
   url: String
 }
 
-type DraftDependencies {
-  metrics: [CompatibleSpatialMetric!]!
-  overlaySources: [ReportOverlaySource!]!
-  ready: Boolean!
-}
-
 input DraftDependenciesInput {
   nodeDependencies: [NodeDependency!]!
   sketchId: Int
+}
+
+type DraftReportDependenciesResults {
+  metrics: [CompatibleSpatialMetric!]!
+  overlaySources: [ReportOverlaySource!]!
+  ready: Boolean!
+  sketchId: Int!
 }
 
 """All input for the `duplicateTableOfContentsItem` mutation."""
@@ -13397,7 +13393,7 @@ type Query implements Node {
     """The method to use when ordering `DataUploadTask`."""
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection
-  draftReportDependencies(input: DraftDependenciesInput): DraftDependencies!
+  draftReportDependencies(input: DraftDependenciesInput): DraftReportDependenciesResults!
   eezlayer: TableOfContentsItem
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
@@ -14671,7 +14667,7 @@ type ReorderReportTabsPayload {
 
 type Report implements Node {
   createdAt: Datetime!
-  dependencies(additionalDependencies: AdditionalCardDependenciesList, sketchId: Int): ReportOverlayDependencies!
+  dependencies(sketchId: Int): ReportOverlayDependencies!
 
   """Reads and enables pagination through a set of `Geography`."""
   geographies(

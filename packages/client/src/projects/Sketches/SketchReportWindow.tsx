@@ -10,9 +10,9 @@ import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportContext, useReportState } from "../../reports/ReportContext";
 import { ReportTabs } from "../../reports/ReportTabs";
 import { ReportBody } from "../../reports/ReportBody";
-import { registerCards } from "../../reports/cards/cards";
+// import { registerCards } from "../../reports/cards/cards";
 
-registerCards();
+// registerCards();
 
 export default function SketchReportWindow({
   sketchId,

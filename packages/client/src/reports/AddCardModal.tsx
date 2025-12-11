@@ -17,6 +17,8 @@ import {
   TableOfContentsItem,
   useAvailableReportLayersQuery,
 } from "../generated/graphql";
+import { registerCards } from "./cards/cards";
+registerCards();
 
 type LayerSelection = {
   layer: any; // ReportingLayerDetailsFragment;

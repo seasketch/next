@@ -175,18 +175,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         cardDependencyLists: [CardDependencyLists!]!
       }
 
-      # Used to add additional dependencies when an admin is authoring a report
-      # with an updated prosemirror document. Clients are responsible for 
-      # determining if the card's currently available dependencies satisfy all
-      # node requirements. If not, they can request dependencies again with this
-      # explicit draft list of extra dependencies.
-      input AdditionalCardDependenciesList {
-        cardId: Int!
-        nodeDependencies: [NodeDependency!]!
-      }
-
       extend type Report {
-        dependencies(sketchId: Int, additionalDependencies: AdditionalCardDependenciesList): ReportOverlayDependencies! @requires(columns: ["id", "project_id", "sketch_class_id"])
+        dependencies(sketchId: Int): ReportOverlayDependencies! @requires(columns: ["id", "project_id", "sketch_class_id"])
       }
 
       input DraftDependenciesInput {
@@ -194,14 +184,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         sketchId: Int
       }
 
-      type DraftDependencies {
+      type DraftReportDependenciesResults {
         ready: Boolean!
+        sketchId: Int!
         overlaySources: [ReportOverlaySource!]!
         metrics: [CompatibleSpatialMetric!]!
       }
 
       extend type Query {
-        draftReportDependencies(input: DraftDependenciesInput): DraftDependencies!
+        draftReportDependencies(input: DraftDependenciesInput): DraftReportDependenciesResults!
       }
 
     `,
@@ -214,8 +205,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             report.id,
             pgClient,
             report.projectId,
-            args.sketchId,
-            args.additionalDependencies
+            args.sketchId
           );
           return deps;
         },
@@ -415,6 +405,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             overlaySources: [],
             metrics,
             ready: !metrics.find((m) => m.state !== "complete"),
+            sketchId,
           };
         },
       },
@@ -479,11 +470,7 @@ async function getOrCreateReportDependencies(
   reportId: number,
   pool: Pool,
   projectId: number,
-  sketchId?: number,
-  additionalDependencies?: {
-    cardId: number;
-    nodeDependencies: MetricDependency[];
-  }
+  sketchId?: number
 ) {
   // Retrieve all overlay sources related to the report
   const overlaySources = await getOverlaySources(reportId, pool);
@@ -885,39 +872,6 @@ async function getOrCreateReportDependencies(
     // }
 
     results.cardDependencyLists.push(cardDependencyList);
-  }
-
-  // deal with additional dependencies
-  if (
-    additionalDependencies &&
-    additionalDependencies.cardId &&
-    additionalDependencies.nodeDependencies.length > 0
-  ) {
-    const { tableOfContentsItemIds, metrics, hashes } =
-      await createMetricsForDependencies(
-        pool,
-        additionalDependencies.nodeDependencies,
-        projectId,
-        fragments,
-        geogs
-      );
-    for (const metric of metrics) {
-      if (!results.metrics.find((m) => m.id === metric.id)) {
-        results.metrics.push(metric);
-      }
-      const cardDependencyList = results.cardDependencyLists.find(
-        (c) => c.cardId === additionalDependencies.cardId
-      );
-      if (cardDependencyList) {
-        if (!cardDependencyList.metrics.includes(metric.id)) {
-          cardDependencyList.metrics.push(metric.id);
-        }
-      }
-    }
-
-    // for (const tableOfContentsItemId of tableOfContentsItemIds) {
-    //   results.overlaySources.push(tableOfContentsItemId);
-    // }
   }
 
   // add all metrics to the results

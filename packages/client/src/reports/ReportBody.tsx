@@ -1,6 +1,6 @@
 import { Trans } from "react-i18next";
 import { useReportContext } from "./ReportContext";
-import { ReportCardFactory } from "./ReportCard";
+import ReportCard from "./ReportCard";
 
 export function ReportBody() {
   const { report, selectedTabId, getDependencies } = useReportContext();
@@ -33,13 +33,13 @@ export function ReportBody() {
               const { metrics, loading, errors, overlaySources } =
                 getDependencies(card.id);
               return (
-                <ReportCardFactory
+                <ReportCard
                   key={card.id}
                   config={card}
                   metrics={metrics}
                   sources={overlaySources}
-                  loading={loading}
-                  errors={errors}
+                  // loading={loading}
+                  // errors={errors}
                 />
               );
             })}

@@ -236,11 +236,6 @@ export type AddValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
-export type AdditionalCardDependenciesList = {
-  cardId: Scalars['Int'];
-  nodeDependencies: Array<NodeDependency>;
-};
-
 /** All input for the `alternateLanguageLabelsForFormElement` mutation. */
 export type AlternateLanguageLabelsForFormElementInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -5016,16 +5011,17 @@ export type DownloadOption = {
   url?: Maybe<Scalars['String']>;
 };
 
-export type DraftDependencies = {
-  __typename?: 'DraftDependencies';
-  metrics: Array<CompatibleSpatialMetric>;
-  overlaySources: Array<ReportOverlaySource>;
-  ready: Scalars['Boolean'];
-};
-
 export type DraftDependenciesInput = {
   nodeDependencies: Array<NodeDependency>;
   sketchId?: Maybe<Scalars['Int']>;
+};
+
+export type DraftReportDependenciesResults = {
+  __typename?: 'DraftReportDependenciesResults';
+  metrics: Array<CompatibleSpatialMetric>;
+  overlaySources: Array<ReportOverlaySource>;
+  ready: Scalars['Boolean'];
+  sketchId: Scalars['Int'];
 };
 
 /** All input for the `duplicateTableOfContentsItem` mutation. */
@@ -11919,7 +11915,7 @@ export type Query = Node & {
   dataUploadTaskByNodeId?: Maybe<DataUploadTask>;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
-  draftReportDependencies: DraftDependencies;
+  draftReportDependencies: DraftReportDependenciesResults;
   eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
@@ -13579,7 +13575,6 @@ export type Report = Node & {
 
 
 export type ReportDependenciesArgs = {
-  additionalDependencies?: Maybe<AdditionalCardDependenciesList>;
   sketchId?: Maybe<Scalars['Int']>;
 };
 
@@ -22955,7 +22950,6 @@ export type OverlaySourceDetailsFragment = (
 export type ReportContextQueryVariables = Exact<{
   reportId: Scalars['Int'];
   sketchId: Scalars['Int'];
-  additionalDependencies?: Maybe<AdditionalCardDependenciesList>;
 }>;
 
 
@@ -23020,8 +23014,8 @@ export type DraftReportDependenciesQueryVariables = Exact<{
 export type DraftReportDependenciesQuery = (
   { __typename?: 'Query' }
   & { draftReportDependencies: (
-    { __typename?: 'DraftDependencies' }
-    & Pick<DraftDependencies, 'ready'>
+    { __typename?: 'DraftReportDependenciesResults' }
+    & Pick<DraftReportDependenciesResults, 'ready' | 'sketchId'>
     & { overlaySources: Array<(
       { __typename?: 'ReportOverlaySource' }
       & OverlaySourceDetailsFragment
@@ -29831,7 +29825,7 @@ export const RecalculateSpatialMetricsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const ReportContextDocument = /*#__PURE__*/ gql`
-    query ReportContext($reportId: Int!, $sketchId: Int!, $additionalDependencies: AdditionalCardDependenciesList) {
+    query ReportContext($reportId: Int!, $sketchId: Int!) {
   sketch(id: $sketchId) {
     ...ReportContextSketchDetails
     sketchClass {
@@ -29852,10 +29846,7 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
       name
       translatedProps
     }
-    dependencies(
-      sketchId: $sketchId
-      additionalDependencies: $additionalDependencies
-    ) {
+    dependencies(sketchId: $sketchId) {
       overlaySources {
         ...OverlaySourceDetails
       }
@@ -29900,6 +29891,7 @@ export const DraftReportDependenciesDocument = /*#__PURE__*/ gql`
     metrics {
       ...CompatibleSpatialMetricDetails
     }
+    sketchId
   }
 }
     ${OverlaySourceDetailsFragmentDoc}

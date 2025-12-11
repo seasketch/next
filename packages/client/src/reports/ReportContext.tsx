@@ -164,16 +164,6 @@ export function useReportState(
     variables: {
       reportId: reportId!,
       sketchId: selectedSketchId!,
-      additionalDependencies:
-        additionalDependencies && additionalDependencies.length > 0
-          ? {
-              cardId: selectedForEditing!,
-              nodeDependencies: additionalDependencies.map((d) => ({
-                ...d,
-                hash: hashMetricDependency(d),
-              })),
-            }
-          : undefined,
     },
     skip: !reportId || !selectedSketchId,
     onError,
@@ -197,6 +187,38 @@ export function useReportState(
     onError,
     fetchPolicy: "cache-and-network",
   });
+
+  const metrics = useMemo(() => {
+    let metrics: CompatibleSpatialMetricDetailsFragment[] = [];
+    if (data?.report?.dependencies?.metrics) {
+      metrics.push(...data.report.dependencies.metrics);
+    }
+    if (draftDependenciesQuery.data?.draftReportDependencies?.metrics) {
+      metrics.push(
+        ...draftDependenciesQuery.data.draftReportDependencies.metrics
+      );
+    }
+    if (
+      !draftDependenciesQuery.data?.draftReportDependencies?.metrics &&
+      draftDependenciesQuery.previousData?.draftReportDependencies?.metrics &&
+      draftDependenciesQuery.previousData.draftReportDependencies.sketchId ===
+        variables?.sketchId
+    ) {
+      metrics.push(
+        ...draftDependenciesQuery.previousData.draftReportDependencies.metrics
+      );
+    }
+    return [
+      ...(data?.report?.dependencies?.metrics || []),
+      ...(draftDependenciesQuery.data?.draftReportDependencies?.metrics || []),
+    ] as CompatibleSpatialMetricDetailsFragment[];
+  }, [
+    data?.report?.dependencies?.metrics,
+    draftDependenciesQuery.data?.draftReportDependencies,
+    variables?.sketchId,
+    draftDependenciesQuery.previousData?.draftReportDependencies?.sketchId,
+    draftDependenciesQuery.previousData?.draftReportDependencies?.metrics,
+  ]);
 
   const [selectedTabId, setSelectedTabId] = useState<number>(
     initialSelectedTabId || data?.report?.tabs?.[0]?.id || 0
@@ -274,13 +296,13 @@ export function useReportState(
 
   const metricsInProgress = useMemo(() => {
     return (
-      (data?.report?.dependencies?.metrics || []).find(
+      (metrics || []).find(
         (m) =>
           m.state === SpatialMetricState.Queued ||
           m.state === SpatialMetricState.Processing
       ) !== undefined
     );
-  }, [data?.report?.dependencies?.metrics]);
+  }, [metrics]);
 
   useEffect(() => {
     if (metricsInProgress) {
@@ -302,7 +324,7 @@ export function useReportState(
     } = {};
     if (
       data?.report?.dependencies?.cardDependencyLists &&
-      data?.report?.dependencies?.metrics &&
+      metrics.length > 0 &&
       data?.report?.dependencies?.overlaySources
     ) {
       for (const cardDependencyList of data.report.dependencies
@@ -313,7 +335,7 @@ export function useReportState(
               overlay.tableOfContentsItemId
             )
         );
-        const metrics = data.report.dependencies.metrics.filter((metric) =>
+        const cardMetrics = metrics.filter((metric) =>
           cardDependencyList.metrics.includes(metric.id)
         );
         let loading = false;
@@ -328,7 +350,7 @@ export function useReportState(
             );
           }
         }
-        for (const metric of metrics) {
+        for (const metric of cardMetrics) {
           if (metric.state === SpatialMetricState.Error) {
             errors.push(metric.errorMessage || "Unknown error");
           }
@@ -340,7 +362,7 @@ export function useReportState(
           }
         }
         dependencies[cardDependencyList.cardId] = {
-          metrics,
+          metrics: cardMetrics,
           overlaySources: overlays,
           loading,
           errors,
@@ -350,7 +372,7 @@ export function useReportState(
     return dependencies;
   }, [
     data?.report?.dependencies?.cardDependencyLists,
-    data?.report?.dependencies?.metrics,
+    metrics,
     data?.report?.dependencies?.overlaySources,
   ]);
 
@@ -455,21 +477,18 @@ export function useReportState(
       if (selectedForEditing !== cardId) {
         throw new Error("Card not selected for editing");
       }
-      console.log("setDraftReportCardBody", cardId, body);
       _setDraftReportCardBody(body);
     },
     [selectedForEditing]
   );
 
   const clearDraftReportCardBody = useCallback(() => {
-    console.log("clearing draft report card body");
     _setDraftReportCardBody(null);
   }, [_setDraftReportCardBody]);
 
   useEffect(() => {
     if (draftReportCardBody) {
       const deps = extractMetricDependenciesFromReportBody(draftReportCardBody);
-      console.log("widget dependencies", deps);
       const currentMetricsForCard = getDependencies(
         selectedForEditing!
       ).metrics;
@@ -489,17 +508,16 @@ export function useReportState(
           });
         }
       }
-      console.log("missing dependencies", missingDependencies);
       if (missingDependencies.length > 0) {
         setAdditionalDependencies(missingDependencies);
-      } else if (
-        hashes.some((hash) =>
-          (variables?.additionalDependencies?.nodeDependencies || [])
-            .map((n) => n.hash)
-            .includes(hash)
-        )
-      ) {
-        // do nothing. the additional dependencies are already present.
+        // } else if (
+        //   hashes.some((hash) =>
+        //     (variables?.additionalDependencies?.nodeDependencies || [])
+        //       .map((n) => n.hash)
+        //       .includes(hash)
+        //   )
+        // ) {
+        //   // do nothing. the additional dependencies are already present.
       } else {
         setAdditionalDependencies([]);
       }
@@ -558,8 +576,7 @@ export function useReportState(
       >[],
       relatedFragments: (data.sketch.relatedFragments ||
         []) as MetricSubjectFragment[],
-      metrics: (data.report.dependencies.metrics ||
-        []) as CompatibleSpatialMetricDetailsFragment[],
+      metrics: metrics,
       userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
       recalculate,
       recalculateState: {

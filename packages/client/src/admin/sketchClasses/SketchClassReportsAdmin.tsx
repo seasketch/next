@@ -1,5 +1,5 @@
-import { useState, useEffect, Suspense, useMemo } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { useState, useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import {
   DraftReportDocument,
@@ -24,7 +24,6 @@ import {
   MenuBarItemClasses,
 } from "../../components/Menubar";
 import {
-  registerCards,
   ReportCardType,
   ReportCardConfiguration,
 } from "../../reports/cards/cards";
@@ -43,7 +42,6 @@ import Button from "../../components/Button";
 import DropdownButton from "../../components/DropdownButton";
 import useDialog from "../../components/useDialog";
 import useProjectId from "../../useProjectId";
-import Spinner from "../../components/Spinner";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import EditorLanguageSelector from "../../surveys/EditorLanguageSelector";
 import languages from "../../lang/supported";
@@ -51,7 +49,7 @@ import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
 
-registerCards();
+// registerCards();
 
 export default function SketchClassReportsAdmin({
   sketchClass,
@@ -361,7 +359,6 @@ export default function SketchClassReportsAdmin({
   ) => {
     if (reportState?.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
-        console.log("set local card edits", updatedConfig);
         const baseState = (prevState ||
           selectedCardForEditing) as ReportCardConfiguration<any> | null;
         if (!baseState) return null;
@@ -632,7 +629,7 @@ export default function SketchClassReportsAdmin({
           {/* Main */}
           <div className="flex-1 flex relative max-h-full overflow-hidden">
             {/* left sidebar */}
-            <div
+            {/* <div
               className={`absolute left-0 top-0 bg-white flex-none border-r shadow-lg border-black/15 min-h-full flex flex-col w-72 transition-transform ${
                 reportState.selectedForEditing
                   ? "translate-x-0"
@@ -689,7 +686,7 @@ export default function SketchClassReportsAdmin({
                   </div>
                 </>
               )}
-            </div>
+            </div> */}
 
             {/* main content */}
             {sketchesForDemonstration.length === 0 && !loading ? (
@@ -818,11 +815,7 @@ export default function SketchClassReportsAdmin({
                   {draftReport && selectedSketch && (
                     <>
                       <div
-                        className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col ${
-                          reportState.selectedForEditing
-                            ? "3xl:translate-x-0 translate-x-36"
-                            : ""
-                        }`}
+                        className={`w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col`}
                       >
                         {/* report header */}
                         <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
@@ -922,6 +915,30 @@ export default function SketchClassReportsAdmin({
                                   onCardUpdate={handleCardUpdate}
                                   optimisticCardOrder={
                                     optimisticCardOrder[tab.id]
+                                  }
+                                  editorFooter={
+                                    reportState.selectedForEditing &&
+                                    isActive ? (
+                                      <div className="flex items-center space-x-2 justify-end">
+                                        <Button
+                                          small
+                                          label={t("Cancel")}
+                                          onClick={handleCancelEditing}
+                                        />
+                                        <Button
+                                          small
+                                          label={t("Save")}
+                                          onClick={handleSaveCard}
+                                          disabled={
+                                            updateReportCardState.loading
+                                          }
+                                          loading={
+                                            updateReportCardState.loading
+                                          }
+                                          primary
+                                        />
+                                      </div>
+                                    ) : undefined
                                   }
                                 />
                               </div>

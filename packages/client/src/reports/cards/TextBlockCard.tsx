@@ -25,7 +25,7 @@ export function TextBlockCard({
   const { presentation } = config.componentSettings;
   const { alternateLanguageSettings } = config;
 
-  const { tint, backgroundTint, icon } = getTintAndIcon(presentation);
+  const { tint, backgroundTint } = getTintAndIcon(presentation);
 
   // TODO: bring back presentation settings
   return <div></div>;
@@ -115,32 +115,27 @@ function getTintAndIcon(
 ): {
   tint: string;
   backgroundTint: ReportCardComponentProps["backgroundTint"];
-  icon: ReportCardComponentProps["icon"];
 } {
   switch (presentation) {
     case "info":
       return {
         tint: "text-blue-900",
         backgroundTint: "blue",
-        icon: "info",
       };
     case "warning":
       return {
         tint: "text-yellow-900",
         backgroundTint: "yellow",
-        icon: "warning",
       };
     case "error":
       return {
         tint: "text-red-900",
         backgroundTint: "red",
-        icon: "error",
       };
     default:
       return {
         tint: "text-gray-900",
         backgroundTint: undefined,
-        icon: undefined,
       };
   }
 }

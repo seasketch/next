@@ -19,10 +19,6 @@ import {
 import { ApolloClient } from "@apollo/client";
 import { CreateFileUploadForAboutPageDocument } from "../generated/graphql";
 import axios from "axios";
-import {
-  createSlashCommandPlugin,
-  defaultSlashCommandItems,
-} from "./slashCommands/plugin";
 
 let spec = baseSchema.spec;
 
@@ -89,21 +85,26 @@ const reportCardBodySchema: Schema = new Schema({
           return ["h1", { "data-report-title": "yes" }, 0];
         },
       },
-      h2: {
-        content: "inline*",
-        group: "block",
-        defining: true,
-        parseDOM: [{ tag: "h2" }],
-        // @ts-ignore
-        toDOM(node: Node) {
-          return ["h2", 0];
-        },
+    })
+    .update("heading", {
+      attrs: { level: { default: 2 } },
+      content: "inline*",
+      group: "block",
+      defining: true,
+      isReporting: true,
+      parseDOM: [
+        { tag: "h2", attrs: { level: 2 } },
+        { tag: "h3", attrs: { level: 3 } },
+      ],
+      toDOM: (node: Node) => {
+        const level = node.attrs.level === 3 ? 3 : 2;
+        return ["h" + level, 0];
       },
     })
     .update("doc", {
       content: "reportTitle block*",
-    })
-    .remove("heading"),
+    }),
+  // .remove("heading"),
   // @ts-ignore
   marks: baseMarks,
 });
@@ -438,7 +439,6 @@ export const formElements = {
   reportCardBody: {
     schema: reportCardBodySchema,
     plugins: [
-      createSlashCommandPlugin(defaultSlashCommandItems),
       ...exampleSetup({ schema: reportCardBodySchema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
     ],
@@ -446,7 +446,6 @@ export const formElements = {
   reportCardFooter: {
     schema: reportCardFooterSchema,
     plugins: [
-      createSlashCommandPlugin(defaultSlashCommandItems),
       ...exampleSetup({ schema: reportCardFooterSchema, menuBar: false }),
     ],
   },
