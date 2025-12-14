@@ -1,12 +1,28 @@
 import { Trans, useTranslation } from "react-i18next";
 import type { ReactNode } from "react";
+import { InfoCircledIcon } from "@radix-ui/react-icons";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 export type INaturalistVisualizationType = "points" | "grid" | "heatmap";
 
-function LegendRow({ swatch, label }: { swatch: ReactNode; label: ReactNode }) {
+function LegendRow({
+  swatch,
+  label,
+  align = "start",
+}: {
+  swatch: ReactNode;
+  label: ReactNode;
+  align?: "start" | "center";
+}) {
   return (
-    <div className="flex items-start space-x-2">
-      <div className="flex-none mt-0.5">{swatch}</div>
+    <div
+      className={`flex ${
+        align === "center" ? "items-center" : "items-start"
+      } space-x-2`}
+    >
+      <div className={`flex-none ${align === "center" ? "-mt-0.5" : "mt-0.5"}`}>
+        {swatch}
+      </div>
       <span className="flex-1 text-xs sm:text-sm text-gray-800 leading-snug break-words">
         {label}
       </span>
@@ -76,6 +92,8 @@ export default function INaturalistLegendContent({
     );
   }
 
+  const inAdminInterface = window.location.pathname.includes("/admin/data");
+
   if (type === "heatmap") {
     return (
       <div className="space-y-3">
@@ -108,11 +126,49 @@ export default function INaturalistLegendContent({
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <div className="text-[0.7rem] uppercase tracking-wide font-semibold text-gray-500">
-          <Trans ns="admin:data">Geoprivacy</Trans>
-        </div>
+        <Tooltip.Provider delayDuration={200}>
+          <div className="flex items-center space-x-1 text-[0.7rem] uppercase tracking-wide font-semibold text-gray-500">
+            <Trans ns="admin:data">Geoprivacy</Trans>
+            <Tooltip.Root>
+              <Tooltip.Trigger asChild>
+                <button
+                  type="button"
+                  aria-label="What is geoprivacy?"
+                  className="rounded text-gray-400 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ml-1"
+                >
+                  <InfoCircledIcon className="h-3.5 w-3.5" />
+                </button>
+              </Tooltip.Trigger>
+              <Tooltip.Portal>
+                <Tooltip.Content
+                  side={"top"}
+                  align="center"
+                  sideOffset={0}
+                  className="z-50 max-w-xs rounded border border-gray-200 bg-white px-3 py-2 text-xs font-normal leading-snug text-gray-800 shadow-lg"
+                >
+                  <p>
+                    <Trans ns="homepage">
+                      Controls whether observation coordinates are open or
+                      obscured to protect sensitive locations.
+                    </Trans>
+                  </p>
+                  <a
+                    href="https://help.inaturalist.org/en/support/solutions/articles/151000169938-what-is-geoprivacy-what-does-it-mean-for-an-observation-to-be-obscured-"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-1 inline-block text-blue-600 hover:underline"
+                  >
+                    <Trans ns="homepage">Learn more</Trans>
+                  </a>
+                  <Tooltip.Arrow className="fill-white" />
+                </Tooltip.Content>
+              </Tooltip.Portal>
+            </Tooltip.Root>
+          </div>
+        </Tooltip.Provider>
         <div className="space-y-1">
           <LegendRow
+            align="center"
             swatch={
               <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-500">
                 <span className="w-2 h-2 rounded-full bg-gray-500" />
@@ -121,6 +177,7 @@ export default function INaturalistLegendContent({
             label={t("Open")}
           />
           <LegendRow
+            align="center"
             swatch={
               <span className="inline-flex items-center justify-center w-4 h-4 rounded-full border border-gray-400 bg-gray-300">
                 <span className="w-2 h-2 rounded-full bg-gray-100" />
