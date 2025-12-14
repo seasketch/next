@@ -527,7 +527,8 @@ export function StringConfig({
       <p className="text-xs py-2 text-gray-500">
         <Trans ns="sketching">
           Select one or more options to limit cells to those with matching
-          values. If no selection is made, this filter will not be applied.
+          values. If no selection is made, this filter will not be applied. Use
+          Control+click (⌘+click on Mac) to select multiple options.
         </Trans>
       </p>
       <select
