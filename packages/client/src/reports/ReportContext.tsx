@@ -123,6 +123,7 @@ export interface ReportContextState {
   clearDraftReportCardBody: () => void;
   additionalDependencies: MetricDependency[];
   setAdditionalDependencies: (dependencies: MetricDependency[]) => void;
+  draftDependencyMetrics: CompatibleSpatialMetricDetailsFragment[];
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -489,35 +490,46 @@ export function useReportState(
   useEffect(() => {
     if (draftReportCardBody) {
       const deps = extractMetricDependenciesFromReportBody(draftReportCardBody);
-      const currentMetricsForCard = getDependencies(
-        selectedForEditing!
-      ).metrics;
+      const metrics = data?.report?.dependencies?.metrics || [];
+      const hashesInMainReportRequest = new Set(
+        metrics.map(
+          (metric: CompatibleSpatialMetricDetailsFragment) =>
+            metric.dependencyHash
+        )
+      );
+      const hashesInDraft = new Set(deps.map((d) => hashMetricDependency(d)));
+
       const missingDependencies: (MetricDependency & { hash: string })[] = [];
-      const hashes: string[] = [];
-      for (const dep of deps) {
-        const hash = hashMetricDependency(dep);
-        hashes.push(hash);
-        if (
-          !currentMetricsForCard.find(
-            (metric) => metric.dependencyHash === hash
-          )
-        ) {
+      const missingHashes: string[] = [];
+      for (const hash of hashesInDraft) {
+        if (!hashesInMainReportRequest.has(hash)) {
+          const dep = deps.find((d) => hashMetricDependency(d) === hash);
+          if (!dep) {
+            throw new Error(`Dependency not found in draft: ${hash}`);
+          }
+          missingHashes.push(hash);
           missingDependencies.push({
             ...dep,
             hash,
           });
         }
       }
+
       if (missingDependencies.length > 0) {
-        setAdditionalDependencies(missingDependencies);
-        // } else if (
-        //   hashes.some((hash) =>
-        //     (variables?.additionalDependencies?.nodeDependencies || [])
-        //       .map((n) => n.hash)
-        //       .includes(hash)
-        //   )
-        // ) {
-        //   // do nothing. the additional dependencies are already present.
+        setAdditionalDependencies((prev) => {
+          // first, check if the dependencies are identical. If so, don't update
+          const currentHashes = prev
+            .map((d) => hashMetricDependency(d))
+            .join(",");
+          const newHashes = missingDependencies
+            .map((d) => hashMetricDependency(d))
+            .join(",");
+          if (currentHashes === newHashes) {
+            return prev;
+          } else {
+            return missingDependencies;
+          }
+        });
       } else {
         setAdditionalDependencies([]);
       }
@@ -532,16 +544,6 @@ export function useReportState(
     selectedForEditing,
     variables,
   ]);
-
-  useEffect(() => {
-    // This functionality is relevant only for the admin interface, where an
-    // admin is authoring a report with new report card widgets.
-    //
-    // If a draft report card body is specified, determine whether the
-    // dependencies it specifies are different from those provided by the
-    // current ReportContext query. If so, this draft body should be provided
-    // to the ReportContext query so that these new metrics can be calculated.
-  }, [draftReportCardBody, data?.report?.dependencies]);
 
   if (!data?.sketch) {
     return undefined;
@@ -591,6 +593,8 @@ export function useReportState(
       report: data.report as unknown as ReportConfiguration,
       getDependencies,
       setCardMapStyle,
+      draftDependencyMetrics:
+        draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
     };
   }
 }

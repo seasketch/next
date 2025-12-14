@@ -1158,6 +1158,40 @@ div[attachments="forumAttachments"] {
   /* Make the entire node selectable */
 }
 
+.ReportCard.loadingSkeleton [contenteditable="false"] {
+  p{
+    border-radius:0.25rem
+  }
+  p{
+    background-color:rgb(0 0 0 / 0.1)
+  }
+  p{
+    color:transparent
+  }
+  p {
+    background: linear-gradient(
+      -100deg,
+      transparent,
+      rgba(0, 0, 0, 0.03),
+      rgba(20, 0, 180, 0.055)
+    );
+    background-size: 400% 400%;
+    animation: pulse 1.3s ease-in-out infinite;
+    @keyframes pulse {
+      0% {
+        background-position: 0% 0%;
+      }
+
+      100% {
+        background-position: -155% 0%;
+      }
+    }
+  }
+  div{
+    opacity:0
+  }
+}
+
 input[type="number"].form-element-number-input {
   -webkit-appearance: textfield;
           appearance: textfield;
@@ -6105,6 +6139,10 @@ select{
   z-index:auto
 }
 
+.z-\[9999\]{
+  z-index:9999
+}
+
 .order-1{
   order:1
 }
@@ -7403,10 +7441,6 @@ select{
   min-width:200px
 }
 
-.min-w-\[240px\]{
-  min-width:240px
-}
-
 .min-w-\[260px\]{
   min-width:260px
 }
@@ -8084,6 +8118,10 @@ select{
   gap:0px
 }
 
+.gap-0\.5{
+  gap:0.125rem
+}
+
 .gap-1{
   gap:0.25rem
 }
@@ -8126,10 +8164,6 @@ select{
 
 .gap-px{
   gap:1px
-}
-
-.gap-0\.5{
-  gap:0.125rem
 }
 
 .gap-x-4{
@@ -12131,10 +12165,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(148 163 184 / var(--tw-text-opacity, 1))
 }
 
-.first\:border-t-0:first-child{
-  border-top-width:0px
-}
-
 .last\:border-none:last-child{
   border-style:none
 }
@@ -13106,10 +13136,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:opacity-50:disabled{
   opacity:0.5
-}
-
-.disabled\:opacity-30:disabled{
-  opacity:0.3
 }
 
 .group:hover .group-hover\:block{
@@ -14590,11 +14616,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 }
 
 @media (min-width: 1780px){
-  .\33xl\:translate-x-0{
-    --tw-translate-x:0px;
-    transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-  }
-
   .\33xl\:p-20{
     padding:5rem
   }

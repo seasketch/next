@@ -17,7 +17,7 @@ import { createReactNodeView } from "../ReactNodeView";
 import {
   ReportWidgetNodeViewRouter,
   buildReportCommandGroups,
-} from "../nodeTypes/routers";
+} from "../widgets/widgets";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,

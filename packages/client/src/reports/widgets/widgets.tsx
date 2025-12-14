@@ -1,16 +1,22 @@
-import InlineMetric, { InlineMetricTooltipControls } from "./InlineMetric";
+import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC } from "react";
+import { FC, useMemo } from "react";
 import { CommandPaletteGroup } from "../commandPalette/types";
 import {
+  CompatibleSpatialMetricDetailsFragment,
   GeographyDetailsFragment,
   OverlaySourceDetailsFragment,
   SketchGeometryType,
+  SpatialMetricState,
 } from "../../generated/graphql";
 import { EditorView } from "prosemirror-view";
-import { MetricDependency } from "overlay-engine";
+import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans } from "react-i18next";
+import { GeographySizeTable } from "./GeographySizeTable";
+import { Node } from "prosemirror-model";
+import { useReportContext } from "../ReportContext";
+import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
@@ -24,9 +30,80 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
 };
 
 export const ReportWidgetNodeViewRouter: FC = (props: any) => {
-  switch (props.node.attrs.type) {
+  const {
+    geographies,
+    metrics: contextMetrics,
+    overlaySources,
+  } = useReportContext();
+  const node = props.node as Node;
+  const { type, componentSettings, metrics: dependencies } = node.attrs || {};
+  if (!type) {
+    throw new Error("ReportWidget node type not specified");
+  }
+  if (!componentSettings) {
+    throw new Error("ReportWidget component settings not specified");
+  }
+
+  const { metrics, sources, loading, errors } = useMemo(() => {
+    let loading = false;
+    let errors: string[] = [];
+    const metrics = filterMetricsByDependencies(
+      contextMetrics,
+      dependencies,
+      overlaySources.map((s) => s.sourceUrl!)
+    ) as CompatibleSpatialMetricDetailsFragment[];
+    for (const metric of metrics) {
+      if (
+        metric.state === SpatialMetricState.DependencyNotReady ||
+        metric.state === SpatialMetricState.Processing ||
+        metric.state === SpatialMetricState.Queued
+      ) {
+        loading = true;
+      }
+      if (metric.state === SpatialMetricState.Error) {
+        errors.push(metric.errorMessage || "Unknown error");
+      }
+    }
+    const sources = overlaySources.filter((s) =>
+      dependencies.some(
+        (d: MetricDependency) =>
+          d.tableOfContentsItemId === s.tableOfContentsItemId
+      )
+    );
+    if (!loading) {
+      // check to make sure each dependency has at least one related metric. If
+      // not, that means the client is dynamically fetching metrics from a draft
+      // report body and hasn't received those metrics (finished or not) yet.
+      for (const dependency of dependencies) {
+        const hash = hashMetricDependency(dependency);
+        const relatedMetric = contextMetrics.find(
+          (m) => m.dependencyHash === hash
+        );
+        if (!relatedMetric) {
+          loading = true;
+          break;
+        }
+      }
+    }
+    // loading = true;
+    return { metrics, sources, loading, errors };
+  }, [contextMetrics, dependencies, overlaySources]);
+
+  const widgetProps = {
+    dependencies,
+    componentSettings,
+    metrics,
+    sources: overlaySources,
+    loading,
+    errors,
+    geographies,
+  };
+
+  switch (node.attrs.type) {
     case "InlineMetric":
-      return <InlineMetric {...props} />;
+      return <InlineMetric {...widgetProps} />;
+    case "GeographySizeTable":
+      return <GeographySizeTable {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -103,7 +180,6 @@ export function buildReportCommandGroups({
               {
                 type: "total_area",
                 subjectType: "geographies",
-                geographies: [clippingGeography],
               },
             ],
           });
@@ -118,11 +194,10 @@ export function buildReportCommandGroups({
         run: (state, dispatch, view) => {
           return insertMetric(view, state.selection.ranges[0], {
             metrics: [
-              // {
-              //   type: "total_area",
-              //   subjectType: "geographies",
-              //   geographies: geographies.map((g) => g.id),
-              // },
+              {
+                type: "total_area",
+                subjectType: "geographies",
+              },
               {
                 type: "total_area",
                 subjectType: "fragments",
@@ -179,3 +254,17 @@ export interface MetricProperties {
   componentSettings: Record<string, any>;
   type: string;
 }
+
+export interface ReportWidgetProps<T extends Record<string, any>> {
+  dependencies: MetricDependency[];
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: string[];
+  geographies: Pick<GeographyDetailsFragment, "id" | "name">[];
+  componentSettings: T;
+}
+
+export type ReportWidget<T extends Record<string, any>> = FC<
+  ReportWidgetProps<T>
+>;

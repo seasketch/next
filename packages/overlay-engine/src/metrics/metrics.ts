@@ -494,7 +494,6 @@ export type MetricDependency = {
   type: MetricType;
   subjectType: MetricDependencySubjectType;
   tableOfContentsItemId?: number;
-  geographies?: number[];
   parameters?: MetricDependencyParameters;
 };
 

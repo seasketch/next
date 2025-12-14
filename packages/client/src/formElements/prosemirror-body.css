@@ -298,3 +298,30 @@ div[attachments="forumAttachments"] {
   @apply inline-block;
   user-select: all; /* Make the entire node selectable */
 }
+
+.ReportCard.loadingSkeleton [contenteditable="false"] {
+  p {
+    @apply text-transparent bg-black/10 rounded;
+    background: linear-gradient(
+      -100deg,
+      transparent,
+      rgba(0, 0, 0, 0.03),
+      rgba(20, 0, 180, 0.055)
+    );
+    background-size: 400% 400%;
+    animation: pulse 1.3s ease-in-out infinite;
+
+    @keyframes pulse {
+      0% {
+        background-position: 0% 0%;
+      }
+      100% {
+        background-position: -155% 0%;
+      }
+    }
+  }
+
+  div {
+    @apply opacity-0;
+  }
+}

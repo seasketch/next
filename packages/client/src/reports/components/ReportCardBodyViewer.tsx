@@ -9,7 +9,7 @@ import ReactNodeViewPortalsProvider, {
 } from "../ReactNodeView/PortalProvider";
 
 import "prosemirror-view/style/prosemirror.css";
-import { ReportWidgetNodeViewRouter } from "../nodeTypes/routers";
+import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
 
 type ReportCardBodyViewerProps = {
   body: any;

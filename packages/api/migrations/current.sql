@@ -684,3 +684,111 @@ CREATE OR REPLACE FUNCTION public.update_report_card(card_id integer, component_
 
 
 grant execute on function update_report_card to seasketch_user;
+
+delete from spatial_metrics;
+
+alter table spatial_metrics add column if not exists dependency_hash text not null;
+
+CREATE OR REPLACE FUNCTION public.spatial_metric_to_json(sm public.spatial_metrics) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+  select jsonb_build_object(
+    'id', sm.id,
+    'type', sm.type,
+    'updatedAt', sm.updated_at,
+    'createdAt', sm.created_at,
+    'value', sm.value,
+    'state', sm.state,
+    'sourceUrl', sm.overlay_source_url,
+    'sourceType', extension_to_source_type(sm.overlay_source_url),
+    'parameters', coalesce(sm.parameters, '{}'::jsonb),
+    'jobKey', sm.job_key,
+    'subject', 
+    case when sm.subject_geography_id is not null then
+      jsonb_build_object('id', sm.subject_geography_id, '__typename', 'GeographySubject')
+    else
+      jsonb_build_object(
+        'hash', sm.subject_fragment_id, 
+        'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = sm.subject_fragment_id), 
+        'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = sm.subject_fragment_id), 
+        '__typename', 'FragmentSubject'
+      )
+    end,
+    'errorMessage', sm.error_message,
+    'progress', sm.progress_percentage,
+    'sourceProcessingJobDependency', sm.source_processing_job_dependency,
+    'eta', sm.eta,
+    'startedAt', sm.started_at,
+    'durationSeconds', extract(epoch from sm.duration)::float,
+    'dependencyHash', sm.dependency_hash
+  );
+$$;
+
+DROP function if exists get_or_create_spatial_metric;
+
+drop index if exists spatial_metrics_unique_metric;
+
+CREATE UNIQUE INDEX spatial_metrics_unique_metric ON public.spatial_metrics USING btree (COALESCE(overlay_source_url, ''::text), COALESCE(source_processing_job_dependency, ''::text), COALESCE(subject_fragment_id, ''::text), COALESCE(subject_geography_id, '-999999'::integer), type, parameters, dependency_hash);
+
+
+CREATE OR REPLACE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer, p_dependency_hash text) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    metric_id bigint;
+  begin
+    -- Validation
+    if p_subject_fragment_id is not null and p_subject_geography_id is not null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_subject_fragment_id is null and p_subject_geography_id is null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_type is null then
+      raise exception 'type parameter is required';
+    end if;
+    if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
+      raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
+    end if;
+        
+    -- Try to get existing metric first (matching the unique index logic)
+    select id into metric_id
+    from spatial_metrics
+    where coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+      and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
+      and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
+      and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
+      and type = p_type
+      and parameters = p_parameters and dependency_hash = p_dependency_hash;
+    
+    -- If not found, insert new metric
+    if metric_id is null then
+      insert into spatial_metrics (
+        subject_fragment_id,
+        subject_geography_id,
+        type,
+        overlay_source_url,
+        source_processing_job_dependency,
+        project_id,
+        parameters,
+        dependency_hash
+      ) values (
+        p_subject_fragment_id,
+        p_subject_geography_id,
+        p_type,
+        p_overlay_source_url,
+        p_source_processing_job_dependency,
+        p_project_id,
+        p_parameters,
+        p_dependency_hash
+      )
+      returning id into metric_id;
+    end if;
+    
+    return get_spatial_metric(metric_id);
+  end;
+$$;
+
+comment on function get_or_create_spatial_metric is '@omit';
+
+grant execute on function get_or_create_spatial_metric to anon;

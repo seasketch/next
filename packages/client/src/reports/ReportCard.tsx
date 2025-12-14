@@ -1,9 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards/cards";
-import {
-  getCardComponent,
-  ReportCardConfigUpdateCallback,
-} from "./registerCard";
+import { ReportCardConfigUpdateCallback } from "./registerCard";
 import { useReportContext } from "./ReportContext";
 import {
   InfoCircledIcon,
@@ -93,6 +90,7 @@ export default function ReportCard({
     deleteCard,
     recalculate,
     recalculateState,
+    draftDependencyMetrics,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
@@ -106,11 +104,18 @@ export default function ReportCard({
   const [retryFailedMetrics, retryState] =
     useRetryFailedSpatialMetricsMutation();
 
+  const hasRelatedDraftMetrics = useMemo(() => {
+    return draftDependencyMetrics.length > 0 && selectedForEditing === cardId;
+  }, [draftDependencyMetrics, selectedForEditing, cardId]);
+
   let { errors, failedMetrics, loading } = useMemo(() => {
     const errors = {} as { [key: string]: number };
     let loading = false;
     const failedMetrics = [] as number[];
-    for (const metric of metrics) {
+    const relatedMetrics = hasRelatedDraftMetrics
+      ? [...metrics, ...draftDependencyMetrics]
+      : metrics;
+    for (const metric of relatedMetrics) {
       if (metric.state === SpatialMetricState.Error) {
         let errorMessage = metric.errorMessage || "Unknown error";
         if (errorMessage in errors) {
@@ -135,7 +140,7 @@ export default function ReportCard({
       }
     }
     return { errors, failedMetrics, loading };
-  }, [metrics, sources]);
+  }, [metrics, sources, hasRelatedDraftMetrics]);
 
   if (Object.keys(errors).length > 0) {
     tint = "text-red-500";
@@ -201,18 +206,18 @@ export default function ReportCard({
 
   const isReady = !loading && !Object.keys(errors).length;
 
-  const loadingSkeleton = useMemo(() => {
-    if (skeleton) {
-      return skeleton;
-    }
-    return (
-      <div className="w-full space-y-1">
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-3/4 h-4" />
-        <Skeleton className="w-4/5 h-4" />
-      </div>
-    );
-  }, [skeleton]);
+  // const loadingSkeleton = useMemo(() => {
+  //   if (skeleton) {
+  //     return skeleton;
+  //   }
+  //   return (
+  //     <div className="w-full space-y-1">
+  //       <Skeleton className="w-full h-4" />
+  //       <Skeleton className="w-3/4 h-4" />
+  //       <Skeleton className="w-4/5 h-4" />
+  //     </div>
+  //   );
+  // }, [skeleton]);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [recalcOpen, setRecalcOpen] = useState(false);
@@ -248,6 +253,19 @@ export default function ReportCard({
     }
   }, [metrics, loading, errors]);
 
+  const loadingSkeleton = useMemo(() => {
+    if (skeleton) {
+      return skeleton;
+    }
+    return (
+      <div className="w-full space-y-1">
+        <Skeleton className="w-full h-4" />
+        <Skeleton className="w-3/4 h-4" />
+        <Skeleton className="w-4/5 h-4" />
+      </div>
+    );
+  }, [skeleton]);
+
   return (
     <div
       className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
@@ -258,7 +276,9 @@ export default function ReportCard({
           : "shadow-sm"
       } ${
         isDisabled ? "opacity-40 pointer-events-none select-none" : ""
-      } ${className}`}
+      } ${className} ${
+        loading && !selectedForEditing ? "loadingSkeleton" : ""
+      }`}
     >
       <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
         <div className="flex items-center space-x-2" {...dragHandleProps}>
@@ -279,7 +299,11 @@ export default function ReportCard({
           <ReportCardLoadingIndicator
             className=""
             display={true}
-            metrics={metrics}
+            metrics={
+              hasRelatedDraftMetrics
+                ? [...metrics, ...draftDependencyMetrics]
+                : metrics
+            }
             sourceProcessingJobs={sources
               .map((s) => s.sourceProcessingJob!)
               .filter((s) => Boolean(s))}
@@ -362,7 +386,7 @@ export default function ReportCard({
         </ErrorBoundary>
       </div>
 
-      <div className="p-4 text-sm pt-0 pb-2">
+      <div className="text-sm pt-0">
         {Object.keys(errors).length > 0 && (
           <>
             <p>
@@ -396,12 +420,12 @@ export default function ReportCard({
             )}
           </>
         )}
-        {isReady && children}
-        {loading && !Object.values(errors).length && (
+        {/* {isReady && children} */}
+        {/* {loading && !Object.values(errors).length && !selectedForEditing && (
           <div className="relative mt-2">
             <div>{loadingSkeleton}</div>
           </div>
-        )}
+        )} */}
       </div>
       {editorFooter && (
         <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner">
@@ -533,9 +557,9 @@ export default function ReportCard({
         >
           <ReportMetricsProgressDetails
             metricIds={metrics.map((m) => m.id)}
-            skeleton={loadingSkeleton}
             config={config}
             isAdmin={adminMode}
+            skeleton={loadingSkeleton}
           />
         </Modal>
       )}

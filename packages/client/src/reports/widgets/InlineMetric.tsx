@@ -15,91 +15,41 @@ import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import Skeleton from "../../components/Skeleton";
 import { useTranslation } from "react-i18next";
+import { ReportWidget } from "./widgets";
+import { MetricLoadingDots } from "../components/MetricLoadingDots";
 
-export default function InlineMetric() {
-  const { node } = useReactNodeView();
-  const reportContext = useReportContext();
+export const InlineMetric: ReportWidget<{
+  unit: "hectare" | "acre" | "mile" | "kilometer";
+  minimumFractionDigits: number;
+  presentation: "total_area" | "percent_area";
+}> = ({
+  metrics,
+  sources,
+  loading,
+  errors,
+  geographies,
+  componentSettings,
+  dependencies,
+}) => {
   const formatters = useNumberFormatters({
-    unit: node?.attrs?.componentSettings?.unit,
-    minimumFractionDigits:
-      node?.attrs?.componentSettings?.minimumFractionDigits,
+    unit: componentSettings?.unit,
+    minimumFractionDigits: componentSettings?.minimumFractionDigits,
   });
 
-  const { loading, error, formattedValue } = useMemo(() => {
-    const overlaySourceUrls = {} as { [tableOfContentsItemId: number]: string };
-    for (const overlaySource of reportContext.overlaySources) {
-      if (!overlaySource.sourceUrl) {
-        throw new Error(
-          `Overlay source URL not provided for table of contents item ID: ${overlaySource.tableOfContentsItemId}`
-        );
-      }
-      overlaySourceUrls[overlaySource.tableOfContentsItemId] =
-        overlaySource.sourceUrl;
-    }
-    let blankResult = { loading: false, error: null, formattedValue: null };
-    const dependencies = node?.attrs?.metrics;
+  const formattedValue = useMemo(() => {
     if (!dependencies.length) {
       throw new Error("No metric dependencies configured");
     }
-    // First, check to see if there are any errors
-    const metrics = filterMetricsByDependencies(
-      reportContext.metrics,
-      dependencies,
-      overlaySourceUrls
-    );
-
-    // check that there is at least one metric to satisfy each dependency
-    for (const dependency of dependencies) {
-      if (
-        filterMetricsByDependencies(
-          reportContext.metrics,
-          [dependency],
-          overlaySourceUrls
-        ).length === 0
-      ) {
-        return {
-          ...blankResult,
-          loading: true,
-        };
-      }
+    if (errors.length > 0 || loading || metrics.length === 0) {
+      return null;
     }
-
-    if (metrics.length === 0) {
-      return {
-        ...blankResult,
-        loading: true,
-      };
-    }
-    if (metrics.some((m) => m.state === SpatialMetricState.Error)) {
-      return {
-        ...blankResult,
-        error: metrics
-          .filter((m) => m.state === SpatialMetricState.Error)
-          .map((m) => m.errorMessage)
-          .join(". \n"),
-      };
-    }
-    // check for loading
-    const loading = metrics.find(
-      (m) => m.state !== SpatialMetricState.Complete
-    );
-    if (loading) {
-      return {
-        ...blankResult,
-        loading: true,
-      };
-    }
-    const presentation =
-      node?.attrs?.componentSettings?.presentation || "total_area";
+    const presentation = componentSettings?.presentation || "total_area";
     switch (presentation) {
       case "total_area":
         const combined = combineMetricsForFragments(
           metrics as Pick<Metric, "type" | "value">[]
         ) as TotalAreaMetric;
-        return {
-          ...blankResult,
-          formattedValue: formatters.area(combined.value),
-        };
+        return formatters.area(combined.value);
       case "percent_area":
         const totalArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsFragment(m.subject)) as Pick<
@@ -107,9 +57,6 @@ export default function InlineMetric() {
             "type" | "value"
           >[]
         ) as TotalAreaMetric;
-        const geographyMetrics = metrics.filter((m) =>
-          subjectIsGeography(m.subject)
-        );
         const geographyArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsGeography(m.subject)) as Pick<
             Metric,
@@ -122,18 +69,16 @@ export default function InlineMetric() {
           minimumFractionDigits: 0,
           maximumFractionDigits: 2,
         }).format(percentArea);
-        return {
-          ...blankResult,
-          formattedValue: formattedPercentArea,
-        };
+        return formattedPercentArea;
       default:
         throw new Error(`Unsupported presentation: ${presentation}`);
     }
   }, [
-    reportContext.metrics,
-    node?.attrs?.metrics,
-    node?.attrs?.componentSettings,
-    reportContext.overlaySources,
+    dependencies.length,
+    errors.length,
+    loading,
+    metrics,
+    componentSettings?.presentation,
     formatters,
   ]);
 
@@ -145,19 +90,15 @@ export default function InlineMetric() {
           className="inline-block border rounded absolute w-full h-full z-10"
         />
         <span className="absolute top-0 left-0 w-full h-full flex items-center justify-center z-20">
-          <span className="metric-dots" aria-hidden="true">
-            <span className="metric-dot" />
-            <span className="metric-dot" />
-            <span className="metric-dot" />
-          </span>
+          <MetricLoadingDots className="" />
         </span>
         <span className="metric-loading-placeholder-for-height">20</span>
       </div>
     );
-  } else if (error) {
+  } else if (errors.length > 0) {
     return (
       <span className="metric font-semibold rounded-sm inline-block">
-        {error}
+        {errors.join(". \n")}
       </span>
     );
   } else {
@@ -167,7 +108,7 @@ export default function InlineMetric() {
       </span>
     );
   }
-}
+};
 
 export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   node,

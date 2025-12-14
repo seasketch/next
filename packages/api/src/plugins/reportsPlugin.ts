@@ -887,6 +887,7 @@ async function getOrCreateSpatialMetric({
   parameters,
   sourceProcessingJobDependency,
   projectId,
+  dependencyHash,
 }: {
   pool: Pool;
   subjectFragmentId?: string;
@@ -896,6 +897,7 @@ async function getOrCreateSpatialMetric({
   parameters: any;
   sourceProcessingJobDependency?: string;
   projectId: number;
+  dependencyHash: string;
 }): Promise<any> {
   if (!subjectFragmentId && !subjectGeographyId) {
     throw new Error(
@@ -904,7 +906,7 @@ async function getOrCreateSpatialMetric({
   }
   const result = await pool.query(
     `
-    select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int) as metric
+    select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int, $8::text) as metric
   `,
     [
       subjectFragmentId || null,
@@ -914,57 +916,61 @@ async function getOrCreateSpatialMetric({
       parameters,
       sourceProcessingJobDependency || null,
       projectId,
+      dependencyHash,
     ]
   );
   return result.rows[0].metric;
 }
 
-async function getOrCreateMetricsOfType(
-  pool: Pool,
-  type: MetricType,
-  overlaySource: ReportOverlaySourcePartial,
-  parameters:
-    | {
-        groupBy?: string | null;
-        includedProperties?: string[] | null;
-        valueColumn?: string | null;
-        bufferDistanceKm?: number | null;
-        resultsLimit?: number | null;
-      }
-    | undefined,
-  geographyIds: number[],
-  fragmentHashes: string[],
-  projectId: number
-) {
-  const metrics: any[] = [];
-  // first, create geography metrics
-  for (const geographyId of geographyIds) {
-    const metric = await getOrCreateSpatialMetric({
-      pool,
-      subjectGeographyId: geographyId,
-      type,
-      overlaySourceUrl: overlaySource.sourceUrl,
-      parameters,
-      sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
-      projectId,
-    });
-    metrics.push(metric);
-  }
-  // then, fragment metrics
-  for (const fragmentHash of fragmentHashes) {
-    const metric = await getOrCreateSpatialMetric({
-      pool,
-      subjectFragmentId: fragmentHash,
-      type,
-      overlaySourceUrl: overlaySource.sourceUrl,
-      parameters,
-      sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
-      projectId,
-    });
-    metrics.push(metric);
-  }
-  return metrics;
-}
+// async function getOrCreateMetricsOfType(
+//   pool: Pool,
+//   type: MetricType,
+//   overlaySource: ReportOverlaySourcePartial,
+//   parameters:
+//     | {
+//         groupBy?: string | null;
+//         includedProperties?: string[] | null;
+//         valueColumn?: string | null;
+//         bufferDistanceKm?: number | null;
+//         resultsLimit?: number | null;
+//       }
+//     | undefined,
+//   geographyIds: number[],
+//   fragmentHashes: string[],
+//   projectId: number,
+//   dependencyHash: string
+// ) {
+//   const metrics: any[] = [];
+//   // first, create geography metrics
+//   for (const geographyId of geographyIds) {
+//     const metric = await getOrCreateSpatialMetric({
+//       pool,
+//       subjectGeographyId: geographyId,
+//       type,
+//       overlaySourceUrl: overlaySource.sourceUrl,
+//       parameters,
+//       sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
+//       projectId,
+//       dependencyHash,
+//     });
+//     metrics.push(metric);
+//   }
+//   // then, fragment metrics
+//   for (const fragmentHash of fragmentHashes) {
+//     const metric = await getOrCreateSpatialMetric({
+//       pool,
+//       subjectFragmentId: fragmentHash,
+//       type,
+//       overlaySourceUrl: overlaySource.sourceUrl,
+//       parameters,
+//       sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
+//       projectId,
+//       dependencyHash,
+//     });
+//     metrics.push(metric);
+//   }
+//   return metrics;
+// }
 
 /**
  * Can be used to start calculating report metrics for a sketch. Useful if we
@@ -1066,32 +1072,23 @@ async function createMetricsForDependencies(
           type: dependency.type,
           parameters: dependency.parameters || {},
           projectId,
+          dependencyHash,
         });
-        metric.dependencyHash = dependencyHash;
+        // metric.dependencyHash = dependencyHash;
         metrics.push(metric);
       }
     } else if (dependency.subjectType === "geographies") {
-      // If the metric dependency specifies a valid list of geographies, use
-      // it. Otherwise, calculate metrics for all geographies in the project.
-      let geographyIds = geogs.map((g) => g.id);
-      if (dependency.geographies && dependency.geographies.length > 0) {
-        geographyIds = [];
-        for (const geographyId of dependency.geographies) {
-          if (!geogs.find((g) => g.id === geographyId)) {
-            continue;
-          }
-          geographyIds.push(geographyId);
-        }
-      }
-      for (const geographyId of geographyIds) {
+      // Calculate metrics for all geographies in the project.
+      for (const geography of geogs) {
         const metric = await getOrCreateSpatialMetric({
           pool,
-          subjectGeographyId: geographyId,
+          subjectGeographyId: geography.id,
           type: dependency.type,
           parameters: dependency.parameters || {},
           projectId,
+          dependencyHash,
         });
-        metric.dependencyHash = dependencyHash;
+        // metric.dependencyHash = dependencyHash;
         metrics.push(metric);
       }
     } else {
