@@ -66,29 +66,28 @@ export default function DataLibraryModal({
               onRequestClose={onRequestClose}
             />
           </DataLibraryEntry>
-          {metadata?.data?.project?.featureFlags?.iNaturalistLayers && (
-            <DataLibraryEntry title={t("iNaturalist")}>
-              <DataLibraryEntryDescription>
-                <p>
-                  {t(
-                    "Create layers from iNaturalist observations, filtered by projects or specific taxa. Display observations as grids, points, or heatmaps."
-                  )}
-                </p>
-              </DataLibraryEntryDescription>
-              <DataLibraryEntryImage
-                alt={t("iNaturalist logo")}
-                src="/logos/inaturalist.png"
-              />
-              <DataLibraryCustomActionButton
-                onClick={() => {
-                  onRequestClose();
-                  if (onOpenINaturalistModal) {
-                    onOpenINaturalistModal();
-                  }
-                }}
-              />
-            </DataLibraryEntry>
-          )}
+
+          <DataLibraryEntry title={t("iNaturalist")}>
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Create layers from iNaturalist observations, filtered by projects or specific taxa. Display observations as grids, points, or heatmaps."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("iNaturalist logo")}
+              src="/logos/inaturalist.png"
+            />
+            <DataLibraryCustomActionButton
+              onClick={() => {
+                onRequestClose();
+                if (onOpenINaturalistModal) {
+                  onOpenINaturalistModal();
+                }
+              }}
+            />
+          </DataLibraryEntry>
         </div>
       </div>
     </Modal>

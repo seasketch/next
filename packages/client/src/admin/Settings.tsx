@@ -1200,7 +1200,7 @@ function SuperUserSettings() {
                   "Amount of spatial data that can be uploaded to this project. We limit this amount initially to prevent abuse and to identify important projects."
                 )}
               />
-              <InputBlock
+              {/* <InputBlock
                 input={
                   <Switch
                     isToggled={Boolean(
@@ -1218,7 +1218,7 @@ function SuperUserSettings() {
                 }
                 title={t("Enable iNaturalist Layers")}
                 description={t("Enable iNaturalist layers for this project.")}
-              />
+              /> */}
             </div>
           </div>
         </form>
