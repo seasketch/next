@@ -6135,12 +6135,12 @@ select{
   z-index:3
 }
 
-.z-auto{
-  z-index:auto
-}
-
 .z-\[9999\]{
   z-index:9999
+}
+
+.z-auto{
+  z-index:auto
 }
 
 .order-1{
@@ -6849,6 +6849,26 @@ select{
 .size-\[25px\]{
   width:25px;
   height:25px
+}
+
+.size-6{
+  width:1.5rem;
+  height:1.5rem
+}
+
+.size-4{
+  width:1rem;
+  height:1rem
+}
+
+.size-3{
+  width:0.75rem;
+  height:0.75rem
+}
+
+.size-3\.5{
+  width:0.875rem;
+  height:0.875rem
 }
 
 .h-0{
@@ -11195,6 +11215,11 @@ select{
           text-decoration-line:underline
 }
 
+.\!underline{
+  -webkit-text-decoration-line:underline !important;
+          text-decoration-line:underline !important
+}
+
 .line-through{
   -webkit-text-decoration-line:line-through;
           text-decoration-line:line-through
@@ -12442,6 +12467,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-gray-800:hover{
+  --tw-bg-opacity:1;
+  background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
+}
+
 .hover\:bg-opacity-10:hover{
   --tw-bg-opacity:0.1
 }
@@ -12772,6 +12802,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus\:bg-primary-600:focus{
   --tw-bg-opacity:1;
   background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1))
+}
+
+.focus\:bg-gray-800:focus{
+  --tw-bg-opacity:1;
+  background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
 }
 
 .focus\:bg-opacity-10:focus{

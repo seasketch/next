@@ -13,17 +13,22 @@ import { EditorView } from "prosemirror-view";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans } from "react-i18next";
-import { GeographySizeTable } from "./GeographySizeTable";
-import { Node } from "prosemirror-model";
+import {
+  GeographySizeTable,
+  GeographySizeTableTooltipControls,
+} from "./GeographySizeTable";
+import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
 ) => {
-  switch (props.node.type.name) {
-    case "metric":
+  switch (props.node.attrs.type) {
+    case "InlineMetric":
       return <InlineMetricTooltipControls {...props} />;
+    case "GeographySizeTable":
+      return <GeographySizeTableTooltipControls {...props} />;
     default:
       return null;
   }
@@ -97,6 +102,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     loading,
     errors,
     geographies,
+    marks: node.marks as Mark[] | undefined,
+    node,
   };
 
   switch (node.attrs.type) {
@@ -192,22 +199,27 @@ export function buildReportCommandGroups({
         label: "Geography Size Table",
         description: "A table of the sizes of the sketch in each geography.",
         run: (state, dispatch, view) => {
-          return insertMetric(view, state.selection.ranges[0], {
-            metrics: [
-              {
-                type: "total_area",
-                subjectType: "geographies",
+          return insertMetric(
+            view,
+            state.selection.ranges[0],
+            {
+              metrics: [
+                {
+                  type: "total_area",
+                  subjectType: "geographies",
+                },
+                {
+                  type: "total_area",
+                  subjectType: "fragments",
+                },
+              ],
+              componentSettings: {
+                presentation: "total_area",
               },
-              {
-                type: "total_area",
-                subjectType: "fragments",
-              },
-            ],
-            componentSettings: {
-              presentation: "total_area",
+              type: "GeographySizeTable",
             },
-            type: "GeographySizeTable",
-          });
+            false
+          );
         },
       });
     }
@@ -222,11 +234,12 @@ export function buildReportCommandGroups({
 export function insertMetric(
   view: EditorView,
   range: SelectionRange,
-  properties: MetricProperties
+  properties: MetricProperties,
+  inline: boolean = true
 ): boolean {
   const { state, dispatch } = view;
   const { schema } = state;
-  const metricType = schema.nodes.metric;
+  const metricType = inline ? schema.nodes.metric : schema.nodes.blockMetric;
 
   if (!metricType) {
     return false;
@@ -238,8 +251,11 @@ export function insertMetric(
 
   let tr = state.tr.replaceRangeWith(range.$from.pos, range.$to.pos, node);
 
-  // Place cursor after the inserted node
-  const posAfter = range.$from.pos + node.nodeSize;
+  // Place cursor after the inserted node. Map the original selection to the
+  // updated document to avoid out-of-range positions when inserting at the end
+  // of a block (e.g., an empty paragraph).
+  const mappedFrom = tr.mapping.map(range.$from.pos);
+  const posAfter = Math.min(tr.doc.content.size, mappedFrom + node.nodeSize);
   tr = tr.setSelection(
     TextSelection.near(tr.doc.resolve(posAfter), 1 /* forward */)
   );
@@ -263,6 +279,8 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   errors: string[];
   geographies: Pick<GeographyDetailsFragment, "id" | "name">[];
   componentSettings: T;
+  marks?: Mark[];
+  node?: Node;
 }
 
 export type ReportWidget<T extends Record<string, any>> = FC<

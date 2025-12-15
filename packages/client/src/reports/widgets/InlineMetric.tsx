@@ -30,6 +30,7 @@ export const InlineMetric: ReportWidget<{
   geographies,
   componentSettings,
   dependencies,
+  marks,
 }) => {
   const formatters = useNumberFormatters({
     unit: componentSettings?.unit,
@@ -102,8 +103,16 @@ export const InlineMetric: ReportWidget<{
       </span>
     );
   } else {
+    const underline =
+      marks?.some((m) => m.type.name === "underline") ||
+      marks?.some((m) => m.type.name === "link" && m.attrs?.underline);
     return (
-      <span className="metric font-semibold rounded-sm inline-block">
+      <span
+        className={`metric font-semibold rounded-sm inline-block ${
+          underline ? "underline" : ""
+        }`}
+        style={underline ? { textDecorationStyle: "solid" } : undefined}
+      >
         {formattedValue}
       </span>
     );
@@ -124,7 +133,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
         {t("Unit")}
       </label> */}
         <select
-          value={node.attrs?.componentSettings?.unit || "square-kilometer"}
+          value={node.attrs?.componentSettings?.unit || "kilometer"}
           onChange={(e) =>
             onUpdate({ componentSettings: { unit: e.target.value } })
           }

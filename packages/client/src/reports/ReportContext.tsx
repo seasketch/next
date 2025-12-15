@@ -655,7 +655,10 @@ export function extractMetricDependenciesFromReportBody(
   if (typeof node !== "object" || node === null || !node.type) {
     throw new Error("Invalid node");
   }
-  if (node.type === "metric" && node.attrs?.metrics) {
+  if (
+    (node.type === "metric" || node.type === "blockMetric") &&
+    node.attrs?.metrics
+  ) {
     const metrics = node.attrs.metrics;
     if (!Array.isArray(metrics)) {
       throw new Error("Invalid metrics");

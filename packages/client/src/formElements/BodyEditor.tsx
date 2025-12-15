@@ -227,7 +227,11 @@ export default function BodyEditor({
   return (
     <div
       className="relative"
-      onBlur={() => {
+      onBlur={(e) => {
+        const next = e.relatedTarget as HTMLElement | null;
+        if (next && next.closest("[data-report-tooltip='true']")) {
+          return;
+        }
         setState(undefined);
       }}
     >

@@ -4,6 +4,7 @@ import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { ReportWidget } from "./widgets";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
+import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 
 export const GeographySizeTable: ReportWidget<{
   /**
@@ -112,4 +113,37 @@ type GeographySizeTableRow = {
   geographyName: string;
   areaSqKm: number;
   fractionOfTotal: number;
+};
+
+export const GeographySizeTableTooltipControls: ReportWidgetTooltipControls = ({
+  node,
+  onUpdate,
+}) => {
+  const presentation =
+    node.attrs.componentSettings.presentation || "total_area";
+  const { t } = useTranslation("admin:reports");
+  if (presentation === "total_area") {
+    return (
+      <>
+        {/* <label className="block text-xs font-semibold text-gray-300 mb-1">
+        {t("Unit")}
+      </label> */}
+        <select
+          value={node.attrs?.componentSettings?.unit || "kilometer"}
+          onChange={(e) =>
+            onUpdate({ componentSettings: { unit: e.target.value } })
+          }
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
+          className="w-auto px-4 pr-8 text-sm bg-transparent border-none text-white  rounded outline-none focus:outline-none active:outline-none focus:ring-0"
+        >
+          <option value="kilometer">{t("km²")}</option>
+          <option value="hectare">{t("ha")}</option>
+          <option value="acre">{t("acre")}</option>
+          <option value="mile">{t("mi²")}</option>
+        </select>
+      </>
+    );
+  }
+  return null;
 };

@@ -140,6 +140,19 @@ function ReportCardBodyEditorInner({
             onDestroy: removePortal,
           });
         },
+        blockMetric(node, view, getPos, decorations) {
+          return createReactNodeView({
+            node,
+            view,
+            // @ts-ignore
+            getPos,
+            // @ts-ignore
+            decorations,
+            component: ReportWidgetNodeViewRouter,
+            onCreatePortal: createPortal,
+            onDestroy: removePortal,
+          });
+        },
       },
       dispatchTransaction: (transaction) => {
         const view = viewRef.current!;

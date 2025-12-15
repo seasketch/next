@@ -74,6 +74,54 @@ export function createReportCardSchema(): Schema {
     },
   };
 
+  const blockMetricSpec: NodeSpec = {
+    ...metricSpec,
+    group: "block",
+    draggable: true,
+    inline: false,
+    parseDOM: [
+      {
+        tag: "div[data-report-react-node='blockMetric']",
+        getAttrs: (dom: string | HTMLElement) => {
+          if (typeof dom === "string") {
+            return {
+              metrics: [],
+              type: "InlineMetric",
+              componentSettings: {},
+            };
+          }
+          const metricsAttr = (dom as HTMLElement).getAttribute("data-metrics");
+          const componentType =
+            (dom as HTMLElement).getAttribute("data-component-type") ||
+            "InlineMetric";
+          const componentSettingsAttr = (dom as HTMLElement).getAttribute(
+            "data-component-settings"
+          );
+          return {
+            metrics: metricsAttr ? JSON.parse(metricsAttr) : [],
+            type: componentType,
+            componentSettings: componentSettingsAttr
+              ? JSON.parse(componentSettingsAttr)
+              : {},
+          };
+        },
+      },
+    ],
+    toDOM: (node: Node) => {
+      const { metrics, type, componentSettings } = node.attrs;
+      return [
+        "div",
+        {
+          "data-report-react-node": "blockMetric",
+          "data-component-type": type || "InlineMetric",
+          "data-metrics": JSON.stringify(metrics || []),
+          "data-component-settings": JSON.stringify(componentSettings || {}),
+        },
+        `{${metrics?.[0]?.type || "blockMetric"}}`,
+      ];
+    },
+  };
+
   // Get the base nodes and add/update metric
   const nodesWithLists = addListNodes(
     baseSchema.spec.nodes,
@@ -86,9 +134,16 @@ export function createReportCardSchema(): Schema {
     ? nodesWithLists.update("metric", metricSpec)
     : nodesWithLists.append({ metric: metricSpec });
 
+  const blockMetricExists = nodesWithLists.get("blockMetric") !== undefined;
+  const updatedNodesWithBlocks = blockMetricExists
+    ? updatedNodes.update("blockMetric", blockMetricSpec)
+    : updatedNodes.append({ blockMetric: blockMetricSpec });
+
   // Create new schema with updated nodes
-  return new Schema({
-    nodes: updatedNodes,
+  const schema = new Schema({
+    nodes: updatedNodesWithBlocks,
     marks: baseSchema.spec.marks,
   });
+  (schema as any).isReportCardBodySchema = true;
+  return schema;
 }

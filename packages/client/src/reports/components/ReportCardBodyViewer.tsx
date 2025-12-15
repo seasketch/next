@@ -43,6 +43,20 @@ function ReportCardBodyViewerInner({
           onDestroy: removePortal,
         });
       },
+      // @ts-ignore
+      blockMetric(node, view, getPos, decorations) {
+        return createReactNodeView({
+          node,
+          view,
+          // @ts-ignore
+          getPos,
+          // @ts-ignore
+          decorations,
+          component: ReportWidgetNodeViewRouter,
+          onCreatePortal: createPortal,
+          onDestroy: removePortal,
+        });
+      },
     }),
     [createPortal, removePortal]
   );

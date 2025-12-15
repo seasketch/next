@@ -122,16 +122,6 @@ const reportCardFooterSchema: Schema = new Schema({
           return ["h2", { "data-footer-title": "yes" }, 0];
         },
       },
-      h2: {
-        content: "inline*",
-        group: "block",
-        defining: true,
-        parseDOM: [{ tag: "h2" }],
-        // @ts-ignore
-        toDOM(node: Node) {
-          return ["h2", 0];
-        },
-      },
     })
     .update("doc", {
       content: "footerTitle block*",
