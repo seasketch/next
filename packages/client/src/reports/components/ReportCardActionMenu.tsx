@@ -47,7 +47,7 @@ export function ReportCardActionMenu(
             "p-1 rounded-full",
             open
               ? "text-gray-600 bg-gray-50"
-              : " text-gray-400 hover:text-gray-600 hover:bg-gray-50",
+              : " text-gray-500 hover:text-gray-600 hover:bg-gray-50",
             triggerClassName
           )}
           aria-label={label}

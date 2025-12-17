@@ -271,7 +271,7 @@ export default function ReportCard({
     <div
       className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
         adminMode && selectedForEditing === cardId ? "editing" : ""
-      } transition-all opacity-100 relative rounded w-full ${getBackgroundClasses()} group ${
+      } transition-all opacity-100 relative rounded w-full ${getBackgroundClasses()} ${
         isSelectedForEditing
           ? "shadow-xl ring-1 ring-opacity-5 ring-black"
           : "shadow-sm"
@@ -281,164 +281,172 @@ export default function ReportCard({
         loading && !selectedForEditing ? "loadingSkeleton" : ""
       }`}
     >
-      <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
-        <div className="flex items-center space-x-2" {...dragHandleProps}>
-          {icon && iconMap[icon] ? (
-            <div className="flex-shrink-0">{iconMap[icon]}</div>
-          ) : (
-            <div className="flex-shrink-0 w-4 h-4" />
-          )}
-        </div>
-      </div>
-      {loading && !Object.values(errors).length && (
-        <button
-          type="button"
-          className="absolute top-[14px] right-[16px]"
-          onClick={() => setShowCalcDetails(true)}
-          title={t("Calculation Details")}
-        >
-          <ReportCardLoadingIndicator
-            className=""
-            display={true}
-            metrics={
-              hasRelatedDraftMetrics
-                ? [...metrics, ...draftDependencyMetrics]
-                : metrics
-            }
-            sourceProcessingJobs={sources
-              .map((s) => s.sourceProcessingJob!)
-              .filter((s) => Boolean(s))}
-          />
-        </button>
-      )}
-      <div className="absolute right-2 top-2 z-10">
-        <div className="flex items-center space-x-1">
-          {dragHandleProps && !selectedForEditing && (
-            <button
-              type="button"
-              aria-label={t("Drag to reorder")}
-              className={`p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 active:bg-gray-100 transition ${
-                menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              }`}
-              {...dragHandleProps}
-            >
-              <DragHandleDots2Icon className="w-4 h-4" />
-            </button>
-          )}
-          {(!loading || Object.values(errors).length > 0) &&
-            !selectedForEditing &&
-            cardId && (
-              <div
-                className={`flex-1 ml-auto transition-opacity flex items-center justify-end ${
-                  menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-                }`}
-              >
-                <ReportCardActionMenu
-                  open={menuOpen}
-                  onOpenChange={setMenuOpen}
-                  label={t("Card actions")}
-                >
-                  {adminMode && (
-                    <ReportCardActionMenu.Item
-                      icon={<Pencil1Icon className="h-4 w-4" />}
-                      onSelect={() => {
-                        setSelectedForEditing(cardId!);
-                      }}
-                    >
-                      {t("Edit card")}
-                    </ReportCardActionMenu.Item>
-                  )}
-                  {metrics?.length > 0 && (
-                    <ReportCardActionMenu.Item
-                      onSelect={() => setShowCalcDetails(true)}
-                      icon={<CalculatorIcon className="h-4 w-4" />}
-                    >
-                      {t("Calculation details")}
-                    </ReportCardActionMenu.Item>
-                  )}
-                  {adminMode && deleteCard && (
-                    <ReportCardActionMenu.Item
-                      icon={<TrashIcon className="h-4 w-4" />}
-                      variant="danger"
-                      onSelect={() => {
-                        deleteCard(cardId!);
-                      }}
-                    >
-                      {t("Delete card")}
-                    </ReportCardActionMenu.Item>
-                  )}
-                </ReportCardActionMenu>
-              </div>
+      <div className="group">
+        <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
+          <div className="flex items-center space-x-2" {...dragHandleProps}>
+            {icon && iconMap[icon] ? (
+              <div className="flex-shrink-0">{iconMap[icon]}</div>
+            ) : (
+              <div className="flex-shrink-0 w-4 h-4" />
             )}
+          </div>
         </div>
-      </div>
-      <div className={`px-4 pb-0 text-sm ${loading ? "loading" : ""}`}>
-        <ErrorBoundary
-          fallback={
-            <ErrorBoundaryFallback
-              title={t("Failed to render report card body")}
+        {loading && !Object.values(errors).length && (
+          <button
+            type="button"
+            className="absolute top-[14px] right-[16px]"
+            onClick={() => setShowCalcDetails(true)}
+            title={t("Calculation Details")}
+          >
+            <ReportCardLoadingIndicator
+              className=""
+              display={true}
+              metrics={
+                hasRelatedDraftMetrics
+                  ? [...metrics, ...draftDependencyMetrics]
+                  : metrics
+              }
+              sourceProcessingJobs={sources
+                .map((s) => s.sourceProcessingJob!)
+                .filter((s) => Boolean(s))}
             />
-          }
-        >
-          {adminMode && selectedForEditing === cardId ? (
-            <ReportCardBodyEditor
-              body={localizedBody}
-              onUpdate={handleBodyUpdate}
-              className={`${tint} ${icon ? "hasIcon" : ""}`}
-              metrics={metrics}
-              sources={sources}
-            />
-          ) : (
-            <ReportCardBodyViewer
-              body={localizedBody}
-              className={`ReportCard ReportCardBody ProseMirrorBody ${
-                icon ? "hasIcon" : ""
-              } ${tint ? tint : ""}`}
-            />
-          )}
-        </ErrorBoundary>
-      </div>
-
-      <div className="text-sm pt-0">
-        {Object.keys(errors).length > 0 && (
-          <>
-            <p>
-              <Trans ns="sketching">
-                There was a problem calculating metrics for this card.
-              </Trans>
-            </p>
-            <ul className="list-disc pl-4 pt-2">
-              {Object.entries(errors).map(([msg, count]) => (
-                <li key={msg}>
-                  {msg}{" "}
-                  {count > 1 && (
-                    <Badge variant="error">
-                      {count}
-                      {t("x")}
-                    </Badge>
-                  )}
-                </li>
-              ))}
-            </ul>
-            {failedMetrics.length > 0 && (
-              <div className="mt-2">
-                <Button
-                  onClick={() => {
-                    setShowCalcDetails(true);
-                  }}
-                  label={t("View details")}
-                  small
-                />
-              </div>
-            )}
-          </>
+          </button>
         )}
-        {/* {isReady && children} */}
-        {/* {loading && !Object.values(errors).length && !selectedForEditing && (
+        <div className="absolute right-2 top-2 z-10">
+          <div className="flex items-center space-x-1">
+            {dragHandleProps &&
+              !selectedForEditing &&
+              (!loading || Object.values(errors).length > 0) && (
+                <button
+                  type="button"
+                  aria-label={t("Drag to reorder")}
+                  className={`p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 active:bg-gray-100 transition ${
+                    menuOpen
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  }`}
+                  {...dragHandleProps}
+                >
+                  <DragHandleDots2Icon className="w-4 h-4" />
+                </button>
+              )}
+            {(!loading || Object.values(errors).length > 0) &&
+              !selectedForEditing &&
+              cardId && (
+                <div
+                  className={`flex-1 ml-auto flex items-center justify-end ${
+                    menuOpen
+                      ? "opacity-100"
+                      : "opacity-0 group-hover:opacity-100"
+                  } ${selectedForEditing ? "opacity-0" : "transition-opacity"}`}
+                >
+                  <ReportCardActionMenu
+                    open={menuOpen}
+                    onOpenChange={setMenuOpen}
+                    label={t("Card actions")}
+                  >
+                    {adminMode && (
+                      <ReportCardActionMenu.Item
+                        icon={<Pencil1Icon className="h-4 w-4" />}
+                        onSelect={() => {
+                          setSelectedForEditing(cardId!);
+                        }}
+                      >
+                        {t("Edit card")}
+                      </ReportCardActionMenu.Item>
+                    )}
+                    {metrics?.length > 0 && (
+                      <ReportCardActionMenu.Item
+                        onSelect={() => setShowCalcDetails(true)}
+                        icon={<CalculatorIcon className="h-4 w-4" />}
+                      >
+                        {t("Calculation details")}
+                      </ReportCardActionMenu.Item>
+                    )}
+                    {adminMode && deleteCard && (
+                      <ReportCardActionMenu.Item
+                        icon={<TrashIcon className="h-4 w-4" />}
+                        variant="danger"
+                        onSelect={() => {
+                          deleteCard(cardId!);
+                        }}
+                      >
+                        {t("Delete card")}
+                      </ReportCardActionMenu.Item>
+                    )}
+                  </ReportCardActionMenu>
+                </div>
+              )}
+          </div>
+        </div>
+        <div className={`px-4 pb-0 text-sm ${loading ? "loading" : ""}`}>
+          <ErrorBoundary
+            fallback={
+              <ErrorBoundaryFallback
+                title={t("Failed to render report card body")}
+              />
+            }
+          >
+            {adminMode && selectedForEditing === cardId ? (
+              <ReportCardBodyEditor
+                body={localizedBody}
+                onUpdate={handleBodyUpdate}
+                className={`${tint} ${icon ? "hasIcon" : ""}`}
+                metrics={metrics}
+                sources={sources}
+              />
+            ) : (
+              <ReportCardBodyViewer
+                body={localizedBody}
+                className={`ReportCard ReportCardBody ProseMirrorBody ${
+                  icon ? "hasIcon" : ""
+                } ${tint ? tint : ""}`}
+              />
+            )}
+          </ErrorBoundary>
+        </div>
+
+        <div className="text-sm pt-0">
+          {Object.keys(errors).length > 0 && (
+            <>
+              <p>
+                <Trans ns="sketching">
+                  There was a problem calculating metrics for this card.
+                </Trans>
+              </p>
+              <ul className="list-disc pl-4 pt-2">
+                {Object.entries(errors).map(([msg, count]) => (
+                  <li key={msg}>
+                    {msg}{" "}
+                    {count > 1 && (
+                      <Badge variant="error">
+                        {count}
+                        {t("x")}
+                      </Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              {failedMetrics.length > 0 && (
+                <div className="mt-2">
+                  <Button
+                    onClick={() => {
+                      setShowCalcDetails(true);
+                    }}
+                    label={t("View details")}
+                    small
+                  />
+                </div>
+              )}
+            </>
+          )}
+          {/* {isReady && children} */}
+          {/* {loading && !Object.values(errors).length && !selectedForEditing && (
           <div className="relative mt-2">
             <div>{loadingSkeleton}</div>
           </div>
         )} */}
+        </div>
       </div>
       {editorFooter && (
         <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner">
