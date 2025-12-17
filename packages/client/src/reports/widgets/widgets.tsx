@@ -1,14 +1,12 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC, useMemo } from "react";
+import { FC, useContext, useMemo } from "react";
 import { CommandPaletteGroup } from "../commandPalette/types";
 import {
   CompatibleSpatialMetricDetailsFragment,
   GeographyDetailsFragment,
   OverlaySourceDetailsFragment,
   ReportContextSketchClassDetailsFragment,
-  SketchClass,
-  SketchClassDetailsFragment,
   SketchGeometryType,
   SpatialMetricState,
 } from "../../generated/graphql";
@@ -23,6 +21,7 @@ import {
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
+import { FormLanguageContext } from "../../formElements/FormElement";
 
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
@@ -44,8 +43,11 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     overlaySources,
     sketchClass,
   } = useReportContext();
+  const languageContext = useContext(FormLanguageContext);
+  const lang = languageContext?.lang?.code;
   const node = props.node as Node;
   const { type, componentSettings, metrics: dependencies } = node.attrs || {};
+  const alternateLanguageSettings = node.attrs?.alternateLanguageSettings || {};
   if (!type) {
     throw new Error("ReportWidget node type not specified");
   }
@@ -53,7 +55,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     throw new Error("ReportWidget component settings not specified");
   }
 
-  const { metrics, sources, loading, errors } = useMemo(() => {
+  const { metrics, loading, errors } = useMemo(() => {
     let loading = false;
     let errors: string[] = [];
     const metrics = filterMetricsByDependencies(
@@ -109,6 +111,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     marks: node.marks as Mark[] | undefined,
     node,
     sketchClass,
+    alternateLanguageSettings,
+    lang,
   };
 
   switch (node.attrs.type) {
@@ -142,6 +146,39 @@ export function buildReportCommandGroups({
   sketchClassGeometryType,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
+  const layoutGroup: CommandPaletteGroup = {
+    id: "layout",
+    label: "Layout",
+    items: [
+      {
+        id: "collapsible-block",
+        label: "Collapsible Block",
+        description: "Accordion-style container with editable heading.",
+        run: (state, dispatch, view) => {
+          const { schema } = state;
+          const detailsType = schema.nodes.details;
+          const summaryType = schema.nodes.summary;
+          const paragraphType = schema.nodes.paragraph;
+          if (!detailsType || !summaryType || !paragraphType) return false;
+
+          const summary = summaryType.create(null, schema.text("Learn more"));
+          const paragraph =
+            paragraphType.createAndFill() || paragraphType.create();
+          const node = detailsType.create({ open: false }, [
+            summary,
+            paragraph,
+          ]);
+          if (dispatch) {
+            const tr = state.tr.replaceSelectionWith(node).scrollIntoView();
+            dispatch(tr);
+          }
+          return true;
+        },
+      },
+    ],
+  };
+  commandGroups.push(layoutGroup);
+
   if (sketchClassGeometryType === SketchGeometryType.Polygon) {
     const sizeGroup: CommandPaletteGroup = {
       id: "Size",
@@ -227,6 +264,34 @@ export function buildReportCommandGroups({
           );
         },
       });
+
+      const distanceGroup: CommandPaletteGroup = {
+        id: "distance",
+        label: "Distance",
+        items: [
+          {
+            id: "inline-distance-to-shore",
+            label: "Distance to Shore",
+            description:
+              "Closest distance between the sketch and the shoreline.",
+            run: (state, dispatch, view) => {
+              return insertMetric(view, state.selection.ranges[0], {
+                type: "InlineMetric",
+                metrics: [
+                  {
+                    type: "distance_to_shore",
+                    subjectType: "fragments",
+                  },
+                ],
+                componentSettings: {
+                  presentation: "distance_to_shore",
+                },
+              });
+            },
+          },
+        ],
+      };
+      commandGroups.push(distanceGroup);
     }
   }
   return commandGroups;
@@ -294,6 +359,8 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
     ReportContextSketchClassDetailsFragment,
     "geometryType" | "clippingGeographies"
   >;
+  alternateLanguageSettings: { [langCode: string]: any };
+  lang?: string;
 }
 
 export type ReportWidget<T extends Record<string, any>> = FC<

@@ -1342,6 +1342,14 @@ export type TooltipDropdownOption = {
   value: string;
   label: ReactNode;
   icon?: ReactNode;
+  /**
+   * When true, prevents the dropdown from closing on select.
+   */
+  preventCloseOnSelect?: boolean;
+  /**
+   * Optional className override for this item.
+   */
+  className?: string;
 };
 
 export function TooltipDropdown({
@@ -1403,11 +1411,16 @@ export function TooltipDropdown({
           {options.map((opt) => (
             <DropdownMenu.Item
               key={opt.value}
-              className={`px-2 py-1 text-sm flex items-center gap-2 rounded hover:bg-gray-100 focus:bg-gray-100 outline-none cursor-pointer ${
-                opt.value === value ? "text-blue-600" : ""
-              }`}
+              className={
+                opt.className ??
+                `px-2 py-1 text-sm flex items-center gap-2 rounded hover:bg-gray-100 focus:bg-gray-100 outline-none cursor-pointer ${
+                  opt.value === value ? "text-blue-600" : ""
+                }`
+              }
               onSelect={(e: Event) => {
-                // e.preventDefault();
+                if (opt.preventCloseOnSelect) {
+                  e.preventDefault();
+                }
                 onChange(opt.value);
               }}
             >
@@ -1433,12 +1446,14 @@ export function TooltipPopoverContent({
   sideOffset = 6,
   align = "center",
   collisionPadding = 8,
+  title,
 }: {
   children: ReactNode;
   side?: "top" | "bottom" | "left" | "right";
   sideOffset?: number;
   align?: "start" | "center" | "end";
   collisionPadding?: number;
+  title?: ReactNode;
 }) {
   return (
     <Popover.Portal>
@@ -1453,6 +1468,11 @@ export function TooltipPopoverContent({
         className="bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg px-2 py-2 w-72 z-[10000]"
         data-tooltip-portal="true"
       >
+        {title && (
+          <div className="px-1 py-1 text-xs font-semibold text-gray-400">
+            {title}
+          </div>
+        )}
         {children}
       </Popover.Content>
     </Popover.Portal>

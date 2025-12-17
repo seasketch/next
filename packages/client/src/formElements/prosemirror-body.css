@@ -380,3 +380,17 @@ div[attachments="forumAttachments"] {
   top: 0;
   left: 0;
 }
+
+.ReportCardBody details {
+  /* @apply pl-2; */
+  @apply my-4;
+}
+
+.ReportCard details > summary,
+.ReportCardBody details > summary {
+  @apply cursor-pointer font-semibold text-gray-800;
+}
+
+.ReportCardBody details > *:not(summary) {
+  @apply ml-4;
+}

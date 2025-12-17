@@ -39,42 +39,42 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
   const formatting: CommandPaletteItem[] = [];
   const blocks: CommandPaletteItem[] = [];
 
-  if (schema.marks.strong) {
-    formatting.push({
-      id: "strong",
-      label: "Bold",
-      keywords: ["strong"],
-      run: (state, dispatch) => {
-        toggleMark(schema.marks.strong)(state, dispatch);
-      },
-      isEnabled: (state) => !!toggleMark(schema.marks.strong)(state),
-    });
-  }
+  // if (schema.marks.strong) {
+  //   formatting.push({
+  //     id: "strong",
+  //     label: "Bold",
+  //     keywords: ["strong"],
+  //     run: (state, dispatch) => {
+  //       toggleMark(schema.marks.strong)(state, dispatch);
+  //     },
+  //     isEnabled: (state) => !!toggleMark(schema.marks.strong)(state),
+  //   });
+  // }
 
-  if (schema.marks.em) {
-    formatting.push({
-      id: "em",
-      label: "Italic",
-      keywords: ["emphasis", "italics"],
-      run: (state, dispatch) => {
-        toggleMark(schema.marks.em)(state, dispatch);
-      },
-      isEnabled: (state) => !!toggleMark(schema.marks.em)(state),
-    });
-  }
+  // if (schema.marks.em) {
+  //   formatting.push({
+  //     id: "em",
+  //     label: "Italic",
+  //     keywords: ["emphasis", "italics"],
+  //     run: (state, dispatch) => {
+  //       toggleMark(schema.marks.em)(state, dispatch);
+  //     },
+  //     isEnabled: (state) => !!toggleMark(schema.marks.em)(state),
+  //   });
+  // }
 
-  if (schema.nodes.paragraph) {
-    blocks.push({
-      id: "paragraph",
-      label: "Paragraph",
-      description: "Normal text",
-      keywords: ["text"],
-      run: (state, dispatch) => {
-        setBlockType(schema.nodes.paragraph)(state, dispatch);
-      },
-      isEnabled: (state) => !!setBlockType(schema.nodes.paragraph)(state),
-    });
-  }
+  // if (schema.nodes.paragraph) {
+  //   blocks.push({
+  //     id: "paragraph",
+  //     label: "Paragraph",
+  //     description: "Normal text",
+  //     keywords: ["text"],
+  //     run: (state, dispatch) => {
+  //       setBlockType(schema.nodes.paragraph)(state, dispatch);
+  //     },
+  //     isEnabled: (state) => !!setBlockType(schema.nodes.paragraph)(state),
+  //   });
+  // }
 
   if (schema.nodes.heading) {
     [2, 3].forEach((level) => {
@@ -92,31 +92,31 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
     });
   }
 
-  if (schema.nodes.h2) {
-    blocks.push({
-      id: "report-heading",
-      label: "Section Heading",
-      description: "Report section title",
-      keywords: ["heading", "section"],
-      run: (state, dispatch) => {
-        setBlockType(schema.nodes.h2)(state, dispatch);
-      },
-      isEnabled: (state) => !!setBlockType(schema.nodes.h2)(state),
-    });
-  }
+  // if (schema.nodes.h2) {
+  //   blocks.push({
+  //     id: "report-heading",
+  //     label: "Section Heading",
+  //     description: "Report section title",
+  //     keywords: ["heading", "section"],
+  //     run: (state, dispatch) => {
+  //       setBlockType(schema.nodes.h2)(state, dispatch);
+  //     },
+  //     isEnabled: (state) => !!setBlockType(schema.nodes.h2)(state),
+  //   });
+  // }
 
-  if (schema.nodes.blockquote) {
-    blocks.push({
-      id: "blockquote",
-      label: "Blockquote",
-      description: "Emphasize a long quote",
-      keywords: ["quote"],
-      run: (state, dispatch) => {
-        wrapIn(schema.nodes.blockquote)(state, dispatch);
-      },
-      isEnabled: (state) => !!wrapIn(schema.nodes.blockquote)(state),
-    });
-  }
+  // if (schema.nodes.blockquote) {
+  //   blocks.push({
+  //     id: "blockquote",
+  //     label: "Blockquote",
+  //     description: "Emphasize a long quote",
+  //     keywords: ["quote"],
+  //     run: (state, dispatch) => {
+  //       wrapIn(schema.nodes.blockquote)(state, dispatch);
+  //     },
+  //     isEnabled: (state) => !!wrapIn(schema.nodes.blockquote)(state),
+  //   });
+  // }
 
   if (schema.nodes.bullet_list && schema.nodes.list_item) {
     blocks.push({
@@ -144,20 +144,20 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
     });
   }
 
-  if (schema.nodes.horizontal_rule) {
-    blocks.push({
-      id: "horizontal-rule",
-      label: "Divider",
-      description: "Insert a horizontal divider",
-      keywords: ["hr", "rule", "divider"],
-      run: (state, dispatch) => {
-        const hrNode = schema.nodes.horizontal_rule.create();
-        const tr = state.tr.replaceSelectionWith(hrNode).scrollIntoView();
-        dispatch(tr);
-      },
-      isEnabled: () => !!schema.nodes.horizontal_rule,
-    });
-  }
+  // if (schema.nodes.horizontal_rule) {
+  //   blocks.push({
+  //     id: "horizontal-rule",
+  //     label: "Divider",
+  //     description: "Insert a horizontal divider",
+  //     keywords: ["hr", "rule", "divider"],
+  //     run: (state, dispatch) => {
+  //       const hrNode = schema.nodes.horizontal_rule.create();
+  //       const tr = state.tr.replaceSelectionWith(hrNode).scrollIntoView();
+  //       dispatch(tr);
+  //     },
+  //     isEnabled: () => !!schema.nodes.horizontal_rule,
+  //   });
+  // }
 
   const groups: CommandPaletteGroup[] = [];
 

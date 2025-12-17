@@ -23,6 +23,7 @@ import {
   ReportWidgetNodeViewRouter,
   buildReportCommandGroups,
 } from "../widgets/widgets";
+import { DetailsView } from "../widgets/prosemirror-details";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
@@ -64,7 +65,6 @@ function ReportCardBodyEditorInner({
 }: ReportCardBodyEditorProps) {
   const { schema, plugins } = useMemo(() => {
     const schema = createReportCardSchema();
-
     const plugins = [
       ...exampleSetup({ schema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
@@ -147,6 +147,9 @@ function ReportCardBodyEditorInner({
             onCreatePortal: createPortal,
             onDestroy: removePortal,
           });
+        },
+        details(node, view, getPos) {
+          return new DetailsView(node, view, getPos as () => number);
         },
         blockMetric(node, view, getPos, decorations) {
           return createReactNodeView({

@@ -904,6 +904,9 @@ async function getOrCreateSpatialMetric({
       "Either subjectFragmentId or subjectGeographyId must be provided"
     );
   }
+  if (type === "distance_to_shore" && !overlaySourceUrl) {
+    overlaySourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+  }
   const result = await pool.query(
     `
     select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int, $8::text) as metric

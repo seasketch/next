@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 import { useMemo } from "react";
 import {
+  DistanceToShoreMetric,
   Metric,
   TotalAreaMetric,
   combineMetricsForFragments,
@@ -11,6 +12,7 @@ import {
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import { UnitSelector } from "./UnitSelector";
+import { AreaUnit, LengthUnit } from "../utils/units";
 import Skeleton from "../../components/Skeleton";
 import { ReportWidget } from "./widgets";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
@@ -18,9 +20,17 @@ import { NumberRoundingControl } from "./NumberRoundingControl";
 import { SketchGeometryType } from "../../generated/graphql";
 
 export const InlineMetric: ReportWidget<{
-  unit: "hectare" | "acre" | "mile" | "kilometer";
+  unit:
+    | "hectare"
+    | "acre"
+    | "mile"
+    | "kilometer"
+    | "meter"
+    | "foot"
+    | "nautical-mile";
+  unitDisplay?: "long" | "short";
   minimumFractionDigits: number;
-  presentation: "total_area" | "percent_area";
+  presentation: "total_area" | "percent_area" | "distance_to_shore";
 }> = ({
   metrics,
   sources,
@@ -40,28 +50,17 @@ export const InlineMetric: ReportWidget<{
   const formatters = useNumberFormatters({
     unit: componentSettings?.unit,
     minimumFractionDigits: componentSettings?.minimumFractionDigits,
+    unitDisplay: componentSettings?.unitDisplay || "short",
   });
-
-  const primaryGeographyId = useMemo(() => {
-    const id = findPrimaryGeographyId(
-      metrics as Pick<Metric, "type" | "value" | "subject">[]
-    );
-    if (!sketchClass.clippingGeographies?.some((g) => g.id === id)) {
-      throw new Error(
-        "Primary geography not found in sketch class clipping geographies."
-      );
-    }
-    return id;
-  }, [metrics, sketchClass.clippingGeographies]);
 
   const formattedValue = useMemo(() => {
     if (!dependencies.length) {
       throw new Error("No metric dependencies configured");
     }
+    const presentation = componentSettings?.presentation || "total_area";
     if (errors.length > 0 || loading || metrics.length === 0) {
       return null;
     }
-    const presentation = componentSettings?.presentation || "total_area";
     switch (presentation) {
       case "total_area":
         const combined = combineMetricsForFragments(
@@ -69,6 +68,21 @@ export const InlineMetric: ReportWidget<{
         ) as TotalAreaMetric;
         return formatters.area(combined.value);
       case "percent_area":
+        const primaryGeographyId = findPrimaryGeographyId(
+          metrics as Pick<Metric, "type" | "value" | "subject">[]
+        );
+        if (!primaryGeographyId) {
+          throw new Error("Primary geography not found in metrics.");
+        }
+        if (
+          !(sketchClass.clippingGeographies || []).some(
+            (g) => g!.id === primaryGeographyId
+          )
+        ) {
+          throw new Error(
+            "Primary geography not found in sketch class clipping geographies."
+          );
+        }
         // Should be percent of sketch class' clipping geography
         const totalArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsFragment(m.subject)) as Pick<
@@ -84,17 +98,31 @@ export const InlineMetric: ReportWidget<{
           throw new Error("Primary geography not found in metrics.");
         }
         return formatters.percent(totalArea.value / geographyAreaMetric.value);
+      case "distance_to_shore": {
+        const distanceToShore = metrics.find(
+          (m) => m.type === "distance_to_shore"
+        );
+        const combined = combineMetricsForFragments(
+          metrics as Pick<Metric, "type" | "value">[]
+        ) as DistanceToShoreMetric;
+        if (!distanceToShore) {
+          console.error("Distance to shore not found in metrics.", metrics);
+          throw new Error("Distance to shore not found in metrics.");
+        }
+        return formatters.distance(combined.value.meters / 1000);
+      }
       default:
-        throw new Error(`Unsupported presentation: ${presentation}`);
+        // eslint-disable-next-line i18next/no-literal-string
+        errors.push(`Unsupported presentation: ${presentation}`);
     }
   }, [
     dependencies.length,
-    errors.length,
     loading,
     metrics,
     componentSettings?.presentation,
     formatters,
-    primaryGeographyId,
+    sketchClass.clippingGeographies,
+    errors,
   ]);
 
   if (loading) {
@@ -139,21 +167,52 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 }) => {
   const presentation =
     node.attrs.componentSettings.presentation || "total_area";
-  const unit = node.attrs?.componentSettings?.unit || "kilometer";
+  const componentSettings = node.attrs?.componentSettings || {};
+  const unit = componentSettings.unit || "kilometer";
+  const unitDisplay = componentSettings.unitDisplay || "short";
 
   return (
     <>
       {presentation === "total_area" && (
         <UnitSelector
-          value={unit}
-          onChange={(value) => onUpdate({ componentSettings: { unit: value } })}
+          unitType="area"
+          value={unit as AreaUnit}
+          unitDisplay={unitDisplay}
+          onChange={(value: AreaUnit) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, unit: value },
+            })
+          }
+          onUnitDisplayChange={(display) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, unitDisplay: display },
+            })
+          }
+        />
+      )}
+      {presentation === "distance_to_shore" && (
+        <UnitSelector
+          unitType="distance"
+          value={unit as LengthUnit}
+          unitDisplay={unitDisplay}
+          onChange={(value: LengthUnit) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, unit: value },
+            })
+          }
+          onUnitDisplayChange={(display) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, unitDisplay: display },
+            })
+          }
         />
       )}
       <NumberRoundingControl
-        value={node.attrs?.componentSettings?.minimumFractionDigits}
+        value={componentSettings?.minimumFractionDigits}
         onChange={(minimumFractionDigits) =>
           onUpdate({
             componentSettings: {
+              ...componentSettings,
               minimumFractionDigits,
             },
           })

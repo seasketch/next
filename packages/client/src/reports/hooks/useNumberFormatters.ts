@@ -1,13 +1,22 @@
 import { useCallback, useContext, useMemo } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import { convertSquareKilometersToUnit } from "../utils/units";
+import {
+  convertSquareKilometersToUnit,
+  convertKilometersToUnit,
+  AreaUnit,
+  LengthUnit,
+  isAreaUnit,
+  isLengthUnit,
+} from "../utils/units";
 
 export function useNumberFormatters({
   minimumFractionDigits,
   unit,
+  unitDisplay,
 }: {
   minimumFractionDigits?: number;
-  unit?: "hectare" | "acre" | "mile" | "kilometer";
+  unit?: AreaUnit | LengthUnit;
+  unitDisplay?: "long" | "short";
 } = {}) {
   unit = unit || "kilometer";
   const langContext = useContext(FormLanguageContext);
@@ -16,19 +25,42 @@ export function useNumberFormatters({
     const smallAreaFormatter = new Intl.NumberFormat(langContext?.lang?.code, {
       style: "unit",
       unit: unit,
+      unitDisplay: unitDisplay,
       maximumFractionDigits: 2,
       minimumFractionDigits: 0,
     });
     const largeAreaFormatter = new Intl.NumberFormat(langContext?.lang?.code, {
       style: "unit",
       unit: unit,
+      unitDisplay: unitDisplay,
       maximumFractionDigits: 0,
       minimumFractionDigits: 0,
     });
+    const smallDistanceFormatter = new Intl.NumberFormat(
+      langContext?.lang?.code,
+      {
+        style: "unit",
+        unit: unit,
+        unitDisplay: unitDisplay,
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+      }
+    );
+    const largeDistanceFormatter = new Intl.NumberFormat(
+      langContext?.lang?.code,
+      {
+        style: "unit",
+        unit: unit,
+        unitDisplay: unitDisplay,
+        maximumFractionDigits: 0,
+        minimumFractionDigits: 0,
+      }
+    );
     const smallPercentFormatter = new Intl.NumberFormat(
       langContext?.lang?.code,
       {
         style: "percent",
+        unitDisplay: unitDisplay,
         maximumFractionDigits: 1,
         minimumFractionDigits: 1,
       }
@@ -37,6 +69,7 @@ export function useNumberFormatters({
       langContext?.lang?.code,
       {
         style: "percent",
+        unitDisplay: unitDisplay,
         maximumFractionDigits: 0,
         minimumFractionDigits: 0,
       }
@@ -46,14 +79,27 @@ export function useNumberFormatters({
       {
         style: "unit",
         unit: unit,
+        unitDisplay: unitDisplay,
         minimumFractionDigits: minimumFractionDigits,
         maximumFractionDigits: minimumFractionDigits,
       }
     );
+    const specifiedDistanceFormatter = new Intl.NumberFormat(
+      langContext?.lang?.code,
+      {
+        style: "unit",
+        unit: unit,
+        unitDisplay: unitDisplay,
+        minimumFractionDigits: minimumFractionDigits,
+        maximumFractionDigits: minimumFractionDigits,
+      }
+    );
+
     const specifiedPercentFormatter = new Intl.NumberFormat(
       langContext?.lang?.code,
       {
         style: "percent",
+        unitDisplay: unitDisplay,
         minimumFractionDigits: minimumFractionDigits,
         maximumFractionDigits: minimumFractionDigits,
       }
@@ -65,14 +111,18 @@ export function useNumberFormatters({
       largePercentFormatter,
       specifiedAreaFormatter,
       specifiedPercentFormatter,
+      specifiedDistanceFormatter,
+      smallDistanceFormatter,
+      largeDistanceFormatter,
     };
-  }, [langContext?.lang?.code, unit, minimumFractionDigits]);
+  }, [langContext?.lang?.code, unit, minimumFractionDigits, unitDisplay]);
 
   const area = useCallback(
     (value: number) => {
-      if (unit !== "kilometer") {
-        value = convertSquareKilometersToUnit(value, unit);
+      if (!isAreaUnit(unit)) {
+        throw new Error(`Invalid area unit: ${unit}`);
       }
+      value = convertSquareKilometersToUnit(value, unit);
       let formattedValue: string;
       if (minimumFractionDigits !== undefined) {
         formattedValue = formatters.specifiedAreaFormatter.format(value);
@@ -83,6 +133,25 @@ export function useNumberFormatters({
       }
       if (unit === "kilometer" || unit === "mile") {
         formattedValue += "²";
+      }
+      return formattedValue;
+    },
+    [formatters, minimumFractionDigits, unit]
+  );
+
+  const distance = useCallback(
+    (value: number) => {
+      if (!isLengthUnit(unit)) {
+        throw new Error(`Invalid length unit: ${unit}`);
+      }
+      value = convertKilometersToUnit(value, unit);
+      let formattedValue: string;
+      if (minimumFractionDigits !== undefined) {
+        formattedValue = formatters.specifiedDistanceFormatter.format(value);
+      } else if (value < 10) {
+        formattedValue = formatters.smallDistanceFormatter.format(value);
+      } else {
+        formattedValue = formatters.largeDistanceFormatter.format(value);
       }
       return formattedValue;
     },
@@ -126,5 +195,6 @@ export function useNumberFormatters({
   return {
     area,
     percent,
+    distance,
   };
 }

@@ -1,6 +1,7 @@
 import { Schema, NodeSpec, Node } from "prosemirror-model";
 import { formElements } from "../../editor/config";
 import { addListNodes } from "prosemirror-schema-list";
+import { detailsNodes } from "../widgets/prosemirror-details";
 
 /**
  * Creates a report card schema with metric node support.
@@ -139,9 +140,16 @@ export function createReportCardSchema(): Schema {
     ? updatedNodes.update("blockMetric", blockMetricSpec)
     : updatedNodes.append({ blockMetric: blockMetricSpec });
 
+  const { details, summary } = detailsNodes({
+    detailsGroup: "block",
+    detailsContent: "block*",
+    summaryContent: "inline*",
+  });
+  const nodesWithDetails = updatedNodesWithBlocks.append({ details, summary });
+
   // Create new schema with updated nodes
   const schema = new Schema({
-    nodes: updatedNodesWithBlocks,
+    nodes: nodesWithDetails,
     marks: baseSchema.spec.marks,
   });
   (schema as any).isReportCardBodySchema = true;
