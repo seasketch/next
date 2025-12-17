@@ -251,14 +251,15 @@ export function insertMetric(
 
   let tr = state.tr.replaceRangeWith(range.$from.pos, range.$to.pos, node);
 
-  // Place cursor after the inserted node. Map the original selection to the
-  // updated document to avoid out-of-range positions when inserting at the end
-  // of a block (e.g., an empty paragraph).
+  // Place cursor just after the inserted node, preferring the same inline
+  // parent so we don't jump into a following block node.
   const mappedFrom = tr.mapping.map(range.$from.pos);
   const posAfter = Math.min(tr.doc.content.size, mappedFrom + node.nodeSize);
-  tr = tr.setSelection(
-    TextSelection.near(tr.doc.resolve(posAfter), 1 /* forward */)
-  );
+  const $posAfter = tr.doc.resolve(posAfter);
+  const selection = $posAfter.parent.inlineContent
+    ? TextSelection.create(tr.doc, posAfter)
+    : TextSelection.near($posAfter, -1 /* backward to stay in previous block */);
+  tr = tr.setSelection(selection);
 
   dispatch(tr.scrollIntoView());
   view.focus();

@@ -604,7 +604,8 @@ export default function TooltipMenu({
           ds?.inlineLinkPopover === "true" ||
           ds?.tooltipDropdown === "true" ||
           ds?.tooltipPortal === "true" ||
-          ds?.reportCommandPalette === "true"
+          ds?.reportCommandPalette === "true" ||
+          ds?.reportBlockHandle === "true"
         );
       });
       if (inTooltip) return;
@@ -748,6 +749,36 @@ export default function TooltipMenu({
         workingState = view.state;
       }
 
+      const convertExistingList = (target: string) => {
+        if (target !== "bullet-list" && target !== "ordered-list") return false;
+        const { bullet_list, ordered_list } = workingState.schema.nodes;
+        const { $from, $to } = workingState.selection;
+
+        for (let depth = $from.depth; depth > 0; depth--) {
+          const node = $from.node(depth);
+          if (node.type !== bullet_list && node.type !== ordered_list) continue;
+          if ($to.depth < depth || $to.node(depth) !== node) continue;
+
+          const pos = $from.before(depth);
+          const targetType =
+            target === "bullet-list" ? bullet_list : ordered_list;
+          if (!targetType || node.type === targetType) return false;
+
+          const targetAttrs =
+            targetType === ordered_list ? node.attrs ?? {} : undefined;
+          const tr = workingState.tr.setNodeMarkup(
+            pos,
+            targetType,
+            targetAttrs
+          );
+          dispatch(tr);
+          workingState = view.state;
+          return true;
+        }
+
+        return false;
+      };
+
       const runLift = () => {
         while (lift(workingState, dispatch)) {
           workingState = view.state;
@@ -771,6 +802,15 @@ export default function TooltipMenu({
       };
 
       // Always clear existing structural wrappers first
+      if (convertExistingList(targetId)) {
+        view.focus();
+        requestAnimationFrame(() => view.focus());
+        setCommands([]);
+        setSuppressOnce(true);
+        setTimeout(() => setSuppressOnce(false), 0);
+        return;
+      }
+
       runLift();
       normalizeToParagraph();
 
