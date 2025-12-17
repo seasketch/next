@@ -14,6 +14,10 @@ import gql from "graphql-tag";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../editor/TooltipMenu";
+import {
+  BLUR_SELECTION_STYLES,
+  createBlurSelectionPlugin,
+} from "../editor/blurSelectionPlugin";
 import { FormLanguageContext, SurveyContext } from "./FormElement";
 import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
 
@@ -73,13 +77,14 @@ export default function BodyEditor({
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
   const [state, setState] = useState<EditorState>();
+  const saveRef = useRef<((doc: any) => void) | null>(null);
 
   useEffect(() => {
     const doc = body ? Node.fromJSON(schema, body) : undefined;
     const view = new EditorView(root.current!, {
       state: EditorState.create({
         schema,
-        plugins,
+        plugins: [...plugins, createBlurSelectionPlugin()],
         doc,
       }),
       dispatchTransaction: (transaction) => {
@@ -136,7 +141,9 @@ export default function BodyEditor({
               },
             });
           }
-          save(newState.doc);
+          if (saveRef.current) {
+            saveRef.current(newState.doc);
+          }
         }
       },
     });
@@ -224,17 +231,15 @@ export default function BodyEditor({
     { leading: true, trailing: true },
     [update, formElementId, selectedLanguage]
   );
+  saveRef.current = save;
   return (
-    <div
-      className="relative"
-      onBlur={(e) => {
-        const next = e.relatedTarget as HTMLElement | null;
-        if (next && next.closest("[data-report-tooltip='true']")) {
-          return;
+    <div className="relative">
+      <style>
+        {
+          // eslint-disable-next-line i18next/no-literal-string
+          BLUR_SELECTION_STYLES
         }
-        setState(undefined);
-      }}
-    >
+      </style>
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
       <div className="ProseMirrorBody" ref={root}></div>
       {surveyContext && (

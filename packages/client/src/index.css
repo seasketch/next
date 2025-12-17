@@ -6143,6 +6143,10 @@ select{
   z-index:auto
 }
 
+.z-\[10000\]{
+  z-index:10000
+}
+
 .order-1{
   order:1
 }
@@ -6851,9 +6855,9 @@ select{
   height:25px
 }
 
-.size-6{
-  width:1.5rem;
-  height:1.5rem
+.size-3{
+  width:0.75rem;
+  height:0.75rem
 }
 
 .size-4{
@@ -6861,14 +6865,9 @@ select{
   height:1rem
 }
 
-.size-3{
-  width:0.75rem;
-  height:0.75rem
-}
-
-.size-3\.5{
-  width:0.875rem;
-  height:0.875rem
+.size-6{
+  width:1.5rem;
+  height:1.5rem
 }
 
 .h-0{
@@ -8975,6 +8974,10 @@ select{
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
 }
 
+.border-black\/20{
+  border-color:rgb(0 0 0 / 0.2)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -10284,6 +10287,11 @@ select{
   padding-bottom:2rem
 }
 
+.py-\[3px\]{
+  padding-top:3px;
+  padding-bottom:3px
+}
+
 .pb-0{
   padding-bottom:0px
 }
@@ -10610,6 +10618,10 @@ select{
 .text-xs{
   font-size:0.75rem;
   line-height:1rem
+}
+
+.text-\[12px\]{
+  font-size:12px
 }
 
 .font-bold{
@@ -11643,6 +11655,11 @@ select{
   filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)
 }
 
+.blur-sm{
+  --tw-blur:blur(4px);
+  filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)
+}
+
 .brightness-50{
   --tw-brightness:brightness(.5);
   filter:var(--tw-blur) var(--tw-brightness) var(--tw-contrast) var(--tw-grayscale) var(--tw-hue-rotate) var(--tw-invert) var(--tw-saturate) var(--tw-sepia) var(--tw-drop-shadow)
@@ -12638,6 +12655,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
 }
 
+.hover\:text-red-900:hover{
+  --tw-text-opacity:1;
+  color:rgb(127 29 29 / var(--tw-text-opacity, 1))
+}
+
 .hover\:underline:hover{
   -webkit-text-decoration-line:underline;
           text-decoration-line:underline
@@ -12807,6 +12829,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus\:bg-gray-800:focus{
   --tw-bg-opacity:1;
   background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
+}
+
+.focus\:bg-gray-50:focus{
+  --tw-bg-opacity:1;
+  background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
 }
 
 .focus\:bg-opacity-10:focus{
@@ -13232,6 +13259,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   opacity:0.8
 }
 
+.has-\[data-state\=open\]\:bg-gray-100:has(data-state=open){
+  --tw-bg-opacity:1;
+  background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
+}
+
 .data-\[state\=active\]\:border-b-2[data-state="active"]{
   border-bottom-width:2px
 }
@@ -13254,6 +13286,16 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .data-\[state\=active\]\:bg-blue-50[data-state="active"]{
   --tw-bg-opacity:1;
   background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))
+}
+
+.data-\[state\=open\]\:bg-gray-100[data-state="open"]{
+  --tw-bg-opacity:1;
+  background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
+}
+
+.data-\[state\=open\]\:bg-gray-50[data-state="open"]{
+  --tw-bg-opacity:1;
+  background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
 }
 
 .data-\[state\=active\]\:text-blue-600[data-state="active"]{

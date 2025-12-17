@@ -70,7 +70,11 @@ export function SortableReportBody({
   }
 
   return (
-    <div className="p-4 bg-gray-100 rounded-b-lg">
+    <div
+      className={`p-4 transition-colors ${
+        !!selectedForEditing ? "bg-gray-300" : "bg-gray-100"
+      } rounded-b-lg`}
+    >
       {selectedTab.cards?.length === 0 && (
         <div>
           <p className="text-sm text-gray-500">

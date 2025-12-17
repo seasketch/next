@@ -12,25 +12,38 @@ import {
   useEffect,
   useMemo,
   useState,
+  MouseEvent as ReactMouseEvent,
+  useRef,
+  Fragment,
 } from "react";
 import { createPortal } from "react-dom";
-import { TFunction, Trans, useTranslation } from "react-i18next";
+import { TFunction, useTranslation } from "react-i18next";
 import { getActiveMarks } from "./EditorMenuBar";
 import { ReportWidgetTooltipControlsRouter } from "../reports/widgets/widgets";
 import { formElements } from "./config";
 import {
+  CaretDownIcon,
   FontBoldIcon,
   FontItalicIcon,
   HeadingIcon,
   ListBulletIcon,
-  PilcrowIcon,
+  TextIcon,
+  TrashIcon,
   UnderlineIcon,
 } from "@radix-ui/react-icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import * as Popover from "@radix-ui/react-popover";
 
 /**
  * Check if the selection is exclusively a metric node (no other content)
  */
+const ICON_CONTAINER_CLASSES =
+  "flex items-center justify-center w-4 h-4 overflow-hidden";
+const ICON_TOGGLE_BUTTON_CLASSES =
+  "w-7 h-7 inline-flex items-center justify-center rounded border border-transparent hover:bg-gray-100 focus:outline-none active:bg-gray-100";
+const DROPDOWN_TRIGGER_CLASSES =
+  "h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none";
+
 function selectionIsOnlyMetricNode(
   state: EditorState,
   schema: Schema
@@ -223,6 +236,39 @@ function nodeTypeSupported(schema: Schema, id: string): boolean {
   }
 }
 
+function getActiveLinkRange(
+  state: EditorState
+): { from: number; to: number } | null {
+  const link = state.schema.marks.link;
+  if (!link) return null;
+  const { selection } = state;
+  const { from, to } = selection;
+  const hasLink = (pos: number) =>
+    state.doc
+      .resolve(pos)
+      .marks()
+      .some((m) => m.type === link);
+  const linkExists =
+    state.doc.rangeHasMark(from, to, link) || hasLink(from) || hasLink(to);
+  if (!linkExists) return null;
+
+  const clamp = (pos: number) =>
+    Math.max(0, Math.min(pos, state.doc.content.size));
+
+  let start = from;
+  let end = to;
+  // Expand start to include the full link mark
+  while (start > 0 && hasLink(start - 1)) {
+    start--;
+  }
+  // Expand end to include the full link mark
+  while (end < state.doc.content.size && hasLink(end)) {
+    end++;
+  }
+
+  return { from: clamp(start), to: clamp(end) };
+}
+
 export default function TooltipMenu({
   state,
   schema,
@@ -232,7 +278,7 @@ export default function TooltipMenu({
   view?: EditorView;
   state?: EditorState;
 }) {
-  const { t } = useTranslation("admin:surveys");
+  const { t } = useTranslation("admin:reports");
   const [position, setPosition] = useState<{
     left: string;
     bottom: string;
@@ -240,6 +286,17 @@ export default function TooltipMenu({
   const [commands, setCommands] = useState<Command[]>([]);
   const [activeMarks, setActiveMarks] = useState<{ [id: string]: boolean }>({});
   const [suppressOnce, setSuppressOnce] = useState(false);
+  const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkTitle, setLinkTitle] = useState("");
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkPopoverPos, setLinkPopoverPos] = useState<{
+    left: number;
+    top: number;
+  } | null>(null);
+  const linkTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const linkInputRef = useRef<HTMLInputElement | null>(null);
+  const tooltipRef = useRef<HTMLDivElement | null>(null);
 
   // Memoize these to prevent infinite loops
   const selectedMetric = useMemo(
@@ -304,6 +361,9 @@ export default function TooltipMenu({
       ) {
         return false;
       }
+      if (command.id === "h2b") {
+        return false;
+      }
       return !command.isDisabled(schema, state);
     });
 
@@ -339,9 +399,17 @@ export default function TooltipMenu({
         setCommands([]);
         return;
       }
+      let start: any;
+      let end: any;
 
-      const start = view.coordsAtPos(from);
-      const end = view.coordsAtPos(to);
+      try {
+        start = view.coordsAtPos(from);
+        end = view.coordsAtPos(to);
+      } catch (e) {
+        // Hack to support livereload. Otherwise an exception will
+        // get thrown when developing.
+        return;
+      }
 
       // Convert to viewport coordinates for portal positioning
       const left = Math.max((start.left + end.left) / 2, start.left + 3);
@@ -359,6 +427,13 @@ export default function TooltipMenu({
       setCommands([]);
     }
   }, [view, state, schema, isOnlyMetricNode, selectedMetric]);
+
+  // If tooltip hides, also clear any lingering link popover state.
+  useEffect(() => {
+    if (position) return;
+    setLinkPopoverOpen(false);
+    setLinkPopoverPos(null);
+  }, [position]);
 
   // Calculate position when selection or state changes
   useEffect(() => {
@@ -410,6 +485,7 @@ export default function TooltipMenu({
         schema.marks.strong,
         schema.marks.em,
         schema.marks.underline,
+        schema.marks.link,
       ].filter(Boolean);
       setActiveMarks(getActiveMarks(state, marksToCheck as any));
     }
@@ -464,9 +540,306 @@ export default function TooltipMenu({
     [view, schema]
   );
 
+  const activeLinkMark = useMemo(() => {
+    if (!state || !state.selection || state.selection.empty) return null;
+    const links = getActiveLinks(state) || [];
+    return links.length ? links[0] : null;
+  }, [state]);
+
+  const calculateLinkPopoverPosition = useCallback(() => {
+    const trigger = linkTriggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const width = 300;
+    const padding = 8;
+    const left = Math.min(
+      Math.max(rect.left + rect.width / 2 - width / 2, padding),
+      window.innerWidth - width - padding
+    );
+    const top = rect.top - 8; // position above the trigger
+    setLinkPopoverPos({ left, top });
+  }, []);
+
+  const updateLinkPopoverPosition = useCallback(() => {
+    if (linkPopoverOpen) {
+      calculateLinkPopoverPosition();
+    }
+  }, [calculateLinkPopoverPosition, linkPopoverOpen]);
+
+  useEffect(() => {
+    if (linkPopoverOpen) {
+      setLinkUrl(activeLinkMark?.attrs?.href || "");
+      setLinkTitle(activeLinkMark?.attrs?.title || "");
+      setLinkError(null);
+      updateLinkPopoverPosition();
+      requestAnimationFrame(() => {
+        linkInputRef.current?.focus();
+      });
+      const handler = () => updateLinkPopoverPosition();
+      window.addEventListener("scroll", handler, true);
+      window.addEventListener("resize", handler);
+      return () => {
+        window.removeEventListener("scroll", handler, true);
+        window.removeEventListener("resize", handler);
+      };
+    }
+  }, [linkPopoverOpen, activeLinkMark, updateLinkPopoverPosition]);
+
+  useEffect(() => {
+    if (!view?.dom) {
+      return;
+    }
+    const handler = (e: MouseEvent) => {
+      const path = (e.composedPath?.() || []) as Array<EventTarget>;
+      const inEditor = path.some(
+        (node) => node instanceof HTMLElement && view.dom.contains(node)
+      );
+      if (inEditor) return;
+      const inTooltip = path.some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const ds = node.dataset;
+        return (
+          ds?.reportTooltip === "true" ||
+          ds?.reportTooltipPortal === "true" ||
+          ds?.inlineLinkPopover === "true" ||
+          ds?.tooltipDropdown === "true" ||
+          ds?.tooltipPortal === "true"
+        );
+      });
+      if (inTooltip) return;
+
+      // check for closing of radix dropdown
+      if (e.target instanceof HTMLElement && e.target.tagName === "HTML") {
+        // const body = document.body;
+        // if (body.style.pointerEvents === "none") {
+        return;
+        // }
+      }
+
+      // clear editor selection
+      view.dispatch(
+        view.state.tr.setSelection(TextSelection.create(view.state.doc, 0, 0))
+      );
+      // setPosition(null);
+      // setCommands([]);
+      // setLinkPopoverOpen(false);
+      // setLinkPopoverPos(null);
+    };
+
+    window.document.addEventListener("mousedown", handler, true);
+    return () => {
+      window.document.removeEventListener("mousedown", handler, true);
+    };
+  }, [view?.dom]);
+
+  // Close tooltip/popovers when clicking outside the editor/tooltip
+  // useEffect(() => {
+  //   if (!position || !view?.dom) return;
+  //   const viewDom = view.dom as HTMLElement;
+  //   const handler = (e: Event) => {
+  //     const path = (e.composedPath?.() || []) as Array<EventTarget>;
+  //     const inEditor = path.some(
+  //       (node) => node instanceof HTMLElement && viewDom.contains(node)
+  //     );
+  //     if (inEditor) return;
+
+  //     const inTooltip = path.some((node) => {
+  //       if (!(node instanceof HTMLElement)) return false;
+  //       const ds = node.dataset;
+  //       return (
+  //         ds?.reportTooltip === "true" ||
+  //         ds?.reportTooltipPortal === "true" ||
+  //         ds?.inlineLinkPopover === "true"
+  //       );
+  //     });
+  //     if (inTooltip) return;
+
+  //     setPosition(null);
+  //     setCommands([]);
+  //     setLinkPopoverOpen(false);
+  //     setLinkPopoverPos(null);
+  //   };
+  //   document.addEventListener("mousedown", handler, true);
+  //   return () => {
+  //     document.removeEventListener("mousedown", handler, true);
+  //   };
+  // }, [position, view]);
+
+  // Close link popover when selection moves
+  useEffect(() => {
+    setLinkPopoverOpen(false);
+    setLinkPopoverPos(null);
+  }, [state?.selection.from, state?.selection.to]);
+
+  const applyLink = useCallback(() => {
+    if (!view || !state) return;
+    const href = linkUrl.trim();
+    const title = linkTitle.trim();
+    const linkMark = schema.marks.link;
+    if (!linkMark) return;
+
+    const range = getActiveLinkRange(state) || {
+      from: state.selection.from,
+      to: state.selection.to,
+    };
+
+    const tr = state.tr.removeMark(range.from, range.to, linkMark);
+
+    if (href) {
+      const valid = /^https?:\/\//i.test(href) || /^mailto:/i.test(href);
+      if (!valid) {
+        // eslint-disable-next-line i18next/no-literal-string
+        setLinkError(
+          "Please enter a valid link starting with http://, https://, or mailto:"
+        );
+        return;
+      }
+      setLinkError(null);
+      tr.addMark(
+        range.from,
+        range.to,
+        linkMark.create(title ? { href, title } : { href })
+      );
+    }
+
+    view.dispatch(tr);
+    setLinkPopoverOpen(false);
+    setLinkPopoverPos(null);
+    requestAnimationFrame(() => view.focus());
+  }, [linkUrl, linkTitle, schema.marks.link, state, view]);
+
+  const removeLink = useCallback(() => {
+    if (!view || !state) return;
+    toggleMark(schema.marks.link, { href: null })(state, view.dispatch);
+    setLinkPopoverOpen(false);
+    setLinkPopoverPos(null);
+    requestAnimationFrame(() => view.focus());
+  }, [schema.marks.link, state, view]);
+
   const markCommands = useMemo(
     () => commands.filter((c) => c.group === "mark"),
     [commands]
+  );
+
+  const handleNodeTypeChange = useCallback(
+    (targetId: string) => {
+      if (!view || !state) return;
+
+      let workingState = view.state;
+      const dispatch = view.dispatch.bind(view);
+
+      // If selection is an inline metric, shift selection to its parent block
+      if (
+        isOnlyMetricNode &&
+        selectedMetric &&
+        selectedMetric.node.type !== schema.nodes.blockMetric
+      ) {
+        const $pos = workingState.doc.resolve(selectedMetric.pos);
+        const blockStart = $pos.start($pos.depth);
+        const blockEnd = $pos.end($pos.depth);
+        const blockSelection = TextSelection.create(
+          workingState.doc,
+          blockStart + 1,
+          Math.max(blockStart + 1, blockEnd - 1)
+        );
+        const trSel = workingState.tr.setSelection(blockSelection);
+        dispatch(trSel);
+        workingState = view.state;
+      }
+
+      const runLift = () => {
+        while (lift(workingState, dispatch)) {
+          workingState = view.state;
+        }
+      };
+
+      const normalizeToParagraph = () => {
+        const para = workingState.schema.nodes.paragraph;
+        if (para) {
+          setBlockType(para)(workingState, dispatch);
+          workingState = view.state;
+        }
+      };
+
+      const applyHeading = (level: number) => {
+        const heading = workingState.schema.nodes.heading;
+        if (heading) {
+          setBlockType(heading, { level })(workingState, dispatch);
+          workingState = view.state;
+        }
+      };
+
+      // Always clear existing structural wrappers first
+      runLift();
+      normalizeToParagraph();
+
+      switch (targetId) {
+        case "paragraph":
+          break;
+        case "blockquote": {
+          const blockquote = workingState.schema.nodes.blockquote;
+          if (blockquote) {
+            wrapIn(blockquote)(workingState, dispatch);
+            workingState = view.state;
+          }
+          break;
+        }
+        case "bullet-list": {
+          const list = workingState.schema.nodes.bullet_list;
+          if (list) {
+            wrapInList(list)(workingState, dispatch);
+            workingState = view.state;
+          }
+          break;
+        }
+        case "ordered-list": {
+          const list = workingState.schema.nodes.ordered_list;
+          if (list) {
+            wrapInList(list)(workingState, dispatch);
+            workingState = view.state;
+          }
+          break;
+        }
+        case "h1":
+          applyHeading(1);
+          break;
+        case "h2":
+          applyHeading(2);
+          break;
+        case "h3":
+          applyHeading(3);
+          break;
+        case "h2b": {
+          const h2 = workingState.schema.nodes.h2;
+          if (h2) {
+            setBlockType(h2)(workingState, dispatch);
+            workingState = view.state;
+          } else {
+            applyHeading(2);
+          }
+          break;
+        }
+        default:
+          break;
+      }
+
+      view.focus();
+      requestAnimationFrame(() => view.focus());
+
+      // Hide the tooltip after changing node type (Notion/tiptap behavior)
+      setCommands([]);
+      setSuppressOnce(true);
+      setTimeout(() => setSuppressOnce(false), 0);
+    },
+    [
+      isOnlyMetricNode,
+      schema.nodes.blockMetric,
+      selectedMetric,
+      setCommands,
+      setSuppressOnce,
+      state,
+      view,
+    ]
   );
 
   const nodeTypeOptions = useMemo(() => {
@@ -481,15 +854,14 @@ export default function TooltipMenu({
     return getActiveNodeTypeId(state, schema);
   }, [state, schema]);
 
-  const currentNodeTitle =
-    nodeTypeOptions.find((c) => c.id === currentNodeTypeId)?.title ||
-    "Paragraph";
+  const isQuestionsSchema = schema === formElements.questions.schema;
 
   const tooltipContent =
     commands.length > 0 || isOnlyMetricNode ? (
       <AnimatePresence>
         {position && (
           <motion.div
+            ref={tooltipRef}
             initial={{
               opacity: 0,
               scale: 0,
@@ -502,7 +874,7 @@ export default function TooltipMenu({
             }}
             exit={{ opacity: 0, scale: 1, translateX: "-50%" }}
             key="tooltip"
-            className={`bg-black text-white rounded shadow-sm fixed z-[9999] ${
+            className={`bg-white text-gray-900 border border-black/20 rounded-lg px-2 py-[3px] shadow-lg fixed z-[9999] ${
               isOnlyMetricNode ? "flex-col" : "flex overflow-hidden"
             }`}
             data-report-tooltip="true"
@@ -510,7 +882,7 @@ export default function TooltipMenu({
               left: position.left,
               bottom: position.bottom,
               transform: "translateX(-50%)",
-              boxShadow: "rgb(0 0 0 / 50%) 1px 3px 10px 0px",
+              boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
             }}
             onMouseDown={(e) => {
               // Prevent editor from handling mouse events when interacting with tooltip
@@ -520,8 +892,9 @@ export default function TooltipMenu({
             }}
           >
             {(commands.length > 0 || (isOnlyMetricNode && selectedMetric)) && (
-              <div className="flex overflow-hidden items-center">
-                {nodeTypeOptions.length > 0 &&
+              <div className="flex overflow-hidden items-center space-x-1">
+                {!isQuestionsSchema &&
+                  nodeTypeOptions.length > 0 &&
                   !selectionIsReportTitle(state, schema) &&
                   !(
                     isSurveyQuestionSchema &&
@@ -532,189 +905,151 @@ export default function TooltipMenu({
                     isOnlyMetricNode &&
                     selectedMetric?.node?.type === schema.nodes.blockMetric
                   ) && (
-                    <DropdownMenu.Root>
-                      <DropdownMenu.Trigger asChild>
-                        <button
-                          className="h-8 bg-gray-900 text-white text-sm px-2 border border-gray-800 rounded-sm mr-1 inline-flex items-center gap-1"
-                          type="button"
-                          onMouseDown={(e) => e.preventDefault()}
-                        >
-                          <PilcrowIcon />
-                          <span>{currentNodeTitle}</span>
-                        </button>
-                      </DropdownMenu.Trigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.Content
-                          className="bg-gray-900 text-white border border-gray-800 rounded shadow-lg px-1 py-1"
-                          sideOffset={4}
-                        >
-                          <DropdownMenu.Label className="px-2 py-1 text-xs text-gray-300">
-                            <Trans ns="admin:reports">Change to</Trans>
-                          </DropdownMenu.Label>
-                          <DropdownMenu.Separator className="h-px bg-gray-800 my-1" />
-                          {nodeTypeOptions.map((command) => (
-                            <DropdownMenu.Item
-                              key={command.id}
-                              className="px-2 py-1 text-sm flex items-center gap-2 rounded hover:bg-gray-800 focus:bg-gray-800 outline-none cursor-pointer"
-                              onSelect={(e: Event) => {
-                                e.preventDefault();
-                                if (!view || !state) return;
-                                const targetId = command.id;
-
-                                let workingState = view.state;
-                                const dispatch = view.dispatch.bind(view);
-
-                                // If selection is an inline metric, shift selection to its parent block
-                                if (
-                                  isOnlyMetricNode &&
-                                  selectedMetric &&
-                                  selectedMetric.node.type !==
-                                    schema.nodes.blockMetric
-                                ) {
-                                  const $pos = workingState.doc.resolve(
-                                    selectedMetric.pos
-                                  );
-                                  const blockStart = $pos.start($pos.depth);
-                                  const blockEnd = $pos.end($pos.depth);
-                                  const blockSelection = TextSelection.create(
-                                    workingState.doc,
-                                    blockStart + 1,
-                                    Math.max(blockStart + 1, blockEnd - 1)
-                                  );
-                                  const trSel =
-                                    workingState.tr.setSelection(
-                                      blockSelection
-                                    );
-                                  dispatch(trSel);
-                                  workingState = view.state;
-                                }
-
-                                const runLift = () => {
-                                  // Keep lifting until nothing to lift
-                                  while (lift(workingState, dispatch)) {
-                                    workingState = view.state;
-                                  }
-                                };
-
-                                const normalizeToParagraph = () => {
-                                  const para =
-                                    workingState.schema.nodes.paragraph;
-                                  if (para) {
-                                    setBlockType(para)(workingState, dispatch);
-                                    workingState = view.state;
-                                  }
-                                };
-
-                                const applyHeading = (level: number) => {
-                                  const heading =
-                                    workingState.schema.nodes.heading;
-                                  if (heading) {
-                                    setBlockType(heading, { level })(
-                                      workingState,
-                                      dispatch
-                                    );
-                                    workingState = view.state;
-                                  }
-                                };
-
-                                // Always clear existing structural wrappers first
-                                runLift();
-                                normalizeToParagraph();
-
-                                switch (targetId) {
-                                  case "paragraph":
-                                    break;
-                                  case "blockquote": {
-                                    const blockquote =
-                                      workingState.schema.nodes.blockquote;
-                                    if (blockquote) {
-                                      wrapIn(blockquote)(
-                                        workingState,
-                                        dispatch
-                                      );
-                                      workingState = view.state;
-                                    }
-                                    break;
-                                  }
-                                  case "bullet-list": {
-                                    const list =
-                                      workingState.schema.nodes.bullet_list;
-                                    if (list) {
-                                      wrapInList(list)(workingState, dispatch);
-                                      workingState = view.state;
-                                    }
-                                    break;
-                                  }
-                                  case "ordered-list": {
-                                    const list =
-                                      workingState.schema.nodes.ordered_list;
-                                    if (list) {
-                                      wrapInList(list)(workingState, dispatch);
-                                      workingState = view.state;
-                                    }
-                                    break;
-                                  }
-                                  case "h1":
-                                    applyHeading(1);
-                                    break;
-                                  case "h2":
-                                    applyHeading(2);
-                                    break;
-                                  case "h3":
-                                    applyHeading(3);
-                                    break;
-                                  case "h2b": {
-                                    const h2 = workingState.schema.nodes.h2;
-                                    if (h2) {
-                                      setBlockType(h2)(workingState, dispatch);
-                                      workingState = view.state;
-                                    } else {
-                                      applyHeading(2);
-                                    }
-                                    break;
-                                  }
-                                  default:
-                                    break;
-                                }
-
-                                // Return focus to the editor so keyboard shortcuts (e.g., undo)
-                                // keep working after interacting with the dropdown.
-                                view.focus();
-                                requestAnimationFrame(() => view.focus());
-
-                                // Hide the tooltip after changing node type (Notion/tiptap behavior)
-                                setCommands([]);
-                                setSuppressOnce(true);
-                                // Allow reopening shortly after by clearing suppression on next tick
-                                setTimeout(() => setSuppressOnce(false), 0);
-                              }}
-                            >
-                              <span className="flex items-center gap-2">
-                                {command.icon}
-                                <span>{command.title}</span>
-                              </span>
-                            </DropdownMenu.Item>
-                          ))}
-                        </DropdownMenu.Content>
-                      </DropdownMenu.Portal>
+                    <DropdownMenu.Root
+                      onOpenChange={(open) => {
+                        if (!open) {
+                          // When closing via the trigger, return focus so the selection stays visible
+                          // and recompute position while keeping the tooltip open.
+                          if (view) {
+                            requestAnimationFrame(() => {
+                              view.focus();
+                              calculatePosition();
+                            });
+                          }
+                        }
+                      }}
+                    >
+                      <TooltipDropdown
+                        value={currentNodeTypeId}
+                        options={nodeTypeOptions.map((command) => ({
+                          value: command.id,
+                          label: command.title,
+                          icon: command.icon,
+                        }))}
+                        onChange={handleNodeTypeChange}
+                        title={t("Turn into")}
+                        onOpenChange={(open) => {
+                          if (!open && view) {
+                            requestAnimationFrame(() => {
+                              view.focus();
+                              calculatePosition();
+                            });
+                          }
+                        }}
+                        ariaLabel={t("Change block type", {
+                          ns: "admin:reports",
+                        })}
+                        contentProps={
+                          {
+                            "data-report-tooltip-portal": "true",
+                          } as any
+                        }
+                      />
                     </DropdownMenu.Root>
                   )}
-                {markCommands.map((c) => (
-                  <button
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={(e) => {
-                      c.toggle(schema, state!, view!.dispatch, t);
-                      e.preventDefault();
-                      return false;
-                    }}
-                    className={`w-8 h-8 justify-center items-center flex ${
-                      !!activeMarks[c.id] ? "bg-gray-800" : ""
-                    }`}
-                    key={c.id}
-                  >
-                    {c.icon}
-                  </button>
-                ))}
+                {markCommands.map((c) =>
+                  c.id === "link" ? (
+                    <Fragment key={c.id}>
+                      <TooltipIconToggleButton
+                        active={!!activeLinkMark}
+                        buttonRef={linkTriggerRef}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setLinkPopoverOpen((prev) => {
+                            const next = !prev;
+                            if (next) {
+                              requestAnimationFrame(() => {
+                                calculateLinkPopoverPosition();
+                              });
+                            }
+                            return next;
+                          });
+                        }}
+                        title={t("Link")}
+                      >
+                        {c.icon}
+                      </TooltipIconToggleButton>
+                      {linkPopoverOpen && linkPopoverPos && (
+                        <InlinePopover
+                          position={linkPopoverPos}
+                          onClose={() => {
+                            setLinkPopoverOpen(false);
+                            setLinkPopoverPos(null);
+                            requestAnimationFrame(() => view?.focus());
+                          }}
+                        >
+                          <div
+                            className="flex items-center gap-1"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="url"
+                              value={linkUrl}
+                              onChange={(e) => setLinkUrl(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  applyLink();
+                                }
+                              }}
+                              ref={linkInputRef}
+                              className="flex-1 rounded border border-gray-300 px-2 py-0 text-[12px] focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              placeholder={t("Paste or type a URL")}
+                            />
+
+                            <button
+                              type="button"
+                              className="text-[12px] px-2 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                applyLink();
+                              }}
+                              title={t("Apply")}
+                            >
+                              {t("Apply")}{" "}
+                              {
+                                // eslint-disable-next-line i18next/no-literal-string
+                                `↵`
+                              }
+                            </button>
+                            {activeLinkMark && (
+                              <button
+                                type="button"
+                                className="text-[12px] px-2 py-1 text-gray-700 hover:text-red-900"
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  removeLink();
+                                }}
+                                title={t("Clear")}
+                              >
+                                <TrashIcon />
+                              </button>
+                            )}
+                          </div>
+                          {linkError && (
+                            <div className="text-[11px] text-red-600 mt-1">
+                              {linkError}
+                            </div>
+                          )}
+                        </InlinePopover>
+                      )}
+                    </Fragment>
+                  ) : (
+                    <TooltipIconToggleButton
+                      key={c.id}
+                      active={!!activeMarks[c.id]}
+                      onClick={(e) => {
+                        c.toggle(schema, state!, view!.dispatch, t);
+                        e.preventDefault();
+                        return false;
+                      }}
+                      title={c.title}
+                    >
+                      {c.icon}
+                    </TooltipIconToggleButton>
+                  )
+                )}
                 {isOnlyMetricNode && selectedMetric && state && view && (
                   <ReportWidgetTooltipControlsRouter
                     node={selectedMetric.node}
@@ -797,10 +1132,7 @@ const Commands: Command[] = [
       const links = getActiveLinks(state);
       const existingUrl =
         links && links.length ? links[0]?.attrs?.href : "https://";
-      const url = window.prompt(
-        t("Enter a URL", { ns: "common" }),
-        existingUrl
-      );
+      const url = window.prompt(t("Enter a URL"), existingUrl);
       if (url === null || url === existingUrl) {
         return;
       } else {
@@ -814,17 +1146,12 @@ const Commands: Command[] = [
   },
   {
     id: "paragraph",
-    title: "Paragraph",
+    title: "Text",
     group: "node-type",
-    icon: <PilcrowIcon />,
-    isDisabled: (schema, state) => {
-      console.log(schema.spec.nodes);
-
-      return !setBlockType(schema.nodes.paragraph)(state);
-    },
-    toggle: (schema, state, dispatch) => {
-      setBlockType(schema.nodes.paragraph)(state, dispatch);
-    },
+    icon: <TextIcon />,
+    isDisabled: (schema, state) => !setBlockType(schema.nodes.paragraph)(state),
+    toggle: (schema, state, dispatch) =>
+      setBlockType(schema.nodes.paragraph)(state, dispatch),
   },
   {
     id: "blockquote",
@@ -874,19 +1201,19 @@ const Commands: Command[] = [
       setBlockType(schema.nodes.heading, { level: 2 })(state, dispatch);
     },
   },
-  {
-    id: "h2b",
-    title: "Heading",
-    group: "node-type",
-    // eslint-disable-next-line i18next/no-literal-string
-    icon: <HeadingIcon />,
-    isDisabled: (schema, state) => {
-      return !setBlockType(schema.nodes.h2)(state);
-    },
-    toggle: (schema, state, dispatch) => {
-      setBlockType(schema.nodes.h2)(state, dispatch);
-    },
-  },
+  // {
+  //   id: "h2b",
+  //   title: "Heading",
+  //   group: "node-type",
+  //   // eslint-disable-next-line i18next/no-literal-string
+  //   icon: <HeadingIcon />,
+  //   isDisabled: (schema, state) => {
+  //     return !setBlockType(schema.nodes.h2)(state);
+  //   },
+  //   toggle: (schema, state, dispatch) => {
+  //     setBlockType(schema.nodes.h2)(state, dispatch);
+  //   },
+  // },
   {
     id: "h3",
     title: "Heading 3",
@@ -958,6 +1285,182 @@ export function getActiveLinks(state: EditorState) {
     );
     return links;
   }
+}
+
+export type TooltipDropdownOption = {
+  value: string;
+  label: ReactNode;
+  icon?: ReactNode;
+};
+
+export function TooltipDropdown({
+  value,
+  options,
+  onChange,
+  ariaLabel,
+  onOpenChange,
+  title,
+  contentProps,
+}: {
+  value: string;
+  options: TooltipDropdownOption[];
+  onChange: (value: string) => void;
+  ariaLabel?: string;
+  onOpenChange?: (open: boolean) => void;
+  title?: ReactNode;
+  contentProps?: React.HTMLAttributes<HTMLDivElement>;
+}) {
+  const selected = options.find((o) => o.value === value);
+  return (
+    <DropdownMenu.Root onOpenChange={onOpenChange}>
+      <DropdownMenu.Trigger asChild>
+        <button
+          className={DROPDOWN_TRIGGER_CLASSES}
+          type="button"
+          aria-label={ariaLabel}
+        >
+          {selected?.icon && (
+            <span className={ICON_CONTAINER_CLASSES}>{selected.icon}</span>
+          )}
+          <span>{selected?.label ?? value}</span>
+          <span className={ICON_CONTAINER_CLASSES}>
+            <CaretDownIcon />
+          </span>
+        </button>
+      </DropdownMenu.Trigger>
+      <DropdownMenu.Portal>
+        <DropdownMenu.Content
+          {...contentProps}
+          className="bg-white text-gray-900 border border-black/20 rounded shadow-lg px-1 py-1 z-50"
+          sideOffset={6}
+          side="top"
+          data-tooltip-dropdown="true"
+        >
+          {title && (
+            <>
+              <div className="px-2 py-1 text-xs font-semibold text-gray-600">
+                {title}
+              </div>
+              {/* <DropdownMenu.Separator className="h-px bg-gray-200 my-1" /> */}
+            </>
+          )}
+          {options.map((opt) => (
+            <DropdownMenu.Item
+              key={opt.value}
+              className={`px-2 py-1 text-sm flex items-center gap-2 rounded hover:bg-gray-100 focus:bg-gray-100 outline-none cursor-pointer ${
+                opt.value === value ? "text-blue-600" : ""
+              }`}
+              onSelect={(e: Event) => {
+                e.preventDefault();
+                onChange(opt.value);
+              }}
+            >
+              <span className="flex items-center gap-2">
+                {opt.icon && (
+                  <span className={ICON_CONTAINER_CLASSES}>{opt.icon}</span>
+                )}
+                <span>{opt.label}</span>
+              </span>
+            </DropdownMenu.Item>
+          ))}
+        </DropdownMenu.Content>
+      </DropdownMenu.Portal>
+    </DropdownMenu.Root>
+  );
+}
+
+export function TooltipPopoverContent({
+  children,
+  side = "top",
+  sideOffset = 6,
+  align = "center",
+  collisionPadding = 8,
+}: {
+  children: ReactNode;
+  side?: "top" | "bottom" | "left" | "right";
+  sideOffset?: number;
+  align?: "start" | "center" | "end";
+  collisionPadding?: number;
+}) {
+  return (
+    <Popover.Portal>
+      <Popover.Content
+        side={side}
+        align={align}
+        sideOffset={sideOffset}
+        collisionPadding={collisionPadding}
+        avoidCollisions
+        onOpenAutoFocus={(e) => e.preventDefault()}
+        onCloseAutoFocus={(e) => e.preventDefault()}
+        className="bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg px-2 py-2 w-72 z-[10000]"
+        data-tooltip-portal="true"
+      >
+        {children}
+      </Popover.Content>
+    </Popover.Portal>
+  );
+}
+
+export function TooltipIconToggleButton({
+  active,
+  onClick,
+  children,
+  title,
+  buttonRef,
+}: {
+  active?: boolean;
+  onClick: (e: ReactMouseEvent<HTMLButtonElement>) => void;
+  children: ReactNode;
+  title?: string;
+  buttonRef?: React.Ref<HTMLButtonElement>;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      ref={buttonRef}
+      onMouseDown={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+      }}
+      onClick={onClick}
+      className={`${ICON_TOGGLE_BUTTON_CLASSES} ${
+        active ? "text-blue-600 " : "text-gray-900"
+      }`}
+    >
+      <span className={ICON_CONTAINER_CLASSES}>{children}</span>
+    </button>
+  );
+}
+
+function InlinePopover({
+  position,
+  children,
+  onClose,
+}: {
+  position: { left: number; top: number };
+  children: ReactNode;
+  onClose: () => void;
+}) {
+  if (typeof document === "undefined") return null;
+  return createPortal(
+    <div
+      className="fixed z-[10000]"
+      style={{
+        left: position.left,
+        top: position.top,
+        transform: "translate(-50%, -100%)",
+      }}
+      data-inline-link-popover="true"
+      data-report-tooltip-portal="true"
+      onMouseDown={(e) => e.stopPropagation()}
+    >
+      <div className="bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg px-2 py-2 w-72">
+        {children}
+      </div>
+    </div>,
+    document.body
+  );
 }
 
 export type ReportWidgetTooltipControlsProps = {

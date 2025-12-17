@@ -8,6 +8,7 @@ import {
   CrossCircledIcon,
   Pencil1Icon,
   TrashIcon,
+  DragHandleDots2Icon,
 } from "@radix-ui/react-icons";
 import ReportCardActionMenu from "./components/ReportCardActionMenu";
 import Modal from "../components/Modal";
@@ -272,10 +273,10 @@ export default function ReportCard({
         adminMode && selectedForEditing === cardId ? "editing" : ""
       } transition-all opacity-100 relative rounded w-full ${getBackgroundClasses()} group ${
         isSelectedForEditing
-          ? "shadow-lg ring-1 ring-opacity-5 ring-black"
+          ? "shadow-xl ring-1 ring-opacity-5 ring-black"
           : "shadow-sm"
       } ${
-        isDisabled ? "opacity-40 pointer-events-none select-none" : ""
+        isDisabled ? "opacity-40 blur-sm pointer-events-none select-none" : ""
       } ${className} ${
         loading && !selectedForEditing ? "loadingSkeleton" : ""
       }`}
@@ -311,7 +312,19 @@ export default function ReportCard({
         </button>
       )}
       <div className="absolute right-2 top-2 z-10">
-        <div>
+        <div className="flex items-center space-x-1">
+          {dragHandleProps && !selectedForEditing && (
+            <button
+              type="button"
+              aria-label={t("Drag to reorder")}
+              className={`p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 active:bg-gray-100 transition ${
+                menuOpen ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              }`}
+              {...dragHandleProps}
+            >
+              <DragHandleDots2Icon className="w-4 h-4" />
+            </button>
+          )}
           {(!loading || Object.values(errors).length > 0) &&
             !selectedForEditing &&
             cardId && (

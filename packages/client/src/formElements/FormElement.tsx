@@ -153,6 +153,7 @@ export function FormElementBody({
   const schema = isInput
     ? editorConfig.questions.schema
     : editorConfig.content.schema;
+
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
   const langContext = useContext(FormLanguageContext);

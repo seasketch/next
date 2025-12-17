@@ -69,7 +69,7 @@ export default function CircularProgressIndicator({
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
-      className={`-rotate-90 ${className}`}
+      className={`-rotate-90 ${className} z-40`}
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}

@@ -6,6 +6,10 @@ import { useDebouncedFn } from "beautiful-react-hooks";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
 import TooltipMenu from "../../editor/TooltipMenu";
+import {
+  BLUR_SELECTION_STYLES,
+  createBlurSelectionPlugin,
+} from "../../editor/blurSelectionPlugin";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { exampleSetup } from "prosemirror-example-setup";
 import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlugin";
@@ -59,9 +63,11 @@ function ReportCardBodyEditorInner({
 }: ReportCardBodyEditorProps) {
   const { schema, plugins } = useMemo(() => {
     const schema = createReportCardSchema();
+
     const plugins = [
       ...exampleSetup({ schema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
+      createBlurSelectionPlugin(),
     ];
     return { schema, plugins };
   }, []);
@@ -211,6 +217,12 @@ function ReportCardBodyEditorInner({
 
   return (
     <div className={`relative ${className}`}>
+      <style>
+        {
+          // eslint-disable-next-line i18next/no-literal-string
+          BLUR_SELECTION_STYLES
+        }
+      </style>
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
       {commandPalette}
       <div className={`ProseMirrorBody ReportCardBodyEditor `} ref={root}></div>
