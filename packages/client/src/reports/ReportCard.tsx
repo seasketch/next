@@ -271,7 +271,7 @@ export default function ReportCard({
     <div
       className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
         adminMode && selectedForEditing === cardId ? "editing" : ""
-      } transition-all opacity-100 relative rounded w-full ${getBackgroundClasses()} ${
+      } transition-all opacity-100 relative rounded-lg w-full ${getBackgroundClasses()} ${
         isSelectedForEditing
           ? "shadow-xl ring-1 ring-opacity-5 ring-black"
           : "shadow-sm"
@@ -326,6 +326,7 @@ export default function ReportCard({
                       : "opacity-0 group-hover:opacity-100"
                   }`}
                   {...dragHandleProps}
+                  title={t("Drag to reorder")}
                 >
                   <DragHandleDots2Icon className="w-4 h-4" />
                 </button>
@@ -379,7 +380,7 @@ export default function ReportCard({
               )}
           </div>
         </div>
-        <div className={`px-4 pb-0 text-sm ${loading ? "loading" : ""}`}>
+        <div className={`px-4 pb-4 text-sm ${loading ? "loading" : ""}`}>
           <ErrorBoundary
             fallback={
               <ErrorBoundaryFallback
@@ -449,7 +450,7 @@ export default function ReportCard({
         </div>
       </div>
       {editorFooter && (
-        <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner">
+        <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg">
           {editorFooter}
         </div>
       )}

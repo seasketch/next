@@ -325,3 +325,21 @@ div[attachments="forumAttachments"] {
     @apply opacity-0;
   }
 }
+
+.ReportCardBody > .ProseMirror p:last-child {
+  @apply mb-0;
+}
+
+.ReportCardBodyEditor .ProseMirror p.empty-active-paragraph {
+  position: relative;
+  @apply text-gray-400;
+}
+
+.ReportCardBodyEditor .ProseMirror p.empty-active-paragraph::before {
+  content: "Start writing or type / for commands";
+  @apply text-gray-400;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+}

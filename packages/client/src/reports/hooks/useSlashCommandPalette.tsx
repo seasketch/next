@@ -364,12 +364,6 @@ export function useSlashCommandPalette({
       return;
     }
     const handler = (event: KeyboardEvent) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === ".") {
-        event.preventDefault();
-        openManualPalette();
-        return;
-      }
-
       if (!trigger) {
         return;
       }
@@ -464,6 +458,7 @@ export function useSlashCommandPalette({
             left: trigger.coords.left,
             top: trigger.coords.bottom + 6,
           }}
+          data-report-command-palette="true"
         >
           <div className="w-80 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl">
             {filtered.groups.length === 0 ? (
@@ -494,8 +489,8 @@ export function useSlashCommandPalette({
                             ? "bg-blue-50 text-blue-900"
                             : "hover:bg-gray-50 text-gray-900"
                         }`}
-                        onMouseDown={(e) => e.preventDefault()}
                         onClick={(e) => {
+                          console.log("clicked", item);
                           e.preventDefault();
                           applyCommand(item);
                         }}

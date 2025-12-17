@@ -603,7 +603,8 @@ export default function TooltipMenu({
           ds?.reportTooltipPortal === "true" ||
           ds?.inlineLinkPopover === "true" ||
           ds?.tooltipDropdown === "true" ||
-          ds?.tooltipPortal === "true"
+          ds?.tooltipPortal === "true" ||
+          ds?.reportCommandPalette === "true"
         );
       });
       if (inTooltip) return;

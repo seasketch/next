@@ -10,6 +10,7 @@ import {
   BLUR_SELECTION_STYLES,
   createBlurSelectionPlugin,
 } from "../../editor/blurSelectionPlugin";
+import ActiveParagraphPlaceholderPlugin from "../../editor/ActiveParagraphPlaceholderPlugin";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { exampleSetup } from "prosemirror-example-setup";
 import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlugin";
@@ -68,6 +69,7 @@ function ReportCardBodyEditorInner({
       ...exampleSetup({ schema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
       createBlurSelectionPlugin(),
+      ActiveParagraphPlaceholderPlugin(),
     ];
     return { schema, plugins };
   }, []);
@@ -225,7 +227,10 @@ function ReportCardBodyEditorInner({
       </style>
       <TooltipMenu view={viewRef.current} state={state} schema={schema} />
       {commandPalette}
-      <div className={`ProseMirrorBody ReportCardBodyEditor `} ref={root}></div>
+      <div
+        className={`ProseMirrorBody ReportCardBodyEditor ReportCardBody`}
+        ref={root}
+      ></div>
     </div>
   );
 }

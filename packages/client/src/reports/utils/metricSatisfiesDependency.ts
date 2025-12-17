@@ -30,11 +30,6 @@ export function metricSatisfiesDependency(
     if (!subjectIsGeography(metric.subject)) {
       return false;
     }
-    if (!dependency.geographies || dependency.geographies.length === 0) {
-      // all geographies match, continue
-    } else if (!dependency.geographies.includes(metric.subject.id)) {
-      return false;
-    }
   } else if (dependency.subjectType === "fragments") {
     if (!subjectIsFragment(metric.subject)) {
       return false;
