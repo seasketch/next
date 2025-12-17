@@ -119,13 +119,15 @@ function ReportCardBodyViewerInner({
     return null;
   }
 
+  const baseClass = "ProseMirrorBody ReportCardBodyViewer";
+
   return (
     <div
       ref={rootRef}
       className={
         className && className.length > 0
-          ? `${className} ProseMirrorBody`
-          : "ProseMirrorBody"
+          ? `${className} ${baseClass}`
+          : baseClass
       }
     />
   );

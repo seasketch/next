@@ -1158,6 +1158,13 @@ div[attachments="forumAttachments"] {
   /* Make the entire node selectable */
 }
 
+.ReportCardBodyViewer .ProseMirror .ProseMirror-selectednode {
+  /* Hide selection styling in view-only mode */
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
 .ReportCard.loadingSkeleton [contenteditable="false"] {
   p{
     border-radius:0.25rem
