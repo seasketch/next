@@ -4,10 +4,9 @@ import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { ReportWidget } from "./widgets";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
-import {
-  ReportWidgetTooltipControls,
-  TooltipDropdown,
-} from "../../editor/TooltipMenu";
+import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
+import { UnitSelector } from "./UnitSelector";
+import { NumberRoundingControl } from "./NumberRoundingControl";
 
 export const GeographySizeTable: ReportWidget<{
   /**
@@ -15,6 +14,10 @@ export const GeographySizeTable: ReportWidget<{
    * @default "kilometer"
    */
   unit?: "hectare" | "acre" | "mile" | "kilometer";
+  /**
+   * Minimum fraction digits to display when formatting numbers.
+   */
+  minimumFractionDigits?: number;
   /**
    * Number of decimal places to round values to. If not specified, assumed to
    * be "auto", in which case it will use the default rounding behavior of the
@@ -27,9 +30,12 @@ export const GeographySizeTable: ReportWidget<{
   const { t } = useTranslation("reports");
 
   const widgetUnit = componentSettings?.unit ?? "kilometer";
+  const minimumFractionDigits =
+    componentSettings?.minimumFractionDigits ??
+    componentSettings?.roundToDecimalPlaces;
 
   const formatters = useNumberFormatters({
-    minimumFractionDigits: componentSettings?.roundToDecimalPlaces,
+    minimumFractionDigits,
     unit: widgetUnit,
   });
 
@@ -124,22 +130,26 @@ export const GeographySizeTableTooltipControls: ReportWidgetTooltipControls = ({
 }) => {
   const presentation =
     node.attrs.componentSettings.presentation || "total_area";
-  const { t } = useTranslation("admin:reports");
   if (presentation === "total_area") {
     const unit = node.attrs?.componentSettings?.unit || "kilometer";
     return (
-      <TooltipDropdown
-        value={unit}
-        ariaLabel={t("Unit")}
-        title={t("Area unit")}
-        options={[
-          { value: "kilometer", label: t("km²") },
-          { value: "hectare", label: t("ha") },
-          { value: "acre", label: t("acre") },
-          { value: "mile", label: t("mi²") },
-        ]}
-        onChange={(value) => onUpdate({ componentSettings: { unit: value } })}
-      />
+      <>
+        <UnitSelector
+          value={unit}
+          onChange={(value) => onUpdate({ componentSettings: { unit: value } })}
+        />
+        <NumberRoundingControl
+          value={node.attrs?.componentSettings?.minimumFractionDigits}
+          onChange={(minimumFractionDigits) =>
+            onUpdate({
+              componentSettings: {
+                minimumFractionDigits,
+                roundToDecimalPlaces: minimumFractionDigits,
+              },
+            })
+          }
+        />
+      </>
     );
   }
   return null;

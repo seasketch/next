@@ -8,14 +8,12 @@ import {
   subjectIsGeography,
 } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
-import {
-  ReportWidgetTooltipControls,
-  TooltipDropdown,
-} from "../../editor/TooltipMenu";
+import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
+import { UnitSelector } from "./UnitSelector";
 import Skeleton from "../../components/Skeleton";
-import { useTranslation } from "react-i18next";
 import { ReportWidget } from "./widgets";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
+import { NumberRoundingControl } from "./NumberRoundingControl";
 
 export const InlineMetric: ReportWidget<{
   unit: "hectare" | "acre" | "mile" | "kilometer";
@@ -51,12 +49,14 @@ export const InlineMetric: ReportWidget<{
         ) as TotalAreaMetric;
         return formatters.area(combined.value);
       case "percent_area":
+        // Should be percent of sketch class' clipping geography
         const totalArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsFragment(m.subject)) as Pick<
             Metric,
             "type" | "value"
           >[]
         ) as TotalAreaMetric;
+        console.log("metrics", metrics, dependencies);
         const geographyArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsGeography(m.subject)) as Pick<
             Metric,
@@ -64,12 +64,8 @@ export const InlineMetric: ReportWidget<{
           >[]
         ) as TotalAreaMetric;
         const percentArea = totalArea.value / geographyArea.value;
-        const formattedPercentArea = Intl.NumberFormat(undefined, {
-          style: "percent",
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 2,
-        }).format(percentArea);
-        return formattedPercentArea;
+        console.log("percentArea", percentArea);
+        return formatters.percent(percentArea);
       default:
         throw new Error(`Unsupported presentation: ${presentation}`);
     }
@@ -124,23 +120,26 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 }) => {
   const presentation =
     node.attrs.componentSettings.presentation || "total_area";
-  const { t } = useTranslation("admin:reports");
-  if (presentation === "total_area") {
-    const unit = node.attrs?.componentSettings?.unit || "kilometer";
-    return (
-      <TooltipDropdown
-        value={unit}
-        ariaLabel={t("Unit")}
-        title={t("Area unit")}
-        options={[
-          { value: "kilometer", label: t("km²") },
-          { value: "hectare", label: t("ha") },
-          { value: "acre", label: t("acre") },
-          { value: "mile", label: t("mi²") },
-        ]}
-        onChange={(value) => onUpdate({ componentSettings: { unit: value } })}
+  const unit = node.attrs?.componentSettings?.unit || "kilometer";
+
+  return (
+    <>
+      {presentation === "total_area" && (
+        <UnitSelector
+          value={unit}
+          onChange={(value) => onUpdate({ componentSettings: { unit: value } })}
+        />
+      )}
+      <NumberRoundingControl
+        value={node.attrs?.componentSettings?.minimumFractionDigits}
+        onChange={(minimumFractionDigits) =>
+          onUpdate({
+            componentSettings: {
+              minimumFractionDigits,
+            },
+          })
+        }
       />
-    );
-  }
-  return null;
+    </>
+  );
 };

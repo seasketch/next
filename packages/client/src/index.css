@@ -6403,6 +6403,11 @@ select{
   margin-bottom:auto
 }
 
+.mx-0\.5{
+  margin-left:0.125rem;
+  margin-right:0.125rem
+}
+
 .-mb-0{
   margin-bottom:-0px
 }
@@ -7691,6 +7696,10 @@ select{
   max-width:20rem
 }
 
+.max-w-\[200px\]{
+  max-width:200px
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -8382,6 +8391,12 @@ select{
   --tw-space-y-reverse:0;
   margin-top:calc(6px * calc(1 - var(--tw-space-y-reverse)));
   margin-bottom:calc(6px * var(--tw-space-y-reverse))
+}
+
+.space-y-1\.5 > :not([hidden]) ~ :not([hidden]){
+  --tw-space-y-reverse:0;
+  margin-top:calc(0.375rem * calc(1 - var(--tw-space-y-reverse)));
+  margin-bottom:calc(0.375rem * var(--tw-space-y-reverse))
 }
 
 .divide-y > :not([hidden]) ~ :not([hidden]){
@@ -10105,6 +10120,10 @@ select{
 
 .fill-white{
   fill:#fff
+}
+
+.fill-gray-800{
+  fill:#1f2937
 }
 
 .object-contain{

@@ -44,15 +44,18 @@ export function useNumberFormatters({
     const specifiedAreaFormatter = new Intl.NumberFormat(
       langContext?.lang?.code,
       {
-        style: "decimal",
-        minimumFractionDigits: minimumFractionDigits || undefined,
+        style: "unit",
+        unit: unit,
+        minimumFractionDigits: minimumFractionDigits,
+        maximumFractionDigits: minimumFractionDigits,
       }
     );
     const specifiedPercentFormatter = new Intl.NumberFormat(
       langContext?.lang?.code,
       {
         style: "percent",
-        minimumFractionDigits: minimumFractionDigits || undefined,
+        minimumFractionDigits: minimumFractionDigits,
+        maximumFractionDigits: minimumFractionDigits,
       }
     );
     return {
@@ -71,10 +74,9 @@ export function useNumberFormatters({
         value = convertSquareKilometersToUnit(value, unit);
       }
       let formattedValue: string;
-      if (minimumFractionDigits) {
+      if (minimumFractionDigits !== undefined) {
         formattedValue = formatters.specifiedAreaFormatter.format(value);
-      }
-      if (value < 100) {
+      } else if (value < 100) {
         formattedValue = formatters.smallAreaFormatter.format(value);
       } else {
         formattedValue = formatters.largeAreaFormatter.format(value);
@@ -98,20 +100,27 @@ export function useNumberFormatters({
         // Very small rounding issues are fine
         value = 1;
       }
-      if (minimumFractionDigits) {
+      if (minimumFractionDigits !== undefined) {
         return formatters.specifiedPercentFormatter.format(value);
       }
       if (value === 0) {
         return formatters.smallPercentFormatter.format(value);
       } else if (value < 0.001) {
-        return "< 0.1%";
+        return (
+          "< " +
+          Intl.NumberFormat(langContext?.lang?.code, {
+            style: "percent",
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1,
+          }).format(0.001)
+        );
       } else if (value < 0.05 && value > 0) {
         return formatters.smallPercentFormatter.format(value);
       } else {
         return formatters.largePercentFormatter.format(value);
       }
     },
-    [formatters]
+    [formatters, minimumFractionDigits, langContext?.lang?.code]
   );
 
   return {

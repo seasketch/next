@@ -1092,10 +1092,20 @@ export default function TooltipMenu({
                   )
                 )}
                 {isOnlyMetricNode && selectedMetric && state && view && (
-                  <ReportWidgetTooltipControlsRouter
-                    node={selectedMetric.node}
-                    onUpdate={updateMetricNode}
-                  />
+                  <>
+                    {commands.length > 0 && (
+                      <>
+                        {/* <div className="h-6 w-px bg-gray-300 mx-0.5" /> */}
+                        <div className="flex items-center gap-2 text-sm text-gray-800"></div>
+                        {/* <div className="flex items-center gap-2 text-sm text-gray-800"></div> */}
+                        {/* <div className="flex items-center gap-2 text-sm text-gray-800"></div> */}
+                      </>
+                    )}
+                    <ReportWidgetTooltipControlsRouter
+                      node={selectedMetric.node}
+                      onUpdate={updateMetricNode}
+                    />
+                  </>
                 )}
               </div>
             )}
@@ -1342,6 +1352,7 @@ export function TooltipDropdown({
   onOpenChange,
   title,
   contentProps,
+  getDisplayLabel,
 }: {
   value: string;
   options: TooltipDropdownOption[];
@@ -1350,8 +1361,12 @@ export function TooltipDropdown({
   onOpenChange?: (open: boolean) => void;
   title?: ReactNode;
   contentProps?: React.HTMLAttributes<HTMLDivElement>;
+  getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
 }) {
   const selected = options.find((o) => o.value === value);
+  const displayLabel = getDisplayLabel
+    ? getDisplayLabel(selected)
+    : selected?.label ?? value;
   return (
     <DropdownMenu.Root onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>
@@ -1363,7 +1378,7 @@ export function TooltipDropdown({
           {selected?.icon && (
             <span className={ICON_CONTAINER_CLASSES}>{selected.icon}</span>
           )}
-          <span>{selected?.label ?? value}</span>
+          <span>{displayLabel}</span>
           <span className={ICON_CONTAINER_CLASSES}>
             <CaretDownIcon />
           </span>
@@ -1392,16 +1407,18 @@ export function TooltipDropdown({
                 opt.value === value ? "text-blue-600" : ""
               }`}
               onSelect={(e: Event) => {
-                e.preventDefault();
+                // e.preventDefault();
                 onChange(opt.value);
               }}
             >
-              <span className="flex items-center gap-2">
-                {opt.icon && (
+              {opt.icon ? (
+                <span className="flex items-center gap-2">
                   <span className={ICON_CONTAINER_CLASSES}>{opt.icon}</span>
-                )}
-                <span>{opt.label}</span>
-              </span>
+                  <span>{opt.label}</span>
+                </span>
+              ) : (
+                opt.label
+              )}
             </DropdownMenu.Item>
           ))}
         </DropdownMenu.Content>
