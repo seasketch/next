@@ -187,5 +187,12 @@ export type MetricDependencyParameters = {
  */
 export declare function hashMetricDependency(dependency: MetricDependency): string;
 export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
+/**
+ * Finds the primary geography id from a list of metrics. The primary
+ * geography is the one that is in all fragments.
+ * @param metrics - The metrics to find the primary geography id from
+ * @returns The primary geography id
+ */
+export declare function findPrimaryGeographyId(metrics: Pick<Metric, "type" | "value" | "subject">[]): number;
 export {};
 //# sourceMappingURL=metrics.d.ts.map

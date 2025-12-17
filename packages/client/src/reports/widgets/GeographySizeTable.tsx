@@ -40,14 +40,17 @@ export const GeographySizeTable: ReportWidget<{
   });
 
   const rows: GeographySizeTableRow[] = useMemo(() => {
-    const totalArea = metrics.reduce((acc, m) => {
-      if (subjectIsFragment(m.subject)) {
-        return acc + m.value;
-      }
-      return acc;
-    }, 0);
-
     return geographies.map((geography) => {
+      const totalArea = metrics.reduce((acc, m) => {
+        if (
+          subjectIsFragment(m.subject) &&
+          m.subject.geographies.includes(geography.id)
+        ) {
+          return acc + m.value;
+        }
+        return acc;
+      }, 0);
+
       const metric = metrics.find(
         (m) => subjectIsGeography(m.subject) && m.subject.id === geography.id
       );

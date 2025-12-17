@@ -709,3 +709,41 @@ function combineGroupedValues<T>(
   }
   return result;
 }
+
+/**
+ * Finds the primary geography id from a list of metrics. The primary
+ * geography is the one that is in all fragments.
+ * @param metrics - The metrics to find the primary geography id from
+ * @returns The primary geography id
+ */
+export function findPrimaryGeographyId(
+  metrics: Pick<Metric, "type" | "value" | "subject">[]
+): number {
+  const foundGeographyIds: { [geographyId: number]: number } = {};
+  const fragmentMetrics = metrics.filter((m) => subjectIsFragment(m.subject));
+  for (const metric of fragmentMetrics) {
+    const fragmentSubject = metric.subject as MetricSubjectFragment;
+    for (const geographyId of fragmentSubject.geographies) {
+      if (geographyId in foundGeographyIds) {
+        foundGeographyIds[geographyId]++;
+      } else {
+        foundGeographyIds[geographyId] = 1;
+      }
+    }
+  }
+  // find the primary geography id by determining which is in all fragments
+  let primaryGeographyId: number | null = null;
+  for (const geographyId in foundGeographyIds) {
+    if (foundGeographyIds[geographyId] === fragmentMetrics.length) {
+      if (primaryGeographyId !== null) {
+        throw new Error("Multiple primary geography ids found.");
+      }
+      primaryGeographyId = Number(geographyId);
+      break;
+    }
+  }
+  if (primaryGeographyId === null) {
+    throw new Error("No primary geography id found.");
+  }
+  return primaryGeographyId;
+}

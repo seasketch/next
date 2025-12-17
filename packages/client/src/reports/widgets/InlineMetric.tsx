@@ -4,6 +4,7 @@ import {
   Metric,
   TotalAreaMetric,
   combineMetricsForFragments,
+  findPrimaryGeographyId,
   subjectIsFragment,
   subjectIsGeography,
 } from "overlay-engine";
@@ -14,6 +15,7 @@ import Skeleton from "../../components/Skeleton";
 import { ReportWidget } from "./widgets";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
+import { SketchGeometryType } from "../../generated/graphql";
 
 export const InlineMetric: ReportWidget<{
   unit: "hectare" | "acre" | "mile" | "kilometer";
@@ -28,11 +30,29 @@ export const InlineMetric: ReportWidget<{
   componentSettings,
   dependencies,
   marks,
+  sketchClass,
 }) => {
+  if (sketchClass.geometryType !== SketchGeometryType.Polygon) {
+    throw new Error(
+      "Inline metric only supports polygon geometry types currently."
+    );
+  }
   const formatters = useNumberFormatters({
     unit: componentSettings?.unit,
     minimumFractionDigits: componentSettings?.minimumFractionDigits,
   });
+
+  const primaryGeographyId = useMemo(() => {
+    const id = findPrimaryGeographyId(
+      metrics as Pick<Metric, "type" | "value" | "subject">[]
+    );
+    if (!sketchClass.clippingGeographies?.some((g) => g.id === id)) {
+      throw new Error(
+        "Primary geography not found in sketch class clipping geographies."
+      );
+    }
+    return id;
+  }, [metrics, sketchClass.clippingGeographies]);
 
   const formattedValue = useMemo(() => {
     if (!dependencies.length) {
@@ -56,16 +76,14 @@ export const InlineMetric: ReportWidget<{
             "type" | "value"
           >[]
         ) as TotalAreaMetric;
-        console.log("metrics", metrics, dependencies);
-        const geographyArea = combineMetricsForFragments(
-          metrics.filter((m) => subjectIsGeography(m.subject)) as Pick<
-            Metric,
-            "type" | "value"
-          >[]
-        ) as TotalAreaMetric;
-        const percentArea = totalArea.value / geographyArea.value;
-        console.log("percentArea", percentArea);
-        return formatters.percent(percentArea);
+        const geographyAreaMetric = metrics.find(
+          (m) =>
+            subjectIsGeography(m.subject) && m.subject.id === primaryGeographyId
+        );
+        if (!geographyAreaMetric) {
+          throw new Error("Primary geography not found in metrics.");
+        }
+        return formatters.percent(totalArea.value / geographyAreaMetric.value);
       default:
         throw new Error(`Unsupported presentation: ${presentation}`);
     }
@@ -76,6 +94,7 @@ export const InlineMetric: ReportWidget<{
     metrics,
     componentSettings?.presentation,
     formatters,
+    primaryGeographyId,
   ]);
 
   if (loading) {

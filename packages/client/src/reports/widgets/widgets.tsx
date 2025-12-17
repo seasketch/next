@@ -6,6 +6,9 @@ import {
   CompatibleSpatialMetricDetailsFragment,
   GeographyDetailsFragment,
   OverlaySourceDetailsFragment,
+  ReportContextSketchClassDetailsFragment,
+  SketchClass,
+  SketchClassDetailsFragment,
   SketchGeometryType,
   SpatialMetricState,
 } from "../../generated/graphql";
@@ -39,6 +42,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     geographies,
     metrics: contextMetrics,
     overlaySources,
+    sketchClass,
   } = useReportContext();
   const node = props.node as Node;
   const { type, componentSettings, metrics: dependencies } = node.attrs || {};
@@ -94,7 +98,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     return { metrics, sources, loading, errors };
   }, [contextMetrics, dependencies, overlaySources]);
 
-  const widgetProps = {
+  const widgetProps: ReportWidgetProps<any> = {
     dependencies,
     componentSettings,
     metrics,
@@ -104,6 +108,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     geographies,
     marks: node.marks as Mark[] | undefined,
     node,
+    sketchClass,
   };
 
   switch (node.attrs.type) {
@@ -258,7 +263,10 @@ export function insertMetric(
   const $posAfter = tr.doc.resolve(posAfter);
   const selection = $posAfter.parent.inlineContent
     ? TextSelection.create(tr.doc, posAfter)
-    : TextSelection.near($posAfter, -1 /* backward to stay in previous block */);
+    : TextSelection.near(
+        $posAfter,
+        -1 /* backward to stay in previous block */
+      );
   tr = tr.setSelection(selection);
 
   dispatch(tr.scrollIntoView());
@@ -282,6 +290,10 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   componentSettings: T;
   marks?: Mark[];
   node?: Node;
+  sketchClass: Pick<
+    ReportContextSketchClassDetailsFragment,
+    "geometryType" | "clippingGeographies"
+  >;
 }
 
 export type ReportWidget<T extends Record<string, any>> = FC<

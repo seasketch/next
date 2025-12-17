@@ -79,6 +79,11 @@ export default function SketchReportWindow({
         className="flex-none flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg pointer-events-auto"
         style={{ maxHeight: 1024 }}
         onClick={(e) => {
+          // Don't intercept clicks on links - let them work normally
+          const link = (e.target as HTMLElement)?.closest("a");
+          if (link) {
+            return;
+          }
           if (onClick) {
             e.stopPropagation();
             e.preventDefault();

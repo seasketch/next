@@ -326,10 +326,40 @@ div[attachments="forumAttachments"] {
         background-position: -155% 0%;
       }
     }
+
+    .ProseMirror__reactComponent {
+      display: none;
+    }
   }
 
-  div {
-    @apply opacity-0;
+  li {
+    list-style: none;
+  }
+
+  .ProseMirror__reactComponent {
+    @apply text-transparent bg-black/10 rounded;
+
+    > * {
+      opacity: 0;
+    }
+
+    background: linear-gradient(
+      -100deg,
+      transparent,
+      rgba(0, 0, 0, 0.03),
+      rgba(20, 0, 180, 0.055)
+    );
+    background-size: 400% 400%;
+    animation: pulse 1.3s ease-in-out infinite;
+
+    @keyframes pulse {
+      0% {
+        background-position: 0% 0%;
+      }
+      100% {
+        background-position: -155% 0%;
+      }
+    }
   }
 }
 

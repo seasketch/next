@@ -6,6 +6,7 @@ exports.combineRasterBandStats = combineRasterBandStats;
 exports.combineColumnValueStats = combineColumnValueStats;
 exports.hashMetricDependency = hashMetricDependency;
 exports.combineMetricsForFragments = combineMetricsForFragments;
+exports.findPrimaryGeographyId = findPrimaryGeographyId;
 const simple_statistics_1 = require("simple-statistics");
 const uniqueIdIndex_1 = require("../utils/uniqueIdIndex");
 /**
@@ -410,5 +411,41 @@ function combineGroupedValues(values, combineFn) {
         }
     }
     return result;
+}
+/**
+ * Finds the primary geography id from a list of metrics. The primary
+ * geography is the one that is in all fragments.
+ * @param metrics - The metrics to find the primary geography id from
+ * @returns The primary geography id
+ */
+function findPrimaryGeographyId(metrics) {
+    const foundGeographyIds = {};
+    const fragmentMetrics = metrics.filter((m) => subjectIsFragment(m.subject));
+    for (const metric of fragmentMetrics) {
+        const fragmentSubject = metric.subject;
+        for (const geographyId of fragmentSubject.geographies) {
+            if (geographyId in foundGeographyIds) {
+                foundGeographyIds[geographyId]++;
+            }
+            else {
+                foundGeographyIds[geographyId] = 1;
+            }
+        }
+    }
+    // find the primary geography id by determining which is in all fragments
+    let primaryGeographyId = null;
+    for (const geographyId in foundGeographyIds) {
+        if (foundGeographyIds[geographyId] === fragmentMetrics.length) {
+            if (primaryGeographyId !== null) {
+                throw new Error("Multiple primary geography ids found.");
+            }
+            primaryGeographyId = Number(geographyId);
+            break;
+        }
+    }
+    if (primaryGeographyId === null) {
+        throw new Error("No primary geography id found.");
+    }
+    return primaryGeographyId;
 }
 //# sourceMappingURL=metrics.js.map
