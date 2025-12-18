@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
-import { createReportCardSchema } from "../utils/createReportCardSchema";
+import { reportBodySchema } from "../widgets/prosemirror/reportBodySchema";
 import { createReactNodeView } from "../ReactNodeView";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
@@ -25,7 +25,7 @@ function ReportCardBodyViewerInner({
   const { createPortal, removePortal, setSelection } =
     useReactNodeViewPortals();
 
-  const schema = useMemo(() => createReportCardSchema(), []);
+  const schema = useMemo(() => reportBodySchema, []);
 
   const nodeViews = useMemo(
     () => ({

@@ -144,6 +144,48 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
     });
   }
 
+  if (schema.nodes.details) {
+    blocks.push({
+      id: "collapsible-block",
+      label: "Collapsible Block",
+      description: "Accordion-style container with editable heading.",
+      run: (state, dispatch, view) => {
+        const { schema } = state;
+        const detailsType = schema.nodes.details;
+        const summaryType = schema.nodes.summary;
+        const paragraphType = schema.nodes.paragraph;
+        if (!detailsType || !summaryType || !paragraphType) return false;
+
+        const summary = summaryType.create(null, schema.text("Learn more"));
+        const paragraph =
+          paragraphType.createAndFill() || paragraphType.create();
+        const node = detailsType.create({ open: true }, [summary, paragraph]);
+        if (dispatch) {
+          const tr = state.tr.replaceSelectionWith(node).scrollIntoView();
+          dispatch(tr);
+        }
+        return true;
+      },
+    });
+  }
+
+  if (schema.nodes.resultsParagraph) {
+    blocks.push({
+      id: "results-paragraph",
+      label: "Results Paragraph",
+      description: "Highlighted paragraph for calculated results.",
+      keywords: ["results", "highlight", "box"],
+      run: (state, dispatch) => {
+        const resultsParagraphType = schema.nodes.resultsParagraph;
+        if (!resultsParagraphType) return false;
+        setBlockType(resultsParagraphType)(state, dispatch);
+        return true;
+      },
+      isEnabled: (state) =>
+        !!setBlockType(schema.nodes.resultsParagraph)(state),
+    });
+  }
+
   // if (schema.nodes.horizontal_rule) {
   //   blocks.push({
   //     id: "horizontal-rule",

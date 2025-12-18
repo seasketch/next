@@ -14,7 +14,7 @@ import ActiveParagraphPlaceholderPlugin from "../../editor/ActiveParagraphPlaceh
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { exampleSetup } from "prosemirror-example-setup";
 import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlugin";
-import { createReportCardSchema } from "../utils/createReportCardSchema";
+import { reportBodySchema } from "../widgets/prosemirror/reportBodySchema";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
 } from "../ReactNodeView/PortalProvider";
@@ -23,7 +23,7 @@ import {
   ReportWidgetNodeViewRouter,
   buildReportCommandGroups,
 } from "../widgets/widgets";
-import { DetailsView } from "../widgets/prosemirror-details";
+import { DetailsView } from "../widgets/prosemirror/details";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
@@ -64,7 +64,7 @@ function ReportCardBodyEditorInner({
   sources,
 }: ReportCardBodyEditorProps) {
   const { schema, plugins } = useMemo(() => {
-    const schema = createReportCardSchema();
+    const schema = reportBodySchema;
     const plugins = [
       ...exampleSetup({ schema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),

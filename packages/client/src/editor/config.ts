@@ -19,6 +19,7 @@ import {
 import { ApolloClient } from "@apollo/client";
 import { CreateFileUploadForAboutPageDocument } from "../generated/graphql";
 import axios from "axios";
+import { reportBodySchema } from "../reports/widgets/prosemirror/reportBodySchema";
 
 let spec = baseSchema.spec;
 
@@ -39,6 +40,8 @@ const baseMarks = baseSchema.spec.marks.update("link", {
     return ["a", { href, title, target: "_blank" }, 0];
   },
 });
+
+export { baseSchema };
 
 const questionSchema: Schema = new Schema({
   nodes: spec.nodes
@@ -66,65 +69,6 @@ const questionSchema: Schema = new Schema({
     })
     .update("doc", {
       content: "question block*",
-    })
-    .remove("heading"),
-  // @ts-ignore
-  marks: baseMarks,
-});
-
-const reportCardBodySchema: Schema = new Schema({
-  nodes: spec.nodes
-    .append({
-      reportTitle: {
-        content: "text*",
-        group: "block",
-        defining: true,
-        marks: "em",
-        parseDOM: [{ tag: "h1[data-report-title]" }],
-        toDOM: function (node: any) {
-          return ["h1", { "data-report-title": "yes" }, 0];
-        },
-      },
-    })
-    .update("heading", {
-      attrs: { level: { default: 2 } },
-      content: "inline*",
-      group: "block",
-      defining: true,
-      isReporting: true,
-      parseDOM: [
-        { tag: "h2", attrs: { level: 2 } },
-        { tag: "h3", attrs: { level: 3 } },
-      ],
-      toDOM: (node: Node) => {
-        const level = node.attrs.level === 3 ? 3 : 2;
-        return ["h" + level, 0];
-      },
-    })
-    .update("doc", {
-      content: "reportTitle block*",
-    }),
-  // .remove("heading"),
-  // @ts-ignore
-  marks: baseMarks,
-});
-
-const reportCardFooterSchema: Schema = new Schema({
-  nodes: spec.nodes
-    .append({
-      footerTitle: {
-        content: "text*",
-        group: "block",
-        defining: true,
-        marks: "em",
-        parseDOM: [{ tag: "h2[data-footer-title]" }],
-        toDOM: function (node: any) {
-          return ["h2", { "data-footer-title": "yes" }, 0];
-        },
-      },
-    })
-    .update("doc", {
-      content: "footerTitle block*",
     })
     .remove("heading"),
   // @ts-ignore
@@ -427,16 +371,10 @@ export const formElements = {
     plugins: exampleSetup({ schema: contentSchema, menuBar: false }),
   },
   reportCardBody: {
-    schema: reportCardBodySchema,
+    schema: reportBodySchema,
     plugins: [
-      ...exampleSetup({ schema: reportCardBodySchema, menuBar: false }),
+      ...exampleSetup({ schema: reportBodySchema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
-    ],
-  },
-  reportCardFooter: {
-    schema: reportCardFooterSchema,
-    plugins: [
-      ...exampleSetup({ schema: reportCardFooterSchema, menuBar: false }),
     ],
   },
 };

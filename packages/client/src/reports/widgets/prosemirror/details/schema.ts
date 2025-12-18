@@ -1,24 +1,11 @@
 import type { NodeSpec } from "prosemirror-model";
 
-type DetailsNodesOptions = {
-  // A group name (something like "block") to add to the details node type.
-  detailsGroup: string;
-  // The content expression for details node.
-  detailsContent: string;
-  // The content expression for summary node.
-  summaryContent: string;
-};
-
-export const detailsNodes = (
-  options: DetailsNodesOptions
-): Record<"details" | "summary", NodeSpec> => {
-  const { detailsGroup, detailsContent, summaryContent } = options;
-
+export const detailsNodes = (): Record<"details" | "summary", NodeSpec> => {
   return {
     details: {
-      group: detailsGroup,
+      group: "block",
       // eslint-disable-next-line i18next/no-literal-string
-      content: `summary? ${detailsContent}`,
+      content: `summary block*`,
       attrs: {
         open: { default: true },
       },
@@ -29,7 +16,6 @@ export const detailsNodes = (
             if (typeof node === "string") {
               return null;
             }
-
             return { open: node.hasAttribute("open") };
           },
         },
@@ -43,7 +29,7 @@ export const detailsNodes = (
       },
     },
     summary: {
-      content: summaryContent,
+      content: "inline*",
       parseDOM: [{ tag: "summary" }],
       toDOM() {
         return ["summary", 0];

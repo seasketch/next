@@ -1257,6 +1257,9 @@ div[attachments="forumAttachments"] {
   /* @apply pl-2; */
   margin-top:1rem;
   margin-bottom:1rem;
+  border-radius:0.25rem;
+  border-width:1px;
+  padding:0.5rem;
 }
 
 .ReportCard details > summary,
@@ -1269,6 +1272,23 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBody details > *:not(summary){
   margin-left:1rem
+}
+
+.ReportCardBody .results-paragraph{
+  border-radius:0.25rem;
+  border-width:1px;
+  border-color:rgb(0 0 0 / 0.1);
+  --tw-bg-opacity:1;
+  background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1));
+  padding:0.75rem;
+  font-size:14px;
+  font-weight:500;
+  --tw-shadow:0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --tw-shadow-colored:0 1px 3px 0 var(--tw-shadow-color), 0 1px 2px -1px var(--tw-shadow-color);
+  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+  .metric{
+    font-weight:700
+  }
 }
 
 input[type="number"].form-element-number-input {
@@ -7532,6 +7552,14 @@ select{
   width:100vw
 }
 
+.w-\[45\%\]{
+  width:45%
+}
+
+.w-\[55\%\]{
+  width:55%
+}
+
 .min-w-0{
   min-width:0px
 }
@@ -8577,6 +8605,10 @@ select{
 
 .whitespace-pre-line{
   white-space:pre-line
+}
+
+.whitespace-pre-wrap{
+  white-space:pre-wrap
 }
 
 .break-words{
@@ -9754,6 +9786,10 @@ select{
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
 }
 
+.bg-gray-50\/60{
+  background-color:rgb(249 250 251 / 0.6)
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -10650,6 +10686,10 @@ select{
   text-align:justify
 }
 
+.align-top{
+  vertical-align:top
+}
+
 .align-middle{
   vertical-align:middle
 }
@@ -10710,6 +10750,10 @@ select{
 
 .text-\[12px\]{
   font-size:12px
+}
+
+.text-\[14px\]{
+  font-size:14px
 }
 
 .text-\[15px\]{

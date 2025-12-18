@@ -18,6 +18,10 @@ import {
   GeographySizeTable,
   GeographySizeTableTooltipControls,
 } from "./GeographySizeTable";
+import {
+  SketchAttributesTable,
+  SketchAttributesTableTooltipControls,
+} from "./SketchAttributesTable";
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
@@ -31,6 +35,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <InlineMetricTooltipControls {...props} />;
     case "GeographySizeTable":
       return <GeographySizeTableTooltipControls {...props} />;
+    case "SketchAttributesTable":
+      return <SketchAttributesTableTooltipControls {...props} />;
     default:
       return null;
   }
@@ -120,6 +126,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <InlineMetric {...widgetProps} />;
     case "GeographySizeTable":
       return <GeographySizeTable {...widgetProps} />;
+    case "SketchAttributesTable":
+      return <SketchAttributesTable {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -139,6 +147,14 @@ export type BuildReportCommandGroupsArgs = {
   sketchClassGeometryType?: SketchGeometryType;
 };
 
+/**
+ * Build context-dependent command groups for the report body editor.
+ * @param sources - The available overlay sources
+ * @param geographies - The available geographies
+ * @param clippingGeography - The clipping geography
+ * @param sketchClassGeometryType - The geometry type of the sketch class
+ * @returns The command groups
+ */
 export function buildReportCommandGroups({
   sources,
   geographies,
@@ -146,38 +162,26 @@ export function buildReportCommandGroups({
   sketchClassGeometryType,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
-  const layoutGroup: CommandPaletteGroup = {
-    id: "layout",
-    label: "Layout",
+
+  const attributesGroup: CommandPaletteGroup = {
+    id: "attributes",
+    label: "Attributes",
     items: [
       {
-        id: "collapsible-block",
-        label: "Collapsible Block",
-        description: "Accordion-style container with editable heading.",
+        id: "sketch-attributes-table",
+        label: "Sketch Attributes Table",
+        description: "Table of the current sketch's attributes.",
         run: (state, dispatch, view) => {
-          const { schema } = state;
-          const detailsType = schema.nodes.details;
-          const summaryType = schema.nodes.summary;
-          const paragraphType = schema.nodes.paragraph;
-          if (!detailsType || !summaryType || !paragraphType) return false;
-
-          const summary = summaryType.create(null, schema.text("Learn more"));
-          const paragraph =
-            paragraphType.createAndFill() || paragraphType.create();
-          const node = detailsType.create({ open: false }, [
-            summary,
-            paragraph,
-          ]);
-          if (dispatch) {
-            const tr = state.tr.replaceSelectionWith(node).scrollIntoView();
-            dispatch(tr);
-          }
-          return true;
+          return insertBlockMetric(view, state.selection.ranges[0], {
+            type: "SketchAttributesTable",
+            metrics: [],
+            componentSettings: {},
+          });
         },
       },
     ],
   };
-  commandGroups.push(layoutGroup);
+  commandGroups.push(attributesGroup);
 
   if (sketchClassGeometryType === SketchGeometryType.Polygon) {
     const sizeGroup: CommandPaletteGroup = {
@@ -189,7 +193,7 @@ export function buildReportCommandGroups({
           label: "Area",
           description: "The total area of the sketch",
           run: (state, dispatch, view) => {
-            return insertMetric(view, state.selection.ranges[0], {
+            return insertInlineMetric(view, state.selection.ranges[0], {
               type: "InlineMetric",
               metrics: [
                 {
@@ -216,7 +220,7 @@ export function buildReportCommandGroups({
           : "Percent of Geography",
         description: "Total area as a fraction of the clipping geography.",
         run: (state, dispatch, view) => {
-          return insertMetric(view, state.selection.ranges[0], {
+          return insertInlineMetric(view, state.selection.ranges[0], {
             type: "InlineMetric",
             componentSettings: {
               presentation: "percent_area",
@@ -241,27 +245,22 @@ export function buildReportCommandGroups({
         label: "Geography Size Table",
         description: "A table of the sizes of the sketch in each geography.",
         run: (state, dispatch, view) => {
-          return insertMetric(
-            view,
-            state.selection.ranges[0],
-            {
-              metrics: [
-                {
-                  type: "total_area",
-                  subjectType: "geographies",
-                },
-                {
-                  type: "total_area",
-                  subjectType: "fragments",
-                },
-              ],
-              componentSettings: {
-                presentation: "total_area",
+          return insertBlockMetric(view, state.selection.ranges[0], {
+            metrics: [
+              {
+                type: "total_area",
+                subjectType: "geographies",
               },
-              type: "GeographySizeTable",
+              {
+                type: "total_area",
+                subjectType: "fragments",
+              },
+            ],
+            componentSettings: {
+              presentation: "total_area",
             },
-            false
-          );
+            type: "GeographySizeTable",
+          });
         },
       });
 
@@ -275,7 +274,7 @@ export function buildReportCommandGroups({
             description:
               "Closest distance between the sketch and the shoreline.",
             run: (state, dispatch, view) => {
-              return insertMetric(view, state.selection.ranges[0], {
+              return insertInlineMetric(view, state.selection.ranges[0], {
                 type: "InlineMetric",
                 metrics: [
                   {
@@ -301,7 +300,7 @@ export function buildReportCommandGroups({
  * Insert a metric node at the specified range.
  * @param properties - The metric properties (type, geography)
  */
-export function insertMetric(
+function _insertMetric(
   view: EditorView,
   range: SelectionRange,
   properties: MetricProperties,
@@ -339,6 +338,36 @@ export function insertMetric(
   return true;
 }
 
+/**
+ * Insert an inline metric node at the specified range.
+ * @param view - The EditorView to insert the metric into
+ * @param range - The SelectionRange to insert the metric into
+ * @param properties - The properties of the metric to insert
+ * @returns True if the metric was inserted successfully, false otherwise
+ */
+export function insertInlineMetric(
+  view: EditorView,
+  range: SelectionRange,
+  properties: MetricProperties
+): boolean {
+  return _insertMetric(view, range, properties, true);
+}
+
+/**
+ * Insert a block metric node at the specified range.
+ * @param view - The EditorView to insert the metric into
+ * @param range - The SelectionRange to insert the metric into
+ * @param properties - The properties of the metric to insert
+ * @returns True if the metric was inserted successfully, false otherwise
+ */
+export function insertBlockMetric(
+  view: EditorView,
+  range: SelectionRange,
+  properties: MetricProperties
+): boolean {
+  return _insertMetric(view, range, properties, false);
+}
+
 export interface MetricProperties {
   metrics: MetricDependency[];
   componentSettings: Record<string, any>;
@@ -355,10 +384,7 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   componentSettings: T;
   marks?: Mark[];
   node?: Node;
-  sketchClass: Pick<
-    ReportContextSketchClassDetailsFragment,
-    "geometryType" | "clippingGeographies"
-  >;
+  sketchClass: ReportContextSketchClassDetailsFragment;
   alternateLanguageSettings: { [langCode: string]: any };
   lang?: string;
 }

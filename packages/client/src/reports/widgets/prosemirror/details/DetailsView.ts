@@ -35,3 +35,4 @@ export class DetailsView implements NodeView {
     return true;
   }
 }
+

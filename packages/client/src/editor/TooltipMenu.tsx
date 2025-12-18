@@ -177,6 +177,7 @@ function getActiveNodeTypeId(state: EditorState, schema: Schema): string {
   if (matchNode(nodes.blockquote)) return "blockquote";
   if (matchNode(nodes.bullet_list)) return "bullet-list";
   if (matchNode(nodes.ordered_list)) return "ordered-list";
+  if (matchNode(nodes.resultsParagraph)) return "results-paragraph";
   if (matchNode(nodes.paragraph)) return "paragraph";
 
   return "paragraph";
@@ -216,8 +217,12 @@ function nodeTypeSupported(schema: Schema, id: string): boolean {
   switch (id) {
     case "paragraph":
       return !!n.paragraph;
-    case "blockquote":
-      return !!n.blockquote;
+    // case "blockquote":
+    //   return !!n.blockquote;
+    case "details":
+      return !!n.details && !!n.summary;
+    case "results-paragraph":
+      return !!n.resultsParagraph;
     case "h1":
       if (isReportCardSchema) return false; // report body reserves h1 for reportTitle
       return !!n.heading || !!n.h1;
@@ -860,6 +865,44 @@ export default function TooltipMenu({
           }
           break;
         }
+        case "details": {
+          const detailsType = workingState.schema.nodes.details;
+          const summaryType = workingState.schema.nodes.summary;
+          const paragraphType = workingState.schema.nodes.paragraph;
+          if (!detailsType || !summaryType || !paragraphType) break;
+
+          const summary = summaryType.create(null, schema.text("Learn more"));
+
+          const slice = workingState.selection.content();
+          const contentNodes: Node[] = [];
+          slice.content.forEach((n) => contentNodes.push(n));
+          if (contentNodes.length === 0) {
+            const para =
+              paragraphType.createAndFill() || paragraphType.create();
+            contentNodes.push(para);
+          }
+
+          const detailsNode = detailsType.create({ open: false }, [
+            summary,
+            ...contentNodes,
+          ]);
+
+          const tr = workingState.tr
+            .replaceSelectionWith(detailsNode)
+            .scrollIntoView();
+          dispatch(tr);
+          workingState = view.state;
+          break;
+        }
+        case "results-paragraph": {
+          const resultsParagraphType =
+            workingState.schema.nodes.resultsParagraph;
+          if (!resultsParagraphType) break;
+          setBlockType(resultsParagraphType)(workingState, dispatch);
+          workingState = view.state;
+          break;
+        }
+
         default:
           break;
       }
@@ -1316,6 +1359,31 @@ const Commands: Command[] = [
     },
     toggle: (schema, state, dispatch) => {
       wrapInList(schema.nodes.ordered_list)(state, dispatch);
+    },
+  },
+  {
+    id: "details",
+    title: "Collapsible block",
+    group: "node-type",
+    icon: <CaretDownIcon />,
+    isDisabled: (schema, _state) =>
+      !schema.nodes.details || !schema.nodes.summary,
+    toggle: (schema, state, dispatch) => {
+      // This is handled in handleNodeTypeChange; no-op here
+      setBlockType(schema.nodes.paragraph)(state, dispatch);
+    },
+  },
+  {
+    id: "results-paragraph",
+    title: "Results paragraph",
+    group: "node-type",
+    icon: <TextIcon />,
+    isDisabled: (schema, state) =>
+      !schema.nodes.resultsParagraph ||
+      !setBlockType(schema.nodes.resultsParagraph)(state),
+    toggle: (schema, state, dispatch) => {
+      // This is handled in handleNodeTypeChange; no-op here
+      setBlockType(schema.nodes.paragraph)(state, dispatch);
     },
   },
 ];

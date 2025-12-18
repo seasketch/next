@@ -383,7 +383,7 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBody details {
   /* @apply pl-2; */
-  @apply my-4;
+  @apply my-4 border rounded p-2;
 }
 
 .ReportCard details > summary,
@@ -393,4 +393,12 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBody details > *:not(summary) {
   @apply ml-4;
+}
+
+.ReportCardBody .results-paragraph {
+  @apply bg-gray-100 rounded p-3 shadow text-[14px] font-medium border border-black/10;
+
+  .metric {
+    @apply font-bold;
+  }
 }

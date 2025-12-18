@@ -1,4 +1,5 @@
 import { DOMSerializer, Node } from "prosemirror-model";
+// @ts-ignore - compatibility shim path
 import { createReportCardSchema } from "./createReportCardSchema";
 
 /**

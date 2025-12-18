@@ -48,6 +48,7 @@ import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
+import { setCollapsibleBlocksClosed } from "../../reports/widgets/prosemirror/reportBodySchema";
 
 // registerCards();
 
@@ -410,6 +411,11 @@ export default function SketchClassReportsAdmin({
           ? selectedCardForEditing.displayMapLayerVisibilityControls
           : true;
 
+      const body = setCollapsibleBlocksClosed(
+        localCardEdits.body || selectedCardForEditing.body
+      );
+
+      console.log("body", body);
       await updateReportCard({
         variables: {
           id: selectedCardForEditing.id,
@@ -419,7 +425,7 @@ export default function SketchClassReportsAdmin({
           alternateLanguageSettings:
             localCardEdits.alternateLanguageSettings ||
             selectedCardForEditing.alternateLanguageSettings,
-          body: localCardEdits.body || selectedCardForEditing.body,
+          body,
           cardType: localCardEdits.type || selectedCardForEditing.type,
           displayMapLayerVisibilityControls,
         } as any, // Type assertion needed - the field exists in the GraphQL schema but TypeScript types may be out of sync
