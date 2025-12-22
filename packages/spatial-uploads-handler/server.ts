@@ -23,6 +23,15 @@ const server = createServer(function (req, res) {
             data.requestingUser,
             data.skipLoggingProgress
           );
+          for (const layer of outputs.layers) {
+            console.log(`outputted - ${layer.name} ${layer.url}`);
+            for (const output of layer.outputs) {
+              console.log(`output - ${output.type} ${output.url}`);
+            }
+            if (layer.geostats) {
+              console.log(JSON.stringify(layer.geostats, null, 2));
+            }
+          }
           res.setHeader("Content-Type", "application/json");
           res.end(
             JSON.stringify({

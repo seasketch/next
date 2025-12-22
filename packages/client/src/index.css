@@ -6996,9 +6996,6 @@ select{
 .size-\[25px\]{
   width:25px;
   height:25px
-.size-\[25px\]{
-  width:25px;
-  height:25px
 }
 
 .h-0{
@@ -7525,8 +7522,16 @@ select{
   width:440px
 }
 
+.w-\[45\%\]{
+  width:45%
+}
+
 .w-\[540px\]{
   width:540px
+}
+
+.w-\[55\%\]{
+  width:55%
 }
 
 .w-auto{
@@ -7553,14 +7558,6 @@ select{
 
 .w-screen{
   width:100vw
-}
-
-.w-\[45\%\]{
-  width:45%
-}
-
-.w-\[55\%\]{
-  width:55%
 }
 
 .min-w-0{
@@ -9441,6 +9438,10 @@ select{
   background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
 }
 
+.bg-gray-50\/60{
+  background-color:rgb(249 250 251 / 0.6)
+}
+
 .bg-gray-500{
   --tw-bg-opacity:1;
   background-color:rgb(107 114 128 / var(--tw-bg-opacity, 1))
@@ -9621,6 +9622,11 @@ select{
   background-color:rgb(220 38 38 / var(--tw-bg-opacity, 1))
 }
 
+.bg-red-700{
+  --tw-bg-opacity:1;
+  background-color:rgb(185 28 28 / var(--tw-bg-opacity, 1))
+}
+
 .bg-red-800{
   --tw-bg-opacity:1;
   background-color:rgb(153 27 27 / var(--tw-bg-opacity, 1))
@@ -9787,10 +9793,6 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
-}
-
-.bg-gray-50\/60{
-  background-color:rgb(249 250 251 / 0.6)
 }
 
 .bg-opacity-10{
@@ -10042,6 +10044,12 @@ select{
 .from-transparent{
   --tw-gradient-from:transparent var(--tw-gradient-from-position);
   --tw-gradient-to:rgb(0 0 0 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)
+}
+
+.from-white{
+  --tw-gradient-from:#fff var(--tw-gradient-from-position);
+  --tw-gradient-to:rgb(255 255 255 / 0) var(--tw-gradient-to-position);
   --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)
 }
 
@@ -10451,6 +10459,30 @@ select{
 .py-\[3px\]{
   padding-top:3px;
   padding-bottom:3px
+}
+
+.\!pl-0{
+  padding-left:0px !important
+}
+
+.\!pl-1{
+  padding-left:0.25rem !important
+}
+
+.\!pl-2{
+  padding-left:0.5rem !important
+}
+
+.\!pl-3{
+  padding-left:0.75rem !important
+}
+
+.\!pl-4{
+  padding-left:1rem !important
+}
+
+.\!pl-5{
+  padding-left:1.25rem !important
 }
 
 .pb-0{
@@ -11170,6 +11202,11 @@ select{
   color:rgb(147 51 234 / var(--tw-text-opacity, 1))
 }
 
+.text-red-100{
+  --tw-text-opacity:1;
+  color:rgb(254 226 226 / var(--tw-text-opacity, 1))
+}
+
 .text-red-200{
   --tw-text-opacity:1;
   color:rgb(254 202 202 / var(--tw-text-opacity, 1))
@@ -11394,11 +11431,6 @@ select{
 .\!underline{
   -webkit-text-decoration-line:underline !important;
           text-decoration-line:underline !important
-}
-
-.underline{
-  -webkit-text-decoration-line:underline;
-          text-decoration-line:underline
 }
 
 .underline{
@@ -12568,11 +12600,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(55 65 81 / var(--tw-bg-opacity, 1))
 }
 
-.hover\:bg-gray-800:hover{
-  --tw-bg-opacity:1;
-  background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
-}
-
 .hover\:bg-gray-900:hover{
   --tw-bg-opacity:1;
   background-color:rgb(17 24 39 / var(--tw-bg-opacity, 1))
@@ -13003,9 +13030,9 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(55 65 81 / 0.6)
 }
 
-.focus\:bg-gray-800:focus{
+.focus\:bg-primary-600:focus{
   --tw-bg-opacity:1;
-  background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
+  background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1))
 }
 
 .focus\:bg-transparent:focus{

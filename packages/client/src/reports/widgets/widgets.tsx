@@ -13,7 +13,7 @@ import {
 import { EditorView } from "prosemirror-view";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import {
   GeographySizeTable,
   GeographySizeTableTooltipControls,
@@ -26,6 +26,11 @@ import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import {
+  ExclamationTriangleIcon,
+  InfoCircledIcon,
+} from "@radix-ui/react-icons";
+import Badge from "../../components/Badge";
 
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
@@ -48,7 +53,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     metrics: contextMetrics,
     overlaySources,
     sketchClass,
+    setShowCalcDetails,
   } = useReportContext();
+  const { t } = useTranslation("reports");
   const languageContext = useContext(FormLanguageContext);
   const lang = languageContext?.lang?.code;
   const node = props.node as Node;
@@ -120,6 +127,59 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     alternateLanguageSettings,
     lang,
   };
+
+  if (errors.length > 0) {
+    const errorMap: Record<string, number> = {};
+    for (const error of errors) {
+      if (error in errorMap) {
+        errorMap[error]++;
+      } else {
+        errorMap[error] = 1;
+      }
+    }
+    if (node.isInline) {
+      return (
+        <button
+          onClick={() => setShowCalcDetails(true)}
+          className="bg-red-700 text-white px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1"
+        >
+          <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
+          <span className="font-semibold">{t("Error")}</span>
+          <span className="max-w-24 truncate text-red-200">
+            {errors.join(". \n")}
+          </span>
+        </button>
+      );
+    } else {
+      return (
+        <div className="bg-red-700 text-white p-2 rounded shadow-sm w-full text-left my-2">
+          <div className="flex items-center space-x-2 py-1 text-base">
+            <ExclamationTriangleIcon className="w-4 h-4 inline-block" />
+            <div className="font-semibold">{t("Error")}</div>
+          </div>
+          <ul className="list-disc !pl-5 pt-1">
+            {Object.entries(errorMap).map(([msg, count]) => (
+              <li key={msg}>
+                {msg}{" "}
+                {Number(count) > 1 && (
+                  <Badge variant="error">
+                    {Number(count)}
+                    {t("x")}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+          <button
+            onClick={() => setShowCalcDetails(true)}
+            className=" bg-red-50  text-black px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1 mt-2 mb-1 text-sm "
+          >
+            <span className="">{t("View details")}</span>
+          </button>
+        </div>
+      );
+    }
+  }
 
   switch (node.attrs.type) {
     case "InlineMetric":

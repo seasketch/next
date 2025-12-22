@@ -92,6 +92,8 @@ export default function ReportCard({
     recalculate,
     recalculateState,
     draftDependencyMetrics,
+    showCalcDetails,
+    setShowCalcDetails,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
@@ -203,28 +205,11 @@ export default function ReportCard({
   ) {
     localizedBody = alternateLanguageSettings[langContext.lang.code].body;
   }
-  // loading = true;
-
-  const isReady = !loading && !Object.keys(errors).length;
-
-  // const loadingSkeleton = useMemo(() => {
-  //   if (skeleton) {
-  //     return skeleton;
-  //   }
-  //   return (
-  //     <div className="w-full space-y-1">
-  //       <Skeleton className="w-full h-4" />
-  //       <Skeleton className="w-3/4 h-4" />
-  //       <Skeleton className="w-4/5 h-4" />
-  //     </div>
-  //   );
-  // }, [skeleton]);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [recalcOpen, setRecalcOpen] = useState(false);
   const [recomputePreprocessed, setRecomputePreprocessed] = useState(false);
   const [recomputeTotals, setRecomputeTotals] = useState(false);
-  const [showCalcDetails, setShowCalcDetails] = useState(false);
 
   const presenceAbsenceClassName = useMemo(() => {
     if (!loading && !Object.values(errors).length) {
@@ -279,7 +264,7 @@ export default function ReportCard({
         isDisabled ? "opacity-40 blur-sm pointer-events-none select-none" : ""
       } ${className} ${
         loading && !selectedForEditing ? "loadingSkeleton" : ""
-      }`}
+      } ${Object.values(errors).length > 0 ? "hasErrors" : ""}`}
     >
       <div className="group">
         <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
@@ -405,48 +390,6 @@ export default function ReportCard({
               />
             )}
           </ErrorBoundary>
-        </div>
-
-        <div className="text-sm pt-0">
-          {Object.keys(errors).length > 0 && (
-            <>
-              <p>
-                <Trans ns="sketching">
-                  There was a problem calculating metrics for this card.
-                </Trans>
-              </p>
-              <ul className="list-disc pl-4 pt-2">
-                {Object.entries(errors).map(([msg, count]) => (
-                  <li key={msg}>
-                    {msg}{" "}
-                    {count > 1 && (
-                      <Badge variant="error">
-                        {count}
-                        {t("x")}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              {failedMetrics.length > 0 && (
-                <div className="mt-2">
-                  <Button
-                    onClick={() => {
-                      setShowCalcDetails(true);
-                    }}
-                    label={t("View details")}
-                    small
-                  />
-                </div>
-              )}
-            </>
-          )}
-          {/* {isReady && children} */}
-          {/* {loading && !Object.values(errors).length && !selectedForEditing && (
-          <div className="relative mt-2">
-            <div>{loadingSkeleton}</div>
-          </div>
-        )} */}
         </div>
       </div>
       {editorFooter && (

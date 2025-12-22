@@ -415,7 +415,6 @@ export default function SketchClassReportsAdmin({
         localCardEdits.body || selectedCardForEditing.body
       );
 
-      console.log("body", body);
       await updateReportCard({
         variables: {
           id: selectedCardForEditing.id,
@@ -991,23 +990,6 @@ export default function SketchClassReportsAdmin({
       </FormLanguageContext.Provider>
     </ReportContext.Provider>
   );
-}
-
-function AdminFactory({
-  type,
-  config,
-  onUpdate,
-}: {
-  type: ReportCardType;
-  config: ReportCardConfiguration<any> | null | undefined;
-  onUpdate: ReportCardConfigUpdateCallback;
-}) {
-  const registration = getCardRegistration(type);
-  if (!registration?.adminComponent || !config) {
-    return null;
-  }
-  const Component = registration.adminComponent;
-  return <Component config={config} onUpdate={onUpdate} />;
 }
 
 export function collectReportCardTitle(body: any) {

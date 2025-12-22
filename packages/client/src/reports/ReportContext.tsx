@@ -7,6 +7,8 @@ import {
   useCallback,
   useMemo,
   useRef,
+  Dispatch,
+  SetStateAction,
 } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -124,6 +126,8 @@ export interface ReportContextState {
   additionalDependencies: MetricDependency[];
   setAdditionalDependencies: (dependencies: MetricDependency[]) => void;
   draftDependencyMetrics: CompatibleSpatialMetricDetailsFragment[];
+  showCalcDetails: boolean;
+  setShowCalcDetails: Dispatch<SetStateAction<boolean>>;
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -147,6 +151,7 @@ export function useReportState(
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
+  const [showCalcDetails, setShowCalcDetails] = useState(false);
 
   const [additionalDependencies, setAdditionalDependencies] = useState<
     MetricDependency[]
@@ -595,6 +600,8 @@ export function useReportState(
       setCardMapStyle,
       draftDependencyMetrics:
         draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
+      showCalcDetails,
+      setShowCalcDetails,
     };
   }
 }
