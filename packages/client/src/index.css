@@ -6996,6 +6996,9 @@ select{
 .size-\[25px\]{
   width:25px;
   height:25px
+.size-\[25px\]{
+  width:25px;
+  height:25px
 }
 
 .h-0{
@@ -11398,6 +11401,11 @@ select{
           text-decoration-line:underline
 }
 
+.underline{
+  -webkit-text-decoration-line:underline;
+          text-decoration-line:underline
+}
+
 .line-through{
   -webkit-text-decoration-line:line-through;
           text-decoration-line:line-through
@@ -12560,6 +12568,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(55 65 81 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-gray-800:hover{
+  --tw-bg-opacity:1;
+  background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
+}
+
 .hover\:bg-gray-900:hover{
   --tw-bg-opacity:1;
   background-color:rgb(17 24 39 / var(--tw-bg-opacity, 1))
@@ -12990,9 +13003,9 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(55 65 81 / 0.6)
 }
 
-.focus\:bg-primary-600:focus{
+.focus\:bg-gray-800:focus{
   --tw-bg-opacity:1;
-  background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1))
+  background-color:rgb(31 41 55 / var(--tw-bg-opacity, 1))
 }
 
 .focus\:bg-transparent:focus{

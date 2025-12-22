@@ -771,3 +771,4 @@ describe("combineMetricsForFragments", () => {
     });
   });
 });
+
