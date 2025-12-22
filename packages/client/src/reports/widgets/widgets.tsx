@@ -1,7 +1,10 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import { FC, useContext, useMemo } from "react";
-import { CommandPaletteGroup } from "../commandPalette/types";
+import {
+  CommandPaletteGroup,
+  CommandPaletteItem,
+} from "../commandPalette/types";
 import {
   CompatibleSpatialMetricDetailsFragment,
   GeographyDetailsFragment,
@@ -10,9 +13,15 @@ import {
   SketchGeometryType,
   SpatialMetricState,
 } from "../../generated/graphql";
+import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
-import { SelectionRange, TextSelection } from "prosemirror-state";
+import {
+  EditorState,
+  SelectionRange,
+  TextSelection,
+  Transaction,
+} from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
 import {
   GeographySizeTable,
@@ -31,6 +40,55 @@ import {
   InfoCircledIcon,
 } from "@radix-ui/react-icons";
 import Badge from "../../components/Badge";
+import {
+  GeostatsLayer,
+  isGeostatsLayer,
+  RasterBandInfo,
+} from "@seasketch/geostats-types";
+import {
+  findGetExpression,
+  isExpression,
+} from "../../dataLayers/legends/utils";
+
+function groupByForStyle(
+  mapboxGlStyles: AnyLayer[] | null | undefined,
+  geostatsLayer?: GeostatsLayer
+): string | undefined {
+  if (!mapboxGlStyles?.length || !geostatsLayer) {
+    return undefined;
+  }
+
+  const geometry = geostatsLayer.geometry;
+  const attributeNames = new Set(
+    geostatsLayer.attributes?.map((a) => a.attribute) || []
+  );
+
+  const paintProps =
+    geometry === "Polygon" || geometry === "MultiPolygon"
+      ? ["fill-color"]
+      : geometry === "LineString" || geometry === "MultiLineString"
+      ? ["line-color"]
+      : ["circle-color", "icon-image"];
+
+  for (const layer of mapboxGlStyles) {
+    if (!("paint" in layer)) continue;
+    const paint = (layer as { paint?: Record<string, any> }).paint;
+    if (!paint) continue;
+    for (const prop of paintProps) {
+      const value = paint[prop];
+      if (!value || !isExpression(value)) continue;
+      const getExpr = findGetExpression(value);
+      if (
+        getExpr?.property &&
+        (!attributeNames.size || attributeNames.has(getExpr.property))
+      ) {
+        return getExpr.property;
+      }
+    }
+  }
+
+  return undefined;
+}
 
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
@@ -53,12 +111,14 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     metrics: contextMetrics,
     overlaySources,
     sketchClass,
+    adminSources,
     setShowCalcDetails,
   } = useReportContext();
   const { t } = useTranslation("reports");
   const languageContext = useContext(FormLanguageContext);
   const lang = languageContext?.lang?.code;
   const node = props.node as Node;
+  const cardId = props.cardId;
   const { type, componentSettings, metrics: dependencies } = node.attrs || {};
   const alternateLanguageSettings = node.attrs?.alternateLanguageSettings || {};
   if (!type) {
@@ -74,7 +134,10 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     const metrics = filterMetricsByDependencies(
       contextMetrics,
       dependencies,
-      overlaySources.map((s) => s.sourceUrl!)
+      [...overlaySources, ...adminSources].reduce((acc, s) => {
+        acc[s.tableOfContentsItemId!] = s.sourceUrl!;
+        return acc;
+      }, {} as Record<number, string>)
     ) as CompatibleSpatialMetricDetailsFragment[];
     for (const metric of metrics) {
       if (
@@ -111,7 +174,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     }
     // loading = true;
     return { metrics, sources, loading, errors };
-  }, [contextMetrics, dependencies, overlaySources]);
+  }, [contextMetrics, dependencies, overlaySources, adminSources]);
 
   const widgetProps: ReportWidgetProps<any> = {
     dependencies,
@@ -140,8 +203,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     if (node.isInline) {
       return (
         <button
-          onClick={() => setShowCalcDetails(true)}
+          onClick={() => setShowCalcDetails(cardId!)}
           className="bg-red-700 text-white px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1"
+          title={errors.join(". \n")}
         >
           <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
           <span className="font-semibold">{t("Error")}</span>
@@ -171,7 +235,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
             ))}
           </ul>
           <button
-            onClick={() => setShowCalcDetails(true)}
+            onClick={() => setShowCalcDetails(cardId!)}
             className=" bg-red-50  text-black px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1 mt-2 mb-1 text-sm "
           >
             <span className="">{t("View details")}</span>
@@ -351,6 +415,109 @@ export function buildReportCommandGroups({
         ],
       };
       commandGroups.push(distanceGroup);
+    }
+  }
+
+  if (sources && sources.length > 0) {
+    const overlayItems: CommandPaletteItem[] = sources
+      .filter((source) => source.tableOfContentsItemId)
+      .map((source) => {
+        const title =
+          source.tableOfContentsItem?.title || "Layer Overlay Analysis";
+        const tocId = source.tableOfContentsItemId!;
+        console.log("building options for", title, source);
+        let children: CommandPaletteItem[] = [];
+        if ("bands" in source.geostats && source.geostats.bands.length > 0) {
+          const bandInfo = source.geostats.bands[0] as RasterBandInfo;
+        } else if (
+          "layers" in source.geostats &&
+          isGeostatsLayer(source.geostats.layers[0])
+        ) {
+          const geostatsLayer = source.geostats.layers[0] as GeostatsLayer;
+          console.log("is vector", geostatsLayer, source.mapboxGlStyles);
+          const groupByColumn = groupByForStyle(
+            source.mapboxGlStyles,
+            geostatsLayer
+          );
+          console.log("groupByColumn", groupByColumn);
+          switch (geostatsLayer.geometry) {
+            case "Polygon":
+            case "MultiPolygon": {
+              children.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-overlap-area`,
+                label: "Overlapping Area",
+                description:
+                  "Inline metric representing the total area of the sketch that overlaps with the layer.",
+                run: (state, dispatch, view) => {
+                  return insertInlineMetric(view, state.selection.ranges[0], {
+                    type: "InlineMetric",
+                    metrics: [
+                      {
+                        type: "overlay_area",
+                        subjectType: "fragments",
+                        tableOfContentsItemId: tocId,
+                      },
+                    ],
+                    componentSettings: {
+                      presentation: "overlay_area",
+                    },
+                  });
+                },
+              });
+              children.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-overlap-table`,
+                label: "Overlapping Area Table",
+                description:
+                  "Table of overlapping area statistics. Works best when grouped by a class key. May include percent overlapped for a geography.",
+                run: (state, dispatch, view) => {
+                  return insertBlockMetric(view, state.selection.ranges[0], {
+                    type: "OverlappingAreaTable",
+                    metrics: [
+                      {
+                        type: "overlay_area",
+                        subjectType: "fragments",
+                        tableOfContentsItemId: tocId,
+                        parameters: {
+                          groupBy: groupByColumn,
+                        },
+                      },
+                      {
+                        type: "overlay_area",
+                        subjectType: "geographies",
+                        tableOfContentsItemId: tocId,
+                        parameters: {
+                          groupBy: groupByColumn,
+                        },
+                      },
+                    ],
+                    componentSettings: {
+                      // presentation: "overlay_area",
+                    },
+                  });
+                },
+              });
+              break;
+            }
+          }
+        }
+        return {
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `overlay-layer-${tocId}`,
+          label: title,
+          // description: "Layer-specific overlay analysis options.",
+          run: () => false,
+          children,
+        };
+      });
+
+    if (overlayItems.length) {
+      commandGroups.push({
+        id: "layer-overlay-analysis",
+        label: "Layer Overlay Analysis",
+        items: overlayItems.sort((a, b) => a.label.localeCompare(b.label)),
+      });
     }
   }
   return commandGroups;

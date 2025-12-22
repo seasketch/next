@@ -711,3 +711,12 @@ query DraftReportDependencies($input: DraftDependenciesInput) {
     sketchId
   }
 }
+
+query ProjectReportingLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    reportingLayers {
+      ...OverlaySourceDetails
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import {
   DistanceToShoreMetric,
   Metric,
+  OverlayAreaMetric,
   TotalAreaMetric,
   combineMetricsForFragments,
   findPrimaryGeographyId,
@@ -20,17 +21,14 @@ import { NumberRoundingControl } from "./NumberRoundingControl";
 import { SketchGeometryType } from "../../generated/graphql";
 
 export const InlineMetric: ReportWidget<{
-  unit:
-    | "hectare"
-    | "acre"
-    | "mile"
-    | "kilometer"
-    | "meter"
-    | "foot"
-    | "nautical-mile";
+  unit: AreaUnit | LengthUnit;
   unitDisplay?: "long" | "short";
   minimumFractionDigits: number;
-  presentation: "total_area" | "percent_area" | "distance_to_shore";
+  presentation:
+    | "total_area"
+    | "percent_area"
+    | "distance_to_shore"
+    | "overlay_area";
 }> = ({
   metrics,
   sources,
@@ -111,6 +109,17 @@ export const InlineMetric: ReportWidget<{
         }
         return formatters.distance(combined.value.meters / 1000);
       }
+      case "overlay_area": {
+        const overlayMetrics = metrics.filter((m) => m.type === "overlay_area");
+        if (overlayMetrics.length === 0) {
+          throw new Error("Overlay area not found in metrics.");
+        }
+        const combined = combineMetricsForFragments(
+          metrics as Pick<Metric, "type" | "value">[]
+        ) as OverlayAreaMetric;
+
+        return formatters.area(combined.value["*"]);
+      }
       default:
         // eslint-disable-next-line i18next/no-literal-string
         errors.push(`Unsupported presentation: ${presentation}`);
@@ -173,7 +182,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   return (
     <>
-      {presentation === "total_area" && (
+      {["total_area", "overlay_area"].includes(presentation) && (
         <UnitSelector
           unitType="area"
           value={unit as AreaUnit}

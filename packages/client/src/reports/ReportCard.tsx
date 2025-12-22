@@ -280,7 +280,7 @@ export default function ReportCard({
           <button
             type="button"
             className="absolute top-[14px] right-[16px]"
-            onClick={() => setShowCalcDetails(true)}
+            onClick={() => setShowCalcDetails(cardId!)}
             title={t("Calculation Details")}
           >
             <ReportCardLoadingIndicator
@@ -343,7 +343,7 @@ export default function ReportCard({
                     )}
                     {metrics?.length > 0 && (
                       <ReportCardActionMenu.Item
-                        onSelect={() => setShowCalcDetails(true)}
+                        onSelect={() => setShowCalcDetails(cardId!)}
                         icon={<CalculatorIcon className="h-4 w-4" />}
                       >
                         {t("Calculation details")}
@@ -380,6 +380,7 @@ export default function ReportCard({
                 className={`${tint} ${icon ? "hasIcon" : ""}`}
                 metrics={metrics}
                 sources={sources}
+                cardId={cardId!}
               />
             ) : (
               <ReportCardBodyViewer
@@ -387,6 +388,7 @@ export default function ReportCard({
                 className={`ReportCard ReportCardBody ProseMirrorBody ${
                   icon ? "hasIcon" : ""
                 } ${tint ? tint : ""}`}
+                cardId={cardId!}
               />
             )}
           </ErrorBoundary>
@@ -463,10 +465,10 @@ export default function ReportCard({
         </Modal>
       )}
 
-      {showCalcDetails && (
+      {showCalcDetails === cardId && (
         <Modal
           open
-          onRequestClose={() => setShowCalcDetails(false)}
+          onRequestClose={() => setShowCalcDetails(undefined)}
           title={
             <div>
               <span className="text-gray-500 block text-base">
@@ -479,7 +481,7 @@ export default function ReportCard({
           footer={[
             {
               label: t("Close"),
-              onClick: () => setShowCalcDetails(false),
+              onClick: () => setShowCalcDetails(undefined),
               variant: "secondary",
             },
             {

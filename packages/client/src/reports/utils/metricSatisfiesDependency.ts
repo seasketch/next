@@ -21,11 +21,11 @@ export function metricSatisfiesDependency(
   let overlaySourceUrl: string | undefined;
   if (dependency.tableOfContentsItemId) {
     overlaySourceUrl = overlaySourceUrls[dependency.tableOfContentsItemId];
-    if (!overlaySourceUrl) {
-      throw new Error(
-        `Overlay source URL not provided for table of contents item ID: ${dependency.tableOfContentsItemId}`
-      );
-    }
+    // if (!overlaySourceUrl) {
+    //   throw new Error(
+    //     `Overlay source URL not provided for table of contents item ID: ${dependency.tableOfContentsItemId}`
+    //   );
+    // }
   }
   if (metric.type !== dependency.type) {
     // if (debugging) {

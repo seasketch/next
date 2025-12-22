@@ -39,6 +39,7 @@ class ReactNodeView implements NodeView {
   getPos: TGetPos;
   decorations: Decoration[];
   onDestroy: (key: string) => void;
+  cardId: number;
   key?: string;
 
   constructor(
@@ -47,7 +48,8 @@ class ReactNodeView implements NodeView {
     getPos: TGetPos,
     decorations: Decoration[],
     component: React.FC<any>,
-    onDestroy: (key: string) => void
+    onDestroy: (key: string) => void,
+    cardId: number
   ) {
     this.node = node;
     this.view = view;
@@ -59,6 +61,7 @@ class ReactNodeView implements NodeView {
     // Use inline-friendly element for inline nodes, block for others.
     const tagName = node.isInline ? "span" : "div";
     this.dom = document.createElement(tagName);
+    this.cardId = cardId;
   }
 
   init() {
@@ -136,7 +139,7 @@ class ReactNodeView implements NodeView {
             decorations: this.decorations,
           }}
         >
-          <this.component {...props} node={this.node} />
+          <this.component {...props} node={this.node} cardId={this.cardId} />
         </ReactNodeViewContext.Provider>
       );
     };
@@ -165,6 +168,7 @@ class ReactNodeView implements NodeView {
 }
 
 interface TCreateReactNodeView extends IReactNodeViewContext {
+  cardId: number;
   component: React.FC<any>;
   onCreatePortal: (key: string, portal: ReactPortal) => void;
   onDestroy: (key: string) => void;
@@ -178,6 +182,7 @@ export const createReactNodeView = ({
   component,
   onCreatePortal,
   onDestroy,
+  cardId,
 }: TCreateReactNodeView) => {
   const reactNodeView = new ReactNodeView(
     node,
@@ -185,7 +190,8 @@ export const createReactNodeView = ({
     getPos,
     decorations,
     component,
-    onDestroy
+    onDestroy,
+    cardId
   );
   const { nodeView, portal, key } = reactNodeView.init();
 

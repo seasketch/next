@@ -13,10 +13,17 @@ import { setBlockType, toggleMark, wrapIn } from "prosemirror-commands";
 import { wrapInList } from "prosemirror-schema-list";
 import { EditorState, TextSelection } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
+import * as Popover from "@radix-ui/react-popover";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
 } from "../commandPalette/types";
+
+type CommandPalettePreviewItem = CommandPaletteItem & {
+  screenshotSrc?: string;
+  screenshotAlt?: string;
+  children?: CommandPalettePreviewItem[];
+};
 
 type TriggerSource = "slash" | "manual";
 
@@ -36,8 +43,8 @@ type UseSlashCommandPaletteOptions = {
 };
 
 function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
-  const formatting: CommandPaletteItem[] = [];
-  const blocks: CommandPaletteItem[] = [];
+  const formatting: CommandPalettePreviewItem[] = [];
+  const blocks: CommandPalettePreviewItem[] = [];
 
   // if (schema.marks.strong) {
   //   formatting.push({
@@ -235,9 +242,14 @@ export function useSlashCommandPalette({
   );
   const [trigger, setTrigger] = useState<TriggerState | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [previewKey, setPreviewKey] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
+  const listContainerRef = useRef<HTMLDivElement | null>(null);
 
-  const filtered = useMemo(() => {
+  const filtered = useMemo<{
+    groups: CommandPaletteGroup[];
+    flatItems: { item: CommandPalettePreviewItem; groupId: string }[];
+  }>(() => {
     const currentState = viewRef.current?.state ?? state;
     const query = (trigger?.query || "").toLowerCase();
     const filteredGroups = combinedGroups
@@ -371,6 +383,9 @@ export function useSlashCommandPalette({
       if (!view || !item) {
         return;
       }
+      if (!item.run) {
+        return;
+      }
       const currentTrigger = trigger;
       const size = view.state.doc.content.size;
       view.focus();
@@ -441,7 +456,12 @@ export function useSlashCommandPalette({
         }
         event.preventDefault();
         const selected = filtered.flatItems[activeIndex]?.item;
-        applyCommand(selected);
+        if (selected?.children?.length) {
+          const key = `${filtered.flatItems[activeIndex]?.groupId}:${selected.id}`;
+          setPreviewKey(key);
+        } else {
+          applyCommand(selected);
+        }
       }
     };
 
@@ -468,6 +488,12 @@ export function useSlashCommandPalette({
       setActiveIndex(filtered.flatItems.length - 1);
     }
   }, [activeIndex, filtered.flatItems.length, trigger]);
+
+  useEffect(() => {
+    if (!trigger) {
+      setPreviewKey(null);
+    }
+  }, [trigger]);
 
   const lookup = useMemo(() => {
     const map = new Map<string, number>();
@@ -502,57 +528,159 @@ export function useSlashCommandPalette({
           }}
           data-report-command-palette="true"
         >
-          <div className="w-80 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl">
-            {filtered.groups.length === 0 ? (
-              <div className="px-3 py-2 text-sm text-gray-500">No commands</div>
-            ) : (
-              filtered.groups.map((group, groupIdx) => (
-                <div
-                  key={group.id}
-                  className={
-                    groupIdx < filtered.groups.length - 1
-                      ? "border-b border-gray-100"
-                      : ""
-                  }
-                >
-                  <div className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                    {group.label}
-                  </div>
-                  {group.items.map((item) => {
-                    const itemIndex = lookup.get(`${group.id}:${item.id}`) ?? 0;
-                    const isActive = itemIndex === activeIndex;
-                    const refKey = `${group.id}:${item.id}`;
-                    return (
-                      <button
-                        key={item.id}
-                        ref={(el) => itemRefs.current.set(refKey, el)}
-                        className={`w-full px-3 py-2 text-left transition-colors ${
-                          isActive
-                            ? "bg-blue-50 text-blue-900"
-                            : "hover:bg-gray-50 text-gray-900"
-                        }`}
-                        onClick={(e) => {
-                          console.log("clicked", item);
-                          e.preventDefault();
-                          applyCommand(item);
-                        }}
-                      >
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-sm font-medium">
-                            {item.label}
-                          </span>
-                          {item.description ? (
-                            <span className="text-xs text-gray-500">
-                              {item.description}
-                            </span>
-                          ) : null}
-                        </div>
-                      </button>
-                    );
-                  })}
+          <div className="relative">
+            <div
+              className="w-72 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl"
+              ref={listContainerRef}
+            >
+              {filtered.groups.length === 0 ? (
+                <div className="px-3 py-2 text-sm text-gray-500">
+                  No commands
                 </div>
-              ))
-            )}
+              ) : (
+                filtered.groups.map((group, groupIdx) => (
+                  <div
+                    key={group.id}
+                    className={
+                      groupIdx < filtered.groups.length - 1
+                        ? "border-b border-gray-100"
+                        : ""
+                    }
+                  >
+                    <div className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      {group.label}
+                    </div>
+                    {group.items.map((item) => {
+                      const previewItem = item as CommandPalettePreviewItem;
+                      const itemIndex =
+                        lookup.get(`${group.id}:${previewItem.id}`) ?? 0;
+                      const isActive = itemIndex === activeIndex;
+                      const refKey = `${group.id}:${previewItem.id}`;
+                      const hasChildren = !!previewItem.children?.length;
+                      return (
+                        <Popover.Root
+                          key={previewItem.id}
+                          open={previewKey === refKey}
+                          onOpenChange={(open) => {
+                            if (!open) setPreviewKey(null);
+                          }}
+                        >
+                          <Popover.Anchor asChild>
+                            <button
+                              ref={(el) => itemRefs.current.set(refKey, el)}
+                              className={`w-full px-3 py-1.5 text-left transition-colors ${
+                                isActive
+                                  ? "bg-blue-50 text-blue-900"
+                                  : "hover:bg-gray-50 text-gray-900"
+                              }`}
+                              onClick={(e) => {
+                                console.log("clicked", previewItem);
+                                e.preventDefault();
+                                if (hasChildren) {
+                                  setPreviewKey(refKey);
+                                } else {
+                                  applyCommand(previewItem);
+                                }
+                              }}
+                              onMouseEnter={() => {
+                                setActiveIndex(itemIndex);
+                                setPreviewKey(refKey);
+                              }}
+                              onFocus={() => {
+                                if (hasChildren) {
+                                  setActiveIndex(itemIndex);
+                                  setPreviewKey(refKey);
+                                }
+                              }}
+                            >
+                              <span className="text-sm font-medium">
+                                {item.label}
+                              </span>
+                            </button>
+                          </Popover.Anchor>
+                          <Popover.Content
+                            side="right"
+                            align="center"
+                            sideOffset={12}
+                            collisionPadding={12}
+                            className="z-50 outline-none focus:outline-none"
+                            onMouseEnter={() => setPreviewKey(refKey)}
+                            onMouseLeave={() => setPreviewKey(null)}
+                          >
+                            {hasChildren ? (
+                              <div className="w-64 rounded-md border border-gray-200 bg-white shadow-xl">
+                                <div className="px-3 py-2 border-b border-gray-100">
+                                  <div className=" text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                    {previewItem.label}
+                                  </div>
+                                  {previewItem.description ? (
+                                    <div className="mt-1 text-xs text-gray-600">
+                                      {previewItem.description}
+                                    </div>
+                                  ) : null}
+                                </div>
+                                <div className="py-1">
+                                  {previewItem.children?.map((child) => (
+                                    <button
+                                      key={child.id}
+                                      className="w-full px-3 py-1.5 text-left text-sm text-gray-900 hover:bg-gray-50"
+                                      onClick={(e) => {
+                                        e.preventDefault();
+                                        applyCommand(child);
+                                        setPreviewKey(null);
+                                      }}
+                                    >
+                                      <div className="flex flex-col gap-0.5">
+                                        <span className="font-medium">
+                                          {child.label}
+                                        </span>
+                                        {child.description ? (
+                                          <span className="text-xs text-gray-600">
+                                            {child.description}
+                                          </span>
+                                        ) : null}
+                                      </div>
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="w-64 rounded-md outline-none border border-gray-200 bg-white shadow-xl focus:outline-none ring-0">
+                                <div className="h-32 w-full overflow-hidden rounded-t-md bg-gray-100">
+                                  {previewItem.screenshotSrc ? (
+                                    <img
+                                      src={previewItem.screenshotSrc}
+                                      alt={
+                                        previewItem.screenshotAlt ||
+                                        `${previewItem.label} preview`
+                                      }
+                                      className="h-full w-full object-cover"
+                                    />
+                                  ) : (
+                                    <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                                      Screenshot coming soon
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="px-3 py-2">
+                                  <div className="text-sm font-semibold text-gray-900">
+                                    {previewItem.label}
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-600 whitespace-pre-line">
+                                    {previewItem.description ||
+                                      "No description provided yet."}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </Popover.Content>
+                        </Popover.Root>
+                      );
+                    })}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>,
         document.body

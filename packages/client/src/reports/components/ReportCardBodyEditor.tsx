@@ -27,9 +27,11 @@ import { DetailsView } from "../widgets/prosemirror/details";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
+  useProjectReportingLayersQuery,
 } from "../../generated/graphql";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
 import { ReportContext } from "../ReportContext";
+import getSlug from "../../getSlug";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -53,6 +55,7 @@ interface ReportCardBodyEditorProps {
    */
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
+  cardId: number;
 }
 
 function ReportCardBodyEditorInner({
@@ -62,6 +65,7 @@ function ReportCardBodyEditorInner({
   className = "",
   metrics,
   sources,
+  cardId,
 }: ReportCardBodyEditorProps) {
   const { schema, plugins } = useMemo(() => {
     const schema = reportBodySchema;
@@ -78,6 +82,12 @@ function ReportCardBodyEditorInner({
   const currentLangCode = langContext?.lang?.code || "EN";
 
   const reportContext = useContext(ReportContext);
+
+  const reportingLayersQuery = useProjectReportingLayersQuery({
+    variables: {
+      slug: getSlug(),
+    },
+  });
 
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
@@ -103,7 +113,8 @@ function ReportCardBodyEditorInner({
   const contextualGroups = useMemo(
     () =>
       buildReportCommandGroups({
-        sources,
+        sources:
+          reportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
         geographies: reportContext?.geographies,
         clippingGeography:
           reportContext?.sketchClass?.clippingGeographies?.[0]?.id,
@@ -114,6 +125,7 @@ function ReportCardBodyEditorInner({
       reportContext?.geographies,
       reportContext?.sketchClass?.clippingGeographies,
       reportContext?.sketchClass?.geometryType,
+      reportingLayersQuery.data?.projectBySlug?.reportingLayers,
     ]
   );
 
@@ -146,6 +158,7 @@ function ReportCardBodyEditorInner({
             component: ReportWidgetNodeViewRouter,
             onCreatePortal: createPortal,
             onDestroy: removePortal,
+            cardId,
           });
         },
         details(node, view, getPos) {
@@ -162,6 +175,7 @@ function ReportCardBodyEditorInner({
             component: ReportWidgetNodeViewRouter,
             onCreatePortal: createPortal,
             onDestroy: removePortal,
+            cardId,
           });
         },
       },

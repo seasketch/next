@@ -307,8 +307,9 @@ div[attachments="forumAttachments"] {
 }
 
 .ReportCard.loadingSkeleton [contenteditable="false"] {
-  p {
-    @apply text-transparent bg-black/10 rounded;
+  p,
+  details {
+    @apply text-transparent bg-black/10 rounded border-none shadow-none;
     background: linear-gradient(
       -100deg,
       transparent,
@@ -330,6 +331,10 @@ div[attachments="forumAttachments"] {
     .ProseMirror__reactComponent {
       display: none;
     }
+  }
+
+  summary {
+    @apply text-transparent;
   }
 
   li {

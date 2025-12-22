@@ -10538,6 +10538,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
+  reportingLayers: Array<ReportOverlaySource>;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
    * this to determine whether `project.communityGuidelines` should be shown to the
@@ -22814,6 +22815,23 @@ export type DraftReportDependenciesQuery = (
       & CompatibleSpatialMetricDetailsFragment
     )> }
   ) }
+);
+
+export type ProjectReportingLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectReportingLayersQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { reportingLayers: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )> }
+  )> }
 );
 
 export type SketchTocDetailsFragment = (
@@ -35609,6 +35627,44 @@ export function useDraftReportDependenciesLazyQuery(baseOptions?: Apollo.LazyQue
 export type DraftReportDependenciesQueryHookResult = ReturnType<typeof useDraftReportDependenciesQuery>;
 export type DraftReportDependenciesLazyQueryHookResult = ReturnType<typeof useDraftReportDependenciesLazyQuery>;
 export type DraftReportDependenciesQueryResult = Apollo.QueryResult<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>;
+export const ProjectReportingLayersDocument = gql`
+    query ProjectReportingLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    reportingLayers {
+      ...OverlaySourceDetails
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
+
+/**
+ * __useProjectReportingLayersQuery__
+ *
+ * To run a query within a React component, call `useProjectReportingLayersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectReportingLayersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectReportingLayersQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectReportingLayersQuery(baseOptions: Apollo.QueryHookOptions<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>(ProjectReportingLayersDocument, options);
+      }
+export function useProjectReportingLayersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>(ProjectReportingLayersDocument, options);
+        }
+export type ProjectReportingLayersQueryHookResult = ReturnType<typeof useProjectReportingLayersQuery>;
+export type ProjectReportingLayersLazyQueryHookResult = ReturnType<typeof useProjectReportingLayersLazyQuery>;
+export type ProjectReportingLayersQueryResult = Apollo.QueryResult<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -39346,6 +39402,7 @@ export const namedOperations = {
     ReportContext: 'ReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
+    ProjectReportingLayers: 'ProjectReportingLayers',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',

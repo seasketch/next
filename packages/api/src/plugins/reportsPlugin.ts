@@ -195,8 +195,45 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         draftReportDependencies(input: DraftDependenciesInput): DraftReportDependenciesResults!
       }
 
+      extend type Project {
+        reportingLayers: [ReportOverlaySource!]! @requires(columns: ["id"])
+      }
     `,
     resolvers: {
+      Project: {
+        async reportingLayers(project, args, context, resolveInfo) {
+          const { pgClient } = context;
+          const result = await context.pgClient.query(
+            `
+            select
+              items.id as table_of_contents_item_id,
+              s.geostats as geostats,
+              l.mapbox_gl_styles as mapbox_gl_styles,
+              o.id as output_id,
+              o.url as source_url
+            from
+              data_sources s
+            inner join data_layers l on l.data_source_id = s.id
+            inner join table_of_contents_items items on items.data_layer_id = l.id
+            left join data_upload_outputs o on o.data_source_id = s.id and is_reporting_type(o.type)
+            where
+              s.id  in (
+                select data_source_id from source_processing_jobs where project_id = $1
+              )
+          `,
+            [project.id]
+          );
+          return result.rows.map((row: any) => ({
+            __typename: "ReportOverlaySource",
+            tableOfContentsItemId: row.table_of_contents_item_id,
+            geostats: row.geostats,
+            mapboxGlStyles: row.mapbox_gl_styles,
+            sourceProcessingJobId: row.source_processing_job_id,
+            outputId: row.output_id,
+            sourceUrl: row.source_url,
+          }));
+        },
+      },
       Report: {
         async dependencies(report, args, context, resolveInfo) {
           const { pgClient } = context;
@@ -899,6 +936,16 @@ async function getOrCreateSpatialMetric({
   projectId: number;
   dependencyHash: string;
 }): Promise<any> {
+  console.log("getOrCreateSpatialMetric", {
+    subjectFragmentId,
+    subjectGeographyId,
+    type,
+    overlaySourceUrl,
+    parameters,
+    sourceProcessingJobDependency,
+    projectId,
+    dependencyHash,
+  });
   if (!subjectFragmentId && !subjectGeographyId) {
     throw new Error(
       "Either subjectFragmentId or subjectGeographyId must be provided"
@@ -1044,9 +1091,53 @@ type ProsemirrorNode = {
   attrs?: Record<string, any>;
   content?: ProsemirrorNode[];
 };
-type ProsemirrorDocument = ProsemirrorNode & {
-  type: "doc";
-};
+
+async function getOverlaySourcesForDependencies(
+  pool: Pool,
+  dependencies: MetricDependency[]
+): Promise<{ [tableOfContentsItemId: number]: string }> {
+  const tableOfContentsItemIds: number[] = [];
+  const overlaySourceUrls: { [tableOfContentsItemId: number]: string } = {};
+  for (const dependency of dependencies) {
+    if (
+      dependency.tableOfContentsItemId &&
+      !tableOfContentsItemIds.includes(dependency.tableOfContentsItemId)
+    ) {
+      tableOfContentsItemIds.push(dependency.tableOfContentsItemId);
+    }
+  }
+  if (tableOfContentsItemIds.length > 0) {
+    const { rows: overlaySourceRows } = await pool.query<{
+      table_of_contents_item_id: number;
+      source_url: string;
+    }>(
+      `
+      select
+        items.id as table_of_contents_item_id,
+        outputs.url as source_url
+      from
+        table_of_contents_items items
+        join data_layers layers on layers.id = items.data_layer_id
+        join data_sources sources on sources.id = layers.data_source_id
+        join lateral (
+          select url
+          from data_upload_outputs o
+          where o.data_source_id = sources.id
+            and is_reporting_type(o.type)
+          order by o.created_at desc
+          limit 1
+        ) outputs on true
+      where
+        items.id = ANY($1::int[])
+      `,
+      [tableOfContentsItemIds]
+    );
+    for (const row of overlaySourceRows) {
+      overlaySourceUrls[row.table_of_contents_item_id] = row.source_url;
+    }
+  }
+  return overlaySourceUrls;
+}
 
 async function createMetricsForDependencies(
   pool: Pool,
@@ -1055,21 +1146,22 @@ async function createMetricsForDependencies(
   fragments: string[],
   geogs: { id: number }[]
 ) {
-  const tableOfContentsItemIds: number[] = [];
   const metrics: any[] = [];
   const hashes: string[] = [];
+
+  const overlaySourceUrls = await getOverlaySourcesForDependencies(
+    pool,
+    dependencies
+  );
+  const tableOfContentsItemIds = Object.keys(overlaySourceUrls).map(Number);
+
   for (const dependency of dependencies) {
     const dependencyHash = hashMetricDependency(dependency);
     if (hashes.includes(dependencyHash)) {
       continue;
     }
     hashes.push(dependencyHash);
-    if (
-      dependency.tableOfContentsItemId &&
-      !tableOfContentsItemIds.includes(dependency.tableOfContentsItemId)
-    ) {
-      tableOfContentsItemIds.push(dependency.tableOfContentsItemId);
-    }
+
     if (dependency.subjectType === "fragments") {
       for (const fragment of fragments) {
         const metric = await getOrCreateSpatialMetric({
@@ -1079,6 +1171,9 @@ async function createMetricsForDependencies(
           parameters: dependency.parameters || {},
           projectId,
           dependencyHash,
+          overlaySourceUrl: dependency.tableOfContentsItemId
+            ? overlaySourceUrls[dependency.tableOfContentsItemId]
+            : undefined,
         });
         // metric.dependencyHash = dependencyHash;
         metrics.push(metric);
@@ -1093,6 +1188,9 @@ async function createMetricsForDependencies(
           parameters: dependency.parameters || {},
           projectId,
           dependencyHash,
+          overlaySourceUrl: dependency.tableOfContentsItemId
+            ? overlaySourceUrls[dependency.tableOfContentsItemId]
+            : undefined,
         });
         // metric.dependencyHash = dependencyHash;
         metrics.push(metric);

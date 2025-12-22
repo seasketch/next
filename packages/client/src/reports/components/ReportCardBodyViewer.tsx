@@ -14,11 +14,13 @@ import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
 type ReportCardBodyViewerProps = {
   body: any;
   className?: string;
+  cardId: number;
 };
 
 function ReportCardBodyViewerInner({
   body,
   className = "",
+  cardId,
 }: ReportCardBodyViewerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
@@ -41,6 +43,7 @@ function ReportCardBodyViewerInner({
           component: ReportWidgetNodeViewRouter,
           onCreatePortal: createPortal,
           onDestroy: removePortal,
+          cardId,
         });
       },
       // @ts-ignore
@@ -55,6 +58,7 @@ function ReportCardBodyViewerInner({
           component: ReportWidgetNodeViewRouter,
           onCreatePortal: createPortal,
           onDestroy: removePortal,
+          cardId,
         });
       },
     }),

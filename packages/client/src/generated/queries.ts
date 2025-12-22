@@ -10536,6 +10536,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
+  reportingLayers: Array<ReportOverlaySource>;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
    * this to determine whether `project.communityGuidelines` should be shown to the
@@ -22814,6 +22815,23 @@ export type DraftReportDependenciesQuery = (
   ) }
 );
 
+export type ProjectReportingLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectReportingLayersQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { reportingLayers: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )> }
+  )> }
+);
+
 export type SketchTocDetailsFragment = (
   { __typename?: 'Sketch' }
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
@@ -29684,6 +29702,16 @@ export const DraftReportDependenciesDocument = /*#__PURE__*/ gql`
 }
     ${OverlaySourceDetailsFragmentDoc}
 ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
+    query ProjectReportingLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    reportingLayers {
+      ...OverlaySourceDetails
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -31011,6 +31039,7 @@ export const namedOperations = {
     ReportContext: 'ReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
+    ProjectReportingLayers: 'ProjectReportingLayers',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',

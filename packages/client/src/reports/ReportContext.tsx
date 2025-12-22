@@ -26,6 +26,7 @@ import {
   useReportOverlaySourcesSubscriptionSubscription,
   SpatialMetricState,
   useDraftReportDependenciesQuery,
+  useProjectReportingLayersQuery,
 } from "../generated/graphql";
 import { ProsemirrorBodyJSON, ReportConfiguration } from "./cards/cards";
 import {
@@ -40,6 +41,7 @@ import { ApolloError } from "@apollo/client";
 import type { AnyLayer, AnySourceData } from "mapbox-gl";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { Node } from "prosemirror-model";
+import getSlug from "../getSlug";
 
 export type ReportMapStyle = {
   sources: { [id: string]: AnySourceData };
@@ -126,8 +128,9 @@ export interface ReportContextState {
   additionalDependencies: MetricDependency[];
   setAdditionalDependencies: (dependencies: MetricDependency[]) => void;
   draftDependencyMetrics: CompatibleSpatialMetricDetailsFragment[];
-  showCalcDetails: boolean;
-  setShowCalcDetails: Dispatch<SetStateAction<boolean>>;
+  showCalcDetails: number | undefined;
+  setShowCalcDetails: Dispatch<SetStateAction<number | undefined>>;
+  adminSources: OverlaySourceDetailsFragment[];
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -151,7 +154,7 @@ export function useReportState(
   const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
     null
   );
-  const [showCalcDetails, setShowCalcDetails] = useState(false);
+  const [showCalcDetails, setShowCalcDetails] = useState<number | undefined>();
 
   const [additionalDependencies, setAdditionalDependencies] = useState<
     MetricDependency[]
@@ -192,6 +195,13 @@ export function useReportState(
       !selectedSketchId,
     onError,
     fetchPolicy: "cache-and-network",
+  });
+
+  const draftReportingLayersQuery = useProjectReportingLayersQuery({
+    variables: {
+      slug: getSlug(),
+    },
+    skip: !window.location.pathname.includes("/admin/sketching/"),
   });
 
   const metrics = useMemo(() => {
@@ -521,6 +531,7 @@ export function useReportState(
       }
 
       if (missingDependencies.length > 0) {
+        console.log("missing dependencies", missingDependencies);
         setAdditionalDependencies((prev) => {
           // first, check if the dependencies are identical. If so, don't update
           const currentHashes = prev
@@ -602,6 +613,8 @@ export function useReportState(
         draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
       showCalcDetails,
       setShowCalcDetails,
+      adminSources:
+        draftReportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
     };
   }
 }
