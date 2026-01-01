@@ -82,5 +82,5 @@ export function extractColorForLayers(style: AnyLayer[]): string {
       }
     }
   }
-  return "#000000";
+  return "#00000000";
 }

@@ -531,7 +531,6 @@ export function useReportState(
       }
 
       if (missingDependencies.length > 0) {
-        console.log("missing dependencies", missingDependencies);
         setAdditionalDependencies((prev) => {
           // first, check if the dependencies are identical. If so, don't update
           const currentHashes = prev

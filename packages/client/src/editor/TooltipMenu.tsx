@@ -33,6 +33,7 @@ import {
 } from "@radix-ui/react-icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
+import { MetricDependency, MetricDependencyParameters } from "overlay-engine";
 
 /**
  * Check if the selection is exclusively a metric node (no other content)
@@ -313,7 +314,6 @@ export default function TooltipMenu({
     [state, schema]
   );
 
-  const isReportSchema = (schema as any).isReportCardBodySchema;
   const isSurveyQuestionSchema = schema === formElements.questions.schema;
   // Calculate position function
   const calculatePosition = useCallback(() => {
@@ -541,6 +541,63 @@ export default function TooltipMenu({
       }
 
       view.dispatch(tr);
+    },
+    [view, schema]
+  );
+
+  const updateDependencyParameters = useCallback(
+    (
+      updateFn: (dependency: MetricDependency) => MetricDependencyParameters
+    ) => {
+      if (!view) return;
+
+      // Get the current state from the view to ensure we have the latest
+      const currentState = view.state;
+      const currentSelectedMetric = getSelectedMetricNode(currentState, schema);
+
+      if (!currentSelectedMetric) return;
+
+      const { node, pos } = currentSelectedMetric;
+      const { from, to } = currentState.selection;
+
+      const metrics = node.attrs.metrics || [];
+      const newDependencies = metrics.map((m: MetricDependency) => {
+        const newParameters = updateFn(m);
+        return {
+          ...m,
+          parameters: newParameters,
+        };
+      });
+
+      const tr = currentState.tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        metrics: newDependencies,
+      });
+
+      // After updating the node, ensure the selection still spans the metric node
+      // The node size might have changed, so we need to recalculate the selection
+      const newDoc = tr.doc;
+      const newMetricNode = newDoc.nodeAt(pos);
+      if (
+        newMetricNode &&
+        (newMetricNode.type === schema.nodes.metric ||
+          newMetricNode.type === schema.nodes.blockMetric)
+      ) {
+        const nodeEnd = pos + newMetricNode.nodeSize;
+        // Preserve the selection range to keep the tooltip open
+        const newSelection = TextSelection.create(
+          newDoc,
+          from,
+          Math.min(to, nodeEnd)
+        );
+        tr.setSelection(newSelection);
+      } else {
+        // Fallback: preserve original selection
+        tr.setSelection(currentState.selection);
+      }
+
+      view.dispatch(tr);
+      return;
     },
     [view, schema]
   );
@@ -958,7 +1015,7 @@ export default function TooltipMenu({
             }}
             exit={{ opacity: 0, scale: 1, translateX: "-50%" }}
             key="tooltip"
-            className={`bg-white text-gray-900 border border-black/20 rounded-lg px-2 py-[3px] shadow-lg fixed z-[9999] ${
+            className={`bg-white select-none text-gray-900 border border-black/20 rounded-lg px-2 py-[3px] shadow-lg fixed z-[49] ${
               isOnlyMetricNode ? "flex-col" : "flex overflow-hidden"
             }`}
             data-report-tooltip="true"
@@ -1147,6 +1204,7 @@ export default function TooltipMenu({
                     <ReportWidgetTooltipControlsRouter
                       node={selectedMetric.node}
                       onUpdate={updateMetricNode}
+                      onUpdateDependencyParameters={updateDependencyParameters}
                     />
                   </>
                 )}
@@ -1533,7 +1591,7 @@ export function TooltipPopoverContent({
         avoidCollisions
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className="bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg px-2 py-2 w-72 z-[10000]"
+        className="bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg px-2 py-2 z-[49]"
         data-tooltip-portal="true"
       >
         {title && (
@@ -1615,6 +1673,12 @@ export type ReportWidgetTooltipControlsProps = {
    * Update the metric node with arbitrary component-specific attributes.
    */
   onUpdate: (attrs: Record<string, any>) => void;
+  /**
+   * Update the metric dependency parameters. Callback is called for each dependency related to the node. Usually parameters for all dependencies should be updated together, but this allows for more fine-grained control. Return the same parameters unchanged if no changes are needed.
+   */
+  onUpdateDependencyParameters: (
+    updateFn: (dependency: MetricDependency) => MetricDependencyParameters
+  ) => void;
 };
 
 export type ReportWidgetTooltipControls = FC<ReportWidgetTooltipControlsProps>;

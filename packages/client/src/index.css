@@ -6291,6 +6291,14 @@ select{
   z-index:auto
 }
 
+.z-\[80\]{
+  z-index:80
+}
+
+.z-\[49\]{
+  z-index:49
+}
+
 .order-1{
   order:1
 }
@@ -7581,6 +7589,10 @@ select{
   width:100vw
 }
 
+.w-\[72px\]{
+  width:72px
+}
+
 .min-w-0{
   min-width:0px
 }
@@ -7641,6 +7653,14 @@ select{
   min-width:32rem
 }
 
+.min-w-\[70px\]{
+  min-width:70px
+}
+
+.min-w-\[80px\]{
+  min-width:80px
+}
+
 .\!max-w-128{
   max-width:32rem !important
 }
@@ -7669,8 +7689,16 @@ select{
   max-width:32rem
 }
 
+.max-w-14{
+  max-width:3.5rem
+}
+
 .max-w-144{
   max-width:36rem
+}
+
+.max-w-16{
+  max-width:4rem
 }
 
 .max-w-24{
@@ -7757,6 +7785,10 @@ select{
   max-width:32ch
 }
 
+.max-w-\[72px\]{
+  max-width:72px
+}
+
 .max-w-\[95\%\]{
   max-width:95%
 }
@@ -7801,16 +7833,8 @@ select{
   max-width:20rem
 }
 
-.max-w-14{
-  max-width:3.5rem
-}
-
-.max-w-16{
-  max-width:4rem
-}
-
-.max-w-\[72px\]{
-  max-width:72px
+.max-w-\[240px\]{
+  max-width:240px
 }
 
 .flex-1{
@@ -7863,6 +7887,10 @@ select{
 
 .basis-full{
   flex-basis:100%
+}
+
+.table-fixed{
+  table-layout:fixed
 }
 
 .border-collapse{
@@ -8310,6 +8338,10 @@ select{
   gap:0px
 }
 
+.gap-0\.5{
+  gap:0.125rem
+}
+
 .gap-1{
   gap:0.25rem
 }
@@ -8352,10 +8384,6 @@ select{
 
 .gap-px{
   gap:1px
-}
-
-.gap-0\.5{
-  gap:0.125rem
 }
 
 .gap-x-4{
@@ -9826,6 +9854,10 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
+}
+
+.bg-gray-50\/30{
+  background-color:rgb(249 250 251 / 0.3)
 }
 
 .bg-opacity-10{
@@ -12957,6 +12989,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:outline-gray-100:hover{
   outline-color:#f3f4f6
+}
+
+.hover\:ring:hover{
+  --tw-ring-offset-shadow:var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+  --tw-ring-shadow:var(--tw-ring-inset) 0 0 0 calc(3px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+  box-shadow:var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000)
+}
+
+.hover\:ring-blue-300\/20:hover{
+  --tw-ring-color:rgb(147 197 253 / 0.2)
+}
+
+.hover\:ring-opacity-20:hover{
+  --tw-ring-opacity:0.2
 }
 
 .hover\:brightness-95:hover{

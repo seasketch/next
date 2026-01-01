@@ -1,6 +1,6 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC, useContext, useMemo } from "react";
+import { FC, useContext, useMemo, useState, useEffect } from "react";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -16,12 +16,7 @@ import {
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
-import {
-  EditorState,
-  SelectionRange,
-  TextSelection,
-  Transaction,
-} from "prosemirror-state";
+import { SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
 import {
   GeographySizeTable,
@@ -31,24 +26,24 @@ import {
   SketchAttributesTable,
   SketchAttributesTableTooltipControls,
 } from "./SketchAttributesTable";
+import {
+  OverlappingAreasTable,
+  OverlappingAreasTableTooltipControls,
+} from "./OverlappingAreasTable";
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import {
-  ExclamationTriangleIcon,
-  InfoCircledIcon,
-} from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import Badge from "../../components/Badge";
-import {
-  GeostatsLayer,
-  isGeostatsLayer,
-  RasterBandInfo,
-} from "@seasketch/geostats-types";
+import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import {
   findGetExpression,
   isExpression,
 } from "../../dataLayers/legends/utils";
+import * as Popover from "@radix-ui/react-popover";
+import { TooltipPopoverContent } from "../../editor/TooltipMenu";
+import useDebounce from "../../useDebounce";
 
 function groupByForStyle(
   mapboxGlStyles: AnyLayer[] | null | undefined,
@@ -100,6 +95,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <GeographySizeTableTooltipControls {...props} />;
     case "SketchAttributesTable":
       return <SketchAttributesTableTooltipControls {...props} />;
+    case "OverlappingAreasTable":
+      return <OverlappingAreasTableTooltipControls {...props} />;
     default:
       return null;
   }
@@ -128,7 +125,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     throw new Error("ReportWidget component settings not specified");
   }
 
-  const { metrics, loading, errors } = useMemo(() => {
+  const { metrics, loading, errors, sources } = useMemo(() => {
     let loading = false;
     let errors: string[] = [];
     const metrics = filterMetricsByDependencies(
@@ -151,7 +148,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         errors.push(metric.errorMessage || "Unknown error");
       }
     }
-    const sources = overlaySources.filter((s) =>
+    const sources = [...overlaySources, ...adminSources].filter((s) =>
       dependencies.some(
         (d: MetricDependency) =>
           d.tableOfContentsItemId === s.tableOfContentsItemId
@@ -180,7 +177,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     dependencies,
     componentSettings,
     metrics,
-    sources: overlaySources,
+    sources,
     loading,
     errors,
     geographies,
@@ -252,6 +249,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <GeographySizeTable {...widgetProps} />;
     case "SketchAttributesTable":
       return <SketchAttributesTable {...widgetProps} />;
+    case "OverlappingAreasTable":
+      return <OverlappingAreasTable {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -425,21 +424,18 @@ export function buildReportCommandGroups({
         const title =
           source.tableOfContentsItem?.title || "Layer Overlay Analysis";
         const tocId = source.tableOfContentsItemId!;
-        console.log("building options for", title, source);
         let children: CommandPaletteItem[] = [];
         if ("bands" in source.geostats && source.geostats.bands.length > 0) {
-          const bandInfo = source.geostats.bands[0] as RasterBandInfo;
+          // Raster handling can be added here if needed
         } else if (
           "layers" in source.geostats &&
           isGeostatsLayer(source.geostats.layers[0])
         ) {
           const geostatsLayer = source.geostats.layers[0] as GeostatsLayer;
-          console.log("is vector", geostatsLayer, source.mapboxGlStyles);
           const groupByColumn = groupByForStyle(
             source.mapboxGlStyles,
             geostatsLayer
           );
-          console.log("groupByColumn", groupByColumn);
           switch (geostatsLayer.geometry) {
             case "Polygon":
             case "MultiPolygon": {
@@ -473,7 +469,7 @@ export function buildReportCommandGroups({
                   "Table of overlapping area statistics. Works best when grouped by a class key. May include percent overlapped for a geography.",
                 run: (state, dispatch, view) => {
                   return insertBlockMetric(view, state.selection.ranges[0], {
-                    type: "OverlappingAreaTable",
+                    type: "OverlappingAreasTable",
                     metrics: [
                       {
                         type: "overlay_area",
@@ -619,3 +615,149 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
 export type ReportWidget<T extends Record<string, any>> = FC<
   ReportWidgetProps<T>
 >;
+
+/**
+ * Reusable inline boolean option for widget tooltips.
+ */
+export function TooltipBooleanConfigurationOption({
+  label,
+  checked,
+  onChange,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label className="flex items-center text-gray-700 text-sm">
+      <span className="flex-1 font-light text-gray-400 whitespace-nowrap">
+        {label}
+      </span>
+      <input
+        type="checkbox"
+        className="h-4 w-4 text-blue-600 rounded border-gray-300"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    </label>
+  );
+}
+
+/**
+ * Reusable component for editing table headings/labels.
+ * Handles state management, debouncing, and explicit save on popover close.
+ */
+export function TableHeadingsEditor({
+  labelKeys,
+  labelDisplayNames,
+  componentSettings,
+  onUpdate,
+}: {
+  /**
+   * Array of keys in componentSettings that store the label values
+   */
+  labelKeys: string[];
+  /**
+   * Array of display names for the labels (used as placeholders and field labels)
+   */
+  labelDisplayNames: string[];
+  /**
+   * Current componentSettings object
+   */
+  componentSettings: Record<string, any>;
+  /**
+   * Callback to update componentSettings
+   */
+  onUpdate: (update: { componentSettings: Record<string, any> }) => void;
+}) {
+  const { t } = useTranslation("admin:reports");
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+
+  const initialLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+    labelKeys.forEach((key) => {
+      labels[key] = componentSettings[key] || "";
+    });
+    return labels;
+  }, [labelKeys, componentSettings]);
+
+  const [localState, setLocalState] = useState(initialLabels);
+  const debouncedLocalState = useDebounce(localState, 100);
+
+  // Sync local state when componentSettings change externally
+  useEffect(() => {
+    setLocalState(initialLabels);
+  }, [initialLabels]);
+
+  // Debounced update of componentSettings
+  useEffect(() => {
+    const hasChanges = labelKeys.some(
+      (key) => debouncedLocalState[key] !== initialLabels[key]
+    );
+    if (hasChanges) {
+      const updatedSettings: Record<string, any> = { ...componentSettings };
+      labelKeys.forEach((key) => {
+        updatedSettings[key] = debouncedLocalState[key] || undefined;
+      });
+      onUpdate({ componentSettings: updatedSettings });
+    }
+  }, [
+    debouncedLocalState,
+    initialLabels,
+    componentSettings,
+    labelKeys,
+    onUpdate,
+  ]);
+
+  // Explicit save when popover closes
+  const handlePopoverOpenChange = (open: boolean) => {
+    setIsPopoverOpen(open);
+    if (!open) {
+      // Popover is closing - ensure all current values are saved
+      const updatedSettings: Record<string, any> = { ...componentSettings };
+      labelKeys.forEach((key) => {
+        updatedSettings[key] = localState[key] || undefined;
+      });
+      onUpdate({ componentSettings: updatedSettings });
+    }
+  };
+
+  return (
+    <Popover.Root open={isPopoverOpen} onOpenChange={handlePopoverOpenChange}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none"
+        >
+          <Pencil2Icon className="w-3 h-3" />
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          {"headings"}
+        </button>
+      </Popover.Trigger>
+      <TooltipPopoverContent title={t("Headings")}>
+        <div className="space-y-3 px-1">
+          {labelKeys.map((key, index) => (
+            <div key={key}>
+              {/* eslint-disable-next-line i18next/no-literal-string */}
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                {labelDisplayNames[index]}
+              </label>
+              <input
+                type="text"
+                value={localState[key]}
+                onChange={(e) =>
+                  setLocalState((prev) => ({
+                    ...prev,
+                    [key]: e.target.value,
+                  }))
+                }
+                placeholder={t(labelDisplayNames[index])}
+                className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              />
+            </div>
+          ))}
+        </div>
+      </TooltipPopoverContent>
+    </Popover.Root>
+  );
+}

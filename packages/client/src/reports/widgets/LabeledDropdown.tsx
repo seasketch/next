@@ -28,7 +28,7 @@ export function LabeledDropdown({
   getDisplayLabel,
 }: LabeledDropdownProps) {
   return (
-    <div className="flex items-center gap-2 text-sm text-gray-800 pl-1">
+    <div className="flex items-center gap-2 text-sm text-gray-800">
       <span className="font-light text-gray-400 whitespace-nowrap">
         {label}
       </span>
