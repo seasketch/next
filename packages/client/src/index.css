@@ -7837,6 +7837,18 @@ select{
   max-width:240px
 }
 
+.max-w-\[84px\]{
+  max-width:84px
+}
+
+.max-w-\[76px\]{
+  max-width:76px
+}
+
+.max-w-\[78px\]{
+  max-width:78px
+}
+
 .flex-1{
   flex:1 1 0%
 }

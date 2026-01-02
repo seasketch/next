@@ -436,6 +436,38 @@ export function buildReportCommandGroups({
             source.mapboxGlStyles,
             geostatsLayer
           );
+          if (
+            [
+              "Polygon",
+              "MultiPolygon",
+              "Point",
+              "MultiPoint",
+              "LineString",
+            ].includes(geostatsLayer.geometry)
+          ) {
+            children.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-feature-count`,
+              label: "Feature Count",
+              description: "Count of the number of overlapping features.",
+              run: (state, dispatch, view) => {
+                return insertInlineMetric(view, state.selection.ranges[0], {
+                  type: "InlineMetric",
+                  componentSettings: {
+                    presentation: "count",
+                  },
+                  metrics: [
+                    {
+                      type: "count",
+                      subjectType: "fragments",
+                      tableOfContentsItemId: tocId,
+                      parameters: {},
+                    },
+                  ],
+                });
+              },
+            });
+          }
           switch (geostatsLayer.geometry) {
             case "Polygon":
             case "MultiPolygon": {

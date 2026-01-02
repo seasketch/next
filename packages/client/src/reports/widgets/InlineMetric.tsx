@@ -1,8 +1,10 @@
 /* eslint-disable no-console */
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
+  CountMetric,
   DistanceToShoreMetric,
   Metric,
+  MetricDependency,
   OverlayAreaMetric,
   TotalAreaMetric,
   combineMetricsForFragments,
@@ -11,14 +13,237 @@ import {
   subjectIsGeography,
 } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
-import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
+import {
+  ReportWidgetTooltipControls,
+  TooltipMorePopover,
+  TooltipPopoverContent,
+} from "../../editor/TooltipMenu";
 import { UnitSelector } from "./UnitSelector";
 import { AreaUnit, LengthUnit } from "../utils/units";
 import Skeleton from "../../components/Skeleton";
-import { ReportWidget } from "./widgets";
+import { ReportWidget, TooltipBooleanConfigurationOption } from "./widgets";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { SketchGeometryType } from "../../generated/graphql";
+import { useTranslation } from "react-i18next";
+import { useReportContext } from "../ReportContext";
+import useCurrentLang from "../../useCurrentLang";
+import * as Popover from "@radix-ui/react-popover";
+import { Pencil2Icon } from "@radix-ui/react-icons";
+
+export type PluralizedMessages = Record<string, string>;
+export type PluralizedMessagesByLang = Record<string, PluralizedMessages>;
+
+const defaultPluralizedCountLabels = {
+  en: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+  es: {
+    zero: "sin elementos",
+    one: "elemento",
+    other: "elementos",
+  },
+  dv: {
+    zero: "ނެތް އެލިމެންޓް",
+    one: "އެލިމެންޓް",
+    other: "އެލިމެންޓް",
+  },
+  pt: {
+    zero: "sem entidades",
+    one: "entidade",
+    other: "entidades",
+  },
+  "pt-br": {
+    zero: "sem entidades",
+    one: "entidade",
+    other: "entidades",
+  },
+  no: {
+    zero: "ingen objekter",
+    one: "objekt",
+    other: "objekter",
+  },
+  kos: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+  sm: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+  CHK: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+  fj: {
+    zero: "sega na iyaya",
+    one: "iyaya",
+    other: "veiyaya",
+  },
+  fh: {
+    zero: "कोई फीचर नहीं",
+    one: "फीचर",
+    other: "फीचर",
+  },
+  haw: {
+    zero: "ʻaʻohe mea",
+    one: "mea",
+    other: "nā mea",
+  },
+  fr: {
+    zero: "aucune entité",
+    one: "entité",
+    other: "entités",
+  },
+  de: {
+    zero: "keine Objekte",
+    one: "Objekt",
+    other: "Objekte",
+  },
+  gil: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+  hr: {
+    zero: "nema elemenata",
+    one: "element",
+    few: "elementa",
+    other: "elemenata",
+  },
+  af: {
+    zero: "geen elemente",
+    one: "element",
+    other: "elemente",
+  },
+  "zh-Hans": {
+    other: "要素",
+  },
+  ar: {
+    zero: "لا توجد ميزات",
+    one: "ميزة",
+    two: "ميزتان",
+    few: "ميزات",
+    many: "ميزات",
+    other: "ميزات",
+  },
+  nl: {
+    zero: "geen objecten",
+    one: "object",
+    other: "objecten",
+  },
+  it: {
+    zero: "nessun elemento",
+    one: "elemento",
+    other: "elementi",
+  },
+  bg: {
+    zero: "няма елементи",
+    one: "елемент",
+    other: "елементи",
+  },
+  "fr-be": {
+    zero: "aucune entité",
+    one: "entité",
+    other: "entités",
+  },
+  el: {
+    zero: "κανένα στοιχείο",
+    one: "στοιχείο",
+    other: "στοιχεία",
+  },
+  hi: {
+    zero: "कोई तत्व नहीं",
+    one: "तत्व",
+    other: "तत्व",
+  },
+  id: {
+    other: "fitur",
+  },
+  mi: {
+    zero: "kāore he taonga",
+    one: "taonga",
+    other: "taonga",
+  },
+  pl: {
+    zero: "brak elementów",
+    one: "element",
+    few: "elementy",
+    many: "elementów",
+    other: "elementów",
+  },
+  ro: {
+    zero: "fără entități",
+    one: "entitate",
+    few: "entități",
+    other: "entități",
+  },
+  to: {
+    zero: "ʻikai ha meʻa",
+    one: "meʻa",
+    other: "meʻa",
+  },
+  zu: {
+    zero: "azikho izinto",
+    one: "into",
+    other: "izinto",
+  },
+  sv: {
+    zero: "inga objekt",
+    one: "objekt",
+    other: "objekt",
+  },
+  "sv-fi": {
+    zero: "inga objekt",
+    one: "objekt",
+    other: "objekt",
+  },
+  et: {
+    zero: "elemendid puuduvad",
+    one: "element",
+    other: "elementi",
+  },
+  lv: {
+    zero: "nav elementu",
+    one: "elements",
+    few: "elementi",
+    other: "elementu",
+  },
+  lt: {
+    zero: "nėra elementų",
+    one: "elementas",
+    few: "elementai",
+    many: "elementų",
+    other: "elementų",
+  },
+  ru: {
+    zero: "нет объектов",
+    one: "объект",
+    few: "объекта",
+    many: "объектов",
+    other: "объектов",
+  },
+  da: {
+    zero: "ingen objekter",
+    one: "objekt",
+    other: "objekter",
+  },
+  yap: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+  bi: {
+    zero: "no features",
+    one: "feature",
+    other: "features",
+  },
+} as PluralizedMessagesByLang;
 
 export const InlineMetric: ReportWidget<{
   unit: AreaUnit | LengthUnit;
@@ -28,7 +253,10 @@ export const InlineMetric: ReportWidget<{
     | "total_area"
     | "percent_area"
     | "distance_to_shore"
-    | "overlay_area";
+    | "overlay_area"
+    | "count";
+  hideLabelForCount?: boolean;
+  pluralizedCountLabels?: PluralizedMessagesByLang;
 }> = ({
   metrics,
   sources,
@@ -40,6 +268,16 @@ export const InlineMetric: ReportWidget<{
   marks,
   sketchClass,
 }) => {
+  const lang = useCurrentLang();
+  const { pluralRules, defaultMessages, customMessages } = useMemo(() => {
+    const pluralRules = new Intl.PluralRules(lang.code);
+    const defaultMessages =
+      defaultPluralizedCountLabels[lang.code] ||
+      defaultPluralizedCountLabels.en;
+    const customMessages =
+      componentSettings?.pluralizedCountLabels?.[lang.code];
+    return { pluralRules, defaultMessages, customMessages };
+  }, [lang.code, componentSettings?.pluralizedCountLabels]);
   if (sketchClass.geometryType !== SketchGeometryType.Polygon) {
     throw new Error(
       "Inline metric only supports polygon geometry types currently."
@@ -120,6 +358,20 @@ export const InlineMetric: ReportWidget<{
 
         return formatters.area(combined.value["*"]);
       }
+      case "count": {
+        const combined = combineMetricsForFragments(
+          metrics as Pick<Metric, "type" | "value">[]
+        ) as CountMetric;
+        const count = combined.value["*"].count;
+        if (componentSettings?.hideLabelForCount) {
+          return formatters.count(count);
+        } else {
+          const pluralKey = pluralRules.select(count) as string;
+
+          let label = customMessages?.[pluralKey] || defaultMessages[pluralKey];
+          return `${formatters.count(count)} ${label}`;
+        }
+      }
       default:
         // eslint-disable-next-line i18next/no-literal-string
         errors.push(`Unsupported presentation: ${presentation}`);
@@ -132,6 +384,10 @@ export const InlineMetric: ReportWidget<{
     formatters,
     sketchClass.clippingGeographies,
     errors,
+    pluralRules,
+    componentSettings?.hideLabelForCount,
+    defaultMessages,
+    customMessages,
   ]);
 
   if (loading) {
@@ -179,6 +435,49 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   const componentSettings = node.attrs?.componentSettings || {};
   const unit = componentSettings.unit || "kilometer";
   const unitDisplay = componentSettings.unitDisplay || "short";
+  const { t } = useTranslation("admin:reports");
+  const type = formatPresentationLabel(componentSettings.presentation);
+  const reportContext = useReportContext();
+  const lang = useCurrentLang();
+  const pluralCategories = useMemo(() => {
+    return new Intl.PluralRules(lang.code).resolvedOptions().pluralCategories;
+  }, [lang.code]);
+  const { pluralRules, defaultMessages, customMessages } = useMemo(() => {
+    const pluralRules = new Intl.PluralRules(lang.code);
+    const defaultMessages =
+      defaultPluralizedCountLabels[lang.code] ||
+      defaultPluralizedCountLabels.en;
+    const customMessages =
+      componentSettings?.pluralizedCountLabels?.[lang.code];
+    return { pluralRules, defaultMessages, customMessages };
+  }, [lang.code, componentSettings?.pluralizedCountLabels]);
+
+  const relatedOverlay = useMemo(() => {
+    const allSources = [
+      ...(reportContext.overlaySources || []),
+      ...(reportContext.adminSources || []),
+    ];
+    const dependencies = (node.attrs.metrics || []) as MetricDependency[];
+    for (const dependency of dependencies) {
+      if (dependency.tableOfContentsItemId) {
+        const source = allSources.find(
+          (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
+        );
+        if (source) {
+          return source;
+        }
+      }
+    }
+    return null;
+  }, [
+    node.attrs.metrics,
+    reportContext.overlaySources,
+    reportContext.adminSources,
+  ]);
+
+  const [countLabelsModalOpen, setCountLabelsModalOpen] = useState(false);
+
+  // TODO: Add related geography once supported
 
   return (
     <>
@@ -216,17 +515,134 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           }
         />
       )}
-      <NumberRoundingControl
-        value={componentSettings?.minimumFractionDigits}
-        onChange={(minimumFractionDigits) =>
-          onUpdate({
-            componentSettings: {
-              ...componentSettings,
-              minimumFractionDigits,
-            },
-          })
-        }
-      />
+      {presentation !== "count" && (
+        <NumberRoundingControl
+          value={componentSettings?.minimumFractionDigits}
+          onChange={(minimumFractionDigits) =>
+            onUpdate({
+              componentSettings: {
+                ...componentSettings,
+                minimumFractionDigits,
+              },
+            })
+          }
+        />
+      )}
+      {presentation === "count" && (
+        <>
+          <Popover.Root
+            open={countLabelsModalOpen}
+            onOpenChange={setCountLabelsModalOpen}
+          >
+            <Popover.Trigger asChild>
+              <button
+                type="button"
+                className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
+              >
+                <Pencil2Icon className="w-3 h-3" />
+                {t("labeling")}
+              </button>
+            </Popover.Trigger>
+            <TooltipPopoverContent>
+              <div className="px-1 space-y-2 w-48">
+                <TooltipBooleanConfigurationOption
+                  label={t("show label")}
+                  checked={!componentSettings?.hideLabelForCount}
+                  onChange={(hideLabelForCount) =>
+                    onUpdate({
+                      componentSettings: {
+                        ...componentSettings,
+                        hideLabelForCount: !hideLabelForCount,
+                      },
+                    })
+                  }
+                />
+                <div
+                  className={
+                    componentSettings?.hideLabelForCount
+                      ? "opacity-20 pointer-events-none"
+                      : ""
+                  }
+                >
+                  <p className="text-xs text-gray-500">
+                    {t(
+                      "The following pluralized forms will be used depending on the count."
+                    )}
+                  </p>
+                  <div className="space-y-1">
+                    {pluralCategories.map((category) => (
+                      <div key={category}>
+                        <label className="text-xs text-gray-500">
+                          {category}
+                        </label>
+                        <input
+                          className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          type="text"
+                          value={customMessages?.[category] || ""}
+                          placeholder={defaultMessages?.[category] || ""}
+                          onChange={(e) =>
+                            onUpdate({
+                              componentSettings: {
+                                ...componentSettings,
+                                pluralizedCountLabels: {
+                                  ...componentSettings?.pluralizedCountLabels,
+                                  [lang.code]: {
+                                    ...componentSettings
+                                      ?.pluralizedCountLabels?.[lang.code],
+                                    [category]: e.target.value,
+                                  },
+                                },
+                              },
+                            })
+                          }
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </TooltipPopoverContent>
+          </Popover.Root>
+        </>
+      )}
+      <TooltipMorePopover>
+        <div className="flex">
+          <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
+            {t("Metric Type")}
+          </span>
+          <span className="text-sm font-light  whitespace-nowrap px-1 flex-1 text-right">
+            {type}
+          </span>
+        </div>
+
+        {relatedOverlay && (
+          <>
+            <div className="flex">
+              <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
+                {t("Layer")}
+              </span>
+              <span className="text-sm font-light  whitespace-nowrap px-1 flex-1 text-right">
+                {relatedOverlay.tableOfContentsItem?.title || "Unknown"}
+              </span>
+            </div>
+          </>
+        )}
+      </TooltipMorePopover>
     </>
   );
 };
+
+function formatPresentationLabel(presentation: string) {
+  switch (presentation) {
+    case "total_area":
+      return "Total Area";
+    case "percent_area":
+      return "Percent Area";
+    case "distance_to_shore":
+      return "Distance to Shore";
+    case "overlay_area":
+      return "Overlay Area";
+    default:
+      return presentation;
+  }
+}

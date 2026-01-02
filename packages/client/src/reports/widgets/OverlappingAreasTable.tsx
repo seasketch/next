@@ -13,7 +13,7 @@ import {
 } from "./widgets";
 import {
   ReportWidgetTooltipControls,
-  TooltipPopoverContent,
+  TooltipMorePopover,
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
@@ -26,7 +26,6 @@ import {
 import { AnyLayer } from "mapbox-gl";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { NumberRoundingControl } from "./NumberRoundingControl";
-import * as Popover from "@radix-ui/react-popover";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { useReportContext } from "../ReportContext";
 
@@ -409,7 +408,6 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate, onUpdateDependencyParameters }) => {
     const { t } = useTranslation("admin:reports");
     const reportContext = useReportContext();
-    const [isPopoverOpen, setIsPopoverOpen] = useState(false);
     const settings: OverlappingAreasTableSettings = useMemo(
       () => node.attrs?.componentSettings || {},
       [node.attrs?.componentSettings]
@@ -579,79 +577,67 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           componentSettings={settings}
           onUpdate={onUpdate}
         />
-        <Popover.Root open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
-            >
-              {t("more...")}
-            </button>
-          </Popover.Trigger>
-          <TooltipPopoverContent>
-            <div className="px-1 space-y-2">
-              <button
-                type="button"
-                onClick={handleBufferClick}
-                className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
-              >
-                <span className="font-light text-gray-400">{t("Buffer")}</span>
-                <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
-                  {bufferFormatter.distance(buffer ?? 0)}
-                </span>
-              </button>
-              <TooltipBooleanConfigurationOption
-                label={t("Show zeros")}
-                checked={showZero}
-                onChange={(next) =>
-                  handleUpdate({ showZeroOverlapCategories: next })
-                }
-              />
-              <TooltipBooleanConfigurationOption
-                label={t("Show % column")}
-                checked={showPercentColumn}
-                onChange={(next) => handleUpdate({ showPercentColumn: next })}
-              />
-              <LabeledDropdown
-                label={t("Group by")}
-                value={currentGroupBy || "__none__"}
-                options={groupByOptions}
-                getDisplayLabel={(selected) => {
-                  if (!selected || selected.value === "__none__") {
-                    return t("None");
-                  }
-                  // Show just the column name in the trigger
-                  return selected.value;
-                }}
-                onChange={(val) => {
-                  const groupByValue = val === "__none__" ? undefined : val;
-                  onUpdateDependencyParameters((dependency) => {
-                    return {
-                      ...dependency.parameters,
-                      groupBy: groupByValue,
-                    };
-                  });
-                }}
-              />
-              <LabeledDropdown
-                label={t("Pagination")}
-                value={rowsPerPage === 0 ? "None" : String(rowsPerPage)}
-                options={[
-                  { value: "None", label: t("None") },
-                  { value: "10", label: "10 items" },
-                  { value: "12", label: "12 items" },
-                  { value: "15", label: "15 items" },
-                  { value: "20", label: "20 items" },
-                ]}
-                onChange={(val) =>
-                  handleUpdate({
-                    rowsPerPage: val === "None" ? 0 : Number(val),
-                  })
-                }
-              />
-            </div>
-          </TooltipPopoverContent>
-        </Popover.Root>
+        <TooltipMorePopover>
+          {/* <button
+            type="button"
+            onClick={handleBufferClick}
+            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
+          >
+            <span className="font-light text-gray-400">{t("Buffer")}</span>
+            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
+              {bufferFormatter.distance(buffer ?? 0)}
+            </span>
+          </button> */}
+          <TooltipBooleanConfigurationOption
+            label={t("Show zeros")}
+            checked={showZero}
+            onChange={(next) =>
+              handleUpdate({ showZeroOverlapCategories: next })
+            }
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Show % column")}
+            checked={showPercentColumn}
+            onChange={(next) => handleUpdate({ showPercentColumn: next })}
+          />
+          <LabeledDropdown
+            label={t("Group by")}
+            value={currentGroupBy || "__none__"}
+            options={groupByOptions}
+            getDisplayLabel={(selected) => {
+              if (!selected || selected.value === "__none__") {
+                return t("None");
+              }
+              // Show just the column name in the trigger
+              return selected.value;
+            }}
+            onChange={(val) => {
+              const groupByValue = val === "__none__" ? undefined : val;
+              onUpdateDependencyParameters((dependency) => {
+                return {
+                  ...dependency.parameters,
+                  groupBy: groupByValue,
+                };
+              });
+            }}
+          />
+          <LabeledDropdown
+            label={t("Pagination")}
+            value={rowsPerPage === 0 ? "None" : String(rowsPerPage)}
+            options={[
+              { value: "None", label: t("None") },
+              { value: "10", label: "10 items" },
+              { value: "12", label: "12 items" },
+              { value: "15", label: "15 items" },
+              { value: "20", label: "20 items" },
+            ]}
+            onChange={(val) =>
+              handleUpdate({
+                rowsPerPage: val === "None" ? 0 : Number(val),
+              })
+            }
+          />
+        </TooltipMorePopover>
       </div>
     );
   };

@@ -104,6 +104,8 @@ export function useNumberFormatters({
         maximumFractionDigits: minimumFractionDigits,
       }
     );
+
+    const countFormatter = new Intl.NumberFormat(langContext?.lang?.code);
     return {
       smallAreaFormatter,
       largeAreaFormatter,
@@ -114,6 +116,7 @@ export function useNumberFormatters({
       specifiedDistanceFormatter,
       smallDistanceFormatter,
       largeDistanceFormatter,
+      countFormatter,
     };
   }, [langContext?.lang?.code, unit, minimumFractionDigits, unitDisplay]);
 
@@ -196,5 +199,6 @@ export function useNumberFormatters({
     area,
     percent,
     distance,
+    count: formatters.countFormatter.format.bind(formatters.countFormatter),
   };
 }

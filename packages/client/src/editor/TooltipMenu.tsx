@@ -42,8 +42,6 @@ const ICON_CONTAINER_CLASSES =
   "flex items-center justify-center w-4 h-4 overflow-hidden";
 const ICON_TOGGLE_BUTTON_CLASSES =
   "w-7 h-7 inline-flex items-center justify-center rounded border border-transparent hover:bg-gray-100 focus:outline-none active:bg-gray-100";
-const DROPDOWN_TRIGGER_CLASSES =
-  "h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none";
 
 function selectionIsOnlyMetricNode(
   state: EditorState,
@@ -1505,14 +1503,14 @@ export function TooltipDropdown({
     <DropdownMenu.Root onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>
         <button
-          className={DROPDOWN_TRIGGER_CLASSES}
+          className="flex-1 h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none justify-end"
           type="button"
           aria-label={ariaLabel}
         >
           {selected?.icon && (
             <span className={ICON_CONTAINER_CLASSES}>{selected.icon}</span>
           )}
-          <span className="max-w-[72px] truncate">{displayLabel}</span>
+          <span className="max-w-[78px] truncate">{displayLabel}</span>
           <span className={ICON_CONTAINER_CLASSES}>
             <CaretDownIcon />
           </span>
@@ -1602,6 +1600,27 @@ export function TooltipPopoverContent({
         {children}
       </Popover.Content>
     </Popover.Portal>
+  );
+}
+
+export function TooltipMorePopover({ children }: { children: ReactNode }) {
+  const { t } = useTranslation("admin:reports");
+  const [isOpen, setIsOpen] = useState(false);
+
+  return (
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
+        >
+          {t("more...")}
+        </button>
+      </Popover.Trigger>
+      <TooltipPopoverContent>
+        <div className="px-1 space-y-2">{children}</div>
+      </TooltipPopoverContent>
+    </Popover.Root>
   );
 }
 
