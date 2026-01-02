@@ -29,7 +29,6 @@ export function SortableReportBody({
   optimisticCardOrder,
   editorFooter,
 }: SortableReportBodyProps) {
-  const { t } = useTranslation("admin:sketching");
   const context = useReportContext();
   const selectedTab = propSelectedTab || context.selectedTab;
   const selectedForEditing =

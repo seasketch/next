@@ -97,6 +97,10 @@ export interface ReportContextState {
    * Function to delete a card
    */
   deleteCard?: (cardId: number) => void;
+  /**
+   * Function to move a card to another tab (admin only)
+   */
+  moveCardToTab?: (cardId: number, tabId: number) => Promise<void> | void;
   geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
 
   selectedSketchId: number | null;

@@ -12571,6 +12571,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:transparent
 }
 
+.hover\:border-blue-200:hover{
+  --tw-border-opacity:1;
+  border-color:rgb(191 219 254 / var(--tw-border-opacity, 1))
+}
+
 .hover\:border-opacity-100:hover{
   --tw-border-opacity:1
 }

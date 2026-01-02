@@ -202,6 +202,8 @@ export default function SketchClassReportsAdmin({
     selectedSketchId
   );
 
+  console.log(reportState?.selectedTab);
+
   // Get the selected sketch for demonstration
   const selectedSketch = sketchesForDemonstration.find(
     (sketch) => sketch.id === selectedSketchId
@@ -259,6 +261,7 @@ export default function SketchClassReportsAdmin({
 
   const handleCardMove = async (cardId: number, destinationTabId: number) => {
     try {
+      console.log("moving card to tab", { cardId, destinationTabId });
       await moveCardToTab({
         variables: {
           cardId,
@@ -294,6 +297,8 @@ export default function SketchClassReportsAdmin({
       console.error("No selected tab");
       return;
     }
+
+    console.log("selected tab", reportState.selectedTab);
 
     const registration = getCardRegistration(cardType as ReportCardType);
     if (!registration) {
@@ -559,6 +564,7 @@ export default function SketchClassReportsAdmin({
         adminMode: true,
         ...reportState,
         deleteCard: handleDeleteCard,
+        moveCardToTab: handleCardMove,
       }}
     >
       <FormLanguageContext.Provider
@@ -753,10 +759,13 @@ export default function SketchClassReportsAdmin({
                     result.destination.droppableId.startsWith("tab-header-");
 
                   if (isDestinationTabHeader) {
-                    // Dropped on a tab header - move card to that tab
-                    handleCardMove(cardId, destinationTabId);
-                    // Switch to the destination tab
-                    reportState.setSelectedTabId(destinationTabId);
+                    console.log("dropped on a tab header", {
+                      cardId,
+                      destinationTabId,
+                      result,
+                    });
+                    // Dragging to tabs is disabled; ignore drop on tab headers
+                    return;
                   } else if (
                     isSourceTabBody &&
                     isDestinationTabBody &&
@@ -788,10 +797,8 @@ export default function SketchClassReportsAdmin({
                     isDestinationTabBody &&
                     sourceTabId !== destinationTabId
                   ) {
-                    // Moving between different tab bodies
-                    handleCardMove(cardId, destinationTabId);
-                    // Switch to the destination tab
-                    reportState.setSelectedTabId(destinationTabId);
+                    // Dragging cards between tabs is disabled; ignore cross-tab drops
+                    return;
                   } else {
                     // Fallback for any unexpected scenarios
                   }
@@ -896,7 +903,7 @@ export default function SketchClassReportsAdmin({
                         </div>
 
                         {/* report tabs */}
-                        <ReportTabs enableDragDrop={true} />
+                        <ReportTabs />
                         {/* report body */}
                         <div className="relative max-h-full overflow-y-auto">
                           {draftReport.tabs?.map((tab) => {

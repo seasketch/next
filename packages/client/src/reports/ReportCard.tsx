@@ -33,7 +33,10 @@ import Skeleton from "../components/Skeleton";
 import ReportMetricsProgressDetails from "./ReportMetricsProgressDetails";
 import { subjectIsFragment } from "overlay-engine";
 import ReportCardLoadingIndicator from "./components/ReportCardLoadingIndicator";
-import { CalculatorIcon } from "@heroicons/react/outline";
+import {
+  CalculatorIcon,
+  SwitchHorizontalIcon,
+} from "@heroicons/react/outline";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
@@ -89,11 +92,15 @@ export default function ReportCard({
     selectedForEditing,
     setSelectedForEditing,
     deleteCard,
+    report,
+    selectedTabId,
+    setSelectedTabId,
     recalculate,
     recalculateState,
     draftDependencyMetrics,
     showCalcDetails,
     setShowCalcDetails,
+    moveCardToTab,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
@@ -210,6 +217,9 @@ export default function ReportCard({
   const [recalcOpen, setRecalcOpen] = useState(false);
   const [recomputePreprocessed, setRecomputePreprocessed] = useState(false);
   const [recomputeTotals, setRecomputeTotals] = useState(false);
+  const [moveTabOpen, setMoveTabOpen] = useState(false);
+  const [moveTabTargetId, setMoveTabTargetId] = useState<number | null>(null);
+  const [moveTabLoading, setMoveTabLoading] = useState(false);
 
   const presenceAbsenceClassName = useMemo(() => {
     if (!loading && !Object.values(errors).length) {
@@ -238,6 +248,58 @@ export default function ReportCard({
       return "";
     }
   }, [metrics, loading, errors]);
+
+  const sortedTabs = useMemo(
+    () => [...(report.tabs || [])].sort((a, b) => a.position - b.position),
+    [report.tabs]
+  );
+
+  const getLocalizedTabTitle = useCallback(
+    (tab: (typeof report.tabs)[0]) => {
+      if (langContext?.lang?.code !== "EN" && tab.alternateLanguageSettings) {
+        const alternateSettings =
+          tab.alternateLanguageSettings[langContext.lang.code];
+        if (alternateSettings?.title) {
+          return alternateSettings.title;
+        }
+      }
+      return tab.title;
+    },
+    [langContext?.lang?.code, report.tabs]
+  );
+
+  const openMoveToTabModal = useCallback(() => {
+    // Default selection is the current tab; submitting keeps card in place.
+    setMoveTabTargetId(selectedTabId);
+    setMoveTabOpen(true);
+  }, [selectedTabId]);
+
+  const handleMoveCardToTab = useCallback(async () => {
+    if (
+      !moveCardToTab ||
+      moveTabTargetId === null ||
+      !cardId
+    ) {
+      setMoveTabOpen(false);
+      return;
+    }
+    setMoveTabLoading(true);
+    try {
+      if (moveTabTargetId !== selectedTabId) {
+        await moveCardToTab(cardId, moveTabTargetId);
+        setSelectedTabId(moveTabTargetId);
+      }
+      setMoveTabOpen(false);
+    } finally {
+      setMoveTabLoading(false);
+    }
+  }, [
+    moveCardToTab,
+    moveTabTargetId,
+    cardId,
+    selectedTabId,
+    setSelectedTabId,
+  ]);
 
   const loadingSkeleton = useMemo(() => {
     if (skeleton) {
@@ -349,6 +411,19 @@ export default function ReportCard({
                         {t("Calculation details")}
                       </ReportCardActionMenu.Item>
                     )}
+                    {adminMode &&
+                      moveCardToTab &&
+                      sortedTabs.length > 1 &&
+                      cardId && (
+                        <ReportCardActionMenu.Item
+                          icon={<SwitchHorizontalIcon className="h-4 w-4" />}
+                          onSelect={() => {
+                            openMoveToTabModal();
+                          }}
+                        >
+                          {t("Move to tab")}
+                        </ReportCardActionMenu.Item>
+                      )}
                     {adminMode && deleteCard && (
                       <ReportCardActionMenu.Item
                         icon={<TrashIcon className="h-4 w-4" />}
@@ -398,6 +473,76 @@ export default function ReportCard({
         <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg">
           {editorFooter}
         </div>
+      )}
+      {moveTabOpen && (
+        <Modal
+          open
+          onRequestClose={() => {
+            if (!moveTabLoading) {
+              setMoveTabOpen(false);
+            }
+          }}
+          title={t("Move card to tab")}
+          footer={[
+            {
+              label: t("Cancel"),
+              onClick: () => setMoveTabOpen(false),
+              variant: "secondary",
+              disabled: moveTabLoading,
+            },
+            {
+              label: t("Move"),
+              onClick: handleMoveCardToTab,
+              variant: "primary",
+              loading: moveTabLoading,
+              disabled: moveTabLoading || moveTabTargetId === null,
+            },
+          ]}
+        >
+          <div className="space-y-3">
+            <p className="text-sm text-gray-600">
+              {t("Select a tab to move this card to.")}
+            </p>
+            <div className="space-y-2">
+              {sortedTabs.map((tab) => {
+                const localizedTitle = getLocalizedTabTitle(tab);
+                return (
+                  <label
+                    key={tab.id}
+                    className={`flex items-center space-x-2 rounded border p-2 ${
+                      moveTabTargetId === tab.id
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-gray-200 hover:border-blue-200"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      className="h-4 w-4"
+                      checked={moveTabTargetId === tab.id}
+                      onChange={() => setMoveTabTargetId(tab.id)}
+                      disabled={moveTabLoading}
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm text-gray-800">
+                        {localizedTitle}
+                      </span>
+                      {tab.id === selectedTabId && (
+                        <span className="ml-2 text-xs text-gray-500">
+                          {t("Current tab")}
+                        </span>
+                      )}
+                    </div>
+                  </label>
+                );
+              })}
+              {sortedTabs.length === 0 && (
+                <p className="text-sm text-gray-500">
+                  {t("No tabs available")}
+                </p>
+              )}
+            </div>
+          </div>
+        </Modal>
       )}
       {recalcOpen && (
         <Modal
