@@ -566,7 +566,7 @@ export function combineMetricsForFragments(
 ): Pick<Metric, "type" | "value"> {
   // first, ensure that all metrics have the same type
   const types = new Set(metrics.map((m) => m.type));
-  if (types.size !== 1) {
+  if (types.size > 1) {
     throw new Error(
       `All metrics must have the same type. Found types: ${Array.from(
         types

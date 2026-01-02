@@ -936,16 +936,6 @@ async function getOrCreateSpatialMetric({
   projectId: number;
   dependencyHash: string;
 }): Promise<any> {
-  console.log("getOrCreateSpatialMetric", {
-    subjectFragmentId,
-    subjectGeographyId,
-    type,
-    overlaySourceUrl,
-    parameters,
-    sourceProcessingJobDependency,
-    projectId,
-    dependencyHash,
-  });
   if (!subjectFragmentId && !subjectGeographyId) {
     throw new Error(
       "Either subjectFragmentId or subjectGeographyId must be provided"

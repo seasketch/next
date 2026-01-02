@@ -28,6 +28,7 @@ import {
 } from "../utils/colors";
 import { AnyLayer } from "mapbox-gl";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
+import { SpatialMetricState } from "../../generated/graphql";
 
 type FeatureCountTableSettings = {
   showZeroCountCategories?: boolean;
@@ -77,92 +78,74 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   }, [metrics]);
 
   const rows = useMemo<FeatureCountRow[]>(() => {
-    const fragmentMetrics = metrics.filter(
-      (m) => subjectIsFragment(m.subject) && m.type === "count"
-    );
-    const geographyMetrics = metrics.filter(
-      (m) => subjectIsGeography(m.subject) && m.type === "count"
-    );
+    let rows: FeatureCountRow[] = [];
 
-    const rowMap: Record<string, FeatureCountRow> = {};
-
-    // Combine fragment metrics using combineMetricsForFragments
-    // Filter out any metrics with invalid values before combining
-    let combinedFragmentMetric: CountMetric | null = null;
-    if (fragmentMetrics.length > 0) {
-      const validMetrics = fragmentMetrics
-        .filter((m) => {
-          // Ensure value exists and is a non-null object (grouped object)
-          const value = m.value;
-          return (
-            value !== null &&
-            value !== undefined &&
-            typeof value === "object" &&
-            !Array.isArray(value)
-          );
-        })
-        .map((m) => ({
-          type: m.type,
-          value: m.value,
-        })) as Pick<Metric, "type" | "value">[];
-
-      if (validMetrics.length > 0) {
-        try {
-          const combined = combineMetricsForFragments(
-            validMetrics
-          ) as CountMetric;
-          combinedFragmentMetric = combined;
-        } catch (error) {
-          // If combination fails, log and skip
-          console.error("Failed to combine fragment metrics:", error, {
-            metrics: validMetrics.map((m) => ({
-              type: m.type,
-              valueType: typeof m.value,
-              valueIsObject: typeof m.value === "object" && m.value !== null,
-            })),
-          });
-        }
-      }
+    if (sources.length === 0) {
+      return [];
+    }
+    if (sources.length > 1) {
+      throw new Error(
+        "FeatureCountTable does not yet support multiple sources"
+      );
+    }
+    const geostatsLayer = sources[0].geostats?.layers?.[0] as
+      | GeostatsLayer
+      | undefined;
+    if (!geostatsLayer) {
+      throw new Error("Geostats layer not found");
     }
 
-    // Process combined fragment metrics (sketch overlaps)
-    if (combinedFragmentMetric) {
-      const countValue = combinedFragmentMetric.value;
-      for (const [classKey, entry] of Object.entries(countValue)) {
-        if (entry && typeof entry === "object" && "count" in entry) {
-          if (!rowMap[classKey]) {
-            rowMap[classKey] = { key: classKey, count: 0, label: classKey };
-          }
-          rowMap[classKey].count = entry.count;
-        }
-      }
-    }
+    const completedFragmentMetrics = metrics.filter(
+      (m) =>
+        subjectIsFragment(m.subject) &&
+        m.type === "count" &&
+        m.state === SpatialMetricState.Complete
+    ) as Pick<Metric, "type" | "value">[];
+    const combinedFragmentMetric = combineMetricsForFragments(
+      completedFragmentMetrics
+    ) as CountMetric;
 
-    // Process geography metrics (totals)
-    // Geography metrics are already totals per geography, so we sum them
-    for (const gm of geographyMetrics) {
-      if (
-        subjectIsGeography(gm.subject) &&
-        gm.subject.id !== primaryGeographyId
-      ) {
-        continue;
-      }
-      const countValue = gm.value as CountMetric["value"];
-      if (countValue && typeof countValue === "object") {
-        for (const [key, entry] of Object.entries(countValue)) {
-          if (entry && typeof entry === "object" && "count" in entry) {
-            if (!rowMap[key]) {
-              rowMap[key] = { key, count: 0, label: key };
-            }
-            rowMap[key].geographyTotal =
-              (rowMap[key].geographyTotal || 0) + entry.count;
-          }
-        }
-      }
-    }
+    const primaryGeographyMetric = metrics.find(
+      (m) =>
+        subjectIsGeography(m.subject) &&
+        m.subject.id === primaryGeographyId &&
+        m.type === "count" &&
+        m.state === SpatialMetricState.Complete
+    ) as CountMetric | undefined;
 
-    let rows = Object.values(rowMap);
-    if (rows.length === 0) return [];
+    if (groupBy) {
+      const attr = geostatsLayer.attributes?.find(
+        (a) => a.attribute === groupBy
+      );
+      if (!attr) {
+        throw new Error(`Attribute ${groupBy} not found in geostats layer`);
+      }
+      const colors = extractColorsForCategories(
+        Object.keys(attr.values || {}),
+        attr,
+        sources[0].mapboxGlStyles as AnyLayer[]
+      );
+      const defaultColor = extractColorForLayers(
+        sources[0].mapboxGlStyles as AnyLayer[]
+      );
+      for (const value of Object.keys(attr.values || {})) {
+        rows.push({
+          key: value,
+          label: value,
+          count: combinedFragmentMetric?.value?.[value]?.count ?? 0,
+          color: colors[value] ?? defaultColor,
+          geographyTotal: primaryGeographyMetric?.value?.[value]?.count ?? 0,
+        });
+      }
+    } else {
+      rows.push({
+        key: "*",
+        label: t("All features"),
+        count: combinedFragmentMetric?.value?.["*"]?.count ?? 0,
+        color: extractColorForLayers(sources[0].mapboxGlStyles as AnyLayer[]),
+        geographyTotal: primaryGeographyMetric?.value?.["*"]?.count ?? 0,
+      });
+    }
 
     if (sortBy === "name") {
       rows = rows.sort((a, b) => a.key.localeCompare(b.key));
@@ -179,71 +162,38 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
     }
 
     return rows;
-  }, [metrics, showZero, sortBy, groupBy, primaryGeographyId]);
+  }, [sources, metrics, groupBy, sortBy, showZero, primaryGeographyId, t]);
 
-  const placeholderRows = useMemo<FeatureCountRow[]>(() => {
-    if (!loading) return [];
-    const source = sources?.[0];
-    const geoLayer = isGeostatsLayer(
-      (source?.geostats as any)?.layers?.[0] as GeostatsLayer
-    )
-      ? ((source!.geostats as any).layers[0] as GeostatsLayer)
-      : undefined;
-    const defaultKeys = ["…", "…", "…"];
-    let keys: string[] = defaultKeys;
-    if (groupBy && geoLayer) {
-      const attr = geoLayer.attributes?.find((a) => a.attribute === groupBy);
-      if (attr) {
-        keys = Object.keys(attr.values || {});
-      }
-    }
-    if (!showZero) {
-      keys = keys.slice(0, 5);
-    }
-    if (!keys.length) {
-      keys = defaultKeys;
-    }
-    return keys.map((k, i) => ({
-      key: "placeholder-" + i,
-      count: 0,
-      label: k,
-    }));
-  }, [loading, sources, groupBy, showZero]);
+  // const placeholderRows = useMemo<FeatureCountRow[]>(() => {
+  //   if (!loading) return [];
+  //   const source = sources?.[0];
+  //   const geoLayer = isGeostatsLayer(
+  //     (source?.geostats as any)?.layers?.[0] as GeostatsLayer
+  //   )
+  //     ? ((source!.geostats as any).layers[0] as GeostatsLayer)
+  //     : undefined;
+  //   const defaultKeys = ["…", "…", "…"];
+  //   let keys: string[] = defaultKeys;
+  //   if (groupBy && geoLayer) {
+  //     const attr = geoLayer.attributes?.find((a) => a.attribute === groupBy);
+  //     if (attr) {
+  //       keys = Object.keys(attr.values || {});
+  //     }
+  //   }
+  //   if (!showZero) {
+  //     keys = keys.slice(0, 5);
+  //   }
+  //   if (!keys.length) {
+  //     keys = defaultKeys;
+  //   }
+  //   return keys.map((k, i) => ({
+  //     key: "placeholder-" + i,
+  //     count: 0,
+  //     label: k,
+  //   }));
+  // }, [loading, sources, groupBy, showZero]);
 
-  const colorMap = useMemo<Record<string, string>>(() => {
-    const baseRows = loading ? placeholderRows : rows;
-    if (!baseRows.length || !sources?.length) return {};
-    const source = sources[0];
-    const mapboxStyles = (source.mapboxGlStyles || []) as AnyLayer[];
-    const geoLayer = isGeostatsLayer(
-      (source.geostats as any)?.layers?.[0] as GeostatsLayer
-    )
-      ? ((source.geostats as any).layers[0] as GeostatsLayer)
-      : undefined;
-
-    const defaultColor = extractColorForLayers(mapboxStyles);
-
-    if (groupBy && geoLayer) {
-      const attr = geoLayer.attributes?.find((a) => a.attribute === groupBy);
-      if (attr) {
-        const colors = extractColorsForCategories(
-          Object.keys(attr.values || {}),
-          attr,
-          mapboxStyles
-        );
-        const map: Record<string, string> = {};
-        for (const key of Object.keys(colors)) {
-          map[key] = colors[key];
-        }
-        map["*"] = map["*"] || defaultColor;
-        return map;
-      }
-    }
-
-    return { "*": defaultColor };
-  }, [rows, placeholderRows, sources, groupBy, loading]);
-
-  const displayRows = loading ? placeholderRows : rows;
+  const displayRows = loading ? rows : rows;
   const totalRows = displayRows.length;
   const showPagination = rowsPerPage > 0 && totalRows > rowsPerPage;
   const totalPages = showPagination ? Math.ceil(totalRows / rowsPerPage) : 1;
@@ -269,10 +219,11 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
 
   // Check if any row has a color to determine if we need color column space
   const hasAnyColor = useMemo(() => {
-    return Object.values(colorMap).some(
-      (color) => color && color !== "#00000000" && color !== "transparent"
+    return rows.some(
+      (row) =>
+        row.color && row.color !== "#00000000" && row.color !== "transparent"
     );
-  }, [colorMap]);
+  }, [rows]);
 
   if (!loading && !rows.length) {
     return (
@@ -305,7 +256,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
           )}
         </div>
         {paginatedRows.map((row) => {
-          const color = colorMap[row.key] ?? colorMap["*"] ?? undefined;
+          const color = row.color;
           const percent =
             !loading &&
             typeof row.geographyTotal === "number" &&
@@ -576,6 +527,30 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
     unitDisplay: "short",
   });
 
+  // Get related overlay source
+  const relatedOverlay = useMemo(() => {
+    const allSources = [
+      ...(reportContext.overlaySources || []),
+      ...(reportContext.adminSources || []),
+    ];
+    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
+    for (const dependency of dependencies) {
+      if (dependency.tableOfContentsItemId) {
+        const source = allSources.find(
+          (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
+        );
+        if (source) {
+          return source;
+        }
+      }
+    }
+    return null;
+  }, [
+    node.attrs?.metrics,
+    reportContext.overlaySources,
+    reportContext.adminSources,
+  ]);
+
   return (
     <div className="flex gap-3 items-center text-sm text-gray-800">
       <LabeledDropdown
@@ -648,6 +623,24 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
             })
           }
         />
+        <div className="flex">
+          <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
+            {t("Component Type")}
+          </span>
+          <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right">
+            {t("Feature Count Table")}
+          </span>
+        </div>
+        {relatedOverlay && (
+          <div className="flex">
+            <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
+              {t("Layer")}
+            </span>
+            <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right truncate">
+              {relatedOverlay.tableOfContentsItem?.title || "Unknown"}
+            </span>
+          </div>
+        )}
       </TooltipMorePopover>
     </div>
   );

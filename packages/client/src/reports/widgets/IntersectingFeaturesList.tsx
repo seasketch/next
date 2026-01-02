@@ -11,10 +11,12 @@ import { ReportWidget } from "./widgets";
 import {
   ReportWidgetTooltipControls,
   TooltipPopoverContent,
+  TooltipMorePopover,
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { useReportContext } from "../ReportContext";
+import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { CaretDownIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
@@ -299,7 +301,7 @@ function FeatureAccordionItem({
 }
 
 export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControls =
-  ({ node, onUpdate }) => {
+  ({ node, onUpdate, onUpdateDependencyParameters }) => {
     const { t } = useTranslation("admin:reports");
     const reportContext = useReportContext();
     const settings: IntersectingFeaturesListSettings = useMemo(
@@ -395,6 +397,66 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
 
     const [isColumnsPopoverOpen, setIsColumnsPopoverOpen] = useState(false);
 
+    // Get related overlay source
+    const relatedOverlay = useMemo(() => {
+      const allSources = [
+        ...(reportContext.overlaySources || []),
+        ...(reportContext.adminSources || []),
+      ];
+      const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
+      for (const dependency of dependencies) {
+        if (dependency.tableOfContentsItemId) {
+          const source = allSources.find(
+            (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
+          );
+          if (source) {
+            return source;
+          }
+        }
+      }
+      return null;
+    }, [
+      node.attrs?.metrics,
+      reportContext.overlaySources,
+      reportContext.adminSources,
+    ]);
+
+    // Get buffer from dependencies
+    const buffer = ((node.attrs?.metrics || []) as MetricDependency[]).find(
+      (m) => m.parameters?.bufferDistanceKm !== undefined
+    )?.parameters?.bufferDistanceKm;
+
+    const handleBufferClick = () => {
+      const currentValue = buffer !== undefined ? String(buffer) : "0";
+      const value = window.prompt(
+        t("Enter buffer distance in kilometers (or 0 for none)"),
+        currentValue
+      );
+      if (value === null) {
+        // User cancelled
+        return;
+      }
+      const numValue = value === "" || value === "0" ? 0 : Number(value);
+      onUpdateDependencyParameters((dependency) => {
+        if (dependency.subjectType === "geographies") {
+          return {
+            ...dependency.parameters,
+            bufferDistanceKm: undefined,
+          };
+        } else {
+          return {
+            ...dependency.parameters,
+            bufferDistanceKm: numValue === 0 ? undefined : numValue,
+          };
+        }
+      });
+    };
+
+    const bufferFormatter = useNumberFormatters({
+      unit: "kilometer",
+      unitDisplay: "short",
+    });
+
     return (
       <div className="flex gap-3 items-center text-sm text-gray-800">
         {labelColumnOptions.length > 0 && (
@@ -458,6 +520,36 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
             </TooltipPopoverContent>
           </Popover.Root>
         )}
+        <TooltipMorePopover>
+          <button
+            type="button"
+            onClick={handleBufferClick}
+            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
+          >
+            <span className="font-light text-gray-400">{t("buffer")}</span>
+            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
+              {bufferFormatter.distance(buffer ?? 0)}
+            </span>
+          </button>
+          <div className="flex">
+            <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
+              {t("Component Type")}
+            </span>
+            <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right">
+              {t("Intersecting Features List")}
+            </span>
+          </div>
+          {relatedOverlay && (
+            <div className="flex">
+              <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
+                {t("Layer")}
+              </span>
+              <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right truncate">
+                {relatedOverlay.tableOfContentsItem?.title || "Unknown"}
+              </span>
+            </div>
+          )}
+        </TooltipMorePopover>
       </div>
     );
   };
