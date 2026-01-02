@@ -566,7 +566,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
                 >
                   <p className="text-xs text-gray-500">
                     {t(
-                      "The following pluralized forms will be used depending on the count."
+                      "The following pluralized labels will be used depending on the count."
                     )}
                   </p>
                   <div className="space-y-1">
@@ -621,7 +621,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
                 {t("Layer")}
               </span>
-              <span className="text-sm font-light  whitespace-nowrap px-1 flex-1 text-right">
+              <span className="text-sm font-light  whitespace-nowrap px-1 flex-1 text-right  max-w-32 truncate">
                 {relatedOverlay.tableOfContentsItem?.title || "Unknown"}
               </span>
             </div>
@@ -646,3 +646,10 @@ function formatPresentationLabel(presentation: string) {
       return presentation;
   }
 }
+
+type LayerDetails = {
+  bestLabelColumn?: string;
+  labelSuitability: "good" | "poor" | "missing";
+  bestCategoryColumn?: string;
+  categorySuitability: "good" | "poor" | "missing";
+};

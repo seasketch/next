@@ -188,6 +188,8 @@ export default function ReportMetricsProgressDetails({
               {state.fragmentMetrics.map((metric) => (
                 <ReportTaskLineItem
                   key={metric.id}
+                  metricType={metric.type}
+                  parameters={metric.parameters}
                   title={
                     <span className="truncate">
                       <span

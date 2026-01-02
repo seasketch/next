@@ -8,7 +8,6 @@ import {
 import { DataSourceTypes } from "../../generated/graphql";
 import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
-import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
 import {
   subjectIsFragment,
@@ -17,11 +16,6 @@ import {
   UniqueIdIndex,
   CountMetric,
 } from "overlay-engine";
-import {
-  extractColorsForCategories,
-  extractColorForLayers,
-} from "../utils/colors";
-import { AnyLayer } from "mapbox-gl";
 import { useTranslation } from "react-i18next";
 import MapLayerVisibilityControl from "../components/MapLayerVisibilityControl";
 

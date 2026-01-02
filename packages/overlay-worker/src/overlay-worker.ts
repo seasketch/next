@@ -239,10 +239,16 @@ export default async function handler(payload: OverlayWorkerPayload) {
         // Extract valueColumn from parameters for column_values
         const columnValuesProperty =
           payload.type === "column_values" ? payload.valueColumn : undefined;
+
+        const bufferedIntersectionFeature = applySubjectBuffer(
+          intersectionFeature,
+          payload.bufferDistanceKm
+        );
+
         const processor = new OverlayEngineBatchProcessor(
           payload.type,
           1024 * 1024 * 1, // 5MB
-          simplify(intersectionFeature, {
+          simplify(bufferedIntersectionFeature, {
             tolerance: SIMPLIFICATION_TOLERANCE,
           }),
           source,

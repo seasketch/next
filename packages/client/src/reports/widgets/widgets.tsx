@@ -30,6 +30,14 @@ import {
   OverlappingAreasTable,
   OverlappingAreasTableTooltipControls,
 } from "./OverlappingAreasTable";
+import {
+  FeatureCountTable,
+  FeatureCountTableTooltipControls,
+} from "./FeatureCountTable";
+import {
+  IntersectingFeaturesList,
+  IntersectingFeaturesListTooltipControls,
+} from "./IntersectingFeaturesList";
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
@@ -85,6 +93,100 @@ function groupByForStyle(
   return undefined;
 }
 
+function labelColumnForGeostatsLayer(
+  geostatsLayer: GeostatsLayer,
+  mapboxGlStyles?: AnyLayer[] | null
+): string | undefined {
+  if (!geostatsLayer?.attributes) return undefined;
+
+  // Attributes to exclude from consideration
+  const excludePatterns = [
+    /shape[_-]?length/i,
+    /shape[_-]?area/i,
+    /area/i,
+    /length/i,
+    /perimeter/i,
+    /id$/i,
+    /^id/i,
+    /^fid/i,
+    /^gid/i,
+    /^objectid/i,
+    /^oid/i,
+  ];
+
+  // Important paint properties to check for get expressions
+  const importantPaintProps = [
+    "fill-color",
+    "line-color",
+    "circle-color",
+    "icon-image",
+  ];
+
+  // First, collect attributes used in the style
+  const styleAttributes = new Set<string>();
+  if (mapboxGlStyles?.length) {
+    for (const layer of mapboxGlStyles) {
+      if ("paint" in layer && layer.paint) {
+        for (const prop of importantPaintProps) {
+          const value = (layer.paint as Record<string, any>)[prop];
+          if (value && isExpression(value)) {
+            const getExpr = findGetExpression(value);
+            if (getExpr && "property" in getExpr) {
+              styleAttributes.add(getExpr.property);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Score all attributes
+  const scoredAttributes = geostatsLayer.attributes
+    .map((attr) => {
+      let score = 0;
+
+      // Check if number of unique values matches feature count
+      const uniqueValues = Object.keys(attr.values || {}).length;
+      const hasUniqueValues = uniqueValues === geostatsLayer.count;
+      if (hasUniqueValues) score += 3;
+
+      // Highest priority: attributes used in style
+      if (styleAttributes.has(attr.attribute)) {
+        score += 5;
+      }
+
+      // Check if it's a string type
+      const firstValue = Object.keys(attr.values || {})[0];
+      if (firstValue && typeof firstValue === "string") {
+        score += 2;
+      }
+
+      // Penalize attributes that match exclusion patterns
+      const shouldExclude = excludePatterns.some((pattern) =>
+        pattern.test(attr.attribute)
+      );
+      if (shouldExclude) score -= 2;
+
+      return {
+        attribute: attr.attribute,
+        score,
+        hasUniqueValues,
+      };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  // Prefer attributes with unique values, but fall back to highest scored if none
+  const bestWithUniqueValues = scoredAttributes.find(
+    (attr) => attr.hasUniqueValues
+  );
+  if (bestWithUniqueValues) {
+    return bestWithUniqueValues.attribute;
+  }
+
+  // Fall back to highest scored attribute
+  return scoredAttributes[0]?.attribute;
+}
+
 export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
   props
 ) => {
@@ -97,6 +199,10 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <SketchAttributesTableTooltipControls {...props} />;
     case "OverlappingAreasTable":
       return <OverlappingAreasTableTooltipControls {...props} />;
+    case "FeatureCountTable":
+      return <FeatureCountTableTooltipControls {...props} />;
+    case "IntersectingFeaturesList":
+      return <IntersectingFeaturesListTooltipControls {...props} />;
     default:
       return null;
   }
@@ -251,6 +357,10 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <SketchAttributesTable {...widgetProps} />;
     case "OverlappingAreasTable":
       return <OverlappingAreasTable {...widgetProps} />;
+    case "FeatureCountTable":
+      return <FeatureCountTable {...widgetProps} />;
+    case "IntersectingFeaturesList":
+      return <IntersectingFeaturesList {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -436,6 +546,10 @@ export function buildReportCommandGroups({
             source.mapboxGlStyles,
             geostatsLayer
           );
+          const bestLabelColumn = labelColumnForGeostatsLayer(
+            geostatsLayer,
+            source.mapboxGlStyles
+          );
           if (
             [
               "Polygon",
@@ -462,6 +576,61 @@ export function buildReportCommandGroups({
                       subjectType: "fragments",
                       tableOfContentsItemId: tocId,
                       parameters: {},
+                    },
+                  ],
+                });
+              },
+            });
+            children.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-feature-count-table`,
+              label: "Feature Count Table",
+              description:
+                "Table with feature counts, optionally grouped by a class key and compared to counts in the entire geography.",
+              run: (state, dispatch, view) => {
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "FeatureCountTable",
+                  componentSettings: {},
+                  metrics: [
+                    {
+                      type: "count",
+                      subjectType: "fragments",
+                      tableOfContentsItemId: tocId,
+                      parameters: {
+                        groupBy: groupByColumn,
+                      },
+                    },
+                    {
+                      type: "count",
+                      subjectType: "geographies",
+                      tableOfContentsItemId: tocId,
+                      parameters: {
+                        groupBy: groupByColumn,
+                      },
+                    },
+                  ],
+                });
+              },
+            });
+            children.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-intersecting-features-list`,
+              label: "Intersecting Features List",
+              description: "List of features that intersect with the sketch.",
+              run: (state, dispatch, view) => {
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "IntersectingFeaturesList",
+                  componentSettings: {
+                    labelColumn: bestLabelColumn,
+                  },
+                  metrics: [
+                    {
+                      type: "presence_table",
+                      subjectType: "fragments",
+                      tableOfContentsItemId: tocId,
+                      parameters: {
+                        maxResults: 25,
+                      },
                     },
                   ],
                 });
