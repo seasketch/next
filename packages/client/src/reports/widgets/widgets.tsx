@@ -550,6 +550,11 @@ export function buildReportCommandGroups({
             geostatsLayer,
             source.mapboxGlStyles
           );
+          const numericColumns = geostatsLayer.attributes
+            .filter((attr) => attr.type === "number")
+            .map((attr) => attr.attribute);
+          const bestNumericColumn =
+            numericColumns.length > 0 ? numericColumns[0] : undefined;
           if (
             [
               "Polygon",
@@ -636,6 +641,34 @@ export function buildReportCommandGroups({
                 });
               },
             });
+            if (bestNumericColumn) {
+              children.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-inline-column-stats`,
+                label: "Inline Column Stats",
+                description:
+                  "Summarize numeric columns with a mean, min, max, or distinct value count.",
+                run: (state, dispatch, view) => {
+                  return insertInlineMetric(view, state.selection.ranges[0], {
+                    type: "InlineMetric",
+                    metrics: [
+                      {
+                        type: "column_values",
+                        subjectType: "fragments",
+                        tableOfContentsItemId: tocId,
+                        parameters: {
+                          valueColumn: bestNumericColumn,
+                        },
+                      },
+                    ],
+                    componentSettings: {
+                      presentation: "column_values",
+                      stat: "mean",
+                    },
+                  });
+                },
+              });
+            }
           }
           switch (geostatsLayer.geometry) {
             case "Polygon":

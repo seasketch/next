@@ -221,7 +221,7 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
   if (blocks.length) {
     groups.push({
       id: "blocks",
-      label: "Blocks & Lists",
+      label: "Basic Blocks",
       items: blocks,
     });
   }
@@ -673,11 +673,11 @@ export function useSlashCommandPalette({
                     key={group.id}
                     className={
                       groupIdx < filtered.groups.length - 1
-                        ? "border-b border-gray-100"
+                        ? "border-b border-gray-100 pt-1 pb-2"
                         : ""
                     }
                   >
-                    <div className="px-3 pt-2 pb-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                    <div className="px-3 pt-2 pb-2 text-xs font-semibold  text-gray-500">
                       {group.label}
                     </div>
                     {group.items.map((item) => {

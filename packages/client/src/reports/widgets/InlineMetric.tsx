@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import {
+  ColumnValuesMetric,
   CountMetric,
   DistanceToShoreMetric,
   Metric,
@@ -11,6 +12,7 @@ import {
   findPrimaryGeographyId,
   subjectIsFragment,
   subjectIsGeography,
+  ColumnValueStats,
 } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
@@ -18,6 +20,7 @@ import {
   TooltipMorePopover,
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
+import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
 import { AreaUnit, LengthUnit } from "../utils/units";
 import Skeleton from "../../components/Skeleton";
@@ -30,9 +33,14 @@ import { useReportContext } from "../ReportContext";
 import useCurrentLang from "../../useCurrentLang";
 import * as Popover from "@radix-ui/react-popover";
 import { Pencil2Icon } from "@radix-ui/react-icons";
+import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 
 export type PluralizedMessages = Record<string, string>;
 export type PluralizedMessagesByLang = Record<string, PluralizedMessages>;
+type ColumnValuesStat = Exclude<
+  keyof ColumnValueStats,
+  "histogram" | "totalAreaSqKm"
+>;
 
 const defaultPluralizedCountLabels = {
   en: {
@@ -254,7 +262,9 @@ export const InlineMetric: ReportWidget<{
     | "percent_area"
     | "distance_to_shore"
     | "overlay_area"
-    | "count";
+    | "count"
+    | "column_values";
+  stat?: ColumnValuesStat;
   hideLabelForCount?: boolean;
   pluralizedCountLabels?: PluralizedMessagesByLang;
 }> = ({
@@ -372,6 +382,20 @@ export const InlineMetric: ReportWidget<{
           return `${formatters.count(count)} ${label}`;
         }
       }
+      case "column_values": {
+        const columnValues = metrics.filter(
+          (m) => m.type === "column_values" && subjectIsFragment(m.subject)
+        );
+        if (!columnValues.length) {
+          throw new Error("Column values not found in metrics.");
+        }
+        const combined = combineMetricsForFragments(
+          columnValues as Pick<Metric, "type" | "value">[]
+        ) as ColumnValuesMetric;
+        console.log("combined", combined);
+        // @ts-ignore
+        return combined.value["*"]?.[componentSettings?.stat || "mean"];
+      }
       default:
         // eslint-disable-next-line i18next/no-literal-string
         errors.push(`Unsupported presentation: ${presentation}`);
@@ -381,6 +405,7 @@ export const InlineMetric: ReportWidget<{
     loading,
     metrics,
     componentSettings?.presentation,
+    componentSettings?.stat,
     formatters,
     sketchClass.clippingGeographies,
     errors,
@@ -429,6 +454,7 @@ export const InlineMetric: ReportWidget<{
 export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   node,
   onUpdate,
+  onUpdateDependencyParameters,
 }) => {
   const presentation =
     node.attrs.componentSettings.presentation || "total_area";
@@ -442,15 +468,31 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   const pluralCategories = useMemo(() => {
     return new Intl.PluralRules(lang.code).resolvedOptions().pluralCategories;
   }, [lang.code]);
-  const { pluralRules, defaultMessages, customMessages } = useMemo(() => {
-    const pluralRules = new Intl.PluralRules(lang.code);
+  const { defaultMessages, customMessages } = useMemo(() => {
     const defaultMessages =
       defaultPluralizedCountLabels[lang.code] ||
       defaultPluralizedCountLabels.en;
     const customMessages =
       componentSettings?.pluralizedCountLabels?.[lang.code];
-    return { pluralRules, defaultMessages, customMessages };
+    return { defaultMessages, customMessages };
   }, [lang.code, componentSettings?.pluralizedCountLabels]);
+
+  const sources = useMemo(() => {
+    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
+    const allSources = [
+      ...(reportContext.overlaySources || []),
+      ...(reportContext.adminSources || []),
+    ];
+    return allSources.filter((s) =>
+      dependencies.some(
+        (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
+      )
+    );
+  }, [
+    node.attrs?.metrics,
+    reportContext.overlaySources,
+    reportContext.adminSources,
+  ]);
 
   const relatedOverlay = useMemo(() => {
     const allSources = [
@@ -474,6 +516,104 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     reportContext.overlaySources,
     reportContext.adminSources,
   ]);
+
+  const currentValueColumn = useMemo(() => {
+    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
+    const depWithValueColumn = dependencies.find(
+      (d) => d.parameters?.valueColumn !== undefined
+    );
+    return (depWithValueColumn?.parameters?.valueColumn as string) || "";
+  }, [node.attrs?.metrics]);
+
+  const valueColumnOptions = useMemo(() => {
+    if (presentation !== "column_values") return [];
+    const options: Array<{ value: string; label: ReactNode }> = [];
+    const source = sources?.[0];
+    if (!source?.geostats) return options;
+
+    const geoLayer = isGeostatsLayer(
+      (source.geostats as any)?.layers?.[0] as GeostatsLayer
+    )
+      ? ((source.geostats as any).layers[0] as GeostatsLayer)
+      : undefined;
+
+    if (!geoLayer?.attributes) return options;
+
+    for (const attr of geoLayer.attributes) {
+      // if (attr.type !== "number") continue;
+      const exampleValues = Object.keys(attr.values || {})
+        .slice(0, 5)
+        .map((v) => String(v));
+      const examplesText =
+        exampleValues.length > 0 ? exampleValues.join(", ") : "";
+
+      options.push({
+        value: attr.attribute,
+        label: (
+          <div className="flex flex-col">
+            <span className="font-medium">{attr.attribute}</span>
+            {examplesText && (
+              <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                {examplesText}
+              </span>
+            )}
+          </div>
+        ),
+      });
+    }
+
+    if (
+      currentValueColumn &&
+      !options.some((opt) => opt.value === currentValueColumn)
+    ) {
+      options.unshift({
+        value: currentValueColumn,
+        label: (
+          <div className="flex flex-col">
+            <span className="font-medium">{currentValueColumn}</span>
+            <span className="text-xs text-gray-500 truncate max-w-[200px]">
+              {t("Current selection")}
+            </span>
+          </div>
+        ),
+      });
+    }
+
+    return options;
+  }, [presentation, sources, currentValueColumn, t]);
+
+  const statOptions = useMemo(
+    () => [
+      { value: "mean", label: t("Mean") },
+      { value: "min", label: t("Minimum") },
+      { value: "max", label: t("Maximum") },
+      { value: "stdDev", label: t("Standard deviation") },
+      { value: "sum", label: t("Sum") },
+      { value: "countDistinct", label: t("Distinct values") },
+    ],
+    [t]
+  );
+
+  const selectedStat: ColumnValuesStat =
+    componentSettings.stat || ("mean" as ColumnValuesStat);
+
+  const handleValueColumnChange = (value: string) => {
+    onUpdateDependencyParameters((dependency) => {
+      if (dependency.type !== "column_values") {
+        return dependency.parameters || {};
+      }
+      return {
+        ...(dependency.parameters || {}),
+        valueColumn: value,
+      };
+    });
+  };
+
+  const handleStatChange = (stat: ColumnValuesStat) => {
+    onUpdate({
+      componentSettings: { ...componentSettings, stat },
+    });
+  };
 
   const [countLabelsModalOpen, setCountLabelsModalOpen] = useState(false);
 
@@ -526,6 +666,23 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               },
             })
           }
+        />
+      )}
+      {presentation === "column_values" && valueColumnOptions.length > 0 && (
+        <LabeledDropdown
+          label={t("Value column")}
+          value={currentValueColumn || valueColumnOptions[0]?.value || ""}
+          options={valueColumnOptions}
+          onChange={handleValueColumnChange}
+          getDisplayLabel={(selected) => selected?.value || ""}
+        />
+      )}
+      {presentation === "column_values" && (
+        <LabeledDropdown
+          label={t("Stat")}
+          value={selectedStat}
+          options={statOptions}
+          onChange={(val) => handleStatChange(val as ColumnValuesStat)}
         />
       )}
       {presentation === "count" && (
@@ -647,6 +804,7 @@ function formatPresentationLabel(presentation: string) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 type LayerDetails = {
   bestLabelColumn?: string;
   labelSuitability: "good" | "poor" | "missing";
