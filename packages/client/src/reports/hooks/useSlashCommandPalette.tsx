@@ -245,6 +245,8 @@ export function useSlashCommandPalette({
   const [previewKey, setPreviewKey] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
   const listContainerRef = useRef<HTMLDivElement | null>(null);
+  const previousBodyOverflowRef = useRef<string | null>(null);
+  const paletteContainerRef = useRef<HTMLDivElement | null>(null);
 
   const filtered = useMemo<{
     groups: CommandPaletteGroup[];
@@ -541,6 +543,56 @@ export function useSlashCommandPalette({
     }
   }, [activeIndex, filtered.flatItems, trigger]);
 
+  useEffect(() => {
+    if (!trigger) {
+      return;
+    }
+    if (typeof window === "undefined" || typeof document === "undefined") {
+      return;
+    }
+
+    const container = paletteContainerRef.current;
+    const handler = (event: WheelEvent | TouchEvent) => {
+      if (!container) {
+        return;
+      }
+      const target = event.target as Node | null;
+      if (target && container.contains(target)) {
+        return;
+      }
+      event.preventDefault();
+    };
+
+    const opts: AddEventListenerOptions = { passive: false, capture: true };
+    window.addEventListener("wheel", handler, opts);
+    window.addEventListener("touchmove", handler, opts);
+
+    return () => {
+      window.removeEventListener("wheel", handler, opts);
+      window.removeEventListener("touchmove", handler, opts);
+    };
+  }, [trigger]);
+
+  useEffect(() => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    const body = document.body;
+    if (trigger) {
+      if (previousBodyOverflowRef.current === null) {
+        previousBodyOverflowRef.current = body.style.overflow;
+      }
+      body.style.overflow = "hidden";
+      return () => {
+        body.style.overflow = previousBodyOverflowRef.current ?? "";
+        previousBodyOverflowRef.current = null;
+      };
+    } else if (previousBodyOverflowRef.current !== null) {
+      body.style.overflow = previousBodyOverflowRef.current ?? "";
+      previousBodyOverflowRef.current = null;
+    }
+  }, [trigger]);
+
   const palettePosition = useMemo(() => {
     if (!trigger) {
       return null;
@@ -603,6 +655,7 @@ export function useSlashCommandPalette({
             top: palettePosition?.top ?? trigger.coords.bottom + 6,
           }}
           data-report-command-palette="true"
+          ref={paletteContainerRef}
         >
           <div className="relative">
             <div
@@ -669,9 +722,7 @@ export function useSlashCommandPalette({
                                 }
                               }}
                             >
-                              <span className="text-sm font-medium">
-                                {item.label}
-                              </span>
+                              <span className="text-sm">{item.label}</span>
                             </button>
                           </Popover.Anchor>
                           <Popover.Content
