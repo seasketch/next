@@ -40,8 +40,11 @@ export const IntersectingFeaturesList: ReportWidget<
   const [showAll, setShowAll] = useState(false);
 
   const labelColumn = componentSettings.labelColumn;
-  const maxDisplayItems =
+  const maxDisplayItemsSetting =
     componentSettings.maxDisplayItems ?? DEFAULT_MAX_DISPLAY_ITEMS;
+  // Use 0 to represent "all" - show all items
+  const maxDisplayItems =
+    maxDisplayItemsSetting === 0 ? Infinity : maxDisplayItemsSetting;
 
   // Combine fragment metrics using combineMetricsForFragments
   const tableData = useMemo(() => {
@@ -175,7 +178,8 @@ export const IntersectingFeaturesList: ReportWidget<
   const displayedValues = showAll
     ? tableData.values
     : tableData.values.slice(0, maxDisplayItems);
-  const hasMore = tableData.values.length > maxDisplayItems;
+  const hasMore =
+    maxDisplayItems !== Infinity && tableData.values.length > maxDisplayItems;
 
   if (!loading && tableData.values.length === 0) {
     return (
@@ -469,7 +473,11 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
         )}
         <LabeledDropdown
           label={t("max displayed")}
-          value={String(settings.maxDisplayItems ?? DEFAULT_MAX_DISPLAY_ITEMS)}
+          value={
+            settings.maxDisplayItems === 0
+              ? "all"
+              : String(settings.maxDisplayItems ?? DEFAULT_MAX_DISPLAY_ITEMS)
+          }
           options={[
             { value: "5", label: "5" },
             { value: "8", label: "8" },
@@ -477,8 +485,13 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
             { value: "12", label: "12" },
             { value: "20", label: "20" },
             { value: "25", label: "25" },
+            { value: "all", label: t("all") },
           ]}
-          onChange={(val) => handleUpdate({ maxDisplayItems: Number(val) })}
+          onChange={(val) =>
+            handleUpdate({
+              maxDisplayItems: val === "all" ? 0 : Number(val),
+            })
+          }
         />
         {allAvailableColumns.length > 0 && (
           <Popover.Root

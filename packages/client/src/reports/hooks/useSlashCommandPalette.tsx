@@ -31,7 +31,7 @@ type TriggerState = {
   from: number;
   to: number;
   query: string;
-  coords: { left: number; top: number; bottom: number };
+  coords: { left: number; right: number; top: number; bottom: number };
   source: TriggerSource;
 };
 
@@ -322,11 +322,24 @@ export function useSlashCommandPalette({
             prev.to === to &&
             prev.query === query &&
             prev.coords.left === coords.left &&
+            prev.coords.right === coords.right &&
+            prev.coords.top === coords.top &&
             prev.coords.bottom === coords.bottom
           ) {
             return prev;
           }
-          return { from, to, query, coords, source: "slash" };
+          return {
+            from,
+            to,
+            query,
+            coords: {
+              left: coords.left,
+              right: coords.right,
+              top: coords.top,
+              bottom: coords.bottom,
+            },
+            source: "slash",
+          };
         });
         return;
       }
@@ -339,7 +352,12 @@ export function useSlashCommandPalette({
                 ...prev,
                 from: selection.from,
                 to: selection.from,
-                coords,
+                coords: {
+                  left: coords.left,
+                  right: coords.right,
+                  top: coords.top,
+                  bottom: coords.bottom,
+                },
               }
             : prev
         );
@@ -371,7 +389,12 @@ export function useSlashCommandPalette({
       from: selection.from,
       to: selection.from,
       query: "",
-      coords,
+      coords: {
+        left: coords.left,
+        right: coords.right,
+        top: coords.top,
+        bottom: coords.bottom,
+      },
       source: "manual",
     });
     setActiveIndex(0);
@@ -518,19 +541,73 @@ export function useSlashCommandPalette({
     }
   }, [activeIndex, filtered.flatItems, trigger]);
 
+  const palettePosition = useMemo(() => {
+    if (!trigger) {
+      return null;
+    }
+
+    const margin = 8;
+    const offset = 6;
+    const paletteWidth = 288; // tailwind w-72
+
+    const viewportHeight =
+      typeof window !== "undefined" ? window.innerHeight : null;
+    const viewportWidth =
+      typeof window !== "undefined" ? window.innerWidth : null;
+
+    const availableBelow =
+      viewportHeight != null
+        ? viewportHeight - (trigger.coords.bottom + offset) - margin
+        : null;
+    const availableAbove =
+      viewportHeight != null ? trigger.coords.top - offset - margin : null;
+
+    const desiredHeight = 320;
+    const shouldOpenUp =
+      viewportHeight != null &&
+      availableAbove != null &&
+      availableBelow != null &&
+      trigger.coords.bottom + offset + desiredHeight + margin >
+        viewportHeight &&
+      availableAbove > availableBelow;
+
+    const availableHeight = shouldOpenUp ? availableAbove : availableBelow;
+    const maxHeight = viewportHeight
+      ? Math.max(120, Math.min(320, Math.max(0, availableHeight ?? 320)))
+      : 320;
+
+    const rawTop = shouldOpenUp
+      ? trigger.coords.top - offset - maxHeight
+      : trigger.coords.bottom + offset;
+    const top = viewportHeight
+      ? Math.max(margin, Math.min(rawTop, viewportHeight - maxHeight - margin))
+      : rawTop;
+
+    const rawLeft = trigger.coords.left;
+    const left = viewportWidth
+      ? Math.max(
+          margin,
+          Math.min(rawLeft, viewportWidth - paletteWidth - margin)
+        )
+      : rawLeft;
+
+    return { left, top, maxHeight };
+  }, [trigger]);
+
   const palette = trigger
     ? createPortal(
         <div
           className="fixed z-50"
           style={{
-            left: trigger.coords.left,
-            top: trigger.coords.bottom + 6,
+            left: palettePosition?.left ?? trigger.coords.left,
+            top: palettePosition?.top ?? trigger.coords.bottom + 6,
           }}
           data-report-command-palette="true"
         >
           <div className="relative">
             <div
-              className="w-72 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl"
+              className="w-72 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl"
+              style={{ maxHeight: palettePosition?.maxHeight ?? 320 }}
               ref={listContainerRef}
             >
               {filtered.groups.length === 0 ? (
@@ -574,7 +651,6 @@ export function useSlashCommandPalette({
                                   : "hover:bg-gray-50 text-gray-900"
                               }`}
                               onClick={(e) => {
-                                console.log("clicked", previewItem);
                                 e.preventDefault();
                                 if (hasChildren) {
                                   setPreviewKey(refKey);
@@ -604,6 +680,14 @@ export function useSlashCommandPalette({
                             sideOffset={12}
                             collisionPadding={12}
                             className="z-50 outline-none focus:outline-none"
+                            onOpenAutoFocus={(event) => {
+                              event.preventDefault();
+                              viewRef.current?.focus();
+                            }}
+                            onCloseAutoFocus={(event) => {
+                              event.preventDefault();
+                              viewRef.current?.focus();
+                            }}
                             onMouseEnter={() => setPreviewKey(refKey)}
                             onMouseLeave={() => setPreviewKey(null)}
                           >
