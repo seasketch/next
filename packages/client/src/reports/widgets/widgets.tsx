@@ -378,6 +378,11 @@ export type BuildReportCommandGroupsArgs = {
   geographies?: Pick<GeographyDetailsFragment, "id" | "name">[];
   clippingGeography?: number;
   sketchClassGeometryType?: SketchGeometryType;
+  overlayFooterItem?: CommandPaletteItem;
+  overlayAugmenter?: (input: {
+    source: OverlaySourceDetailsFragment;
+    item: CommandPaletteItem;
+  }) => CommandPaletteItem;
 };
 
 /**
@@ -393,6 +398,8 @@ export function buildReportCommandGroups({
   geographies,
   clippingGeography,
   sketchClassGeometryType,
+  overlayFooterItem,
+  overlayAugmenter,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
 
@@ -732,7 +739,7 @@ export function buildReportCommandGroups({
             }
           }
         }
-        return {
+        let item: CommandPaletteItem = {
           // eslint-disable-next-line i18next/no-literal-string
           id: `overlay-layer-${tocId}`,
           label: title,
@@ -740,13 +747,23 @@ export function buildReportCommandGroups({
           run: () => false,
           children,
         };
+        if (overlayAugmenter) {
+          item = overlayAugmenter({ source, item });
+        }
+        return item;
       });
 
-    if (overlayItems.length) {
+    if (overlayItems.length || overlayFooterItem) {
+      const sortedItems = overlayItems.sort((a, b) =>
+        a.label.localeCompare(b.label)
+      );
+      if (overlayFooterItem) {
+        sortedItems.push(overlayFooterItem);
+      }
       commandGroups.push({
         id: "layer-overlay-analysis",
         label: "Layer Overlay Analysis",
-        items: overlayItems.sort((a, b) => a.label.localeCompare(b.label)),
+        items: sortedItems,
       });
     }
   }

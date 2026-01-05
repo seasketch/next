@@ -720,3 +720,20 @@ query ProjectReportingLayers($slug: String!) {
     }
   }
 }
+
+mutation PreprocessSource($slug: String!, $sourceId: Int!) {
+  preprocessSource(input: { slug: $slug, sourceId: $sourceId }) {
+    tableOfContentsItem {
+      id
+      dataLayer {
+        id
+        dataSource {
+          id
+          sourceProcessingJob {
+            ...SourceProcessingJobDetails
+          }
+        }
+      }
+    }
+  }
+}

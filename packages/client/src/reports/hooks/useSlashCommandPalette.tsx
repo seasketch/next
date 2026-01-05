@@ -18,6 +18,7 @@ import {
   CommandPaletteGroup,
   CommandPaletteItem,
 } from "../commandPalette/types";
+import Spinner from "../../components/Spinner";
 
 type CommandPalettePreviewItem = CommandPaletteItem & {
   screenshotSrc?: string;
@@ -40,6 +41,8 @@ type UseSlashCommandPaletteOptions = {
   state?: EditorState;
   schema: Schema;
   groups?: CommandPaletteGroup[];
+  requestedPreviewKey?: string | null;
+  onPreviewKeyApplied?: () => void;
 };
 
 function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
@@ -234,6 +237,8 @@ export function useSlashCommandPalette({
   state,
   schema,
   groups = [],
+  requestedPreviewKey,
+  onPreviewKeyApplied,
 }: UseSlashCommandPaletteOptions) {
   const baseGroups = useMemo(() => buildBaseGroups(schema), [schema]);
   const combinedGroups = useMemo(
@@ -529,6 +534,17 @@ export function useSlashCommandPalette({
   }, [filtered.flatItems]);
 
   useEffect(() => {
+    if (requestedPreviewKey) {
+      const idx = lookup.get(requestedPreviewKey);
+      if (idx !== undefined) {
+        setActiveIndex(idx);
+        setPreviewKey(requestedPreviewKey);
+        onPreviewKeyApplied?.();
+      }
+    }
+  }, [lookup, onPreviewKeyApplied, requestedPreviewKey]);
+
+  useEffect(() => {
     if (!trigger || !filtered.flatItems.length) {
       return;
     }
@@ -592,6 +608,35 @@ export function useSlashCommandPalette({
       previousBodyOverflowRef.current = null;
     }
   }, [trigger]);
+
+  const normalizeState = (state?: string | null) => {
+    if (!state) return null;
+    const label = state.replace(/_/g, " ").toLowerCase();
+    return label.charAt(0).toUpperCase() + label.slice(1);
+  };
+
+  const statusIsActive = (status?: CommandPaletteItem["status"]) => {
+    const normalized = status?.state?.toLowerCase();
+    return normalized === "processing" || normalized === "queued";
+  };
+
+  const statusLabel = (status?: CommandPaletteItem["status"]) => {
+    if (!status) return null;
+    if (status.label) return status.label;
+    if (status.progressPercent != null) {
+      const base = normalizeState(status.state) || "Processing";
+      return `${base} ${status.progressPercent}%`;
+    }
+    return normalizeState(status.state);
+  };
+
+  const renderStatusIcon = (status?: CommandPaletteItem["status"]) => {
+    if (!status) return null;
+    if (statusIsActive(status)) {
+      return <Spinner mini />;
+    }
+    return null;
+  };
 
   const palettePosition = useMemo(() => {
     if (!trigger) {
@@ -686,7 +731,13 @@ export function useSlashCommandPalette({
                         lookup.get(`${group.id}:${previewItem.id}`) ?? 0;
                       const isActive = itemIndex === activeIndex;
                       const refKey = `${group.id}:${previewItem.id}`;
-                      const hasChildren = !!previewItem.children?.length;
+                      const hasChildren =
+                        !!previewItem.children?.length ||
+                        !!previewItem.customPopoverContent;
+                      const isDisabled = previewItem.disabled;
+                      const inlineStatus = renderStatusIcon(previewItem.status);
+                      const closePopover = () => setPreviewKey(null);
+                      const focusPalette = () => viewRef.current?.focus();
                       return (
                         <Popover.Root
                           key={previewItem.id}
@@ -702,9 +753,13 @@ export function useSlashCommandPalette({
                                 isActive
                                   ? "bg-blue-50 text-blue-900"
                                   : "hover:bg-gray-50 text-gray-900"
+                              } ${
+                                isDisabled ? "opacity-60 cursor-not-allowed" : ""
                               }`}
+                              disabled={isDisabled}
                               onClick={(e) => {
                                 e.preventDefault();
+                                if (isDisabled) return;
                                 if (hasChildren) {
                                   setPreviewKey(refKey);
                                 } else {
@@ -722,7 +777,17 @@ export function useSlashCommandPalette({
                                 }
                               }}
                             >
-                              <span className="text-sm">{item.label}</span>
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-2">
+                                  {previewItem.icon ? (
+                                    <span className="text-gray-500">
+                                      {previewItem.icon}
+                                    </span>
+                                  ) : null}
+                                  <span className="text-sm">{item.label}</span>
+                                </div>
+                                {inlineStatus}
+                              </div>
                             </button>
                           </Popover.Anchor>
                           <Popover.Content
@@ -742,72 +807,96 @@ export function useSlashCommandPalette({
                             onMouseEnter={() => setPreviewKey(refKey)}
                             onMouseLeave={() => setPreviewKey(null)}
                           >
-                            {hasChildren ? (
-                              <div className="w-64 rounded-md border border-gray-200 bg-white shadow-xl">
-                                <div className="px-3 py-2 border-b border-gray-100">
-                                  <div className=" text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                    {previewItem.label}
-                                  </div>
-                                  {previewItem.description ? (
-                                    <div className="mt-1 text-xs text-gray-600">
-                                      {previewItem.description}
-                                    </div>
-                                  ) : null}
-                                </div>
-                                <div className="py-1">
-                                  {previewItem.children?.map((child) => (
-                                    <button
-                                      key={child.id}
-                                      className="w-full px-3 py-1.5 text-left text-sm text-gray-900 hover:bg-gray-50"
-                                      onClick={(e) => {
-                                        e.preventDefault();
-                                        applyCommand(child);
-                                        setPreviewKey(null);
-                                      }}
-                                    >
-                                      <div className="flex flex-col gap-0.5">
-                                        <span className="font-medium">
-                                          {child.label}
-                                        </span>
-                                        {child.description ? (
-                                          <span className="text-xs text-gray-600">
-                                            {child.description}
-                                          </span>
-                                        ) : null}
+                            {(() => {
+                              if (
+                                previewItem.customPopoverContent &&
+                                hasChildren
+                              ) {
+                                return previewItem.customPopoverContent({
+                                  closePopover: () => {
+                                    closePopover();
+                                  },
+                                  focusPalette,
+                                });
+                              }
+                              if (hasChildren) {
+                                return (
+                                  <div className="w-64 rounded-md border border-gray-200 bg-white shadow-xl">
+                                    <div className="px-3 py-2 border-b border-gray-100">
+                                      <div className="flex items-center justify-between gap-2">
+                                        <div className=" text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                          {previewItem.label}
+                                        </div>
+                                        {renderStatusIcon(previewItem.status)}
                                       </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="w-64 rounded-md outline-none border border-gray-200 bg-white shadow-xl focus:outline-none ring-0">
-                                <div className="h-32 w-full overflow-hidden rounded-t-md bg-gray-100">
-                                  {previewItem.screenshotSrc ? (
-                                    <img
-                                      src={previewItem.screenshotSrc}
-                                      alt={
-                                        previewItem.screenshotAlt ||
-                                        `${previewItem.label} preview`
-                                      }
-                                      className="h-full w-full object-cover"
-                                    />
-                                  ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                                      Screenshot coming soon
+                                      {statusLabel(previewItem.status) ? (
+                                        <div className="mt-1 text-xs text-gray-600">
+                                          {statusLabel(previewItem.status)}
+                                        </div>
+                                      ) : null}
+                                      {previewItem.description ? (
+                                        <div className="mt-1 text-xs text-gray-600">
+                                          {previewItem.description}
+                                        </div>
+                                      ) : null}
                                     </div>
-                                  )}
-                                </div>
-                                <div className="px-3 py-2">
-                                  <div className="text-sm font-semibold text-gray-900">
-                                    {previewItem.label}
+                                    <div className="py-1">
+                                      {previewItem.children?.map((child) => (
+                                        <button
+                                          key={child.id}
+                                          className="w-full px-3 py-1.5 text-left text-sm text-gray-900 hover:bg-gray-50"
+                                          onClick={(e) => {
+                                            e.preventDefault();
+                                            applyCommand(child);
+                                            setPreviewKey(null);
+                                          }}
+                                        >
+                                          <div className="flex flex-col gap-0.5">
+                                            <span className="font-medium">
+                                              {child.label}
+                                            </span>
+                                            {child.description ? (
+                                              <span className="text-xs text-gray-600">
+                                                {child.description}
+                                              </span>
+                                            ) : null}
+                                          </div>
+                                        </button>
+                                      ))}
+                                    </div>
                                   </div>
-                                  <div className="mt-1 text-xs text-gray-600 whitespace-pre-line">
-                                    {previewItem.description ||
-                                      "No description provided yet."}
+                                );
+                              }
+                              return (
+                                <div className="w-64 rounded-md outline-none border border-gray-200 bg-white shadow-xl focus:outline-none ring-0">
+                                  <div className="h-32 w-full overflow-hidden rounded-t-md bg-gray-100">
+                                    {previewItem.screenshotSrc ? (
+                                      <img
+                                        src={previewItem.screenshotSrc}
+                                        alt={
+                                          previewItem.screenshotAlt ||
+                                          `${previewItem.label} preview`
+                                        }
+                                        className="h-full w-full object-cover"
+                                      />
+                                    ) : (
+                                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
+                                        Screenshot coming soon
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="px-3 py-2">
+                                    <div className="text-sm font-semibold text-gray-900">
+                                      {previewItem.label}
+                                    </div>
+                                    <div className="mt-1 text-xs text-gray-600 whitespace-pre-line">
+                                      {previewItem.description ||
+                                        "No description provided yet."}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
+                              );
+                            })()}
                           </Popover.Content>
                         </Popover.Root>
                       );

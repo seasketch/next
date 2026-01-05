@@ -9235,6 +9235,10 @@ select{
   border-top-color:rgb(255 255 255 / var(--tw-border-opacity, 1))
 }
 
+.border-t-transparent{
+  border-top-color:transparent
+}
+
 .border-opacity-0{
   --tw-border-opacity:0
 }
@@ -11975,6 +11979,12 @@ select{
   backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
 }
 
+.backdrop-blur-\[1px\]{
+  --tw-backdrop-blur:blur(1px);
+  -webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
+}
+
 .backdrop-filter{
   -webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
   backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
@@ -13107,6 +13117,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:transparent
 }
 
+.focus\:bg-gray-50:focus{
+  --tw-bg-opacity:1;
+  background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
+}
+
 .focus\:bg-opacity-10:focus{
   --tw-bg-opacity:0.1
 }
@@ -13474,6 +13489,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:opacity-50:disabled{
   opacity:0.5
+}
+
+.disabled\:opacity-60:disabled{
+  opacity:0.6
 }
 
 .group:hover .group-hover\:block{

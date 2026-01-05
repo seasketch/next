@@ -6,6 +6,11 @@ export type CommandPaletteItem = {
   id: string;
   label: string;
   description?: string;
+  status?: {
+    label?: string;
+    progressPercent?: number | null;
+    state?: string | null;
+  };
   /**
    * Optional screenshot for previewing the command. If omitted, a placeholder
    * should be rendered.
@@ -14,6 +19,11 @@ export type CommandPaletteItem = {
   screenshotAlt?: string;
   keywords?: string[];
   icon?: ReactNode;
+  customPopoverContent?: (helpers: {
+    closePopover: () => void;
+    focusPalette: () => void;
+  }) => ReactNode;
+  disabled?: boolean;
   children?: CommandPaletteItem[];
   isEnabled?: (state: EditorState) => boolean;
   run?: (

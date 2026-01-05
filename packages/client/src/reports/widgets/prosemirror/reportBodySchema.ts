@@ -118,7 +118,7 @@ const reportTitleNode: NodeSpec = {
   content: "text*",
   group: "block",
   defining: true,
-  marks: "em",
+  marks: "",
   parseDOM: [{ tag: "h1[data-report-title]" }],
   toDOM: function () {
     return ["h1", { "data-report-title": "yes" }, 0];

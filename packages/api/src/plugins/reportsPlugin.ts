@@ -1,11 +1,7 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
-import {
-  hashMetricDependency,
-  MetricDependency,
-  MetricType,
-} from "overlay-engine";
+import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { Pool } from "pg";
 
 const geographyMetricTopicFromContext = async (args: any, context: any) => {
@@ -198,6 +194,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       extend type Project {
         reportingLayers: [ReportOverlaySource!]! @requires(columns: ["id"])
       }
+      
     `,
     resolvers: {
       Project: {
@@ -450,59 +447,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
   };
 });
 
-/**
- * Returns all overlay sources for a report. Each card in a report may have
- * layers associated with it for analysis. This function returns distinct layers
- * for all cards in a report.
- *
- * Of particular note for browser clients is the pre-processing state of the
- * source, indicating whether it is ready for metric calculation or not.
- *
- * @param reportId - The id of the report to get overlay sources for
- * @param pool - The database pool to use
- * @returns An array of ReportOverlaySourcePartial objects
- */
-async function getOverlaySources(reportId: number, pool: Pool) {
-  return [];
-  const rows = await pool.query<{
-    table_of_contents_item_id: number;
-    geostats: GeostatsLayer | RasterInfo;
-    mapbox_gl_styles: AnyLayer[];
-    source_processing_job_id?: string;
-    output_id: number | null;
-    source_url: string | null;
-  }>(
-    `
-      select 
-        distinct on (rcl.table_of_contents_item_id) rcl.table_of_contents_item_id, 
-        ds.geostats,
-        dl.mapbox_gl_styles,
-        coalesce(spj.job_key, duo.source_processing_job_key) as source_processing_job_id,
-        duo.id as output_id,
-        duo.url as source_url
-      from 
-        report_card_layers rcl
-      inner join table_of_contents_items t on t.id = rcl.table_of_contents_item_id
-      inner join data_layers dl on dl.id = t.data_layer_id
-      inner join data_sources ds on ds.id = dl.data_source_id
-      left join source_processing_jobs spj on spj.data_source_id = ds.id
-      left join data_upload_outputs duo on duo.data_source_id = ds.id and is_reporting_type(duo.type)
-      where 
-        report_card_id in (select report_card_ids_for_report($1))
-      `,
-    [reportId]
-  );
-  const overlaySources = rows.rows.map((row) => ({
-    tableOfContentsItemId: row.table_of_contents_item_id,
-    geostats: row.geostats,
-    mapboxGlStyles: row.mapbox_gl_styles,
-    sourceProcessingJobId: row.source_processing_job_id,
-    outputId: row.output_id,
-    sourceUrl: row.source_url,
-  })) as ReportOverlaySourcePartial[];
-  return overlaySources;
-}
-
 async function getOrCreateReportDependencies(
   reportId: number,
   pool: Pool,
@@ -510,10 +454,11 @@ async function getOrCreateReportDependencies(
   sketchId?: number
 ) {
   // Retrieve all overlay sources related to the report
-  const overlaySources = await getOverlaySources(reportId, pool);
+  // const overlaySources = await getOverlaySources(reportId, pool);
 
+  const relatedTableOfContentsItemIds = new Set<number>();
   const results = {
-    overlaySources,
+    overlaySources: [] as ReportOverlaySourcePartial[],
     ready: true,
     metrics: [] as any[],
     cardDependencyLists: [] as {
@@ -563,43 +508,6 @@ async function getOrCreateReportDependencies(
     [reportId]
   );
 
-  // first, create total_area metrics. These will be calculated for all
-  // geographies and fragments, regardless of configuration.
-
-  // const totalAreaMetrics: any[] = [];
-  // // First, create total_area metrics. These will be calculated for all
-  // // geographies and fragments, regardless of configuration.
-  // for (const geography of geogs) {
-  //   const metricId = await getOrCreateSpatialMetric(
-  //     pool,
-  //     null,
-  //     geography.id,
-  //     "total_area",
-  //     null,
-  //     {},
-  //     null,
-  //     projectId
-  //   );
-  //   totalAreaMetrics.push(metricId);
-  // }
-  // for (const fragment of fragments) {
-  //   const metricId = await getOrCreateSpatialMetric(
-  //     pool,
-  //     fragment,
-  //     null,
-  //     "total_area",
-  //     null,
-  //     {},
-  //     null,
-  //     projectId
-  //   );
-  //   totalAreaMetrics.push(metricId);
-  // }
-
-  // results.metrics.push(...totalAreaMetrics);
-
-  // TODO: Doesn't seem to consider overlays at all
-
   for (const card of cards.rows) {
     const cardDependencyList = {
       cardId: card.id,
@@ -617,8 +525,9 @@ async function getOrCreateReportDependencies(
         geogs
       );
 
-    // TODO: add overlay sources to the card dependency list
-    // add metrics to card dependency list
+    for (const tableOfContentsItemId of tableOfContentsItemIds) {
+      relatedTableOfContentsItemIds.add(tableOfContentsItemId);
+    }
     for (const metric of metrics) {
       cardDependencyList.metrics.push(metric.id);
       // Note that some performance optimization is possible here in order to
@@ -629,286 +538,27 @@ async function getOrCreateReportDependencies(
       }
     }
 
-    // for (const dependency of dependencies) {
-    //   if (dependency.subjectType === "fragments") {
-    //     for (const fragment of fragments) {
-    //       const metric = await getOrCreateSpatialMetric({
-    //         pool,
-    //         subjectFragmentId: fragment,
-    //         type: dependency.type,
-    //         parameters: dependency.parameters || {},
-    //         projectId,
-    //       });
-    //       cardDependencyList.metrics.push(metric.id);
-    //       const dependencyHash = hashMetricDependency(dependency);
-    //       console.log("dependencyHash", dependencyHash, dependency);
-    //       const existingResult = results.metrics.find(
-    //         (m) => m.id === metric.id
-    //       );
-    //       if (!existingResult) {
-    //         metric.dependencyHashes = [hashMetricDependency(dependency)];
-    //         results.metrics.push(metric);
-    //       } else if (
-    //         !existingResult.dependencyHashes.includes(dependencyHash)
-    //       ) {
-    //         existingResult.dependencyHashes.push(dependencyHash);
-    //       }
-    //     }
-    //   } else if (dependency.subjectType === "geographies") {
-    //     // If the metric dependency specifies a valid list of geographies, use
-    //     // it. Otherwise, calculate metrics for all geographies in the project.
-    //     let geographyIds = geogs.map((g) => g.id);
-    //     if (dependency.geographies && dependency.geographies.length > 0) {
-    //       geographyIds = [];
-    //       for (const geographyId of dependency.geographies) {
-    //         if (!geogs.find((g) => g.id === geographyId)) {
-    //           continue;
-    //         }
-    //         geographyIds.push(geographyId);
-    //       }
-    //     }
-    //     for (const geographyId of geographyIds) {
-    //       const metric = await getOrCreateSpatialMetric({
-    //         pool,
-    //         subjectGeographyId: geographyId,
-    //         type: dependency.type,
-    //         parameters: dependency.parameters || {},
-    //         projectId,
-    //       });
-    //       cardDependencyList.metrics.push(metric.id);
-    //       const dependencyHash = hashMetricDependency(dependency);
-    //       console.log("dependencyHash", dependencyHash, dependency);
-    //       const existingResult = results.metrics.find(
-    //         (m) => m.id === metric.id
-    //       );
-    //       if (!existingResult) {
-    //         metric.dependencyHashes = [hashMetricDependency(dependency)];
-    //         results.metrics.push(metric);
-    //       } else if (
-    //         !existingResult.dependencyHashes.includes(dependencyHash)
-    //       ) {
-    //         existingResult.dependencyHashes.push(dependencyHash);
-    //       }
-    //     }
-    //   } else {
-    //     throw new Error(`Unknown subject type: ${dependency.subjectType}`);
-    //   }
-    // }
-
-    // switch (card.type) {
-    //   case "OverlappingAreas": {
-    //     for (const layer of card.layers) {
-    //       cardDependencyList.overlaySources.push(layer.id);
-    //       const overlaySource = overlaySources.find(
-    //         (source) => source.tableOfContentsItemId === layer.id
-    //       );
-    //       if (!overlaySource) {
-    //         throw new Error(
-    //           `Overlay source not found for card layer: ${layer.id}`
-    //         );
-    //       }
-    //       let parameters = layer.layerParameters;
-    //       const bufferMeters = card.component_settings?.bufferMeters;
-    //       if (typeof bufferMeters === "number" && bufferMeters > 0) {
-    //         const bufferDistanceKm = bufferMeters / 1000;
-    //         parameters = {
-    //           ...(parameters || {}),
-    //           bufferDistanceKm,
-    //         };
-    //       }
-
-    //       const metrics = await getOrCreateMetricsOfType(
-    //         pool,
-    //         "overlay_area",
-    //         overlaySource,
-    //         parameters,
-    //         geogs.map((g) => g.id),
-    //         fragments,
-    //         projectId
-    //       );
-    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //       results.metrics.push(...metrics);
-    //     }
-    //     break;
-    //   }
-    //   case "Size": {
-    //     cardDependencyList.metrics.push(...totalAreaMetrics.map((m) => m.id));
-    //     break;
-    //   }
-    //   case "FeatureCount": {
-    //     for (const layer of card.layers) {
-    //       cardDependencyList.overlaySources.push(layer.id);
-    //       const overlaySource = overlaySources.find(
-    //         (source) => source.tableOfContentsItemId === layer.id
-    //       );
-    //       if (!overlaySource) {
-    //         throw new Error(
-    //           `Overlay source not found for card layer: ${layer.id}`
-    //         );
-    //       }
-    //       const metrics = await getOrCreateMetricsOfType(
-    //         pool,
-    //         "count",
-    //         overlaySource,
-    //         layer.layerParameters,
-    //         geogs.map((g) => g.id),
-    //         fragments,
-    //         projectId
-    //       );
-    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //       results.metrics.push(...metrics);
-    //     }
-    //     break;
-    //   }
-    //   case "Presence": {
-    //     for (const layer of card.layers) {
-    //       cardDependencyList.overlaySources.push(layer.id);
-    //       const overlaySource = overlaySources.find(
-    //         (source) => source.tableOfContentsItemId === layer.id
-    //       );
-    //       if (!overlaySource) {
-    //         throw new Error(
-    //           `Overlay source not found for card layer: ${layer.id}`
-    //         );
-    //       }
-    //       const metrics = await getOrCreateMetricsOfType(
-    //         pool,
-    //         "presence",
-    //         overlaySource,
-    //         layer.layerParameters,
-    //         [],
-    //         fragments,
-    //         projectId
-    //       );
-    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //       results.metrics.push(...metrics);
-    //     }
-    //     break;
-    //   }
-    //   case "FeatureList": {
-    //     for (const layer of card.layers) {
-    //       cardDependencyList.overlaySources.push(layer.id);
-    //       const overlaySource = overlaySources.find(
-    //         (source) => source.tableOfContentsItemId === layer.id
-    //       );
-    //       if (!overlaySource) {
-    //         throw new Error(
-    //           `Overlay source not found for card layer: ${layer.id}`
-    //         );
-    //       }
-    //       let parameters = layer.layerParameters;
-    //       // NOTE:
-    //       // This works just fine if you send it, but I'm just including all
-    //       // props for now so metrics don't need to be recalculated when the
-    //       // included properties change. At this point the results size doesn't
-    //       // matter as much.
-    //       //
-    //       // if (
-    //       //   card.component_settings.includedProperties &&
-    //       //   card.component_settings.includedProperties.length > 0
-    //       // ) {
-    //       //   parameters = {
-    //       //     ...parameters,
-    //       //     includedProperties:
-    //       //       card.component_settings.includedProperties.sort(),
-    //       //   };
-    //       // }
-    //       if (card.component_settings.resultsLimit) {
-    //         parameters = {
-    //           ...parameters,
-    //           resultsLimit: card.component_settings.resultsLimit,
-    //         };
-    //       }
-    //       const metrics = await getOrCreateMetricsOfType(
-    //         pool,
-    //         "presence_table",
-    //         overlaySource,
-    //         parameters,
-    //         [],
-    //         fragments,
-    //         projectId
-    //       );
-    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //       results.metrics.push(...metrics);
-    //     }
-    //     break;
-    //   }
-    //   case "ColumnStatistics": {
-    //     for (const layer of card.layers) {
-    //       cardDependencyList.overlaySources.push(layer.id);
-    //       const overlaySource = overlaySources.find(
-    //         (source) => source.tableOfContentsItemId === layer.id
-    //       );
-    //       if (!overlaySource) {
-    //         throw new Error(
-    //           `Overlay source not found for card layer: ${layer.id}`
-    //         );
-    //       }
-    //       if (!layer.layerParameters?.valueColumn) {
-    //         throw new Error(
-    //           `ColumnStatistics card requires valueColumn parameter for layer: ${layer.id}`
-    //         );
-    //       }
-    //       const metrics = await getOrCreateMetricsOfType(
-    //         pool,
-    //         "column_values",
-    //         overlaySource,
-    //         layer.layerParameters,
-    //         geogs.map((g) => g.id),
-    //         fragments,
-    //         projectId
-    //       );
-    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //       results.metrics.push(...metrics);
-    //     }
-    //     break;
-    //   }
-    //   case "RasterBandStatistics": {
-    //     for (const layer of card.layers) {
-    //       cardDependencyList.overlaySources.push(layer.id);
-    //       const overlaySource = overlaySources.find(
-    //         (source) => source.tableOfContentsItemId === layer.id
-    //       );
-    //       if (!overlaySource) {
-    //         throw new Error(
-    //           `Overlay source not found for card layer: ${layer.id}`
-    //         );
-    //       }
-    //       const metrics = await getOrCreateMetricsOfType(
-    //         pool,
-    //         "raster_stats",
-    //         overlaySource,
-    //         layer.layerParameters,
-    //         geogs.map((g) => g.id),
-    //         fragments,
-    //         projectId
-    //       );
-    //       cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //       results.metrics.push(...metrics);
-    //     }
-    //     break;
-    //   }
-    //   case "DistanceToShore": {
-    //     const metrics = await getOrCreateMetricsOfType(
-    //       pool,
-    //       "distance_to_shore",
-    //       {
-    //         sourceUrl: "https://uploads.seasketch.org/land-big-2.fgb",
-    //       } as ReportOverlaySourcePartial,
-    //       {},
-    //       [],
-    //       fragments,
-    //       projectId
-    //     );
-    //     cardDependencyList.metrics.push(...metrics.map((m) => m.id));
-    //     results.metrics.push(...metrics);
-    //   }
-    //   default:
-    //     // do nothing. some cards like sketchAttributes do not have dependencies
-    //     break;
-    // }
-
     results.cardDependencyLists.push(cardDependencyList);
+  }
+
+  const overlaySources = await getOverlaySourcesForDependencies(
+    pool,
+    Array.from(relatedTableOfContentsItemIds),
+    projectId
+  );
+
+  for (const tableOfContentsItemIdString in overlaySources) {
+    const tableOfContentsItemId = Number(tableOfContentsItemIdString);
+    results.overlaySources.push({
+      tableOfContentsItemId: tableOfContentsItemId,
+      geostats: overlaySources[tableOfContentsItemIdString].geostats,
+      mapboxGlStyles:
+        overlaySources[tableOfContentsItemIdString].mapboxGlStyles,
+      sourceProcessingJobId:
+        overlaySources[tableOfContentsItemIdString].sourceProcessingJobId,
+      outputId: overlaySources[tableOfContentsItemIdString].outputId,
+      sourceUrl: overlaySources[tableOfContentsItemIdString].sourceUrl,
+    });
   }
 
   // add all metrics to the results
@@ -944,6 +594,15 @@ async function getOrCreateSpatialMetric({
   if (type === "distance_to_shore" && !overlaySourceUrl) {
     overlaySourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
   }
+  if (
+    type !== "total_area" &&
+    !overlaySourceUrl &&
+    !sourceProcessingJobDependency
+  ) {
+    throw new Error(
+      "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
+    );
+  }
   const result = await pool.query(
     `
     select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int, $8::text) as metric
@@ -961,56 +620,6 @@ async function getOrCreateSpatialMetric({
   );
   return result.rows[0].metric;
 }
-
-// async function getOrCreateMetricsOfType(
-//   pool: Pool,
-//   type: MetricType,
-//   overlaySource: ReportOverlaySourcePartial,
-//   parameters:
-//     | {
-//         groupBy?: string | null;
-//         includedProperties?: string[] | null;
-//         valueColumn?: string | null;
-//         bufferDistanceKm?: number | null;
-//         resultsLimit?: number | null;
-//       }
-//     | undefined,
-//   geographyIds: number[],
-//   fragmentHashes: string[],
-//   projectId: number,
-//   dependencyHash: string
-// ) {
-//   const metrics: any[] = [];
-//   // first, create geography metrics
-//   for (const geographyId of geographyIds) {
-//     const metric = await getOrCreateSpatialMetric({
-//       pool,
-//       subjectGeographyId: geographyId,
-//       type,
-//       overlaySourceUrl: overlaySource.sourceUrl,
-//       parameters,
-//       sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
-//       projectId,
-//       dependencyHash,
-//     });
-//     metrics.push(metric);
-//   }
-//   // then, fragment metrics
-//   for (const fragmentHash of fragmentHashes) {
-//     const metric = await getOrCreateSpatialMetric({
-//       pool,
-//       subjectFragmentId: fragmentHash,
-//       type,
-//       overlaySourceUrl: overlaySource.sourceUrl,
-//       parameters,
-//       sourceProcessingJobDependency: overlaySource.sourceProcessingJobId,
-//       projectId,
-//       dependencyHash,
-//     });
-//     metrics.push(metric);
-//   }
-//   return metrics;
-// }
 
 /**
  * Can be used to start calculating report metrics for a sketch. Useful if we
@@ -1084,49 +693,127 @@ type ProsemirrorNode = {
 
 async function getOverlaySourcesForDependencies(
   pool: Pool,
-  dependencies: MetricDependency[]
-): Promise<{ [tableOfContentsItemId: number]: string }> {
-  const tableOfContentsItemIds: number[] = [];
-  const overlaySourceUrls: { [tableOfContentsItemId: number]: string } = {};
-  for (const dependency of dependencies) {
-    if (
-      dependency.tableOfContentsItemId &&
-      !tableOfContentsItemIds.includes(dependency.tableOfContentsItemId)
-    ) {
-      tableOfContentsItemIds.push(dependency.tableOfContentsItemId);
-    }
-  }
+  tableOfContentsItemIds: number[],
+  projectId: number
+): Promise<{
+  [tableOfContentsItemId: number]: {
+    sourceUrl?: string;
+    sourceProcessingJobId?: string;
+    tableOfContentsItemId: number;
+    geostats: any;
+    mapboxGlStyles: any;
+    outputId?: number;
+  };
+}> {
+  const results: {
+    [tableOfContentsItemId: number]: {
+      sourceUrl?: string;
+      sourceProcessingJobId?: string;
+      tableOfContentsItemId: number;
+      geostats: any;
+      mapboxGlStyles: any;
+      outputId?: number;
+    };
+  } = {};
   if (tableOfContentsItemIds.length > 0) {
     const { rows: overlaySourceRows } = await pool.query<{
       table_of_contents_item_id: number;
       source_url: string;
+      source_processing_job_id: string;
+      geostats: any;
+      mapbox_gl_styles: any;
+      output_id?: number;
     }>(
       `
       select
         items.id as table_of_contents_item_id,
-        outputs.url as source_url
+        outputs.url as source_url,
+        jobs.job_key as source_processing_job_id,
+        sources.geostats as geostats,
+        layers.mapbox_gl_styles as mapbox_gl_styles,
+        outputs.id as output_id
       from
         table_of_contents_items items
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
         join lateral (
-          select url
+          select url, id
           from data_upload_outputs o
           where o.data_source_id = sources.id
             and is_reporting_type(o.type)
           order by o.created_at desc
           limit 1
         ) outputs on true
+        left join source_processing_jobs jobs on jobs.data_source_id = sources.id
       where
         items.id = ANY($1::int[])
       `,
       [tableOfContentsItemIds]
     );
     for (const row of overlaySourceRows) {
-      overlaySourceUrls[row.table_of_contents_item_id] = row.source_url;
+      results[row.table_of_contents_item_id] = {
+        sourceUrl: row.source_url,
+        sourceProcessingJobId: row.source_processing_job_id,
+        tableOfContentsItemId: row.table_of_contents_item_id,
+        geostats: row.geostats,
+        mapboxGlStyles: row.mapbox_gl_styles,
+        outputId: row.output_id,
+      };
+    }
+    // if any of the source processing job ids are null, call preprocess_source for the source
+    for (const tableOfContentsItemId of tableOfContentsItemIds) {
+      const sourceProcessingJobId =
+        results[tableOfContentsItemId]?.sourceProcessingJobId;
+      if (!sourceProcessingJobId) {
+        await pool.query(
+          `select preprocess_source((select slug from projects where id = $1), (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = $2))) as table_of_contents_item_id`,
+          [projectId, tableOfContentsItemId]
+        );
+        // const rows = await pool.query<{ job_key: string }>(
+        //   `select job_key from source_processing_jobs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = $1))`,
+        //   [tableOfContentsItemId]
+        // );
+        const { rows } = await pool.query<{
+          table_of_contents_item_id: number;
+          source_url: string;
+          source_processing_job_id: string;
+          geostats: any;
+          mapbox_gl_styles: any;
+          output_id?: number;
+        }>(
+          `
+          select
+            items.id as table_of_contents_item_id,
+            jobs.job_key as source_processing_job_id,
+            sources.geostats as geostats,
+            layers.mapbox_gl_styles as mapbox_gl_styles
+          from
+            table_of_contents_items items
+            join data_layers layers on layers.id = items.data_layer_id
+            join data_sources sources on sources.id = layers.data_source_id
+            left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+          where
+            items.id = $1
+          `,
+          [tableOfContentsItemId]
+        );
+
+        if (rows.length > 0) {
+          results[tableOfContentsItemId] = {
+            tableOfContentsItemId: tableOfContentsItemId,
+            geostats: rows[0].geostats,
+            mapboxGlStyles: rows[0].mapbox_gl_styles,
+            sourceProcessingJobId: rows[0].source_processing_job_id,
+          };
+        } else {
+          throw new Error(
+            `Source processing job not found for table of contents item: ${tableOfContentsItemId}`
+          );
+        }
+      }
     }
   }
-  return overlaySourceUrls;
+  return results;
 }
 
 async function createMetricsForDependencies(
@@ -1139,11 +826,18 @@ async function createMetricsForDependencies(
   const metrics: any[] = [];
   const hashes: string[] = [];
 
-  const overlaySourceUrls = await getOverlaySourcesForDependencies(
+  const overlaySources = await getOverlaySourcesForDependencies(
     pool,
-    dependencies
+    Array.from(
+      new Set(
+        dependencies
+          .filter((d) => d.tableOfContentsItemId)
+          .map((d) => d.tableOfContentsItemId!)
+      )
+    ),
+    projectId
   );
-  const tableOfContentsItemIds = Object.keys(overlaySourceUrls).map(Number);
+  const tableOfContentsItemIds = Object.keys(overlaySources).map(Number);
 
   for (const dependency of dependencies) {
     const dependencyHash = hashMetricDependency(dependency);
@@ -1162,7 +856,11 @@ async function createMetricsForDependencies(
           projectId,
           dependencyHash,
           overlaySourceUrl: dependency.tableOfContentsItemId
-            ? overlaySourceUrls[dependency.tableOfContentsItemId]
+            ? overlaySources[dependency.tableOfContentsItemId]?.sourceUrl
+            : undefined,
+          sourceProcessingJobDependency: dependency.tableOfContentsItemId
+            ? overlaySources[dependency.tableOfContentsItemId]
+                ?.sourceProcessingJobId
             : undefined,
         });
         // metric.dependencyHash = dependencyHash;
@@ -1179,7 +877,11 @@ async function createMetricsForDependencies(
           projectId,
           dependencyHash,
           overlaySourceUrl: dependency.tableOfContentsItemId
-            ? overlaySourceUrls[dependency.tableOfContentsItemId]
+            ? overlaySources[dependency.tableOfContentsItemId]?.sourceUrl
+            : undefined,
+          sourceProcessingJobDependency: dependency.tableOfContentsItemId
+            ? overlaySources[dependency.tableOfContentsItemId]
+                ?.sourceProcessingJobId
             : undefined,
         });
         // metric.dependencyHash = dependencyHash;

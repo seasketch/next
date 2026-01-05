@@ -792,3 +792,44 @@ $$;
 comment on function get_or_create_spatial_metric is '@omit';
 
 grant execute on function get_or_create_spatial_metric to anon;
+
+create or replace function preprocess_source(slug text, source_id integer)
+    returns public.table_of_contents_items
+    language plpgsql SECURITY DEFINER
+AS $$
+  declare
+    item table_of_contents_items;
+    source_processing_job_key text;
+  begin
+    -- Find the table of contents item for this source up front so we can always return it.
+    select *
+      into item
+      from table_of_contents_items
+     where data_layer_id = (
+       select id from data_layers where data_source_id = source_id limit 1
+     )
+     limit 1;
+
+    if (session_is_admin((select id from projects where projects.slug = preprocess_source.slug))) then
+      if (not exists (select 1 from data_sources where id = source_id)) then
+        raise exception 'Data source % not found', source_id;
+      end if;
+      if (not exists (select 1 from data_upload_outputs where data_source_id = source_id and is_reporting_type(type))) then
+        insert into source_processing_jobs (data_source_id, project_id) values (source_id, (select project_id from data_sources where id = source_id)) on conflict do nothing returning job_key into source_processing_job_key;
+        if source_processing_job_key is not null then
+          PERFORM graphile_worker.add_job(
+            'preprocessSource',
+            json_build_object('jobKey', source_processing_job_key),
+            max_attempts := 1
+          );
+        end if;
+      end if;
+      return item;
+    else
+      raise exception 'You are not authorized to preprocess this source';
+    end if;
+  end;
+$$;
+
+
+grant execute on function preprocess_source to seasketch_user;

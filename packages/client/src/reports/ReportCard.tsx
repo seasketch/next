@@ -33,10 +33,7 @@ import Skeleton from "../components/Skeleton";
 import ReportMetricsProgressDetails from "./ReportMetricsProgressDetails";
 import { subjectIsFragment } from "overlay-engine";
 import ReportCardLoadingIndicator from "./components/ReportCardLoadingIndicator";
-import {
-  CalculatorIcon,
-  SwitchHorizontalIcon,
-} from "@heroicons/react/outline";
+import { CalculatorIcon, SwitchHorizontalIcon } from "@heroicons/react/outline";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 import Badge from "../components/Badge";
 import Button from "../components/Button";
@@ -101,6 +98,7 @@ export default function ReportCard({
     showCalcDetails,
     setShowCalcDetails,
     moveCardToTab,
+    preselectTitle,
   } = useReportContext();
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
@@ -275,11 +273,7 @@ export default function ReportCard({
   }, [selectedTabId]);
 
   const handleMoveCardToTab = useCallback(async () => {
-    if (
-      !moveCardToTab ||
-      moveTabTargetId === null ||
-      !cardId
-    ) {
+    if (!moveCardToTab || moveTabTargetId === null || !cardId) {
       setMoveTabOpen(false);
       return;
     }
@@ -293,13 +287,7 @@ export default function ReportCard({
     } finally {
       setMoveTabLoading(false);
     }
-  }, [
-    moveCardToTab,
-    moveTabTargetId,
-    cardId,
-    selectedTabId,
-    setSelectedTabId,
-  ]);
+  }, [moveCardToTab, moveTabTargetId, cardId, selectedTabId, setSelectedTabId]);
 
   const loadingSkeleton = useMemo(() => {
     if (skeleton) {
@@ -456,6 +444,7 @@ export default function ReportCard({
                 metrics={metrics}
                 sources={sources}
                 cardId={cardId!}
+                preselectTitle={preselectTitle}
               />
             ) : (
               <ReportCardBodyViewer

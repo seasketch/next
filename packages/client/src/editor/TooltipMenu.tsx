@@ -95,6 +95,25 @@ function selectionIsOnlyMetricNode(
   return false;
 }
 
+function selectionIsOnlyReportTitle(
+  state: EditorState,
+  schema: Schema
+): boolean {
+  if (!state.selection || state.selection.empty) {
+    return false;
+  }
+  const reportTitle = schema.nodes.reportTitle;
+  if (!reportTitle) {
+    return false;
+  }
+  const $from = state.selection.$from;
+  for (let depth = $from.depth; depth >= 0; depth--) {
+    const node = $from.node(depth);
+    if (node.type === reportTitle) return true;
+  }
+  return false;
+}
+
 /**
  * Get the metric node from the selection if it's exclusively a metric node
  */
@@ -309,6 +328,11 @@ export default function TooltipMenu({
   );
   const isOnlyMetricNode = useMemo(
     () => (state ? selectionIsOnlyMetricNode(state, schema) : false),
+    [state, schema]
+  );
+
+  const isOnlyReportTitle = useMemo(
+    () => (state ? selectionIsReportTitle(state, schema) : false),
     [state, schema]
   );
 
@@ -1214,7 +1238,9 @@ export default function TooltipMenu({
     ) : null;
 
   // Render in portal to avoid overflow clipping
-  return typeof document !== "undefined"
+  return typeof document !== "undefined" &&
+    (markCommands.length > 0 || commands.length > 0) &&
+    !isOnlyReportTitle
     ? createPortal(tooltipContent, document.body)
     : null;
 }
@@ -1422,8 +1448,10 @@ const Commands: Command[] = [
     title: "Collapsible block",
     group: "node-type",
     icon: <CaretDownIcon />,
-    isDisabled: (schema, _state) =>
-      !schema.nodes.details || !schema.nodes.summary,
+    isDisabled: (schema, state) =>
+      !schema.nodes.details ||
+      !schema.nodes.summary ||
+      !setBlockType(schema.nodes.details)(state),
     toggle: (schema, state, dispatch) => {
       // This is handled in handleNodeTypeChange; no-op here
       setBlockType(schema.nodes.paragraph)(state, dispatch);

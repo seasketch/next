@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useHistory } from "react-router-dom";
 import {
@@ -202,8 +202,6 @@ export default function SketchClassReportsAdmin({
     selectedSketchId
   );
 
-  console.log(reportState?.selectedTab);
-
   // Get the selected sketch for demonstration
   const selectedSketch = sketchesForDemonstration.find(
     (sketch) => sketch.id === selectedSketchId
@@ -261,7 +259,6 @@ export default function SketchClassReportsAdmin({
 
   const handleCardMove = async (cardId: number, destinationTabId: number) => {
     try {
-      console.log("moving card to tab", { cardId, destinationTabId });
       await moveCardToTab({
         variables: {
           cardId,
@@ -297,8 +294,6 @@ export default function SketchClassReportsAdmin({
       console.error("No selected tab");
       return;
     }
-
-    console.log("selected tab", reportState.selectedTab);
 
     const registration = getCardRegistration(cardType as ReportCardType);
     if (!registration) {
@@ -348,6 +343,97 @@ export default function SketchClassReportsAdmin({
       // Error is handled by onError
     }
   };
+
+  const addACard = useCallback(async () => {
+    if (!reportState) {
+      console.error("No report state");
+      return;
+    }
+    // 1. Save a card with a default body
+    // 2. Make sure the card is scrolled into view
+    // 3. Put the card into edit mode
+    // 4. Select the title by updating the prosemirror state
+    const body = {
+      type: "doc",
+      content: [
+        {
+          type: "reportTitle",
+          content: [
+            {
+              type: "text",
+              text: "Card title",
+            },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Use ",
+            },
+            {
+              type: "text",
+              text: "Text Blocks",
+              marks: [{ type: "strong" }],
+            },
+            {
+              type: "text",
+              text: " to add instructions or other details to your report.",
+            },
+          ],
+        },
+      ],
+    };
+    let newCardId: number | null = null;
+    try {
+      const { data } = await addReportCard({
+        variables: {
+          reportTabId: reportState.selectedTab.id,
+          componentSettings: {
+            type: "textBlock",
+          },
+          cardType: "TextBlock",
+          body,
+        },
+        onError,
+        refetchQueries: [ReportContextDocument, DraftReportDocument],
+        awaitRefetchQueries: true,
+      });
+      newCardId = data?.addReportCard?.reportCard?.id || null;
+      if (!newCardId) {
+        console.error("No new card id");
+        return;
+      }
+      // 2. Make sure the card is scrolled into view
+      const cardElement = document.querySelector(
+        // eslint-disable-next-line i18next/no-literal-string
+        `[data-rbd-draggable-id="${newCardId}"]`
+      );
+      if (cardElement) {
+        cardElement.scrollIntoView({ behavior: "smooth" });
+      }
+      // 3. Put the card into edit mode
+      reportState.setSelectedForEditing(newCardId, true);
+      // 4. Select the title by updating the prosemirror state
+
+      setTimeout(() => {
+        const editor = document.querySelector(
+          // eslint-disable-next-line i18next/no-literal-string
+          `[data-rbd-draggable-id="${newCardId}"] [contenteditable="true"]`
+        );
+        if (editor) {
+          (editor as HTMLElement).focus();
+        }
+        if (cardElement) {
+          cardElement.scrollIntoView({ behavior: "smooth" });
+        }
+      }, 100);
+      return newCardId;
+    } catch (error) {
+      // Error is handled by onError
+    }
+  }, [addReportCard, reportState, onError]);
 
   const handleCancelEditing = () => {
     reportState?.setSelectedForEditing(null);
@@ -759,11 +845,6 @@ export default function SketchClassReportsAdmin({
                     result.destination.droppableId.startsWith("tab-header-");
 
                   if (isDestinationTabHeader) {
-                    console.log("dropped on a tab header", {
-                      cardId,
-                      destinationTabId,
-                      result,
-                    });
                     // Dragging to tabs is disabled; ignore drop on tab headers
                     return;
                   } else if (
@@ -880,8 +961,9 @@ export default function SketchClassReportsAdmin({
                                     className={MenuBarItemClasses}
                                     onSelect={(e) => {
                                       e.preventDefault();
-                                      setAddCardModalOpen(true);
+                                      // setAddCardModalOpen(true);
                                       setDropdownOpen(false);
+                                      addACard();
                                     }}
                                   >
                                     {t("Add a Card")}

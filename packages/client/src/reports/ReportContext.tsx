@@ -87,11 +87,15 @@ export interface ReportContextState {
    * The ID of the card currently selected for editing
    */
   selectedForEditing: number | null;
+  preselectTitle: boolean;
 
   /**
    * Function to set the card selected for editing
    */
-  setSelectedForEditing: (cardId: number | null) => void;
+  setSelectedForEditing: (
+    cardId: number | null,
+    preselectTitle?: boolean
+  ) => void;
 
   /**
    * Function to delete a card
@@ -155,8 +159,16 @@ export function useReportState(
       [styleId: string]: { sources: string[]; layers: string[] };
     };
   }>({});
-  const [selectedForEditing, setSelectedForEditing] = useState<number | null>(
+  const [selectedForEditing, _setSelectedForEditing] = useState<number | null>(
     null
+  );
+  const [preselectTitle, setPreselectTitle] = useState<boolean>(false);
+  const setSelectedForEditing = useCallback(
+    (cardId: number | null, preselectTitle?: boolean) => {
+      setPreselectTitle(preselectTitle || false);
+      _setSelectedForEditing(cardId);
+    },
+    [_setSelectedForEditing, setPreselectTitle]
   );
   const [showCalcDetails, setShowCalcDetails] = useState<number | undefined>();
 
@@ -584,6 +596,7 @@ export function useReportState(
       selectedTab: selectedTab as ReportConfiguration["tabs"][0],
       selectedForEditing,
       setSelectedForEditing,
+      preselectTitle,
       selectedSketchId,
       sketch: data.sketch!,
       sketchClass: data.sketch.sketchClass!,
