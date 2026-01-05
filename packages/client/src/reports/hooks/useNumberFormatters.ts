@@ -105,6 +105,36 @@ export function useNumberFormatters({
       }
     );
 
+    const smallDecimalFormatter = new Intl.NumberFormat(
+      langContext?.lang?.code,
+      {
+        style: "decimal",
+        unitDisplay: unitDisplay,
+        minimumFractionDigits: minimumFractionDigits,
+        maximumFractionDigits: minimumFractionDigits,
+      }
+    );
+
+    const largeDecimalFormatter = new Intl.NumberFormat(
+      langContext?.lang?.code,
+      {
+        style: "decimal",
+        unitDisplay: unitDisplay,
+        minimumFractionDigits: minimumFractionDigits,
+        maximumFractionDigits: minimumFractionDigits,
+      }
+    );
+
+    const specifiedDecimalFormatter = new Intl.NumberFormat(
+      langContext?.lang?.code,
+      {
+        style: "decimal",
+        unitDisplay: unitDisplay,
+        minimumFractionDigits: minimumFractionDigits,
+        maximumFractionDigits: minimumFractionDigits,
+      }
+    );
+
     const countFormatter = new Intl.NumberFormat(langContext?.lang?.code);
     return {
       smallAreaFormatter,
@@ -117,6 +147,9 @@ export function useNumberFormatters({
       smallDistanceFormatter,
       largeDistanceFormatter,
       countFormatter,
+      smallDecimalFormatter,
+      largeDecimalFormatter,
+      specifiedDecimalFormatter,
     };
   }, [langContext?.lang?.code, unit, minimumFractionDigits, unitDisplay]);
 
@@ -195,10 +228,25 @@ export function useNumberFormatters({
     [formatters, minimumFractionDigits, langContext?.lang?.code]
   );
 
+  const decimal = useCallback(
+    (value: number) => {
+      if (minimumFractionDigits !== undefined) {
+        return formatters.specifiedDecimalFormatter.format(value);
+      }
+      if (value < 10) {
+        return formatters.smallDecimalFormatter.format(value);
+      } else {
+        return formatters.largeDecimalFormatter.format(value);
+      }
+    },
+    [formatters, minimumFractionDigits]
+  );
+
   return {
     area,
     percent,
     distance,
     count: formatters.countFormatter.format.bind(formatters.countFormatter),
+    decimal,
   };
 }

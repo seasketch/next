@@ -393,8 +393,16 @@ export const InlineMetric: ReportWidget<{
           columnValues as Pick<Metric, "type" | "value">[]
         ) as ColumnValuesMetric;
         console.log("combined", combined);
-        // @ts-ignore
-        return combined.value["*"]?.[componentSettings?.stat || "mean"];
+        if (
+          componentSettings?.stat === "countDistinct" ||
+          componentSettings?.stat === "count"
+        ) {
+          return combined.value["*"]?.[componentSettings?.stat || "mean"];
+        } else {
+          return formatters.decimal(
+            combined.value["*"]?.[componentSettings?.stat || "mean"]
+          );
+        }
       }
       default:
         // eslint-disable-next-line i18next/no-literal-string
@@ -540,6 +548,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     if (!geoLayer?.attributes) return options;
 
     for (const attr of geoLayer.attributes) {
+      console.log(attr);
       // if (attr.type !== "number") continue;
       const exampleValues = Object.keys(attr.values || {})
         .slice(0, 5)

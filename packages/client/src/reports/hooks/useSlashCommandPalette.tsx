@@ -754,7 +754,9 @@ export function useSlashCommandPalette({
                                   ? "bg-blue-50 text-blue-900"
                                   : "hover:bg-gray-50 text-gray-900"
                               } ${
-                                isDisabled ? "opacity-60 cursor-not-allowed" : ""
+                                isDisabled
+                                  ? "opacity-60 cursor-not-allowed"
+                                  : ""
                               }`}
                               disabled={isDisabled}
                               onClick={(e) => {
