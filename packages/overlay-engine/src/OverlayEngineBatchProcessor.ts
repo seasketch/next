@@ -761,7 +761,11 @@ export class OverlayEngineBatchProcessor<
   ) {
     const value = feature.properties?.[this.columnValuesProperty!];
     const results = this.getColumnValuesResults();
-    if (typeof value === "number") {
+    if (
+      typeof value === "number" ||
+      typeof value === "string" ||
+      typeof value === "boolean"
+    ) {
       const columnValue: ColumnValues = [value];
       if (
         feature.geometry.type === "Polygon" ||
@@ -965,18 +969,27 @@ function calculateColumnValueStats(values: ColumnValues[]): ColumnValueStats {
   let weightedSum = 0;
   let totalWeight = 0;
 
-  const histogramMap = new Map<number, number>();
+  const histogramMap = new Map<number | string | boolean, number>();
+  const distinctValues = new Set<number | string | boolean>();
 
   for (const entry of values) {
     const value = entry[0];
+    distinctValues.add(value);
     const weight = entry.length > 1 ? entry[1] : undefined;
 
-    if (value < min) min = value;
-    if (value > max) max = value;
+    if (typeof value === "number") {
+      if (value < min) min = value;
+      if (value > max) max = value;
 
-    sum += value;
-
-    if (typeof weight === "number" && isFinite(weight) && weight > 0) {
+      sum += value;
+    }
+    if (
+      typeof weight === "number" &&
+      typeof value === "number" &&
+      isFinite(weight) &&
+      weight > 0 &&
+      isFinite(value)
+    ) {
       weightedSum += value * weight;
       totalWeight += weight;
     }
@@ -991,40 +1004,54 @@ function calculateColumnValueStats(values: ColumnValues[]): ColumnValueStats {
 
   const mean = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
 
-  // Standard deviation - weighted if we have weights, otherwise unweighted
   let varianceNumerator = 0;
-  if (totalWeight > 0) {
-    for (const entry of values) {
-      const value = entry[0];
-      const weight = entry.length > 1 ? entry[1] : undefined;
-      if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
-        continue;
+  if (typeof values[0][0] === "number") {
+    // Standard deviation - weighted if we have weights, otherwise unweighted
+    if (totalWeight > 0) {
+      for (const entry of values) {
+        const value = entry[0] as number;
+        const weight = entry.length > 1 ? entry[1] : undefined;
+        if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
+          continue;
+        }
+        const diff = value - mean;
+        varianceNumerator += weight * diff * diff;
       }
-      const diff = value - mean;
-      varianceNumerator += weight * diff * diff;
+      varianceNumerator = varianceNumerator / totalWeight;
+    } else {
+      for (const entry of values) {
+        const value = entry[0] as number;
+        const diff = value - mean;
+        varianceNumerator += diff * diff;
+      }
+      varianceNumerator = varianceNumerator / count;
     }
-    varianceNumerator = varianceNumerator / totalWeight;
-  } else {
-    for (const entry of values) {
-      const value = entry[0];
-      const diff = value - mean;
-      varianceNumerator += diff * diff;
-    }
-    varianceNumerator = varianceNumerator / count;
   }
-
   const stdDev = Math.sqrt(varianceNumerator);
 
-  let histogram: [number, number][] = Array.from(histogramMap.entries()).sort(
-    (a, b) => a[0] - b[0]
-  );
+  let histogram: [number | string | boolean, number][] = Array.from(
+    histogramMap.entries()
+  ).sort((a, b) => {
+    if (typeof a[0] === "number" && typeof b[0] === "number") {
+      return a[0] - b[0];
+    } else {
+      return 0;
+    }
+  });
 
   const MAX_HISTOGRAM_ENTRIES = 200;
   if (histogram.length > MAX_HISTOGRAM_ENTRIES) {
-    histogram = downsampleHistogram(histogram, MAX_HISTOGRAM_ENTRIES);
+    if (typeof histogram[0][0] === "number") {
+      histogram = downsampleHistogram(
+        histogram as [number, number][],
+        MAX_HISTOGRAM_ENTRIES
+      );
+    } else {
+      histogram = histogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+    }
   }
 
-  const countDistinct = histogramMap.size;
+  const countDistinct = distinctValues.size;
 
   return {
     count,

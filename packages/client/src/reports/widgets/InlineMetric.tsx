@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import {
   ColumnValuesMetric,
   CountMetric,
@@ -253,6 +253,27 @@ const defaultPluralizedCountLabels = {
   },
 } as PluralizedMessagesByLang;
 
+const defaultDistinctValueMessages: PluralizedMessages = {
+  zero: "no distinct values",
+  one: "distinct value",
+  two: "distinct values",
+  few: "distinct values",
+  many: "distinct values",
+  other: "distinct values",
+};
+
+const defaultPluralizedDistinctValueLabels = Object.fromEntries(
+  Object.entries(defaultPluralizedCountLabels).map(([lang, messages]) => {
+    const entries: Record<string, string> = {};
+    Object.keys(messages).forEach((category) => {
+      entries[category] =
+        defaultDistinctValueMessages[category] ||
+        defaultDistinctValueMessages.other;
+    });
+    return [lang, entries];
+  })
+) as PluralizedMessagesByLang;
+
 export const InlineMetric: ReportWidget<{
   unit: AreaUnit | LengthUnit;
   unitDisplay?: "long" | "short";
@@ -267,6 +288,7 @@ export const InlineMetric: ReportWidget<{
   stat?: ColumnValuesStat;
   hideLabelForCount?: boolean;
   pluralizedCountLabels?: PluralizedMessagesByLang;
+  pluralizedDistinctValueLabels?: PluralizedMessagesByLang;
 }> = ({
   metrics,
   sources,
@@ -279,15 +301,36 @@ export const InlineMetric: ReportWidget<{
   sketchClass,
 }) => {
   const lang = useCurrentLang();
-  const { pluralRules, defaultMessages, customMessages } = useMemo(() => {
+  const {
+    pluralRules,
+    countDefaultMessages,
+    countCustomMessages,
+    distinctDefaultMessages,
+    distinctCustomMessages,
+  } = useMemo(() => {
     const pluralRules = new Intl.PluralRules(lang.code);
-    const defaultMessages =
+    const countDefaultMessages =
       defaultPluralizedCountLabels[lang.code] ||
       defaultPluralizedCountLabels.en;
-    const customMessages =
+    const countCustomMessages =
       componentSettings?.pluralizedCountLabels?.[lang.code];
-    return { pluralRules, defaultMessages, customMessages };
-  }, [lang.code, componentSettings?.pluralizedCountLabels]);
+    const distinctDefaultMessages =
+      defaultPluralizedDistinctValueLabels[lang.code] ||
+      defaultPluralizedDistinctValueLabels.en;
+    const distinctCustomMessages =
+      componentSettings?.pluralizedDistinctValueLabels?.[lang.code];
+    return {
+      pluralRules,
+      countDefaultMessages,
+      countCustomMessages,
+      distinctDefaultMessages,
+      distinctCustomMessages,
+    };
+  }, [
+    lang.code,
+    componentSettings?.pluralizedCountLabels,
+    componentSettings?.pluralizedDistinctValueLabels,
+  ]);
   if (sketchClass.geometryType !== SketchGeometryType.Polygon) {
     throw new Error(
       "Inline metric only supports polygon geometry types currently."
@@ -378,7 +421,8 @@ export const InlineMetric: ReportWidget<{
         } else {
           const pluralKey = pluralRules.select(count) as string;
 
-          let label = customMessages?.[pluralKey] || defaultMessages[pluralKey];
+          let label =
+            countCustomMessages?.[pluralKey] || countDefaultMessages[pluralKey];
           return `${formatters.count(count)} ${label}`;
         }
       }
@@ -392,17 +436,20 @@ export const InlineMetric: ReportWidget<{
         const combined = combineMetricsForFragments(
           columnValues as Pick<Metric, "type" | "value">[]
         ) as ColumnValuesMetric;
-        console.log("combined", combined);
-        if (
-          componentSettings?.stat === "countDistinct" ||
-          componentSettings?.stat === "count"
-        ) {
-          return combined.value["*"]?.[componentSettings?.stat || "mean"];
-        } else {
-          return formatters.decimal(
-            combined.value["*"]?.[componentSettings?.stat || "mean"]
-          );
+        const statKey = componentSettings?.stat || "mean";
+        const value = combined.value["*"]?.[statKey];
+        if (componentSettings?.stat === "countDistinct") {
+          const countDistinct = value ?? 0;
+          const pluralKey = pluralRules.select(countDistinct) as string;
+          const label =
+            distinctCustomMessages?.[pluralKey] ||
+            distinctDefaultMessages[pluralKey];
+          return `${formatters.count(countDistinct)} ${label}`;
         }
+        if (componentSettings?.stat === "count") {
+          return value;
+        }
+        return formatters.decimal(value);
       }
       default:
         // eslint-disable-next-line i18next/no-literal-string
@@ -419,8 +466,10 @@ export const InlineMetric: ReportWidget<{
     errors,
     pluralRules,
     componentSettings?.hideLabelForCount,
-    defaultMessages,
-    customMessages,
+    countDefaultMessages,
+    countCustomMessages,
+    distinctCustomMessages,
+    distinctDefaultMessages,
   ]);
 
   if (loading) {
@@ -484,6 +533,14 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       componentSettings?.pluralizedCountLabels?.[lang.code];
     return { defaultMessages, customMessages };
   }, [lang.code, componentSettings?.pluralizedCountLabels]);
+  const { distinctDefaultMessages, distinctCustomMessages } = useMemo(() => {
+    const distinctDefaultMessages =
+      defaultPluralizedDistinctValueLabels[lang.code] ||
+      defaultPluralizedDistinctValueLabels.en;
+    const distinctCustomMessages =
+      componentSettings?.pluralizedDistinctValueLabels?.[lang.code];
+    return { distinctDefaultMessages, distinctCustomMessages };
+  }, [lang.code, componentSettings?.pluralizedDistinctValueLabels]);
 
   const sources = useMemo(() => {
     const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
@@ -533,11 +590,18 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     return (depWithValueColumn?.parameters?.valueColumn as string) || "";
   }, [node.attrs?.metrics]);
 
-  const valueColumnOptions = useMemo(() => {
-    if (presentation !== "column_values") return [];
+  const { valueColumnOptions, valueColumnAttributesByName } = useMemo(() => {
     const options: Array<{ value: string; label: ReactNode }> = [];
+    const valueColumnAttributesByName: Record<string, { type?: string }> = {};
+
+    if (presentation !== "column_values") {
+      return { valueColumnOptions: options, valueColumnAttributesByName };
+    }
+
     const source = sources?.[0];
-    if (!source?.geostats) return options;
+    if (!source?.geostats) {
+      return { valueColumnOptions: options, valueColumnAttributesByName };
+    }
 
     const geoLayer = isGeostatsLayer(
       (source.geostats as any)?.layers?.[0] as GeostatsLayer
@@ -545,11 +609,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       ? ((source.geostats as any).layers[0] as GeostatsLayer)
       : undefined;
 
-    if (!geoLayer?.attributes) return options;
+    if (!geoLayer?.attributes) {
+      return { valueColumnOptions: options, valueColumnAttributesByName };
+    }
 
     for (const attr of geoLayer.attributes) {
-      console.log(attr);
-      // if (attr.type !== "number") continue;
+      valueColumnAttributesByName[attr.attribute] = { type: attr.type };
       const exampleValues = Object.keys(attr.values || {})
         .slice(0, 5)
         .map((v) => String(v));
@@ -588,23 +653,63 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       });
     }
 
-    return options;
+    return { valueColumnOptions: options, valueColumnAttributesByName };
   }, [presentation, sources, currentValueColumn, t]);
+
+  const selectedValueColumn =
+    currentValueColumn || valueColumnOptions[0]?.value || "";
+  const selectedValueColumnIsNumeric =
+    valueColumnAttributesByName[selectedValueColumn]?.type === "number";
 
   const statOptions = useMemo(
     () => [
-      { value: "mean", label: t("Mean") },
-      { value: "min", label: t("Minimum") },
-      { value: "max", label: t("Maximum") },
-      { value: "stdDev", label: t("Standard deviation") },
-      { value: "sum", label: t("Sum") },
+      {
+        value: "mean",
+        label: t("Mean"),
+        disabled: !selectedValueColumnIsNumeric,
+      },
+      {
+        value: "min",
+        label: t("Minimum"),
+        disabled: !selectedValueColumnIsNumeric,
+      },
+      {
+        value: "max",
+        label: t("Maximum"),
+        disabled: !selectedValueColumnIsNumeric,
+      },
+      {
+        value: "stdDev",
+        label: t("Standard deviation"),
+        disabled: !selectedValueColumnIsNumeric,
+      },
+      {
+        value: "sum",
+        label: t("Sum"),
+        disabled: !selectedValueColumnIsNumeric,
+      },
       { value: "countDistinct", label: t("Distinct values") },
     ],
-    [t]
+    [t, selectedValueColumnIsNumeric]
   );
 
-  const selectedStat: ColumnValuesStat =
-    componentSettings.stat || ("mean" as ColumnValuesStat);
+  const selectedStat: ColumnValuesStat = selectedValueColumnIsNumeric
+    ? (componentSettings.stat as ColumnValuesStat) ||
+      ("mean" as ColumnValuesStat)
+    : ("countDistinct" as ColumnValuesStat);
+
+  useEffect(() => {
+    if (presentation !== "column_values") return;
+    if (selectedValueColumnIsNumeric) return;
+    if (componentSettings?.stat === "countDistinct") return;
+
+    onUpdate({
+      componentSettings: {
+        ...componentSettings,
+        stat: "countDistinct",
+      },
+    });
+  }, [presentation, selectedValueColumnIsNumeric, componentSettings, onUpdate]);
 
   const handleValueColumnChange = (value: string) => {
     onUpdateDependencyParameters((dependency) => {
@@ -616,15 +721,30 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
         valueColumn: value,
       };
     });
+
+    const nextValueColumnIsNumeric =
+      valueColumnAttributesByName[value]?.type === "number";
+    if (
+      !nextValueColumnIsNumeric &&
+      componentSettings?.stat !== "countDistinct"
+    ) {
+      onUpdate({
+        componentSettings: { ...componentSettings, stat: "countDistinct" },
+      });
+    }
   };
 
   const handleStatChange = (stat: ColumnValuesStat) => {
+    if (!selectedValueColumnIsNumeric && stat !== "countDistinct") {
+      return;
+    }
     onUpdate({
       componentSettings: { ...componentSettings, stat },
     });
   };
 
   const [countLabelsModalOpen, setCountLabelsModalOpen] = useState(false);
+  const [distinctLabelsModalOpen, setDistinctLabelsModalOpen] = useState(false);
 
   // TODO: Add related geography once supported
 
@@ -679,7 +799,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       )}
       {presentation === "column_values" && valueColumnOptions.length > 0 && (
         <LabeledDropdown
-          label={t("Value column")}
+          label={t("column")}
           value={currentValueColumn || valueColumnOptions[0]?.value || ""}
           options={valueColumnOptions}
           onChange={handleValueColumnChange}
@@ -693,6 +813,59 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           options={statOptions}
           onChange={(val) => handleStatChange(val as ColumnValuesStat)}
         />
+      )}
+      {presentation === "column_values" && selectedStat === "countDistinct" && (
+        <Popover.Root
+          open={distinctLabelsModalOpen}
+          onOpenChange={setDistinctLabelsModalOpen}
+        >
+          <Popover.Trigger asChild>
+            <button
+              type="button"
+              className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
+            >
+              <Pencil2Icon className="w-3 h-3" />
+              {t("labeling")}
+            </button>
+          </Popover.Trigger>
+          <TooltipPopoverContent>
+            <div className="px-1 space-y-2 w-48">
+              <p className="text-xs text-gray-500">
+                {t(
+                  "The following pluralized labels will be used depending on the count."
+                )}
+              </p>
+              <div className="space-y-1">
+                {pluralCategories.map((category) => (
+                  <div key={category}>
+                    <label className="text-xs text-gray-500">{category}</label>
+                    <input
+                      className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      type="text"
+                      value={distinctCustomMessages?.[category] || ""}
+                      placeholder={distinctDefaultMessages?.[category] || ""}
+                      onChange={(e) =>
+                        onUpdate({
+                          componentSettings: {
+                            ...componentSettings,
+                            pluralizedDistinctValueLabels: {
+                              ...componentSettings?.pluralizedDistinctValueLabels,
+                              [lang.code]: {
+                                ...componentSettings
+                                  ?.pluralizedDistinctValueLabels?.[lang.code],
+                                [category]: e.target.value,
+                              },
+                            },
+                          },
+                        })
+                      }
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TooltipPopoverContent>
+        </Popover.Root>
       )}
       {presentation === "count" && (
         <>

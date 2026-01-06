@@ -326,6 +326,7 @@ export default function TooltipMenu({
     () => (state ? getSelectedMetricNode(state, schema) : null),
     [state, schema]
   );
+
   const isOnlyMetricNode = useMemo(
     () => (state ? selectionIsOnlyMetricNode(state, schema) : false),
     [state, schema]
@@ -618,6 +619,25 @@ export default function TooltipMenu({
         tr.setSelection(currentState.selection);
       }
 
+      view.dispatch(tr);
+      return;
+    },
+    [view, schema]
+  );
+
+  const updateAllDependencies = useCallback(
+    (updateFn: (dependencies: MetricDependency[]) => MetricDependency[]) => {
+      if (!view) return;
+      const currentState = view.state;
+      const currentSelectedMetric = getSelectedMetricNode(currentState, schema);
+      if (!currentSelectedMetric) return;
+      const { node, pos } = currentSelectedMetric;
+      const metrics = node.attrs.metrics || [];
+      const newDependencies = updateFn(metrics);
+      const tr = currentState.tr.setNodeMarkup(pos, undefined, {
+        ...node.attrs,
+        metrics: newDependencies,
+      });
       view.dispatch(tr);
       return;
     },
@@ -1227,6 +1247,7 @@ export default function TooltipMenu({
                       node={selectedMetric.node}
                       onUpdate={updateMetricNode}
                       onUpdateDependencyParameters={updateDependencyParameters}
+                      onUpdateAllDependencies={updateAllDependencies}
                     />
                   </>
                 )}
@@ -1239,7 +1260,7 @@ export default function TooltipMenu({
 
   // Render in portal to avoid overflow clipping
   return typeof document !== "undefined" &&
-    (markCommands.length > 0 || commands.length > 0) &&
+    (markCommands.length > 0 || commands.length > 0 || isOnlyMetricNode) &&
     !isOnlyReportTitle
     ? createPortal(tooltipContent, document.body)
     : null;
@@ -1494,6 +1515,7 @@ export type TooltipDropdownOption = {
   value: string;
   label: ReactNode;
   icon?: ReactNode;
+  disabled?: boolean;
   /**
    * When true, prevents the dropdown from closing on select.
    */
@@ -1547,9 +1569,11 @@ export function TooltipDropdown({
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           {...contentProps}
-          className="bg-white text-gray-900 border border-black/20 rounded shadow-lg px-1 py-1 z-50"
+          className="bg-white text-gray-900 border border-black/20 rounded shadow-lg px-1 py-1 z-50 max-h-72 overflow-auto"
           sideOffset={6}
-          side="top"
+          side="bottom"
+          collisionPadding={8}
+          avoidCollisions
           data-tooltip-dropdown="true"
         >
           {title && (
@@ -1563,13 +1587,20 @@ export function TooltipDropdown({
           {options.map((opt) => (
             <DropdownMenu.Item
               key={opt.value}
+              disabled={opt.disabled}
               className={
                 opt.className ??
-                `px-2 py-1 text-sm flex items-center gap-2 rounded hover:bg-gray-100 focus:bg-gray-100 outline-none cursor-pointer ${
-                  opt.value === value ? "text-blue-600" : ""
-                }`
+                `px-2 py-1 text-sm flex items-center gap-2 rounded ${
+                  opt.disabled
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "hover:bg-gray-100 focus:bg-gray-100 cursor-pointer"
+                } outline-none ${opt.value === value ? "text-blue-600" : ""}`
               }
               onSelect={(e: Event) => {
+                if (opt.disabled) {
+                  e.preventDefault();
+                  return;
+                }
                 if (opt.preventCloseOnSelect) {
                   e.preventDefault();
                 }
@@ -1725,6 +1756,12 @@ export type ReportWidgetTooltipControlsProps = {
    */
   onUpdateDependencyParameters: (
     updateFn: (dependency: MetricDependency) => MetricDependencyParameters
+  ) => void;
+  /**
+   * Update all dependencies related to the node. Callback is called with the current dependencies and should return the new dependencies.
+   */
+  onUpdateAllDependencies: (
+    updateFn: (dependencies: MetricDependency[]) => MetricDependency[]
   ) => void;
 };
 

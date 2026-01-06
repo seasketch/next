@@ -108,6 +108,7 @@ function ReportCardBodyEditorInner({
     variables: {
       slug: getSlug(),
     },
+    fetchPolicy: "cache-and-network",
   });
 
   const langContext = useContext(FormLanguageContext);

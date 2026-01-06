@@ -56,11 +56,11 @@ export declare function createPresenceTable({ features, differenceMultiPolygon, 
 }>;
 export type ColumnValues = [
     /** column value */
-    number,
+    number | string | boolean,
     number
 ] | [
     /** column value */
-    number
+    number | string | boolean
 ];
 export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }: {
     features: {

@@ -149,6 +149,7 @@ function combineColumnValueStats(statsArray) {
     if (statsArray.length === 1) {
         return statsArray[0];
     }
+    let isNumeric = false;
     // Determine whether to weight by area or by count
     const useAreaWeight = statsArray.some((s) => typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0);
     let totalCount = 0;
@@ -163,6 +164,12 @@ function combineColumnValueStats(statsArray) {
     // Merge histograms by value
     const histogramMap = new Map();
     for (const stats of statsArray) {
+        if (typeof stats.min === "number" &&
+            typeof stats.max === "number" &&
+            !isNaN(stats.min) &&
+            !isNaN(stats.max)) {
+            isNumeric = true;
+        }
         const weight = useAreaWeight && typeof stats.totalAreaSqKm === "number"
             ? Math.max(stats.totalAreaSqKm, 0)
             : stats.count;
@@ -211,11 +218,23 @@ function combineColumnValueStats(statsArray) {
     // Convert histogram map back to array and sort by value
     let combinedHistogram = Array.from(histogramMap.entries())
         .map(([value, count]) => [value, count])
-        .sort((a, b) => a[0] - b[0]);
+        .sort((a, b) => {
+        if (typeof a[0] === "number" && typeof b[0] === "number") {
+            return a[0] - b[0];
+        }
+        else {
+            return 0;
+        }
+    });
     // Limit histogram size similarly to raster stats by downsampling
     const MAX_HISTOGRAM_ENTRIES = 200;
     if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
-        combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
+        if (typeof combinedHistogram[0][0] === "number") {
+            combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
+        }
+        else {
+            combinedHistogram = combinedHistogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+        }
     }
     const countDistinct = histogramMap.size;
     const totalAreaSqKm = useAreaWeight
@@ -226,13 +245,13 @@ function combineColumnValueStats(statsArray) {
         : undefined;
     return {
         count: combinedCount,
-        min: combinedMin,
-        max: combinedMax,
-        mean: combinedMean,
-        stdDev: combinedStdDev,
+        min: isNumeric ? combinedMin : NaN,
+        max: isNumeric ? combinedMax : NaN,
+        mean: isNumeric ? combinedMean : NaN,
+        stdDev: isNumeric ? combinedStdDev : NaN,
         histogram: combinedHistogram,
         countDistinct,
-        sum: combinedSum,
+        sum: isNumeric ? combinedSum : NaN,
         totalAreaSqKm,
     };
 }

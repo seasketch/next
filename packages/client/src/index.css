@@ -7649,6 +7649,10 @@ select{
   min-width:32rem
 }
 
+.min-w-\[90px\]{
+  min-width:90px
+}
+
 .\!max-w-128{
   max-width:32rem !important
 }

@@ -72,7 +72,7 @@ export type ColumnValueStats = {
     max: number;
     mean: number;
     stdDev: number;
-    histogram: [number, number][];
+    histogram: [number | string | boolean, number][];
     countDistinct: number;
     sum: number;
     /**

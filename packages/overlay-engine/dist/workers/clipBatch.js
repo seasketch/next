@@ -339,7 +339,9 @@ async function collectColumnValues({ features, differenceMultiPolygon, subjectFe
             }
             columnValue.push(length);
         }
-        if (typeof value === "number") {
+        if (typeof value === "number" ||
+            typeof value === "string" ||
+            typeof value === "boolean") {
             results["*"].push(columnValue);
             if (groupBy) {
                 const classKey = f.feature.properties?.[groupBy];

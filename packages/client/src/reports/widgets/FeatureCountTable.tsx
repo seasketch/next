@@ -78,9 +78,13 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   }, [metrics]);
 
   const rows = useMemo<FeatureCountRow[]>(() => {
+    console.log("calculate rows", { metrics, sources });
     let rows: FeatureCountRow[] = [];
 
     if (sources.length === 0) {
+      return [];
+    }
+    if (metrics.length === 0) {
       return [];
     }
     if (sources.length > 1) {
@@ -101,6 +105,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
         m.type === "count" &&
         m.state === SpatialMetricState.Complete
     ) as Pick<Metric, "type" | "value">[];
+    console.log("completedFragmentMetrics", completedFragmentMetrics);
     const combinedFragmentMetric = combineMetricsForFragments(
       completedFragmentMetrics
     ) as CountMetric;

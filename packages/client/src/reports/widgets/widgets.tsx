@@ -38,6 +38,10 @@ import {
   IntersectingFeaturesList,
   IntersectingFeaturesListTooltipControls,
 } from "./IntersectingFeaturesList";
+import {
+  ColumnStatisticsTable,
+  ColumnStatisticsTableTooltipControls,
+} from "./ColumnStatisticsTable";
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
@@ -203,6 +207,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <FeatureCountTableTooltipControls {...props} />;
     case "IntersectingFeaturesList":
       return <IntersectingFeaturesListTooltipControls {...props} />;
+    case "ColumnStatisticsTable":
+      return <ColumnStatisticsTableTooltipControls {...props} />;
     default:
       return null;
   }
@@ -254,11 +260,18 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         errors.push(metric.errorMessage || "Unknown error");
       }
     }
-    const sources = [...overlaySources, ...adminSources].filter((s) =>
+    let sources = [...overlaySources, ...adminSources].filter((s) =>
       dependencies.some(
         (d: MetricDependency) =>
           d.tableOfContentsItemId === s.tableOfContentsItemId
       )
+    );
+    // make sure there's only one source for each source id (no duplicates)
+    const sourceIds = new Set<number>(
+      sources.map((s) => s.tableOfContentsItemId!)
+    );
+    sources = Array.from(sourceIds).map(
+      (id) => sources.find((s) => s.tableOfContentsItemId! === id)!
     );
     if (!loading) {
       // check to make sure each dependency has at least one related metric. If
@@ -361,6 +374,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <FeatureCountTable {...widgetProps} />;
     case "IntersectingFeaturesList":
       return <IntersectingFeaturesList {...widgetProps} />;
+    case "ColumnStatisticsTable":
+      return <ColumnStatisticsTable {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -648,34 +663,72 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            if (bestNumericColumn) {
-              children.push({
-                // eslint-disable-next-line i18next/no-literal-string
-                id: `overlay-layer-${tocId}-inline-column-stats`,
-                label: "Inline Column Stats",
-                description:
-                  "Summarize numeric columns with a mean, min, max, or distinct value count.",
-                run: (state, dispatch, view) => {
-                  return insertInlineMetric(view, state.selection.ranges[0], {
-                    type: "InlineMetric",
-                    metrics: [
-                      {
-                        type: "column_values",
-                        subjectType: "fragments",
-                        tableOfContentsItemId: tocId,
-                        parameters: {
-                          valueColumn: bestNumericColumn,
-                        },
+            // if (bestNumericColumn) {
+            children.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-inline-column-stats`,
+              label: "Inline Column Stats",
+              description:
+                "Summarize numeric columns with a mean, min, max, or distinct value count.",
+              run: (state, dispatch, view) => {
+                return insertInlineMetric(view, state.selection.ranges[0], {
+                  type: "InlineMetric",
+                  metrics: [
+                    {
+                      type: "column_values",
+                      subjectType: "fragments",
+                      tableOfContentsItemId: tocId,
+                      parameters: {
+                        valueColumn:
+                          bestNumericColumn ||
+                          source.geostats.layers[0].attributes[0].attribute,
                       },
-                    ],
-                    componentSettings: {
-                      presentation: "column_values",
-                      stat: "mean",
                     },
-                  });
-                },
-              });
-            }
+                  ],
+                  componentSettings: {
+                    presentation: "column_values",
+                    stat: "mean",
+                  },
+                });
+              },
+            });
+            // }
+
+            children.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-column-stats-table`,
+              label: "Column Statistics Table",
+              description:
+                "Show key statistics for a column such as min, max, mean, sum, and distinct value count.",
+              run: (state, dispatch, view) => {
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "ColumnStatisticsTable",
+                  metrics: [
+                    {
+                      type: "column_values",
+                      subjectType: "fragments",
+                      tableOfContentsItemId: tocId,
+                      parameters: {
+                        valueColumn:
+                          bestNumericColumn ||
+                          source.geostats.layers[0].attributes[0].attribute,
+                      },
+                    },
+                  ],
+                  componentSettings: {
+                    displayStats: bestNumericColumn
+                      ? {
+                          min: true,
+                          max: true,
+                          mean: true,
+                        }
+                      : {
+                          countDistinct: true,
+                        },
+                  },
+                });
+              },
+            });
           }
           switch (geostatsLayer.geometry) {
             case "Polygon":

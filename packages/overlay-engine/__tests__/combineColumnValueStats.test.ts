@@ -271,8 +271,8 @@ describe("combineColumnValueStats", () => {
 
     // Should still cover the full input range (0 to 249) after downsampling
     const values = result2.histogram.map(([value]) => value);
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values.filter((v) => typeof v === "number"));
+    const maxValue = Math.max(...values.filter((v) => typeof v === "number"));
     expect(minValue).toBeGreaterThanOrEqual(0);
     expect(maxValue).toBeLessThanOrEqual(249);
 
@@ -281,8 +281,12 @@ describe("combineColumnValueStats", () => {
     const span = maxValue - minValue;
     const lowerThreshold = minValue + span * 0.25;
     const upperThreshold = minValue + span * 0.75;
-    const hasLower = values.some((v) => v <= lowerThreshold);
-    const hasUpper = values.some((v) => v >= upperThreshold);
+    const hasLower = values.some(
+      (v) => typeof v === "number" && v <= lowerThreshold
+    );
+    const hasUpper = values.some(
+      (v) => typeof v === "number" && v >= upperThreshold
+    );
     expect(hasLower).toBe(true);
     expect(hasUpper).toBe(true);
   });

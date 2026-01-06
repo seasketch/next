@@ -375,13 +375,13 @@ export async function createPresenceTable({
 export type ColumnValues =
   | [
       /** column value */
-      number,
+      number | string | boolean,
       /* area of overlap (in sq meters) if feature is polygonal, or length in meters if feature is linestring */
       number
     ]
   | [
       /** column value */
-      number
+      number | string | boolean
     ];
 
 export async function collectColumnValues({
@@ -471,7 +471,11 @@ export async function collectColumnValues({
       }
       columnValue.push(length);
     }
-    if (typeof value === "number") {
+    if (
+      typeof value === "number" ||
+      typeof value === "string" ||
+      typeof value === "boolean"
+    ) {
       results["*"].push(columnValue);
       if (groupBy) {
         const classKey = f.feature.properties?.[groupBy];

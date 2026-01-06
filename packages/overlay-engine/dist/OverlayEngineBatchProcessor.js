@@ -534,7 +534,9 @@ class OverlayEngineBatchProcessor {
     addColumnValuesFeatureToResults(feature) {
         const value = feature.properties?.[this.columnValuesProperty];
         const results = this.getColumnValuesResults();
-        if (typeof value === "number") {
+        if (typeof value === "number" ||
+            typeof value === "string" ||
+            typeof value === "boolean") {
             const columnValue = [value];
             if (feature.geometry.type === "Polygon" ||
                 feature.geometry.type === "MultiPolygon") {
@@ -703,15 +705,23 @@ function calculateColumnValueStats(values) {
     let weightedSum = 0;
     let totalWeight = 0;
     const histogramMap = new Map();
+    const distinctValues = new Set();
     for (const entry of values) {
         const value = entry[0];
+        distinctValues.add(value);
         const weight = entry.length > 1 ? entry[1] : undefined;
-        if (value < min)
-            min = value;
-        if (value > max)
-            max = value;
-        sum += value;
-        if (typeof weight === "number" && isFinite(weight) && weight > 0) {
+        if (typeof value === "number") {
+            if (value < min)
+                min = value;
+            if (value > max)
+                max = value;
+            sum += value;
+        }
+        if (typeof weight === "number" &&
+            typeof value === "number" &&
+            isFinite(weight) &&
+            weight > 0 &&
+            isFinite(value)) {
             weightedSum += value * weight;
             totalWeight += weight;
         }
@@ -719,35 +729,49 @@ function calculateColumnValueStats(values) {
         histogramMap.set(value, (histogramMap.get(value) || 0) + histogramContribution);
     }
     const mean = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
-    // Standard deviation - weighted if we have weights, otherwise unweighted
     let varianceNumerator = 0;
-    if (totalWeight > 0) {
-        for (const entry of values) {
-            const value = entry[0];
-            const weight = entry.length > 1 ? entry[1] : undefined;
-            if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
-                continue;
+    if (typeof values[0][0] === "number") {
+        // Standard deviation - weighted if we have weights, otherwise unweighted
+        if (totalWeight > 0) {
+            for (const entry of values) {
+                const value = entry[0];
+                const weight = entry.length > 1 ? entry[1] : undefined;
+                if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
+                    continue;
+                }
+                const diff = value - mean;
+                varianceNumerator += weight * diff * diff;
             }
-            const diff = value - mean;
-            varianceNumerator += weight * diff * diff;
+            varianceNumerator = varianceNumerator / totalWeight;
         }
-        varianceNumerator = varianceNumerator / totalWeight;
-    }
-    else {
-        for (const entry of values) {
-            const value = entry[0];
-            const diff = value - mean;
-            varianceNumerator += diff * diff;
+        else {
+            for (const entry of values) {
+                const value = entry[0];
+                const diff = value - mean;
+                varianceNumerator += diff * diff;
+            }
+            varianceNumerator = varianceNumerator / count;
         }
-        varianceNumerator = varianceNumerator / count;
     }
     const stdDev = Math.sqrt(varianceNumerator);
-    let histogram = Array.from(histogramMap.entries()).sort((a, b) => a[0] - b[0]);
+    let histogram = Array.from(histogramMap.entries()).sort((a, b) => {
+        if (typeof a[0] === "number" && typeof b[0] === "number") {
+            return a[0] - b[0];
+        }
+        else {
+            return 0;
+        }
+    });
     const MAX_HISTOGRAM_ENTRIES = 200;
     if (histogram.length > MAX_HISTOGRAM_ENTRIES) {
-        histogram = (0, rasterStats_1.downsampleHistogram)(histogram, MAX_HISTOGRAM_ENTRIES);
+        if (typeof histogram[0][0] === "number") {
+            histogram = (0, rasterStats_1.downsampleHistogram)(histogram, MAX_HISTOGRAM_ENTRIES);
+        }
+        else {
+            histogram = histogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+        }
     }
-    const countDistinct = histogramMap.size;
+    const countDistinct = distinctValues.size;
     return {
         count,
         min,
