@@ -110,8 +110,8 @@ export function useNumberFormatters({
       {
         style: "decimal",
         unitDisplay: unitDisplay,
-        minimumFractionDigits: minimumFractionDigits,
-        maximumFractionDigits: minimumFractionDigits,
+        minimumFractionDigits: 1,
+        maximumFractionDigits: 1,
       }
     );
 
@@ -120,8 +120,8 @@ export function useNumberFormatters({
       {
         style: "decimal",
         unitDisplay: unitDisplay,
-        minimumFractionDigits: minimumFractionDigits,
-        maximumFractionDigits: minimumFractionDigits,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
       }
     );
 

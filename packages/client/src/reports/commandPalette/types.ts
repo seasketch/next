@@ -22,6 +22,10 @@ export type CommandPaletteItem = {
   customPopoverContent?: (helpers: {
     closePopover: () => void;
     focusPalette: () => void;
+    apply: (
+      item: CommandPaletteItem,
+      extra?: { state?: EditorState; view?: EditorView }
+    ) => void;
   }) => ReactNode;
   disabled?: boolean;
   children?: CommandPaletteItem[];
@@ -38,4 +42,3 @@ export type CommandPaletteGroup = {
   label: string;
   items: CommandPaletteItem[];
 };
-

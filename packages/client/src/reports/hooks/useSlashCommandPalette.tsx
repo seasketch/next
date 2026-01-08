@@ -819,6 +819,7 @@ export function useSlashCommandPalette({
                                     closePopover();
                                   },
                                   focusPalette,
+                                  apply: applyCommand,
                                 });
                               }
                               if (hasChildren) {

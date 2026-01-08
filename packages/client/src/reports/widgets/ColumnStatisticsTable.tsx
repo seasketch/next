@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import {
   ColumnValuesMetric,
@@ -17,6 +17,7 @@ import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
   TooltipPopoverContent,
+  TooltipInfoIcon,
 } from "../../editor/TooltipMenu";
 import { useReportContext } from "../ReportContext";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
@@ -26,9 +27,20 @@ import { NumberRoundingControl } from "./NumberRoundingControl";
 import * as Popover from "@radix-ui/react-popover";
 import { Pencil2Icon } from "@radix-ui/react-icons";
 import { ColumnValuesStatKey } from "./InlineMetric";
+import { MapContext } from "../../dataLayers/MapContextManager";
+import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
+import { LayersIcon } from "@radix-ui/react-icons";
 
 type ColumnStatisticsTableSettings = {
   columns?: string[];
+  columnSettings?: Record<
+    string,
+    {
+      label?: string;
+      stableId?: string;
+    }
+  >;
   displayStats?: Partial<Record<ColumnValuesStatKey, boolean>>;
   minimumFractionDigits?: number;
   columnLabel?: string;
@@ -72,8 +84,8 @@ const statLabels = (
 export const ColumnStatisticsTable: ReportWidget<
   ColumnStatisticsTableSettings
 > = ({ metrics, componentSettings, sources, loading }) => {
-  console.log("componentSettings", componentSettings);
   const { t } = useTranslation("reports");
+  const mapContext = useContext(MapContext);
   const formatters = useNumberFormatters({
     minimumFractionDigits: componentSettings?.minimumFractionDigits,
   });
@@ -86,6 +98,8 @@ export const ColumnStatisticsTable: ReportWidget<
   }, [componentSettings?.displayStats]);
 
   const rows = useMemo<(ColumnStatisticsRow & { column: string })[]>(() => {
+    const selectedColumns = componentSettings?.columns || [];
+    const columnSettings = componentSettings?.columnSettings || {};
     const rows: (ColumnStatisticsRow & { column: string })[] = [];
 
     const fragmentMetrics = metrics.filter(
@@ -93,7 +107,22 @@ export const ColumnStatisticsTable: ReportWidget<
         subjectIsFragment(m.subject) && m.type === "column_values" && m.value
     ) as unknown as ColumnValuesMetric[];
 
-    if (!fragmentMetrics.length) return [];
+    if (!fragmentMetrics.length || loading)
+      return selectedColumns.map((col) => ({
+        column: col,
+        stats: {
+          type: "number",
+          count: 0,
+          min: NaN,
+          max: NaN,
+          mean: NaN,
+          stdDev: NaN,
+          sum: NaN,
+          histogram: [],
+          countDistinct: 0,
+        },
+      }));
+
     const statsByColumn: Record<
       string,
       Array<NumberColumnValueStats | StringOrBooleanColumnValueStats>
@@ -115,9 +144,7 @@ export const ColumnStatisticsTable: ReportWidget<
       }
     }
 
-    const selectedColumns = componentSettings?.columns;
-    const columnsToRender =
-      selectedColumns?.filter((col) => statsByColumn[col]) || [];
+    const columnsToRender = selectedColumns.filter((col) => statsByColumn[col]);
 
     for (const column of columnsToRender) {
       const statsList = statsByColumn[column] || [];
@@ -161,6 +188,11 @@ export const ColumnStatisticsTable: ReportWidget<
     [resolvedDisplayStats]
   );
 
+  const hasVisibilityColumn = useMemo(() => {
+    const cs = componentSettings?.columnSettings || {};
+    return Object.keys(cs).some((c) => !!cs[c]?.stableId);
+  }, [componentSettings?.columnSettings]);
+
   const formatValue = (
     stat: ColumnValuesStatKey,
     stats: NumberColumnValueStats | StringOrBooleanColumnValueStats
@@ -195,40 +227,118 @@ export const ColumnStatisticsTable: ReportWidget<
     );
   }
 
-  console.log(
-    "statLabel mean",
-    componentSettings,
-    statLabels(t, componentSettings)["mean"]
-  );
-
   return (
     <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
-      <div className="divide-y divide-gray-100">
-        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
-          <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
+      <div
+        className="divide-y divide-gray-100"
+        style={{
+          display: "grid",
+          gridTemplateColumns: `${
+            hasVisibilityColumn ? "40px " : ""
+          }minmax(140px,1fr) repeat(${statsToShow.length}, minmax(70px, auto))`,
+        }}
+      >
+        <div className="contents bg-gray-50 border-b border-gray-200">
+          {hasVisibilityColumn && (
+            <div className="px-3 py-2 text-center text-gray-600 text-xs font-semibold uppercase tracking-wide bg-gray-100 border-b flex items-center justify-center">
+              <LayersIcon className="w-4 h-4" />
+            </div>
+          )}
+          <div className="px-3 py-2 text-gray-600 text-xs font-semibold uppercase tracking-wide truncate bg-gray-100 border-b">
             {componentSettings?.columnLabel || t("Column")}
           </div>
           {statsToShow.map((stat) => (
             <div
               key={String(stat)}
-              className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[90px]"
+              className="px-3 py-2 text-right text-gray-600 text-xs font-semibold uppercase tracking-wide bg-gray-100 border-b truncate"
             >
               {statLabels(t, componentSettings)[stat]}
             </div>
           ))}
         </div>
         {rows.map((row, idx) => (
-          <div
-            key={idx}
-            className="flex items-center gap-3 px-3 py-2 hover:bg-gray-50"
-          >
-            <div className="flex-1 min-w-0 text-sm text-gray-900 truncate">
-              {row.column}
+          <div key={idx} className="contents hover:bg-gray-50">
+            {hasVisibilityColumn && (
+              <div
+                className={`px-3 py-2 text-center ${
+                  idx % 2 === 1
+                    ? "bg-gray-50/50 border-t border-b border-black/5"
+                    : ""
+                }`}
+              >
+                {componentSettings?.columnSettings?.[row.column]?.stableId ? (
+                  <VisibilityCheckboxAnimated
+                    id={
+                      componentSettings.columnSettings?.[row.column]
+                        ?.stableId || ""
+                    }
+                    onClick={() => {
+                      const sid =
+                        componentSettings.columnSettings?.[row.column]
+                          ?.stableId;
+                      if (!sid) return;
+                      if (
+                        mapContext?.layerStatesByTocStaticId?.[sid]?.visible
+                      ) {
+                        mapContext.manager?.hideTocItems?.([sid]);
+                      } else {
+                        mapContext?.manager?.showTocItems?.([sid]);
+                      }
+                    }}
+                    disabled={!mapContext?.manager}
+                    visibility={
+                      !!mapContext?.layerStatesByTocStaticId?.[
+                        componentSettings.columnSettings?.[row.column]
+                          ?.stableId || ""
+                      ]?.visible &&
+                      mapContext?.layerStatesByTocStaticId?.[
+                        componentSettings.columnSettings?.[row.column]
+                          ?.stableId || ""
+                      ]?.hidden !== true
+                    }
+                    loading={
+                      !!mapContext?.layerStatesByTocStaticId?.[
+                        componentSettings.columnSettings?.[row.column]
+                          ?.stableId || ""
+                      ]?.loading
+                    }
+                    error={
+                      mapContext?.layerStatesByTocStaticId?.[
+                        componentSettings.columnSettings?.[row.column]
+                          ?.stableId || ""
+                      ]?.error
+                        ? String(
+                            mapContext?.layerStatesByTocStaticId?.[
+                              componentSettings.columnSettings?.[row.column]
+                                ?.stableId || ""
+                            ]?.error
+                          )
+                        : undefined
+                    }
+                  />
+                ) : (
+                  <span className="text-xs text-gray-400"></span>
+                )}
+              </div>
+            )}
+            <div
+              className={`px-3 py-2 text-sm text-gray-900 truncate group- ${
+                idx % 2 === 1
+                  ? "bg-gray-50/50 border-t border-b border-black/5"
+                  : ""
+              }`}
+            >
+              {componentSettings?.columnSettings?.[row.column]?.label ||
+                row.column}
             </div>
             {statsToShow.map((stat) => (
               <div
                 key={`${row.column}-${String(stat)}`}
-                className="flex-none text-right text-sm text-gray-900 tabular-nums min-w-[90px]"
+                className={`px-3 py-2 text-right text-sm text-gray-900 tabular-nums  ${
+                  idx % 2 === 1
+                    ? "bg-gray-50/50 border-t border-b border-black/5"
+                    : ""
+                }`}
               >
                 {loading ? <MetricLoadingDots /> : formatValue(stat, row.stats)}
               </div>
@@ -246,6 +356,7 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
     const reportContext = useReportContext();
     const componentSettings = node.attrs?.componentSettings || {};
     const [statsModalOpen, setStatsModalOpen] = useState(false);
+    const overlayOptions = useOverlayOptionsForLayerToggle(t);
 
     const dependencies = useMemo(
       () => (node.attrs?.metrics || []) as MetricDependency[],
@@ -271,7 +382,7 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
     const numericColumnOptions = useMemo(() => {
       const options: Array<{
         value: string;
-        label: React.ReactNode;
+        examples?: string;
       }> = [];
       const source = sources?.[0];
       if (!source?.geostats) return options;
@@ -285,22 +396,13 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       for (const attr of geoLayer.attributes) {
         if (attr.type !== "number") continue;
         const exampleValues = Object.keys(attr.values || {})
-          .slice(0, 5)
+          .slice(0, 3)
           .map((v) => String(v));
         const examplesText =
           exampleValues.length > 0 ? exampleValues.join(", ") : "";
         options.push({
           value: attr.attribute,
-          label: (
-            <div className="flex flex-col">
-              <span className="font-medium">{attr.attribute}</span>
-              {examplesText && (
-                <span className="text-xs text-gray-500 truncate max-w-[200px]">
-                  {examplesText}
-                </span>
-              )}
-            </div>
-          ),
+          examples: examplesText,
         });
       }
       options.sort((a, b) => a.value.localeCompare(b.value));
@@ -340,6 +442,36 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
         componentSettings: {
           ...componentSettings,
           columns: [],
+        },
+      });
+    };
+
+    const handleLabelChange = (column: string, value: string) => {
+      onUpdate({
+        componentSettings: {
+          ...componentSettings,
+          columnSettings: {
+            ...(componentSettings.columnSettings || {}),
+            [column]: {
+              ...(componentSettings.columnSettings || {})[column],
+              label: value,
+            },
+          },
+        },
+      });
+    };
+
+    const handleStableIdChange = (column: string, stableId?: string) => {
+      onUpdate({
+        componentSettings: {
+          ...componentSettings,
+          columnSettings: {
+            ...(componentSettings.columnSettings || {}),
+            [column]: {
+              ...(componentSettings.columnSettings || {})[column],
+              stableId,
+            },
+          },
         },
       });
     };
@@ -394,55 +526,156 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
               className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
             >
               <Pencil2Icon className="w-3 h-3" />
-              {t("columns")}
+              {t("rows")}
               <span className="text-gray-500 text-xs">
                 {selectedColumns.length ? ` (${selectedColumns.length})` : ""}
               </span>
             </button>
           </Popover.Trigger>
           <TooltipPopoverContent>
-            <div className="px-1 pb-2 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                className="text-xs px-2 py-1 rounded hover:bg-gray-100"
-                onClick={handleSelectAll}
-                disabled={!numericColumnOptions.length}
-              >
-                {t("Select all")}
-              </button>
-              <button
-                type="button"
-                className="text-xs px-2 py-1 rounded hover:bg-gray-100"
-                onClick={handleSelectNone}
-              >
-                {t("Select none")}
-              </button>
+            <div className="px-3 pt-2 pb-1 grid grid-cols-3 gap-2 items-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              <label className="flex items-center gap-2 text-xs text-gray-700">
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={
+                    selectedColumns.length > 0 &&
+                    selectedColumns.length === numericColumnOptions.length
+                  }
+                  ref={(el) => {
+                    if (!el) return;
+                    const none = selectedColumns.length === 0;
+                    const some =
+                      selectedColumns.length > 0 &&
+                      selectedColumns.length < numericColumnOptions.length;
+                    el.indeterminate = some;
+                    if (none) el.checked = false;
+                  }}
+                  onChange={(e) => {
+                    if (e.target.indeterminate || !e.target.checked) {
+                      handleSelectNone();
+                    } else {
+                      handleSelectAll();
+                    }
+                  }}
+                />
+                <span>{t("Included Columns")}</span>
+              </label>
+              <div className="pl-2 flex items-center gap-1">
+                {t("Label")}
+                <TooltipInfoIcon
+                  content={t(
+                    "Custom labels can optionally be used to replace column names."
+                  )}
+                  ariaLabel={t("Label help")}
+                />
+              </div>
+              <div className="pl-2 flex items-center gap-1">
+                {t("Linked Layer")}
+                <TooltipInfoIcon
+                  content={t(
+                    "If specified, controls will be shown to toggle related layers on the map."
+                  )}
+                  ariaLabel={t("Linked layer help")}
+                />
+              </div>
             </div>
-            <div className="px-1 space-y-1 w-56 max-h-72 overflow-auto">
-              {numericColumnOptions.map((opt) => {
-                const checked = selectedColumns.includes(opt.value);
-                return (
-                  <label
-                    key={opt.value}
-                    className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      className="rounded border-gray-300"
-                      checked={checked}
-                      onChange={(e) =>
-                        handleColumnSelectionChange(opt.value, e.target.checked)
-                      }
-                    />
-                    <span className="flex-1 min-w-0 truncate">{opt.value}</span>
-                  </label>
-                );
-              })}
-              {!numericColumnOptions.length && (
-                <div className="text-xs text-gray-500 px-1">
-                  {t("No numeric columns available")}
-                </div>
-              )}
+            <div className="max-h-72 overflow-auto">
+              <div className="divide-y divide-gray-100">
+                {numericColumnOptions.map((opt) => {
+                  const checked = selectedColumns.includes(opt.value);
+                  const colSettings =
+                    componentSettings.columnSettings?.[opt.value];
+                  const layerTitle = colSettings?.stableId
+                    ? overlayOptions.find(
+                        (o) => o.value === colSettings?.stableId
+                      )?.label
+                    : "";
+                  return (
+                    <div
+                      key={opt.value}
+                      className="grid grid-cols-3 gap-2 px-3 py-2 items-center"
+                      style={{
+                        gridTemplateColumns:
+                          "minmax(0,200px) minmax(0,200px) minmax(0,200px)",
+                      }}
+                    >
+                      <label className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300"
+                          checked={checked}
+                          onChange={(e) =>
+                            handleColumnSelectionChange(
+                              opt.value,
+                              e.target.checked
+                            )
+                          }
+                        />
+                        <span className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900">
+                          {opt.value}
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        placeholder={opt.value}
+                        value={colSettings?.label || ""}
+                        onChange={(e) =>
+                          handleLabelChange(opt.value, e.target.value)
+                        }
+                      />
+                      <Popover.Root>
+                        <Popover.Trigger asChild>
+                          <button
+                            type="button"
+                            className="h-8 w-full rounded border border-gray-300 px-2 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50"
+                          >
+                            <span className="truncate">
+                              {layerTitle || t("None")}
+                            </span>
+                            <Pencil2Icon className="w-3 h-3 text-gray-500" />
+                          </button>
+                        </Popover.Trigger>
+                        <Popover.Content
+                          side="top"
+                          sideOffset={6}
+                          className="bg-white text-gray-900 border border-black/20 rounded shadow-lg px-2 py-2 z-50 w-56"
+                        >
+                          <div className="max-h-56 overflow-auto divide-y divide-gray-100">
+                            <button
+                              type="button"
+                              className="w-full text-left px-2 py-1 text-sm hover:bg-gray-50"
+                              onClick={() =>
+                                handleStableIdChange(opt.value, undefined)
+                              }
+                            >
+                              {t("None")}
+                            </button>
+                            {overlayOptions.map((o) => (
+                              <button
+                                key={o.value}
+                                type="button"
+                                className="w-full text-left px-2 py-1 text-sm hover:bg-gray-50"
+                                onClick={() =>
+                                  handleStableIdChange(opt.value, o.value)
+                                }
+                              >
+                                {o.label}
+                              </button>
+                            ))}
+                          </div>
+                        </Popover.Content>
+                      </Popover.Root>
+                    </div>
+                  );
+                })}
+                {!numericColumnOptions.length && (
+                  <div className="text-xs text-gray-500 px-3 py-2">
+                    {t("No numeric columns available")}
+                  </div>
+                )}
+              </div>
             </div>
           </TooltipPopoverContent>
         </Popover.Root>

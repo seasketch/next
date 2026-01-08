@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
-import * as Tooltip from "@radix-ui/react-tooltip";
 import { LabeledDropdown } from "./LabeledDropdown";
+import { TooltipInfoIcon } from "../../editor/TooltipMenu";
 
 type RoundingValue = number | undefined;
 
@@ -27,44 +26,26 @@ export function NumberRoundingControl({
     () => (
       <div className="flex items-center justify-between w-full -ml-2 pl-2">
         <span className="flex-1">{t("auto")}</span>
-        <Tooltip.Provider>
-          <Tooltip.Root delayDuration={100}>
-            <Tooltip.Trigger asChild>
-              <button
-                type="button"
-                className="inline-flex items-center text-gray-400 hover:text-gray-600 -mr-1"
-                onClick={(e) => e.stopPropagation()}
-                onMouseDown={(e) => e.stopPropagation()}
-              >
-                <QuestionMarkCircledIcon className="w-3.5 h-3.5" />
-              </button>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content
-                side="right"
-                align="center"
-                className="bg-gray-800 text-white p-2 rounded text-xs max-w-[200px] z-[10000]"
-                sideOffset={5}
-              >
-                <div className="space-y-1.5">
-                  <div className="font-semibold">{t("Area:")}</div>
-                  <div>
-                    {t(
-                      "Larger numbers (>100) are presented with no fractional digits. Smaller numbers will be displayed to one decimal place."
-                    )}
-                  </div>
-                  <div className="font-semibold pt-1">{t("Percentages:")}</div>
-                  <div>
-                    {t(
-                      'Percentages > 5% will be rounded. Percentages > 0.9999 will be displayed as 100%., and values less than 0.1% will be displayed as "< 0.1%".'
-                    )}
-                  </div>
-                </div>
-                <Tooltip.Arrow className="fill-gray-800" />
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
-        </Tooltip.Provider>
+        <TooltipInfoIcon
+          side="right"
+          content={
+            <div className="space-y-1.5">
+              <div className="font-semibold">{t("Area:")}</div>
+              <div>
+                {t(
+                  "Larger numbers (>100) are presented with no fractional digits. Smaller numbers will be displayed to one decimal place."
+                )}
+              </div>
+              <div className="font-semibold pt-1">{t("Percentages:")}</div>
+              <div>
+                {t(
+                  'Percentages > 5% will be rounded. Percentages > 0.9999 will be displayed as 100%., and values less than 0.1% will be displayed as "< 0.1%".'
+                )}
+              </div>
+            </div>
+          }
+          className="-mr-1"
+        />
       </div>
     ),
     [t]

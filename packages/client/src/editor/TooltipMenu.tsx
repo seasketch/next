@@ -30,9 +30,11 @@ import {
   TextIcon,
   TrashIcon,
   UnderlineIcon,
+  QuestionMarkCircledIcon,
 } from "@radix-ui/react-icons";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import * as Popover from "@radix-ui/react-popover";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { MetricDependency, MetricDependencyParameters } from "overlay-engine";
 
 /**
@@ -1620,6 +1622,55 @@ export function TooltipDropdown({
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+  );
+}
+
+export function TooltipInfoIcon({
+  content,
+  side = "top",
+  align = "center",
+  sideOffset = 4,
+  delayDuration = 100,
+  className = "",
+  iconClassName = "w-3.5 h-3.5",
+  ariaLabel,
+}: {
+  content: ReactNode;
+  side?: "top" | "bottom" | "left" | "right";
+  align?: "start" | "center" | "end";
+  sideOffset?: number;
+  delayDuration?: number;
+  className?: string;
+  iconClassName?: string;
+  ariaLabel?: string;
+}) {
+  return (
+    <Tooltip.Provider delayDuration={delayDuration}>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <button
+            type="button"
+            aria-label={ariaLabel}
+            className={`inline-flex items-center text-gray-400 hover:text-gray-600 focus:outline-none ${className}`}
+            onClick={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
+          >
+            <QuestionMarkCircledIcon className={iconClassName} />
+          </button>
+        </Tooltip.Trigger>
+        <Tooltip.Portal>
+          <Tooltip.Content
+            side={side}
+            align={align}
+            sideOffset={sideOffset}
+            className="bg-gray-900 text-white text-[11px] px-2 py-1 rounded shadow-lg max-w-xs leading-snug z-[80]"
+          >
+            <div className="space-y-1">{content}</div>
+            <Tooltip.Arrow className="fill-gray-900" />
+          </Tooltip.Content>
+        </Tooltip.Portal>
+      </Tooltip.Root>
+    </Tooltip.Provider>
   );
 }
 

@@ -737,3 +737,17 @@ mutation PreprocessSource($slug: String!, $sourceId: Int!) {
     }
   }
 }
+
+query OverlaysForReportLayerToggles($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      reportingOutput {
+        id
+      }
+    }
+  }
+}

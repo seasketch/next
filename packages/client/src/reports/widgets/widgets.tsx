@@ -15,6 +15,7 @@ import {
 } from "../../generated/graphql";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
+import { EditorState } from "prosemirror-state";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
@@ -38,6 +39,15 @@ import {
   IntersectingFeaturesList,
   IntersectingFeaturesListTooltipControls,
 } from "./IntersectingFeaturesList";
+import {
+  BlockLayerToggle,
+  BlockLayerToggleTooltipControls,
+} from "./BlockLayerToggle";
+import { OverlayTogglePicker } from "./OverlayTogglePicker";
+import {
+  InlineLayerToggle,
+  InlineLayerToggleTooltipControls,
+} from "./InlineLayerToggle";
 import {
   ColumnStatisticsTable,
   ColumnStatisticsTableTooltipControls,
@@ -209,6 +219,10 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <IntersectingFeaturesListTooltipControls {...props} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTableTooltipControls {...props} />;
+    case "BlockLayerToggle":
+      return <BlockLayerToggleTooltipControls {...props} />;
+    case "InlineLayerToggle":
+      return <InlineLayerToggleTooltipControls {...props} />;
     default:
       return null;
   }
@@ -376,6 +390,10 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <IntersectingFeaturesList {...widgetProps} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTable {...widgetProps} />;
+    case "InlineLayerToggle":
+      return <InlineLayerToggle {...widgetProps} />;
+    case "BlockLayerToggle":
+      return <BlockLayerToggle {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -550,6 +568,62 @@ export function buildReportCommandGroups({
   }
 
   if (sources && sources.length > 0) {
+    commandGroups.push({
+      id: "overlay-toggles",
+      label: "Overlay Toggles",
+      items: [
+        {
+          id: "block-layer-toggle",
+          label: "Block Layer Toggle",
+          description: "Toggle an overlay layer on the map",
+          run: () => false,
+          customPopoverContent: ({ closePopover, apply, focusPalette }) => (
+            <OverlayTogglePicker
+              onSelect={(stableId, label, helpers) => {
+                const item = {
+                  id: `block-layer-toggle-${stableId}`,
+                  label,
+                  run: (state: EditorState, dispatch: any, view: EditorView) =>
+                    insertBlockMetric(view, state.selection.ranges[0], {
+                      type: "BlockLayerToggle",
+                      metrics: [],
+                      componentSettings: { stableId, label },
+                    }),
+                };
+                (helpers?.apply || apply)(item);
+                closePopover();
+              }}
+              helpers={{ apply, closePopover, focusPalette }}
+            />
+          ),
+        },
+        {
+          id: "inline-layer-toggle",
+          label: "Inline Layer Toggle",
+          description: "Inline toggle for an overlay layer",
+          run: () => false,
+          customPopoverContent: ({ closePopover, apply }) => (
+            <OverlayTogglePicker
+              onSelect={(stableId, label) => {
+                const item = {
+                  id: `inline-layer-toggle-${stableId}`,
+                  label,
+                  run: (state: EditorState, dispatch: any, view: EditorView) =>
+                    insertInlineMetric(view, state.selection.ranges[0], {
+                      type: "InlineLayerToggle",
+                      metrics: [],
+                      componentSettings: { stableId, label },
+                    }),
+                };
+                apply(item);
+                closePopover();
+              }}
+            />
+          ),
+        },
+      ],
+    });
+
     const overlayItems: CommandPaletteItem[] = sources
       .filter((source) => source.tableOfContentsItemId)
       .map((source) => {
