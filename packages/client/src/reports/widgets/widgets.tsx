@@ -1,6 +1,6 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC, useContext, useMemo, useState, useEffect } from "react";
+import { FC, useContext, useMemo, useState, useEffect, useRef } from "react";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -663,36 +663,37 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            // if (bestNumericColumn) {
-            children.push({
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `overlay-layer-${tocId}-inline-column-stats`,
-              label: "Inline Column Stats",
-              description:
-                "Summarize numeric columns with a mean, min, max, or distinct value count.",
-              run: (state, dispatch, view) => {
-                return insertInlineMetric(view, state.selection.ranges[0], {
-                  type: "InlineMetric",
-                  metrics: [
-                    {
-                      type: "column_values",
-                      subjectType: "fragments",
-                      tableOfContentsItemId: tocId,
-                      parameters: {
-                        valueColumn:
-                          bestNumericColumn ||
-                          source.geostats.layers[0].attributes[0].attribute,
+            if (
+              bestNumericColumn ||
+              source.geostats.layers[0]?.attributes?.[0]?.attribute
+            ) {
+              children.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-inline-column-stats`,
+                label: "Inline Column Stats",
+                description:
+                  "Summarize numeric columns with a mean, min, max, or distinct value count.",
+                run: (state, dispatch, view) => {
+                  return insertInlineMetric(view, state.selection.ranges[0], {
+                    type: "InlineMetric",
+                    metrics: [
+                      {
+                        type: "column_values",
+                        subjectType: "fragments",
+                        tableOfContentsItemId: tocId,
                       },
+                    ],
+                    componentSettings: {
+                      presentation: "column_values",
+                      stat: "mean",
+                      column:
+                        bestNumericColumn ||
+                        source.geostats.layers[0].attributes[0].attribute,
                     },
-                  ],
-                  componentSettings: {
-                    presentation: "column_values",
-                    stat: "mean",
-                  },
-                });
-              },
-            });
-            // }
+                  });
+                },
+              });
+            }
 
             children.push({
               // eslint-disable-next-line i18next/no-literal-string
@@ -708,14 +709,13 @@ export function buildReportCommandGroups({
                       type: "column_values",
                       subjectType: "fragments",
                       tableOfContentsItemId: tocId,
-                      parameters: {
-                        valueColumn:
-                          bestNumericColumn ||
-                          source.geostats.layers[0].attributes[0].attribute,
-                      },
                     },
                   ],
                   componentSettings: {
+                    columns: [
+                      bestNumericColumn ||
+                        source.geostats.layers[0].attributes[0].attribute,
+                    ],
                     displayStats: bestNumericColumn
                       ? {
                           min: true,
@@ -999,19 +999,13 @@ export function TableHeadingsEditor({
       (key) => debouncedLocalState[key] !== initialLabels[key]
     );
     if (hasChanges) {
-      const updatedSettings: Record<string, any> = { ...componentSettings };
+      const updatedSettings: Record<string, any> = {};
       labelKeys.forEach((key) => {
         updatedSettings[key] = debouncedLocalState[key] || undefined;
       });
       onUpdate({ componentSettings: updatedSettings });
     }
-  }, [
-    debouncedLocalState,
-    initialLabels,
-    componentSettings,
-    labelKeys,
-    onUpdate,
-  ]);
+  }, [debouncedLocalState, labelKeys, onUpdate]);
 
   // Explicit save when popover closes
   const handlePopoverOpenChange = (open: boolean) => {

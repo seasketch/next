@@ -73,7 +73,14 @@ export declare function collectColumnValues({ features, differenceMultiPolygon, 
     property: string;
     groupBy?: string;
 }): Promise<{
-    [classKey: string]: ColumnValues[];
+    [classKey: string]: {
+        [attr: string]: ColumnValues[];
+    };
 }>;
+export declare function addColumnValuesToResults(results: {
+    [classKey: string]: {
+        [attr: string]: ColumnValues[];
+    };
+}, feature: FeatureWithMetadata<Feature<Geometry>>, groupBy?: string): void;
 export declare function pick(object: any, keys?: string[]): any;
 //# sourceMappingURL=clipBatch.d.ts.map

@@ -401,7 +401,11 @@ export async function collectColumnValues({
   property: string;
   groupBy?: string;
 }) {
-  const results: { [classKey: string]: ColumnValues[] } = { "*": [] };
+  const results: {
+    [classKey: string]: {
+      [attr: string]: ColumnValues[];
+    };
+  } = { "*": {} };
   for (const f of features) {
     if (
       f.feature.geometry.type === "Point" ||
@@ -450,22 +454,45 @@ export async function collectColumnValues({
         subjectFeature
       );
     }
-    const value = f.feature.properties?.[property];
+    addColumnValuesToResults(results, f.feature, groupBy);
+  }
+  return results;
+}
+
+export function addColumnValuesToResults(
+  results: {
+    [classKey: string]: {
+      [attr: string]: ColumnValues[];
+    };
+  },
+  feature: FeatureWithMetadata<Feature<Geometry>>,
+  groupBy?: string
+) {
+  for (const attr in feature.properties) {
+    if (
+      attr === "__oidx" ||
+      attr === "__byteLength" ||
+      attr === "__area" ||
+      attr === "__offset"
+    ) {
+      continue;
+    }
+    const value = feature.properties[attr];
     const columnValue: ColumnValues = [value];
     if (
-      f.feature.geometry.type === "Polygon" ||
-      f.feature.geometry.type === "MultiPolygon"
+      feature.geometry.type === "Polygon" ||
+      feature.geometry.type === "MultiPolygon"
     ) {
-      const sqKm = calcArea(f.feature) * 1e-6;
+      const sqKm = calcArea(feature) * 1e-6;
       if (isNaN(sqKm) || sqKm === 0) {
         continue;
       }
       columnValue.push(sqKm);
     } else if (
-      f.feature.geometry.type === "LineString" ||
-      f.feature.geometry.type === "MultiLineString"
+      feature.geometry.type === "LineString" ||
+      feature.geometry.type === "MultiLineString"
     ) {
-      const length = turfLength(f.feature);
+      const length = turfLength(feature);
       if (isNaN(length) || length === 0) {
         continue;
       }
@@ -476,19 +503,24 @@ export async function collectColumnValues({
       typeof value === "string" ||
       typeof value === "boolean"
     ) {
-      results["*"].push(columnValue);
+      if (!(attr in results["*"])) {
+        results["*"][attr] = [];
+      }
+      results["*"][attr].push(columnValue);
       if (groupBy) {
-        const classKey = f.feature.properties?.[groupBy];
+        const classKey = feature.properties?.[groupBy];
         if (classKey) {
           if (!(classKey in results)) {
-            results[classKey] = [];
+            results[classKey] = {} as { [attr: string]: ColumnValues[] };
           }
-          results[classKey].push(columnValue);
+          if (!(attr in results[classKey])) {
+            results[classKey][attr] = [];
+          }
+          results[classKey][attr].push(columnValue);
         }
       }
     }
   }
-  return results;
 }
 
 parentPort?.on(

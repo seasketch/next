@@ -142,13 +142,23 @@ export type PresenceTableMetric = OverlayMetricBase & {
   };
 };
 
-export type ColumnValueStats = {
+export type StringOrBooleanColumnValueStats = {
+  type: "string" | "boolean";
+  /**
+   * Distinct value ([0]) and count [1]
+   */
+  distinctValues: [string | boolean, number][];
+  countDistinct: number;
+};
+
+export type NumberColumnValueStats = {
+  type: "number";
   count: number;
   min: number;
   max: number;
   mean: number;
   stdDev: number;
-  histogram: [number | string | boolean, number][];
+  histogram: [number, number][];
   countDistinct: number;
   sum: number;
   /**
@@ -159,10 +169,20 @@ export type ColumnValueStats = {
   totalAreaSqKm?: number;
 };
 
+export function isNumberColumnValueStats(
+  stats: NumberColumnValueStats | StringOrBooleanColumnValueStats
+): stats is NumberColumnValueStats {
+  return stats.type === "number";
+}
+
+export type ValuesForColumns = {
+  [attr: string]: StringOrBooleanColumnValueStats | NumberColumnValueStats;
+};
+
 export type ColumnValuesMetric = OverlayMetricBase & {
   type: "column_values";
   value: {
-    [groupBy: string]: ColumnValueStats;
+    [groupBy: string]: ValuesForColumns;
   };
 };
 
@@ -362,9 +382,9 @@ export function combineRasterBandStats(
  * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
  * Otherwise, they are weighted by count.
  */
-export function combineColumnValueStats(
-  statsArray: ColumnValueStats[]
-): ColumnValueStats | undefined {
+export function combineNumberColumnValueStats(
+  statsArray: NumberColumnValueStats[]
+): NumberColumnValueStats | undefined {
   if (statsArray.length === 0) {
     return undefined;
   }
@@ -372,8 +392,6 @@ export function combineColumnValueStats(
   if (statsArray.length === 1) {
     return statsArray[0];
   }
-
-  let isNumeric = false;
 
   // Determine whether to weight by area or by count
   const useAreaWeight = statsArray.some(
@@ -395,14 +413,6 @@ export function combineColumnValueStats(
   const histogramMap = new Map<number | string | boolean, number>();
 
   for (const stats of statsArray) {
-    if (
-      typeof stats.min === "number" &&
-      typeof stats.max === "number" &&
-      !isNaN(stats.min) &&
-      !isNaN(stats.max)
-    ) {
-      isNumeric = true;
-    }
     const weight =
       useAreaWeight && typeof stats.totalAreaSqKm === "number"
         ? Math.max(stats.totalAreaSqKm, 0)
@@ -459,12 +469,8 @@ export function combineColumnValueStats(
   }
 
   // Convert histogram map back to array and sort by value
-  let combinedHistogram: [number | string | boolean, number][] = Array.from(
-    histogramMap.entries()
-  )
-    .map(
-      ([value, count]) => [value, count] as [number | string | boolean, number]
-    )
+  let combinedHistogram: [number, number][] = Array.from(histogramMap.entries())
+    .map(([value, count]) => [value, count] as [number, number])
     .sort((a, b) => {
       if (typeof a[0] === "number" && typeof b[0] === "number") {
         return a[0] - b[0];
@@ -476,17 +482,11 @@ export function combineColumnValueStats(
   // Limit histogram size similarly to raster stats by downsampling
   const MAX_HISTOGRAM_ENTRIES = 200;
   if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
-    if (typeof combinedHistogram[0][0] === "number") {
-      combinedHistogram = downsampleColumnHistogram(
-        combinedHistogram as [number, number][],
-        MAX_HISTOGRAM_ENTRIES
-      );
-    } else {
-      combinedHistogram = combinedHistogram.slice(0, MAX_HISTOGRAM_ENTRIES);
-    }
+    combinedHistogram = downsampleColumnHistogram(
+      combinedHistogram as [number, number][],
+      MAX_HISTOGRAM_ENTRIES
+    );
   }
-
-  const countDistinct = histogramMap.size;
 
   const totalAreaSqKm = useAreaWeight
     ? statsArray.reduce(
@@ -500,15 +500,49 @@ export function combineColumnValueStats(
     : undefined;
 
   return {
+    type: "number",
     count: combinedCount,
-    min: isNumeric ? combinedMin : NaN,
-    max: isNumeric ? combinedMax : NaN,
-    mean: isNumeric ? combinedMean : NaN,
-    stdDev: isNumeric ? combinedStdDev : NaN,
+    min: combinedMin,
+    max: combinedMax,
+    mean: combinedMean,
+    stdDev: combinedStdDev,
     histogram: combinedHistogram,
-    countDistinct,
-    sum: isNumeric ? combinedSum : NaN,
+    countDistinct: histogramMap.size,
+    sum: combinedSum,
     totalAreaSqKm,
+  };
+}
+
+export function combineStringOrBooleanColumnValueStats(
+  statsArray: StringOrBooleanColumnValueStats[]
+): StringOrBooleanColumnValueStats | undefined {
+  if (statsArray.length === 0) {
+    return undefined;
+  }
+  if (statsArray.length === 1) {
+    return statsArray[0];
+  }
+
+  const distinctValues: [string | boolean, number][] = [];
+  for (const stats of statsArray) {
+    for (const record of stats.distinctValues) {
+      const value = record[0];
+      const count = record[1];
+      const existing = distinctValues.find(([v]) => v === value);
+      if (existing) {
+        existing[1] += count;
+      } else {
+        distinctValues.push([value, count]);
+      }
+    }
+  }
+
+  const outputType = statsArray[0]?.type === "boolean" ? "boolean" : "string";
+
+  return {
+    type: outputType,
+    distinctValues,
+    countDistinct: distinctValues.length,
   };
 }
 
@@ -620,7 +654,51 @@ export function combineMetricsForFragments(
       const values = metrics.map((m) => m.value as ColumnValuesMetric["value"]);
       return {
         type: "column_values",
-        value: combineGroupedValues(values, (v) => combineColumnValueStats(v)!),
+        value: combineGroupedValues(values, (groupedValues) => {
+          const stats: ValuesForColumns = {};
+          const attrNames = new Set<string>();
+
+          // Collect all attribute names across fragments for this class key
+          for (const entry of groupedValues) {
+            if (entry && typeof entry === "object") {
+              for (const attr in entry) {
+                attrNames.add(attr);
+              }
+            }
+          }
+
+          for (const attr of attrNames) {
+            const attrValues = groupedValues
+              .map((entry) => entry?.[attr])
+              .filter(
+                (
+                  v
+                ): v is
+                  | StringOrBooleanColumnValueStats
+                  | NumberColumnValueStats => v !== undefined
+              );
+
+            if (attrValues.length === 0) continue;
+
+            if (isNumberColumnValueStats(attrValues[0])) {
+              const combined = combineNumberColumnValueStats(
+                attrValues as NumberColumnValueStats[]
+              );
+              if (combined) {
+                stats[attr] = combined;
+              }
+            } else {
+              const combined = combineStringOrBooleanColumnValueStats(
+                attrValues as StringOrBooleanColumnValueStats[]
+              );
+              if (combined) {
+                stats[attr] = combined;
+              }
+            }
+          }
+
+          return stats;
+        }),
       };
     }
     case "total_area": {

@@ -146,9 +146,11 @@ class OverlayEngineBatchProcessor {
         }
         if (this.operation === "column_values") {
             this.columnValuesProperty = columnValuesProperty;
-            if (!this.columnValuesProperty) {
-                throw new Error("columnValuesProperty is required for column_values operation");
-            }
+            // if (!this.columnValuesProperty) {
+            //   throw new Error(
+            //     "columnValuesProperty is required for column_values operation"
+            //   );
+            // }
         }
     }
     resetBatchData() {
@@ -457,14 +459,22 @@ class OverlayEngineBatchProcessor {
         for (const batchData of batchResults) {
             for (const classKey in batchData) {
                 if (!(classKey in results)) {
-                    results[classKey] = [];
+                    results[classKey] = {};
                 }
-                results[classKey].push(...batchData[classKey]);
+                for (const attr in batchData[classKey]) {
+                    if (!(attr in results[classKey])) {
+                        results[classKey][attr] = [];
+                    }
+                    results[classKey][attr].push(...batchData[classKey][attr]);
+                }
             }
         }
-        // calculate statistics for each class
+        // calculate statistics for each class and attribute
         for (const classKey in results) {
-            columnStats[classKey] = calculateColumnValueStats(results[classKey]);
+            columnStats[classKey] = {};
+            for (const attr in results[classKey]) {
+                columnStats[classKey][attr] = calculateColumnValueStats(results[classKey][attr]);
+            }
         }
         this.results = columnStats;
     }
@@ -534,31 +544,7 @@ class OverlayEngineBatchProcessor {
     addColumnValuesFeatureToResults(feature) {
         const value = feature.properties?.[this.columnValuesProperty];
         const results = this.getColumnValuesResults();
-        if (typeof value === "number" ||
-            typeof value === "string" ||
-            typeof value === "boolean") {
-            const columnValue = [value];
-            if (feature.geometry.type === "Polygon" ||
-                feature.geometry.type === "MultiPolygon") {
-                const sqKm = feature.properties?.__area
-                    ? feature.properties.__area
-                    : (0, area_1.default)(feature) * 1e-6;
-                if (isNaN(sqKm) || sqKm === 0) {
-                    return;
-                }
-                columnValue.push(sqKm);
-            }
-            results["*"].push(columnValue);
-            if (this.groupBy) {
-                const classKey = feature.properties?.[this.groupBy];
-                if (classKey) {
-                    if (!(classKey in results)) {
-                        results[classKey] = [];
-                    }
-                    results[classKey].push(columnValue);
-                }
-            }
-        }
+        (0, clipBatch_1.addColumnValuesToResults)(results, feature, this.groupBy);
     }
     addOverlayFeatureToTotals(feature) {
         // get area in square kilometers
@@ -689,6 +675,7 @@ function calculateColumnValueStats(values) {
     const count = values.length;
     if (count === 0) {
         return {
+            type: "number",
             count: 0,
             min: NaN,
             max: NaN,
@@ -697,6 +684,21 @@ function calculateColumnValueStats(values) {
             histogram: [],
             countDistinct: 0,
             sum: 0,
+        };
+    }
+    const firstValue = values[0][0];
+    if (typeof firstValue === "string" || typeof firstValue === "boolean") {
+        const distinctMap = new Map();
+        for (const entry of values) {
+            const value = entry[0];
+            const current = distinctMap.get(value) ?? 0;
+            distinctMap.set(value, current + 1);
+        }
+        const outputType = typeof firstValue === "boolean" ? "boolean" : "string";
+        return {
+            type: outputType,
+            distinctValues: Array.from(distinctMap.entries()),
+            countDistinct: distinctMap.size,
         };
     }
     let min = Infinity;
@@ -708,17 +710,17 @@ function calculateColumnValueStats(values) {
     const distinctValues = new Set();
     for (const entry of values) {
         const value = entry[0];
+        if (typeof value !== "number") {
+            continue;
+        }
         distinctValues.add(value);
         const weight = entry.length > 1 ? entry[1] : undefined;
-        if (typeof value === "number") {
-            if (value < min)
-                min = value;
-            if (value > max)
-                max = value;
-            sum += value;
-        }
+        if (value < min)
+            min = value;
+        if (value > max)
+            max = value;
+        sum += value;
         if (typeof weight === "number" &&
-            typeof value === "number" &&
             isFinite(weight) &&
             weight > 0 &&
             isFinite(value)) {
@@ -730,28 +732,26 @@ function calculateColumnValueStats(values) {
     }
     const mean = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
     let varianceNumerator = 0;
-    if (typeof values[0][0] === "number") {
-        // Standard deviation - weighted if we have weights, otherwise unweighted
-        if (totalWeight > 0) {
-            for (const entry of values) {
-                const value = entry[0];
-                const weight = entry.length > 1 ? entry[1] : undefined;
-                if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
-                    continue;
-                }
-                const diff = value - mean;
-                varianceNumerator += weight * diff * diff;
+    // Standard deviation - weighted if we have weights, otherwise unweighted
+    if (totalWeight > 0) {
+        for (const entry of values) {
+            const value = entry[0];
+            const weight = entry.length > 1 ? entry[1] : undefined;
+            if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
+                continue;
             }
-            varianceNumerator = varianceNumerator / totalWeight;
+            const diff = value - mean;
+            varianceNumerator += weight * diff * diff;
         }
-        else {
-            for (const entry of values) {
-                const value = entry[0];
-                const diff = value - mean;
-                varianceNumerator += diff * diff;
-            }
-            varianceNumerator = varianceNumerator / count;
+        varianceNumerator = varianceNumerator / totalWeight;
+    }
+    else {
+        for (const entry of values) {
+            const value = entry[0];
+            const diff = value - mean;
+            varianceNumerator += diff * diff;
         }
+        varianceNumerator = varianceNumerator / count;
     }
     const stdDev = Math.sqrt(varianceNumerator);
     let histogram = Array.from(histogramMap.entries()).sort((a, b) => {
@@ -773,6 +773,7 @@ function calculateColumnValueStats(values) {
     }
     const countDistinct = distinctValues.size;
     return {
+        type: "number",
         count,
         min,
         max,

@@ -12,7 +12,7 @@ import {
   findPrimaryGeographyId,
   subjectIsFragment,
   subjectIsGeography,
-  ColumnValueStats,
+  isNumberColumnValueStats,
 } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
@@ -37,10 +37,14 @@ import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 
 export type PluralizedMessages = Record<string, string>;
 export type PluralizedMessagesByLang = Record<string, PluralizedMessages>;
-type ColumnValuesStat = Exclude<
-  keyof ColumnValueStats,
-  "histogram" | "totalAreaSqKm"
->;
+export type ColumnValuesStatKey =
+  | "mean"
+  | "min"
+  | "max"
+  | "stdDev"
+  | "sum"
+  | "count"
+  | "countDistinct";
 
 const defaultPluralizedCountLabels = {
   en: {
@@ -274,7 +278,7 @@ const defaultPluralizedDistinctValueLabels = Object.fromEntries(
   })
 ) as PluralizedMessagesByLang;
 
-export const InlineMetric: ReportWidget<{
+export type InlineMetricComponentSettings = {
   unit: AreaUnit | LengthUnit;
   unitDisplay?: "long" | "short";
   minimumFractionDigits: number;
@@ -285,11 +289,14 @@ export const InlineMetric: ReportWidget<{
     | "overlay_area"
     | "count"
     | "column_values";
-  stat?: ColumnValuesStat;
+  stat?: ColumnValuesStatKey;
   hideLabelForCount?: boolean;
   pluralizedCountLabels?: PluralizedMessagesByLang;
   pluralizedDistinctValueLabels?: PluralizedMessagesByLang;
-}> = ({
+  column?: string;
+};
+
+export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   metrics,
   sources,
   loading,
@@ -436,9 +443,18 @@ export const InlineMetric: ReportWidget<{
         const combined = combineMetricsForFragments(
           columnValues as Pick<Metric, "type" | "value">[]
         ) as ColumnValuesMetric;
-        const statKey = componentSettings?.stat || "mean";
-        const value = combined.value["*"]?.[statKey];
+        const prop = componentSettings?.column || "";
+        const statKey = (componentSettings?.stat || "mean") as
+          | "mean"
+          | "min"
+          | "max"
+          | "stdDev"
+          | "sum"
+          | "count"
+          | "countDistinct";
+        const values = combined.value["*"]!;
         if (componentSettings?.stat === "countDistinct") {
+          const value = values[prop]?.countDistinct ?? 0;
           const countDistinct = value ?? 0;
           const pluralKey = pluralRules.select(countDistinct) as string;
           const label =
@@ -446,10 +462,15 @@ export const InlineMetric: ReportWidget<{
             distinctDefaultMessages[pluralKey];
           return `${formatters.count(countDistinct)} ${label}`;
         }
-        if (componentSettings?.stat === "count") {
-          return value;
+        const value = values[prop];
+        if (value && isNumberColumnValueStats(value)) {
+          if (componentSettings?.stat === "count") {
+            return value.count;
+          }
+          return formatters.decimal(value[statKey]);
+        } else {
+          return NaN;
         }
-        return formatters.decimal(value);
       }
       default:
         // eslint-disable-next-line i18next/no-literal-string
@@ -515,7 +536,10 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 }) => {
   const presentation =
     node.attrs.componentSettings.presentation || "total_area";
-  const componentSettings = node.attrs?.componentSettings || {};
+  const componentSettings = useMemo(() => {
+    return (node.attrs?.componentSettings ||
+      {}) as InlineMetricComponentSettings;
+  }, [node.attrs?.componentSettings]);
   const unit = componentSettings.unit || "kilometer";
   const unitDisplay = componentSettings.unitDisplay || "short";
   const { t } = useTranslation("admin:reports");
@@ -582,14 +606,6 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     reportContext.adminSources,
   ]);
 
-  const currentValueColumn = useMemo(() => {
-    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-    const depWithValueColumn = dependencies.find(
-      (d) => d.parameters?.valueColumn !== undefined
-    );
-    return (depWithValueColumn?.parameters?.valueColumn as string) || "";
-  }, [node.attrs?.metrics]);
-
   const { valueColumnOptions, valueColumnAttributesByName } = useMemo(() => {
     const options: Array<{ value: string; label: ReactNode }> = [];
     const valueColumnAttributesByName: Record<string, { type?: string }> = {};
@@ -637,14 +653,14 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     }
 
     if (
-      currentValueColumn &&
-      !options.some((opt) => opt.value === currentValueColumn)
+      componentSettings.column &&
+      !options.some((opt) => opt.value === componentSettings.column)
     ) {
       options.unshift({
-        value: currentValueColumn,
+        value: componentSettings.column,
         label: (
           <div className="flex flex-col">
-            <span className="font-medium">{currentValueColumn}</span>
+            <span className="font-medium">{componentSettings.column}</span>
             <span className="text-xs text-gray-500 truncate max-w-[200px]">
               {t("Current selection")}
             </span>
@@ -654,12 +670,11 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     }
 
     return { valueColumnOptions: options, valueColumnAttributesByName };
-  }, [presentation, sources, currentValueColumn, t]);
+  }, [presentation, sources, componentSettings.column, t]);
 
-  const selectedValueColumn =
-    currentValueColumn || valueColumnOptions[0]?.value || "";
   const selectedValueColumnIsNumeric =
-    valueColumnAttributesByName[selectedValueColumn]?.type === "number";
+    componentSettings.column &&
+    valueColumnAttributesByName[componentSettings.column]?.type === "number";
 
   const statOptions = useMemo(
     () => [
@@ -693,10 +708,10 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     [t, selectedValueColumnIsNumeric]
   );
 
-  const selectedStat: ColumnValuesStat = selectedValueColumnIsNumeric
-    ? (componentSettings.stat as ColumnValuesStat) ||
-      ("mean" as ColumnValuesStat)
-    : ("countDistinct" as ColumnValuesStat);
+  const selectedStat: ColumnValuesStatKey = selectedValueColumnIsNumeric
+    ? (componentSettings.stat as ColumnValuesStatKey) ||
+      ("mean" as ColumnValuesStatKey)
+    : ("countDistinct" as ColumnValuesStatKey);
 
   useEffect(() => {
     if (presentation !== "column_values") return;
@@ -712,14 +727,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   }, [presentation, selectedValueColumnIsNumeric, componentSettings, onUpdate]);
 
   const handleValueColumnChange = (value: string) => {
-    onUpdateDependencyParameters((dependency) => {
-      if (dependency.type !== "column_values") {
-        return dependency.parameters || {};
-      }
-      return {
-        ...(dependency.parameters || {}),
-        valueColumn: value,
-      };
+    onUpdate({
+      componentSettings: { ...componentSettings, column: value },
     });
 
     const nextValueColumnIsNumeric =
@@ -734,7 +743,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     }
   };
 
-  const handleStatChange = (stat: ColumnValuesStat) => {
+  const handleStatChange = (stat: ColumnValuesStatKey) => {
     if (!selectedValueColumnIsNumeric && stat !== "countDistinct") {
       return;
     }
@@ -800,7 +809,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       {presentation === "column_values" && valueColumnOptions.length > 0 && (
         <LabeledDropdown
           label={t("column")}
-          value={currentValueColumn || valueColumnOptions[0]?.value || ""}
+          value={componentSettings?.column || ""}
           options={valueColumnOptions}
           onChange={handleValueColumnChange}
           getDisplayLabel={(selected) => selected?.value || ""}
@@ -811,7 +820,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           label={t("Stat")}
           value={selectedStat}
           options={statOptions}
-          onChange={(val) => handleStatChange(val as ColumnValuesStat)}
+          onChange={(val) => handleStatChange(val as ColumnValuesStatKey)}
         />
       )}
       {presentation === "column_values" && selectedStat === "countDistinct" && (

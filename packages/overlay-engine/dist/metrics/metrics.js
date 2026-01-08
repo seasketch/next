@@ -1,9 +1,11 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isNumberColumnValueStats = isNumberColumnValueStats;
 exports.subjectIsFragment = subjectIsFragment;
 exports.subjectIsGeography = subjectIsGeography;
 exports.combineRasterBandStats = combineRasterBandStats;
-exports.combineColumnValueStats = combineColumnValueStats;
+exports.combineNumberColumnValueStats = combineNumberColumnValueStats;
+exports.combineStringOrBooleanColumnValueStats = combineStringOrBooleanColumnValueStats;
 exports.hashMetricDependency = hashMetricDependency;
 exports.combineMetricsForFragments = combineMetricsForFragments;
 exports.findPrimaryGeographyId = findPrimaryGeographyId;
@@ -46,6 +48,9 @@ function downsampleColumnHistogram(histogram, maxEntries) {
         result.push([value, count]);
     }
     return result;
+}
+function isNumberColumnValueStats(stats) {
+    return stats.type === "number";
 }
 function subjectIsFragment(subject) {
     return "hash" in subject;
@@ -142,14 +147,13 @@ function combineRasterBandStats(statsArray) {
  * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
  * Otherwise, they are weighted by count.
  */
-function combineColumnValueStats(statsArray) {
+function combineNumberColumnValueStats(statsArray) {
     if (statsArray.length === 0) {
         return undefined;
     }
     if (statsArray.length === 1) {
         return statsArray[0];
     }
-    let isNumeric = false;
     // Determine whether to weight by area or by count
     const useAreaWeight = statsArray.some((s) => typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0);
     let totalCount = 0;
@@ -164,12 +168,6 @@ function combineColumnValueStats(statsArray) {
     // Merge histograms by value
     const histogramMap = new Map();
     for (const stats of statsArray) {
-        if (typeof stats.min === "number" &&
-            typeof stats.max === "number" &&
-            !isNaN(stats.min) &&
-            !isNaN(stats.max)) {
-            isNumeric = true;
-        }
         const weight = useAreaWeight && typeof stats.totalAreaSqKm === "number"
             ? Math.max(stats.totalAreaSqKm, 0)
             : stats.count;
@@ -229,14 +227,8 @@ function combineColumnValueStats(statsArray) {
     // Limit histogram size similarly to raster stats by downsampling
     const MAX_HISTOGRAM_ENTRIES = 200;
     if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
-        if (typeof combinedHistogram[0][0] === "number") {
-            combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
-        }
-        else {
-            combinedHistogram = combinedHistogram.slice(0, MAX_HISTOGRAM_ENTRIES);
-        }
+        combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
     }
-    const countDistinct = histogramMap.size;
     const totalAreaSqKm = useAreaWeight
         ? statsArray.reduce((acc, s) => acc +
             (typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
@@ -244,15 +236,44 @@ function combineColumnValueStats(statsArray) {
                 : 0), 0)
         : undefined;
     return {
+        type: "number",
         count: combinedCount,
-        min: isNumeric ? combinedMin : NaN,
-        max: isNumeric ? combinedMax : NaN,
-        mean: isNumeric ? combinedMean : NaN,
-        stdDev: isNumeric ? combinedStdDev : NaN,
+        min: combinedMin,
+        max: combinedMax,
+        mean: combinedMean,
+        stdDev: combinedStdDev,
         histogram: combinedHistogram,
-        countDistinct,
-        sum: isNumeric ? combinedSum : NaN,
+        countDistinct: histogramMap.size,
+        sum: combinedSum,
         totalAreaSqKm,
+    };
+}
+function combineStringOrBooleanColumnValueStats(statsArray) {
+    if (statsArray.length === 0) {
+        return undefined;
+    }
+    if (statsArray.length === 1) {
+        return statsArray[0];
+    }
+    const distinctValues = [];
+    for (const stats of statsArray) {
+        for (const record of stats.distinctValues) {
+            const value = record[0];
+            const count = record[1];
+            const existing = distinctValues.find(([v]) => v === value);
+            if (existing) {
+                existing[1] += count;
+            }
+            else {
+                distinctValues.push([value, count]);
+            }
+        }
+    }
+    const outputType = statsArray[0]?.type === "boolean" ? "boolean" : "string";
+    return {
+        type: outputType,
+        distinctValues,
+        countDistinct: distinctValues.length,
     };
 }
 /**
@@ -329,7 +350,38 @@ function combineMetricsForFragments(metrics) {
             const values = metrics.map((m) => m.value);
             return {
                 type: "column_values",
-                value: combineGroupedValues(values, (v) => combineColumnValueStats(v)),
+                value: combineGroupedValues(values, (groupedValues) => {
+                    const stats = {};
+                    const attrNames = new Set();
+                    // Collect all attribute names across fragments for this class key
+                    for (const entry of groupedValues) {
+                        if (entry && typeof entry === "object") {
+                            for (const attr in entry) {
+                                attrNames.add(attr);
+                            }
+                        }
+                    }
+                    for (const attr of attrNames) {
+                        const attrValues = groupedValues
+                            .map((entry) => entry?.[attr])
+                            .filter((v) => v !== undefined);
+                        if (attrValues.length === 0)
+                            continue;
+                        if (isNumberColumnValueStats(attrValues[0])) {
+                            const combined = combineNumberColumnValueStats(attrValues);
+                            if (combined) {
+                                stats[attr] = combined;
+                            }
+                        }
+                        else {
+                            const combined = combineStringOrBooleanColumnValueStats(attrValues);
+                            if (combined) {
+                                stats[attr] = combined;
+                            }
+                        }
+                    }
+                    return stats;
+                }),
             };
         }
         case "total_area": {

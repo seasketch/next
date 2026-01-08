@@ -2,9 +2,10 @@ import { describe, it, expect } from "vitest";
 import {
   combineMetricsForFragments,
   RasterBandStats,
-  ColumnValueStats,
   UniqueIdIndex,
   Metric,
+  NumberColumnValueStats,
+  StringOrBooleanColumnValueStats,
 } from "../src/metrics/metrics";
 import { Feature, LineString } from "geojson";
 
@@ -25,10 +26,11 @@ function makeRasterBandStats(
   };
 }
 
-function makeColumnValueStats(
-  partial: Partial<ColumnValueStats>
-): ColumnValueStats {
+function makeNumberColumnValueStats(
+  partial: Partial<NumberColumnValueStats>
+): NumberColumnValueStats {
   return {
+    type: "number",
     count: 0,
     min: NaN,
     max: NaN,
@@ -37,6 +39,16 @@ function makeColumnValueStats(
     histogram: [],
     countDistinct: 0,
     sum: 0,
+    ...partial,
+  };
+}
+
+function makeStringColumnValueStats(
+  partial: Partial<StringOrBooleanColumnValueStats>
+): StringOrBooleanColumnValueStats {
+  return {
+    type: "string",
+    distinctValues: [],
     ...partial,
   };
 }
@@ -168,18 +180,20 @@ describe("combineMetricsForFragments", () => {
         {
           type: "column_values",
           value: {
-            class1: makeColumnValueStats({
-              count: 10,
-              mean: 5,
-              sum: 50,
-            }),
+            class1: {
+              col: makeNumberColumnValueStats({
+                count: 10,
+                mean: 5,
+                sum: 50,
+              }),
+            },
           },
         },
       ];
 
       const result = combineMetricsForFragments(metrics);
       expect(result.type).toBe("column_values");
-      expect(result.value.class1).toBe(metrics[0].value.class1);
+      expect(result.value.class1).toStrictEqual(metrics[0].value.class1);
     });
 
     it("combines multiple column_values metrics with same groupBy keys", () => {
@@ -187,38 +201,43 @@ describe("combineMetricsForFragments", () => {
         {
           type: "column_values",
           value: {
-            class1: makeColumnValueStats({
-              count: 100,
-              min: 0,
-              max: 10,
-              mean: 2,
-              sum: 200,
-              histogram: [[1, 100]],
-            }),
+            class1: {
+              col: makeNumberColumnValueStats({
+                count: 100,
+                min: 0,
+                max: 10,
+                mean: 2,
+                sum: 200,
+                histogram: [[1, 100]],
+              }),
+            },
           },
         },
         {
           type: "column_values",
           value: {
-            class1: makeColumnValueStats({
-              count: 50,
-              min: 5,
-              max: 15,
-              mean: 10,
-              sum: 500,
-              histogram: [[10, 50]],
-            }),
+            class1: {
+              col: makeNumberColumnValueStats({
+                count: 50,
+                min: 5,
+                max: 15,
+                mean: 10,
+                sum: 500,
+                histogram: [[10, 50]],
+              }),
+            },
           },
         },
       ];
 
       const result = combineMetricsForFragments(metrics);
       expect(result.type).toBe("column_values");
-      expect(result.value.class1.count).toBe(150);
-      expect(result.value.class1.sum).toBe(700);
-      expect(result.value.class1.min).toBe(0);
-      expect(result.value.class1.max).toBe(15);
-      expect(result.value.class1.mean).toBeCloseTo(700 / 150, 6);
+      const combined = result.value.class1.col;
+      expect(combined.count).toBe(150);
+      expect(combined.sum).toBe(700);
+      expect(combined.min).toBe(0);
+      expect(combined.max).toBe(15);
+      expect(combined.mean).toBeCloseTo(700 / 150, 6);
     });
 
     it("combines column_values metrics with different groupBy keys", () => {
@@ -226,41 +245,89 @@ describe("combineMetricsForFragments", () => {
         {
           type: "column_values",
           value: {
-            class1: makeColumnValueStats({
-              count: 10,
-              mean: 5,
-              sum: 50,
-            }),
-            class2: makeColumnValueStats({
-              count: 20,
-              mean: 10,
-              sum: 200,
-            }),
+            class1: {
+              col: makeNumberColumnValueStats({
+                count: 10,
+                mean: 5,
+                sum: 50,
+              }),
+            },
+            class2: {
+              col: makeNumberColumnValueStats({
+                count: 20,
+                mean: 10,
+                sum: 200,
+              }),
+            },
           },
         },
         {
           type: "column_values",
           value: {
-            class1: makeColumnValueStats({
-              count: 15,
-              mean: 3,
-              sum: 45,
-            }),
-            class3: makeColumnValueStats({
-              count: 5,
-              mean: 2,
-              sum: 10,
-            }),
+            class1: {
+              col: makeNumberColumnValueStats({
+                count: 15,
+                mean: 3,
+                sum: 45,
+              }),
+            },
+            class3: {
+              col: makeNumberColumnValueStats({
+                count: 5,
+                mean: 2,
+                sum: 10,
+              }),
+            },
           },
         },
       ];
 
       const result = combineMetricsForFragments(metrics);
       expect(result.type).toBe("column_values");
-      expect(result.value.class1.count).toBe(25);
-      expect(result.value.class1.sum).toBe(95);
-      expect(result.value.class2.count).toBe(20);
-      expect(result.value.class3.count).toBe(5);
+      expect(result.value.class1.col.count).toBe(25);
+      expect(result.value.class1.col.sum).toBe(95);
+      expect(result.value.class2.col.count).toBe(20);
+      expect(result.value.class3.col.count).toBe(5);
+    });
+
+    it("combines string column_values metrics", () => {
+      const metrics: Pick<Metric, "type" | "value">[] = [
+        {
+          type: "column_values",
+          value: {
+            class1: {
+              color: makeStringColumnValueStats({
+                distinctValues: [
+                  ["red", 2],
+                  ["blue", 1],
+                ],
+              }),
+            },
+          },
+        },
+        {
+          type: "column_values",
+          value: {
+            class1: {
+              color: makeStringColumnValueStats({
+                distinctValues: [
+                  ["red", 1],
+                  ["green", 4],
+                ],
+              }),
+            },
+          },
+        },
+      ];
+
+      const result = combineMetricsForFragments(metrics);
+      expect(result.type).toBe("column_values");
+      expect(result.value.class1.color.type).toBe("string");
+      expect(result.value.class1.color.distinctValues).toEqual([
+        ["red", 3],
+        ["blue", 1],
+        ["green", 4],
+      ]);
     });
   });
 

@@ -1,12 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation, Trans } from "react-i18next";
 import {
-  ColumnValueStats,
   ColumnValuesMetric,
-  Metric,
   MetricDependency,
-  combineColumnValueStats,
+  NumberColumnValueStats,
+  StringOrBooleanColumnValueStats,
   subjectIsFragment,
+  combineNumberColumnValueStats,
 } from "overlay-engine";
 import {
   ReportWidget,
@@ -25,9 +25,11 @@ import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import * as Popover from "@radix-ui/react-popover";
 import { Pencil2Icon } from "@radix-ui/react-icons";
+import { ColumnValuesStatKey } from "./InlineMetric";
 
 type ColumnStatisticsTableSettings = {
-  displayStats?: Partial<Record<keyof ColumnValueStats, boolean>>;
+  columns?: string[];
+  displayStats?: Partial<Record<ColumnValuesStatKey, boolean>>;
   minimumFractionDigits?: number;
   columnLabel?: string;
   valueColumnLabel?: string;
@@ -41,10 +43,10 @@ type ColumnStatisticsTableSettings = {
 };
 
 type ColumnStatisticsRow = {
-  stats: ColumnValueStats;
+  stats: NumberColumnValueStats | StringOrBooleanColumnValueStats;
 };
 
-const numericStatOrder: Array<keyof ColumnValueStats> = [
+const numericStatOrder: Array<ColumnValuesStatKey> = [
   "count",
   "countDistinct",
   "min",
@@ -57,7 +59,7 @@ const numericStatOrder: Array<keyof ColumnValueStats> = [
 const statLabels = (
   t: (key: string, opts?: Record<string, any>) => string,
   settings?: ColumnStatisticsTableSettings
-): Record<keyof ColumnValueStats, string> => ({
+): Record<ColumnValuesStatKey, string> => ({
   min: settings?.minLabel || t("Min"),
   max: settings?.maxLabel || t("Max"),
   mean: settings?.meanLabel || t("Mean"),
@@ -65,58 +67,23 @@ const statLabels = (
   sum: settings?.sumLabel || t("Sum"),
   count: settings?.countLabel || t("Count"),
   countDistinct: settings?.countDistinctLabel || t("Distinct"),
-  histogram: t("Histogram"),
-  totalAreaSqKm: t("Area"),
 });
 
 export const ColumnStatisticsTable: ReportWidget<
   ColumnStatisticsTableSettings
 > = ({ metrics, componentSettings, sources, loading }) => {
+  console.log("componentSettings", componentSettings);
   const { t } = useTranslation("reports");
   const formatters = useNumberFormatters({
     minimumFractionDigits: componentSettings?.minimumFractionDigits,
   });
 
-  const valueColumns = useMemo(() => {
-    const columns = new Set<string>();
-    for (const metric of metrics.filter(
-      (m) => subjectIsFragment(m.subject) && m.type === "column_values"
-    )) {
-      columns.add((metric.parameters as any)?.valueColumn as string);
-    }
-    return Array.from(columns);
-  }, [metrics]);
-
-  const allNumericColumns = useMemo(() => {
-    const source = sources?.[0];
-    const geoLayer = isGeostatsLayer(
-      (source?.geostats as any)?.layers?.[0] as GeostatsLayer
-    )
-      ? ((source!.geostats as any).layers[0] as GeostatsLayer)
-      : undefined;
-    if (!geoLayer?.attributes) return [];
-    return geoLayer.attributes
-      .filter((a) => a.type === "number")
-      .map((a) => a.attribute);
-  }, [sources]);
-
-  const isNumericColumn = true;
-
   const resolvedDisplayStats = useMemo(() => {
-    const defaults: Partial<Record<keyof ColumnValueStats, boolean>> =
-      isNumericColumn
-        ? { min: true, max: true, mean: true }
-        : { countDistinct: true };
-    const merged = {
-      ...defaults,
-      ...(componentSettings?.displayStats || {}),
+    const defaults: Partial<Record<ColumnValuesStatKey, boolean>> = {
+      mean: true,
     };
-    // Enforce non-numeric restriction
-    if (!isNumericColumn) {
-      return { countDistinct: merged.countDistinct !== false };
-    }
-    return merged;
-  }, [componentSettings?.displayStats, isNumericColumn]);
+    return componentSettings?.displayStats || defaults;
+  }, [componentSettings?.displayStats]);
 
   const rows = useMemo<(ColumnStatisticsRow & { column: string })[]>(() => {
     const rows: (ColumnStatisticsRow & { column: string })[] = [];
@@ -127,27 +94,56 @@ export const ColumnStatisticsTable: ReportWidget<
     ) as unknown as ColumnValuesMetric[];
 
     if (!fragmentMetrics.length) return [];
-    const statsByColumn: Record<string, ColumnValueStats[]> = {};
+    const statsByColumn: Record<
+      string,
+      Array<NumberColumnValueStats | StringOrBooleanColumnValueStats>
+    > = {};
 
     for (const metric of fragmentMetrics) {
-      const columnName = (metric as any)?.parameters?.valueColumn as string;
-      if (!columnName) continue;
       const val = metric.value as ColumnValuesMetric["value"];
-      const allStats: ColumnValueStats[] = [];
-      for (const classKey of Object.keys(val)) {
-        const stats = val[classKey];
-        if (!stats) continue;
-        allStats.push(stats);
+      for (const classKey of Object.keys(val || {})) {
+        const statsByAttr = val[classKey];
+        if (!statsByAttr) continue;
+        for (const attr in statsByAttr) {
+          const statsForColumn = statsByAttr[attr];
+          if (!statsForColumn) continue;
+          if (!statsByColumn[attr]) {
+            statsByColumn[attr] = [];
+          }
+          statsByColumn[attr].push(statsForColumn);
+        }
       }
-      if (!allStats.length) continue;
-      if (!statsByColumn[columnName]) {
-        statsByColumn[columnName] = [];
-      }
-      statsByColumn[columnName].push(combineColumnValueStats(allStats)!);
     }
 
-    for (const column of Object.keys(statsByColumn)) {
-      const combined = combineColumnValueStats(statsByColumn[column]);
+    const selectedColumns = componentSettings?.columns;
+    const columnsToRender =
+      selectedColumns?.filter((col) => statsByColumn[col]) || [];
+
+    for (const column of columnsToRender) {
+      const statsList = statsByColumn[column] || [];
+      if (!statsList.length) continue;
+      const first = statsList[0];
+      let combined:
+        | NumberColumnValueStats
+        | StringOrBooleanColumnValueStats
+        | undefined;
+      if (first.type === "number") {
+        combined = combineNumberColumnValueStats(
+          statsList as NumberColumnValueStats[]
+        ) as NumberColumnValueStats | undefined;
+      } else {
+        const distinctMap = new Map<string | boolean, number>();
+        for (const stat of statsList as StringOrBooleanColumnValueStats[]) {
+          for (const [val, count] of stat.distinctValues) {
+            distinctMap.set(val, (distinctMap.get(val) || 0) + count);
+          }
+        }
+        combined = {
+          type: first.type,
+          distinctValues: Array.from(distinctMap.entries()),
+          countDistinct: distinctMap.size,
+        } as StringOrBooleanColumnValueStats & { countDistinct: number };
+      }
       if (!combined) continue;
       rows.push({
         stats: combined,
@@ -155,20 +151,33 @@ export const ColumnStatisticsTable: ReportWidget<
       });
     }
 
+    rows.sort((a, b) => a.column.localeCompare(b.column));
+
     return rows;
-  }, [metrics]);
+  }, [metrics, componentSettings?.columns]);
 
   const statsToShow = useMemo(
-    () =>
-      numericStatOrder.filter(
-        (stat) =>
-          resolvedDisplayStats[stat] &&
-          (isNumericColumn || stat === "countDistinct" || stat === "count")
-      ),
-    [resolvedDisplayStats, isNumericColumn]
+    () => numericStatOrder.filter((stat) => resolvedDisplayStats[stat]),
+    [resolvedDisplayStats]
   );
 
-  const formatValue = (stat: keyof ColumnValueStats, value: any) => {
+  const formatValue = (
+    stat: ColumnValuesStatKey,
+    stats: NumberColumnValueStats | StringOrBooleanColumnValueStats
+  ) => {
+    let value: number | undefined;
+    if (stats.type === "number") {
+      const numericStats = stats as NumberColumnValueStats;
+      value = numericStats[stat as keyof NumberColumnValueStats] as
+        | number
+        | undefined;
+    } else {
+      if (stat === "countDistinct" || stat === "count") {
+        value = stats.distinctValues.reduce((acc, [, c]) => acc + c, 0);
+      } else {
+        value = undefined;
+      }
+    }
     if (value === undefined || value === null || Number.isNaN(value)) {
       return "–";
     }
@@ -186,6 +195,12 @@ export const ColumnStatisticsTable: ReportWidget<
     );
   }
 
+  console.log(
+    "statLabel mean",
+    componentSettings,
+    statLabels(t, componentSettings)["mean"]
+  );
+
   return (
     <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
       <div className="divide-y divide-gray-100">
@@ -195,7 +210,7 @@ export const ColumnStatisticsTable: ReportWidget<
           </div>
           {statsToShow.map((stat) => (
             <div
-              key={stat}
+              key={String(stat)}
               className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[90px]"
             >
               {statLabels(t, componentSettings)[stat]}
@@ -212,14 +227,10 @@ export const ColumnStatisticsTable: ReportWidget<
             </div>
             {statsToShow.map((stat) => (
               <div
-                key={stat}
+                key={`${row.column}-${String(stat)}`}
                 className="flex-none text-right text-sm text-gray-900 tabular-nums min-w-[90px]"
               >
-                {loading ? (
-                  <MetricLoadingDots />
-                ) : (
-                  formatValue(stat, row.stats[stat])
-                )}
+                {loading ? <MetricLoadingDots /> : formatValue(stat, row.stats)}
               </div>
             ))}
           </div>
@@ -234,10 +245,12 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
     const { t } = useTranslation("admin:reports");
     const reportContext = useReportContext();
     const componentSettings = node.attrs?.componentSettings || {};
-    const lang = useTranslation().i18n.language;
     const [statsModalOpen, setStatsModalOpen] = useState(false);
 
-    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
+    const dependencies = useMemo(
+      () => (node.attrs?.metrics || []) as MetricDependency[],
+      [node.attrs?.metrics]
+    );
 
     const sources = useMemo(() => {
       const allSources = [
@@ -254,16 +267,6 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       reportContext.overlaySources,
       reportContext.adminSources,
     ]);
-
-    const columnValueDeps = useMemo(
-      () =>
-        dependencies.filter(
-          (d) =>
-            d.type === "column_values" &&
-            (d.subjectType === "fragments" || !d.subjectType)
-        ),
-      [dependencies]
-    );
 
     const numericColumnOptions = useMemo(() => {
       const options: Array<{
@@ -300,35 +303,13 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
           ),
         });
       }
+      options.sort((a, b) => a.value.localeCompare(b.value));
       return options;
     }, [sources]);
 
     const selectedColumns = useMemo(() => {
-      return columnValueDeps
-        .map((d) => (d.parameters as any)?.valueColumn as string)
-        .filter(Boolean);
-    }, [columnValueDeps]);
-
-    const applySelectedColumns = (nextSelected: Set<string>) => {
-      onUpdateAllDependencies((existingDependencies) => {
-        const base = existingDependencies.find(
-          (d) =>
-            d.type === "column_values" &&
-            (d.subjectType === "fragments" || !d.subjectType)
-        );
-        if (!base) return existingDependencies;
-        const filtered = existingDependencies.filter(
-          (d) =>
-            d.type !== "column_values" ||
-            (d.subjectType && d.subjectType !== "fragments")
-        );
-        const newColumnDeps = Array.from(nextSelected).map((col) => ({
-          ...base,
-          parameters: { ...(base.parameters || {}), valueColumn: col },
-        }));
-        return [...filtered, ...newColumnDeps];
-      });
-    };
+      return componentSettings?.columns || [];
+    }, [componentSettings?.columns]);
 
     const handleColumnSelectionChange = (column: string, checked: boolean) => {
       const nextSelected = new Set(selectedColumns);
@@ -337,23 +318,33 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       } else {
         nextSelected.delete(column);
       }
-      applySelectedColumns(nextSelected);
+      onUpdate({
+        componentSettings: {
+          ...componentSettings,
+          columns: Array.from(nextSelected),
+        },
+      });
     };
 
     const handleSelectAll = () => {
-      applySelectedColumns(
-        new Set(numericColumnOptions.map((opt) => opt.value))
-      );
+      onUpdate({
+        componentSettings: {
+          ...componentSettings,
+          columns: numericColumnOptions.map((opt) => opt.value),
+        },
+      });
     };
 
     const handleSelectNone = () => {
-      applySelectedColumns(new Set());
+      onUpdate({
+        componentSettings: {
+          ...componentSettings,
+          columns: [],
+        },
+      });
     };
 
-    const handleToggleStat = (
-      stat: keyof ColumnValueStats,
-      enabled: boolean
-    ) => {
+    const handleToggleStat = (stat: ColumnValuesStatKey, enabled: boolean) => {
       onUpdate({
         componentSettings: {
           ...componentSettings,
@@ -365,17 +356,8 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
-    const resolvedDisplayStats = useMemo(() => {
-      const defaults: Partial<Record<keyof ColumnValueStats, boolean>> = {
-        min: true,
-        max: true,
-        mean: true,
-      };
-      return { ...defaults, ...(componentSettings.displayStats || {}) };
-    }, [componentSettings.displayStats]);
-
     const statToggleList: Array<{
-      key: keyof ColumnValueStats;
+      key: ColumnValuesStatKey;
       label: string;
     }> = [
       { key: "min", label: t("Min") },
@@ -478,15 +460,11 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
         <TableHeadingsEditor
           labelKeys={[
             "columnLabel",
-            ...statToggleList
-              .filter((s) => resolvedDisplayStats[s.key])
-              .map((s) => `${s.key}Label`),
+            ...statToggleList.map((s) => s.key + "Label"),
           ]}
           labelDisplayNames={[
             t("Column"),
-            ...statToggleList
-              .filter((s) => resolvedDisplayStats[s.key])
-              .map((s) => statLabels(t)[s.key]),
+            ...statToggleList.map((s) => statLabels(t)[s.key]),
           ]}
           componentSettings={componentSettings}
           onUpdate={onUpdate}
@@ -507,7 +485,7 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
                 <TooltipBooleanConfigurationOption
                   key={item.key}
                   label={item.label}
-                  checked={!!resolvedDisplayStats[item.key]}
+                  checked={!!componentSettings.displayStats?.[item.key]}
                   onChange={(next) => handleToggleStat(item.key, next)}
                 />
               ))}

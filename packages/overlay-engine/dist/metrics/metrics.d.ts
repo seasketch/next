@@ -66,13 +66,22 @@ export type PresenceTableMetric = OverlayMetricBase & {
         exceededLimit: boolean;
     };
 };
-export type ColumnValueStats = {
+export type StringOrBooleanColumnValueStats = {
+    type: "string" | "boolean";
+    /**
+     * Distinct value ([0]) and count [1]
+     */
+    distinctValues: [string | boolean, number][];
+    countDistinct: number;
+};
+export type NumberColumnValueStats = {
+    type: "number";
     count: number;
     min: number;
     max: number;
     mean: number;
     stdDev: number;
-    histogram: [number | string | boolean, number][];
+    histogram: [number, number][];
     countDistinct: number;
     sum: number;
     /**
@@ -82,10 +91,14 @@ export type ColumnValueStats = {
      */
     totalAreaSqKm?: number;
 };
+export declare function isNumberColumnValueStats(stats: NumberColumnValueStats | StringOrBooleanColumnValueStats): stats is NumberColumnValueStats;
+export type ValuesForColumns = {
+    [attr: string]: StringOrBooleanColumnValueStats | NumberColumnValueStats;
+};
 export type ColumnValuesMetric = OverlayMetricBase & {
     type: "column_values";
     value: {
-        [groupBy: string]: ColumnValueStats;
+        [groupBy: string]: ValuesForColumns;
     };
 };
 export type RasterBandStats = {
@@ -157,7 +170,8 @@ export declare function combineRasterBandStats(statsArray: RasterBandStats[]): R
  * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
  * Otherwise, they are weighted by count.
  */
-export declare function combineColumnValueStats(statsArray: ColumnValueStats[]): ColumnValueStats | undefined;
+export declare function combineNumberColumnValueStats(statsArray: NumberColumnValueStats[]): NumberColumnValueStats | undefined;
+export declare function combineStringOrBooleanColumnValueStats(statsArray: StringOrBooleanColumnValueStats[]): StringOrBooleanColumnValueStats | undefined;
 export type MetricDependencySubjectType = "fragments" | "geographies";
 export type MetricDependency = {
     type: MetricType;
