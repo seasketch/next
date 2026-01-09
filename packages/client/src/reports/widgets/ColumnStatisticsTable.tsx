@@ -532,9 +532,9 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
               </span>
             </button>
           </Popover.Trigger>
-          <TooltipPopoverContent>
-            <div className="px-3 pt-2 pb-1 grid grid-cols-3 gap-2 items-center text-[11px] font-semibold uppercase tracking-wide text-gray-500">
-              <label className="flex items-center gap-2 text-xs text-gray-700">
+          <TooltipPopoverContent noPadding>
+            <div className="px-3 py-3 shadow-sm grid grid-cols-3 gap-2 items-center text-[11px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-50 border-b rounded-t-lg">
+              <label className="flex items-center gap-2">
                 <input
                   type="checkbox"
                   className="rounded border-gray-300"

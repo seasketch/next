@@ -1681,6 +1681,7 @@ export function TooltipPopoverContent({
   align = "center",
   collisionPadding = 8,
   title,
+  noPadding = false,
 }: {
   children: ReactNode;
   side?: "top" | "bottom" | "left" | "right";
@@ -1688,6 +1689,7 @@ export function TooltipPopoverContent({
   align?: "start" | "center" | "end";
   collisionPadding?: number;
   title?: ReactNode;
+  noPadding?: boolean;
 }) {
   return (
     <Popover.Portal>
@@ -1699,7 +1701,9 @@ export function TooltipPopoverContent({
         avoidCollisions
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className="bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg px-2 py-2 z-[49]"
+        className={`bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg ${
+          noPadding ? "" : "px-2 py-2"
+        } z-[49]`}
         data-tooltip-portal="true"
       >
         {title && (
