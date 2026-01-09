@@ -1,15 +1,15 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { LabeledDropdown } from "./LabeledDropdown";
 import { useReportContext } from "../ReportContext";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
 } from "../../editor/TooltipMenu";
 import * as Popover from "@radix-ui/react-popover";
-import { Pencil2Icon } from "@radix-ui/react-icons";
+import { Pencil2Icon, CaretDownIcon } from "@radix-ui/react-icons";
 import getSlug from "../../getSlug";
 import { useOverlaysForReportLayerTogglesQuery } from "../../generated/graphql";
+import { LayerPickerDropdown } from "./LayerPickerDropdown";
 
 type LayerToggleSettings = {
   stableId?: string;
@@ -80,23 +80,41 @@ export function LayerToggleTooltipControlsBase({
 
   return (
     <div className="flex flex-wrap gap-3 items-center text-sm text-gray-800">
-      <LabeledDropdown
-        label={t("layer")}
-        value={stableId || ""}
-        options={overlayOptions}
-        onChange={(value) => {
-          const defaultLabel =
-            overlayOptions.find((o) => o.value === value)?.label || "";
-          onUpdate({
-            componentSettings: {
-              ...componentSettings,
-              stableId: value,
-              label: defaultLabel,
-            },
-          });
-        }}
-        getDisplayLabel={(selected) => selected?.label || ""}
-      />
+      <div className="flex items-center gap-2">
+        <span className="font-light text-gray-400 whitespace-nowrap">
+          {t("layer")}
+        </span>
+        <LayerPickerDropdown
+          value={stableId}
+          onChange={(layerValue) => {
+            onUpdate({
+              componentSettings: {
+                ...componentSettings,
+                stableId: layerValue?.stableId,
+                label: layerValue?.title || "",
+              },
+            });
+          }}
+          required={false}
+          onlyReportingLayers={false}
+          hideSearch={false}
+        >
+          <button
+            type="button"
+            className="flex-1 h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none justify-end"
+          >
+            <span className="truncate max-w-[160px] text-right">
+              {stableId
+                ? overlayOptions.find((o) => o.value === stableId)?.label ||
+                  t("Unknown layer")
+                : t("None")}
+            </span>
+            <span className="flex items-center justify-center w-4 h-4">
+              <CaretDownIcon className="w-4 h-4" />
+            </span>
+          </button>
+        </LayerPickerDropdown>
+      </div>
       <Popover.Root>
         <Popover.Trigger asChild>
           <button

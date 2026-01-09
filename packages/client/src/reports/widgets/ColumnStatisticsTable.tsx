@@ -25,12 +25,13 @@ import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import * as Popover from "@radix-ui/react-popover";
-import { Pencil2Icon } from "@radix-ui/react-icons";
+import { CaretDownIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { ColumnValuesStatKey } from "./InlineMetric";
 import { MapContext } from "../../dataLayers/MapContextManager";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
-import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import { LayersIcon } from "@radix-ui/react-icons";
+import { LayerPickerDropdown } from "./LayerPickerDropdown";
+import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 
 type ColumnStatisticsTableSettings = {
   columns?: string[];
@@ -99,7 +100,6 @@ export const ColumnStatisticsTable: ReportWidget<
 
   const rows = useMemo<(ColumnStatisticsRow & { column: string })[]>(() => {
     const selectedColumns = componentSettings?.columns || [];
-    const columnSettings = componentSettings?.columnSettings || {};
     const rows: (ColumnStatisticsRow & { column: string })[] = [];
 
     const fragmentMetrics = metrics.filter(
@@ -181,7 +181,7 @@ export const ColumnStatisticsTable: ReportWidget<
     rows.sort((a, b) => a.column.localeCompare(b.column));
 
     return rows;
-  }, [metrics, componentSettings?.columns]);
+  }, [metrics, componentSettings?.columns, loading]);
 
   const statsToShow = useMemo(
     () => numericStatOrder.filter((stat) => resolvedDisplayStats[stat]),
@@ -586,11 +586,6 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
                   const checked = selectedColumns.includes(opt.value);
                   const colSettings =
                     componentSettings.columnSettings?.[opt.value];
-                  const layerTitle = colSettings?.stableId
-                    ? overlayOptions.find(
-                        (o) => o.value === colSettings?.stableId
-                      )?.label
-                    : "";
                   return (
                     <div
                       key={opt.value}
@@ -625,48 +620,29 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
                           handleLabelChange(opt.value, e.target.value)
                         }
                       />
-                      <Popover.Root>
-                        <Popover.Trigger asChild>
-                          <button
-                            type="button"
-                            className="h-8 w-full rounded border border-gray-300 px-2 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50"
-                          >
-                            <span className="truncate">
-                              {layerTitle || t("None")}
-                            </span>
-                            <Pencil2Icon className="w-3 h-3 text-gray-500" />
-                          </button>
-                        </Popover.Trigger>
-                        <Popover.Content
-                          side="top"
-                          sideOffset={6}
-                          className="bg-white text-gray-900 border border-black/20 rounded shadow-lg px-2 py-2 z-50 w-56"
+                      <LayerPickerDropdown
+                        value={colSettings?.stableId}
+                        onChange={(layerValue) =>
+                          handleStableIdChange(opt.value, layerValue?.stableId)
+                        }
+                        required={false}
+                        onlyReportingLayers={false}
+                        hideSearch={false}
+                      >
+                        <button
+                          type="button"
+                          className="h-8 w-full rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                         >
-                          <div className="max-h-56 overflow-auto divide-y divide-gray-100">
-                            <button
-                              type="button"
-                              className="w-full text-left px-2 py-1 text-sm hover:bg-gray-50"
-                              onClick={() =>
-                                handleStableIdChange(opt.value, undefined)
-                              }
-                            >
-                              {t("None")}
-                            </button>
-                            {overlayOptions.map((o) => (
-                              <button
-                                key={o.value}
-                                type="button"
-                                className="w-full text-left px-2 py-1 text-sm hover:bg-gray-50"
-                                onClick={() =>
-                                  handleStableIdChange(opt.value, o.value)
-                                }
-                              >
-                                {o.label}
-                              </button>
-                            ))}
-                          </div>
-                        </Popover.Content>
-                      </Popover.Root>
+                          <span className="truncate flex-1 min-w-0">
+                            {colSettings?.stableId
+                              ? overlayOptions.find(
+                                  (o) => o.value === colSettings?.stableId
+                                )?.label || t("Unknown layer")
+                              : t("None")}
+                          </span>
+                          <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                        </button>
+                      </LayerPickerDropdown>
                     </div>
                   );
                 })}
