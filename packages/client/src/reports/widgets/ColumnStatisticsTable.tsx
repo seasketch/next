@@ -256,95 +256,85 @@ export const ColumnStatisticsTable: ReportWidget<
             </div>
           ))}
         </div>
-        {rows.map((row, idx) => (
-          <div key={idx} className="contents hover:bg-gray-50">
-            {hasVisibilityColumn && (
-              <div
-                className={`px-3 py-2 text-center ${
-                  idx % 2 === 1
-                    ? "bg-gray-50/50 border-t border-b border-black/5"
-                    : ""
-                }`}
-              >
-                {componentSettings?.columnSettings?.[row.column]?.stableId ? (
-                  <VisibilityCheckboxAnimated
-                    id={
-                      componentSettings.columnSettings?.[row.column]
-                        ?.stableId || ""
-                    }
-                    onClick={() => {
-                      const sid =
+        {rows.map((row, idx) => {
+          const layerState =
+            mapContext?.layerStatesByTocStaticId?.[
+              componentSettings.columnSettings?.[row.column]?.stableId || ""
+            ];
+          return (
+            <div key={idx} className="contents hover:bg-gray-50">
+              {hasVisibilityColumn && (
+                <div
+                  className={`px-3 py-2 text-center ${
+                    idx % 2 === 1
+                      ? "bg-gray-50/50 border-t border-b border-black/5"
+                      : ""
+                  }`}
+                >
+                  {componentSettings?.columnSettings?.[row.column]?.stableId ? (
+                    <VisibilityCheckboxAnimated
+                      id={
                         componentSettings.columnSettings?.[row.column]
-                          ?.stableId;
-                      if (!sid) return;
-                      if (
-                        mapContext?.layerStatesByTocStaticId?.[sid]?.visible
-                      ) {
-                        mapContext.manager?.hideTocItems?.([sid]);
-                      } else {
-                        mapContext?.manager?.showTocItems?.([sid]);
+                          ?.stableId || ""
                       }
-                    }}
-                    disabled={!mapContext?.manager}
-                    visibility={
-                      !!mapContext?.layerStatesByTocStaticId?.[
-                        componentSettings.columnSettings?.[row.column]
-                          ?.stableId || ""
-                      ]?.visible &&
-                      mapContext?.layerStatesByTocStaticId?.[
-                        componentSettings.columnSettings?.[row.column]
-                          ?.stableId || ""
-                      ]?.hidden !== true
-                    }
-                    loading={
-                      !!mapContext?.layerStatesByTocStaticId?.[
-                        componentSettings.columnSettings?.[row.column]
-                          ?.stableId || ""
-                      ]?.loading
-                    }
-                    error={
-                      mapContext?.layerStatesByTocStaticId?.[
-                        componentSettings.columnSettings?.[row.column]
-                          ?.stableId || ""
-                      ]?.error
-                        ? String(
-                            mapContext?.layerStatesByTocStaticId?.[
-                              componentSettings.columnSettings?.[row.column]
-                                ?.stableId || ""
-                            ]?.error
-                          )
-                        : undefined
-                    }
-                  />
-                ) : (
-                  <span className="text-xs text-gray-400"></span>
-                )}
-              </div>
-            )}
-            <div
-              className={`px-3 py-2 text-sm text-gray-900 truncate group- ${
-                idx % 2 === 1
-                  ? "bg-gray-50/50 border-t border-b border-black/5"
-                  : ""
-              }`}
-            >
-              {componentSettings?.columnSettings?.[row.column]?.label ||
-                row.column}
-            </div>
-            {statsToShow.map((stat) => (
+                      onClick={() => {
+                        const sid =
+                          componentSettings.columnSettings?.[row.column]
+                            ?.stableId;
+                        if (!sid) return;
+                        if (
+                          mapContext?.layerStatesByTocStaticId?.[sid]?.visible
+                        ) {
+                          mapContext.manager?.hideTocItems?.([sid]);
+                        } else {
+                          mapContext?.manager?.showTocItems?.([sid]);
+                        }
+                      }}
+                      disabled={!mapContext?.manager}
+                      visibility={
+                        layerState?.visible && layerState?.hidden !== true
+                      }
+                      loading={layerState?.loading}
+                      error={
+                        layerState?.error
+                          ? String(layerState?.error)
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-400"></span>
+                  )}
+                </div>
+              )}
               <div
-                key={`${row.column}-${String(stat)}`}
-                className={`px-3 py-2 text-right text-sm text-gray-900 tabular-nums  ${
+                className={`px-3 py-2 text-sm text-gray-900 truncate group- ${
                   idx % 2 === 1
                     ? "bg-gray-50/50 border-t border-b border-black/5"
                     : ""
                 }`}
               >
-                {loading ? <MetricLoadingDots /> : formatValue(stat, row.stats)}
+                {componentSettings?.columnSettings?.[row.column]?.label ||
+                  row.column}
               </div>
-            ))}
-          </div>
-        ))}
+              {statsToShow.map((stat) => (
+                <div
+                  key={`${row.column}-${String(stat)}`}
+                  className={`px-3 py-2 text-right text-sm text-gray-900 tabular-nums  ${
+                    idx % 2 === 1
+                      ? "bg-gray-50/50 border-t border-b border-black/5"
+                      : ""
+                  }`}
+                >
+                  {loading ? (
+                    <MetricLoadingDots />
+                  ) : (
+                    formatValue(stat, row.stats)
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

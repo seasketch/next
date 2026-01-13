@@ -1,6 +1,5 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useContext } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/outline";
 import {
   MetricDependency,
   subjectIsFragment,
@@ -27,8 +26,213 @@ import {
   extractColorsForCategories,
 } from "../utils/colors";
 import { AnyLayer } from "mapbox-gl";
-import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
-import { SpatialMetricState } from "../../generated/graphql";
+import { GeostatsLayer } from "@seasketch/geostats-types";
+import {
+  CompatibleSpatialMetricDetailsFragment,
+  OverlaySourceDetailsFragment,
+  SpatialMetricState,
+} from "../../generated/graphql";
+import {
+  PaginationFooter,
+  PaginationSetting,
+  TablePaddingRows,
+} from "./Pagination";
+import { usePagination } from "../hooks/usePagination";
+import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
+import { MapContext } from "../../dataLayers/MapContextManager";
+import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import { LayersIcon } from "@radix-ui/react-icons";
+
+export type ClassTableRow = {
+  key: string;
+  label: string;
+  groupByKey: string;
+  sourceId: string;
+  color?: string;
+  stableId?: string;
+};
+
+export type ClassTableRowComponentSettings = {
+  /**
+   * A list of row keys to exclude from the table. The key must match the ClassTableRow.key value.
+   */
+  excludedRowKeys?: string[];
+  /**
+   * A map of row keys to custom labels. The key must match the ClassTableRow.key value.
+   */
+  customRowLabels?: { [key: string]: string };
+  /**
+   * A map of row keys to stable IDs. The key must match the ClassTableRow.key value.
+   */
+  rowLinkedStableIds?: { [key: string]: string };
+};
+
+/**
+ * Returns a list of ClassTableRows for the given dependencies and sources. In
+ * report widgets like FeatureCountTable and OverlappingAreasTable, the widget
+ * can populate these rows with metrics data for rendering as part of a table
+ * component. The purpose of this function is to let table widgets delegate
+ * responsibility for determining what rows to display, their colors, and their
+ * labels, based on depedencies and common configuration. Widget-specific
+ * functionality can then be implemented by callers.
+ *
+ * If sources aren't provided, likely because they haven't been loaded yet, the
+ * function will return placeholder rows.
+ * @param options
+ * @returns
+ */
+export function getClassTableRows(options: {
+  dependencies: MetricDependency[];
+  sources: OverlaySourceDetailsFragment[];
+  allFeaturesLabel: string;
+  /**
+   * A map of group by keys to custom labels. The key must match the
+   * ClassTableRow.key value.
+   */
+  customLabels?: { [key: string]: string };
+  /**
+   * A map of table of contents item IDs to stable IDs for showing map layer
+   * toggles. The key must match the ClassTableRow.sourceId value.
+   */
+  stableIds?: { [key: string]: string };
+  excludedRowKeys?: string[];
+}): ClassTableRow[] {
+  const rows = [] as ClassTableRow[];
+  const fragmentDependencies = options.dependencies.filter(
+    (d) => d.subjectType === "fragments" && Boolean(d.tableOfContentsItemId)
+  );
+  for (const dependency of fragmentDependencies) {
+    const source = options.sources.find(
+      (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
+    );
+    const layer = source?.geostats?.layers?.[0] as GeostatsLayer | undefined;
+    if (!source || !layer) {
+      if (dependency.parameters?.groupBy) {
+        [1, 2, 3].forEach((i) => {
+          rows.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            key: `${dependency.tableOfContentsItemId}-placeholder-${i}`,
+            label: `-`,
+            // eslint-disable-next-line i18next/no-literal-string
+            groupByKey: `${dependency.tableOfContentsItemId}-placeholder-${i}`,
+            sourceId: dependency.tableOfContentsItemId!.toString(),
+          });
+        });
+      } else {
+        const key = `${dependency.tableOfContentsItemId}-*`;
+        rows.push({
+          key,
+          label: options.customLabels?.[key] || options.allFeaturesLabel,
+          groupByKey: "*",
+          sourceId: dependency.tableOfContentsItemId!.toString(),
+          stableId: options.stableIds?.[key],
+        });
+      }
+    } else {
+      if (dependency.parameters?.groupBy) {
+        const attr = layer.attributes?.find(
+          (a) => a.attribute === dependency.parameters?.groupBy
+        );
+        if (!attr) {
+          throw new Error(
+            `Attribute ${dependency.parameters?.groupBy} not found in geostats layer`
+          );
+        }
+        const values = Object.keys(attr.values || {});
+        const colors = extractColorsForCategories(
+          values,
+          attr,
+          source.mapboxGlStyles as AnyLayer[]
+        );
+        for (const value of values) {
+          const key = `${dependency.tableOfContentsItemId}-${value}`;
+          let color: string | undefined =
+            colors[value] ||
+            extractColorForLayers(source.mapboxGlStyles as AnyLayer[]);
+          if (color === "transparent" || color === "#00000000") {
+            color = undefined;
+          }
+          rows.push({
+            key,
+            label: options.customLabels?.[key] || value,
+            groupByKey: value,
+            sourceId: dependency.tableOfContentsItemId!.toString(),
+            stableId: options.stableIds?.[key],
+            color,
+          });
+        }
+      } else {
+        const key = `${dependency.tableOfContentsItemId}-*`;
+        let color: string | undefined = extractColorForLayers(
+          source.mapboxGlStyles as AnyLayer[]
+        );
+        if (color === "transparent" || color === "#00000000") {
+          color = undefined;
+        }
+        rows.push({
+          key,
+          label: options.customLabels?.[key] || options.allFeaturesLabel,
+          groupByKey: "*",
+          sourceId: dependency.tableOfContentsItemId!.toString(),
+          stableId: options.stableIds?.[key],
+          color,
+        });
+      }
+    }
+  }
+  return rows.filter((r) => !options.excludedRowKeys?.includes(r.key));
+}
+
+export function combineMetricsBySource<T extends Metric>(
+  metrics: CompatibleSpatialMetricDetailsFragment[],
+  sources: OverlaySourceDetailsFragment[],
+  geographyId: number
+): {
+  [sourceId: string]: {
+    fragments: T;
+    geographies: T;
+  };
+} {
+  const result: {
+    [sourceId: string]: {
+      fragments: T;
+      geographies: T;
+    };
+  } = {};
+  // first, gather up source ids
+  const sourceIds = new Set<string>();
+  for (const metric of metrics) {
+    if (metric.sourceUrl) {
+      const source = sources.find((s) => s.sourceUrl === metric.sourceUrl);
+      if (source) {
+        sourceIds.add(source.tableOfContentsItemId.toString());
+      }
+    }
+  }
+  // then for each sourceId, combine the metrics
+  for (const sourceId of sourceIds) {
+    const source = sources.find(
+      (s) => s.tableOfContentsItemId.toString() === sourceId
+    );
+    if (source) {
+      result[sourceId] = {
+        fragments: combineMetricsForFragments(
+          metrics.filter(
+            (m) =>
+              m.sourceUrl === source.sourceUrl && subjectIsFragment(m.subject)
+          ) as Pick<Metric, "type" | "value">[]
+        ) as T,
+        geographies: metrics.find(
+          (m) =>
+            m.sourceUrl === source.sourceUrl &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === geographyId
+        ) as unknown as T,
+      };
+    }
+  }
+  return result;
+}
 
 type FeatureCountTableSettings = {
   showZeroCountCategories?: boolean;
@@ -39,14 +243,11 @@ type FeatureCountTableSettings = {
   percentWithinLabel?: string;
   showPercentColumn?: boolean;
   bufferMeters?: number;
-};
+} & ClassTableRowComponentSettings;
 
-type FeatureCountRow = {
-  key: string;
-  label: string;
+type FeatureCountRow = ClassTableRow & {
   count: number;
   geographyTotal?: number;
-  color?: string;
 };
 
 export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
@@ -56,9 +257,10 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   loading,
   geographies,
   sketchClass,
+  dependencies,
 }) => {
   const { t } = useTranslation("reports");
-  const [currentPage, setCurrentPage] = useState(1);
+  const mapContext = useContext(MapContext);
 
   const showZero = componentSettings.showZeroCountCategories ?? false;
   const sortBy = componentSettings.sortBy || "count";
@@ -71,33 +273,15 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
 
   const primaryGeographyId = sketchClass?.clippingGeographies?.[0]?.id;
 
-  const groupBy = useMemo(() => {
-    const frag = metrics.find((m) => subjectIsFragment(m.subject));
-    const params = (frag?.parameters || {}) as any;
-    return params.groupBy || params.group_by || undefined;
-  }, [metrics]);
-
   const rows = useMemo<FeatureCountRow[]>(() => {
-    console.log("calculate rows", { metrics, sources });
-    let rows: FeatureCountRow[] = [];
-
-    if (sources.length === 0) {
-      return [];
-    }
-    if (metrics.length === 0) {
-      return [];
-    }
-    if (sources.length > 1) {
-      throw new Error(
-        "FeatureCountTable does not yet support multiple sources"
-      );
-    }
-    const geostatsLayer = sources[0].geostats?.layers?.[0] as
-      | GeostatsLayer
-      | undefined;
-    if (!geostatsLayer) {
-      throw new Error("Geostats layer not found");
-    }
+    const classRows = getClassTableRows({
+      dependencies,
+      sources,
+      customLabels: componentSettings.customRowLabels,
+      allFeaturesLabel: t("All features"),
+      stableIds: componentSettings.rowLinkedStableIds,
+      excludedRowKeys: componentSettings.excludedRowKeys,
+    });
 
     const completedFragmentMetrics = metrics.filter(
       (m) =>
@@ -105,52 +289,41 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
         m.type === "count" &&
         m.state === SpatialMetricState.Complete
     ) as Pick<Metric, "type" | "value">[];
-    console.log("completedFragmentMetrics", completedFragmentMetrics);
-    const combinedFragmentMetric = combineMetricsForFragments(
-      completedFragmentMetrics
-    ) as CountMetric;
 
-    const primaryGeographyMetric = metrics.find(
-      (m) =>
-        subjectIsGeography(m.subject) &&
-        m.subject.id === primaryGeographyId &&
-        m.type === "count" &&
-        m.state === SpatialMetricState.Complete
-    ) as CountMetric | undefined;
-
-    if (groupBy) {
-      const attr = geostatsLayer.attributes?.find(
-        (a) => a.attribute === groupBy
-      );
-      if (!attr) {
-        throw new Error(`Attribute ${groupBy} not found in geostats layer`);
-      }
-      const colors = extractColorsForCategories(
-        Object.keys(attr.values || {}),
-        attr,
-        sources[0].mapboxGlStyles as AnyLayer[]
-      );
-      const defaultColor = extractColorForLayers(
-        sources[0].mapboxGlStyles as AnyLayer[]
-      );
-      for (const value of Object.keys(attr.values || {})) {
-        rows.push({
-          key: value,
-          label: value,
-          count: combinedFragmentMetric?.value?.[value]?.count ?? 0,
-          color: colors[value] ?? defaultColor,
-          geographyTotal: primaryGeographyMetric?.value?.[value]?.count ?? 0,
-        });
-      }
-    } else {
-      rows.push({
-        key: "*",
-        label: t("All features"),
-        count: combinedFragmentMetric?.value?.["*"]?.count ?? 0,
-        color: extractColorForLayers(sources[0].mapboxGlStyles as AnyLayer[]),
-        geographyTotal: primaryGeographyMetric?.value?.["*"]?.count ?? 0,
-      });
+    if (
+      sources.length === 0 ||
+      completedFragmentMetrics.length === 0 ||
+      metrics.length === 0 ||
+      loading
+    ) {
+      return classRows.map((r) => ({
+        ...r,
+        count: NaN,
+        geographyTotal: NaN,
+      }));
     }
+
+    if (!primaryGeographyId) {
+      throw new Error("Primary geography not found.");
+    }
+    const combinedMetrics = combineMetricsBySource<CountMetric>(
+      metrics,
+      sources,
+      primaryGeographyId
+    );
+
+    let rows: FeatureCountRow[] = classRows.map((r) => {
+      const combinedForSource = combinedMetrics[r.sourceId];
+      const count =
+        combinedForSource?.fragments?.value?.[r.groupByKey]?.count || 0;
+      const geographyTotal =
+        combinedForSource?.geographies?.value?.[r.groupByKey]?.count || 0;
+      return {
+        ...r,
+        count,
+        geographyTotal,
+      };
+    });
 
     if (sortBy === "name") {
       rows = rows.sort((a, b) => a.key.localeCompare(b.key));
@@ -159,76 +332,49 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
     }
 
     if (!showZero) {
-      rows = rows.filter((r) => r.count !== 0);
-    }
-
-    if (groupBy) {
-      rows = rows.filter((r) => r.key !== "*");
+      rows = rows.filter((r) => r.count > 0);
     }
 
     return rows;
-  }, [sources, metrics, groupBy, sortBy, showZero, primaryGeographyId, t]);
-
-  // const placeholderRows = useMemo<FeatureCountRow[]>(() => {
-  //   if (!loading) return [];
-  //   const source = sources?.[0];
-  //   const geoLayer = isGeostatsLayer(
-  //     (source?.geostats as any)?.layers?.[0] as GeostatsLayer
-  //   )
-  //     ? ((source!.geostats as any).layers[0] as GeostatsLayer)
-  //     : undefined;
-  //   const defaultKeys = ["…", "…", "…"];
-  //   let keys: string[] = defaultKeys;
-  //   if (groupBy && geoLayer) {
-  //     const attr = geoLayer.attributes?.find((a) => a.attribute === groupBy);
-  //     if (attr) {
-  //       keys = Object.keys(attr.values || {});
-  //     }
-  //   }
-  //   if (!showZero) {
-  //     keys = keys.slice(0, 5);
-  //   }
-  //   if (!keys.length) {
-  //     keys = defaultKeys;
-  //   }
-  //   return keys.map((k, i) => ({
-  //     key: "placeholder-" + i,
-  //     count: 0,
-  //     label: k,
-  //   }));
-  // }, [loading, sources, groupBy, showZero]);
+  }, [
+    dependencies,
+    sources,
+    t,
+    metrics,
+    loading,
+    sortBy,
+    showZero,
+    primaryGeographyId,
+    componentSettings.customRowLabels,
+    componentSettings.rowLinkedStableIds,
+    componentSettings.excludedRowKeys,
+  ]);
 
   const displayRows = loading ? rows : rows;
-  const totalRows = displayRows.length;
-  const showPagination = rowsPerPage > 0 && totalRows > rowsPerPage;
-  const totalPages = showPagination ? Math.ceil(totalRows / rowsPerPage) : 1;
+  const {
+    currentPage,
+    setCurrentPage,
+    paginatedItems: paginatedRows,
+    paddingRowsCount,
+    showPagination,
+    totalPages,
+    totalRows,
+    pageBounds,
+  } = usePagination(displayRows, rowsPerPage);
 
-  // Reset to page 1 when rows change or rowsPerPage changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [totalRows, rowsPerPage]);
-
-  // Calculate paginated rows
-  const paginatedRows = useMemo(() => {
-    if (!showPagination) return displayRows;
-    const startIndex = (currentPage - 1) * rowsPerPage;
-    const endIndex = startIndex + rowsPerPage;
-    return displayRows.slice(startIndex, endIndex);
-  }, [displayRows, currentPage, showPagination, rowsPerPage]);
-
-  // Calculate padding rows needed for last page
-  const paddingRowsCount = useMemo(() => {
-    if (!showPagination || paginatedRows.length >= rowsPerPage) return 0;
-    return rowsPerPage - paginatedRows.length;
-  }, [showPagination, paginatedRows.length, rowsPerPage]);
-
-  // Check if any row has a color to determine if we need color column space
-  const hasAnyColor = useMemo(() => {
-    return rows.some(
-      (row) =>
-        row.color && row.color !== "#00000000" && row.color !== "transparent"
-    );
-  }, [rows]);
+  const hasAnyColor = useMemo(() => rows.some((row) => row.color), [rows]);
+  const hasVisibilityColumn = useMemo(
+    () =>
+      rows.some(
+        (row) =>
+          row.stableId ||
+          componentSettings.rowLinkedStableIds?.[row.key] ||
+          (row.groupByKey
+            ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
+            : undefined)
+      ),
+    [rows, componentSettings.rowLinkedStableIds]
+  );
 
   if (!loading && !rows.length) {
     return (
@@ -243,7 +389,11 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
       <div className="divide-y divide-gray-100">
         {/* Header row */}
         <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
-          {/* Color column space - no header needed */}
+          {hasVisibilityColumn && (
+            <div className="flex-none w-6 flex justify-center text-gray-600 text-xs font-semibold uppercase tracking-wide">
+              <LayersIcon className="w-4 h-4" />
+            </div>
+          )}
           <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
             {nameLabel}
           </div>
@@ -268,8 +418,16 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
             row.geographyTotal > 0
               ? row.count / row.geographyTotal
               : undefined;
-          const hasColor =
-            color && color !== "#00000000" && color !== "transparent";
+          const hasColor = color;
+          const stableId =
+            row.stableId ||
+            componentSettings.rowLinkedStableIds?.[row.key] ||
+            (row.groupByKey
+              ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
+              : undefined);
+          const layerState = stableId
+            ? mapContext?.layerStatesByTocStaticId?.[stableId]
+            : undefined;
           return (
             <div
               key={row.key}
@@ -277,6 +435,38 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
                 row.count === 0 ? "opacity-50" : ""
               }`}
             >
+              {hasVisibilityColumn && (
+                <div className="flex-none w-6 flex justify-center">
+                  {stableId ? (
+                    <VisibilityCheckboxAnimated
+                      id={stableId}
+                      onClick={() => {
+                        if (!mapContext?.manager) return;
+                        const visible =
+                          layerState?.visible && layerState?.hidden !== true;
+                        if (visible) {
+                          mapContext.manager.hideTocItems?.([stableId]);
+                        } else {
+                          mapContext.manager.showTocItems?.([stableId]);
+                        }
+                      }}
+                      disabled={!mapContext?.manager}
+                      visibility={
+                        (layerState?.visible && layerState?.hidden !== true) ||
+                        false
+                      }
+                      loading={layerState?.loading}
+                      error={
+                        layerState?.error
+                          ? String(layerState?.error)
+                          : undefined
+                      }
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-400"></span>
+                  )}
+                </div>
+              )}
               {hasColor && (
                 <div className="flex-none w-4 flex justify-center">
                   <span
@@ -315,77 +505,22 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
             </div>
           );
         })}
-        {/* Padding rows to maintain consistent height */}
-        {Array.from({ length: paddingRowsCount }).map((_, i) => (
-          <div
-            key={`padding-${i}`}
-            className="flex items-center gap-3 px-3 py-2 bg-gray-50/30"
-            aria-hidden="true"
-          >
-            {hasAnyColor && (
-              <div className="flex-none w-4 flex justify-center" />
-            )}
-            <div className="flex-1 min-w-0 text-gray-800 text-sm">
-              <span className="truncate block invisible">.</span>
-            </div>
-            <div
-              className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
-                showPercentColumn ? "text-center" : "text-right"
-              }`}
-            >
-              <span className="invisible">0</span>
-            </div>
-            {showPercentColumn && (
-              <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
-                <span className="invisible">&nbsp;</span>
-              </div>
-            )}
-          </div>
-        ))}
+        <TablePaddingRows
+          count={paddingRowsCount}
+          includeColorColumn={hasAnyColor}
+          includeVisibilityColumn={hasVisibilityColumn}
+          showPercentColumn={showPercentColumn}
+          numericAlign={showPercentColumn ? "center" : "right"}
+        />
       </div>
       {showPagination && (
-        <div className="border-t border-gray-200 bg-gray-50 px-3 py-2 flex items-center justify-between">
-          <div className="text-sm text-gray-700">
-            {t("Showing {{start}}–{{end}} of {{total}}", {
-              start: (currentPage - 1) * rowsPerPage + 1,
-              end: Math.min(currentPage * rowsPerPage, totalRows),
-              total: totalRows,
-            })}
-          </div>
-          <nav
-            className="isolate inline-flex -space-x-px rounded-md shadow-sm"
-            aria-label="Pagination"
-          >
-            <button
-              type="button"
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-              className={`${
-                currentPage === 1
-                  ? "pointer-events-none opacity-25"
-                  : "hover:bg-gray-50"
-              } relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 focus:z-20 focus:outline-none`}
-            >
-              <span className="sr-only">{t("Previous")}</span>
-              <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-              }
-              disabled={currentPage === totalPages}
-              className={`${
-                currentPage === totalPages
-                  ? "pointer-events-none opacity-25"
-                  : "hover:bg-gray-50"
-              } relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 focus:z-20 focus:outline-none`}
-            >
-              <span className="sr-only">{t("Next")}</span>
-              <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
-            </button>
-          </nav>
-        </div>
+        <PaginationFooter
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalRows={totalRows}
+          pageBounds={pageBounds}
+          onPageChange={setCurrentPage}
+        />
       )}
     </div>
   );
@@ -395,8 +530,11 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
   node,
   onUpdate,
   onUpdateDependencyParameters,
+  onUpdateAllDependencies,
 }) => {
   const { t } = useTranslation("admin:reports");
+  const dependencies = node.attrs?.metrics as MetricDependency[] | undefined;
+
   const reportContext = useReportContext();
   const settings: FeatureCountTableSettings = useMemo(
     () => node.attrs?.componentSettings || {},
@@ -410,79 +548,18 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
 
   // Get sources from report context
   const sources = useMemo(() => {
-    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
     const allSources = [
       ...(reportContext.overlaySources || []),
       ...(reportContext.adminSources || []),
     ];
     return allSources.filter((s) =>
-      dependencies.some(
+      dependencies?.some(
         (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
       )
     );
-  }, [
-    node.attrs?.metrics,
-    reportContext.overlaySources,
-    reportContext.adminSources,
-  ]);
+  }, [reportContext.overlaySources, reportContext.adminSources, dependencies]);
 
   // Get current groupBy from dependencies
-  const currentGroupBy = useMemo(() => {
-    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-    const dep = dependencies.find((d) => d.parameters?.groupBy !== undefined);
-    return dep?.parameters?.groupBy || undefined;
-  }, [node.attrs?.metrics]);
-
-  // Get available groupBy columns from geostats
-  const groupByOptions = useMemo(() => {
-    const options: Array<{ value: string; label: React.ReactNode }> = [
-      { value: "__none__", label: t("None") },
-    ];
-
-    const source = sources?.[0];
-    if (!source?.geostats) return options;
-
-    const geoLayer = isGeostatsLayer(
-      (source.geostats as any)?.layers?.[0] as GeostatsLayer
-    )
-      ? ((source.geostats as any).layers[0] as GeostatsLayer)
-      : undefined;
-
-    if (!geoLayer?.attributes) return options;
-
-    for (const attr of geoLayer.attributes) {
-      const isString = attr.type === "string";
-      const distinctCount = Object.keys(attr.values || {}).length;
-      const isNumericWithFewValues =
-        attr.type === "number" && distinctCount <= 10;
-
-      if (isString || isNumericWithFewValues) {
-        // Get example values (up to 5)
-        const exampleValues = Object.keys(attr.values || {})
-          .slice(0, 5)
-          .map((v) => String(v));
-        const examplesText =
-          exampleValues.length > 0 ? exampleValues.join(", ") : "";
-
-        options.push({
-          value: attr.attribute,
-          label: (
-            <div className="flex flex-col">
-              <span className="font-medium">{attr.attribute}</span>
-              {examplesText && (
-                <span className="text-xs text-gray-500 truncate max-w-[200px]">
-                  {examplesText}
-                </span>
-              )}
-            </div>
-          ),
-        });
-      }
-    }
-
-    return options;
-  }, [sources, t]);
-
   const handleUpdate = (patch: Partial<FeatureCountTableSettings>) => {
     onUpdate({
       componentSettings: {
@@ -532,30 +609,6 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
     unitDisplay: "short",
   });
 
-  // Get related overlay source
-  const relatedOverlay = useMemo(() => {
-    const allSources = [
-      ...(reportContext.overlaySources || []),
-      ...(reportContext.adminSources || []),
-    ];
-    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-    for (const dependency of dependencies) {
-      if (dependency.tableOfContentsItemId) {
-        const source = allSources.find(
-          (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
-        );
-        if (source) {
-          return source;
-        }
-      }
-    }
-    return null;
-  }, [
-    node.attrs?.metrics,
-    reportContext.overlaySources,
-    reportContext.adminSources,
-  ]);
-
   return (
     <div className="flex gap-3 items-center text-sm text-gray-800">
       <LabeledDropdown
@@ -569,6 +622,15 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
         labelDisplayNames={["Name", "Count", "% Within"]}
         componentSettings={settings}
         onUpdate={onUpdate}
+      />
+      <ClassRowSettingsPopover
+        settings={settings}
+        onUpdateSettings={(patch) => handleUpdate(patch)}
+        dependencies={dependencies || []}
+        sources={sources}
+        onUpdateDependencyParameters={onUpdateDependencyParameters}
+        onUpdateAllDependencies={onUpdateAllDependencies}
+        t={t}
       />
       <TooltipMorePopover>
         <button
@@ -591,42 +653,10 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
           checked={showPercentColumn}
           onChange={(next) => handleUpdate({ showPercentColumn: next })}
         />
-        <LabeledDropdown
-          label={t("Group by")}
-          value={currentGroupBy || "__none__"}
-          options={groupByOptions}
-          getDisplayLabel={(selected) => {
-            if (!selected || selected.value === "__none__") {
-              return t("None");
-            }
-            // Show just the column name in the trigger
-            return selected.value;
-          }}
-          onChange={(val) => {
-            const groupByValue = val === "__none__" ? undefined : val;
-            onUpdateDependencyParameters((dependency) => {
-              return {
-                ...dependency.parameters,
-                groupBy: groupByValue,
-              };
-            });
-          }}
-        />
-        <LabeledDropdown
-          label={t("Pagination")}
-          value={rowsPerPage === 0 ? "None" : String(rowsPerPage)}
-          options={[
-            { value: "None", label: t("None") },
-            { value: "10", label: "10 items" },
-            { value: "12", label: "12 items" },
-            { value: "15", label: "15 items" },
-            { value: "20", label: "20 items" },
-          ]}
-          onChange={(val) =>
-            handleUpdate({
-              rowsPerPage: val === "None" ? 0 : Number(val),
-            })
-          }
+
+        <PaginationSetting
+          rowsPerPage={rowsPerPage}
+          onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
         />
         <div className="flex">
           <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
@@ -636,16 +666,6 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
             {t("Feature Count Table")}
           </span>
         </div>
-        {relatedOverlay && (
-          <div className="flex">
-            <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
-              {t("Layer")}
-            </span>
-            <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right truncate">
-              {relatedOverlay.tableOfContentsItem?.title || "Unknown"}
-            </span>
-          </div>
-        )}
       </TooltipMorePopover>
     </div>
   );

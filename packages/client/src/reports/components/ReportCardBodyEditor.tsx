@@ -48,6 +48,7 @@ import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
 import { ReportContext } from "../ReportContext";
 import getSlug from "../../getSlug";
 import Spinner from "../../components/Spinner";
+import { LayerPickerList } from "../widgets/LayerPickerDropdown";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -104,25 +105,12 @@ function ReportCardBodyEditorInner({
     return { schema, plugins };
   }, []);
 
-  const availableReportLayersQuery = useAvailableReportLayersQuery({
-    variables: {
-      slug: getSlug(),
-    },
-    fetchPolicy: "cache-and-network",
-  });
-
   const langContext = useContext(FormLanguageContext);
   const currentLangCode = langContext?.lang?.code || "EN";
 
   const reportContext = useContext(ReportContext);
 
   const reportingLayersQuery = useProjectReportingLayersQuery({
-    variables: {
-      slug: getSlug(),
-    },
-  });
-
-  const publishedTocQuery = usePublishedTableOfContentsQuery({
     variables: {
       slug: getSlug(),
     },
@@ -136,22 +124,6 @@ function ReportCardBodyEditorInner({
   );
   const [addingOverlayId, setAddingOverlayId] = useState<number | null>(null);
   const [overlayError, setOverlayError] = useState<string | null>(null);
-
-  const overlayOptions = useMemo<OverlayPickerOption[]>(() => {
-    const existing = new Set(
-      (reportingLayersQuery.data?.projectBySlug?.reportingLayers || []).map(
-        (layer) => layer.tableOfContentsItemId
-      )
-    );
-    return (
-      availableReportLayersQuery.data?.projectBySlug?.availableReportLayers?.filter(
-        (layer) => !existing.has(layer.id)
-      ) || []
-    );
-  }, [
-    availableReportLayersQuery.data?.projectBySlug?.availableReportLayers,
-    reportingLayersQuery.data?.projectBySlug?.reportingLayers,
-  ]);
 
   const overlayAugmenter = useCallback(
     ({
@@ -239,7 +211,6 @@ function ReportCardBodyEditorInner({
       description: t("Add a reporting layer by preprocessing an overlay."),
       customPopoverContent: ({ closePopover, focusPalette }) => (
         <OverlayPickerContent
-          overlays={overlayOptions}
           isLoading={
             preprocessSourceState.loading || typeof addingOverlayId === "number"
           }
@@ -259,7 +230,6 @@ function ReportCardBodyEditorInner({
         preprocessSourceState.loading || typeof addingOverlayId === "number",
     };
   }, [
-    overlayOptions,
     preprocessSourceState.loading,
     addingOverlayId,
     overlayError,
@@ -470,92 +440,44 @@ function ReportCardBodyEditorInner({
 }
 
 function OverlayPickerContent({
-  overlays,
   onSelect,
   isLoading,
   loadingId,
   errorMessage,
 }: {
-  overlays: OverlayPickerOption[];
   onSelect: (overlayId: number) => Promise<boolean>;
   isLoading: boolean;
   loadingId: number | null;
   errorMessage?: string | null;
 }) {
   const { t } = useTranslation("sketching");
-  const [search, setSearch] = useState("");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
 
-  const filtered = useMemo(() => {
-    const term = search.toLowerCase();
-    return overlays.filter((option) =>
-      option.title.toLowerCase().includes(term)
-    );
-  }, [overlays, search]);
-
   return (
-    <div className="w-72 rounded-md border border-gray-200 bg-white shadow-xl">
-      <div className="border-b border-gray-100 p-2">
-        <input
-          ref={inputRef}
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t("Search overlays…")}
-          className="w-full rounded border border-gray-200 px-2 py-1 text-sm outline-none focus:border-blue-500"
-          disabled={isLoading}
-        />
-      </div>
-      <div className="max-h-64 overflow-auto">
-        {filtered.length === 0 ? (
-          <div className="px-3 py-2 text-sm text-gray-500">
-            {t("No compatible overlays found.")}
-          </div>
-        ) : (
-          filtered.map((option) => (
-            <button
-              key={option.id}
-              disabled={isLoading}
-              className={`w-full px-3 py-2 text-left transition-colors ${
-                isLoading
-                  ? "cursor-wait opacity-60"
-                  : "hover:bg-gray-50 focus:bg-gray-50"
-              }`}
-              onClick={async (e) => {
-                e.preventDefault();
-                if (isLoading) return;
-                const success = await onSelect(option.id);
-                if (!success) {
-                  inputRef.current?.focus();
-                }
-              }}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <div className="flex flex-col">
-                  <span className="text-sm font-medium text-gray-900">
-                    {option.title}
-                  </span>
-                  {option.stableId ? (
-                    <span className="text-xs text-gray-500">
-                      {option.stableId}
-                    </span>
-                  ) : null}
-                </div>
-                {loadingId === option.id && isLoading ? <Spinner mini /> : null}
-              </div>
-            </button>
-          ))
-        )}
-      </div>
-      {errorMessage ? (
-        <div className="border-t border-gray-100 px-3 py-2 text-xs text-red-600">
-          {errorMessage}
-        </div>
-      ) : null}
-    </div>
+    <LayerPickerList
+      className="w-72"
+      hideSearch={false}
+      required
+      onlyReportingLayers={false}
+      // optionsOverride={overlays.map((option) => ({
+      //   stableId: option.stableId || String(option.id),
+      //   title: option.title,
+      //   tableOfContentsItemId: option.id,
+      //   reporting: true,
+      // }))}
+      onSelect={async (val) => {
+        if (!val?.tableOfContentsItemId) return;
+        if (isLoading) return;
+        const success = await onSelect(val.tableOfContentsItemId);
+        if (!success && inputRef.current) {
+          inputRef.current.focus();
+        }
+      }}
+    />
   );
 }
 

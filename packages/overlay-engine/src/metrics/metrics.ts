@@ -622,6 +622,9 @@ function fnv1a(input: string): string {
 export function combineMetricsForFragments(
   metrics: Pick<Metric, "type" | "value">[]
 ): Pick<Metric, "type" | "value"> {
+  if (metrics.length === 0) {
+    throw new Error("Cannot combine empty array of metrics");
+  }
   // first, ensure that all metrics have the same type
   const types = new Set(metrics.map((m) => m.type));
   if (types.size > 1) {

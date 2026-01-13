@@ -324,6 +324,9 @@ function fnv1a(input) {
     return (hash >>> 0).toString(16).padStart(8, "0");
 }
 function combineMetricsForFragments(metrics) {
+    if (metrics.length === 0) {
+        throw new Error("Cannot combine empty array of metrics");
+    }
     // first, ensure that all metrics have the same type
     const types = new Set(metrics.map((m) => m.type));
     if (types.size > 1) {
