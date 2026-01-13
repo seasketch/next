@@ -22,6 +22,9 @@ export type LayerPickerDropdownProps = {
   popoverSideOffset?: number;
   children: ReactNode;
   optionsOverride?: LayerPickerOption[];
+  suggested?: number[];
+  title?: string;
+  description?: string;
 };
 
 type LayerPickerOption = {
@@ -315,6 +318,9 @@ export function LayerPickerDropdown({
   popoverSideOffset = 6,
   children,
   optionsOverride,
+  suggested,
+  title,
+  description,
 }: LayerPickerDropdownProps) {
   const { t } = useTranslation("admin:reports");
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -347,6 +353,28 @@ export function LayerPickerDropdown({
         )
       );
 
+  const suggestedLayers = useMemo(() => {
+    if (!suggested || !suggested.length) return [];
+    const allOptions = [...reportingLayers, ...allLayers];
+    const byTocId = new Map<number, LayerPickerOption>();
+    for (const opt of allOptions) {
+      if (typeof opt.tableOfContentsItemId === "number") {
+        byTocId.set(opt.tableOfContentsItemId, opt);
+      }
+    }
+    const found: LayerPickerOption[] = [];
+    for (const id of suggested) {
+      const match = byTocId.get(id);
+      if (match) found.push(match);
+    }
+    return found;
+  }, [allLayers, reportingLayers, suggested]);
+
+  const filteredSuggested = useMemo(() => {
+    if (!suggestedLayers.length) return [];
+    return filterItems(suggestedLayers);
+  }, [filterItems, suggestedLayers]);
+
   const handleSelect = (layer?: LayerPickerOption) => {
     if (!layer) {
       onChange(undefined);
@@ -372,6 +400,18 @@ export function LayerPickerDropdown({
         sideOffset={popoverSideOffset}
         className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-50 w-60 p-1"
       >
+        {(title || description) && (
+          <div className="px-2 pb-2 pt-1">
+            {title && (
+              <div className="text-[11px] font-semibold uppercase tracking-wide text-gray-600">
+                {title}
+              </div>
+            )}
+            {description && (
+              <div className="text-xs text-gray-500 mt-1">{description}</div>
+            )}
+          </div>
+        )}
         {!hideSearch && (
           <div className="px-2 pb-2 pt-1">
             <input
@@ -393,6 +433,28 @@ export function LayerPickerDropdown({
             >
               {t("None")}
             </button>
+          )}
+          {filteredSuggested.length > 0 && (
+            <div className="space-y-1">
+              <div className="px-2.5 py-1 text-[10px] uppercase tracking-[0.08em] text-gray-700 sticky top-0 z-10 bg-gray-100 border-b border-gray-50">
+                {t("Suggested")}
+              </div>
+              <div className="space-y-1">
+                {filteredSuggested.map((layer) => (
+                  <button
+                    key={`suggested-${layer.stableId}-${
+                      layer.tableOfContentsItemId ?? "none"
+                    }`}
+                    type="button"
+                    className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
+                    onClick={() => handleSelect(layer)}
+                    title={layer.title}
+                  >
+                    <span className="truncate">{layer.title}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
           {filteredReporting.length > 0 && (
             <div className="space-y-1">

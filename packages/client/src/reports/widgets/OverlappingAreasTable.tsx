@@ -115,7 +115,7 @@ export const OverlappingAreasTable: ReportWidget<
       excludedRowKeys: componentSettings.excludedRowKeys,
     });
 
-    if (sources.length === 0 || metrics.length === 0) {
+    if (sources.length === 0 || metrics.length === 0 || loading) {
       return classRows.map((r) => ({
         ...r,
         overlap: NaN,
@@ -182,7 +182,13 @@ export const OverlappingAreasTable: ReportWidget<
     pageBounds,
   } = usePagination(rows, rowsPerPage);
 
-  if (!loading && !rows.length) {
+  // loading = true;
+
+  if (
+    !loading &&
+    !rows.length &&
+    !componentSettings.showZeroOverlapCategories
+  ) {
     return (
       <div className="border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
         <Trans ns="reports">No overlapping features found.</Trans>
@@ -203,7 +209,11 @@ export const OverlappingAreasTable: ReportWidget<
           <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
             {nameLabel}
           </div>
-          <div className="flex-none text-center text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]">
+          <div
+            className={`flex-none ${
+              showPercentColumn ? "text-center" : "text-right"
+            } text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]`}
+          >
             {areaLabel}
           </div>
           {showPercentColumn && (
@@ -276,7 +286,11 @@ export const OverlappingAreasTable: ReportWidget<
                   {row.label}
                 </span>
               </div>
-              <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
+              <div
+                className={`flex-none ${
+                  showPercentColumn ? "text-center" : "text-right"
+                } text-gray-900 tabular-nums text-sm min-w-[80px]`}
+              >
                 {loading ? <MetricLoadingDots /> : formatters.area(row.overlap)}
               </div>
               {showPercentColumn && (

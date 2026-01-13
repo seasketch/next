@@ -1,12 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { Pencil2Icon, CaretDownIcon, Cross2Icon } from "@radix-ui/react-icons";
-import { LabeledDropdown } from "./LabeledDropdown";
+import { Pencil2Icon, CaretDownIcon, TrashIcon } from "@radix-ui/react-icons";
 import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import {
   ClassTableRow,
   ClassTableRowComponentSettings,
+  classTableRowKey,
   getClassTableRows,
 } from "./FeatureCountTable";
 import { MetricDependency } from "overlay-engine";
@@ -15,6 +15,67 @@ import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { useReportContext } from "../ReportContext";
 import getSlug from "../../getSlug";
 import { useOverlaysForReportLayerTogglesQuery } from "../../generated/graphql";
+import * as Tooltip from "@radix-ui/react-tooltip";
+import { TooltipInfoIcon } from "../../editor/TooltipMenu";
+
+function GroupByPicker({
+  value,
+  options,
+  onChange,
+  placeholder,
+}: {
+  value?: string;
+  options: Array<{ value: string; label: React.ReactNode }>;
+  onChange: (next?: string) => void;
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="h-8 w-full truncate rounded border border-transparent hover:border-gray-300 px-2 pr-1.5 text-sm flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-right"
+        >
+          <span className="truncate flex-1 min-w-0">
+            {(() => {
+              const selected =
+                options.find((o) => o.value === (value || "__none__")) ||
+                options.find((o) => o.value === "__none__");
+              if (!selected) return placeholder;
+              if (selected.value === "__none__") return placeholder;
+              return typeof selected.label === "string"
+                ? selected.label
+                : selected.value;
+            })()}
+          </span>
+          <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+        </button>
+      </Popover.Trigger>
+      <Popover.Content
+        side="bottom"
+        sideOffset={6}
+        className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-50 w-56 p-1"
+      >
+        <div className="max-h-64 overflow-auto space-y-1 pb-1">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
+              onClick={() => {
+                onChange(opt.value === "__none__" ? undefined : opt.value);
+                setOpen(false);
+              }}
+            >
+              <span className="truncate">{opt.label}</span>
+            </button>
+          ))}
+        </div>
+      </Popover.Content>
+    </Popover.Root>
+  );
+}
 
 type ClassRowSettingsPopoverProps = {
   settings: ClassTableRowComponentSettings;
@@ -41,6 +102,9 @@ export const ClassRowSettingsPopover = ({
 }: ClassRowSettingsPopoverProps) => {
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const reportContext = useReportContext();
+  // Hack to handle the fact that we sometimes don't have access to the titles of related table of contents items when the user adds a new source (e.g. when it hasn't been preprocessed yet)
+  const [titlesByTableOfContentsItemId, setTitlesByTableOfContentsItemId] =
+    useState<Record<number, string>>({});
   const { data } = useOverlaysForReportLayerTogglesQuery({
     variables: { slug: getSlug() },
   });
@@ -145,6 +209,17 @@ export const ClassRowSettingsPopover = ({
     if (!layerValue?.tableOfContentsItemId) return;
     // Don't add if already in use
     if (currentSourceIds.has(layerValue.tableOfContentsItemId)) return;
+    if (!layerValue.tableOfContentsItemId) {
+      return;
+    }
+
+    if (layerValue.tableOfContentsItemId) {
+      setTitlesByTableOfContentsItemId((prev) => {
+        const next = { ...prev };
+        next[layerValue.tableOfContentsItemId!] = layerValue.title;
+        return next;
+      });
+    }
 
     onUpdateAllDependencies((currentDeps) => {
       const newDeps = [...currentDeps];
@@ -166,6 +241,68 @@ export const ClassRowSettingsPopover = ({
         tableOfContentsItemId: layerValue.tableOfContentsItemId,
         parameters: params,
       });
+
+      // add layer toggles to all sources (if not already set)
+      // add custom label to the row so it doesn't just say "All features"
+
+      const newSettings = {
+        ...settings,
+        rowLinkedStableIds: {
+          ...settings.rowLinkedStableIds,
+        },
+        customRowLabels: {
+          ...settings.customRowLabels,
+        },
+      };
+
+      const allSources = [
+        ...reportContext.overlaySources,
+        ...reportContext.adminSources,
+      ];
+
+      const fragmentDeps = newDeps.filter((d) => d.subjectType === "fragments");
+      for (const dep of fragmentDeps) {
+        if (dep.tableOfContentsItemId) {
+          const relatedSource = allSources.find(
+            (s) => s.tableOfContentsItemId === dep.tableOfContentsItemId
+          );
+          if (relatedSource && dep.parameters?.groupBy) {
+            // set layer toggle for each key in the groupBy
+            const values = Object.keys(
+              relatedSource.geostats?.layers?.[0]?.attributes?.[
+                dep.parameters?.groupBy
+              ]?.values || {}
+            );
+            for (const value of values) {
+              const rowKey = classTableRowKey(
+                dep.tableOfContentsItemId!,
+                value
+              );
+              if (!(rowKey in newSettings.rowLinkedStableIds)) {
+                newSettings.rowLinkedStableIds[rowKey] =
+                  relatedSource.tableOfContentsItem?.stableId;
+              }
+            }
+          } else {
+            // set layer toggle
+            const stableId =
+              relatedSource?.tableOfContentsItem?.stableId ||
+              (layerValue.tableOfContentsItemId === dep.tableOfContentsItemId
+                ? layerValue.stableId
+                : undefined);
+            if (stableId) {
+              const rowKey = classTableRowKey(dep.tableOfContentsItemId!, "*");
+              if (!(rowKey in newSettings.rowLinkedStableIds)) {
+                newSettings.rowLinkedStableIds[rowKey] = stableId;
+              }
+            }
+          }
+        }
+      }
+      setTimeout(() => {
+        onUpdateSettings(newSettings);
+      }, 1);
+
       return newDeps;
     });
   };
@@ -195,12 +332,19 @@ export const ClassRowSettingsPopover = ({
         source?: OverlaySourceDetailsFragment;
       }
     > = {};
+    const allSources = [
+      ...reportContext.overlaySources,
+      ...reportContext.adminSources,
+    ];
     for (const row of rows) {
-      const source = sources.find(
+      const source = allSources.find(
         (s) => String(s.tableOfContentsItemId) === row.sourceId
       );
       const title =
-        source?.tableOfContentsItem?.title || t("Unknown source") || "";
+        source?.tableOfContentsItem?.title ||
+        titlesByTableOfContentsItemId[parseInt(row.sourceId)] ||
+        t("Unknown source") ||
+        "";
       if (!groups[row.sourceId]) {
         groups[row.sourceId] = { title, rows: [], source };
       }
@@ -289,49 +433,62 @@ export const ClassRowSettingsPopover = ({
         side="top"
         align="center"
         sideOffset={6}
-        className="bg-white rounded-lg shadow-lg border border-gray-200 p-0 w-[680px] max-h-96 overflow-auto"
+        className="bg-white rounded-lg shadow-lg border border-gray-200 p-0 w-[680px] max-h-128 flex flex-col"
       >
-        {groupedRows.length > 1 && (
-          <>
-            <div className="px-3 py-3 shadow-sm grid grid-cols-3 gap-2 items-center text-[11px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-50 border-b rounded-t-lg">
-              <div className="pl-1 flex items-center gap-1">
-                {t("Included Rows")}
-              </div>
-              <div className="pl-2 flex items-center gap-1">{t("Label")}</div>
-              <div className="pl-2 flex items-center gap-1">
-                {t("Map Layer Toggle")}
-              </div>
-            </div>
-          </>
-        )}
-        <div className="divide-y divide-gray-100">
+        <div className="text-xs px-3 py-3 shadow-sm z-10 grid grid-cols-3 gap-2 items-center font-semibold uppercase tracking-wide text-gray-500 bg-white border-b rounded-t-lg flex-none">
+          <div className="pl-1 flex items-center gap-1">
+            <button autoFocus></button>
+            {t("Included Rows")}
+            <TooltipInfoIcon
+              content={t(
+                "Uncheck any rows you would like to exclude from the table."
+              )}
+              ariaLabel={t("Included rows help")}
+            />
+          </div>
+          <div className="pl-2 flex items-center gap-1">
+            {t("Label")}
+            <TooltipInfoIcon
+              content={t(
+                "Customized labels will appear in the table, replacing default values."
+              )}
+              ariaLabel={t("Label help")}
+            />
+          </div>
+          <div className="pl-2 flex items-center gap-1">
+            {t("Map Layer Toggle")}
+            <TooltipInfoIcon
+              content={t(
+                "If provided, a column will appear in the table with inputs for toggling linked data layers on the map. These may be the same layer used in the analysis, or in a different derivative visualization layer of your choosing."
+              )}
+              ariaLabel={t("Map layer toggle help")}
+            />
+          </div>
+        </div>
+        <div className="divide-y divide-gray-100 overflow-y-auto flex-1">
           {groupedRows.map((group) => (
             <div key={group.title}>
-              <div className="px-3 py-2 font-semibold text-gray-600 bg-gray-50 border-b flex items-center space-x-4">
+              <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center space-x-2">
                 <span className="text-sm truncate font-light text-gray-400 whitespace-nowrap flex-1">
                   {group.title}
                 </span>
-                <div className="w-32">
-                  <LabeledDropdown
-                    label={t("Group by")}
+                <div className="w-42 flex items-center overflow-hidden space-x-2">
+                  <span className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold flex-none ">
+                    {t("Group by")}
+                  </span>
+                  <GroupByPicker
                     value={
                       currentGroupByBySource[
                         String(group.source?.tableOfContentsItemId)
-                      ] || "__none__"
+                      ]
                     }
                     options={
                       groupByOptionsBySource[
                         String(group.source?.tableOfContentsItemId)
                       ] || [{ value: "__none__", label: t("None") }]
                     }
-                    getDisplayLabel={(selected) => {
-                      if (!selected || selected.value === "__none__") {
-                        return t("None");
-                      }
-                      return selected.value;
-                    }}
-                    onChange={(val) => {
-                      const groupByValue = val === "__none__" ? undefined : val;
+                    placeholder={t("None")}
+                    onChange={(groupByValue) => {
                       const targetId = group.source?.tableOfContentsItemId;
                       if (!targetId) return;
                       onUpdateDependencyParameters((dependency) => {
@@ -348,36 +505,44 @@ export const ClassRowSettingsPopover = ({
                 </div>
                 {groupedRows.length > 1 &&
                   group.source?.tableOfContentsItemId && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleRemoveSource(group.source!.tableOfContentsItemId!)
-                      }
-                      className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
-                      title={t("Remove source")}
-                    >
-                      <Cross2Icon className="w-3 h-3" />
-                    </button>
+                    <Tooltip.Provider delayDuration={100}>
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              handleRemoveSource(
+                                group.source!.tableOfContentsItemId!
+                              )
+                            }
+                            className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+                          >
+                            <TrashIcon className="w-4 h-4" />
+                          </button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Portal>
+                          <Tooltip.Content
+                            side="top"
+                            align="center"
+                            sideOffset={6}
+                            className="bg-gray-900 text-white text-[11px] px-2 py-1 rounded shadow-lg z-[60]"
+                          >
+                            {t("Remove source")}
+                            <Tooltip.Arrow className="fill-gray-900" />
+                          </Tooltip.Content>
+                        </Tooltip.Portal>
+                      </Tooltip.Root>
+                    </Tooltip.Provider>
                   )}
               </div>
-              {groupedRows.length === 1 && (
-                <>
-                  <div className="px-3 py-3 shadow-sm grid grid-cols-3 gap-2 items-center text-[11px] font-semibold uppercase tracking-wide text-gray-500 bg-gray-50 border-b rounded-t-lg">
-                    <div className="flex items-center gap-1">
-                      {t("Included Rows")}
-                    </div>
-                    <div className="flex items-center gap-1">{t("Label")}</div>
-                    <div className="flex items-center gap-1">
-                      {t("Map Layer Toggle")}
-                    </div>
-                  </div>
-                </>
-              )}
 
               {group.rows.map((row) => {
                 const checked = !excludedSet.has(row.key);
                 const linkedStableId = settings.rowLinkedStableIds?.[row.key];
                 const customLabel = settings.customRowLabels?.[row.key] || "";
+                const tableOfContentsItemId = row.sourceId
+                  ? parseInt(row.sourceId)
+                  : undefined;
                 return (
                   <div
                     key={row.key}
@@ -427,6 +592,11 @@ export const ClassRowSettingsPopover = ({
                       }}
                     />
                     <LayerPickerDropdown
+                      suggested={
+                        tableOfContentsItemId
+                          ? [tableOfContentsItemId]
+                          : undefined
+                      }
                       value={linkedStableId}
                       onChange={(layerValue) => {
                         const next = { ...(settings.rowLinkedStableIds || {}) };
@@ -440,6 +610,10 @@ export const ClassRowSettingsPopover = ({
                       required={false}
                       onlyReportingLayers={false}
                       hideSearch={false}
+                      title={t("Choose a layer")}
+                      description={t(
+                        "An input will be shown to toggle the chosen layer on the map."
+                      )}
                     >
                       <button
                         type="button"
@@ -465,29 +639,34 @@ export const ClassRowSettingsPopover = ({
               {t("No rows available")}
             </div>
           )}
-          <div className="px-3 py-2 border-t border-gray-200">
-            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-              {t("Add Source")}
-            </div>
-            <LayerPickerDropdown
-              value={undefined}
-              onChange={handleAddSource}
-              required={false}
-              onlyReportingLayers={false}
-              hideSearch={false}
-              optionsOverride={filteredLayerOptions}
-            >
-              <button
-                type="button"
-                className="w-full h-8 rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <span className="truncate flex-1 text-gray-500">
-                  {t("Select layer to add...")}
-                </span>
-                <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-              </button>
-            </LayerPickerDropdown>
+        </div>
+        <div className="px-3 py-2 border-t border-gray-200 bg-gray-50 shadow-sm z-10">
+          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+            {t("Add a Source")}
           </div>
+          <p className="text-xs text-gray-500 pb-2">
+            {t(
+              `Rows can be added to this table by using the "Group by" option, adding multiple sources, or some combination.`
+            )}
+          </p>
+          <LayerPickerDropdown
+            value={undefined}
+            onChange={handleAddSource}
+            required={false}
+            onlyReportingLayers={false}
+            hideSearch={false}
+            optionsOverride={filteredLayerOptions}
+          >
+            <button
+              type="button"
+              className="h-8 rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-72"
+            >
+              <span className="truncate flex-1 text-gray-500">
+                {t("Select layer to add...")}
+              </span>
+              <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            </button>
+          </LayerPickerDropdown>
         </div>
       </Popover.Content>
     </Popover.Root>

@@ -36,8 +36,11 @@ export default function ReportMetricsProgressDetails({
     const fragmentMetrics: CompatibleSpatialMetric[] = [];
     const relatedOverlaySources = new Set<OverlaySourceDetailsFragment>();
     const failedMetrics = [] as number[];
-
-    for (const metric of reportContext.metrics) {
+    const metrics = [
+      ...reportContext.draftDependencyMetrics,
+      ...reportContext.metrics,
+    ];
+    for (const metric of metrics) {
       if (metricIds.includes(metric.id)) {
         if (
           subjectIsGeography(
@@ -95,7 +98,7 @@ export default function ReportMetricsProgressDetails({
                     SpatialMetricState.Complete || Boolean(layer.output);
                 return (
                   <ReportTaskLineItem
-                    key={layer.tableOfContentsItemId}
+                    key={"rtli-layer-" + layer.tableOfContentsItemId}
                     title={layer.tableOfContentsItem?.title || "Untitled"}
                     state={
                       isComplete
@@ -148,7 +151,7 @@ export default function ReportMetricsProgressDetails({
             <ul className="space-y-1 py-2">
               {state.geographyMetrics.map((metric) => (
                 <ReportTaskLineItem
-                  key={metric.id}
+                  key={"rtli-" + metric.id}
                   title={nameForGeography(
                     metric.subject as { type: "geography"; id: number },
                     reportContext.geographies
@@ -187,7 +190,7 @@ export default function ReportMetricsProgressDetails({
             <ul className="space-y-1 py-2">
               {state.fragmentMetrics.map((metric) => (
                 <ReportTaskLineItem
-                  key={metric.id}
+                  key={"rmtli-" + metric.id}
                   metricType={metric.type}
                   parameters={metric.parameters}
                   title={

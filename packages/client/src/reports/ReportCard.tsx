@@ -550,7 +550,7 @@ export default function ReportCard({
               label: t("Recalculate"),
               onClick: async () => {
                 const metricsToRecalculate = [] as number[];
-                for (const metric of metrics) {
+                for (const metric of [...metrics, ...draftDependencyMetrics]) {
                   if (subjectIsFragment(metric.subject) || recomputeTotals) {
                     metricsToRecalculate.push(metric.id);
                   }
@@ -625,7 +625,10 @@ export default function ReportCard({
                   setRecalcOpen(true);
                 } else {
                   const metricsToRecalculate = [] as number[];
-                  for (const metric of metrics) {
+                  for (const metric of [
+                    ...metrics,
+                    ...draftDependencyMetrics,
+                  ]) {
                     if (subjectIsFragment(metric.subject)) {
                       metricsToRecalculate.push(metric.id);
                     }
@@ -657,7 +660,12 @@ export default function ReportCard({
           ]}
         >
           <ReportMetricsProgressDetails
-            metricIds={metrics.map((m) => m.id)}
+            metricIds={Array.from(
+              new Set([
+                ...metrics.map((m) => m.id),
+                ...draftDependencyMetrics.map((m) => m.id),
+              ])
+            )}
             config={config}
             isAdmin={adminMode}
             skeleton={loadingSkeleton}

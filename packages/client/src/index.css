@@ -6295,6 +6295,10 @@ select{
   z-index:auto
 }
 
+.z-\[60\]{
+  z-index:60
+}
+
 .order-1{
   order:1
 }
@@ -7563,6 +7567,10 @@ select{
   width:55%
 }
 
+.w-\[680px\]{
+  width:680px
+}
+
 .w-auto{
   width:auto
 }
@@ -7587,10 +7595,6 @@ select{
 
 .w-screen{
   width:100vw
-}
-
-.w-\[680px\]{
-  width:680px
 }
 
 .min-w-0{
@@ -7835,6 +7839,10 @@ select{
 
 .max-w-xs{
   max-width:20rem
+}
+
+.max-w-\[208px\]{
+  max-width:208px
 }
 
 .flex-1{
@@ -9868,6 +9876,10 @@ select{
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
 }
 
+.bg-blue-50\/20{
+  background-color:rgb(239 246 255 / 0.2)
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -10999,10 +11011,6 @@ select{
 
 .leading-9{
   line-height:2.25rem
-}
-
-.leading-\[24px\]{
-  line-height:24px
 }
 
 .leading-none{
@@ -12541,6 +12549,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
+.hover\:border:hover{
+  border-width:1px
+}
+
 .hover\:\!border-gray-400:hover{
   --tw-border-opacity:1 !important;
   border-color:rgb(156 163 175 / var(--tw-border-opacity, 1)) !important
@@ -12852,11 +12864,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-blue-600:hover{
   --tw-text-opacity:1;
   color:rgb(37 99 235 / var(--tw-text-opacity, 1))
-}
-
-.hover\:text-blue-700:hover{
-  --tw-text-opacity:1;
-  color:rgb(29 78 216 / var(--tw-text-opacity, 1))
 }
 
 .hover\:text-blue-900:hover{

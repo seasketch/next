@@ -435,8 +435,18 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               fragments,
               geogs
             );
+
+          const relatedTableOfContentsItemIds = new Set<number>(
+            tableOfContentsItemIds
+          );
+
+          const overlaySources = await getOverlaySourcesForDependencies(
+            pool,
+            Array.from(relatedTableOfContentsItemIds),
+            projectId
+          );
           return {
-            overlaySources: [],
+            overlaySources: Object.values(overlaySources),
             metrics,
             ready: !metrics.find((m) => m.state !== "complete"),
             sketchId,
@@ -764,7 +774,12 @@ async function getOverlaySourcesForDependencies(
     for (const tableOfContentsItemId of tableOfContentsItemIds) {
       const sourceProcessingJobId =
         results[tableOfContentsItemId]?.sourceProcessingJobId;
-      if (!sourceProcessingJobId) {
+      if (
+        !sourceProcessingJobId &&
+        !results[tableOfContentsItemId]?.sourceUrl
+      ) {
+        console.log("preprocessing source", tableOfContentsItemId, projectId);
+        console.log(results[tableOfContentsItemId]);
         await pool.query(
           `select preprocess_source((select slug from projects where id = $1), (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = $2))) as table_of_contents_item_id`,
           [projectId, tableOfContentsItemId]

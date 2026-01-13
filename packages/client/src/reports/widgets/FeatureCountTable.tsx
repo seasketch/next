@@ -97,10 +97,13 @@ export function getClassTableRows(options: {
   stableIds?: { [key: string]: string };
   excludedRowKeys?: string[];
 }): ClassTableRow[] {
+  // console.log("getClassTableRows", options);
   const rows = [] as ClassTableRow[];
   const fragmentDependencies = options.dependencies.filter(
     (d) => d.subjectType === "fragments" && Boolean(d.tableOfContentsItemId)
   );
+  const multiSource =
+    fragmentDependencies.length > 1 && options.sources.length > 1;
   for (const dependency of fragmentDependencies) {
     const source = options.sources.find(
       (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
@@ -119,7 +122,7 @@ export function getClassTableRows(options: {
           });
         });
       } else {
-        const key = `${dependency.tableOfContentsItemId}-*`;
+        const key = classTableRowKey(dependency.tableOfContentsItemId!, "*");
         rows.push({
           key,
           label: options.customLabels?.[key] || options.allFeaturesLabel,
@@ -145,7 +148,10 @@ export function getClassTableRows(options: {
           source.mapboxGlStyles as AnyLayer[]
         );
         for (const value of values) {
-          const key = `${dependency.tableOfContentsItemId}-${value}`;
+          const key = classTableRowKey(
+            dependency.tableOfContentsItemId!,
+            value
+          );
           let color: string | undefined =
             colors[value] ||
             extractColorForLayers(source.mapboxGlStyles as AnyLayer[]);
@@ -162,7 +168,7 @@ export function getClassTableRows(options: {
           });
         }
       } else {
-        const key = `${dependency.tableOfContentsItemId}-*`;
+        const key = classTableRowKey(dependency.tableOfContentsItemId!, "*");
         let color: string | undefined = extractColorForLayers(
           source.mapboxGlStyles as AnyLayer[]
         );
@@ -171,7 +177,11 @@ export function getClassTableRows(options: {
         }
         rows.push({
           key,
-          label: options.customLabels?.[key] || options.allFeaturesLabel,
+          label:
+            options.customLabels?.[key] ||
+            (multiSource
+              ? source.tableOfContentsItem?.title || options.allFeaturesLabel
+              : options.allFeaturesLabel),
           groupByKey: "*",
           sourceId: dependency.tableOfContentsItemId!.toString(),
           stableId: options.stableIds?.[key],
@@ -180,7 +190,18 @@ export function getClassTableRows(options: {
       }
     }
   }
+  // console.log(
+  //   "returning rows",
+  //   rows.filter((r) => !options.excludedRowKeys?.includes(r.key))
+  // );
   return rows.filter((r) => !options.excludedRowKeys?.includes(r.key));
+}
+
+export function classTableRowKey(
+  tableOfContentsItemId: number,
+  groupByKey?: string
+) {
+  return `${tableOfContentsItemId}-${groupByKey || "*"}`;
 }
 
 export function combineMetricsBySource<T extends Metric>(
@@ -193,6 +214,7 @@ export function combineMetricsBySource<T extends Metric>(
     geographies: T;
   };
 } {
+  metrics = metrics.filter((m) => m.state === SpatialMetricState.Complete);
   const result: {
     [sourceId: string]: {
       fragments: T;

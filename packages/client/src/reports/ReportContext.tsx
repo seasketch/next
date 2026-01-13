@@ -213,6 +213,26 @@ export function useReportState(
     fetchPolicy: "cache-and-network",
   });
 
+  const allOverlays = useMemo(() => {
+    const tableOfContentsItemIds = new Set<number>();
+    const overlays = [] as OverlaySourceDetailsFragment[];
+    for (const overlay of data?.report?.dependencies?.overlaySources || []) {
+      tableOfContentsItemIds.add(overlay.tableOfContentsItemId);
+      overlays.push(overlay);
+    }
+    for (const overlay of draftDependenciesQuery.data?.draftReportDependencies
+      ?.overlaySources || []) {
+      if (!tableOfContentsItemIds.has(overlay.tableOfContentsItemId)) {
+        tableOfContentsItemIds.add(overlay.tableOfContentsItemId);
+        overlays.push(overlay);
+      }
+    }
+    return overlays;
+  }, [
+    data?.report?.dependencies?.overlaySources,
+    draftDependenciesQuery.data?.draftReportDependencies?.overlaySources,
+  ]);
+
   const draftReportingLayersQuery = useProjectReportingLayersQuery({
     variables: {
       slug: getSlug(),
@@ -357,15 +377,14 @@ export function useReportState(
     if (
       data?.report?.dependencies?.cardDependencyLists &&
       metrics.length > 0 &&
-      data?.report?.dependencies?.overlaySources
+      allOverlays.length > 0
     ) {
       for (const cardDependencyList of data.report.dependencies
         .cardDependencyLists) {
-        const overlays = data.report.dependencies.overlaySources.filter(
-          (overlay) =>
-            cardDependencyList.overlaySources.includes(
-              overlay.tableOfContentsItemId
-            )
+        const overlays = allOverlays.filter((overlay) =>
+          cardDependencyList.overlaySources.includes(
+            overlay.tableOfContentsItemId
+          )
         );
         const cardMetrics = metrics.filter((metric) =>
           cardDependencyList.metrics.includes(metric.id)
@@ -402,11 +421,7 @@ export function useReportState(
       }
     }
     return dependencies;
-  }, [
-    data?.report?.dependencies?.cardDependencyLists,
-    metrics,
-    data?.report?.dependencies?.overlaySources,
-  ]);
+  }, [data?.report?.dependencies?.cardDependencyLists, metrics, allOverlays]);
 
   const getDependencies = useCallback(
     (cardId: number) => {
@@ -620,7 +635,7 @@ export function useReportState(
       isCollection: Boolean(
         data.sketch.sketchClass?.geometryType === SketchGeometryType.Collection
       ),
-      overlaySources: data.report.dependencies.overlaySources,
+      overlaySources: allOverlays,
       geographies: data.report.geographies || [],
       report: data.report as unknown as ReportConfiguration,
       getDependencies,
