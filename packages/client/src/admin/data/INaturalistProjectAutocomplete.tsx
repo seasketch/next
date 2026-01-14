@@ -137,7 +137,7 @@ export default function INaturalistProjectAutocomplete({
   return (
     <div className="relative">
       <label className="block text-sm font-medium leading-5 text-gray-800 mb-1">
-        <Trans ns="admin:data">Project (optional)</Trans>
+        <Trans ns="admin:data">Project</Trans>
       </label>
       <div className="relative">
         <input

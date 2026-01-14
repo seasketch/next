@@ -7,7 +7,10 @@ import {
   useUpdateQueryParametersMutation,
   UpdateQueryParametersMutation,
 } from "../../generated/graphql";
-import { normalizeInaturalistParams } from "../../dataLayers/inaturalist";
+import {
+  normalizeInaturalistParams,
+  InaturalistQueryParams,
+} from "../../dataLayers/inaturalist";
 import INaturalistLayerOptionsForm, {
   InaturalistOptionsFormValue,
 } from "./INaturalistLayerOptionsForm";
@@ -21,7 +24,7 @@ export default function INaturalistLayerSettingsForm({
   useTranslation("admin:data");
   const mapContext = useContext(MapContext);
   const source = item.dataLayer?.dataSource;
-  const params = normalizeInaturalistParams(
+  const params: InaturalistQueryParams = normalizeInaturalistParams(
     (source?.queryParameters as any) || {}
   );
   const [formState, setFormState] = useState<InaturalistOptionsFormValue>({
@@ -64,6 +67,11 @@ export default function INaturalistLayerSettingsForm({
           showCallToAction: next.showCallToAction,
           projectId: params.projectId,
           taxonIds: params.taxonIds,
+          placeId: params.placeId,
+          nelat: params.nelat,
+          nelng: params.nelng,
+          swlat: params.swlat,
+          swlng: params.swlng,
         },
       },
       optimisticResponse: {
@@ -83,6 +91,11 @@ export default function INaturalistLayerSettingsForm({
               showCallToAction: next.showCallToAction,
               projectId: params.projectId,
               taxonIds: params.taxonIds,
+              placeId: params.placeId,
+              nelat: params.nelat,
+              nelng: params.nelng,
+              swlat: params.swlat,
+              swlng: params.swlng,
             },
           },
         },
@@ -98,6 +111,11 @@ export default function INaturalistLayerSettingsForm({
       showCallToAction: next.showCallToAction,
       projectId: params.projectId,
       taxonIds: params.taxonIds,
+      placeId: params.placeId,
+      nelat: params.nelat,
+      nelng: params.nelng,
+      swlat: params.swlat,
+      swlng: params.swlng,
     });
   };
 
@@ -108,8 +126,32 @@ export default function INaturalistLayerSettingsForm({
         : params.projectId;
     const taxa =
       params.taxonIds && params.taxonIds.length ? params.taxonIds : [];
-    return { project, taxa };
-  }, [params.projectId, params.taxonIds]);
+    const place =
+      params.placeId === null || params.placeId === undefined
+        ? null
+        : params.placeId;
+    const bbox =
+      params.nelat !== null &&
+      params.nelng !== null &&
+      params.swlat !== null &&
+      params.swlng !== null
+        ? {
+            nelat: params.nelat,
+            nelng: params.nelng,
+            swlat: params.swlat,
+            swlng: params.swlng,
+          }
+        : null;
+    return { project, taxa, place, bbox };
+  }, [
+    params.projectId,
+    params.taxonIds,
+    params.placeId,
+    params.nelat,
+    params.nelng,
+    params.swlat,
+    params.swlng,
+  ]);
 
   if (!source || source.type !== DataSourceTypes.Inaturalist) {
     return null;
@@ -175,6 +217,44 @@ export default function INaturalistLayerSettingsForm({
                   </a>
                 ))}
               </div>
+            ) : (
+              <span className="flex-1 text-right text-gray-500 truncate">
+                <Trans ns="admin:data">Not set</Trans>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="font-medium text-gray-800">
+              <Trans ns="admin:data">Place</Trans>
+            </span>
+            {readonlyLabels.place ? (
+              <a
+                className="flex-1 text-right text-gray-500 truncate hover:text-primary-600"
+                href={`https://www.inaturalist.org/places/${encodeURIComponent(
+                  readonlyLabels.place
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {readonlyLabels.place}
+              </a>
+            ) : (
+              <span className="flex-1 text-right text-gray-500 truncate">
+                <Trans ns="admin:data">Not set</Trans>
+              </span>
+            )}
+          </div>
+          <div className="flex items-center space-x-2">
+            <span className="font-medium text-gray-800">
+              <Trans ns="admin:data">Bounding Box</Trans>
+            </span>
+            {readonlyLabels.bbox ? (
+              <span className="flex-1 text-right text-gray-500 truncate font-mono text-xs">
+                {readonlyLabels.bbox.swlat.toFixed(6)},{" "}
+                {readonlyLabels.bbox.swlng.toFixed(6)},{" "}
+                {readonlyLabels.bbox.nelat.toFixed(6)},{" "}
+                {readonlyLabels.bbox.nelng.toFixed(6)}
+              </span>
             ) : (
               <span className="flex-1 text-right text-gray-500 truncate">
                 <Trans ns="admin:data">Not set</Trans>

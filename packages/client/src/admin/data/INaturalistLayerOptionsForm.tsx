@@ -8,20 +8,33 @@ import {
   MIN_ZOOM_CUTOFF,
   InaturalistQueryParams,
 } from "../../dataLayers/inaturalist";
+import { XIcon } from "@heroicons/react/outline";
 
 export type InaturalistOptionsFormValue = Pick<
   InaturalistQueryParams,
   "d1" | "d2" | "type" | "zoomCutoff" | "verifiable" | "showCallToAction"
 > & {
   hasProject?: boolean;
+  nelat?: number | null;
+  nelng?: number | null;
+  swlat?: number | null;
+  swlng?: number | null;
 };
 
-export function INaturalistLayerOptionsForm({
+export default function INaturalistLayerOptionsForm({
   value,
   onChange,
+  disabled,
+  onStartDrawingBbox,
+  onCancelDrawingBbox,
+  isDrawingBbox,
 }: {
   value: InaturalistOptionsFormValue;
   onChange: (partial: Partial<InaturalistOptionsFormValue>) => void;
+  disabled?: boolean;
+  onStartDrawingBbox?: () => void;
+  onCancelDrawingBbox?: () => void;
+  isDrawingBbox?: boolean;
 }) {
   const { t } = useTranslation("admin:data");
 
@@ -55,7 +68,8 @@ export function INaturalistLayerOptionsForm({
                     : value.zoomCutoff,
               })
             }
-            className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+            disabled={disabled}
+            className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black disabled:opacity-50 disabled:cursor-not-allowed"
           />
           <span className="text-gray-500">
             <Trans ns="admin:data">to</Trans>
@@ -73,10 +87,45 @@ export function INaturalistLayerOptionsForm({
               })
             }
             min={value.d1 || undefined}
-            className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+            disabled={disabled}
+            className="flex-1 border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
       </div>
+
+      {onStartDrawingBbox && (
+        <BoundingBoxFilter
+          value={{
+            nelat:
+              typeof value.nelat === "number" || value.nelat === null
+                ? value.nelat
+                : null,
+            nelng:
+              typeof value.nelng === "number" || value.nelng === null
+                ? value.nelng
+                : null,
+            swlat:
+              typeof value.swlat === "number" || value.swlat === null
+                ? value.swlat
+                : null,
+            swlng:
+              typeof value.swlng === "number" || value.swlng === null
+                ? value.swlng
+                : null,
+          }}
+          isDrawing={isDrawingBbox || false}
+          onStartDrawing={onStartDrawingBbox}
+          onCancelDrawing={onCancelDrawingBbox || (() => {})}
+          onClear={() =>
+            onChange({
+              nelat: null,
+              nelng: null,
+              swlat: null,
+              swlng: null,
+            } as Partial<InaturalistOptionsFormValue>)
+          }
+        />
+      )}
 
       <div>
         <label className="block text-sm font-medium leading-5 text-gray-800 mb-2">
@@ -89,7 +138,8 @@ export function INaturalistLayerOptionsForm({
               type: e.target.value as InaturalistQueryParams["type"],
             })
           }
-          className="w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+          disabled={disabled}
+          className="w-full border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="grid+points">{t("Grid + Points")}</option>
           <option value="heatmap+points">{t("Heatmap + Points")}</option>
@@ -113,7 +163,8 @@ export function INaturalistLayerOptionsForm({
                   const zoomCutoff = parseInt(e.target.value, 10);
                   onChange({ zoomCutoff });
                 }}
-                className="zoom-cutoff-slider flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+                disabled={disabled}
+                className="zoom-cutoff-slider flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ background: zoomGradient }}
               />
               <span className="text-sm font-medium text-gray-700 w-8 text-center">
@@ -184,6 +235,7 @@ export function INaturalistLayerOptionsForm({
           <Switch
             isToggled={value.verifiable}
             onClick={(val) => onChange({ verifiable: val })}
+            disabled={disabled}
           />
         </div>
 
@@ -227,4 +279,118 @@ export function INaturalistLayerOptionsForm({
   );
 }
 
-export default INaturalistLayerOptionsForm;
+function BoundingBoxFilter({
+  value,
+  isDrawing,
+  onStartDrawing,
+  onCancelDrawing,
+  onClear,
+}: {
+  value: {
+    nelat?: number | null;
+    nelng?: number | null;
+    swlat?: number | null;
+    swlng?: number | null;
+  };
+  isDrawing: boolean;
+  onStartDrawing: () => void;
+  onCancelDrawing: () => void;
+  onClear: () => void;
+}) {
+  const { t } = useTranslation("admin:data");
+  const hasBbox =
+    value.nelat !== null &&
+    value.nelat !== undefined &&
+    value.nelng !== null &&
+    value.nelng !== undefined &&
+    value.swlat !== null &&
+    value.swlat !== undefined &&
+    value.swlng !== null &&
+    value.swlng !== undefined;
+
+  const formatCoordinate = (coord: number | null | undefined): string => {
+    if (coord === null || coord === undefined) return "";
+    return coord.toFixed(6);
+  };
+
+  const truncateCoords = (): string => {
+    if (!hasBbox) return "";
+    return `${formatCoordinate(value.swlat)}, ${formatCoordinate(
+      value.swlng
+    )}, ${formatCoordinate(value.nelat)}, ${formatCoordinate(value.nelng)}`;
+  };
+
+  if (isDrawing) {
+    return (
+      <div className="border border-blue-500 rounded-md p-4 bg-blue-50">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-blue-900">
+            <Trans ns="admin:data">Drawing bounding box</Trans>
+          </span>
+          <button
+            type="button"
+            onClick={onCancelDrawing}
+            className="px-3 py-1 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            {t("Cancel")}
+          </button>
+        </div>
+        <p className="text-sm text-blue-700">
+          <Trans ns="admin:data">
+            Draw a rectangle on the map to set the bounding box filter. Click
+            cancel to abort.
+          </Trans>
+        </p>
+      </div>
+    );
+  }
+
+  if (hasBbox) {
+    return (
+      <div className="border border-gray-300 rounded-md p-3 bg-gray-50">
+        <div className="flex items-start justify-between">
+          <div className="flex-1 min-w-0">
+            <label className="block text-sm font-medium leading-5 text-gray-800 mb-1">
+              <Trans ns="admin:data">Bounding Box Filter</Trans>
+            </label>
+            <div className="text-xs text-gray-600 font-mono truncate">
+              {truncateCoords()}
+            </div>
+          </div>
+          <div className="flex items-center space-x-2 ml-2">
+            <button
+              type="button"
+              onClick={onStartDrawing}
+              className="px-2 py-1 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              {t("Modify")}
+            </button>
+            <button
+              type="button"
+              onClick={onClear}
+              className="p-1 text-gray-400 hover:text-gray-600"
+              aria-label={t("Clear bounding box")}
+            >
+              <XIcon className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <label className="block text-sm font-medium leading-5 text-gray-800 mb-1">
+        <Trans ns="admin:data">Bounding Box Filter (optional)</Trans>
+      </label>
+      <button
+        type="button"
+        onClick={onStartDrawing}
+        className="w-full px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      >
+        <Trans ns="admin:data">Limit to bounding box</Trans>
+      </button>
+    </div>
+  );
+}

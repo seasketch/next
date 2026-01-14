@@ -11,6 +11,7 @@ export type InaturalistLayerType =
 export interface InaturalistQueryParams {
   projectId: string | null;
   taxonIds: number[];
+  placeId: number | null;
   d1: string | null;
   d2: string | null;
   verifiable: boolean;
@@ -18,6 +19,10 @@ export interface InaturalistQueryParams {
   type: InaturalistLayerType;
   zoomCutoff: number;
   showCallToAction?: boolean;
+  nelat: number | null;
+  nelng: number | null;
+  swlat: number | null;
+  swlng: number | null;
 }
 
 export const DEFAULT_ZOOM_CUTOFF = 9;
@@ -50,6 +55,13 @@ export function normalizeInaturalistParams(
     taxonIds: Array.isArray(raw?.taxonIds)
       ? raw!.taxonIds.map((id: any) => Number(id)).filter((id) => !isNaN(id))
       : [],
+    placeId:
+      raw?.placeId === null || raw?.placeId === undefined
+        ? null
+        : (() => {
+            const id = Number(raw.placeId);
+            return isNaN(id) ? null : id;
+          })(),
     d1: raw?.d1 ?? null,
     d2: raw?.d2 ?? null,
     verifiable: raw?.verifiable !== false,
@@ -60,6 +72,22 @@ export function normalizeInaturalistParams(
     type,
     zoomCutoff,
     showCallToAction: raw?.showCallToAction ?? false,
+    nelat:
+      raw?.nelat !== null && raw?.nelat !== undefined
+        ? Number(raw.nelat)
+        : null,
+    nelng:
+      raw?.nelng !== null && raw?.nelng !== undefined
+        ? Number(raw.nelng)
+        : null,
+    swlat:
+      raw?.swlat !== null && raw?.swlat !== undefined
+        ? Number(raw.swlat)
+        : null,
+    swlng:
+      raw?.swlng !== null && raw?.swlng !== undefined
+        ? Number(raw.swlng)
+        : null,
   };
 }
 
@@ -111,6 +139,10 @@ export function buildInaturalistQueryString(
     queryParts.push(`taxon_id=${params.taxonIds.join(",")}`);
   }
 
+  if (params.placeId !== null && params.placeId !== undefined) {
+    queryParts.push(`place_id=${params.placeId}`);
+  }
+
   if (params.d1) {
     queryParts.push(`d1=${encodeURIComponent(params.d1)}`);
   }
@@ -125,6 +157,18 @@ export function buildInaturalistQueryString(
 
   if (params.color) {
     queryParts.push(`color=${encodeURIComponent(params.color)}`);
+  }
+
+  if (
+    params.nelat !== null &&
+    params.nelng !== null &&
+    params.swlat !== null &&
+    params.swlng !== null
+  ) {
+    queryParts.push(`nelat=${params.nelat}`);
+    queryParts.push(`nelng=${params.nelng}`);
+    queryParts.push(`swlat=${params.swlat}`);
+    queryParts.push(`swlng=${params.swlng}`);
   }
 
   const queryString = queryParts.length ? `?${queryParts.join("&")}` : "";

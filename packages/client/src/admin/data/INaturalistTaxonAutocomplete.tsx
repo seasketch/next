@@ -44,7 +44,9 @@ export default function INaturalistTaxonAutocomplete({
     try {
       // eslint-disable-next-line i18next/no-literal-string
       const response = await fetch(
-        `https://api.inaturalist.org/v1/taxa/autocomplete?q=${encodeURIComponent(query)}&per_page=50`
+        `https://api.inaturalist.org/v1/taxa/autocomplete?q=${encodeURIComponent(
+          query
+        )}&per_page=50`
       );
       const data = await response.json();
       const taxa: TaxonResult[] = (data.results || []).map((item: any) => ({
@@ -90,7 +92,7 @@ export default function INaturalistTaxonAutocomplete({
   return (
     <div className="relative">
       <label className="block text-sm font-medium leading-5 text-gray-800 mb-1">
-        <Trans ns="admin:data">Taxa (optional)</Trans>
+        <Trans ns="admin:data">Taxa</Trans>
       </label>
       <div className="relative">
         <input
@@ -132,7 +134,9 @@ export default function INaturalistTaxonAutocomplete({
                   {taxon.preferred_common_name || taxon.name}
                 </div>
                 {taxon.preferred_common_name && (
-                  <div className="text-sm text-gray-500 italic">{taxon.name}</div>
+                  <div className="text-sm text-gray-500 italic">
+                    {taxon.name}
+                  </div>
                 )}
               </div>
             </button>
@@ -169,12 +173,8 @@ export default function INaturalistTaxonAutocomplete({
       )}
       {/* Click outside to close */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setIsOpen(false)}
-        />
+        <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
       )}
     </div>
   );
 }
-
