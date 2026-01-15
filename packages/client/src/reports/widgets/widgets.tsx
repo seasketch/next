@@ -567,7 +567,7 @@ export function buildReportCommandGroups({
     }
   }
 
-  if (sources && sources.length > 0) {
+  if (sources) {
     commandGroups.push({
       id: "overlay-toggles",
       label: "Overlay Toggles",

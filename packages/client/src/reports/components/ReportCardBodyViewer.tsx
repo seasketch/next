@@ -10,6 +10,7 @@ import ReactNodeViewPortalsProvider, {
 
 import "prosemirror-view/style/prosemirror.css";
 import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
+import { DetailsView } from "../widgets/prosemirror/details";
 
 type ReportCardBodyViewerProps = {
   body: any;
@@ -61,8 +62,12 @@ function ReportCardBodyViewerInner({
           cardId,
         });
       },
+      // @ts-ignore
+      details(node, view, getPos) {
+        return new DetailsView(node, view, getPos as () => number);
+      },
     }),
-    [createPortal, removePortal]
+    [createPortal, removePortal, cardId]
   );
 
   // Create/destroy the view when core configuration changes
@@ -80,20 +85,13 @@ function ReportCardBodyViewerInner({
       state: initialState,
       editable: () => false,
       nodeViews,
-      // dispatchTransaction: (transaction) => {
-      //   const currentView = viewRef.current!;
-      //   const newState = currentView.state.apply(transaction);
-      //   currentView.updateState(newState);
-
-      //   if (newState.selection) {
-      //     setSelection({
-      //       anchorPos: newState.selection.$anchor.pos,
-      //       headPos: newState.selection.$head.pos,
-      //     });
-      //   } else {
-      //     setSelection(null);
-      //   }
-      // },
+      dispatchTransaction: (transaction) => {
+        const currentView = viewRef.current!;
+        const newState = currentView.state.apply(transaction);
+        currentView.updateState(newState);
+        // Note: We don't persist changes in the viewer, but we allow
+        // local state updates (e.g., for toggling collapsible blocks)
+      },
     });
 
     viewRef.current = view;
