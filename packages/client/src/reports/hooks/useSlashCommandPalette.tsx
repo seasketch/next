@@ -807,7 +807,17 @@ export function useSlashCommandPalette({
                               viewRef.current?.focus();
                             }}
                             onMouseEnter={() => setPreviewKey(refKey)}
-                            onMouseLeave={() => setPreviewKey(null)}
+                            onMouseLeave={(event) => {
+                              // Don't close if mouse is moving to an element inside the popover
+                              const relatedTarget =
+                                event.relatedTarget as HTMLElement;
+                              if (
+                                relatedTarget?.closest("[data-popover-content]")
+                              ) {
+                                return;
+                              }
+                              setPreviewKey(null);
+                            }}
                           >
                             {(() => {
                               if (

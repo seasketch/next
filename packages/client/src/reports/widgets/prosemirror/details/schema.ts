@@ -31,7 +31,7 @@ export const detailsNodes = (): Record<"details" | "summary", NodeSpec> => {
     summary: {
       content: "inline*",
       parseDOM: [{ tag: "summary" }],
-      toDOM() {
+      toDOM(node) {
         return ["summary", 0];
       },
     },

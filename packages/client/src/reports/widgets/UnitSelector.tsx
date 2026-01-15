@@ -2,7 +2,7 @@ import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { LabeledDropdown } from "./LabeledDropdown";
-import { AreaUnit, LengthUnit } from "../utils/units";
+import { AreaUnit, LengthUnit, getLocalizedUnitLabel } from "../utils/units";
 
 type UnitSelectorAreaProps = {
   unitType: "area";
@@ -10,6 +10,16 @@ type UnitSelectorAreaProps = {
   onChange: (value: AreaUnit) => void;
   unitDisplay?: "short" | "long";
   onUnitDisplayChange?: (display: "short" | "long") => void;
+  allowNone?: false;
+};
+
+type UnitSelectorAreaOptionalProps = {
+  unitType: "area";
+  value?: AreaUnit;
+  onChange: (value?: AreaUnit) => void;
+  unitDisplay?: "short" | "long";
+  onUnitDisplayChange?: (display: "short" | "long") => void;
+  allowNone: true;
 };
 
 type UnitSelectorDistanceProps = {
@@ -18,11 +28,23 @@ type UnitSelectorDistanceProps = {
   onChange: (value: LengthUnit) => void;
   unitDisplay?: "short" | "long";
   onUnitDisplayChange?: (display: "short" | "long") => void;
+  allowNone?: false;
+};
+
+type UnitSelectorDistanceOptionalProps = {
+  unitType: "distance";
+  value?: LengthUnit;
+  onChange: (value?: LengthUnit) => void;
+  unitDisplay?: "short" | "long";
+  onUnitDisplayChange?: (display: "short" | "long") => void;
+  allowNone: true;
 };
 
 export type UnitSelectorProps =
   | UnitSelectorAreaProps
-  | UnitSelectorDistanceProps;
+  | UnitSelectorAreaOptionalProps
+  | UnitSelectorDistanceProps
+  | UnitSelectorDistanceOptionalProps;
 
 function unitDisplayToggleOption(
   unitDisplay: "short" | "long",
@@ -52,56 +74,18 @@ function unitDisplayToggleOption(
   };
 }
 
-/**
- * Gets a localized unit label using Intl.NumberFormat
- */
-function getLocalizedUnitLabel(
-  unit: AreaUnit | LengthUnit,
-  locale: string | undefined,
-  isArea: boolean
-): string {
-  const localeCode = locale || "en";
-
-  try {
-    const formatter = new Intl.NumberFormat(localeCode, {
-      style: "unit",
-      unit: unit,
-      unitDisplay: "long",
-    });
-
-    // Use formatToParts to extract just the unit part
-    const parts = formatter.formatToParts(10);
-    const unitPart = parts.find((part) => part.type === "unit");
-
-    if (unitPart) {
-      return unitPart.value;
-    }
-  } catch (error) {
-    // Fallback to English if Intl API fails
-    console.warn(`Failed to get localized unit label for ${unit}:`, error);
-  }
-  const fallbackMap: Record<string, string> = {
-    kilometer: isArea ? "square kilometers" : "kilometers",
-    hectare: "hectares",
-    acre: "acres",
-    mile: isArea ? "square miles" : "miles",
-    meter: "meters",
-    foot: "feet",
-    "nautical-mile": "nautical miles",
-  };
-  return fallbackMap[unit] || unit;
-}
-
 function UnitSelectorArea({
   value,
   onChange,
   unitDisplay = "short",
   onUnitDisplayChange,
+  allowNone,
 }: {
-  value: AreaUnit;
-  onChange: (value: AreaUnit) => void;
+  value?: AreaUnit;
+  onChange: (value?: AreaUnit) => void;
   unitDisplay?: "short" | "long";
   onUnitDisplayChange?: (display: "short" | "long") => void;
+  allowNone?: boolean;
 }) {
   const { t } = useTranslation("admin:reports");
   const langContext = useContext(FormLanguageContext);
@@ -126,9 +110,13 @@ function UnitSelectorArea({
         label: getLocalizedUnitLabel("mile", locale, true),
       },
     ];
+    const noneOption = allowNone
+      ? [{ value: "__unit:none__", label: t("None") }]
+      : [];
 
     if (onUnitDisplayChange) {
       return [
+        ...noneOption,
         ...unitOptions,
         unitDisplayToggleOption(
           unitDisplay,
@@ -138,13 +126,15 @@ function UnitSelectorArea({
       ];
     }
 
-    return unitOptions;
-  }, [langContext?.lang?.code, unitDisplay, onUnitDisplayChange, t]);
+    return [...noneOption, ...unitOptions];
+  }, [langContext?.lang?.code, unitDisplay, onUnitDisplayChange, t, allowNone]);
 
   const handleChange = (selectedValue: string) => {
     if (selectedValue === "__unitDisplay:toggle__") {
       const nextDisplay = unitDisplay === "short" ? "long" : "short";
       onUnitDisplayChange?.(nextDisplay);
+    } else if (selectedValue === "__unit:none__") {
+      onChange(undefined);
     } else {
       onChange(selectedValue as AreaUnit);
     }
@@ -153,7 +143,7 @@ function UnitSelectorArea({
   return (
     <LabeledDropdown
       label={t("Unit")}
-      value={value}
+      value={value || "__unit:none__"}
       ariaLabel={t("Unit")}
       title={t("Area unit")}
       options={options}
@@ -167,11 +157,13 @@ function UnitSelectorDistance({
   onChange,
   unitDisplay = "short",
   onUnitDisplayChange,
+  allowNone,
 }: {
-  value: LengthUnit;
-  onChange: (value: LengthUnit) => void;
+  value?: LengthUnit;
+  onChange: (value?: LengthUnit) => void;
   unitDisplay?: "short" | "long";
   onUnitDisplayChange?: (display: "short" | "long") => void;
+  allowNone?: boolean;
 }) {
   const { t } = useTranslation("admin:reports");
   const langContext = useContext(FormLanguageContext);
@@ -197,9 +189,13 @@ function UnitSelectorDistance({
       },
       // { value: "nautical-mile" as LengthUnit, label: getLocalizedUnitLabel("nautical-mile", locale, false, unitDisplay) },
     ];
+    const noneOption = allowNone
+      ? [{ value: "__unit:none__", label: t("None") }]
+      : [];
 
     if (onUnitDisplayChange) {
       return [
+        ...noneOption,
         ...unitOptions,
         unitDisplayToggleOption(
           unitDisplay,
@@ -209,13 +205,15 @@ function UnitSelectorDistance({
       ];
     }
 
-    return unitOptions;
-  }, [langContext?.lang?.code, unitDisplay, onUnitDisplayChange, t]);
+    return [...noneOption, ...unitOptions];
+  }, [langContext?.lang?.code, unitDisplay, onUnitDisplayChange, t, allowNone]);
 
   const handleChange = (selectedValue: string) => {
     if (selectedValue === "__unitDisplay:toggle__") {
       const nextDisplay = unitDisplay === "short" ? "long" : "short";
       onUnitDisplayChange?.(nextDisplay);
+    } else if (selectedValue === "__unit:none__") {
+      onChange(undefined);
     } else {
       onChange(selectedValue as LengthUnit);
     }
@@ -224,7 +222,7 @@ function UnitSelectorDistance({
   return (
     <LabeledDropdown
       label={t("Unit")}
-      value={value}
+      value={value || "__unit:none__"}
       ariaLabel={t("Unit")}
       title={t("Distance unit")}
       options={options}
@@ -238,21 +236,35 @@ function UnitSelectorDistance({
  */
 export function UnitSelector(props: UnitSelectorProps): JSX.Element {
   if (props.unitType === "area") {
+    const handleChange = props.allowNone
+      ? props.onChange
+      : (value?: AreaUnit) => {
+          if (value === undefined) return;
+          props.onChange(value);
+        };
     return (
       <UnitSelectorArea
         value={props.value}
-        onChange={props.onChange}
+        onChange={handleChange}
         unitDisplay={props.unitDisplay}
         onUnitDisplayChange={props.onUnitDisplayChange}
+        allowNone={props.allowNone}
       />
     );
   } else {
+    const handleChange = props.allowNone
+      ? props.onChange
+      : (value?: LengthUnit) => {
+          if (value === undefined) return;
+          props.onChange(value);
+        };
     return (
       <UnitSelectorDistance
         value={props.value}
-        onChange={props.onChange}
+        onChange={handleChange}
         unitDisplay={props.unitDisplay}
         onUnitDisplayChange={props.onUnitDisplayChange}
+        allowNone={props.allowNone}
       />
     );
   }

@@ -36,6 +36,10 @@ import {
   FeatureCountTableTooltipControls,
 } from "./FeatureCountTable";
 import {
+  FeaturePresenceTable,
+  FeaturePresenceTableTooltipControls,
+} from "./FeaturePresenceTable";
+import {
   IntersectingFeaturesList,
   IntersectingFeaturesListTooltipControls,
 } from "./IntersectingFeaturesList";
@@ -215,6 +219,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <OverlappingAreasTableTooltipControls {...props} />;
     case "FeatureCountTable":
       return <FeatureCountTableTooltipControls {...props} />;
+    case "FeaturePresenceTable":
+      return <FeaturePresenceTableTooltipControls {...props} />;
     case "IntersectingFeaturesList":
       return <IntersectingFeaturesListTooltipControls {...props} />;
     case "ColumnStatisticsTable":
@@ -386,6 +392,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <OverlappingAreasTable {...widgetProps} />;
     case "FeatureCountTable":
       return <FeatureCountTable {...widgetProps} />;
+    case "FeaturePresenceTable":
+      return <FeaturePresenceTable {...widgetProps} />;
     case "IntersectingFeaturesList":
       return <IntersectingFeaturesList {...widgetProps} />;
     case "ColumnStatisticsTable":
@@ -704,6 +712,29 @@ export function buildReportCommandGroups({
                     {
                       type: "count",
                       subjectType: "geographies",
+                      tableOfContentsItemId: tocId,
+                      parameters: {
+                        groupBy: groupByColumn,
+                      },
+                    },
+                  ],
+                });
+              },
+            });
+            children.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-feature-presence-table`,
+              label: "Feature Presence Table",
+              description:
+                "Table that shows presence/absence based on intersecting feature counts, optionally grouped by a class key.",
+              run: (state, dispatch, view) => {
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "FeaturePresenceTable",
+                  componentSettings: {},
+                  metrics: [
+                    {
+                      type: "count",
+                      subjectType: "fragments",
                       tableOfContentsItemId: tocId,
                       parameters: {
                         groupBy: groupByColumn,

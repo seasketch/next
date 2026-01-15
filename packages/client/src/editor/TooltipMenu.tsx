@@ -1562,7 +1562,9 @@ export function TooltipDropdown({
           {selected?.icon && (
             <span className={ICON_CONTAINER_CLASSES}>{selected.icon}</span>
           )}
-          <span className="max-w-[78px] truncate">{displayLabel}</span>
+          <span className="max-w-[78px] truncate flex items-center">
+            {displayLabel}
+          </span>
           <span className={ICON_CONTAINER_CLASSES}>
             <CaretDownIcon />
           </span>

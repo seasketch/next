@@ -400,7 +400,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
 
   if (!loading && !rows.length) {
     return (
-      <div className="border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
+      <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
         <Trans ns="reports">No overlapping features found.</Trans>
       </div>
     );

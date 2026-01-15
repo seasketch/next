@@ -192,7 +192,10 @@ export function LayerPickerList({
         )
       );
 
-  const handleSelect = (layer?: LayerPickerOption) => {
+  const handleSelect = (
+    layer?: LayerPickerOption,
+    event?: React.MouseEvent | React.PointerEvent
+  ) => {
     if (!layer) {
       onSelect(undefined);
       return;
@@ -230,9 +233,18 @@ export function LayerPickerList({
 
   return (
     <div
+      data-popover-content="true"
       className={`bg-white text-gray-900 border border-gray-200 rounded-lg shadow-sm w-60 p-1 ${
         className || ""
       }`}
+      onMouseDown={(e) => {
+        // Prevent popover from closing when clicking inside
+        e.stopPropagation();
+      }}
+      onClick={(e) => {
+        // Prevent popover from closing when clicking inside
+        e.stopPropagation();
+      }}
     >
       {!hideSearch && (
         <div className="px-2 pb-2 pt-1">
@@ -250,7 +262,15 @@ export function LayerPickerList({
           <button
             type="button"
             className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors truncate"
-            onClick={() => handleSelect(undefined)}
+            onPointerDown={(e) => handleSelect(undefined, e)}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+            }}
             title={t("None")}
           >
             {t("None")}
@@ -267,7 +287,15 @@ export function LayerPickerList({
                   key={layer.stableId}
                   type="button"
                   className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
-                  onClick={() => handleSelect(layer)}
+                  onPointerDown={(e) => handleSelect(layer, e)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   title={layer.title}
                 >
                   <span className="truncate">{layer.title}</span>
@@ -287,7 +315,15 @@ export function LayerPickerList({
                   key={layer.stableId}
                   type="button"
                   className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
-                  onClick={() => handleSelect(layer)}
+                  onPointerDown={(e) => handleSelect(layer, e)}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
                   title={layer.title}
                 >
                   <span className="truncate">{layer.title}</span>

@@ -1308,6 +1308,15 @@ div[attachments="forumAttachments"] {
   }
 }
 
+.ReportCardBody [contenteditable="false"] details {
+  -webkit-user-select: none;
+          user-select: none;
+  p {
+    -webkit-user-select: text;
+            user-select: text;
+  }
+}
+
 input[type="number"].form-element-number-input {
   -webkit-appearance: textfield;
           appearance: textfield;
@@ -7223,6 +7232,10 @@ select{
   height:100vh
 }
 
+.h-\[18px\]{
+  height:18px
+}
+
 .max-h-128{
   max-height:32rem
 }
@@ -7595,6 +7608,10 @@ select{
 
 .w-screen{
   width:100vw
+}
+
+.w-\[18px\]{
+  width:18px
 }
 
 .min-w-0{

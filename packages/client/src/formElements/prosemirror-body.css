@@ -407,3 +407,10 @@ div[attachments="forumAttachments"] {
     @apply font-bold;
   }
 }
+
+.ReportCardBody [contenteditable="false"] details {
+  user-select: none;
+  p {
+    user-select: text;
+  }
+}
