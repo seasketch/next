@@ -833,3 +833,47 @@ $$;
 
 
 grant execute on function preprocess_source to seasketch_user;
+
+
+create or replace function trigger_geography_metric_subscription()
+  returns trigger
+  language plpgsql
+  security definer
+  stable
+  as $$
+  declare
+    pid integer;
+    skid integer;
+  begin
+    if NEW.state = 'complete' or NEW.state = 'error' then
+      if NEW.subject_geography_id is not null then
+        select project_id into pid from project_geography where id = NEW.subject_geography_id limit 1;
+        perform pg_notify(
+          'graphql:projects:' || pid || ':geography-metrics',
+          '{"metricId": ' || NEW.id || ', "geographyId": ' || NEW.subject_geography_id || ', "projectId": ' || pid || '}'
+        );
+      end if;
+      if NEW.subject_fragment_id is not null then
+        select sketch_id into skid from sketch_fragments where fragment_hash = NEW.subject_fragment_id limit 1;
+        perform pg_notify(
+          'graphql:sketches:' || skid || ':metrics',
+          '{"metricId": ' || NEW.id || ', "sketchId": ' || skid || '}'
+        );
+      end if;
+    end if;
+    return NEW;
+  end;
+  $$;
+
+CREATE OR REPLACE FUNCTION public.trigger_report_overlay_source_subscription() RETURNS trigger
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  BEGIN
+    -- Notify GraphQL subscription for source processing job updates
+    PERFORM pg_notify(
+      'graphql:projects:' || NEW.project_id || ':reportOverlaySources',
+      '{"jobKey": "' || NEW.job_key || '", "projectId": ' || NEW.project_id || ', "dataSourceId": ' || NEW.data_source_id || '}'
+    );
+    RETURN NEW;
+  END;
+  $$;

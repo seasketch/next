@@ -286,7 +286,9 @@ async function createPresenceTable({ features, differenceMultiPolygon, subjectFe
     }
     return results;
 }
-async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }) {
+async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, 
+// property,
+groupBy, }) {
     const results = { "*": {} };
     for (const f of features) {
         if (f.feature.geometry.type === "Point" ||
@@ -411,14 +413,14 @@ node_worker_threads_1.parentPort?.on("message", async (job) => {
             });
         }
         else if (operation === "column_values") {
-            if (!job.property) {
-                throw new Error("property is required for column_values operation");
-            }
+            // if (!job.property) {
+            //   throw new Error("property is required for column_values operation");
+            // }
             result = await collectColumnValues({
                 features: job.features,
                 differenceMultiPolygon: job.differenceMultiPolygon,
                 subjectFeature: job.subjectFeature,
-                property: job.property,
+                // property: job.property,
                 groupBy: job.groupBy,
             });
         }

@@ -300,7 +300,7 @@ export const OverlappingAreasTable: ReportWidget<
                   ) : typeof percent === "number" ? (
                     formatters.percent(percent)
                   ) : (
-                    "—"
+                    formatters.percent(0)
                   )}
                 </div>
               )}

@@ -178,6 +178,22 @@ class OverlayEngineBatchProcessor {
                 // how many bytes of features are estimated to be returned, determine the
                 // batch size to use when clipping.
                 const envelopes = (0, bboxUtils_1.splitBBoxAntimeridian)((0, bbox_1.default)(this.subjectFeature.geometry)).map(bboxUtils_1.bboxToEnvelope);
+                // check to ensure source fgb index bounds are within [-180, 180, -90, 90]
+                const sourceBounds = this.intersectionSource.bounds;
+                if (sourceBounds.minX < -180.0001 ||
+                    sourceBounds.maxX > 180.0001 ||
+                    sourceBounds.minY < -90.0001 ||
+                    sourceBounds.maxY > 90.0001) {
+                    throw new Error("Source fgb index bounds are out of range. Expected maximum of [-180, 180, -90, 90], but got [" +
+                        sourceBounds.minX +
+                        ", " +
+                        sourceBounds.maxX +
+                        ", " +
+                        sourceBounds.minY +
+                        ", " +
+                        sourceBounds.maxY +
+                        "]");
+                }
                 const queryPlan = this.intersectionSource.createPlan(envelopes);
                 const concurrency = this.pool?.size || 1;
                 // The default max batch size is helpful when working with very large
@@ -386,7 +402,7 @@ class OverlayEngineBatchProcessor {
             differenceMultiPolygon: differenceMultiPolygon,
             subjectFeature: this.subjectFeature,
             groupBy: this.groupBy,
-            property: this.columnValuesProperty,
+            // property: this.columnValuesProperty!,
         }).catch((error) => {
             console.error(`Error collecting column values: ${error.message}`);
             throw error;
@@ -542,7 +558,6 @@ class OverlayEngineBatchProcessor {
         }
     }
     addColumnValuesFeatureToResults(feature) {
-        const value = feature.properties?.[this.columnValuesProperty];
         const results = this.getColumnValuesResults();
         (0, clipBatch_1.addColumnValuesToResults)(results, feature, this.groupBy);
     }

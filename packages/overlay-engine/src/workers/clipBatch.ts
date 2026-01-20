@@ -388,7 +388,7 @@ export async function collectColumnValues({
   features,
   differenceMultiPolygon,
   subjectFeature,
-  property,
+  // property,
   groupBy,
 }: {
   features: {
@@ -398,7 +398,7 @@ export async function collectColumnValues({
   }[];
   differenceMultiPolygon: clipping.Geom[];
   subjectFeature: Feature<Polygon | MultiPolygon>;
-  property: string;
+  // property: string;
   groupBy?: string;
 }) {
   const results: {
@@ -580,14 +580,14 @@ parentPort?.on(
           includedProperties: job.includedProperties,
         });
       } else if (operation === "column_values") {
-        if (!job.property) {
-          throw new Error("property is required for column_values operation");
-        }
+        // if (!job.property) {
+        //   throw new Error("property is required for column_values operation");
+        // }
         result = await collectColumnValues({
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
-          property: job.property,
+          // property: job.property,
           groupBy: job.groupBy,
         });
       } else {

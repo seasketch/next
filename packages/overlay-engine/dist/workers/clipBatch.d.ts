@@ -62,7 +62,7 @@ export type ColumnValues = [
     /** column value */
     number | string | boolean
 ];
-export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }: {
+export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;
         requiresIntersection: boolean;
@@ -70,7 +70,6 @@ export declare function collectColumnValues({ features, differenceMultiPolygon, 
     }[];
     differenceMultiPolygon: clipping.Geom[];
     subjectFeature: Feature<Polygon | MultiPolygon>;
-    property: string;
     groupBy?: string;
 }): Promise<{
     [classKey: string]: {

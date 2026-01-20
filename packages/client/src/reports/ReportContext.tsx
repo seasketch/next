@@ -42,6 +42,7 @@ import type { AnyLayer, AnySourceData } from "mapbox-gl";
 import { MapContext } from "../dataLayers/MapContextManager";
 import { Node } from "prosemirror-model";
 import getSlug from "../getSlug";
+import useDebounce from "../useDebounce";
 
 export type ReportMapStyle = {
   sources: { [id: string]: AnySourceData };
@@ -195,6 +196,8 @@ export function useReportState(
     fetchPolicy: "cache-and-network",
   });
 
+  const debouncedData = useDebounce(data, 100);
+
   const draftDependenciesQuery = useDraftReportDependenciesQuery({
     variables: {
       input: {
@@ -213,6 +216,11 @@ export function useReportState(
     fetchPolicy: "cache-and-network",
   });
 
+  const debouncedDraftDependenciesData = useDebounce(
+    draftDependenciesQuery.data,
+    100
+  );
+
   const allOverlays = useMemo(() => {
     const tableOfContentsItemIds = new Set<number>();
     const overlays = [] as OverlaySourceDetailsFragment[];
@@ -229,8 +237,8 @@ export function useReportState(
     }
     return overlays;
   }, [
-    data?.report?.dependencies?.overlaySources,
-    draftDependenciesQuery.data?.draftReportDependencies?.overlaySources,
+    debouncedData?.report?.dependencies?.overlaySources,
+    debouncedDraftDependenciesData?.draftReportDependencies?.overlaySources,
   ]);
 
   const draftReportingLayersQuery = useProjectReportingLayersQuery({
@@ -245,13 +253,13 @@ export function useReportState(
     if (data?.report?.dependencies?.metrics) {
       metrics.push(...data.report.dependencies.metrics);
     }
-    if (draftDependenciesQuery.data?.draftReportDependencies?.metrics) {
+    if (debouncedDraftDependenciesData?.draftReportDependencies?.metrics) {
       metrics.push(
-        ...draftDependenciesQuery.data.draftReportDependencies.metrics
+        ...debouncedDraftDependenciesData.draftReportDependencies.metrics
       );
     }
     if (
-      !draftDependenciesQuery.data?.draftReportDependencies?.metrics &&
+      !debouncedDraftDependenciesData?.draftReportDependencies?.metrics &&
       draftDependenciesQuery.previousData?.draftReportDependencies?.metrics &&
       draftDependenciesQuery.previousData.draftReportDependencies.sketchId ===
         variables?.sketchId
@@ -261,12 +269,13 @@ export function useReportState(
       );
     }
     return [
-      ...(data?.report?.dependencies?.metrics || []),
-      ...(draftDependenciesQuery.data?.draftReportDependencies?.metrics || []),
+      ...(debouncedData?.report?.dependencies?.metrics || []),
+      ...(debouncedDraftDependenciesData?.draftReportDependencies?.metrics ||
+        []),
     ] as CompatibleSpatialMetricDetailsFragment[];
   }, [
-    data?.report?.dependencies?.metrics,
-    draftDependenciesQuery.data?.draftReportDependencies,
+    debouncedData?.report?.dependencies?.metrics,
+    debouncedDraftDependenciesData?.draftReportDependencies,
     variables?.sketchId,
     draftDependenciesQuery.previousData?.draftReportDependencies?.sketchId,
     draftDependenciesQuery.previousData?.draftReportDependencies?.metrics,
@@ -315,13 +324,13 @@ export function useReportState(
   useEffect(() => {
     if (!data?.report?.tabs) return;
 
-    const currentTabExists = data.report.tabs.some(
+    const currentTabExists = debouncedData?.report?.tabs?.some(
       (tab) => tab.id === selectedTabId
     );
-    if (!currentTabExists && data.report.tabs[0]?.id) {
-      setSelectedTabId(data.report.tabs[0].id);
+    if (!currentTabExists && debouncedData?.report?.tabs?.[0]?.id) {
+      setSelectedTabId(debouncedData.report.tabs[0].id);
     }
-  }, [data?.report?.tabs, selectedTabId]);
+  }, [debouncedData?.report?.tabs, selectedTabId]);
 
   const recalculate = useCallback(
     (metricIds: number[], preprocessSources?: boolean) => {
@@ -375,11 +384,11 @@ export function useReportState(
       };
     } = {};
     if (
-      data?.report?.dependencies?.cardDependencyLists &&
+      debouncedData?.report?.dependencies?.cardDependencyLists &&
       metrics.length > 0 &&
       allOverlays.length > 0
     ) {
-      for (const cardDependencyList of data.report.dependencies
+      for (const cardDependencyList of debouncedData.report.dependencies
         .cardDependencyLists) {
         const overlays = allOverlays.filter((overlay) =>
           cardDependencyList.overlaySources.includes(
@@ -421,7 +430,11 @@ export function useReportState(
       }
     }
     return dependencies;
-  }, [data?.report?.dependencies?.cardDependencyLists, metrics, allOverlays]);
+  }, [
+    debouncedData?.report?.dependencies?.cardDependencyLists,
+    metrics,
+    allOverlays,
+  ]);
 
   const getDependencies = useCallback(
     (cardId: number) => {
@@ -536,7 +549,7 @@ export function useReportState(
   useEffect(() => {
     if (draftReportCardBody) {
       const deps = extractMetricDependenciesFromReportBody(draftReportCardBody);
-      const metrics = data?.report?.dependencies?.metrics || [];
+      const metrics = debouncedData?.report?.dependencies?.metrics || [];
       const hashesInMainReportRequest = new Set(
         metrics.map(
           (metric: CompatibleSpatialMetricDetailsFragment) =>
@@ -585,7 +598,7 @@ export function useReportState(
   }, [
     draftReportCardBody,
     setAdditionalDependencies,
-    data?.report?.dependencies,
+    debouncedData?.report?.dependencies,
     getDependencies,
     selectedForEditing,
     variables,

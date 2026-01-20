@@ -9,6 +9,7 @@ import {
 } from "overlay-engine";
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
+import colors from "yoctocolors-cjs";
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -158,6 +159,7 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
 }
 
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
+  console.log(colors.bgMagenta(`[${payload.jobKey}] Calling overlay worker`));
   if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
     const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
       method: "POST",

@@ -6,20 +6,23 @@ import {
 import { Pool } from "pg";
 import { OverlayEngineWorkerMessage } from "overlay-worker";
 import colors from "yoctocolors-cjs";
+import { JobStatusUpdater, MessageWithReceipt } from "./JobStatusUpdater";
 
 // Initialize SQS client
 const sqsClient = new SQSClient({
   region: process.env.S3_REGION || "us-east-1",
 });
 
+let jobStatusUpdater: JobStatusUpdater | null = null;
+
 /**
  * Consolidates messages by jobKey to avoid multiple database updates
  * Priority: result/error > begin > progress (highest progress value only)
  */
 function consolidateMessagesByJobKey(
-  messages: OverlayEngineWorkerMessage[]
-): Map<string, OverlayEngineWorkerMessage> {
-  const consolidated = new Map<string, OverlayEngineWorkerMessage>();
+  messages: MessageWithReceipt[]
+): Map<string, MessageWithReceipt> {
+  const consolidated = new Map<string, MessageWithReceipt>();
 
   for (const message of messages) {
     const existing = consolidated.get(message.jobKey);
@@ -73,24 +76,34 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
     const response = await sqsClient.send(command);
 
     if (response.Messages && response.Messages.length > 0) {
+      let queryCount = 0;
+      console.time("processing sqs messages");
       // Parse all messages first
-      const parsedMessages: (OverlayEngineWorkerMessage & {
-        origin?: string;
-      })[] = [];
+      const parsedMessages: MessageWithReceipt[] = [];
       const allReceiptHandles: string[] = []; // Store all receipt handles for deletion
 
       for (const message of response.Messages) {
         if (message.Body) {
           try {
-            if (message.ReceiptHandle) {
-              allReceiptHandles.push(message.ReceiptHandle);
-            }
             const parsedMessage: OverlayEngineWorkerMessage & {
               origin?: string;
             } = JSON.parse(message.Body);
+            if (
+              parsedMessage.origin &&
+              parsedMessage.origin !== "overlay" &&
+              message.ReceiptHandle
+            ) {
+              allReceiptHandles.push(message.ReceiptHandle);
+            }
 
             if (parsedMessage.jobKey) {
-              parsedMessages.push(parsedMessage);
+              parsedMessages.push({
+                ...parsedMessage,
+                receiptHandle: message.ReceiptHandle,
+                origin:
+                  (parsedMessage.origin as "overlay" | "subdivision") ||
+                  "overlay",
+              });
               // Store receipt handle for later deletion
             } else {
               console.error(
@@ -100,6 +113,9 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
               );
             }
           } catch (parseError) {
+            if (message.ReceiptHandle) {
+              allReceiptHandles.push(message.ReceiptHandle);
+            }
             console.error(
               colors.red("Failed to parse message body:"),
               parseError
@@ -149,16 +165,14 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           if (origin === "subdivision") {
             switch (consolidatedMessage.type) {
               case "begin":
-                console.log("begin and set started_at", consolidatedMessage);
-                console.log(
-                  `update source_processing_jobs set state = 'processing', updated_at = now(), started_at = now() where job_key = '${jobKey}' and (state = 'queued' or state = 'processing')`
-                );
+                queryCount++;
                 await pgPool.query(
                   `update source_processing_jobs set state = 'processing', updated_at = now(), started_at = now() where job_key = $1 and (state = 'queued' or state = 'processing')`,
                   [jobKey]
                 );
                 break;
               case "progress":
+                queryCount++;
                 await pgPool.query(
                   `update source_processing_jobs set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), progress_message = $3, eta = $4 where job_key = $2 and state != 'complete' and state != 'error'`,
                   [
@@ -170,6 +184,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                 );
                 break;
               case "error":
+                queryCount++;
                 await pgPool.query(
                   `update source_processing_jobs set state = 'error', error_message = $1, updated_at = now(), duration = now() - started_at where job_key = $2 and (state = 'processing' or state = 'queued')`,
                   [consolidatedMessage.error, jobKey]
@@ -178,6 +193,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
               case "result": {
                 // Expect { object: { publicUrl?, bucket, key, size, filename } }
                 const res = consolidatedMessage.result || {};
+                queryCount++;
                 const obj = res.object || {};
                 // Fetch job so we know data_source_id and project_id
                 const jobQ = await pgPool.query(
@@ -185,7 +201,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                   [jobKey]
                 );
                 if (jobQ.rows.length > 0) {
-                  console.log("obj", obj);
                   const { data_source_id, project_id } = jobQ.rows[0];
                   const url =
                     obj.publicUrl || `https://uploads.seasketch.org/${obj.key}`;
@@ -193,6 +208,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                   const size = obj.size || 0;
                   const filename = obj.filename || obj.key || "output.fgb";
                   const epsg = obj.epsg || null;
+                  queryCount++;
                   await pgPool.query(
                     `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key, epsg)
                      values ($1, $9, $2, $3, $4, $5, false, $6, $4, $7, $8)
@@ -211,6 +227,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                         : "ReportingCOG",
                     ]
                   );
+                  queryCount++;
                   await pgPool.query(
                     `update source_processing_jobs set state = 'complete', updated_at = now(), completed_at = now(), duration = now() - started_at, progress_percentage = 100, error_message = null where job_key = $1`,
                     [jobKey]
@@ -222,58 +239,67 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
                 break;
             }
           } else {
-            switch (consolidatedMessage.type) {
-              case "result":
-                await pgPool.query(
-                  `update spatial_metrics set value = $1, state = 'complete', updated_at = now(), completed_at = now(), duration = coalesce($3, now() - started_at), progress_percentage = 100, error_message = null where job_key = $2`,
-                  [
-                    consolidatedMessage.result,
-                    jobKey,
-                    consolidatedMessage.duration
-                      ? `${consolidatedMessage.duration}ms`
-                      : null,
-                  ]
-                );
-                break;
-              case "error":
-                await pgPool.query(
-                  `update spatial_metrics set state = 'error', error_message = $1, updated_at = now(), duration = now() - started_at where job_key = $2 and (state = 'processing' or state = 'queued')`,
-                  [consolidatedMessage.error, jobKey]
-                );
-                break;
-              case "progress":
-                await pgPool.query(
-                  `update spatial_metrics set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), eta = $3 where job_key = $2 and state != 'complete' and state != 'error'`,
-                  [
-                    Math.round(consolidatedMessage.progress),
-                    jobKey,
-                    consolidatedMessage.eta,
-                  ]
-                );
-                break;
-              case "begin":
-                await pgPool.query(
-                  `update spatial_metrics set state = 'processing', updated_at = now(), started_at = now() where job_key = $1 and (state = 'queued' or state = 'processing')`,
-                  [jobKey]
-                );
-                if (consolidatedMessage.logfileUrl) {
-                  await pgPool.query(
-                    `update spatial_metrics set logs_url = $1, logs_expires_at = $2 where job_key = $3`,
-                    [
-                      consolidatedMessage.logfileUrl,
-                      consolidatedMessage.logsExpiresAt,
-                      jobKey,
-                    ]
-                  );
-                }
-                break;
-              default:
-                console.log(
-                  `Unknown message type for job ${jobKey}:`,
-                  consolidatedMessage
-                );
-                break;
+            if (!jobStatusUpdater) {
+              throw new Error("JobStatusUpdater is not initialized");
             }
+            jobStatusUpdater.enqueueMessage(consolidatedMessage);
+            // switch (consolidatedMessage.type) {
+            //   case "result":
+            //     queryCount++;
+            //     await pgPool.query(
+            //       `update spatial_metrics set value = $1, state = 'complete', updated_at = now(), completed_at = now(), duration = coalesce($3, now() - started_at), progress_percentage = 100, error_message = null where job_key = $2`,
+            //       [
+            //         consolidatedMessage.result,
+            //         jobKey,
+            //         consolidatedMessage.duration
+            //           ? `${consolidatedMessage.duration}ms`
+            //           : null,
+            //       ]
+            //     );
+            //     break;
+            //   case "error":
+            //     queryCount++;
+            //     await pgPool.query(
+            //       `update spatial_metrics set state = 'error', error_message = $1, updated_at = now(), duration = now() - started_at where job_key = $2 and (state = 'processing' or state = 'queued')`,
+            //       [consolidatedMessage.error, jobKey]
+            //     );
+            //     break;
+            //   case "progress":
+            //     queryCount++;
+            //     await pgPool.query(
+            //       `update spatial_metrics set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage, $1), eta = $3 where job_key = $2 and state != 'complete' and state != 'error'`,
+            //       [
+            //         Math.round(consolidatedMessage.progress),
+            //         jobKey,
+            //         consolidatedMessage.eta,
+            //       ]
+            //     );
+            //     break;
+            //   case "begin":
+            //     queryCount++;
+            //     await pgPool.query(
+            //       `update spatial_metrics set state = 'processing', updated_at = now(), started_at = now() where job_key = $1 and (state = 'queued' or state = 'processing')`,
+            //       [jobKey]
+            //     );
+            //     if (consolidatedMessage.logfileUrl) {
+            //       queryCount++;
+            //       await pgPool.query(
+            //         `update spatial_metrics set logs_url = $1, logs_expires_at = $2 where job_key = $3`,
+            //         [
+            //           consolidatedMessage.logfileUrl,
+            //           consolidatedMessage.logsExpiresAt,
+            //           jobKey,
+            //         ]
+            //       );
+            //     }
+            //     break;
+            //   default:
+            //     console.log(
+            //       `Unknown message type for job ${jobKey}:`,
+            //       consolidatedMessage
+            //     );
+            //     break;
+            // }
           }
         } catch (processError) {
           console.error(
@@ -285,6 +311,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
 
       // Delete all processed messages from the queue
       for (const receiptHandle of allReceiptHandles) {
+        console.log("deleting receipt handle:", receiptHandle);
         try {
           const deleteCommand = new DeleteMessageCommand({
             QueueUrl: queueUrl,
@@ -295,6 +322,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           console.error("Failed to delete message:", deleteError);
         }
       }
+      console.timeEnd("processing sqs messages");
     } else {
       // console.log("No messages received from queue");
     }
@@ -311,6 +339,7 @@ export async function startOverlayEngineWorkerMessageConsumer(pgPool: Pool) {
     `Starting overlay engine worker message consumer on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}`
   );
 
+  jobStatusUpdater = new JobStatusUpdater(pgPool, sqsClient);
   // Start continuous polling
   while (true) {
     try {

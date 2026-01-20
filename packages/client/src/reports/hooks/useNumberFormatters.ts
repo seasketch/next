@@ -209,7 +209,7 @@ export function useNumberFormatters({
         return formatters.specifiedPercentFormatter.format(value);
       }
       if (value === 0) {
-        return formatters.smallPercentFormatter.format(value);
+        return formatters.largePercentFormatter.format(value);
       } else if (value < 0.001) {
         return (
           "< " +

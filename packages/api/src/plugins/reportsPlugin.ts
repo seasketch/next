@@ -212,7 +212,19 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               data_sources s
             inner join data_layers l on l.data_source_id = s.id
             inner join table_of_contents_items items on items.data_layer_id = l.id
-            left join data_upload_outputs o on o.data_source_id = s.id and is_reporting_type(o.type)
+            left join lateral (
+              select
+                o.id,
+                o.url
+              from
+                data_upload_outputs o
+              where
+                o.data_source_id = s.id
+                and is_reporting_type(o.type)
+              order by
+                o.id desc
+              limit 1
+            ) o on true
             where
               s.id  in (
                 select data_source_id from source_processing_jobs where project_id = $1
@@ -778,8 +790,6 @@ async function getOverlaySourcesForDependencies(
         !sourceProcessingJobId &&
         !results[tableOfContentsItemId]?.sourceUrl
       ) {
-        console.log("preprocessing source", tableOfContentsItemId, projectId);
-        console.log(results[tableOfContentsItemId]);
         await pool.query(
           `select preprocess_source((select slug from projects where id = $1), (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = $2))) as table_of_contents_item_id`,
           [projectId, tableOfContentsItemId]
