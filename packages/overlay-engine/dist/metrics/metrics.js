@@ -110,8 +110,12 @@ function combineRasterBandStats(statsArray) {
         totalCount += stats.count;
         totalSum += stats.sum;
         totalInvalid += stats.invalid;
-        mins.push(stats.min);
-        maxs.push(stats.max);
+        if (isFinite(stats.min) && stats.min !== null) {
+            mins.push(stats.min);
+        }
+        if (isFinite(stats.max) && stats.max !== null) {
+            maxs.push(stats.max);
+        }
         // Merge histogram entries
         for (const [value, count] of stats.histogram) {
             histogramMap.set(value, (histogramMap.get(value) || 0) + count);

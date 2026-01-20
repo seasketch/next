@@ -7200,6 +7200,10 @@ select{
   height:170%
 }
 
+.h-\[18px\]{
+  height:18px
+}
+
 .h-\[19px\]{
   height:19px
 }
@@ -7230,10 +7234,6 @@ select{
 
 .h-screen{
   height:100vh
-}
-
-.h-\[18px\]{
-  height:18px
 }
 
 .max-h-128{
@@ -7544,6 +7544,10 @@ select{
   width:16px
 }
 
+.w-\[18px\]{
+  width:18px
+}
+
 .w-\[19px\]{
   width:19px
 }
@@ -7608,10 +7612,6 @@ select{
 
 .w-screen{
   width:100vw
-}
-
-.w-\[18px\]{
-  width:18px
 }
 
 .min-w-0{
@@ -8407,6 +8407,10 @@ select{
   gap:1px
 }
 
+.gap-\[1px\]{
+  gap:1px
+}
+
 .gap-x-4{
   column-gap:1rem
 }
@@ -8421,6 +8425,10 @@ select{
 
 .gap-y-6{
   row-gap:1.5rem
+}
+
+.gap-y-2{
+  row-gap:0.5rem
 }
 
 .-space-x-px > :not([hidden]) ~ :not([hidden]){
@@ -9891,6 +9899,18 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
+}
+
+.bg-gray-200\/70{
+  background-color:rgb(229 231 235 / 0.7)
+}
+
+.bg-gray-200\/0{
+  background-color:rgb(229 231 235 / 0)
+}
+
+.bg-gray-200\/10{
+  background-color:rgb(229 231 235 / 0.1)
 }
 
 .bg-opacity-10{

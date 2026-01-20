@@ -311,7 +311,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
 
       // Delete all processed messages from the queue
       for (const receiptHandle of allReceiptHandles) {
-        console.log("deleting receipt handle:", receiptHandle);
         try {
           const deleteCommand = new DeleteMessageCommand({
             QueueUrl: queueUrl,

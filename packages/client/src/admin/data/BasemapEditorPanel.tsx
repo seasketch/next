@@ -84,7 +84,7 @@ export default function BasemapEditorPanel({
       basemap &&
       debouncedExaggeration &&
       parseFloat(basemap.terrainExaggeration) !==
-        parseFloat(debouncedExaggeration)
+        debouncedExaggeration
     ) {
       client.writeFragment({
         id: `Basemap:${basemap.id}`,

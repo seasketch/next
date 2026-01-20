@@ -56,13 +56,21 @@ import {
   ColumnStatisticsTable,
   ColumnStatisticsTableTooltipControls,
 } from "./ColumnStatisticsTable";
+import {
+  RasterValuesHistogram,
+  RasterValuesHistogramTooltipControls,
+} from "./RasterValuesHistogram";
+import {
+  RasterStatisticsTable,
+  RasterStatisticsTableTooltipControls,
+} from "./RasterStatisticsTable";
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import Badge from "../../components/Badge";
-import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
+import { GeostatsLayer, isGeostatsLayer, RasterBandInfo } from "@seasketch/geostats-types";
 import {
   findGetExpression,
   isExpression,
@@ -88,8 +96,8 @@ function groupByForStyle(
     geometry === "Polygon" || geometry === "MultiPolygon"
       ? ["fill-color"]
       : geometry === "LineString" || geometry === "MultiLineString"
-      ? ["line-color"]
-      : ["circle-color", "icon-image"];
+        ? ["line-color"]
+        : ["circle-color", "icon-image"];
 
   for (const layer of mapboxGlStyles) {
     if (!("paint" in layer)) continue;
@@ -225,6 +233,10 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <IntersectingFeaturesListTooltipControls {...props} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTableTooltipControls {...props} />;
+    case "RasterValuesHistogram":
+      return <RasterValuesHistogramTooltipControls {...props} />;
+    case "RasterStatisticsTable":
+      return <RasterStatisticsTableTooltipControls {...props} />;
     case "BlockLayerToggle":
       return <BlockLayerToggleTooltipControls {...props} />;
     case "InlineLayerToggle":
@@ -398,6 +410,10 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <IntersectingFeaturesList {...widgetProps} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTable {...widgetProps} />;
+    case "RasterValuesHistogram":
+      return <RasterValuesHistogram {...widgetProps} />;
+    case "RasterStatisticsTable":
+      return <RasterStatisticsTable {...widgetProps} />;
     case "InlineLayerToggle":
       return <InlineLayerToggle {...widgetProps} />;
     case "BlockLayerToggle":
@@ -497,7 +513,7 @@ export function buildReportCommandGroups({
         id: "clipping-geography-percent",
         label: geography
           ? // eslint-disable-next-line i18next/no-literal-string
-            `Percent of ${geography.name}`
+          `Percent of ${geography.name}`
           : "Percent of Geography",
         description: "Total area as a fraction of the clipping geography.",
         run: (state, dispatch, view) => {
@@ -639,8 +655,85 @@ export function buildReportCommandGroups({
           source.tableOfContentsItem?.title || "Layer Overlay Analysis";
         const tocId = source.tableOfContentsItemId!;
         let children: CommandPaletteItem[] = [];
-        if ("bands" in source.geostats && source.geostats.bands.length > 0) {
+        if ("bands" in source.geostats && source.geostats.bands.length === 1) {
+          const band = source.geostats.bands[0] as RasterBandInfo;
           // Raster handling can be added here if needed
+          children.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-band-stats`,
+            label: "Inline Raster Band Statistics",
+            description: "Summarize a raster band with a mean, min, max, or distinct value count.",
+            run: (state, dispatch, view) => {
+              return insertInlineMetric(view, state.selection.ranges[0], {
+                type: "InlineMetric",
+                metrics: [
+                  {
+                    type: "raster_stats",
+                    subjectType: "fragments",
+                    tableOfContentsItemId: tocId,
+                  },
+                ],
+                componentSettings: {
+                  presentation: "raster_stats",
+                  rasterStat: "mean"
+                },
+              });
+            },
+          });
+          children.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-raster-stats-table`,
+            label: "Raster Statistics Table",
+            description:
+              "Table of raster band statistics such as mean, min, max, sum, and invalid pixels.",
+            run: (state, dispatch, view) => {
+              return insertBlockMetric(view, state.selection.ranges[0], {
+                type: "RasterStatisticsTable",
+                metrics: [
+                  {
+                    type: "raster_stats",
+                    subjectType: "fragments",
+                    tableOfContentsItemId: tocId,
+                  },
+                ],
+                componentSettings: {
+                  displayStats: {
+                    mean: true,
+                    min: true,
+                    max: true,
+                    count: true,
+                  },
+                },
+              });
+            },
+          });
+          children.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-raster-histogram`,
+            label: "Raster Values Histogram",
+            description:
+              "Histogram of raster values for the sketch, using the layer's bin definitions.",
+            run: (state, dispatch, view) => {
+              return insertBlockMetric(view, state.selection.ranges[0], {
+                type: "RasterValuesHistogram",
+                metrics: [
+                  {
+                    type: "raster_stats",
+                    subjectType: "fragments",
+                    tableOfContentsItemId: tocId,
+                  },
+                ],
+                componentSettings: {
+                  colorCoded: true,
+                  displayStats: {
+                    mean: true,
+                    min: true,
+                    max: true
+                  },
+                },
+              });
+            },
+          });
         } else if (
           "layers" in source.geostats &&
           isGeostatsLayer(source.geostats.layers[0])
@@ -819,17 +912,17 @@ export function buildReportCommandGroups({
                   componentSettings: {
                     columns: [
                       bestNumericColumn ||
-                        source.geostats.layers[0].attributes[0].attribute,
+                      source.geostats.layers[0].attributes[0].attribute,
                     ],
                     displayStats: bestNumericColumn
                       ? {
-                          min: true,
-                          max: true,
-                          mean: true,
-                        }
+                        min: true,
+                        max: true,
+                        mean: true,
+                      }
                       : {
-                          countDistinct: true,
-                        },
+                        countDistinct: true,
+                      },
                   },
                 });
               },
@@ -960,9 +1053,9 @@ function _insertMetric(
   const selection = $posAfter.parent.inlineContent
     ? TextSelection.create(tr.doc, posAfter)
     : TextSelection.near(
-        $posAfter,
-        -1 /* backward to stay in previous block */
-      );
+      $posAfter,
+      -1 /* backward to stay in previous block */
+    );
   tr = tr.setSelection(selection);
 
   dispatch(tr.scrollIntoView());
@@ -1038,7 +1131,7 @@ export function TooltipBooleanConfigurationOption({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <label className="flex items-center text-gray-700 text-sm">
+    <label className="flex items-center text-gray-700 text-sm space-x-1">
       <span className="flex-1 font-light text-gray-400 whitespace-nowrap">
         {label}
       </span>

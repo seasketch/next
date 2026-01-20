@@ -57,7 +57,6 @@ export function OverlayTogglePicker({
       optionsOverride={optionsOverride}
       className="w-72"
       onSelect={(val) => {
-        console.log("onSelect", val);
         if (!val?.stableId) return;
         onSelect(val.stableId, val.title, helpers);
       }}

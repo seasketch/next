@@ -13,6 +13,7 @@ import {
   subjectIsFragment,
   subjectIsGeography,
   isNumberColumnValueStats,
+  RasterStats,
 } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
@@ -22,7 +23,13 @@ import {
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
-import { AreaUnit, LengthUnit } from "../utils/units";
+import {
+  AreaUnit,
+  LengthUnit,
+  getLocalizedUnitLabel,
+  isAreaUnit,
+  isLengthUnit,
+} from "../utils/units";
 import Skeleton from "../../components/Skeleton";
 import { ReportWidget, TooltipBooleanConfigurationOption } from "./widgets";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
@@ -266,6 +273,8 @@ const defaultDistinctValueMessages: PluralizedMessages = {
   other: "distinct values",
 };
 
+type RasterValuesStatKey = "mean" | "min" | "max" | "sum" | "count";
+
 const defaultPluralizedDistinctValueLabels = Object.fromEntries(
   Object.entries(defaultPluralizedCountLabels).map(([lang, messages]) => {
     const entries: Record<string, string> = {};
@@ -279,17 +288,19 @@ const defaultPluralizedDistinctValueLabels = Object.fromEntries(
 ) as PluralizedMessagesByLang;
 
 export type InlineMetricComponentSettings = {
-  unit: AreaUnit | LengthUnit;
+  unit?: AreaUnit | LengthUnit;
   unitDisplay?: "long" | "short";
   minimumFractionDigits: number;
   presentation:
-    | "total_area"
-    | "percent_area"
-    | "distance_to_shore"
-    | "overlay_area"
-    | "count"
-    | "column_values";
+  | "total_area"
+  | "percent_area"
+  | "distance_to_shore"
+  | "overlay_area"
+  | "count"
+  | "column_values"
+  | "raster_stats";
   stat?: ColumnValuesStatKey;
+  rasterStat?: RasterValuesStatKey;
   hideLabelForCount?: boolean;
   pluralizedCountLabels?: PluralizedMessagesByLang;
   pluralizedDistinctValueLabels?: PluralizedMessagesByLang;
@@ -348,6 +359,18 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     minimumFractionDigits: componentSettings?.minimumFractionDigits,
     unitDisplay: componentSettings?.unitDisplay || "short",
   });
+  const rasterUnitLabel = useMemo(() => {
+    const unit = componentSettings?.unit;
+    if (!unit || (!isAreaUnit(unit) && !isLengthUnit(unit))) {
+      return null;
+    }
+    return getLocalizedUnitLabel(
+      unit,
+      lang.code,
+      isAreaUnit(unit),
+      componentSettings?.unitDisplay || "short"
+    );
+  }, [componentSettings?.unit, componentSettings?.unitDisplay, lang.code]);
 
   const formattedValue = useMemo(() => {
     if (!dependencies.length) {
@@ -472,6 +495,21 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           return NaN;
         }
       }
+      case "raster_stats": {
+        const rasterStats = metrics.find(
+          (m) => m.type === "raster_stats"
+        );
+        if (!rasterStats) {
+          throw new Error("Raster stats not found in metrics.");
+        }
+        const combined = combineMetricsForFragments(
+          metrics as Pick<Metric, "type" | "value">[]
+        ) as RasterStats;
+        const value =
+          combined.value.bands[0][componentSettings?.rasterStat || "mean"];
+        const formatted = formatters.decimal(value);
+        return rasterUnitLabel ? `${formatted} ${rasterUnitLabel}` : formatted;
+      }
       default:
         // eslint-disable-next-line i18next/no-literal-string
         errors.push(`Unsupported presentation: ${presentation}`);
@@ -482,7 +520,11 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     metrics,
     componentSettings?.presentation,
     componentSettings?.stat,
+    componentSettings?.rasterStat,
+    componentSettings?.unit,
+    componentSettings?.unitDisplay,
     formatters,
+    rasterUnitLabel,
     sketchClass.clippingGeographies,
     errors,
     pluralRules,
@@ -518,9 +560,8 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
       marks?.some((m) => m.type.name === "link" && m.attrs?.underline);
     return (
       <span
-        className={`metric font-semibold rounded-sm inline-block ${
-          underline ? "underline" : ""
-        }`}
+        className={`metric font-semibold rounded-sm inline-block ${underline ? "underline" : ""
+          }`}
         style={underline ? { textDecorationStyle: "solid" } : undefined}
       >
         {formattedValue}
@@ -708,10 +749,24 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     [t, selectedValueColumnIsNumeric]
   );
 
+  const rasterStatOptions = useMemo(
+    () => [
+      { value: "mean", label: t("Mean") },
+      { value: "min", label: t("Minimum") },
+      { value: "max", label: t("Maximum") },
+      { value: "sum", label: t("Sum") },
+      { value: "count", label: t("Count") },
+    ],
+    [t]
+  );
+
   const selectedStat: ColumnValuesStatKey = selectedValueColumnIsNumeric
     ? (componentSettings.stat as ColumnValuesStatKey) ||
-      ("mean" as ColumnValuesStatKey)
+    ("mean" as ColumnValuesStatKey)
     : ("countDistinct" as ColumnValuesStatKey);
+
+  const selectedRasterStat: RasterValuesStatKey =
+    (componentSettings.rasterStat as RasterValuesStatKey) || "mean";
 
   useEffect(() => {
     if (presentation !== "column_values") return;
@@ -749,6 +804,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     }
     onUpdate({
       componentSettings: { ...componentSettings, stat },
+    });
+  };
+
+  const handleRasterStatChange = (stat: RasterValuesStatKey) => {
+    onUpdate({
+      componentSettings: { ...componentSettings, rasterStat: stat },
     });
   };
 
@@ -806,6 +867,24 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           }
         />
       )}
+      {presentation === "raster_stats" && (
+        <UnitSelector
+          unitType="distance"
+          allowNone
+          value={componentSettings?.unit as LengthUnit | undefined}
+          unitDisplay={componentSettings?.unitDisplay}
+          onChange={(value) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, unit: value },
+            })
+          }
+          onUnitDisplayChange={(display) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, unitDisplay: display },
+            })
+          }
+        />
+      )}
       {presentation === "column_values" && valueColumnOptions.length > 0 && (
         <LabeledDropdown
           label={t("column")}
@@ -821,6 +900,14 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           value={selectedStat}
           options={statOptions}
           onChange={(val) => handleStatChange(val as ColumnValuesStatKey)}
+        />
+      )}
+      {presentation === "raster_stats" && (
+        <LabeledDropdown
+          label={t("Stat")}
+          value={selectedRasterStat}
+          options={rasterStatOptions}
+          onChange={(val) => handleRasterStatChange(val as RasterValuesStatKey)}
         />
       )}
       {presentation === "column_values" && selectedStat === "countDistinct" && (

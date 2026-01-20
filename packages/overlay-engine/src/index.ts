@@ -47,6 +47,7 @@ export {
   RasterBandStats,
   combineRasterBandStats,
   combineMetricsForFragments,
+  RasterStats,
   MetricDependency,
   isNumberColumnValueStats,
   MetricDependencySubjectType,
