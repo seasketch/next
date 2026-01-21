@@ -8403,11 +8403,11 @@ select{
   gap:2rem
 }
 
-.gap-px{
+.gap-\[1px\]{
   gap:1px
 }
 
-.gap-\[1px\]{
+.gap-px{
   gap:1px
 }
 
@@ -8419,16 +8419,16 @@ select{
   row-gap:4rem
 }
 
+.gap-y-2{
+  row-gap:0.5rem
+}
+
 .gap-y-4{
   row-gap:1rem
 }
 
 .gap-y-6{
   row-gap:1.5rem
-}
-
-.gap-y-2{
-  row-gap:0.5rem
 }
 
 .-space-x-px > :not([hidden]) ~ :not([hidden]){
@@ -9521,6 +9521,14 @@ select{
   background-color:rgb(229 231 235 / var(--tw-bg-opacity, 1))
 }
 
+.bg-gray-200\/10{
+  background-color:rgb(229 231 235 / 0.1)
+}
+
+.bg-gray-200\/70{
+  background-color:rgb(229 231 235 / 0.7)
+}
+
 .bg-gray-300{
   --tw-bg-opacity:1;
   background-color:rgb(209 213 219 / var(--tw-bg-opacity, 1))
@@ -9899,18 +9907,6 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
-}
-
-.bg-gray-200\/70{
-  background-color:rgb(229 231 235 / 0.7)
-}
-
-.bg-gray-200\/0{
-  background-color:rgb(229 231 235 / 0)
-}
-
-.bg-gray-200\/10{
-  background-color:rgb(229 231 235 / 0.1)
 }
 
 .bg-opacity-10{

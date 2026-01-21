@@ -57,6 +57,10 @@ import {
   ColumnStatisticsTableTooltipControls,
 } from "./ColumnStatisticsTable";
 import {
+  ColumnValuesHistogram,
+  ColumnValuesHistogramTooltipControls,
+} from "./ColumnValuesHistogram";
+import {
   RasterValuesHistogram,
   RasterValuesHistogramTooltipControls,
 } from "./RasterValuesHistogram";
@@ -233,6 +237,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <IntersectingFeaturesListTooltipControls {...props} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTableTooltipControls {...props} />;
+    case "ColumnValuesHistogram":
+      return <ColumnValuesHistogramTooltipControls {...props} />;
     case "RasterValuesHistogram":
       return <RasterValuesHistogramTooltipControls {...props} />;
     case "RasterStatisticsTable":
@@ -410,6 +416,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <IntersectingFeaturesList {...widgetProps} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTable {...widgetProps} />;
+    case "ColumnValuesHistogram":
+      return <ColumnValuesHistogram {...widgetProps} />;
     case "RasterValuesHistogram":
       return <RasterValuesHistogram {...widgetProps} />;
     case "RasterStatisticsTable":
@@ -927,6 +935,37 @@ export function buildReportCommandGroups({
                 });
               },
             });
+
+            if (bestNumericColumn) {
+              children.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-column-value-histogram`,
+                label: "Column Value Histogram",
+                description:
+                  "Histogram of values for a numeric column.",
+                run: (state, dispatch, view) => {
+                  return insertBlockMetric(view, state.selection.ranges[0], {
+                    type: "ColumnValuesHistogram",
+                    metrics: [
+                      {
+                        type: "column_values",
+                        subjectType: "fragments",
+                        tableOfContentsItemId: tocId,
+                      },
+                    ],
+                    componentSettings: {
+                      column: bestNumericColumn,
+                      displayStats: {
+                        min: true,
+                        max: true,
+                        mean: true,
+                      },
+                      colorCoded: true,
+                    },
+                  });
+                },
+              });
+            }
           }
           switch (geostatsLayer.geometry) {
             case "Polygon":

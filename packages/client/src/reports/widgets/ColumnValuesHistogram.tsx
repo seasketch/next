@@ -1,13 +1,14 @@
 import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import {
-  combineMetricsForFragments,
+  ColumnValuesMetric,
   Metric,
   MetricDependency,
-  RasterStats,
+  NumberColumnValueStats,
+  combineMetricsForFragments,
+  isNumberColumnValueStats,
   subjectIsFragment,
 } from "overlay-engine";
-import { Bucket, isRasterInfo, RasterInfo } from "@seasketch/geostats-types";
 import { Expression } from "mapbox-gl";
 import { scaleLinear } from "d3-scale";
 import { ExpressionEvaluator } from "../../dataLayers/legends/ExpressionEvaluator";
@@ -23,6 +24,17 @@ import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { Pencil2Icon } from "@radix-ui/react-icons";
 import { useReportContext } from "../ReportContext";
+import {
+  Bucket,
+  GeostatsLayer,
+  isGeostatsLayer,
+  isNumericGeostatsAttribute,
+  NumericGeostatsAttribute,
+} from "@seasketch/geostats-types";
+import {
+  hasGetExpressionForProperty,
+  isExpression,
+} from "../../dataLayers/legends/utils";
 import { UnitSelector } from "./UnitSelector";
 import {
   getLocalizedUnitLabel,
@@ -32,65 +44,58 @@ import {
 } from "../utils/units";
 import { FormLanguageContext } from "../../formElements/FormElement";
 
-type RasterValuesHistogramSettings = {
+type ColumnValuesHistogramSettings = {
   colorCoded?: boolean;
   labelDensity?: "none" | "less" | "default" | "more";
   showTooltips?: boolean;
   showBackgroundHistogram?: boolean;
-  displayStats?: Partial<Record<RasterHistogramStatKey, boolean>>;
+  displayStats?: Partial<Record<ColumnValuesHistogramStatKey, boolean>>;
   title?: string;
   minLabel?: string;
   maxLabel?: string;
   meanLabel?: string;
   sumLabel?: string;
   countLabel?: string;
-  invalidLabel?: string;
+  countDistinctLabel?: string;
+  stdDevLabel?: string;
+  column?: string;
   unit?: LengthUnit;
   unitDisplay?: "short" | "long";
 };
 
 type HistogramEntry = { value: number; count: number };
 type HistogramBar = { value: number; count: number; fraction: number };
-type RasterHistogramStatKey =
+type ColumnValuesHistogramStatKey =
   | "min"
   | "max"
   | "mean"
   | "sum"
   | "count"
-  | "invalid";
+  | "countDistinct"
+  | "stdDev";
 
-const statOrder: RasterHistogramStatKey[] = [
+const statOrder: ColumnValuesHistogramStatKey[] = [
   "min",
   "max",
   "mean",
+  "stdDev",
   "sum",
   "count",
-  "invalid",
+  "countDistinct",
 ];
 
 const statLabels = (
   t: (key: string) => string,
-  settings?: RasterValuesHistogramSettings
-): Record<RasterHistogramStatKey, string> => ({
+  settings?: ColumnValuesHistogramSettings
+): Record<ColumnValuesHistogramStatKey, string> => ({
   min: settings?.minLabel || t("Min"),
   max: settings?.maxLabel || t("Max"),
   mean: settings?.meanLabel || t("Mean"),
+  stdDev: settings?.stdDevLabel || t("Std Dev"),
   sum: settings?.sumLabel || t("Sum"),
   count: settings?.countLabel || t("Count"),
-  invalid: settings?.invalidLabel || t("Invalid"),
+  countDistinct: settings?.countDistinctLabel || t("Distinct"),
 });
-
-function buildHistogramExpression(expression: Expression): Expression {
-  const fnType = expression[0];
-  return /interpolate/.test(fnType)
-    ? [
-      expression[0],
-      expression[1],
-      ["get", "value"],
-      ...expression.slice(3),
-    ]
-    : [expression[0], ["get", "value"], ...expression.slice(2)];
-}
 
 function buildHistogramBuckets({
   baseBuckets,
@@ -115,13 +120,9 @@ function buildHistogramBuckets({
     entries.push({ value: bucket[0], count: 0 });
   }
 
-
   for (const [value, entryCount] of histogram) {
-    const nextEntryIndex = entries.findIndex((entry) => entry.value > value);
-    if (nextEntryIndex === -1) {
-      throw new Error(`No entry found for value: ${value}`);
-    }
-    const target = entries[Math.max(0, nextEntryIndex - 1)];
+    const target =
+      entries.find((entry) => entry.value >= value) || entries[entries.length - 1];
     if (target) {
       target.count += entryCount;
     }
@@ -134,58 +135,100 @@ function buildHistogramBuckets({
   }));
 }
 
-function getLabelDomain(baseBuckets?: Bucket[]): [number, number] | null {
-  if (!baseBuckets?.length) return null;
-  const buckets = baseBuckets.filter((bucket) => bucket[1] !== null);
-  if (!buckets.length) return null;
-  const min = buckets[0][0];
-  const max = buckets[buckets.length - 1][0];
+function getLabelDomain(
+  baseBuckets?: Bucket[],
+  stats?: NumberColumnValueStats | null
+): [number, number] | null {
+  if (baseBuckets?.length) {
+    const buckets = baseBuckets.filter((bucket) => bucket[1] !== null);
+    if (!buckets.length) return null;
+    const min = buckets[0][0];
+    const max = buckets[buckets.length - 1][0];
+    if (Number.isFinite(min) && Number.isFinite(max) && min !== max) {
+      return [min, max];
+    }
+  }
+  if (!stats) return null;
+  const { min, max } = stats;
   if (Number.isFinite(min) && Number.isFinite(max) && min !== max) {
     return [min, max];
   }
-  return null;
+  const values = stats.histogram
+    .map((entry) => entry[0])
+    .filter((value) => Number.isFinite(value));
+  if (values.length < 2) return null;
+  const fallbackMin = Math.min(...values);
+  const fallbackMax = Math.max(...values);
+  if (!Number.isFinite(fallbackMin) || !Number.isFinite(fallbackMax)) {
+    return null;
+  }
+  return fallbackMin === fallbackMax ? null : [fallbackMin, fallbackMax];
 }
 
-function getBinBounds(baseBuckets?: Bucket[]): Array<{ min: number; max: number }> {
-  if (!baseBuckets?.length) return [];
-  const buckets = baseBuckets.filter((bucket) => bucket[1] !== null);
-  return buckets.map((bucket, index) => {
-    const next = buckets[index + 1];
+function getBinBounds(
+  histogram: [number, number][],
+  baseBuckets?: Bucket[]
+): Array<{ min: number; max: number }> {
+  if (baseBuckets?.length) {
+    const buckets = baseBuckets.filter((bucket) => bucket[1] !== null);
+    return buckets.map((bucket, index) => {
+      const next = buckets[index + 1];
+      return {
+        min: bucket[0],
+        max: next ? next[0] : bucket[0],
+      };
+    });
+  }
+  if (!histogram.length) return [];
+  return histogram.map((entry, index) => {
+    const next = histogram[index + 1];
     return {
-      min: bucket[0],
-      max: next ? next[0] : bucket[0],
+      min: entry[0],
+      max: next ? next[0] : entry[0],
     };
   });
 }
 
-function getRasterInfo(
-  source?: { geostats?: RasterInfo | unknown }
-): RasterInfo | undefined {
-  if (!source?.geostats) return undefined;
-  if (isRasterInfo(source.geostats)) {
-    return source.geostats as RasterInfo;
-  }
-  return undefined;
-}
+type ColumnColorSource =
+  | { type: "expression"; expression: Expression }
+  | { type: "color"; color: string };
 
-function getRasterColorExpression(
-  mapboxGlStyles?: Array<{ type?: string; paint?: Record<string, any> }>
-): Expression | null {
+function getColumnColorSource(
+  mapboxGlStyles?: Array<{ type?: string; paint?: Record<string, any> }>,
+  column?: string,
+  geometryType?: string
+): ColumnColorSource | null {
   if (!mapboxGlStyles?.length) return null;
+  const paintProps =
+    geometryType === "LineString" || geometryType === "MultiLineString"
+      ? ["line-color"]
+      : geometryType === "Point" || geometryType === "MultiPoint"
+        ? ["circle-color"]
+        : ["fill-color"];
+
   for (const layer of mapboxGlStyles) {
-    if (layer.type !== "raster") continue;
-    const expr = layer.paint?.["raster-color"];
-    if (expr) return expr as Expression;
+    const paint = layer.paint;
+    if (!paint) continue;
+    for (const prop of paintProps) {
+      const value = paint[prop];
+      if (typeof value === "string") {
+        return { type: "color", color: value };
+      }
+      if (!isExpression(value)) continue;
+      if (!column || hasGetExpressionForProperty(value, column)) {
+        return { type: "expression", expression: value as Expression };
+      }
+    }
   }
   return null;
 }
 
-export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> =
+export const ColumnValuesHistogram: ReportWidget<ColumnValuesHistogramSettings> =
   ({ metrics, componentSettings, sources, loading }) => {
     const { t } = useTranslation("reports");
     const langContext = useContext(FormLanguageContext);
     const source = sources?.[0];
-    const rasterInfo = useMemo(() => getRasterInfo(source), [source]);
+    const column = componentSettings?.column;
     const colorCoded = componentSettings?.colorCoded !== false;
     const labelDensity = componentSettings?.labelDensity || "default";
     const showTooltips = componentSettings?.showTooltips !== false;
@@ -209,10 +252,29 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
       langContext?.lang?.code,
     ]);
 
-    const bandStats = useMemo(() => {
+    const geostatsLayer = useMemo(() => {
+      const layer = (source?.geostats as any)?.layers?.[0] as
+        | GeostatsLayer
+        | undefined;
+      return isGeostatsLayer(layer) ? layer : undefined;
+    }, [source?.geostats]);
+
+    const numericAttribute = useMemo(() => {
+      if (!column || !geostatsLayer?.attributes?.length) return null;
+      const attribute = geostatsLayer.attributes.find(
+        (attr) => attr.attribute === column
+      );
+      if (attribute && isNumericGeostatsAttribute(attribute)) {
+        return attribute as NumericGeostatsAttribute;
+      }
+      return null;
+    }, [column, geostatsLayer?.attributes]);
+
+    const columnStats = useMemo(() => {
+      if (!column) return null;
       const fragmentMetrics = metrics.filter(
-        (m) => subjectIsFragment(m.subject) && m.type === "raster_stats" && m.value
-      ) as unknown as RasterStats[];
+        (m) => subjectIsFragment(m.subject) && m.type === "column_values" && m.value
+      ) as unknown as ColumnValuesMetric[];
 
       if (!fragmentMetrics.length || loading) {
         return null;
@@ -220,48 +282,98 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
 
       const combined = combineMetricsForFragments(
         fragmentMetrics as Pick<Metric, "type" | "value">[]
-      ) as RasterStats;
+      ) as ColumnValuesMetric;
 
-      return combined.value.bands[0] || null;
-    }, [metrics, loading]);
+      const value = combined.value["*"]?.[column];
+      if (!value || !isNumberColumnValueStats(value)) return null;
+      return value;
+    }, [metrics, loading, column]);
 
+    const histogram = useMemo(
+      () => columnStats?.histogram?.map((entry) => entry) || [],
+      [columnStats]
+    );
 
-    const baseBuckets = rasterInfo?.bands?.[0]?.stats?.histogram;
+    const totalHistogramCount = useMemo(
+      () =>
+        histogram.reduce(
+          (sum, entry) => sum + (typeof entry[1] === "number" ? entry[1] : 0),
+          0
+        ),
+      [histogram]
+    );
+
+    const { baseBuckets, isDiscreteBuckets } = useMemo(() => {
+      const histogram = numericAttribute?.stats?.histogram;
+      const values = numericAttribute?.values;
+      if (!histogram || !values) {
+        return { baseBuckets: histogram, isDiscreteBuckets: false };
+      }
+      const entries = Object.entries(values);
+      if (!entries.length || entries.length >= 49) {
+        return { baseBuckets: histogram, isDiscreteBuckets: false };
+      }
+      const parsed = entries.map(([value, count]) => ({
+        value: Number(value),
+        count,
+      }));
+      if (
+        parsed.every(
+          (entry) =>
+            Number.isFinite(entry.value) && Number.isInteger(entry.value)
+        )
+      ) {
+        return {
+          baseBuckets: parsed
+            .sort((a, b) => a.value - b.value)
+            .map((entry) => [entry.value, entry.count] as Bucket),
+          isDiscreteBuckets: true,
+        };
+      }
+      return { baseBuckets: histogram, isDiscreteBuckets: false };
+    }, [numericAttribute?.stats?.histogram, numericAttribute?.values]);
+
     const histogramBuckets = useMemo(() => {
-      const histogram =
-        bandStats?.histogram?.map((entry: [number, number]) => entry) || [];
-      const totalCount = bandStats?.count || 0;
       return buildHistogramBuckets({
         baseBuckets,
         histogram,
-        count: totalCount,
+        count: totalHistogramCount,
       });
-    }, [baseBuckets, bandStats]);
+    }, [baseBuckets, histogram, totalHistogramCount]);
 
     const labelDomain = useMemo(
-      () => getLabelDomain(baseBuckets),
-      [baseBuckets]
+      () => getLabelDomain(baseBuckets, columnStats),
+      [baseBuckets, columnStats]
     );
 
-    const binBounds = useMemo(() => getBinBounds(baseBuckets), [baseBuckets]);
+    const binBounds = useMemo(
+      () => getBinBounds(histogram, baseBuckets),
+      [histogram, baseBuckets]
+    );
 
-    const rasterColorExpression = useMemo(
-      () => getRasterColorExpression(source?.mapboxGlStyles as any),
-      [source?.mapboxGlStyles]
+    const columnColorSource = useMemo(
+      () =>
+        colorCoded
+          ? getColumnColorSource(
+            source?.mapboxGlStyles as any,
+            column,
+            geostatsLayer?.geometry
+          )
+          : null,
+      [colorCoded, source?.mapboxGlStyles, column, geostatsLayer?.geometry]
     );
 
     const evaluator = useMemo(() => {
-      if (!colorCoded || !rasterColorExpression) return null;
-      try {
-        return ExpressionEvaluator.parse(
-          buildHistogramExpression(rasterColorExpression),
-          "color"
-        );
-      } catch (error) {
-        console.warn("Failed to parse raster color expression", error);
+      if (!columnColorSource || columnColorSource.type !== "expression") {
         return null;
       }
-    }, [colorCoded, rasterColorExpression]);
+      try {
+        return ExpressionEvaluator.parse(columnColorSource.expression, "color");
+      } catch (error) {
+        console.warn("Failed to parse column color expression", error);
+        return null;
+      }
+    }, [columnColorSource]);
 
     const maxFraction = useMemo(() => {
       return histogramBuckets.reduce(
@@ -275,47 +387,50 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
         const value = bucket.value;
         const count = bucket.count || 0;
         const fraction = bucket.fraction || 0;
-        const color = evaluator
-          ? evaluator
-            .evaluate({
-              type: "Feature",
-              properties: { value },
-              geometry: { type: "Point", coordinates: [0, 0] },
-            })
-            .toString()
-          : "#668";
+        const properties: Record<string, number> = { value };
+        if (column) {
+          properties[column] = value;
+        }
+        const color =
+          columnColorSource?.type === "color"
+            ? columnColorSource.color
+            : evaluator
+              ? evaluator
+                .evaluate({
+                  type: "Feature",
+                  properties,
+                  geometry: { type: "Point", coordinates: [0, 0] },
+                })
+                .toString()
+              : "#668";
         return { value, count, fraction, color };
       });
-    }, [histogramBuckets, evaluator]);
+    }, [histogramBuckets, evaluator, column, columnColorSource]);
 
     const backgroundBars = useMemo(() => {
-      const bandInfo = rasterInfo?.bands?.[0];
-      const histogram = bandInfo?.stats?.histogram;
-      const totalCount = bandInfo?.count || 0;
-      if (!histogram || !histogram.length) return [];
-      return histogram
+      if (!baseBuckets?.length) return [];
+      return baseBuckets
         .filter((bucket) => bucket[1] !== null)
         .map((bucket) => ({
           value: bucket[0],
-          fraction: bucket[1] as number
+          count: bucket[1] as number,
         }));
-    }, [rasterInfo]);
+    }, [baseBuckets]);
 
     const layerTotalCount = useMemo(() => {
-      const bandInfo = rasterInfo?.bands?.[0];
-      if (!bandInfo?.stats?.histogram) return 0;
-      const sum = bandInfo.stats.histogram.reduce((acc, bucket) => {
-        return acc + (bucket[1] === null ? 0 : bucket[1]);
-      }, 0);
-      return bandInfo.count || sum;
-    }, [rasterInfo]);
+      if (!numericAttribute?.count || !backgroundBars.length) {
+        return backgroundBars.reduce((sum, bucket) => sum + bucket.count, 0);
+      }
+      return numericAttribute.count;
+    }, [numericAttribute?.count, backgroundBars]);
 
     const backgroundMaxFraction = useMemo(() => {
-      return backgroundBars.reduce(
-        (max, bucket) => (bucket.fraction > max ? bucket.fraction : max),
-        0
-      );
-    }, [backgroundBars]);
+      if (!layerTotalCount || !backgroundBars.length) return 0;
+      return backgroundBars.reduce((max, bucket) => {
+        const fraction = bucket.count / layerTotalCount;
+        return fraction > max ? fraction : max;
+      }, 0);
+    }, [backgroundBars, layerTotalCount]);
 
     const labelScale = useMemo(() => {
       if (!labelDomain) return null;
@@ -339,14 +454,12 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
     }, []);
 
     const countFormatter = useMemo(
-      () => new Intl.NumberFormat(undefined),
+      () =>
+        new Intl.NumberFormat(undefined, {
+          maximumFractionDigits: 2,
+        }),
       []
     );
-
-    const formatValueWithUnit = (value: number, formatter = labelFormatter) => {
-      const formatted = formatter.format(value);
-      return unitLabel ? `${formatted} ${unitLabel}` : formatted;
-    };
 
     const percentFormatter = useMemo(
       () =>
@@ -366,6 +479,11 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
       []
     );
 
+    const formatValueWithUnit = (value: number, formatter = labelFormatter) => {
+      const formatted = formatter.format(value);
+      return unitLabel ? `${formatted} ${unitLabel}` : formatted;
+    };
+
     const displayStats = useMemo(() => {
       return componentSettings?.displayStats || {};
     }, [componentSettings?.displayStats]);
@@ -376,26 +494,26 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
     );
 
     const meanPosition = useMemo(() => {
-      if (!displayStats.mean || !labelScale || !bandStats) return null;
-      const mean = bandStats.mean;
+      if (!displayStats.mean || !labelScale || !columnStats) return null;
+      const mean = columnStats.mean;
       if (mean === undefined || mean === null || Number.isNaN(mean)) {
         return null;
       }
       return labelScale(mean);
-    }, [displayStats.mean, labelScale, bandStats]);
+    }, [displayStats.mean, labelScale, columnStats]);
 
     const meanColor = "#888";
 
-    const formatStatValue = (stat: RasterHistogramStatKey) => {
-      if (!bandStats) return "—";
-      const value = bandStats[stat];
+    const formatStatValue = (stat: ColumnValuesHistogramStatKey) => {
+      if (!columnStats) return "—";
+      const value = columnStats[stat as keyof NumberColumnValueStats];
       if (value === undefined || value === null || Number.isNaN(value)) {
         return "—";
       }
-      if (stat === "count" || stat === "invalid") {
-        return countFormatter.format(value);
+      if (stat === "count" || stat === "countDistinct") {
+        return countFormatter.format(value as number);
       }
-      return formatValueWithUnit(value, statFormatter);
+      return formatValueWithUnit(value as number, statFormatter);
     };
 
     if (loading) {
@@ -408,7 +526,7 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
       );
     }
 
-    if (!bandStats || !histogramBuckets.length) {
+    if (!columnStats || !histogramBuckets.length) {
       return (
         <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
           <div className="px-3 py-3 text-sm text-gray-500">
@@ -432,7 +550,7 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                   style={{
                     left: `${meanPosition}%`,
                     transform: "translateX(-50%)",
-                    marginTop: "2px"
+                    marginTop: "2px",
                   }}
                 >
                   <div
@@ -453,6 +571,10 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                 const background = showBackgroundHistogram
                   ? backgroundBars[index]
                   : undefined;
+                const backgroundFraction =
+                  background && layerTotalCount > 0
+                    ? background.count / layerTotalCount
+                    : 0;
                 const overlayHeight =
                   bar.fraction && maxFraction > 0
                     ? Math.max((bar.fraction / maxFraction) * 100, 1)
@@ -460,7 +582,7 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                 const backgroundHeight =
                   background && backgroundMaxFraction > 0
                     ? Math.max(
-                      (background.fraction / backgroundMaxFraction) * 100,
+                      (backgroundFraction / backgroundMaxFraction) * 100,
                       1
                     )
                     : 1;
@@ -495,19 +617,20 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                       title={!showTooltips ? String(bar.value) : undefined}
                     >
                       <Tooltip.Trigger asChild>
-                        {
-                          background && backgroundHeight > overlayHeight ?
-                            <div
-                              className="absolute bottom-0 left-0 right-0 bg-gray-200/10 z-20"
-                              style={{ height: `${backgroundHeight}%` }}
-                            /> : <div
-                              className="absolute bottom-0 left-0 right-0 opacity-10 z-20"
-                              style={{
-                                height: `${overlayHeight}%`,
-                                backgroundColor: bar.color,
-                              }}
-                            />
-                        }
+                        {background && backgroundHeight > overlayHeight ? (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 bg-gray-200/10 z-20"
+                            style={{ height: `${backgroundHeight}%` }}
+                          />
+                        ) : (
+                          <div
+                            className="absolute bottom-0 left-0 right-0 opacity-10 z-20"
+                            style={{
+                              height: `${overlayHeight}%`,
+                              backgroundColor: bar.color,
+                            }}
+                          />
+                        )}
                       </Tooltip.Trigger>
                       <div>
                         {background && (
@@ -536,7 +659,12 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                           <div className="font-semibold text-[11px] uppercase tracking-wide text-gray-300">
                             {t("Bin")}
                           </div>
-                          {bounds.min === bounds.max ? (
+                          {isDiscreteBuckets ? (
+                            <div className="flex justify-between gap-2">
+                              <span className="text-gray-300">{t("Value")}</span>
+                              <span>{formatValueWithUnit(bar.value)}</span>
+                            </div>
+                          ) : bounds.min === bounds.max ? (
                             <div className="flex justify-between gap-2">
                               <span className="text-gray-300">{t("Value")}</span>
                               <span>{`>=`} {formatValueWithUnit(bounds.min)}</span>
@@ -553,12 +681,17 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                               </div>
                             </>
                           )}
-
-                          <div className="flex justify-between gap-2 pt-0.5 border-t border-white/10">
-                            <span className="text-gray-300">
-                              {t("Share")}
+                          {/* <div className="flex justify-between gap-2 pt-0.5 border-t border-white/10">
+                            <span className="text-gray-300">{t("Count")}</span>
+                            <span>{countFormatter.format(bar.count)}</span>
+                          </div> */}
+                          <div className="flex justify-between gap-2 border-t border-white/10 pt-0.5">
+                            <span className="text-gray-300">{t("Share")}</span>
+                            <span>
+                              {bar.fraction > 0
+                                ? percentFormatter.format(bar.fraction)
+                                : "—"}
                             </span>
-                            <span>{percentFormatter.format(bar.fraction)}</span>
                           </div>
                           {background && (
                             <div className="flex justify-between gap-2">
@@ -566,7 +699,9 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                                 {t("Layer share")}
                               </span>
                               <span>
-                                {percentFormatter.format(background.fraction)}
+                                {backgroundFraction > 0
+                                  ? percentFormatter.format(backgroundFraction)
+                                  : "—"}
                               </span>
                             </div>
                           )}
@@ -629,7 +764,7 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
     );
   };
 
-export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
+export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate }) => {
     const { t } = useTranslation("admin:reports");
     const reportContext = useReportContext();
@@ -654,6 +789,59 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
       reportContext.overlaySources,
       reportContext.adminSources,
     ]);
+
+    const numericColumnOptions = useMemo(() => {
+      const options: Array<{ value: string; label: JSX.Element }> = [];
+      if (!relatedOverlay?.geostats) return options;
+      const geoLayer = isGeostatsLayer(
+        (relatedOverlay.geostats as any)?.layers?.[0] as GeostatsLayer
+      )
+        ? ((relatedOverlay.geostats as any).layers[0] as GeostatsLayer)
+        : undefined;
+      if (!geoLayer?.attributes) return options;
+
+      for (const attr of geoLayer.attributes) {
+        if (attr.type !== "number") continue;
+        const exampleValues = Object.keys(attr.values || {})
+          .slice(0, 5)
+          .map((v) => String(v));
+        const examplesText =
+          exampleValues.length > 0 ? exampleValues.join(", ") : "";
+        options.push({
+          value: attr.attribute,
+          label: (
+            <div className="flex flex-col">
+              <span className="font-medium">{attr.attribute}</span>
+              {examplesText && (
+                <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                  {examplesText}
+                </span>
+              )}
+            </div>
+          ),
+        });
+      }
+      options.sort((a, b) => a.value.localeCompare(b.value));
+
+      if (
+        componentSettings.column &&
+        !options.some((opt) => opt.value === componentSettings.column)
+      ) {
+        options.unshift({
+          value: componentSettings.column,
+          label: (
+            <div className="flex flex-col">
+              <span className="font-medium">{componentSettings.column}</span>
+              <span className="text-xs text-gray-500 truncate max-w-[200px]">
+                {t("Current selection")}
+              </span>
+            </div>
+          ),
+        });
+      }
+
+      return options;
+    }, [relatedOverlay?.geostats, componentSettings.column, t]);
 
     return (
       <Tooltip.Provider>
@@ -702,7 +890,8 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
                         | "meanLabel"
                         | "sumLabel"
                         | "countLabel"
-                        | "invalidLabel";
+                        | "countDistinctLabel"
+                        | "stdDevLabel";
                       return (
                         <div key={stat}>
                           <label className="block text-xs font-medium text-gray-700 mb-1">
@@ -763,6 +952,22 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
               </div>
             </TooltipPopoverContent>
           </Popover.Root>
+          {numericColumnOptions.length > 0 && (
+            <LabeledDropdown
+              label={t("column")}
+              value={componentSettings?.column || ""}
+              options={numericColumnOptions}
+              onChange={(value) =>
+                onUpdate({
+                  componentSettings: {
+                    ...componentSettings,
+                    column: value,
+                  },
+                })
+              }
+              getDisplayLabel={(selected) => selected?.value || ""}
+            />
+          )}
           <UnitSelector
             unitType="distance"
             allowNone
@@ -849,7 +1054,7 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
                 {t("Metric Type")}
               </span>
               <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right">
-                {t("Raster values histogram")}
+                {t("Column values histogram")}
               </span>
             </div>
             {relatedOverlay && (
