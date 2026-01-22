@@ -304,17 +304,13 @@ export default function ReportCard({
 
   return (
     <div
-      className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
-        adminMode && selectedForEditing === cardId ? "editing" : ""
-      } transition-all opacity-100 relative rounded-lg w-full ${getBackgroundClasses()} ${
-        isSelectedForEditing
+      className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${adminMode && selectedForEditing === cardId ? "editing" : ""
+        } transition-all opacity-100 relative rounded-lg w-full ${getBackgroundClasses()} ${isSelectedForEditing
           ? "shadow-xl ring-1 ring-opacity-5 ring-black"
           : "shadow-sm"
-      } ${
-        isDisabled ? "opacity-40 blur-sm pointer-events-none select-none" : ""
-      } ${className} ${
-        loading && !selectedForEditing ? "loadingSkeleton" : ""
-      } ${Object.values(errors).length > 0 ? "hasErrors" : ""}`}
+        } ${isDisabled ? "opacity-40 blur-sm pointer-events-none select-none" : ""
+        } ${className} ${loading && !selectedForEditing ? "loadingSkeleton" : ""
+        } ${Object.values(errors).length > 0 ? "hasErrors" : ""}`}
     >
       <div className="group">
         <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
@@ -355,11 +351,10 @@ export default function ReportCard({
                 <button
                   type="button"
                   aria-label={t("Drag to reorder")}
-                  className={`p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 active:bg-gray-100 transition ${
-                    menuOpen
+                  className={`p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 active:bg-gray-100 transition ${menuOpen
                       ? "opacity-100"
                       : "opacity-0 group-hover:opacity-100"
-                  }`}
+                    }`}
                   {...dragHandleProps}
                   title={t("Drag to reorder")}
                 >
@@ -370,11 +365,10 @@ export default function ReportCard({
               !selectedForEditing &&
               cardId && (
                 <div
-                  className={`flex-1 ml-auto flex items-center justify-end ${
-                    menuOpen
+                  className={`flex-1 ml-auto flex items-center justify-end ${menuOpen
                       ? "opacity-100"
                       : "opacity-0 group-hover:opacity-100"
-                  } ${selectedForEditing ? "opacity-0" : "transition-opacity"}`}
+                    } ${selectedForEditing ? "opacity-0" : "transition-opacity"}`}
                 >
                   <ReportCardActionMenu
                     open={menuOpen}
@@ -449,9 +443,8 @@ export default function ReportCard({
             ) : (
               <ReportCardBodyViewer
                 body={localizedBody}
-                className={`ReportCard ReportCardBody ProseMirrorBody ${
-                  icon ? "hasIcon" : ""
-                } ${tint ? tint : ""}`}
+                className={`ReportCard ReportCardBody ProseMirrorBody ${icon ? "hasIcon" : ""
+                  } ${tint ? tint : ""}`}
                 cardId={cardId!}
               />
             )}
@@ -498,11 +491,10 @@ export default function ReportCard({
                 return (
                   <label
                     key={tab.id}
-                    className={`flex items-center space-x-2 rounded border p-2 ${
-                      moveTabTargetId === tab.id
+                    className={`flex items-center space-x-2 rounded border p-2 ${moveTabTargetId === tab.id
                         ? "border-blue-500 bg-blue-50"
                         : "border-gray-200 hover:border-blue-200"
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -642,20 +634,20 @@ export default function ReportCard({
             },
             ...(failedMetrics.length > 0
               ? [
-                  {
-                    label: t("Retry failed calculations"),
-                    onClick: async () => {
-                      await retryFailedMetrics({
-                        variables: {
-                          metricIds: failedMetrics,
-                        },
-                      });
-                    },
-                    disabled: retryState.loading,
-                    variant: "danger" as const,
-                    loading: retryState.loading,
+                {
+                  label: t("Retry failed calculations"),
+                  onClick: async () => {
+                    await retryFailedMetrics({
+                      variables: {
+                        metricIds: failedMetrics,
+                      },
+                    });
                   },
-                ]
+                  disabled: retryState.loading,
+                  variant: "danger" as const,
+                  loading: retryState.loading,
+                },
+              ]
               : []),
           ]}
         >

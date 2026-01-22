@@ -446,8 +446,8 @@ export default function SketchClassReportsAdmin({
     updatedConfig:
       | ReportCardConfiguration<any>
       | ((
-          prevState: ReportCardConfiguration<any>
-        ) => ReportCardConfiguration<any>)
+        prevState: ReportCardConfiguration<any>
+      ) => ReportCardConfiguration<any>)
   ) => {
     if (reportState?.selectedForEditing === cardId) {
       setLocalCardEdits((prevState) => {
@@ -499,8 +499,8 @@ export default function SketchClassReportsAdmin({
           ? localCardEdits.displayMapLayerVisibilityControls
           : selectedCardForEditing.displayMapLayerVisibilityControls !==
             undefined
-          ? selectedCardForEditing.displayMapLayerVisibilityControls
-          : true;
+            ? selectedCardForEditing.displayMapLayerVisibilityControls
+            : true;
 
       const body = setCollapsibleBlocksClosed(
         localCardEdits.body || selectedCardForEditing.body
@@ -599,12 +599,12 @@ export default function SketchClassReportsAdmin({
   const hasUnpublishedChanges =
     (data?.sketchClass && !data?.sketchClass?.report) ||
     new Date(data?.sketchClass?.draftReport?.updatedAt) >=
-      new Date(data?.sketchClass?.report?.createdAt);
+    new Date(data?.sketchClass?.report?.createdAt);
 
   const selectedCardForEditing = reportState?.selectedForEditing
     ? reportState.selectedTab?.cards.find(
-        (card) => card.id === reportState.selectedForEditing
-      )
+      (card) => card.id === reportState.selectedForEditing
+    )
     : null;
 
   // Merge local edits with server state for the card being edited
@@ -694,9 +694,9 @@ export default function SketchClassReportsAdmin({
               <span className="text-sm text-gray-500">
                 {data?.sketchClass?.report &&
                   t("Published ") +
-                    new Date(
-                      data.sketchClass.report.createdAt
-                    ).toLocaleDateString()}
+                  new Date(
+                    data.sketchClass.report.createdAt
+                  ).toLocaleDateString()}
               </span>
             </div>
             <div className="flex-1 flex items-center justify-center">
@@ -936,17 +936,16 @@ export default function SketchClassReportsAdmin({
                                   title={
                                     reportState.selectedForEditing
                                       ? t(
-                                          "Cannot add a card or tab while editing"
-                                        )
+                                        "Cannot add a card or tab while editing"
+                                      )
                                       : t("Add a card or tab")
                                   }
                                 >
                                   <PlusCircleIcon
-                                    className={`w-7 h-7 text-blue-500  ${
-                                      reportState.selectedForEditing
+                                    className={`w-7 h-7 text-blue-500  ${reportState.selectedForEditing
                                         ? "text-gray-400"
                                         : "hover:text-blue-600"
-                                    }`}
+                                      }`}
                                   />
                                 </button>
                               </DropdownMenu.Trigger>
@@ -994,11 +993,10 @@ export default function SketchClassReportsAdmin({
                             return (
                               <div
                                 key={tab.id}
-                                className={`absolute top-0 w-full ${
-                                  isActive
+                                className={`absolute top-0 w-full ${isActive
                                     ? "relative left-0"
                                     : "-left-[10000px]"
-                                }`}
+                                  }`}
                               >
                                 <SortableReportBody
                                   selectedTab={tab}
@@ -1012,7 +1010,7 @@ export default function SketchClassReportsAdmin({
                                   }
                                   editorFooter={
                                     reportState.selectedForEditing &&
-                                    isActive ? (
+                                      isActive ? (
                                       <div className="flex items-center space-x-2 justify-end">
                                         <Button
                                           small

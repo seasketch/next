@@ -318,6 +318,7 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   marks,
   sketchClass,
 }) => {
+  console.log("Render InlineMetric")
   const lang = useCurrentLang();
   const {
     pluralRules,

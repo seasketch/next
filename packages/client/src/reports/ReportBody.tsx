@@ -38,8 +38,8 @@ export function ReportBody() {
                   config={card}
                   metrics={metrics}
                   sources={overlaySources}
-                  // loading={loading}
-                  // errors={errors}
+                // loading={loading}
+                // errors={errors}
                 />
               );
             })}

@@ -177,16 +177,16 @@ export function useReportState(
     MetricDependency[]
   >([]);
 
-  useReportOverlaySourcesSubscriptionSubscription({
-    variables: {
-      projectId: projectMetadata.data?.project?.id!,
-    },
-    skip: !projectMetadata.data?.project?.id,
-  });
+  // useReportOverlaySourcesSubscriptionSubscription({
+  //   variables: {
+  //     projectId: projectMetadata.data?.project?.id!,
+  //   },
+  //   skip: !projectMetadata.data?.project?.id,
+  // });
 
   const onError = useGlobalErrorHandler();
 
-  const { data, refetch, variables } = useReportContextQuery({
+  const { data, refetch, variables, loading } = useReportContextQuery({
     variables: {
       reportId: reportId!,
       sketchId: selectedSketchId!,
@@ -262,7 +262,7 @@ export function useReportState(
       !debouncedDraftDependenciesData?.draftReportDependencies?.metrics &&
       draftDependenciesQuery.previousData?.draftReportDependencies?.metrics &&
       draftDependenciesQuery.previousData.draftReportDependencies.sketchId ===
-        variables?.sketchId
+      variables?.sketchId
     ) {
       metrics.push(
         ...draftDependenciesQuery.previousData.draftReportDependencies.metrics
@@ -290,12 +290,12 @@ export function useReportState(
     (tab) => tab.id === selectedTabId
   ) ||
     data?.report?.tabs?.[0] || {
-      id: 0,
-      title: "Default Tab",
-      position: 0,
-      cards: [],
-      alternateLanguageSettings: {},
-    };
+    id: 0,
+    title: "Default Tab",
+    position: 0,
+    cards: [],
+    alternateLanguageSettings: {},
+  };
 
   const [recalculateMutation, recalculateState] =
     useRecalculateSpatialMetricsMutation({
@@ -306,19 +306,19 @@ export function useReportState(
 
   const projectId = useProjectId();
 
-  useGeographyMetricSubscriptionSubscription({
-    variables: {
-      projectId: projectId!,
-    },
-    skip: !projectId,
-  });
+  // useGeographyMetricSubscriptionSubscription({
+  //   variables: {
+  //     projectId: projectId!,
+  //   },
+  //   skip: !projectId,
+  // });
 
-  useSketchMetricSubscriptionSubscription({
-    variables: {
-      sketchId: selectedSketchId!,
-    },
-    skip: !selectedSketchId,
-  });
+  // useSketchMetricSubscriptionSubscription({
+  //   variables: {
+  //     sketchId: selectedSketchId!,
+  //   },
+  //   skip: !selectedSketchId,
+  // });
 
   // Update selectedTabId if the current one is no longer valid
   useEffect(() => {
@@ -365,11 +365,18 @@ export function useReportState(
     );
   }, [metrics]);
 
+  const loadingRef = useRef(loading);
+  useEffect(() => {
+    loadingRef.current = loading;
+  }, [loading]);
+
   useEffect(() => {
     if (metricsInProgress) {
       const interval = setInterval(() => {
-        refetch();
-      }, 10000);
+        if (!loadingRef.current) {
+          refetch();
+        }
+      }, 600);
       return () => clearInterval(interval);
     }
   }, [metricsInProgress, refetch]);

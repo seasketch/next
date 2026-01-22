@@ -55,7 +55,7 @@ export default function ReportMetricsProgressDetails({
           const relatedOverlaySource = reportContext.overlaySources.find(
             (s) =>
               s.sourceProcessingJob?.jobKey ===
-                metric.sourceProcessingJobDependency ||
+              metric.sourceProcessingJobDependency ||
               (s.sourceUrl && s.sourceUrl === metric.sourceUrl)
           );
           if (relatedOverlaySource) {
@@ -95,7 +95,7 @@ export default function ReportMetricsProgressDetails({
               {state.relatedOverlaySources.map((layer) => {
                 const isComplete =
                   layer.sourceProcessingJob?.state ===
-                    SpatialMetricState.Complete || Boolean(layer.output);
+                  SpatialMetricState.Complete || Boolean(layer.output);
                 return (
                   <ReportTaskLineItem
                     key={"rtli-layer-" + layer.tableOfContentsItemId}
@@ -104,7 +104,7 @@ export default function ReportMetricsProgressDetails({
                       isComplete
                         ? SpatialMetricState.Complete
                         : layer.sourceProcessingJob?.state ||
-                          SpatialMetricState.Queued
+                        SpatialMetricState.Queued
                     }
                     progress={
                       isComplete
@@ -127,8 +127,8 @@ export default function ReportMetricsProgressDetails({
                         ? "FlatGeobuf"
                         : layer.output?.url &&
                           layer.output?.url.endsWith(".tif")
-                        ? "GeoTIFF"
-                        : undefined
+                          ? "GeoTIFF"
+                          : undefined
                     }
                     isAdmin={isAdmin}
                     estimatedCompletionTime={layer.sourceProcessingJob?.eta}
@@ -170,7 +170,7 @@ export default function ReportMetricsProgressDetails({
                     (layer) =>
                       layer.output ||
                       layer.sourceProcessingJob?.state ===
-                        SpatialMetricState.Complete
+                      SpatialMetricState.Complete
                   )}
                 />
               ))}
@@ -223,7 +223,7 @@ export default function ReportMetricsProgressDetails({
                     (layer) =>
                       layer.output ||
                       layer.sourceProcessingJob?.state ===
-                        SpatialMetricState.Complete
+                      SpatialMetricState.Complete
                   )}
                 />
               ))}

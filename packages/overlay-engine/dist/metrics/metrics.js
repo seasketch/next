@@ -128,8 +128,8 @@ function combineRasterBandStats(statsArray) {
     // Calculate combined mean using sum/count (not average of means)
     const combinedMean = totalCount > 0 ? totalSum / totalCount : NaN;
     // Calculate combined range
-    const combinedMin = (0, simple_statistics_1.min)(mins);
-    const combinedMax = (0, simple_statistics_1.max)(maxs);
+    const combinedMin = mins.length > 0 ? (0, simple_statistics_1.min)(mins) : NaN;
+    const combinedMax = maxs.length > 0 ? (0, simple_statistics_1.max)(maxs) : NaN;
     const combinedRange = combinedMax - combinedMin;
     // For median, we can't easily combine without the full dataset, so we'll use NaN
     // or could potentially estimate from the combined histogram, but that's complex

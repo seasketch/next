@@ -232,6 +232,9 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           `,
             [project.id]
           );
+          for (const row of result.rows) {
+            stripUnnecessaryGeostatsFields(row.geostats);
+          }
           return result.rows.map((row: any) => ({
             __typename: "ReportOverlaySource",
             tableOfContentsItemId: row.table_of_contents_item_id,
@@ -247,12 +250,14 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         async dependencies(report, args, context, resolveInfo) {
           const { pgClient } = context;
 
+          console.time('getOrCreateReportDependencies');
           const deps = await getOrCreateReportDependencies(
             report.id,
             pgClient,
             report.projectId,
             args.sketchId
           );
+          console.timeEnd('getOrCreateReportDependencies');
           return deps;
         },
       },
@@ -377,6 +382,10 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           );
           if (!result.rows[0]) {
             throw new Error("Report overlay source not found");
+          }
+          // delete unnecessary geostats fields
+          for (const row of result.rows) {
+            stripUnnecessaryGeostatsFields(row.geostats);
           }
           return {
             __typename: "ReportOverlaySource",
@@ -643,6 +652,108 @@ async function getOrCreateSpatialMetric({
   return result.rows[0].metric;
 }
 
+async function getOrCreateSpatialMetricsBatch(
+  pool: Pool,
+  inputs: Array<{
+    subjectFragmentId?: string;
+    subjectGeographyId?: number;
+    type: string;
+    overlaySourceUrl?: string;
+    parameters: any;
+    sourceProcessingJobDependency?: string;
+    projectId: number;
+    dependencyHash: string;
+  }>
+): Promise<any[]> {
+  const subjectFragmentIds: (string | null)[] = [];
+  const subjectGeographyIds: (number | null)[] = [];
+  const types: string[] = [];
+  const overlaySourceUrls: (string | null)[] = [];
+  const parameters: any[] = [];
+  const sourceProcessingJobDependencies: (string | null)[] = [];
+  const projectIds: number[] = [];
+  const dependencyHashes: string[] = [];
+
+  for (const input of inputs) {
+    if (!input.subjectFragmentId && !input.subjectGeographyId) {
+      throw new Error(
+        "Either subjectFragmentId or subjectGeographyId must be provided"
+      );
+    }
+    let overlaySourceUrl = input.overlaySourceUrl;
+    if (input.type === "distance_to_shore" && !overlaySourceUrl) {
+      overlaySourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    }
+    if (
+      input.type !== "total_area" &&
+      !overlaySourceUrl &&
+      !input.sourceProcessingJobDependency
+    ) {
+      throw new Error(
+        "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
+      );
+    }
+
+    subjectFragmentIds.push(input.subjectFragmentId || null);
+    subjectGeographyIds.push(input.subjectGeographyId || null);
+    types.push(input.type);
+    overlaySourceUrls.push(overlaySourceUrl || null);
+    parameters.push(input.parameters || {});
+    sourceProcessingJobDependencies.push(
+      input.sourceProcessingJobDependency || null
+    );
+    projectIds.push(input.projectId);
+    dependencyHashes.push(input.dependencyHash);
+  }
+
+  const result = await pool.query(
+    `
+      select
+        get_or_create_spatial_metric(
+          t.subject_fragment_id::text,
+          t.subject_geography_id::int,
+          t.type::spatial_metric_type,
+          t.overlay_source_url::text,
+          t.parameters::jsonb,
+          t.source_processing_job_dependency::text,
+          t.project_id::int,
+          t.dependency_hash::text
+        ) as metric
+      from unnest(
+        $1::text[],
+        $2::int[],
+        $3::text[],
+        $4::text[],
+        $5::jsonb[],
+        $6::text[],
+        $7::int[],
+        $8::text[]
+      ) as t(
+        subject_fragment_id,
+        subject_geography_id,
+        type,
+        overlay_source_url,
+        parameters,
+        source_processing_job_dependency,
+        project_id,
+        dependency_hash
+      )
+    `,
+    [
+      subjectFragmentIds,
+      subjectGeographyIds,
+      types,
+      overlaySourceUrls,
+      parameters,
+      sourceProcessingJobDependencies,
+      projectIds,
+      dependencyHashes,
+    ]
+  );
+
+  return result.rows.map((row: { metric: any }) => row.metric);
+}
+
 /**
  * Can be used to start calculating report metrics for a sketch. Useful if we
  * want to run them as soon as a sketch is saved rather than waiting for the
@@ -773,6 +884,7 @@ async function getOverlaySourcesForDependencies(
       [tableOfContentsItemIds]
     );
     for (const row of overlaySourceRows) {
+      stripUnnecessaryGeostatsFields(row.geostats);
       results[row.table_of_contents_item_id] = {
         sourceUrl: row.source_url,
         sourceProcessingJobId: row.source_processing_job_id,
@@ -850,6 +962,16 @@ async function createMetricsForDependencies(
 ) {
   const metrics: any[] = [];
   const hashes: string[] = [];
+  const batchInputs: Array<{
+    subjectFragmentId?: string;
+    subjectGeographyId?: number;
+    type: string;
+    overlaySourceUrl?: string;
+    parameters: any;
+    sourceProcessingJobDependency?: string;
+    projectId: number;
+    dependencyHash: string;
+  }> = [];
 
   const overlaySources = await getOverlaySourcesForDependencies(
     pool,
@@ -873,8 +995,7 @@ async function createMetricsForDependencies(
 
     if (dependency.subjectType === "fragments") {
       for (const fragment of fragments) {
-        const metric = await getOrCreateSpatialMetric({
-          pool,
+        batchInputs.push({
           subjectFragmentId: fragment,
           type: dependency.type,
           parameters: dependency.parameters || {},
@@ -888,14 +1009,11 @@ async function createMetricsForDependencies(
                 ?.sourceProcessingJobId
             : undefined,
         });
-        // metric.dependencyHash = dependencyHash;
-        metrics.push(metric);
       }
     } else if (dependency.subjectType === "geographies") {
       // Calculate metrics for all geographies in the project.
       for (const geography of geogs) {
-        const metric = await getOrCreateSpatialMetric({
-          pool,
+        batchInputs.push({
           subjectGeographyId: geography.id,
           type: dependency.type,
           parameters: dependency.parameters || {},
@@ -909,12 +1027,35 @@ async function createMetricsForDependencies(
                 ?.sourceProcessingJobId
             : undefined,
         });
-        // metric.dependencyHash = dependencyHash;
-        metrics.push(metric);
       }
     } else {
       throw new Error(`Unknown subject type: ${dependency.subjectType}`);
     }
   }
+  if (batchInputs.length > 0) {
+    const batchMetrics = await getOrCreateSpatialMetricsBatch(pool, batchInputs);
+    metrics.push(...batchMetrics);
+  }
   return { tableOfContentsItemIds, metrics, hashes };
+}
+
+function stripUnnecessaryGeostatsFields(geostats: any) {
+  if (geostats && 'layers' in geostats && Array.isArray(geostats.layers)) {
+    const layer = geostats.layers[0];
+    if (layer && 'attributes' in layer && Array.isArray(layer.attributes)) {
+      for (const attribute of layer.attributes) {
+        if (attribute && 'stats' in attribute) {
+          delete attribute.stats.equalInterval;
+          delete attribute.stats.naturalBreaks;
+          delete attribute.stats.quantiles;
+          delete attribute.stats.geometricInterval;
+          delete attribute.stats.standardDeviations;
+        }
+      }
+    } else {
+      console.log('layer is not an array');
+    }
+  } else {
+    console.log('geostats is not an object or layers is not an array');
+  }
 }

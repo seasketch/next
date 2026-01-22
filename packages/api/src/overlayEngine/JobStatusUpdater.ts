@@ -398,7 +398,7 @@ export class JobStatusUpdater {
     );
   }
 
-  debouncedUpdateJobs = debounce(this.processMessages, 20, {
-    maxWait: 500,
+  debouncedUpdateJobs = debounce(this.processMessages, 100, {
+    maxWait: 1000,
   });
 }

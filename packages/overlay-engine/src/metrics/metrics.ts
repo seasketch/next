@@ -361,8 +361,8 @@ export function combineRasterBandStats(
 
   
   // Calculate combined range
-  const combinedMin = min(mins);
-  const combinedMax = max(maxs);
+  const combinedMin = mins.length > 0 ? min(mins) : NaN;
+  const combinedMax = maxs.length > 0 ? max(maxs) : NaN;
   const combinedRange = combinedMax - combinedMin;
 
   // For median, we can't easily combine without the full dataset, so we'll use NaN

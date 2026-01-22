@@ -256,7 +256,7 @@ export const ColumnValuesHistogram: ReportWidget<ColumnValuesHistogramSettings> 
       const layer = (source?.geostats as any)?.layers?.[0] as
         | GeostatsLayer
         | undefined;
-      return isGeostatsLayer(layer) ? layer : undefined;
+      return layer && isGeostatsLayer(layer) ? layer : undefined;
     }, [source?.geostats]);
 
     const numericAttribute = useMemo(() => {
@@ -619,12 +619,12 @@ export const ColumnValuesHistogram: ReportWidget<ColumnValuesHistogramSettings> 
                       <Tooltip.Trigger asChild>
                         {background && backgroundHeight > overlayHeight ? (
                           <div
-                            className="absolute bottom-0 left-0 right-0 bg-gray-200/10"
+                            className="absolute bottom-0 left-0 right-0 bg-gray-200/10 z-10 opacity-0"
                             style={{ height: `${backgroundHeight}%` }}
                           />
                         ) : (
                           <div
-                            className="absolute bottom-0 left-0 right-0 opacity-10"
+                            className="absolute bottom-0 left-0 right-0 opacity-0 z-10"
                             style={{
                               height: `${overlayHeight}%`,
                               backgroundColor: bar.color,
@@ -793,7 +793,7 @@ export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
     const numericColumnOptions = useMemo(() => {
       const options: Array<{ value: string; label: JSX.Element }> = [];
       if (!relatedOverlay?.geostats) return options;
-      const geoLayer = isGeostatsLayer(
+      const geoLayer = (relatedOverlay.geostats as any)?.layers?.[0] && isGeostatsLayer(
         (relatedOverlay.geostats as any)?.layers?.[0] as GeostatsLayer
       )
         ? ((relatedOverlay.geostats as any).layers[0] as GeostatsLayer)

@@ -845,7 +845,6 @@ create or replace function trigger_geography_metric_subscription()
     pid integer;
     skid integer;
   begin
-    if NEW.state = 'complete' or NEW.state = 'error' then
       if NEW.subject_geography_id is not null then
         select project_id into pid from project_geography where id = NEW.subject_geography_id limit 1;
         perform pg_notify(
@@ -860,7 +859,6 @@ create or replace function trigger_geography_metric_subscription()
           '{"metricId": ' || NEW.id || ', "sketchId": ' || skid || '}'
         );
       end if;
-    end if;
     return NEW;
   end;
   $$;
