@@ -428,7 +428,7 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
             <div className="relative h-32 w-full flex items-end gap-[1px] bg-gray-50 border border-gray-200 rounded pt-2">
               {meanPosition !== null && (
                 <div
-                  className="absolute top-full flex items-start z-10"
+                  className="absolute top-full flex items-start"
                   style={{
                     left: `${meanPosition}%`,
                     transform: "translateX(-50%)",
@@ -498,10 +498,10 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                         {
                           background && backgroundHeight > overlayHeight ?
                             <div
-                              className="absolute bottom-0 left-0 right-0 bg-gray-200/10 z-20"
+                              className="absolute bottom-0 left-0 right-0 bg-gray-200/10"
                               style={{ height: `${backgroundHeight}%` }}
                             /> : <div
-                              className="absolute bottom-0 left-0 right-0 opacity-10 z-20"
+                              className="absolute bottom-0 left-0 right-0 opacity-10"
                               style={{
                                 height: `${overlayHeight}%`,
                                 backgroundColor: bar.color,
