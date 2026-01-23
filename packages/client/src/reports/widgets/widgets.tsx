@@ -82,6 +82,7 @@ import {
 import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
+import { DraftReportContext } from "../DraftReportContext";
 
 type WidgetComponent = React.FC<any>;
 
@@ -307,6 +308,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     adminSources,
     setShowCalcDetails,
   } = useReportContext();
+  const draftReportContext = useContext(DraftReportContext);
   const { t } = useTranslation("reports");
   const languageContext = useContext(FormLanguageContext);
   const lang = languageContext?.lang?.code;
@@ -325,9 +327,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     let loading = false;
     let errors: string[] = [];
     const metrics = filterMetricsByDependencies(
-      contextMetrics,
+      [...contextMetrics, ...draftReportContext.draftMetrics],
       dependencies,
-      [...overlaySources, ...adminSources].reduce((acc, s) => {
+      [...overlaySources, ...adminSources, ...draftReportContext.draftOverlaySources].reduce((acc, s) => {
         acc[s.tableOfContentsItemId!] = s.sourceUrl!;
         return acc;
       }, {} as Record<number, string>)
@@ -344,7 +346,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         errors.push(metric.errorMessage || "Unknown error");
       }
     }
-    let sources = [...overlaySources, ...adminSources].filter((s) =>
+    let sources = [...overlaySources, ...adminSources, ...draftReportContext.draftOverlaySources].filter((s) =>
       dependencies.some(
         (d: MetricDependency) =>
           d.tableOfContentsItemId === s.tableOfContentsItemId
@@ -372,9 +374,10 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         }
       }
     }
+    console.log('metrics', metrics);
     // loading = true;
     return { metrics, sources, loading, errors };
-  }, [contextMetrics, dependencies, overlaySources, adminSources]);
+  }, [contextMetrics, dependencies, overlaySources, adminSources, draftReportContext.draftMetrics, draftReportContext.draftOverlaySources]);
 
   const widgetProps: ReportWidgetProps<any> = {
     dependencies,

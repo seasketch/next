@@ -46,10 +46,11 @@ import {
   useUpdateReportCardMutation,
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
+  useDraftReportDependenciesQuery,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
-import { ReportContext } from "../ReportContext";
+import { extractMetricDependenciesFromReportBody, ReportContext } from "../ReportContext";
 import getSlug from "../../getSlug";
 import Spinner from "../../components/Spinner";
 import { LayerPickerList } from "../widgets/LayerPickerDropdown";
@@ -57,6 +58,8 @@ import { useHistory } from "react-router-dom";
 import { ProsemirrorBodyJSON } from "../cards/cards";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Button from "../../components/Button";
+import { hashMetricDependency, MetricDependency } from "overlay-engine";
+import { DraftReportContext } from "../DraftReportContext";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -99,8 +102,9 @@ function ReportCardBodyEditorInner({
   footerContainerRef,
 }: ReportCardBodyEditorProps) {
 
-
   const reportContext = useContext(ReportContext);
+
+
 
   const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
   const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(JSON.parse(JSON.stringify(body)));
@@ -128,6 +132,41 @@ function ReportCardBodyEditorInner({
 
   const history = useHistory();
   const { t } = useTranslation("sketching");
+
+
+  const [additionalDependencies, setAdditionalDependencies] = useState<
+    MetricDependency[]
+  >([]);
+
+  const draftDependenciesQuery = useDraftReportDependenciesQuery({
+    variables: {
+      input: {
+        nodeDependencies: additionalDependencies.map((d) => ({
+          ...d,
+          hash: hashMetricDependency(d),
+        })),
+        sketchId: reportContext?.selectedSketchId!,
+      },
+    },
+    skip:
+      !additionalDependencies ||
+      additionalDependencies.length === 0 ||
+      !reportContext?.selectedSketchId,
+    onError,
+    fetchPolicy: "cache-and-network",
+  });
+
+  useEffect(() => {
+    if (!draftDependenciesQuery.loading && !draftDependenciesQuery.data?.draftReportDependencies?.ready) {
+      const ref = setInterval(() => {
+        draftDependenciesQuery.refetch();
+      }, 1000);
+      return () => clearInterval(ref);
+    }
+  }, [draftDependenciesQuery.loading, draftDependenciesQuery.data?.draftReportDependencies?.ready])
+
+
+
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -303,17 +342,38 @@ function ReportCardBodyEditorInner({
   const initialBodyRef = useRef<any>(body);
   const saveRef = useRef<((doc: any) => void) | null>(null);
   initialBodyRef.current = body;
-  const { createPortal, removePortal, setSelection } =
+  const { createPortal, removePortal, setSelection, setDraftDependencies } =
     useReactNodeViewPortals();
+
+  useEffect(() => {
+    setDraftDependencies({
+      metrics: draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
+      overlaySources: draftDependenciesQuery.data?.draftReportDependencies?.overlaySources || [],
+      dependencies: additionalDependencies,
+    });
+  }, [draftDependenciesQuery.data?.draftReportDependencies?.metrics, draftDependenciesQuery.data?.draftReportDependencies?.overlaySources, additionalDependencies, setDraftDependencies]);
+
 
   const save = useDebouncedFn(
     (doc: any) => {
       setReportBodyHasChanges(true);
-      setDraftBody(doc.toJSON());
+      const body = doc.toJSON();
+      setDraftBody(body);
+      const deps = extractMetricDependenciesFromReportBody(body);
+      let missing: MetricDependency[] = [];
+      for (const dep of deps) {
+        const hash = hashMetricDependency(dep);
+        if (metrics.find((m) => m.dependencyHash === hash)) {
+          continue;
+        }
+        missing.push(dep);
+      }
+      console.log("missing", missing);
+      setAdditionalDependencies(missing);
     },
     100,
     { leading: true, trailing: true },
-    []
+    [setReportBodyHasChanges, setDraftBody, setAdditionalDependencies]
   );
   saveRef.current = save;
 
@@ -571,8 +631,10 @@ function OverlayPickerContent({
 
 export default function ReportCardBodyEditor(props: ReportCardBodyEditorProps) {
   return (
+
     <ReactNodeViewPortalsProvider>
       <ReportCardBodyEditorInner {...props} />
     </ReactNodeViewPortalsProvider>
+
   );
 }

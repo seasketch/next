@@ -3,8 +3,12 @@ import React, {
   ReactPortal,
   useCallback,
   useContext,
+  useMemo,
   useState,
 } from "react";
+import { CompatibleSpatialMetricDetailsFragment, OverlaySourceDetailsFragment } from "../../generated/graphql";
+import { DraftReportContext } from "../DraftReportContext";
+import { MetricDependency } from "overlay-engine";
 
 export const ReactNodeViewPortalsContext = React.createContext<{
   createPortal: (key: string, portal: ReactPortal) => void;
@@ -14,16 +18,31 @@ export const ReactNodeViewPortalsContext = React.createContext<{
     selection: { anchorPos: number; headPos: number } | null
   ) => void;
   selection: { anchorPos: number; headPos: number } | null;
+  setDraftDependencies: (draftDependencies: {
+    metrics: CompatibleSpatialMetricDetailsFragment[];
+    overlaySources: OverlaySourceDetailsFragment[];
+    dependencies: MetricDependency[];
+  }) => void;
 }>({
-  createPortal: () => {},
-  removePortal: () => {},
+  createPortal: () => { },
+  removePortal: () => { },
   state: {},
-  setSelection: () => {},
+  setSelection: () => { },
   selection: null,
+  setDraftDependencies: () => { },
 });
 
 function ReactNodeViewPortalsProvider({ children }: { children?: ReactNode }) {
   const [state, setState] = useState<{ [key: string]: ReactPortal }>({});
+  const [draftDependencies, setDraftDependencies] = useState<{
+    metrics: CompatibleSpatialMetricDetailsFragment[];
+    overlaySources: OverlaySourceDetailsFragment[];
+    dependencies: MetricDependency[];
+  }>({
+    metrics: [],
+    overlaySources: [],
+    dependencies: [],
+  });
   const [selection, _setSelection] = useState<{
     anchorPos: number;
     headPos: number;
@@ -57,19 +76,30 @@ function ReactNodeViewPortalsProvider({ children }: { children?: ReactNode }) {
     [setState]
   );
 
+  const draftReportContextValue = useMemo(() => {
+    return {
+      draftMetrics: draftDependencies.metrics,
+      draftOverlaySources: draftDependencies.overlaySources,
+      draftDependencies: draftDependencies.dependencies,
+    };
+  }, [draftDependencies.metrics, draftDependencies.overlaySources, draftDependencies.dependencies]);
+
   return (
-    <ReactNodeViewPortalsContext.Provider
+    <DraftReportContext.Provider value={draftReportContextValue}><ReactNodeViewPortalsContext.Provider
       value={{
         createPortal,
         removePortal,
         state,
         setSelection,
         selection,
+        setDraftDependencies,
       }}
     >
       {children}
       {Object.keys(state).map((key) => state[key])}
     </ReactNodeViewPortalsContext.Provider>
+    </DraftReportContext.Provider>
+
   );
 }
 

@@ -109,17 +109,15 @@ export default function ReportCard({
   const [retryFailedMetrics, retryState] =
     useRetryFailedSpatialMetricsMutation();
 
-  const hasRelatedDraftMetrics = useMemo(() => {
-    return draftReportContext.draftDependencyMetrics.length > 0 && selectedForEditing === cardId;
-  }, [draftReportContext.draftDependencyMetrics, selectedForEditing, cardId]);
+  // const hasRelatedDraftMetrics = useMemo(() => {
+  //   return draftReportContext.draftDependencyMetrics.length > 0 && selectedForEditing === cardId;
+  // }, [draftReportContext.draftDependencyMetrics, selectedForEditing, cardId]);
 
   let { errors, failedMetrics, loading } = useMemo(() => {
     const errors = {} as { [key: string]: number };
     let loading = false;
     const failedMetrics = [] as number[];
-    const relatedMetrics = hasRelatedDraftMetrics
-      ? [...metrics, ...draftReportContext.draftDependencyMetrics]
-      : metrics;
+    const relatedMetrics = metrics;
     for (const metric of relatedMetrics) {
       if (metric.state === SpatialMetricState.Error) {
         let errorMessage = metric.errorMessage || "Unknown error";
@@ -145,7 +143,7 @@ export default function ReportCard({
       }
     }
     return { errors, failedMetrics, loading };
-  }, [metrics, sources, hasRelatedDraftMetrics]);
+  }, [metrics, sources]);
 
   if (Object.keys(errors).length > 0) {
     tint = "text-red-500";
@@ -309,9 +307,10 @@ export default function ReportCard({
               className=""
               display={true}
               metrics={
-                hasRelatedDraftMetrics
-                  ? [...metrics, ...draftReportContext.draftDependencyMetrics]
-                  : metrics
+                metrics
+                // hasRelatedDraftMetrics
+                //   ? [...metrics, ...draftReportContext.draftDependencyMetrics]
+                //   : metrics
               }
               sourceProcessingJobs={sources
                 .map((s) => s.sourceProcessingJob!)
@@ -514,7 +513,7 @@ export default function ReportCard({
               label: t("Recalculate"),
               onClick: async () => {
                 const metricsToRecalculate = [] as number[];
-                for (const metric of [...metrics, ...draftReportContext.draftDependencyMetrics]) {
+                for (const metric of metrics) {
                   if (subjectIsFragment(metric.subject) || recomputeTotals) {
                     metricsToRecalculate.push(metric.id);
                   }
@@ -589,10 +588,7 @@ export default function ReportCard({
                   setRecalcOpen(true);
                 } else {
                   const metricsToRecalculate = [] as number[];
-                  for (const metric of [
-                    ...metrics,
-                    ...draftReportContext.draftDependencyMetrics,
-                  ]) {
+                  for (const metric of metrics) {
                     if (subjectIsFragment(metric.subject)) {
                       metricsToRecalculate.push(metric.id);
                     }
@@ -624,12 +620,7 @@ export default function ReportCard({
           ]}
         >
           <ReportMetricsProgressDetails
-            metricIds={Array.from(
-              new Set([
-                ...metrics.map((m) => m.id),
-                ...draftReportContext.draftDependencyMetrics.map((m) => m.id),
-              ])
-            )}
+            metricIds={metrics.map((m) => m.id)}
             config={config}
             isAdmin={adminMode}
           />

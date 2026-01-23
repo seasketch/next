@@ -189,7 +189,8 @@ export function useReportState(
     fetchPolicy: "cache-and-network",
   });
 
-  const debouncedData = useDebounce(data, 100);
+  // const debouncedData = useDebounce(data, 10);
+  const debouncedData = data;
 
   const allOverlays = useMemo(() => {
     return debouncedData?.report?.dependencies?.overlaySources || [];
@@ -197,7 +198,7 @@ export function useReportState(
     debouncedData?.report?.dependencies?.overlaySources,
   ]);
 
-  const draftReportingLayersQuery = useProjectReportingLayersQuery({
+  const availableReportingLayersQuery = useProjectReportingLayersQuery({
     variables: {
       slug: getSlug(),
     },
@@ -205,13 +206,7 @@ export function useReportState(
   });
 
   const metrics = useMemo(() => {
-    let metrics: CompatibleSpatialMetricDetailsFragment[] = [];
-    if (data?.report?.dependencies?.metrics) {
-      metrics.push(...data.report.dependencies.metrics);
-    }
-    return [
-      ...(debouncedData?.report?.dependencies?.metrics || []),
-    ] as CompatibleSpatialMetricDetailsFragment[];
+    return debouncedData?.report?.dependencies?.metrics || [];
   }, [
     debouncedData?.report?.dependencies?.metrics,
   ]);
@@ -504,15 +499,13 @@ export function useReportState(
       showCalcDetails,
       setShowCalcDetails,
       adminSources:
-        draftReportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
+        availableReportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
     };
   }
 }
 
 export function useReportContext(): ReportContextState {
   const context = useContext(ReportContext);
-  // @ts-ignore
-  window.reportContext = context;
   if (!context) {
     throw new Error(
       "useReportContext must be used within a ReportContextProvider"

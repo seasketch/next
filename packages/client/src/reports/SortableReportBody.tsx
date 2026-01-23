@@ -5,7 +5,6 @@ import ReportCard from "./ReportCard";
 import { Draggable, Droppable } from "react-beautiful-dnd";
 import { ReportCardConfiguration } from "./cards/cards";
 import { ReportCardConfigUpdateCallback } from "./registerCard";
-import { DraftReportContextProvider } from "./DraftReportContext";
 
 interface SortableReportBodyProps {
   selectedTab?: any;
@@ -133,19 +132,17 @@ export function SortableReportBody({
                         ...provided.draggableProps.style,
                       }}
                     >
-                      <DraftReportContextProvider>
-                        <ReportCard
-                          config={cardWithLocalEdits}
-                          dragHandleProps={
-                            selectedForEditing ? {} : provided.dragHandleProps
-                          }
-                          // onUpdate={onReportCardUpdateFns[card.id]}
-                          metrics={metrics}
-                          sources={overlaySources}
-                        // loading={loading}
-                        // errors={errors}
-                        />
-                      </DraftReportContextProvider>
+                      <ReportCard
+                        config={cardWithLocalEdits}
+                        dragHandleProps={
+                          selectedForEditing ? {} : provided.dragHandleProps
+                        }
+                        // onUpdate={onReportCardUpdateFns[card.id]}
+                        metrics={metrics}
+                        sources={overlaySources}
+                      // loading={loading}
+                      // errors={errors}
+                      />
                     </div>
                   )}
                 </Draggable>
