@@ -29,7 +29,6 @@ import {
 } from "../../reports/cards/cards";
 import {
   getCardRegistration,
-  ReportCardConfigUpdateCallback,
 } from "../../reports/registerCard";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
@@ -48,7 +47,6 @@ import languages from "../../lang/supported";
 import getSlug from "../../getSlug";
 import { DragDropContext, DropResult } from "react-beautiful-dnd";
 import { SketchingIcon } from "../../projects/ToolbarButtons";
-import { setCollapsibleBlocksClosed } from "../../reports/widgets/prosemirror/reportBodySchema";
 
 // registerCards();
 
@@ -209,28 +207,12 @@ export default function SketchClassReportsAdmin({
   const [localCardEdits, setLocalCardEdits] =
     useState<ReportCardConfiguration<any> | null>(null);
 
-  useEffect(() => {
-    if (reportState?.selectedForEditing && localCardEdits?.body) {
-      reportState?.setDraftReportCardBody(
-        reportState.selectedForEditing,
-        localCardEdits?.body
-      );
-    } else {
-      reportState?.clearDraftReportCardBody();
-    }
-  }, [
-    localCardEdits?.body,
-    reportState?.selectedForEditing,
-    reportState?.setDraftReportCardBody,
-    reportState?.clearDraftReportCardBody,
-  ]);
 
   // Optimistic state for card ordering
   const [optimisticCardOrder, setOptimisticCardOrder] = useState<{
     [tabId: number]: number[];
   }>({});
 
-  const history = useHistory();
 
   const handleCardReorder = async (cardIds: number[], reportTabId: number) => {
     try {
@@ -435,13 +417,13 @@ export default function SketchClassReportsAdmin({
     }
   }, [addReportCard, reportState, onError]);
 
-  const handleCancelEditing = () => {
-    reportState?.setSelectedForEditing(null);
-    reportState?.clearDraftReportCardBody();
-    setLocalCardEdits(null);
-  };
+  const selectedCardForEditing = reportState?.selectedForEditing
+    ? reportState.selectedTab?.cards.find(
+      (card) => card.id === reportState.selectedForEditing
+    )
+    : null;
 
-  const handleCardUpdate = (
+  const handleCardUpdate = useCallback((
     cardId: number,
     updatedConfig:
       | ReportCardConfiguration<any>
@@ -459,9 +441,9 @@ export default function SketchClassReportsAdmin({
           : updatedConfig;
       });
     }
-  };
+  }, [reportState?.selectedForEditing, selectedCardForEditing]);
 
-  const handleDeleteCard = async (cardId: number) => {
+  const handleDeleteCard = useCallback(async (cardId: number) => {
     await confirmDelete({
       message: t("Are you sure you want to delete this card?"),
       description: t("This action cannot be undone."),
@@ -477,85 +459,8 @@ export default function SketchClassReportsAdmin({
         }
       },
     });
-  };
+  }, [confirmDelete, t, deleteCardMutation]);
 
-  const handleSaveCard = async () => {
-    if (!selectedCardForEditing) {
-      return;
-    }
-
-    if (!localCardEdits) {
-      // cancel
-      reportState?.setSelectedForEditing(null);
-      setLocalCardEdits(null);
-      return;
-    }
-
-    try {
-      // Ensure displayMapLayerVisibilityControls always has a value (defaults to true)
-      // This is required because the database column is NOT NULL
-      const displayMapLayerVisibilityControls =
-        localCardEdits.displayMapLayerVisibilityControls !== undefined
-          ? localCardEdits.displayMapLayerVisibilityControls
-          : selectedCardForEditing.displayMapLayerVisibilityControls !==
-            undefined
-            ? selectedCardForEditing.displayMapLayerVisibilityControls
-            : true;
-
-      const body = setCollapsibleBlocksClosed(
-        localCardEdits.body || selectedCardForEditing.body
-      );
-
-      await updateReportCard({
-        variables: {
-          id: selectedCardForEditing.id,
-          componentSettings:
-            localCardEdits.componentSettings ||
-            selectedCardForEditing.componentSettings,
-          alternateLanguageSettings:
-            localCardEdits.alternateLanguageSettings ||
-            selectedCardForEditing.alternateLanguageSettings,
-          body,
-          cardType: localCardEdits.type || selectedCardForEditing.type,
-          displayMapLayerVisibilityControls,
-        } as any, // Type assertion needed - the field exists in the GraphQL schema but TypeScript types may be out of sync
-        refetchQueries: [DraftReportDocument, ReportContextDocument],
-        awaitRefetchQueries: true,
-      });
-
-      // Clear local edits and exit editing mode on successful save
-      reportState?.setSelectedForEditing(null);
-      setLocalCardEdits(null);
-    } catch (error) {
-      // Error is handled by onError
-    }
-  };
-
-  // Handle navigation blocking when editing
-  useEffect(() => {
-    if (!reportState?.selectedForEditing) return;
-
-    const message = t(
-      "You have unsaved changes to a report card. Are you sure you want to leave?"
-    );
-
-    // Handle browser refresh/close (beforeunload)
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = message;
-      return message;
-    };
-
-    // Handle React Router navigation
-    const unblock = history.block(() => message);
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      unblock();
-    };
-  }, [reportState?.selectedForEditing, history, t]);
 
   if (!loading && !draftReport) {
     if (
@@ -601,11 +506,6 @@ export default function SketchClassReportsAdmin({
     new Date(data?.sketchClass?.draftReport?.updatedAt) >=
     new Date(data?.sketchClass?.report?.createdAt);
 
-  const selectedCardForEditing = reportState?.selectedForEditing
-    ? reportState.selectedTab?.cards.find(
-      (card) => card.id === reportState.selectedForEditing
-    )
-    : null;
 
   // Merge local edits with server state for the card being edited
   const cardWithLocalEdits = {
@@ -733,57 +633,8 @@ export default function SketchClassReportsAdmin({
                   : "-translate-x-72"
               }`}
             >
-              {selectedCardForEditing && (
-                <>
-                  <div className="flex-1">
-                    <div className="p-4">
-                      <h3 className="text-lg font-medium">
-                        {collectReportCardTitle(selectedCardForEditing.body) ||
-                          getCardRegistration(selectedCardForEditing.type)
-                            ?.label}
-                      </h3>
-                    </div>
-                    <div className="p-4 pt-0">
-                      <Suspense
-                        fallback={
-                          <div>
-                            <Spinner />
-                          </div>
-                        }
-                      >
-                        <AdminFactory
-                          type={selectedCardForEditing.type}
-                          config={cardWithLocalEdits}
-                          onUpdate={(update) => {
-                            setLocalCardEdits((prevState) => {
-                              const result =
-                                typeof update === "function"
-                                  ? update(prevState || ({} as any))
-                                  : update;
-                              return result;
-                            });
-                          }}
-                        />
-                      </Suspense>
-                    </div>
-                  </div>
-                  <div className="flex-none bg-gray-100 p-4 space-x-2 border-t flex justify-end">
-                    <Button
-                      label={t("Cancel")}
-                      onClick={handleCancelEditing}
-                      disabled={updateReportCardState.loading}
-                    />
-                    <Button
-                      label={t("Save")}
-                      onClick={handleSaveCard}
-                      primary
-                      loading={updateReportCardState.loading}
-                      disabled={updateReportCardState.loading}
-                    />
-                  </div>
-                </>
-              )}
-            </div> */}
+            </div> 
+            */}
 
             {/* main content */}
             {sketchesForDemonstration.length === 0 && !loading ? (
@@ -943,8 +794,8 @@ export default function SketchClassReportsAdmin({
                                 >
                                   <PlusCircleIcon
                                     className={`w-7 h-7 text-blue-500  ${reportState.selectedForEditing
-                                        ? "text-gray-400"
-                                        : "hover:text-blue-600"
+                                      ? "text-gray-400"
+                                      : "hover:text-blue-600"
                                       }`}
                                   />
                                 </button>
@@ -994,8 +845,8 @@ export default function SketchClassReportsAdmin({
                               <div
                                 key={tab.id}
                                 className={`absolute top-0 w-full ${isActive
-                                    ? "relative left-0"
-                                    : "-left-[10000px]"
+                                  ? "relative left-0"
+                                  : "-left-[10000px]"
                                   }`}
                               >
                                 <SortableReportBody
@@ -1007,30 +858,6 @@ export default function SketchClassReportsAdmin({
                                   onCardUpdate={handleCardUpdate}
                                   optimisticCardOrder={
                                     optimisticCardOrder[tab.id]
-                                  }
-                                  editorFooter={
-                                    reportState.selectedForEditing &&
-                                      isActive ? (
-                                      <div className="flex items-center space-x-2 justify-end">
-                                        <Button
-                                          small
-                                          label={t("Cancel")}
-                                          onClick={handleCancelEditing}
-                                        />
-                                        <Button
-                                          small
-                                          label={t("Save")}
-                                          onClick={handleSaveCard}
-                                          disabled={
-                                            updateReportCardState.loading
-                                          }
-                                          loading={
-                                            updateReportCardState.loading
-                                          }
-                                          primary
-                                        />
-                                      </div>
-                                    ) : undefined
                                   }
                                 />
                               </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, memo } from "react";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
@@ -135,10 +135,16 @@ function ReportCardBodyViewerInner({
   );
 }
 
-export default function ReportCardBodyViewer(props: ReportCardBodyViewerProps) {
+export default memo(function ReportCardBodyViewer(props: ReportCardBodyViewerProps) {
   return (
     <ReactNodeViewPortalsProvider>
       <ReportCardBodyViewerInner {...props} />
     </ReactNodeViewPortalsProvider>
   );
-}
+}, (prevProps, nextProps) => {
+  return (
+    prevProps.cardId === nextProps.cardId &&
+    prevProps.body === nextProps.body &&
+    prevProps.className === nextProps.className
+  );
+});

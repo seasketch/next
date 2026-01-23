@@ -109,15 +109,15 @@ class ReactNodeView implements NodeView {
           if (pos != null) {
             if (
               pos <
-                Math.max(
-                  portalContext.selection.anchorPos,
-                  portalContext.selection.headPos
-                ) &&
+              Math.max(
+                portalContext.selection.anchorPos,
+                portalContext.selection.headPos
+              ) &&
               pos >=
-                Math.min(
-                  portalContext.selection.anchorPos,
-                  portalContext.selection.headPos
-                )
+              Math.min(
+                portalContext.selection.anchorPos,
+                portalContext.selection.headPos
+              )
             ) {
               this.dom?.classList.add("ProseMirror-selectednode");
               return;

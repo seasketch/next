@@ -1,5 +1,5 @@
 /* eslint-disable no-console */
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState, memo } from "react";
 import {
   ColumnValuesMetric,
   CountMetric,
@@ -31,7 +31,11 @@ import {
   isLengthUnit,
 } from "../utils/units";
 import Skeleton from "../../components/Skeleton";
-import { ReportWidget, TooltipBooleanConfigurationOption } from "./widgets";
+import {
+  ReportWidget,
+  ReportWidgetProps,
+  TooltipBooleanConfigurationOption,
+} from "./widgets";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { SketchGeometryType } from "../../generated/graphql";
@@ -307,7 +311,7 @@ export type InlineMetricComponentSettings = {
   column?: string;
 };
 
-export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
+const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   metrics,
   sources,
   loading,
@@ -317,9 +321,8 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   dependencies,
   marks,
   sketchClass,
+  lang
 }) => {
-  console.log("Render InlineMetric")
-  const lang = useCurrentLang();
   const {
     pluralRules,
     countDefaultMessages,
@@ -327,17 +330,17 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     distinctDefaultMessages,
     distinctCustomMessages,
   } = useMemo(() => {
-    const pluralRules = new Intl.PluralRules(lang.code);
+    const pluralRules = new Intl.PluralRules(lang);
     const countDefaultMessages =
-      defaultPluralizedCountLabels[lang.code] ||
+      defaultPluralizedCountLabels[lang] ||
       defaultPluralizedCountLabels.en;
     const countCustomMessages =
-      componentSettings?.pluralizedCountLabels?.[lang.code];
+      componentSettings?.pluralizedCountLabels?.[lang];
     const distinctDefaultMessages =
-      defaultPluralizedDistinctValueLabels[lang.code] ||
+      defaultPluralizedDistinctValueLabels[lang] ||
       defaultPluralizedDistinctValueLabels.en;
     const distinctCustomMessages =
-      componentSettings?.pluralizedDistinctValueLabels?.[lang.code];
+      componentSettings?.pluralizedDistinctValueLabels?.[lang];
     return {
       pluralRules,
       countDefaultMessages,
@@ -346,7 +349,7 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
       distinctCustomMessages,
     };
   }, [
-    lang.code,
+    lang,
     componentSettings?.pluralizedCountLabels,
     componentSettings?.pluralizedDistinctValueLabels,
   ]);
@@ -367,11 +370,11 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     }
     return getLocalizedUnitLabel(
       unit,
-      lang.code,
+      lang,
       isAreaUnit(unit),
       componentSettings?.unitDisplay || "short"
     );
-  }, [componentSettings?.unit, componentSettings?.unitDisplay, lang.code]);
+  }, [componentSettings?.unit, componentSettings?.unitDisplay, lang]);
 
   const formattedValue = useMemo(() => {
     if (!dependencies.length) {
@@ -571,6 +574,54 @@ export const InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   }
 };
 
+function inlineMetricPropsEqual(
+  prevProps: ReportWidgetProps<InlineMetricComponentSettings>,
+  nextProps: ReportWidgetProps<InlineMetricComponentSettings>
+) {
+  const changes: string[] = [];
+
+  if (prevProps.componentSettings !== nextProps.componentSettings) {
+    changes.push("componentSettings");
+  }
+  if (prevProps.metrics !== nextProps.metrics) {
+    changes.push("metrics");
+  }
+  if (prevProps.dependencies !== nextProps.dependencies) {
+    changes.push("dependencies");
+  }
+  if (prevProps.loading !== nextProps.loading) {
+    changes.push("loading");
+  }
+  if (prevProps.errors !== nextProps.errors) {
+    changes.push("errors");
+  }
+  if (prevProps.sources !== nextProps.sources) {
+    changes.push("sources");
+  }
+  if (prevProps.geographies !== nextProps.geographies) {
+    changes.push("geographies");
+  }
+  if (prevProps.marks !== nextProps.marks) {
+    changes.push("marks");
+  }
+  if (prevProps.sketchClass !== nextProps.sketchClass) {
+    changes.push("sketchClass");
+  }
+  if (prevProps.lang !== nextProps.lang) {
+    changes.push("lang");
+  }
+  if (prevProps.node !== nextProps.node) {
+    changes.push("node");
+  }
+  if (prevProps.alternateLanguageSettings !== nextProps.alternateLanguageSettings) {
+    changes.push("alternateLanguageSettings");
+  }
+
+  return changes.length === 0;
+}
+
+export const InlineMetric = memo(_InlineMetric, inlineMetricPropsEqual);
+
 export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   node,
   onUpdate,
@@ -584,7 +635,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   }, [node.attrs?.componentSettings]);
   const unit = componentSettings.unit || "kilometer";
   const unitDisplay = componentSettings.unitDisplay || "short";
-  const { t } = useTranslation("admin:reports");
+  const i18n = useTranslation("admin:reports");
+  const t = i18n.t;
+
   const type = formatPresentationLabel(componentSettings.presentation);
   const reportContext = useReportContext();
   const lang = useCurrentLang();

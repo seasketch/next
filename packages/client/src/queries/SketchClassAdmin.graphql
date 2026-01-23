@@ -548,6 +548,14 @@ mutation UpdateReportCard(
   }
 }
 
+mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
+  updateReportCardBody(input: { cardId: $id, body: $body }) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+
 mutation DeleteReportCard($id: Int!) {
   deleteReportCard(input: { cardId: $id }) {
     boolean

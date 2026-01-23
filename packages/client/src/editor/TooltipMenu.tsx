@@ -711,7 +711,8 @@ export default function TooltipMenu({
           ds?.tooltipDropdown === "true" ||
           ds?.tooltipPortal === "true" ||
           ds?.reportCommandPalette === "true" ||
-          ds?.reportBlockHandle === "true"
+          ds?.reportBlockHandle === "true" ||
+          ds?.reportCardBodyEditorFooter === "true"
         );
       });
       if (inTooltip) return;
@@ -1059,9 +1060,8 @@ export default function TooltipMenu({
             }}
             exit={{ opacity: 0, scale: 1, translateX: "-50%" }}
             key="tooltip"
-            className={`bg-white select-none text-gray-900 border border-black/20 rounded-lg px-2 py-[3px] shadow-lg fixed z-[49] ${
-              isOnlyMetricNode ? "flex-col" : "flex overflow-hidden"
-            }`}
+            className={`bg-white select-none text-gray-900 border border-black/20 rounded-lg px-2 py-[3px] shadow-lg fixed z-[49] ${isOnlyMetricNode ? "flex-col" : "flex overflow-hidden"
+              }`}
             data-report-tooltip="true"
             style={{
               left: position.left,
@@ -1594,10 +1594,9 @@ export function TooltipDropdown({
               disabled={opt.disabled}
               className={
                 opt.className ??
-                `px-2 py-1 text-sm flex items-center gap-2 rounded ${
-                  opt.disabled
-                    ? "text-gray-400 cursor-not-allowed"
-                    : "hover:bg-gray-100 focus:bg-gray-100 cursor-pointer"
+                `px-2 py-1 text-sm flex items-center gap-2 rounded ${opt.disabled
+                  ? "text-gray-400 cursor-not-allowed"
+                  : "hover:bg-gray-100 focus:bg-gray-100 cursor-pointer"
                 } outline-none ${opt.value === value ? "text-blue-600" : ""}`
               }
               onSelect={(e: Event) => {
@@ -1703,9 +1702,8 @@ export function TooltipPopoverContent({
         avoidCollisions
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
-        className={`bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg ${
-          noPadding ? "" : "px-2 py-2"
-        } z-[49]`}
+        className={`bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg ${noPadding ? "" : "px-2 py-2"
+          } z-[49]`}
         data-tooltip-portal="true"
       >
         {title && (
@@ -1763,9 +1761,8 @@ export function TooltipIconToggleButton({
         e.stopPropagation();
       }}
       onClick={onClick}
-      className={`${ICON_TOGGLE_BUTTON_CLASSES} ${
-        active ? "text-blue-600 " : "text-gray-900"
-      }`}
+      className={`${ICON_TOGGLE_BUTTON_CLASSES} ${active ? "text-blue-600 " : "text-gray-900"
+        }`}
     >
       <span className={ICON_CONTAINER_CLASSES}>{children}</span>
     </button>

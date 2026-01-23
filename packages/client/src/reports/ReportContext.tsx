@@ -132,11 +132,6 @@ export interface ReportContextState {
     styleId: string,
     style: ReportMapStyle | null
   ) => void;
-  setDraftReportCardBody: (cardId: number, body: any) => void;
-  clearDraftReportCardBody: () => void;
-  additionalDependencies: MetricDependency[];
-  setAdditionalDependencies: (dependencies: MetricDependency[]) => void;
-  draftDependencyMetrics: CompatibleSpatialMetricDetailsFragment[];
   showCalcDetails: number | undefined;
   setShowCalcDetails: Dispatch<SetStateAction<number | undefined>>;
   adminSources: OverlaySourceDetailsFragment[];
@@ -173,9 +168,7 @@ export function useReportState(
   );
   const [showCalcDetails, setShowCalcDetails] = useState<number | undefined>();
 
-  const [additionalDependencies, setAdditionalDependencies] = useState<
-    MetricDependency[]
-  >([]);
+
 
   // useReportOverlaySourcesSubscriptionSubscription({
   //   variables: {
@@ -198,47 +191,10 @@ export function useReportState(
 
   const debouncedData = useDebounce(data, 100);
 
-  const draftDependenciesQuery = useDraftReportDependenciesQuery({
-    variables: {
-      input: {
-        nodeDependencies: additionalDependencies.map((d) => ({
-          ...d,
-          hash: hashMetricDependency(d),
-        })),
-        sketchId: selectedSketchId!,
-      },
-    },
-    skip:
-      !additionalDependencies ||
-      additionalDependencies.length === 0 ||
-      !selectedSketchId,
-    onError,
-    fetchPolicy: "cache-and-network",
-  });
-
-  const debouncedDraftDependenciesData = useDebounce(
-    draftDependenciesQuery.data,
-    100
-  );
-
   const allOverlays = useMemo(() => {
-    const tableOfContentsItemIds = new Set<number>();
-    const overlays = [] as OverlaySourceDetailsFragment[];
-    for (const overlay of data?.report?.dependencies?.overlaySources || []) {
-      tableOfContentsItemIds.add(overlay.tableOfContentsItemId);
-      overlays.push(overlay);
-    }
-    for (const overlay of draftDependenciesQuery.data?.draftReportDependencies
-      ?.overlaySources || []) {
-      if (!tableOfContentsItemIds.has(overlay.tableOfContentsItemId)) {
-        tableOfContentsItemIds.add(overlay.tableOfContentsItemId);
-        overlays.push(overlay);
-      }
-    }
-    return overlays;
+    return debouncedData?.report?.dependencies?.overlaySources || [];
   }, [
     debouncedData?.report?.dependencies?.overlaySources,
-    debouncedDraftDependenciesData?.draftReportDependencies?.overlaySources,
   ]);
 
   const draftReportingLayersQuery = useProjectReportingLayersQuery({
@@ -253,32 +209,11 @@ export function useReportState(
     if (data?.report?.dependencies?.metrics) {
       metrics.push(...data.report.dependencies.metrics);
     }
-    if (debouncedDraftDependenciesData?.draftReportDependencies?.metrics) {
-      metrics.push(
-        ...debouncedDraftDependenciesData.draftReportDependencies.metrics
-      );
-    }
-    if (
-      !debouncedDraftDependenciesData?.draftReportDependencies?.metrics &&
-      draftDependenciesQuery.previousData?.draftReportDependencies?.metrics &&
-      draftDependenciesQuery.previousData.draftReportDependencies.sketchId ===
-      variables?.sketchId
-    ) {
-      metrics.push(
-        ...draftDependenciesQuery.previousData.draftReportDependencies.metrics
-      );
-    }
     return [
       ...(debouncedData?.report?.dependencies?.metrics || []),
-      ...(debouncedDraftDependenciesData?.draftReportDependencies?.metrics ||
-        []),
     ] as CompatibleSpatialMetricDetailsFragment[];
   }, [
     debouncedData?.report?.dependencies?.metrics,
-    debouncedDraftDependenciesData?.draftReportDependencies,
-    variables?.sketchId,
-    draftDependenciesQuery.previousData?.draftReportDependencies?.sketchId,
-    draftDependenciesQuery.previousData?.draftReportDependencies?.metrics,
   ]);
 
   const [selectedTabId, setSelectedTabId] = useState<number>(
@@ -304,21 +239,6 @@ export function useReportState(
       awaitRefetchQueries: true,
     });
 
-  const projectId = useProjectId();
-
-  // useGeographyMetricSubscriptionSubscription({
-  //   variables: {
-  //     projectId: projectId!,
-  //   },
-  //   skip: !projectId,
-  // });
-
-  // useSketchMetricSubscriptionSubscription({
-  //   variables: {
-  //     sketchId: selectedSketchId!,
-  //   },
-  //   skip: !selectedSketchId,
-  // });
 
   // Update selectedTabId if the current one is no longer valid
   useEffect(() => {
@@ -536,81 +456,6 @@ export function useReportState(
     [data?.report?.id, mapContext.manager, selectedSketchId]
   );
 
-  const [draftReportCardBody, _setDraftReportCardBody] =
-    useState<ProsemirrorBodyJSON | null>(null);
-
-  const setDraftReportCardBody = useCallback(
-    (cardId: number, body: ProsemirrorBodyJSON) => {
-      if (selectedForEditing !== cardId) {
-        throw new Error("Card not selected for editing");
-      }
-      _setDraftReportCardBody(body);
-    },
-    [selectedForEditing]
-  );
-
-  const clearDraftReportCardBody = useCallback(() => {
-    _setDraftReportCardBody(null);
-  }, [_setDraftReportCardBody]);
-
-  useEffect(() => {
-    if (draftReportCardBody) {
-      const deps = extractMetricDependenciesFromReportBody(draftReportCardBody);
-      const metrics = debouncedData?.report?.dependencies?.metrics || [];
-      const hashesInMainReportRequest = new Set(
-        metrics.map(
-          (metric: CompatibleSpatialMetricDetailsFragment) =>
-            metric.dependencyHash
-        )
-      );
-      const hashesInDraft = new Set(deps.map((d) => hashMetricDependency(d)));
-
-      const missingDependencies: (MetricDependency & { hash: string })[] = [];
-      const missingHashes: string[] = [];
-      for (const hash of hashesInDraft) {
-        if (!hashesInMainReportRequest.has(hash)) {
-          const dep = deps.find((d) => hashMetricDependency(d) === hash);
-          if (!dep) {
-            throw new Error(`Dependency not found in draft: ${hash}`);
-          }
-          missingHashes.push(hash);
-          missingDependencies.push({
-            ...dep,
-            hash,
-          });
-        }
-      }
-
-      if (missingDependencies.length > 0) {
-        setAdditionalDependencies((prev) => {
-          // first, check if the dependencies are identical. If so, don't update
-          const currentHashes = prev
-            .map((d) => hashMetricDependency(d))
-            .join(",");
-          const newHashes = missingDependencies
-            .map((d) => hashMetricDependency(d))
-            .join(",");
-          if (currentHashes === newHashes) {
-            return prev;
-          } else {
-            return missingDependencies;
-          }
-        });
-      } else {
-        setAdditionalDependencies([]);
-      }
-    } else {
-      setAdditionalDependencies([]);
-    }
-  }, [
-    draftReportCardBody,
-    setAdditionalDependencies,
-    debouncedData?.report?.dependencies,
-    getDependencies,
-    selectedForEditing,
-    variables,
-  ]);
-
   if (!data?.sketch) {
     return undefined;
   } else {
@@ -622,10 +467,6 @@ export function useReportState(
       throw new Error("Report dependencies not found");
     }
     return {
-      additionalDependencies,
-      setAdditionalDependencies,
-      setDraftReportCardBody,
-      clearDraftReportCardBody,
       selectedTabId,
       setSelectedTabId,
       selectedTab: selectedTab as ReportConfiguration["tabs"][0],
@@ -660,8 +501,6 @@ export function useReportState(
       report: data.report as unknown as ReportConfiguration,
       getDependencies,
       setCardMapStyle,
-      draftDependencyMetrics:
-        draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
       showCalcDetails,
       setShowCalcDetails,
       adminSources:
@@ -672,6 +511,8 @@ export function useReportState(
 
 export function useReportContext(): ReportContextState {
   const context = useContext(ReportContext);
+  // @ts-ignore
+  window.reportContext = context;
   if (!context) {
     throw new Error(
       "useReportContext must be used within a ReportContextProvider"

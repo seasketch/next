@@ -498,10 +498,10 @@ export const RasterValuesHistogram: ReportWidget<RasterValuesHistogramSettings> 
                         {
                           background && backgroundHeight > overlayHeight ?
                             <div
-                              className="absolute bottom-0 left-0 right-0 bg-gray-200/10"
+                              className="absolute bottom-0 left-0 right-0 bg-gray-200/10 z-10 opacity-0"
                               style={{ height: `${backgroundHeight}%` }}
                             /> : <div
-                              className="absolute bottom-0 left-0 right-0 opacity-10"
+                              className="absolute bottom-0 left-0 right-0 opacity-0 z-10"
                               style={{
                                 height: `${overlayHeight}%`,
                                 backgroundColor: bar.color,

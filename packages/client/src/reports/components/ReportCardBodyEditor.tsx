@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { createPortal as createReactPortal } from "react-dom";
 import { useDebouncedFn } from "beautiful-react-hooks";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
@@ -21,7 +22,7 @@ import ActiveParagraphPlaceholderPlugin from "../../editor/ActiveParagraphPlaceh
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { exampleSetup } from "prosemirror-example-setup";
 import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlugin";
-import { reportBodySchema } from "../widgets/prosemirror/reportBodySchema";
+import { reportBodySchema, setCollapsibleBlocksClosed } from "../widgets/prosemirror/reportBodySchema";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
 } from "../ReactNodeView/PortalProvider";
@@ -42,6 +43,9 @@ import {
   useDataDownloadInfoLazyQuery,
   usePreprocessSourceMutation,
   useAvailableReportLayersQuery,
+  useUpdateReportCardMutation,
+  DraftReportDocument,
+  useUpdateReportCardBodyMutation,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -49,16 +53,16 @@ import { ReportContext } from "../ReportContext";
 import getSlug from "../../getSlug";
 import Spinner from "../../components/Spinner";
 import { LayerPickerList } from "../widgets/LayerPickerDropdown";
+import { useHistory } from "react-router-dom";
+import { ProsemirrorBodyJSON } from "../cards/cards";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import Button from "../../components/Button";
 
 interface ReportCardBodyEditorProps {
   /**
    * The Prosemirror document to edit
    */
   body: any;
-  /**
-   * Callback when the document changes
-   */
-  onUpdate: (newBody: any) => void;
   /**
    * Whether this is an input field (affects editor configuration)
    */
@@ -74,6 +78,7 @@ interface ReportCardBodyEditorProps {
   sources: OverlaySourceDetailsFragment[];
   cardId: number;
   preselectTitle?: boolean;
+  footerContainerRef: React.RefObject<HTMLDivElement>;
 }
 
 type OverlayPickerOption = {
@@ -85,15 +90,70 @@ type OverlayPickerOption = {
 
 function ReportCardBodyEditorInner({
   body,
-  onUpdate,
   isInput = false,
   className = "",
   metrics,
   sources,
   cardId,
   preselectTitle = false,
+  footerContainerRef,
 }: ReportCardBodyEditorProps) {
+
+
+  const reportContext = useContext(ReportContext);
+
+  const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
+  const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(JSON.parse(JSON.stringify(body)));
+  const onError = useGlobalErrorHandler();
+
+  const [updateReportCard, updateReportCardState] = useUpdateReportCardBodyMutation(
+    {
+      onError,
+      awaitRefetchQueries: true,
+      refetchQueries: [DraftReportDocument],
+    }
+  );
+
+  const handleCardSave = useCallback(async () => {
+    await updateReportCard({
+      variables: {
+        id: cardId,
+        body: setCollapsibleBlocksClosed(draftBody)
+      },
+      refetchQueries: [DraftReportDocument],
+      awaitRefetchQueries: true,
+    });
+    reportContext?.setSelectedForEditing(null);
+  }, [reportBodyHasChanges, updateReportCard, cardId, draftBody]);
+
+  const history = useHistory();
   const { t } = useTranslation("sketching");
+
+  // Handle navigation blocking when editing
+  useEffect(() => {
+    if (!reportBodyHasChanges) return;
+    const message = t(
+      "You have unsaved changes to a report card. Are you sure you want to leave?"
+    );
+
+    // Handle browser refresh/close (beforeunload)
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = message;
+      return message;
+    };
+
+    // Handle React Router navigation
+    const unblock = history.block(() => message);
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      unblock();
+    };
+  }, [history, t, reportBodyHasChanges]);
+
   const { schema, plugins } = useMemo(() => {
     const schema = reportBodySchema;
     const plugins = [
@@ -108,7 +168,6 @@ function ReportCardBodyEditorInner({
   const langContext = useContext(FormLanguageContext);
   const currentLangCode = langContext?.lang?.code || "EN";
 
-  const reportContext = useContext(ReportContext);
 
   const reportingLayersQuery = useProjectReportingLayersQuery({
     variables: {
@@ -139,19 +198,19 @@ function ReportCardBodyEditorInner({
       const status =
         state || source.sourceProcessingJob?.progressPercentage != null
           ? {
-              state: state || null,
-              progressPercent:
-                source.sourceProcessingJob?.progressPercentage ?? null,
-              label:
-                source.sourceProcessingJob?.state ===
-                  SpatialMetricState.Processing &&
+            state: state || null,
+            progressPercent:
+              source.sourceProcessingJob?.progressPercentage ?? null,
+            label:
+              source.sourceProcessingJob?.state ===
+                SpatialMetricState.Processing &&
                 source.sourceProcessingJob?.progressPercentage != null
-                  ? t("Processing {{percent}}%", {
-                      percent:
-                        source.sourceProcessingJob?.progressPercentage ?? 0,
-                    })
-                  : state || undefined,
-            }
+                ? t("Processing {{percent}}%", {
+                  percent:
+                    source.sourceProcessingJob?.progressPercentage ?? 0,
+                })
+                : state || undefined,
+          }
           : undefined;
       return {
         ...item,
@@ -249,11 +308,12 @@ function ReportCardBodyEditorInner({
 
   const save = useDebouncedFn(
     (doc: any) => {
-      onUpdate(doc.toJSON());
+      setReportBodyHasChanges(true);
+      setDraftBody(doc.toJSON());
     },
     100,
     { leading: true, trailing: true },
-    [onUpdate]
+    []
   );
   saveRef.current = save;
 
@@ -435,6 +495,34 @@ function ReportCardBodyEditorInner({
         className={`ProseMirrorBody ReportCardBodyEditor ReportCardBody`}
         ref={root}
       ></div>
+      {
+        footerContainerRef.current && createReactPortal(<>
+          <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg" data-report-card-body-editor-footer="true">
+            <div className="flex items-center space-x-2 justify-end">
+              <Button
+                small
+                label={t("Cancel")}
+                onClick={() => {
+                  reportContext?.setSelectedForEditing(null)
+                }}
+              />
+              <Button
+                small
+                label={t("Save")}
+                onClick={handleCardSave}
+                disabled={
+                  updateReportCardState.loading
+                }
+                loading={
+                  updateReportCardState.loading
+                }
+                primary
+              />
+            </div>
+
+          </div></>, footerContainerRef.current)
+
+      }
     </div>
   );
 }

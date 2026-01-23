@@ -19,12 +19,10 @@ import { ReportCardConfiguration } from "./cards/cards";
 
 export default function ReportMetricsProgressDetails({
   metricIds,
-  skeleton,
   config,
   isAdmin,
 }: {
   metricIds: number[];
-  skeleton: React.ReactNode;
   config: ReportCardConfiguration<any>;
   isAdmin?: boolean;
 }) {
@@ -37,7 +35,7 @@ export default function ReportMetricsProgressDetails({
     const relatedOverlaySources = new Set<OverlaySourceDetailsFragment>();
     const failedMetrics = [] as number[];
     const metrics = [
-      ...reportContext.draftDependencyMetrics,
+      // ...reportContext.draftDependencyMetrics,
       ...reportContext.metrics,
     ];
     for (const metric of metrics) {

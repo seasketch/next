@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useReportContext } from "./ReportContext";
 import ReportCard from "./ReportCard";
 import { Draggable, Droppable } from "react-beautiful-dnd";
 import { ReportCardConfiguration } from "./cards/cards";
+import { ReportCardConfigUpdateCallback } from "./registerCard";
+import { DraftReportContextProvider } from "./DraftReportContext";
 
 interface SortableReportBodyProps {
   selectedTab?: any;
@@ -14,11 +16,10 @@ interface SortableReportBodyProps {
     updatedConfig:
       | ReportCardConfiguration<any>
       | ((
-          prevState: ReportCardConfiguration<any>
-        ) => ReportCardConfiguration<any>)
+        prevState: ReportCardConfiguration<any>
+      ) => ReportCardConfiguration<any>)
   ) => void;
   optimisticCardOrder?: number[];
-  editorFooter?: React.ReactNode;
 }
 
 export function SortableReportBody({
@@ -27,7 +28,6 @@ export function SortableReportBody({
   localCardEdits,
   onCardUpdate,
   optimisticCardOrder,
-  editorFooter,
 }: SortableReportBodyProps) {
   const context = useReportContext();
   const selectedTab = propSelectedTab || context.selectedTab;
@@ -64,15 +64,26 @@ export function SortableReportBody({
       );
   }, [optimisticCardOrder, selectedTab?.cards, optimisticCards]);
 
+  const onReportCardUpdateFns = useMemo(() => {
+    return displayCards.reduce((acc, card) => {
+      acc[card.id] = (update: ReportCardConfiguration<any> | ((prevState: ReportCardConfiguration<any>) => ReportCardConfiguration<any>)) => {
+        if (onCardUpdate) {
+          onCardUpdate(card.id, update);
+        }
+      };
+      return acc;
+    }, {} as Record<number, ReportCardConfigUpdateCallback>);
+  }, [displayCards.map(card => card.id).join(","), onCardUpdate]);
+
+
   if (!selectedTab) {
     return null;
   }
 
   return (
     <div
-      className={`p-4 transition-colors ${
-        !!selectedForEditing ? "bg-gray-300" : "bg-gray-100"
-      } rounded-b-lg`}
+      className={`p-4 transition-colors ${!!selectedForEditing ? "bg-gray-300" : "bg-gray-100"
+        } rounded-b-lg`}
     >
       {selectedTab.cards?.length === 0 && (
         <div>
@@ -111,39 +122,30 @@ export function SortableReportBody({
                     <div
                       ref={provided.innerRef}
                       {...provided.draggableProps}
-                      className={`${
-                        snapshot.isDragging
-                          ? "shadow-lg rotate-2 scale-105 z-50"
-                          : ""
-                      } ${
-                        !snapshot.isDragging
+                      className={`${snapshot.isDragging
+                        ? "shadow-lg rotate-2 scale-105 z-50"
+                        : ""
+                        } ${!snapshot.isDragging
                           ? "transition-colors duration-150"
                           : ""
-                      }`}
+                        }`}
                       style={{
                         ...provided.draggableProps.style,
                       }}
                     >
-                      <ReportCard
-                        config={cardWithLocalEdits}
-                        dragHandleProps={
-                          selectedForEditing ? {} : provided.dragHandleProps
-                        }
-                        onUpdate={(update) => {
-                          if (onCardUpdate) {
-                            onCardUpdate(card.id, update);
+                      <DraftReportContextProvider>
+                        <ReportCard
+                          config={cardWithLocalEdits}
+                          dragHandleProps={
+                            selectedForEditing ? {} : provided.dragHandleProps
                           }
-                        }}
-                        metrics={metrics}
-                        sources={overlaySources}
+                          // onUpdate={onReportCardUpdateFns[card.id]}
+                          metrics={metrics}
+                          sources={overlaySources}
                         // loading={loading}
                         // errors={errors}
-                        editorFooter={
-                          card.id === selectedForEditing
-                            ? editorFooter
-                            : undefined
-                        }
-                      />
+                        />
+                      </DraftReportContextProvider>
                     </div>
                   )}
                 </Draggable>

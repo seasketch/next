@@ -39,6 +39,7 @@ import Badge from "../components/Badge";
 import Button from "../components/Button";
 import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
+import { DraftReportContext } from "./DraftReportContext";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -53,8 +54,6 @@ export type ReportCardComponentProps = {
   className?: string;
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
-  skeleton?: React.ReactNode;
-  editorFooter?: React.ReactNode;
 };
 
 // Icon mapping for named icons (no color classes, will inherit from parent)
@@ -75,8 +74,6 @@ export default function ReportCard({
   className,
   metrics,
   sources,
-  skeleton,
-  editorFooter,
 }: ReportCardComponentProps & {
   config: ReportCardConfiguration<any>;
 }) {
@@ -94,12 +91,12 @@ export default function ReportCard({
     setSelectedTabId,
     recalculate,
     recalculateState,
-    draftDependencyMetrics,
     showCalcDetails,
     setShowCalcDetails,
     moveCardToTab,
     preselectTitle,
   } = useReportContext();
+  const draftReportContext = useContext(DraftReportContext);
   const langContext = useContext(FormLanguageContext);
   const { alternateLanguageSettings } = config;
 
@@ -113,15 +110,15 @@ export default function ReportCard({
     useRetryFailedSpatialMetricsMutation();
 
   const hasRelatedDraftMetrics = useMemo(() => {
-    return draftDependencyMetrics.length > 0 && selectedForEditing === cardId;
-  }, [draftDependencyMetrics, selectedForEditing, cardId]);
+    return draftReportContext.draftDependencyMetrics.length > 0 && selectedForEditing === cardId;
+  }, [draftReportContext.draftDependencyMetrics, selectedForEditing, cardId]);
 
   let { errors, failedMetrics, loading } = useMemo(() => {
     const errors = {} as { [key: string]: number };
     let loading = false;
     const failedMetrics = [] as number[];
     const relatedMetrics = hasRelatedDraftMetrics
-      ? [...metrics, ...draftDependencyMetrics]
+      ? [...metrics, ...draftReportContext.draftDependencyMetrics]
       : metrics;
     for (const metric of relatedMetrics) {
       if (metric.state === SpatialMetricState.Error) {
@@ -202,15 +199,6 @@ export default function ReportCard({
   const isSelectedForEditing = selectedForEditing === cardId;
   const isDisabled = selectedForEditing && !isSelectedForEditing;
 
-  // Get localized body
-  let localizedBody = config.body;
-  if (
-    langContext?.lang?.code !== "EN" &&
-    alternateLanguageSettings[langContext?.lang?.code]?.body
-  ) {
-    localizedBody = alternateLanguageSettings[langContext.lang.code].body;
-  }
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [recalcOpen, setRecalcOpen] = useState(false);
   const [recomputePreprocessed, setRecomputePreprocessed] = useState(false);
@@ -251,6 +239,7 @@ export default function ReportCard({
     () => [...(report.tabs || [])].sort((a, b) => a.position - b.position),
     [report.tabs]
   );
+  const footerContainerRef = useRef<HTMLDivElement>(null);
 
   const getLocalizedTabTitle = useCallback(
     (tab: (typeof report.tabs)[0]) => {
@@ -289,19 +278,6 @@ export default function ReportCard({
     }
   }, [moveCardToTab, moveTabTargetId, cardId, selectedTabId, setSelectedTabId]);
 
-  const loadingSkeleton = useMemo(() => {
-    if (skeleton) {
-      return skeleton;
-    }
-    return (
-      <div className="w-full space-y-1">
-        <Skeleton className="w-full h-4" />
-        <Skeleton className="w-3/4 h-4" />
-        <Skeleton className="w-4/5 h-4" />
-      </div>
-    );
-  }, [skeleton]);
-
   return (
     <div
       className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${adminMode && selectedForEditing === cardId ? "editing" : ""
@@ -334,7 +310,7 @@ export default function ReportCard({
               display={true}
               metrics={
                 hasRelatedDraftMetrics
-                  ? [...metrics, ...draftDependencyMetrics]
+                  ? [...metrics, ...draftReportContext.draftDependencyMetrics]
                   : metrics
               }
               sourceProcessingJobs={sources
@@ -352,8 +328,8 @@ export default function ReportCard({
                   type="button"
                   aria-label={t("Drag to reorder")}
                   className={`p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 active:bg-gray-100 transition ${menuOpen
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
                     }`}
                   {...dragHandleProps}
                   title={t("Drag to reorder")}
@@ -366,8 +342,8 @@ export default function ReportCard({
               cardId && (
                 <div
                   className={`flex-1 ml-auto flex items-center justify-end ${menuOpen
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-100"
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
                     } ${selectedForEditing ? "opacity-0" : "transition-opacity"}`}
                 >
                   <ReportCardActionMenu
@@ -432,17 +408,17 @@ export default function ReportCard({
           >
             {adminMode && selectedForEditing === cardId ? (
               <ReportCardBodyEditor
-                body={localizedBody}
-                onUpdate={handleBodyUpdate}
+                body={config.body}
                 className={`${tint} ${icon ? "hasIcon" : ""}`}
                 metrics={metrics}
                 sources={sources}
                 cardId={cardId!}
                 preselectTitle={preselectTitle}
+                footerContainerRef={footerContainerRef}
               />
             ) : (
               <ReportCardBodyViewer
-                body={localizedBody}
+                body={config.body}
                 className={`ReportCard ReportCardBody ProseMirrorBody ${icon ? "hasIcon" : ""
                   } ${tint ? tint : ""}`}
                 cardId={cardId!}
@@ -451,11 +427,7 @@ export default function ReportCard({
           </ErrorBoundary>
         </div>
       </div>
-      {editorFooter && (
-        <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg">
-          {editorFooter}
-        </div>
-      )}
+      <div ref={footerContainerRef}></div>
       {moveTabOpen && (
         <Modal
           open
@@ -492,8 +464,8 @@ export default function ReportCard({
                   <label
                     key={tab.id}
                     className={`flex items-center space-x-2 rounded border p-2 ${moveTabTargetId === tab.id
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-gray-200 hover:border-blue-200"
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-blue-200"
                       }`}
                   >
                     <input
@@ -542,7 +514,7 @@ export default function ReportCard({
               label: t("Recalculate"),
               onClick: async () => {
                 const metricsToRecalculate = [] as number[];
-                for (const metric of [...metrics, ...draftDependencyMetrics]) {
+                for (const metric of [...metrics, ...draftReportContext.draftDependencyMetrics]) {
                   if (subjectIsFragment(metric.subject) || recomputeTotals) {
                     metricsToRecalculate.push(metric.id);
                   }
@@ -619,7 +591,7 @@ export default function ReportCard({
                   const metricsToRecalculate = [] as number[];
                   for (const metric of [
                     ...metrics,
-                    ...draftDependencyMetrics,
+                    ...draftReportContext.draftDependencyMetrics,
                   ]) {
                     if (subjectIsFragment(metric.subject)) {
                       metricsToRecalculate.push(metric.id);
@@ -655,12 +627,11 @@ export default function ReportCard({
             metricIds={Array.from(
               new Set([
                 ...metrics.map((m) => m.id),
-                ...draftDependencyMetrics.map((m) => m.id),
+                ...draftReportContext.draftDependencyMetrics.map((m) => m.id),
               ])
             )}
             config={config}
             isAdmin={adminMode}
-            skeleton={loadingSkeleton}
           />
         </Modal>
       )}

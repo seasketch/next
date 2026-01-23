@@ -875,3 +875,23 @@ CREATE OR REPLACE FUNCTION public.trigger_report_overlay_source_subscription() R
     RETURN NEW;
   END;
   $$;
+
+
+CREATE OR REPLACE FUNCTION public.update_report_card_body(card_id integer, body jsonb) RETURNS public.report_cards
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      updated_card report_cards;
+    begin
+      if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = (select report_tab_id from report_cards where id = card_id)))) then
+        update report_cards set body = update_report_card_body.body where id = update_report_card_body.card_id returning * into updated_card;
+        return updated_card;
+      else
+        raise exception 'You are not authorized to update this card';
+      end if;
+    end;
+  $$;
+
+
+
+grant execute on function update_report_card_body to seasketch_user;

@@ -8065,6 +8065,7 @@ export type Mutation = {
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
   updateReportCard?: Maybe<UpdateReportCardPayload>;
+  updateReportCardBody?: Maybe<UpdateReportCardBodyPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -9710,6 +9711,12 @@ export type MutationUpdateReportByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateReportCardArgs = {
   input: UpdateReportCardInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardBodyArgs = {
+  input: UpdateReportCardBodyInput;
 };
 
 
@@ -17177,6 +17184,30 @@ export type UpdateReportByNodeIdInput = {
   patch: ReportPatch;
 };
 
+/** All input for the `updateReportCardBody` mutation. */
+export type UpdateReportCardBodyInput = {
+  body?: Maybe<Scalars['JSON']>;
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateReportCardBody` mutation. */
+export type UpdateReportCardBodyPayload = {
+  __typename?: 'UpdateReportCardBodyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** All input for the `updateReportCard` mutation. */
 export type UpdateReportCardInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -22632,6 +22663,23 @@ export type UpdateReportCardMutation = (
   { __typename?: 'Mutation' }
   & { updateReportCard?: Maybe<(
     { __typename?: 'UpdateReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & ReportCardDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateReportCardBodyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type UpdateReportCardBodyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReportCardBody?: Maybe<(
+    { __typename?: 'UpdateReportCardBodyPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & ReportCardDetailsFragment
@@ -29647,6 +29695,15 @@ export const UpdateReportCardDocument = /*#__PURE__*/ gql`
   }
 }
     ${ReportCardDetailsFragmentDoc}`;
+export const UpdateReportCardBodyDocument = /*#__PURE__*/ gql`
+    mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
+  updateReportCardBody(input: {cardId: $id, body: $body}) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
 export const DeleteReportCardDocument = /*#__PURE__*/ gql`
     mutation DeleteReportCard($id: Int!) {
   deleteReportCard(input: {cardId: $id}) {
@@ -31315,6 +31372,7 @@ export const namedOperations = {
     AddReportCard: 'AddReportCard',
     ReorderReportTabCards: 'ReorderReportTabCards',
     UpdateReportCard: 'UpdateReportCard',
+    UpdateReportCardBody: 'UpdateReportCardBody',
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
     PublishReport: 'PublishReport',

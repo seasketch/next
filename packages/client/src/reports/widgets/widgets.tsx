@@ -1,6 +1,6 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC, useContext, useMemo, useState, useEffect, useRef } from "react";
+import { FC, useContext, useMemo, useState, useEffect, useRef, memo } from "react";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -82,6 +82,52 @@ import {
 import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
+
+type WidgetComponent = React.FC<any>;
+
+const DEBUG_WIDGET_MEMO = false;
+
+function debugPropsEqual(componentName: string, prevProps: Record<string, any>, nextProps: Record<string, any>) {
+  const allKeys = new Set([...Object.keys(prevProps), ...Object.keys(nextProps)]);
+  const changed = Array.from(allKeys).filter(
+    (key) => prevProps[key] !== nextProps[key]
+  );
+  if (changed.length > 0) {
+    console.log(`[WidgetMemo] ${componentName} props changed`, changed);
+    return false;
+  } else {
+    console.log(`[WidgetMemo] ${componentName} props did not change`);
+  }
+  return true;
+}
+
+function memoWidget(Component: WidgetComponent, name: string) {
+  return DEBUG_WIDGET_MEMO
+    ? memo(Component, (prevProps, nextProps) =>
+      debugPropsEqual(
+        name,
+        prevProps as Record<string, any>,
+        nextProps as Record<string, any>
+      )
+    )
+    : memo(Component);
+}
+
+const memoizedWidgets: Record<string, WidgetComponent> = {
+  InlineMetric: memoWidget(InlineMetric, "InlineMetric"),
+  GeographySizeTable: memoWidget(GeographySizeTable, "GeographySizeTable"),
+  SketchAttributesTable: memoWidget(SketchAttributesTable, "SketchAttributesTable"),
+  OverlappingAreasTable: memoWidget(OverlappingAreasTable, "OverlappingAreasTable"),
+  FeatureCountTable: memoWidget(FeatureCountTable, "FeatureCountTable"),
+  FeaturePresenceTable: memoWidget(FeaturePresenceTable, "FeaturePresenceTable"),
+  IntersectingFeaturesList: memoWidget(IntersectingFeaturesList, "IntersectingFeaturesList"),
+  ColumnStatisticsTable: memoWidget(ColumnStatisticsTable, "ColumnStatisticsTable"),
+  ColumnValuesHistogram: memoWidget(ColumnValuesHistogram, "ColumnValuesHistogram"),
+  RasterValuesHistogram: memoWidget(RasterValuesHistogram, "RasterValuesHistogram"),
+  RasterStatisticsTable: memoWidget(RasterStatisticsTable, "RasterStatisticsTable"),
+  InlineLayerToggle: memoWidget(InlineLayerToggle, "InlineLayerToggle"),
+  BlockLayerToggle: memoWidget(BlockLayerToggle, "BlockLayerToggle"),
+};
 
 function groupByForStyle(
   mapboxGlStyles: AnyLayer[] | null | undefined,
@@ -267,7 +313,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
   const node = props.node as Node;
   const cardId = props.cardId;
   const { type, componentSettings, metrics: dependencies } = node.attrs || {};
-  const alternateLanguageSettings = node.attrs?.alternateLanguageSettings || {};
+  const alternateLanguageSettings = node.attrs?.alternateLanguageSettings;
   if (!type) {
     throw new Error("ReportWidget node type not specified");
   }
@@ -401,31 +447,31 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
 
   switch (node.attrs.type) {
     case "InlineMetric":
-      return <InlineMetric {...widgetProps} />;
+      return <memoizedWidgets.InlineMetric {...widgetProps} />;
     case "GeographySizeTable":
-      return <GeographySizeTable {...widgetProps} />;
+      return <memoizedWidgets.GeographySizeTable {...widgetProps} />;
     case "SketchAttributesTable":
-      return <SketchAttributesTable {...widgetProps} />;
+      return <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
     case "OverlappingAreasTable":
-      return <OverlappingAreasTable {...widgetProps} />;
+      return <memoizedWidgets.OverlappingAreasTable {...widgetProps} />;
     case "FeatureCountTable":
-      return <FeatureCountTable {...widgetProps} />;
+      return <memoizedWidgets.FeatureCountTable {...widgetProps} />;
     case "FeaturePresenceTable":
-      return <FeaturePresenceTable {...widgetProps} />;
+      return <memoizedWidgets.FeaturePresenceTable {...widgetProps} />;
     case "IntersectingFeaturesList":
-      return <IntersectingFeaturesList {...widgetProps} />;
+      return <memoizedWidgets.IntersectingFeaturesList {...widgetProps} />;
     case "ColumnStatisticsTable":
-      return <ColumnStatisticsTable {...widgetProps} />;
+      return <memoizedWidgets.ColumnStatisticsTable {...widgetProps} />;
     case "ColumnValuesHistogram":
-      return <ColumnValuesHistogram {...widgetProps} />;
+      return <memoizedWidgets.ColumnValuesHistogram {...widgetProps} />;
     case "RasterValuesHistogram":
-      return <RasterValuesHistogram {...widgetProps} />;
+      return <memoizedWidgets.RasterValuesHistogram {...widgetProps} />;
     case "RasterStatisticsTable":
-      return <RasterStatisticsTable {...widgetProps} />;
+      return <memoizedWidgets.RasterStatisticsTable {...widgetProps} />;
     case "InlineLayerToggle":
-      return <InlineLayerToggle {...widgetProps} />;
+      return <memoizedWidgets.InlineLayerToggle {...widgetProps} />;
     case "BlockLayerToggle":
-      return <BlockLayerToggle {...widgetProps} />;
+      return <memoizedWidgets.BlockLayerToggle {...widgetProps} />;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -1149,8 +1195,8 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   marks?: Mark[];
   node?: Node;
   sketchClass: ReportContextSketchClassDetailsFragment;
-  alternateLanguageSettings: { [langCode: string]: any };
-  lang?: string;
+  alternateLanguageSettings?: { [langCode: string]: any };
+  lang: string;
 }
 
 export type ReportWidget<T extends Record<string, any>> = FC<
