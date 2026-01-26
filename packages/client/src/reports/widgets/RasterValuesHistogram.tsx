@@ -115,13 +115,20 @@ function buildHistogramBuckets({
     entries.push({ value: bucket[0], count: 0 });
   }
 
+  if (!entries.length) {
+    return histogram.map(([value, entryCount]) => ({
+      value,
+      count: entryCount,
+      fraction: count > 0 ? entryCount / count : 0,
+    }));
+  }
 
   for (const [value, entryCount] of histogram) {
     const nextEntryIndex = entries.findIndex((entry) => entry.value > value);
-    if (nextEntryIndex === -1) {
-      throw new Error(`No entry found for value: ${value}`);
-    }
-    const target = entries[Math.max(0, nextEntryIndex - 1)];
+    const target =
+      nextEntryIndex === -1
+        ? entries[entries.length - 1]
+        : entries[Math.max(0, nextEntryIndex - 1)];
     if (target) {
       target.count += entryCount;
     }
