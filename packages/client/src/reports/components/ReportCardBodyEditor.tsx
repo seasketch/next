@@ -26,7 +26,7 @@ import {
   reportBodySchema,
   setCollapsibleBlocksClosed,
 } from "../widgets/prosemirror/reportBodySchema";
-import ReactNodeViewPortalsProvider, {
+import {
   useReactNodeViewPortals,
 } from "../ReactNodeView/PortalProvider";
 import { createReactNodeView } from "../ReactNodeView";
@@ -42,11 +42,8 @@ import {
   ProjectReportingLayersDocument,
   SpatialMetricState,
   useProjectReportingLayersQuery,
-  usePublishedTableOfContentsQuery,
   useDataDownloadInfoLazyQuery,
   usePreprocessSourceMutation,
-  useAvailableReportLayersQuery,
-  useUpdateReportCardMutation,
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
@@ -60,14 +57,12 @@ import {
   ReportContext,
 } from "../ReportContext";
 import getSlug from "../../getSlug";
-import Spinner from "../../components/Spinner";
 import { LayerPickerList } from "../widgets/LayerPickerDropdown";
 import { useHistory } from "react-router-dom";
 import { ProsemirrorBodyJSON } from "../cards/cards";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Button from "../../components/Button";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
-import { DraftReportContext } from "../DraftReportContext";
 import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 
 interface ReportCardBodyEditorProps {
@@ -625,6 +620,7 @@ function ReportCardBodyEditorInner({
           </>,
           footerContainerRef.current
         )}
+
     </div>
   );
 }
@@ -673,8 +669,6 @@ function OverlayPickerContent({
 
 export default function ReportCardBodyEditor(props: ReportCardBodyEditorProps) {
   return (
-    <ReactNodeViewPortalsProvider>
-      <ReportCardBodyEditorInner {...props} />
-    </ReactNodeViewPortalsProvider>
+    <ReportCardBodyEditorInner {...props} />
   );
 }

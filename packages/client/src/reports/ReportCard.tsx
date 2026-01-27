@@ -31,6 +31,7 @@ import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReport
 import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar";
+import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -235,7 +236,9 @@ export default function ReportCard({
     }
   }, [moveCardToTab, moveTabTargetId, cardId, selectedTabId, setSelectedTabId]);
 
-  return (
+
+  const content = (
+
     <ReportCardTitleToolbarContext.Provider value={{ editing: Boolean(adminMode && selectedForEditing === cardId), dragHandleProps, adminMode: Boolean(adminMode), cardId, hasMetrics: metrics?.length > 0, openMoveCardToTabModal: sortedTabs.length > 1 ? openMoveToTabModal : undefined }}>
       <div
         className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${adminMode && selectedForEditing === cardId ? "editing" : ""
@@ -470,7 +473,6 @@ export default function ReportCard({
             ]}
           >
             <ReportMetricsProgressDetails
-              metricIds={metrics.map((m) => m.id)}
               config={config}
               isAdmin={adminMode}
             />
@@ -478,5 +480,15 @@ export default function ReportCard({
         )}
       </div>
     </ReportCardTitleToolbarContext.Provider>
+
   );
+  if (adminMode && selectedForEditing === cardId) {
+    return (
+      <ReactNodeViewPortalsProvider>
+        {content}
+      </ReactNodeViewPortalsProvider>
+    );
+  } else {
+    return content;
+  }
 }

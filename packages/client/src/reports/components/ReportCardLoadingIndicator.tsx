@@ -254,7 +254,6 @@ export default function ReportCardLoadingIndicator({
     }
   }, [display, isComplete]);
 
-  console.log('isComplete', isComplete, readyToShow);
 
   if (!display || (!isComplete && !readyToShow)) return null;
 

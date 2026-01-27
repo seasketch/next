@@ -1,6 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import { useReportContext } from "./ReportContext";
-import { useMemo } from "react";
+import { useContext, useMemo } from "react";
 import {
   CompatibleSpatialMetric,
   Geography,
@@ -16,18 +16,18 @@ import {
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { ReportCardConfiguration } from "./cards/cards";
+import { DraftReportContext } from "./DraftReportContext";
 
 export default function ReportMetricsProgressDetails({
-  metricIds,
   config,
   isAdmin,
 }: {
-  metricIds: number[];
   config: ReportCardConfiguration<any>;
   isAdmin?: boolean;
 }) {
   const { t } = useTranslation("sketching");
   const reportContext = useReportContext();
+  const draftReportContext = useContext(DraftReportContext);
 
   const state = useMemo(() => {
     const geographyMetrics: CompatibleSpatialMetric[] = [];
@@ -35,11 +35,21 @@ export default function ReportMetricsProgressDetails({
     const relatedOverlaySources = new Set<OverlaySourceDetailsFragment>();
     const failedMetrics = [] as number[];
     const metrics = [
-      // ...reportContext.draftDependencyMetrics,
+      ...draftReportContext.draftMetrics,
       ...reportContext.metrics,
     ];
+    const overlaySources = [
+      ...draftReportContext.draftOverlaySources,
+      ...reportContext.overlaySources,
+    ];
+    const deps = reportContext.getDependencies(config.id);
+
+    const metricIds = new Set([
+      ...deps.metrics.map((m) => m.id),
+      ...draftReportContext.draftMetrics.map((m) => m.id),
+    ]);
     for (const metric of metrics) {
-      if (metricIds.includes(metric.id)) {
+      if (metricIds.has(metric.id)) {
         if (
           subjectIsGeography(
             metric.subject as MetricSubjectFragment | MetricSubjectGeography
@@ -50,7 +60,7 @@ export default function ReportMetricsProgressDetails({
           fragmentMetrics.push(metric);
         }
         if (metric.sourceUrl || metric.sourceProcessingJobDependency) {
-          const relatedOverlaySource = reportContext.overlaySources.find(
+          const relatedOverlaySource = overlaySources.find(
             (s) =>
               s.sourceProcessingJob?.jobKey ===
               metric.sourceProcessingJobDependency ||
@@ -72,7 +82,7 @@ export default function ReportMetricsProgressDetails({
       relatedOverlaySources: Array.from(relatedOverlaySources),
       failedMetrics,
     };
-  }, [metricIds, reportContext.metrics, reportContext.overlaySources]);
+  }, [draftReportContext.draftMetrics, draftReportContext.draftOverlaySources, reportContext.metrics, reportContext.overlaySources]);
 
   return (
     <Tooltip.Provider>

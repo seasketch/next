@@ -711,11 +711,20 @@ export default function TooltipMenu({
           ds?.tooltipDropdown === "true" ||
           ds?.tooltipPortal === "true" ||
           ds?.reportCommandPalette === "true" ||
-          ds?.reportBlockHandle === "true" ||
-          ds?.reportCardBodyEditorFooter === "true"
+          ds?.reportBlockHandle === "true"
         );
       });
       if (inTooltip) return;
+
+      const inFooter = path.some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const ds = node.dataset;
+        return ds?.reportCardBodyEditorFooter === "true";
+      });
+      if (inFooter) {
+        setPosition(null);
+        return;
+      }
 
       // check for closing of radix dropdown
       if (e.target instanceof HTMLElement && e.target.tagName === "HTML") {

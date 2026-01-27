@@ -27,6 +27,7 @@ import {
   SpatialMetricState,
   useDraftReportDependenciesQuery,
   useProjectReportingLayersQuery,
+  DraftReportDependenciesDocument,
 } from "../generated/graphql";
 import { ProsemirrorBodyJSON, ReportConfiguration } from "./cards/cards";
 import {
@@ -43,6 +44,9 @@ import { MapContext } from "../dataLayers/MapContextManager";
 import { Node } from "prosemirror-model";
 import getSlug from "../getSlug";
 import useDebounce from "../useDebounce";
+import { gql } from "@apollo/client";
+// @ts-ignore
+window.gql = gql;
 
 export type ReportMapStyle = {
   sources: { [id: string]: AnySourceData };
@@ -230,7 +234,7 @@ export function useReportState(
   const [recalculateMutation, recalculateState] =
     useRecalculateSpatialMetricsMutation({
       onError: onError,
-      refetchQueries: [ReportContextDocument],
+      refetchQueries: [ReportContextDocument, DraftReportDependenciesDocument],
       awaitRefetchQueries: true,
     });
 
