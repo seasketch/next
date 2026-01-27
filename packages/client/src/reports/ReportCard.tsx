@@ -287,37 +287,7 @@ export default function ReportCard({
         } ${Object.values(errors).length > 0 ? "hasErrors" : ""}`}
     >
       <div className="group">
-        <div className={`absolute top-0.5 w-full p-4 pb-1 ${tint}`}>
-          <div className="flex items-center space-x-2" {...dragHandleProps}>
-            {icon && iconMap[icon] ? (
-              <div className="flex-shrink-0">{iconMap[icon]}</div>
-            ) : (
-              <div className="flex-shrink-0 w-4 h-4" />
-            )}
-          </div>
-        </div>
-        {loading && !Object.values(errors).length && (
-          <button
-            type="button"
-            className="absolute top-[14px] right-[16px]"
-            onClick={() => setShowCalcDetails(cardId!)}
-            title={t("Calculation Details")}
-          >
-            <ReportCardLoadingIndicator
-              className=""
-              display={true}
-              metrics={
-                metrics
-                // hasRelatedDraftMetrics
-                //   ? [...metrics, ...draftReportContext.draftDependencyMetrics]
-                //   : metrics
-              }
-              sourceProcessingJobs={sources
-                .map((s) => s.sourceProcessingJob!)
-                .filter((s) => Boolean(s))}
-            />
-          </button>
-        )}
+
         <div className="absolute right-2 top-2 z-10">
           <div className="flex items-center space-x-1">
             {dragHandleProps &&
@@ -395,6 +365,28 @@ export default function ReportCard({
                   </ReportCardActionMenu>
                 </div>
               )}
+            {(true || (loading && !Object.values(errors).length)) && (
+              <button
+                type="button"
+                className="absolute top-[14px] right-[16px]"
+                onClick={() => setShowCalcDetails(cardId!)}
+                title={t("Calculation Details")}
+              >
+                <ReportCardLoadingIndicator
+                  className=""
+                  display={true}
+                  metrics={
+                    metrics
+                    // hasRelatedDraftMetrics
+                    //   ? [...metrics, ...draftReportContext.draftDependencyMetrics]
+                    //   : metrics
+                  }
+                  sourceProcessingJobs={sources
+                    .map((s) => s.sourceProcessingJob!)
+                    .filter((s) => Boolean(s))}
+                />
+              </button>
+            )}
           </div>
         </div>
         <div className={`px-4 pb-4 text-sm ${loading ? "loading" : ""}`}>

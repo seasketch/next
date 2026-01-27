@@ -22,7 +22,10 @@ import ActiveParagraphPlaceholderPlugin from "../../editor/ActiveParagraphPlaceh
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { exampleSetup } from "prosemirror-example-setup";
 import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlugin";
-import { reportBodySchema, setCollapsibleBlocksClosed } from "../widgets/prosemirror/reportBodySchema";
+import {
+  reportBodySchema,
+  setCollapsibleBlocksClosed,
+} from "../widgets/prosemirror/reportBodySchema";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
 } from "../ReactNodeView/PortalProvider";
@@ -47,10 +50,14 @@ import {
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
+  ReportContextDocument,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
-import { extractMetricDependenciesFromReportBody, ReportContext } from "../ReportContext";
+import {
+  extractMetricDependenciesFromReportBody,
+  ReportContext,
+} from "../ReportContext";
 import getSlug from "../../getSlug";
 import Spinner from "../../components/Spinner";
 import { LayerPickerList } from "../widgets/LayerPickerDropdown";
@@ -101,30 +108,28 @@ function ReportCardBodyEditorInner({
   preselectTitle = false,
   footerContainerRef,
 }: ReportCardBodyEditorProps) {
-
   const reportContext = useContext(ReportContext);
 
-
-
   const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
-  const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(JSON.parse(JSON.stringify(body)));
+  const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(
+    JSON.parse(JSON.stringify(body))
+  );
   const onError = useGlobalErrorHandler();
 
-  const [updateReportCard, updateReportCardState] = useUpdateReportCardBodyMutation(
-    {
+  const [updateReportCard, updateReportCardState] =
+    useUpdateReportCardBodyMutation({
       onError,
       awaitRefetchQueries: true,
       refetchQueries: [DraftReportDocument],
-    }
-  );
+    });
 
   const handleCardSave = useCallback(async () => {
     await updateReportCard({
       variables: {
         id: cardId,
-        body: setCollapsibleBlocksClosed(draftBody)
+        body: setCollapsibleBlocksClosed(draftBody),
       },
-      refetchQueries: [DraftReportDocument],
+      refetchQueries: [DraftReportDocument, ReportContextDocument],
       awaitRefetchQueries: true,
     });
     reportContext?.setSelectedForEditing(null);
@@ -132,7 +137,6 @@ function ReportCardBodyEditorInner({
 
   const history = useHistory();
   const { t } = useTranslation("sketching");
-
 
   const [additionalDependencies, setAdditionalDependencies] = useState<
     MetricDependency[]
@@ -157,16 +161,20 @@ function ReportCardBodyEditorInner({
   });
 
   useEffect(() => {
-    if (!draftDependenciesQuery.loading && !draftDependenciesQuery.data?.draftReportDependencies?.ready) {
+    if (
+      !draftDependenciesQuery.loading &&
+      !draftDependenciesQuery.data?.draftReportDependencies?.ready
+    ) {
       const ref = setInterval(() => {
         draftDependenciesQuery.refetch();
       }, 1000);
       return () => clearInterval(ref);
     }
-  }, [draftDependenciesQuery.loading, draftDependenciesQuery.data?.draftReportDependencies?.ready])
-
-
-
+  }, [
+    draftDependenciesQuery.loading,
+    draftDependenciesQuery.data?.draftReportDependencies?.ready,
+    draftDependenciesQuery,
+  ]);
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -206,7 +214,6 @@ function ReportCardBodyEditorInner({
 
   const langContext = useContext(FormLanguageContext);
   const currentLangCode = langContext?.lang?.code || "EN";
-
 
   const reportingLayersQuery = useProjectReportingLayersQuery({
     variables: {
@@ -347,12 +354,19 @@ function ReportCardBodyEditorInner({
 
   useEffect(() => {
     setDraftDependencies({
-      metrics: draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
-      overlaySources: draftDependenciesQuery.data?.draftReportDependencies?.overlaySources || [],
+      metrics:
+        draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
+      overlaySources:
+        draftDependenciesQuery.data?.draftReportDependencies?.overlaySources ||
+        [],
       dependencies: additionalDependencies,
     });
-  }, [draftDependenciesQuery.data?.draftReportDependencies?.metrics, draftDependenciesQuery.data?.draftReportDependencies?.overlaySources, additionalDependencies, setDraftDependencies]);
-
+  }, [
+    draftDependenciesQuery.data?.draftReportDependencies?.metrics,
+    draftDependenciesQuery.data?.draftReportDependencies?.overlaySources,
+    additionalDependencies,
+    setDraftDependencies,
+  ]);
 
   const save = useDebouncedFn(
     (doc: any) => {
@@ -368,7 +382,6 @@ function ReportCardBodyEditorInner({
         }
         missing.push(dep);
       }
-      console.log("missing", missing);
       setAdditionalDependencies(missing);
     },
     100,
@@ -555,34 +568,34 @@ function ReportCardBodyEditorInner({
         className={`ProseMirrorBody ReportCardBodyEditor ReportCardBody`}
         ref={root}
       ></div>
-      {
-        footerContainerRef.current && createReactPortal(<>
-          <div className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg" data-report-card-body-editor-footer="true">
-            <div className="flex items-center space-x-2 justify-end">
-              <Button
-                small
-                label={t("Cancel")}
-                onClick={() => {
-                  reportContext?.setSelectedForEditing(null)
-                }}
-              />
-              <Button
-                small
-                label={t("Save")}
-                onClick={handleCardSave}
-                disabled={
-                  updateReportCardState.loading
-                }
-                loading={
-                  updateReportCardState.loading
-                }
-                primary
-              />
+      {footerContainerRef.current &&
+        createReactPortal(
+          <>
+            <div
+              className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg"
+              data-report-card-body-editor-footer="true"
+            >
+              <div className="flex items-center space-x-2 justify-end">
+                <Button
+                  small
+                  label={t("Cancel")}
+                  onClick={() => {
+                    reportContext?.setSelectedForEditing(null);
+                  }}
+                />
+                <Button
+                  small
+                  label={t("Save")}
+                  onClick={handleCardSave}
+                  disabled={updateReportCardState.loading}
+                  loading={updateReportCardState.loading}
+                  primary
+                />
+              </div>
             </div>
-
-          </div></>, footerContainerRef.current)
-
-      }
+          </>,
+          footerContainerRef.current
+        )}
     </div>
   );
 }
@@ -631,10 +644,8 @@ function OverlayPickerContent({
 
 export default function ReportCardBodyEditor(props: ReportCardBodyEditorProps) {
   return (
-
     <ReactNodeViewPortalsProvider>
       <ReportCardBodyEditorInner {...props} />
     </ReactNodeViewPortalsProvider>
-
   );
 }

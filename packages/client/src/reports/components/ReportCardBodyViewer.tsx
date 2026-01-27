@@ -66,6 +66,21 @@ function ReportCardBodyViewerInner({
       details(node, view, getPos) {
         return new DetailsView(node, view, getPos as () => number);
       },
+      // @ts-ignore
+      reportTitle(node, view, getPos, decorations) {
+        return createReactNodeView({
+          node,
+          view,
+          // @ts-ignore
+          getPos,
+          // @ts-ignore
+          decorations,
+          component: ReportWidgetNodeViewRouter,
+          onCreatePortal: createPortal,
+          onDestroy: removePortal,
+          cardId,
+        });
+      },
     }),
     [createPortal, removePortal, cardId]
   );

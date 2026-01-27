@@ -414,3 +414,9 @@ div[attachments="forumAttachments"] {
     user-select: text;
   }
 }
+
+.ReportCardBody:not(.ReportCardBodyEditor) h1[data-report-title="yes"] {
+  > .ProseMirror__contentDOM {
+    display: none;
+  }
+}

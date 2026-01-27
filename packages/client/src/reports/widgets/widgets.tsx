@@ -1,6 +1,14 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC, useContext, useMemo, useState, useEffect, useRef, memo } from "react";
+import {
+  FC,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  memo,
+} from "react";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -72,9 +80,18 @@ import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import {
+  DotsHorizontalIcon,
+  DragHandleDots1Icon,
+  ExclamationTriangleIcon,
+  Pencil2Icon,
+} from "@radix-ui/react-icons";
 import Badge from "../../components/Badge";
-import { GeostatsLayer, isGeostatsLayer, RasterBandInfo } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  isGeostatsLayer,
+  RasterBandInfo,
+} from "@seasketch/geostats-types";
 import {
   findGetExpression,
   isExpression,
@@ -83,21 +100,27 @@ import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
 import { DraftReportContext } from "../DraftReportContext";
+import { collectText } from "../../admin/surveys/collectText";
+import { DotsCircleHorizontalIcon } from "@heroicons/react/outline";
 
 type WidgetComponent = React.FC<any>;
 
 const DEBUG_WIDGET_MEMO = false;
 
-function debugPropsEqual(componentName: string, prevProps: Record<string, any>, nextProps: Record<string, any>) {
-  const allKeys = new Set([...Object.keys(prevProps), ...Object.keys(nextProps)]);
+function debugPropsEqual(
+  componentName: string,
+  prevProps: Record<string, any>,
+  nextProps: Record<string, any>
+) {
+  const allKeys = new Set([
+    ...Object.keys(prevProps),
+    ...Object.keys(nextProps),
+  ]);
   const changed = Array.from(allKeys).filter(
     (key) => prevProps[key] !== nextProps[key]
   );
   if (changed.length > 0) {
-    console.log(`[WidgetMemo] ${componentName} props changed`, changed);
     return false;
-  } else {
-    console.log(`[WidgetMemo] ${componentName} props did not change`);
   }
   return true;
 }
@@ -117,15 +140,39 @@ function memoWidget(Component: WidgetComponent, name: string) {
 const memoizedWidgets: Record<string, WidgetComponent> = {
   InlineMetric: memoWidget(InlineMetric, "InlineMetric"),
   GeographySizeTable: memoWidget(GeographySizeTable, "GeographySizeTable"),
-  SketchAttributesTable: memoWidget(SketchAttributesTable, "SketchAttributesTable"),
-  OverlappingAreasTable: memoWidget(OverlappingAreasTable, "OverlappingAreasTable"),
+  SketchAttributesTable: memoWidget(
+    SketchAttributesTable,
+    "SketchAttributesTable"
+  ),
+  OverlappingAreasTable: memoWidget(
+    OverlappingAreasTable,
+    "OverlappingAreasTable"
+  ),
   FeatureCountTable: memoWidget(FeatureCountTable, "FeatureCountTable"),
-  FeaturePresenceTable: memoWidget(FeaturePresenceTable, "FeaturePresenceTable"),
-  IntersectingFeaturesList: memoWidget(IntersectingFeaturesList, "IntersectingFeaturesList"),
-  ColumnStatisticsTable: memoWidget(ColumnStatisticsTable, "ColumnStatisticsTable"),
-  ColumnValuesHistogram: memoWidget(ColumnValuesHistogram, "ColumnValuesHistogram"),
-  RasterValuesHistogram: memoWidget(RasterValuesHistogram, "RasterValuesHistogram"),
-  RasterStatisticsTable: memoWidget(RasterStatisticsTable, "RasterStatisticsTable"),
+  FeaturePresenceTable: memoWidget(
+    FeaturePresenceTable,
+    "FeaturePresenceTable"
+  ),
+  IntersectingFeaturesList: memoWidget(
+    IntersectingFeaturesList,
+    "IntersectingFeaturesList"
+  ),
+  ColumnStatisticsTable: memoWidget(
+    ColumnStatisticsTable,
+    "ColumnStatisticsTable"
+  ),
+  ColumnValuesHistogram: memoWidget(
+    ColumnValuesHistogram,
+    "ColumnValuesHistogram"
+  ),
+  RasterValuesHistogram: memoWidget(
+    RasterValuesHistogram,
+    "RasterValuesHistogram"
+  ),
+  RasterStatisticsTable: memoWidget(
+    RasterStatisticsTable,
+    "RasterStatisticsTable"
+  ),
   InlineLayerToggle: memoWidget(InlineLayerToggle, "InlineLayerToggle"),
   BlockLayerToggle: memoWidget(BlockLayerToggle, "BlockLayerToggle"),
 };
@@ -316,20 +363,25 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
   const cardId = props.cardId;
   const { type, componentSettings, metrics: dependencies } = node.attrs || {};
   const alternateLanguageSettings = node.attrs?.alternateLanguageSettings;
-  if (!type) {
+  if (!type && node.type.name !== "reportTitle") {
     throw new Error("ReportWidget node type not specified");
   }
-  if (!componentSettings) {
+  if (!componentSettings && node.type.name !== "reportTitle") {
     throw new Error("ReportWidget component settings not specified");
   }
 
   const { metrics, loading, errors, sources } = useMemo(() => {
+    const allMetrics = [...contextMetrics, ...draftReportContext.draftMetrics];
     let loading = false;
     let errors: string[] = [];
     const metrics = filterMetricsByDependencies(
-      [...contextMetrics, ...draftReportContext.draftMetrics],
-      dependencies,
-      [...overlaySources, ...adminSources, ...draftReportContext.draftOverlaySources].reduce((acc, s) => {
+      allMetrics,
+      dependencies || [],
+      [
+        ...overlaySources,
+        ...adminSources,
+        ...draftReportContext.draftOverlaySources,
+      ].reduce((acc, s) => {
         acc[s.tableOfContentsItemId!] = s.sourceUrl!;
         return acc;
       }, {} as Record<number, string>)
@@ -346,8 +398,12 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         errors.push(metric.errorMessage || "Unknown error");
       }
     }
-    let sources = [...overlaySources, ...adminSources, ...draftReportContext.draftOverlaySources].filter((s) =>
-      dependencies.some(
+    let sources = [
+      ...overlaySources,
+      ...adminSources,
+      ...draftReportContext.draftOverlaySources,
+    ].filter((s) =>
+      (dependencies || []).some(
         (d: MetricDependency) =>
           d.tableOfContentsItemId === s.tableOfContentsItemId
       )
@@ -363,21 +419,25 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       // check to make sure each dependency has at least one related metric. If
       // not, that means the client is dynamically fetching metrics from a draft
       // report body and hasn't received those metrics (finished or not) yet.
-      for (const dependency of dependencies) {
+      for (const dependency of dependencies || []) {
         const hash = hashMetricDependency(dependency);
-        const relatedMetric = contextMetrics.find(
-          (m) => m.dependencyHash === hash
-        );
+        const relatedMetric = metrics.find((m) => m.dependencyHash === hash);
         if (!relatedMetric) {
           loading = true;
           break;
         }
       }
     }
-    console.log('metrics', metrics);
     // loading = true;
     return { metrics, sources, loading, errors };
-  }, [contextMetrics, dependencies, overlaySources, adminSources, draftReportContext.draftMetrics, draftReportContext.draftOverlaySources]);
+  }, [
+    contextMetrics,
+    dependencies,
+    overlaySources,
+    adminSources,
+    draftReportContext.draftMetrics,
+    draftReportContext.draftOverlaySources,
+  ]);
 
   const widgetProps: ReportWidgetProps<any> = {
     dependencies,
@@ -393,6 +453,29 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     alternateLanguageSettings,
     lang,
   };
+
+  if (node.type.name === "reportTitle") {
+    // @ts-ignore
+    const title = collectText(node.content);
+    console.log("rendering title", title, node.content);
+    return (
+      <h1
+        className="text-2xl font-bold flex items-center max-w-full truncate"
+        data-report-title-node-view="yes"
+        data-report-title="yes"
+      >
+        <span className="flex-1 truncate">{title.toString()}</span>
+        <div className="flex items-center space-x-1">
+          <button>
+            <DragHandleDots1Icon />
+          </button>
+          <button>
+            <DotsHorizontalIcon />
+          </button>
+        </div>
+      </h1>
+    );
+  }
 
   if (errors.length > 0) {
     const errorMap: Record<string, number> = {};
@@ -719,7 +802,8 @@ export function buildReportCommandGroups({
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-inline-band-stats`,
             label: "Inline Raster Band Statistics",
-            description: "Summarize a raster band with a mean, min, max, or distinct value count.",
+            description:
+              "Summarize a raster band with a mean, min, max, or distinct value count.",
             run: (state, dispatch, view) => {
               return insertInlineMetric(view, state.selection.ranges[0], {
                 type: "InlineMetric",
@@ -732,7 +816,7 @@ export function buildReportCommandGroups({
                 ],
                 componentSettings: {
                   presentation: "raster_stats",
-                  rasterStat: "mean"
+                  rasterStat: "mean",
                 },
               });
             },
@@ -785,7 +869,7 @@ export function buildReportCommandGroups({
                   displayStats: {
                     mean: true,
                     min: true,
-                    max: true
+                    max: true,
                   },
                 },
               });
@@ -990,8 +1074,7 @@ export function buildReportCommandGroups({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-column-value-histogram`,
                 label: "Column Value Histogram",
-                description:
-                  "Histogram of values for a numeric column.",
+                description: "Histogram of values for a numeric column.",
                 run: (state, dispatch, view) => {
                   return insertBlockMetric(view, state.selection.ranges[0], {
                     type: "ColumnValuesHistogram",

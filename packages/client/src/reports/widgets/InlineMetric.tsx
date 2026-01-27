@@ -496,7 +496,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           }
           return formatters.decimal(value[statKey]);
         } else {
-          return NaN;
+          return NaN.toLocaleString(lang);
         }
       }
       case "raster_stats": {
@@ -525,8 +525,6 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     componentSettings?.presentation,
     componentSettings?.stat,
     componentSettings?.rasterStat,
-    componentSettings?.unit,
-    componentSettings?.unitDisplay,
     formatters,
     rasterUnitLabel,
     sketchClass.clippingGeographies,
@@ -537,6 +535,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     countCustomMessages,
     distinctCustomMessages,
     distinctDefaultMessages,
+    componentSettings?.column,
   ]);
 
   if (loading) {

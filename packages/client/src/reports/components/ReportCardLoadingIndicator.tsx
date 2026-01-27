@@ -58,7 +58,7 @@ function computeCombinedProgress(items: MinimalJob[]): {
       progressPercent: null,
       farthestEta: null,
       thresholdMet: false,
-      allComplete: false,
+      allComplete: true,
     };
   }
 
@@ -196,8 +196,8 @@ export default function ReportCardLoadingIndicator({
   const currentPhase: "sources" | "metrics" | "complete" = isComplete
     ? "complete"
     : stage === "sources"
-    ? "sources"
-    : "metrics";
+      ? "sources"
+      : "metrics";
 
   // Synchronous reset when switching phases to avoid a one-frame lag
   if (
@@ -213,8 +213,8 @@ export default function ReportCardLoadingIndicator({
   const targetPercent = isComplete
     ? 100
     : typeof progressPercent === "number"
-    ? Math.max(0, Math.min(94, progressPercent))
-    : prevPercentRef.current; // hold if unknown
+      ? Math.max(0, Math.min(94, progressPercent))
+      : prevPercentRef.current; // hold if unknown
 
   const nextPercent = Math.max(prevPercentRef.current, targetPercent);
   if (nextPercent !== prevPercentRef.current) {
@@ -253,6 +253,8 @@ export default function ReportCardLoadingIndicator({
       setReadyToShow(false);
     }
   }, [display, isComplete]);
+
+  console.log('isComplete', isComplete, readyToShow);
 
   if (!display || (!isComplete && !readyToShow)) return null;
 

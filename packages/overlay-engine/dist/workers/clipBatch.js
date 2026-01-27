@@ -357,7 +357,7 @@ function addColumnValuesToResults(results, feature, groupBy) {
         if (typeof value === "number" ||
             typeof value === "string" ||
             typeof value === "boolean") {
-            if (!(attr in results["*"])) {
+            if (!(attr in results["*"]) || !Array.isArray(results["*"][attr])) {
                 results["*"][attr] = [];
             }
             results["*"][attr].push(columnValue);
@@ -367,7 +367,8 @@ function addColumnValuesToResults(results, feature, groupBy) {
                     if (!(classKey in results)) {
                         results[classKey] = {};
                     }
-                    if (!(attr in results[classKey])) {
+                    if (!(attr in results[classKey]) ||
+                        !Array.isArray(results[classKey][attr])) {
                         results[classKey][attr] = [];
                     }
                     results[classKey][attr].push(columnValue);

@@ -698,7 +698,10 @@ export class OverlayEngineBatchProcessor<
           results[classKey] = {};
         }
         for (const attr in batchData[classKey]) {
-          if (!(attr in results[classKey])) {
+          if (
+            !(attr in results[classKey]) ||
+            !Array.isArray(results[classKey][attr])
+          ) {
             results[classKey][attr] = [];
           }
           results[classKey][attr].push(...batchData[classKey][attr]);

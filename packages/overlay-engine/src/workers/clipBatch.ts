@@ -503,7 +503,7 @@ export function addColumnValuesToResults(
       typeof value === "string" ||
       typeof value === "boolean"
     ) {
-      if (!(attr in results["*"])) {
+      if (!(attr in results["*"]) || !Array.isArray(results["*"][attr])) {
         results["*"][attr] = [];
       }
       results["*"][attr].push(columnValue);
@@ -513,7 +513,10 @@ export function addColumnValuesToResults(
           if (!(classKey in results)) {
             results[classKey] = {} as { [attr: string]: ColumnValues[] };
           }
-          if (!(attr in results[classKey])) {
+          if (
+            !(attr in results[classKey]) ||
+            !Array.isArray(results[classKey][attr])
+          ) {
             results[classKey][attr] = [];
           }
           results[classKey][attr].push(columnValue);

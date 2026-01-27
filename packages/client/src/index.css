@@ -1317,6 +1317,12 @@ div[attachments="forumAttachments"] {
   }
 }
 
+.ReportCardBody:not(.ReportCardBodyEditor) h1[data-report-title="yes"] {
+  > .ProseMirror__contentDOM {
+    display: none;
+  }
+}
+
 input[type="number"].form-element-number-input {
   -webkit-appearance: textfield;
           appearance: textfield;
