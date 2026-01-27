@@ -11,6 +11,7 @@ import ReactNodeViewPortalsProvider, {
 import "prosemirror-view/style/prosemirror.css";
 import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
 import { DetailsView } from "../widgets/prosemirror/details";
+import ReportCardTitleToolbar from "../widgets/ReportCardTitleToolbar";
 
 type ReportCardBodyViewerProps = {
   body: any;
@@ -75,7 +76,7 @@ function ReportCardBodyViewerInner({
           getPos,
           // @ts-ignore
           decorations,
-          component: ReportWidgetNodeViewRouter,
+          component: ReportCardTitleToolbar,
           onCreatePortal: createPortal,
           onDestroy: removePortal,
           cardId,

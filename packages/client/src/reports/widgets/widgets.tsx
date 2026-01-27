@@ -363,10 +363,10 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
   const cardId = props.cardId;
   const { type, componentSettings, metrics: dependencies } = node.attrs || {};
   const alternateLanguageSettings = node.attrs?.alternateLanguageSettings;
-  if (!type && node.type.name !== "reportTitle") {
+  if (!type) {
     throw new Error("ReportWidget node type not specified");
   }
-  if (!componentSettings && node.type.name !== "reportTitle") {
+  if (!componentSettings) {
     throw new Error("ReportWidget component settings not specified");
   }
 
@@ -453,29 +453,6 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     alternateLanguageSettings,
     lang,
   };
-
-  if (node.type.name === "reportTitle") {
-    // @ts-ignore
-    const title = collectText(node.content);
-    console.log("rendering title", title, node.content);
-    return (
-      <h1
-        className="text-2xl font-bold flex items-center max-w-full truncate"
-        data-report-title-node-view="yes"
-        data-report-title="yes"
-      >
-        <span className="flex-1 truncate">{title.toString()}</span>
-        <div className="flex items-center space-x-1">
-          <button>
-            <DragHandleDots1Icon />
-          </button>
-          <button>
-            <DotsHorizontalIcon />
-          </button>
-        </div>
-      </h1>
-    );
-  }
 
   if (errors.length > 0) {
     const errorMap: Record<string, number> = {};

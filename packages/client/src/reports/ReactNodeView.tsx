@@ -127,10 +127,12 @@ class ReactNodeView implements NodeView {
         this.dom?.classList.remove("ProseMirror-selectednode");
       }, [portalContext.selection]);
 
+      const isTitleComponent = this.node.type.name === "reportTitle";
+
       // Use span for inline nodes to avoid forcing block layout; div otherwise.
       return React.createElement(
         this.node.isInline ? "span" : "div",
-        { ref: componentRef, className: "ProseMirror__reactComponent" },
+        { ref: componentRef, className: `ProseMirror__reactComponent ${isTitleComponent ? "reportTitle" : ""}` },
         <ReactNodeViewContext.Provider
           value={{
             node: this.node,

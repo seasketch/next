@@ -51,6 +51,7 @@ import {
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
   ReportContextDocument,
+  SourceProcessingJobDetailsFragment,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -67,6 +68,7 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Button from "../../components/Button";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { DraftReportContext } from "../DraftReportContext";
+import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -175,6 +177,25 @@ function ReportCardBodyEditorInner({
     draftDependenciesQuery.data?.draftReportDependencies?.ready,
     draftDependenciesQuery,
   ]);
+
+  const allDependencies = useMemo(() => {
+    const allMetrics = [...metrics] as CompatibleSpatialMetricDetailsFragment[];
+    const allSourceProcessingJobs = [...sources.map((s) => s.sourceProcessingJob)] as SourceProcessingJobDetailsFragment[];
+    for (const source of draftDependenciesQuery.data?.draftReportDependencies?.overlaySources || []) {
+      if (source.sourceProcessingJob && !allSourceProcessingJobs.find((j) => j.jobKey === source.sourceProcessingJob?.jobKey)) {
+        allSourceProcessingJobs.push(source.sourceProcessingJob);
+      }
+    }
+    for (const metric of draftDependenciesQuery.data?.draftReportDependencies?.metrics || []) {
+      if (metric.id && !allMetrics.find((m) => m.id === metric.id)) {
+        allMetrics.push(metric);
+      }
+    }
+    return {
+      metrics: allMetrics,
+      sourceProcessingJobs: allSourceProcessingJobs,
+    };
+  }, [draftDependenciesQuery.data?.draftReportDependencies, metrics, sources])
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -575,7 +596,15 @@ function ReportCardBodyEditorInner({
               className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg"
               data-report-card-body-editor-footer="true"
             >
+
               <div className="flex items-center space-x-2 justify-end">
+                <div className="pr-5">
+                  <button onClick={() => {
+                    reportContext?.setShowCalcDetails(cardId);
+                  }}>
+                    <ReportCardLoadingIndicator display={true} metrics={allDependencies.metrics} sourceProcessingJobs={allDependencies.sourceProcessingJobs} />
+                  </button>
+                </div>
                 <Button
                   small
                   label={t("Cancel")}

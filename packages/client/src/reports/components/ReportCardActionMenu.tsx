@@ -1,6 +1,8 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import React from "react";
+import React, { useMemo } from "react";
+import { CompatibleSpatialMetricDetailsFragment, OverlaySourceDetailsFragment, SourceProcessingJobDetailsFragment } from "../../generated/graphql";
+import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 
 export type ReportCardActionMenuProps = {
   open?: boolean;
@@ -9,6 +11,12 @@ export type ReportCardActionMenuProps = {
   className?: string;
   triggerClassName?: string;
   children: React.ReactNode;
+  dependencies?: {
+    loading: boolean;
+    errors: string[];
+    metrics: CompatibleSpatialMetricDetailsFragment[];
+    overlaySources: OverlaySourceDetailsFragment[];
+  }
 };
 
 export type ReportCardActionMenuItemProps = {
@@ -36,6 +44,16 @@ export function ReportCardActionMenu(
     children,
   } = props;
 
+  const sourceProcessingJobs = useMemo(() => {
+    const jobs = [] as SourceProcessingJobDetailsFragment[];
+    for (const source of props.dependencies?.overlaySources || []) {
+      if (source.sourceProcessingJob && !jobs.find((j) => j.jobKey === source.sourceProcessingJob?.jobKey)) {
+        jobs.push(source.sourceProcessingJob);
+      }
+    }
+    return jobs;
+  }, [props.dependencies?.overlaySources]);
+
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>
@@ -44,23 +62,35 @@ export function ReportCardActionMenu(
             e.stopPropagation();
           }}
           className={classNames(
-            "p-1 rounded-full",
+            "p-1 rounded-full flex items-center justify-center",
             open
-              ? "text-gray-600 bg-gray-50"
-              : " text-gray-500 hover:text-gray-600 hover:bg-gray-50",
+              ? (
+                props.dependencies?.loading
+                  ? "text-gray-600 "
+                  : "text-gray-600 bg-black/5"
+              )
+              : (
+                props.dependencies?.loading ?
+                  " text-gray-500 "
+                  : " text-gray-500 hover:text-gray-600 hover:bg-black/5"
+              ),
             triggerClassName
           )}
           aria-label={label}
           title={label}
         >
-          <DotsHorizontalIcon className="w-4 h-4" />
+          {
+            props.dependencies?.loading ? <ReportCardLoadingIndicator display={true} metrics={props.dependencies.metrics} sourceProcessingJobs={sourceProcessingJobs} /> : <DotsHorizontalIcon className="w-4 h-4" />
+          }
+
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           side="bottom"
           align="end"
-          sideOffset={4}
+          sideOffset={8}
+          alignOffset={-12}
           className={classNames(
             "z-50 min-w-[160px] rounded-md border border-black/5 bg-white p-1 shadow-lg",
             className

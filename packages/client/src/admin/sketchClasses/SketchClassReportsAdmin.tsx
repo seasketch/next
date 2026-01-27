@@ -17,7 +17,7 @@ import {
   ReportContextDocument,
   usePublishTableOfContentsMutation,
 } from "../../generated/graphql";
-import { PlusCircleIcon } from "@heroicons/react/solid";
+import { PlusCircleIcon, ChevronDownIcon } from "@heroicons/react/solid";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   MenuBarContentClasses,
@@ -38,7 +38,6 @@ import { SortableReportBody } from "../../reports/SortableReportBody";
 import { ReportTabManagementModal } from "../../reports/ReportTabManagementModal";
 import { AddCardModal } from "../../reports/AddCardModal";
 import Button from "../../components/Button";
-import DropdownButton from "../../components/DropdownButton";
 import useDialog from "../../components/useDialog";
 import useProjectId from "../../useProjectId";
 import { FormLanguageContext } from "../../formElements/FormElement";
@@ -190,6 +189,7 @@ export default function SketchClassReportsAdmin({
   });
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [sketchDropdownOpen, setSketchDropdownOpen] = useState(false);
   const [manageTabsModalOpen, setManageTabsModalOpen] = useState(false);
   const [addCardModalOpen, setAddCardModalOpen] = useState(false);
   const draftReport = data?.sketchClass?.draftReport;
@@ -593,35 +593,13 @@ export default function SketchClassReportsAdmin({
               />
               <span className="text-sm text-gray-500">
                 {data?.sketchClass?.report &&
-                  t("Published ") +
+                  t("Last Published ") +
                   new Date(
                     data.sketchClass.report.createdAt
                   ).toLocaleDateString()}
               </span>
             </div>
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-600">
-                  {t("Demo Sketch")}
-                </span>
-                <DropdownButton
-                  small
-                  disabled={sketchesForDemonstration.length === 0}
-                  label={
-                    selectedSketch
-                      ? selectedSketch.name
-                      : t("Select a sketch...")
-                  }
-                  options={sketchesForDemonstration.map((sketch) => ({
-                    label: sketch.name,
-                    onClick: () => setSelectedSketchId(sketch.id),
-                    id: sketch.id.toString(),
-                    selected: sketch.id === selectedSketchId,
-                  }))}
-                />
-              </div>
-            </div>
-            <EditorLanguageSelector />
+            {/* <EditorLanguageSelector /> */}
           </div>
           {/* Main */}
           <div className="flex-1 flex relative max-h-full overflow-hidden">
@@ -764,9 +742,57 @@ export default function SketchClassReportsAdmin({
                         {/* report header */}
                         <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
                           <div className="flex-1">
-                            {selectedSketch
-                              ? selectedSketch.name
-                              : t("Loading...")}
+                            <DropdownMenu.Root
+                              open={sketchDropdownOpen}
+                              onOpenChange={setSketchDropdownOpen}
+                            >
+                              <DropdownMenu.Trigger asChild>
+                                <button
+                                  className="flex items-center gap-1 hover:text-gray-600 focus:outline-none"
+                                  disabled={sketchesForDemonstration.length === 0}
+                                >
+                                  <span>
+                                    {selectedSketch
+                                      ? selectedSketch.name
+                                      : t("Loading...")}
+                                  </span>
+                                  <ChevronDownIcon className="w-4 h-4 text-gray-400" />
+                                </button>
+                              </DropdownMenu.Trigger>
+                              <DropdownMenu.Portal>
+                                <DropdownMenu.Content
+                                  className={MenuBarContentClasses}
+                                  side="bottom"
+                                  align="start"
+                                  sideOffset={5}
+                                >
+                                  <p className="text-sm text-gray-600 px-2 py-1">
+                                    {t("Choose from the following sketches to demonstrate this report.")}
+                                  </p>
+                                  <DropdownMenu.Separator />
+                                  {sketchesForDemonstration.map((sketch) => (
+                                    <DropdownMenu.Item
+                                      key={sketch.id}
+                                      className={MenuBarItemClasses}
+                                      onSelect={() => {
+                                        setSelectedSketchId(sketch.id);
+                                        setSketchDropdownOpen(false);
+                                      }}
+                                    >
+                                      <span
+                                        className={
+                                          sketch.id === selectedSketchId
+                                            ? "font-medium"
+                                            : ""
+                                        }
+                                      >
+                                        {sketch.name}
+                                      </span>
+                                    </DropdownMenu.Item>
+                                  ))}
+                                </DropdownMenu.Content>
+                              </DropdownMenu.Portal>
+                            </DropdownMenu.Root>
                           </div>
                           {/* <div className="flex-none flex items-center hover:bg-gray-100 rounded-full hover:outline-4 hover:outline hover:outline-gray-100">
                         <button>
