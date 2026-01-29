@@ -158,7 +158,7 @@ export const ClassRowSettingsPopover = ({
     if (map.size === 0) {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       for (const s of allSources) {
         const sid = s.tableOfContentsItem?.stableId;
@@ -199,7 +199,7 @@ export const ClassRowSettingsPopover = ({
   }, [
     data?.projectBySlug?.draftTableOfContentsItems,
     reportContext.overlaySources,
-    reportContext.adminSources,
+    reportContext.preprocessedOverlaySources,
     overlayOptions,
     currentSourceIds,
     t,
@@ -257,7 +257,7 @@ export const ClassRowSettingsPopover = ({
 
       const allSources = [
         ...reportContext.overlaySources,
-        ...reportContext.adminSources,
+        ...reportContext.preprocessedOverlaySources,
       ];
 
       const fragmentDeps = newDeps.filter((d) => d.subjectType === "fragments");
@@ -334,7 +334,7 @@ export const ClassRowSettingsPopover = ({
     > = {};
     const allSources = [
       ...reportContext.overlaySources,
-      ...reportContext.adminSources,
+      ...reportContext.preprocessedOverlaySources,
     ];
     for (const row of rows) {
       const source = allSources.find(
@@ -479,12 +479,12 @@ export const ClassRowSettingsPopover = ({
                   <GroupByPicker
                     value={
                       currentGroupByBySource[
-                        String(group.source?.tableOfContentsItemId)
+                      String(group.source?.tableOfContentsItemId)
                       ]
                     }
                     options={
                       groupByOptionsBySource[
-                        String(group.source?.tableOfContentsItemId)
+                      String(group.source?.tableOfContentsItemId)
                       ] || [{ value: "__none__", label: t("None") }]
                     }
                     placeholder={t("None")}
@@ -547,10 +547,10 @@ export const ClassRowSettingsPopover = ({
                   <div
                     key={row.key}
                     className="grid grid-cols-3 gap-2 px-3 py-2 items-center"
-                    // style={{
-                    //   gridTemplateColumns:
-                    //     "minmax(0,200px) minmax(0,200px) minmax(0,200px)",
-                    // }}
+                  // style={{
+                  //   gridTemplateColumns:
+                  //     "minmax(0,200px) minmax(0,200px) minmax(0,200px)",
+                  // }}
                   >
                     <label className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
                       <input
@@ -622,8 +622,8 @@ export const ClassRowSettingsPopover = ({
                         <span className="truncate flex-1 min-w-0">
                           {linkedStableId
                             ? overlayOptions.find(
-                                (o) => o.value === linkedStableId
-                              )?.label || linkedStableId
+                              (o) => o.value === linkedStableId
+                            )?.label || linkedStableId
                             : t("None")}
                         </span>
                         <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />

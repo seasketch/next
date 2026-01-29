@@ -56,229 +56,229 @@ export const FeaturePresenceTable: ReportWidget<
   sketchClass,
   dependencies,
 }) => {
-  const { t } = useTranslation("reports");
-  const mapContext = useContext(MapContext);
+    const { t } = useTranslation("reports");
+    const mapContext = useContext(MapContext);
 
-  const rowsPerPage = componentSettings.rowsPerPage ?? 10;
-  const nameLabel = componentSettings.nameLabel || t("Name");
-  const presenceLabel = componentSettings.presenceLabel || t("Presence");
+    const rowsPerPage = componentSettings.rowsPerPage ?? 10;
+    const nameLabel = componentSettings.nameLabel || t("Name");
+    const presenceLabel = componentSettings.presenceLabel || t("Presence");
 
-  const primaryGeographyId = sketchClass?.clippingGeographies?.[0]?.id ?? 0;
+    const primaryGeographyId = sketchClass?.clippingGeographies?.[0]?.id ?? 0;
 
-  const rows = useMemo<FeaturePresenceRow[]>(() => {
-    const classRows = getClassTableRows({
+    const rows = useMemo<FeaturePresenceRow[]>(() => {
+      const classRows = getClassTableRows({
+        dependencies,
+        sources,
+        customLabels: componentSettings.customRowLabels,
+        allFeaturesLabel: t("All features"),
+        stableIds: componentSettings.rowLinkedStableIds,
+        excludedRowKeys: componentSettings.excludedRowKeys,
+      });
+
+      if (sources.length === 0 || metrics.length === 0 || loading) {
+        return classRows.map((r) => ({
+          ...r,
+          count: NaN,
+        }));
+      }
+
+      const combinedMetrics = combineMetricsBySource<CountMetric>(
+        metrics as any,
+        sources as any,
+        primaryGeographyId
+      ) as Record<
+        string,
+        {
+          fragments: CountMetric;
+          geographies: CountMetric;
+        }
+      >;
+
+      let rows: FeaturePresenceRow[] = classRows.map((r) => {
+        const combinedForSource = combinedMetrics[r.sourceId];
+        const count =
+          combinedForSource?.fragments?.value?.[r.groupByKey]?.count || 0;
+        return {
+          ...r,
+          count,
+        };
+      });
+
+      rows = rows.sort((a, b) =>
+        (a.label || a.key).localeCompare(b.label || b.key)
+      );
+
+      return rows;
+    }, [
       dependencies,
       sources,
-      customLabels: componentSettings.customRowLabels,
-      allFeaturesLabel: t("All features"),
-      stableIds: componentSettings.rowLinkedStableIds,
-      excludedRowKeys: componentSettings.excludedRowKeys,
-    });
+      t,
+      metrics,
+      loading,
+      primaryGeographyId,
+      componentSettings.customRowLabels,
+      componentSettings.rowLinkedStableIds,
+      componentSettings.excludedRowKeys,
+    ]);
 
-    if (sources.length === 0 || metrics.length === 0 || loading) {
-      return classRows.map((r) => ({
-        ...r,
-        count: NaN,
-      }));
+    const {
+      currentPage,
+      setCurrentPage,
+      paginatedItems: paginatedRows,
+      paddingRowsCount,
+      showPagination,
+      totalPages,
+      totalRows,
+      pageBounds,
+    } = usePagination(rows, rowsPerPage);
+
+    const hasAnyColor = useMemo(() => rows.some((row) => row.color), [rows]);
+    const hasVisibilityColumn = useMemo(
+      () =>
+        rows.some(
+          (row) =>
+            row.stableId ||
+            componentSettings.rowLinkedStableIds?.[row.key] ||
+            (row.groupByKey
+              ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
+              : undefined)
+        ),
+      [rows, componentSettings.rowLinkedStableIds]
+    );
+
+    if (!loading && !rows.length) {
+      return (
+        <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
+          <Trans ns="reports">No overlapping features found.</Trans>
+        </div>
+      );
     }
 
-    const combinedMetrics = combineMetricsBySource<CountMetric>(
-      metrics as any,
-      sources as any,
-      primaryGeographyId
-    ) as Record<
-      string,
-      {
-        fragments: CountMetric;
-        geographies: CountMetric;
-      }
-    >;
-
-    let rows: FeaturePresenceRow[] = classRows.map((r) => {
-      const combinedForSource = combinedMetrics[r.sourceId];
-      const count =
-        combinedForSource?.fragments?.value?.[r.groupByKey]?.count || 0;
-      return {
-        ...r,
-        count,
-      };
-    });
-
-    rows = rows.sort((a, b) =>
-      (a.label || a.key).localeCompare(b.label || b.key)
-    );
-
-    return rows;
-  }, [
-    dependencies,
-    sources,
-    t,
-    metrics,
-    loading,
-    primaryGeographyId,
-    componentSettings.customRowLabels,
-    componentSettings.rowLinkedStableIds,
-    componentSettings.excludedRowKeys,
-  ]);
-
-  const {
-    currentPage,
-    setCurrentPage,
-    paginatedItems: paginatedRows,
-    paddingRowsCount,
-    showPagination,
-    totalPages,
-    totalRows,
-    pageBounds,
-  } = usePagination(rows, rowsPerPage);
-
-  const hasAnyColor = useMemo(() => rows.some((row) => row.color), [rows]);
-  const hasVisibilityColumn = useMemo(
-    () =>
-      rows.some(
-        (row) =>
-          row.stableId ||
-          componentSettings.rowLinkedStableIds?.[row.key] ||
-          (row.groupByKey
-            ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-            : undefined)
-      ),
-    [rows, componentSettings.rowLinkedStableIds]
-  );
-
-  if (!loading && !rows.length) {
     return (
-      <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
-        <Trans ns="reports">No overlapping features found.</Trans>
-      </div>
-    );
-  }
-
-  return (
-    <Tooltip.Provider>
-      <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
-        <div className="divide-y divide-gray-100">
-          <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
-            {hasVisibilityColumn && (
-              <div className="flex-none w-6 flex justify-center text-gray-600 text-xs font-semibold uppercase tracking-wide">
-                <LayersIcon className="w-4 h-4" />
+      <Tooltip.Provider>
+        <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
+          <div className="divide-y divide-gray-100">
+            <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+              {hasVisibilityColumn && (
+                <div className="flex-none w-6 flex justify-center text-gray-600 text-xs font-semibold uppercase tracking-wide">
+                  <LayersIcon className="w-4 h-4" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
+                {nameLabel}
               </div>
-            )}
-            <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
-              {nameLabel}
+              <div className="flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] text-center">
+                {presenceLabel}
+              </div>
             </div>
-            <div className="flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] text-center">
-              {presenceLabel}
-            </div>
-          </div>
-          {paginatedRows.map((row) => {
-            const color = row.color;
-            const stableId =
-              row.stableId ||
-              componentSettings.rowLinkedStableIds?.[row.key] ||
-              (row.groupByKey
-                ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-                : undefined);
-            const layerState = stableId
-              ? mapContext?.layerStatesByTocStaticId?.[stableId]
-              : undefined;
-            const isPresent = row.count > 0;
-            return (
-              <div
-                key={row.key}
-                className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50`}
-              >
-                {hasVisibilityColumn && (
-                  <div className="flex-none w-6 flex justify-center">
-                    {stableId ? (
-                      <VisibilityCheckboxAnimated
-                        id={stableId}
-                        onClick={() => {
-                          if (!mapContext?.manager) return;
-                          const visible =
-                            layerState?.visible && layerState?.hidden !== true;
-                          if (visible) {
-                            mapContext.manager.hideTocItems?.([stableId]);
-                          } else {
-                            mapContext.manager.showTocItems?.([stableId]);
+            {paginatedRows.map((row) => {
+              const color = row.color;
+              const stableId =
+                row.stableId ||
+                componentSettings.rowLinkedStableIds?.[row.key] ||
+                (row.groupByKey
+                  ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
+                  : undefined);
+              const layerState = stableId
+                ? mapContext?.layerStatesByTocStaticId?.[stableId]
+                : undefined;
+              const isPresent = row.count > 0;
+              return (
+                <div
+                  key={row.key}
+                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50`}
+                >
+                  {hasVisibilityColumn && (
+                    <div className="flex-none w-6 flex justify-center">
+                      {stableId ? (
+                        <VisibilityCheckboxAnimated
+                          id={stableId}
+                          onClick={() => {
+                            if (!mapContext?.manager) return;
+                            const visible =
+                              layerState?.visible && layerState?.hidden !== true;
+                            if (visible) {
+                              mapContext.manager.hideTocItems?.([stableId]);
+                            } else {
+                              mapContext.manager.showTocItems?.([stableId]);
+                            }
+                          }}
+                          disabled={!mapContext?.manager}
+                          visibility={
+                            (layerState?.visible &&
+                              layerState?.hidden !== true) ||
+                            false
                           }
-                        }}
-                        disabled={!mapContext?.manager}
-                        visibility={
-                          (layerState?.visible &&
-                            layerState?.hidden !== true) ||
-                          false
-                        }
-                        loading={layerState?.loading}
-                        error={
-                          layerState?.error
-                            ? String(layerState?.error)
-                            : undefined
-                        }
+                          loading={layerState?.loading}
+                          error={
+                            layerState?.error
+                              ? String(layerState?.error)
+                              : undefined
+                          }
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-400"></span>
+                      )}
+                    </div>
+                  )}
+                  {color && (
+                    <div className="flex-none w-4 flex justify-center">
+                      <span
+                        className="inline-block w-4 h-4 rounded-sm border border-black/10"
+                        style={{ backgroundColor: color }}
+                        aria-hidden
                       />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 text-gray-800 text-sm">
+                    <span
+                      className="truncate block"
+                      title={row.key === "*" ? t("All features") : row.key}
+                    >
+                      {row.key === "*" ? t("All features") : row.label}
+                    </span>
+                  </div>
+                  <div className="flex-none text-gray-900 tabular-nums text-sm min-w-[80px] text-center items-center flex">
+                    {loading ? (
+                      <MetricLoadingDots />
                     ) : (
-                      <span className="text-xs text-gray-400"></span>
+                      renderPresenceSymbol({
+                        isPresent,
+                        presentation:
+                          componentSettings.presenceColumnPresentation ||
+                          DEFAULT_PRESENCE_PRESENTATION,
+                        presentLabel: t("Present"),
+                        absentLabel: t("Absent"),
+                        withTooltip: true,
+                        wrapperClassName:
+                          "inline-flex items-center justify-center w-full cursor-help",
+                      })
                     )}
                   </div>
-                )}
-                {color && (
-                  <div className="flex-none w-4 flex justify-center">
-                    <span
-                      className="inline-block w-4 h-4 rounded-sm border border-black/10"
-                      style={{ backgroundColor: color }}
-                      aria-hidden
-                    />
-                  </div>
-                )}
-                <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                  <span
-                    className="truncate block"
-                    title={row.key === "*" ? t("All features") : row.key}
-                  >
-                    {row.key === "*" ? t("All features") : row.label}
-                  </span>
                 </div>
-                <div className="flex-none text-gray-900 tabular-nums text-sm min-w-[80px] text-center items-center flex">
-                  {loading ? (
-                    <MetricLoadingDots />
-                  ) : (
-                    renderPresenceSymbol({
-                      isPresent,
-                      presentation:
-                        componentSettings.presenceColumnPresentation ||
-                        DEFAULT_PRESENCE_PRESENTATION,
-                      presentLabel: t("Present"),
-                      absentLabel: t("Absent"),
-                      withTooltip: true,
-                      wrapperClassName:
-                        "inline-flex items-center justify-center w-full cursor-help",
-                    })
-                  )}
-                </div>
-              </div>
-            );
-          })}
-          <TablePaddingRows
-            count={paddingRowsCount}
-            includeColorColumn={hasAnyColor}
-            includeVisibilityColumn={hasVisibilityColumn}
-            showPercentColumn={false}
-            numericAlign="center"
-          />
+              );
+            })}
+            <TablePaddingRows
+              count={paddingRowsCount}
+              includeColorColumn={hasAnyColor}
+              includeVisibilityColumn={hasVisibilityColumn}
+              showPercentColumn={false}
+              numericAlign="center"
+            />
+          </div>
+          {showPagination && (
+            <PaginationFooter
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalRows={totalRows}
+              pageBounds={pageBounds}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
-        {showPagination && (
-          <PaginationFooter
-            currentPage={currentPage}
-            totalPages={totalPages}
-            totalRows={totalRows}
-            pageBounds={pageBounds}
-            onPageChange={setCurrentPage}
-          />
-        )}
-      </div>
-    </Tooltip.Provider>
-  );
-};
+      </Tooltip.Provider>
+    );
+  };
 
 export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
   ({
@@ -301,7 +301,7 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
     const sources = useMemo(() => {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       return allSources.filter((s) =>
         dependencies?.some(
@@ -310,7 +310,7 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
       );
     }, [
       reportContext.overlaySources,
-      reportContext.adminSources,
+      reportContext.preprocessedOverlaySources,
       dependencies,
     ]);
 

@@ -323,6 +323,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   sketchClass,
   lang
 }) => {
+  console.log("rendering inline metric");
   const {
     pluralRules,
     countDefaultMessages,
@@ -664,7 +665,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
     const allSources = [
       ...(reportContext.overlaySources || []),
-      ...(reportContext.adminSources || []),
+      ...(reportContext.preprocessedOverlaySources || []),
     ];
     return allSources.filter((s) =>
       dependencies.some(
@@ -674,13 +675,13 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   }, [
     node.attrs?.metrics,
     reportContext.overlaySources,
-    reportContext.adminSources,
+    reportContext.preprocessedOverlaySources,
   ]);
 
   const relatedOverlay = useMemo(() => {
     const allSources = [
       ...(reportContext.overlaySources || []),
-      ...(reportContext.adminSources || []),
+      ...(reportContext.preprocessedOverlaySources || []),
     ];
     const dependencies = (node.attrs.metrics || []) as MetricDependency[];
     for (const dependency of dependencies) {
@@ -697,7 +698,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   }, [
     node.attrs.metrics,
     reportContext.overlaySources,
-    reportContext.adminSources,
+    reportContext.preprocessedOverlaySources,
   ]);
 
   const { valueColumnOptions, valueColumnAttributesByName } = useMemo(() => {

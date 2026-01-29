@@ -16,34 +16,26 @@ import {
   ReportContextSketchClassDetailsFragment,
   ReportContextSketchDetailsFragment,
   Sketch,
-  useGeographyMetricSubscriptionSubscription,
   useRecalculateSpatialMetricsMutation,
-  useSketchMetricSubscriptionSubscription,
   OverlaySourceDetailsFragment,
   useReportContextQuery,
   ReportContextDocument,
   SketchGeometryType,
-  useReportOverlaySourcesSubscriptionSubscription,
   SpatialMetricState,
-  useDraftReportDependenciesQuery,
   useProjectReportingLayersQuery,
   DraftReportDependenciesDocument,
 } from "../generated/graphql";
-import { ProsemirrorBodyJSON, ReportConfiguration } from "./cards/cards";
+import { ReportConfiguration } from "./cards/cards";
 import {
-  hashMetricDependency,
   MetricDependency,
   MetricSubjectFragment,
 } from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import useProjectId from "../useProjectId";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ApolloError } from "@apollo/client";
 import type { AnyLayer, AnySourceData } from "mapbox-gl";
 import { MapContext } from "../dataLayers/MapContextManager";
-import { Node } from "prosemirror-model";
 import getSlug from "../getSlug";
-import useDebounce from "../useDebounce";
 import { gql } from "@apollo/client";
 // @ts-ignore
 window.gql = gql;
@@ -91,13 +83,13 @@ export interface ReportContextState {
   /**
    * The ID of the card currently selected for editing
    */
-  selectedForEditing: number | null;
+  editing: number | null;
   preselectTitle: boolean;
 
   /**
    * Function to set the card selected for editing
    */
-  setSelectedForEditing: (
+  setEditing: (
     cardId: number | null,
     preselectTitle?: boolean
   ) => void;
@@ -105,7 +97,7 @@ export interface ReportContextState {
   /**
    * Function to delete a card
    */
-  deleteCard?: (cardId: number) => void;
+  deleteCard?: (cardId: number, skipConfirmation?: boolean) => void;
   /**
    * Function to move a card to another tab (admin only)
    */
@@ -123,22 +115,11 @@ export interface ReportContextState {
     loading: boolean;
     errors: string[];
   };
-  userIsAdmin: boolean;
   recalculate: (metricIds: number[], preprocessSources?: boolean) => void;
   recalculateState: { loading: boolean; error: ApolloError | undefined };
-  /**
-   * Set or clear a map style associated with a given report card. Styles are
-   * automatically namespaced so they don't collide with other report cards or
-   * the main overlay list.
-   */
-  setCardMapStyle: (
-    cardId: number,
-    styleId: string,
-    style: ReportMapStyle | null
-  ) => void;
   showCalcDetails: number | undefined;
   setShowCalcDetails: Dispatch<SetStateAction<number | undefined>>;
-  adminSources: OverlaySourceDetailsFragment[];
+  preprocessedOverlaySources: OverlaySourceDetailsFragment[];
 }
 
 export const ReportContext = createContext<ReportContextState | null>(null);
@@ -152,13 +133,6 @@ export function useReportState(
   selectedSketchId: number | null,
   initialSelectedTabId?: number
 ): ReportContextState | undefined {
-  const projectMetadata = useCurrentProjectMetadata();
-  const mapContext = useContext(MapContext);
-  const cardMapStylesRef = useRef<{
-    [cardId: number]: {
-      [styleId: string]: { sources: string[]; layers: string[] };
-    };
-  }>({});
   const [selectedForEditing, _setSelectedForEditing] = useState<number | null>(
     null
   );
@@ -173,17 +147,9 @@ export function useReportState(
   const [showCalcDetails, setShowCalcDetails] = useState<number | undefined>();
 
 
-
-  // useReportOverlaySourcesSubscriptionSubscription({
-  //   variables: {
-  //     projectId: projectMetadata.data?.project?.id!,
-  //   },
-  //   skip: !projectMetadata.data?.project?.id,
-  // });
-
   const onError = useGlobalErrorHandler();
 
-  const { data, refetch, variables, loading } = useReportContextQuery({
+  const { data, refetch, loading } = useReportContextQuery({
     variables: {
       reportId: reportId!,
       sketchId: selectedSketchId!,
@@ -193,15 +159,6 @@ export function useReportState(
     fetchPolicy: "cache-and-network",
   });
 
-  // const debouncedData = useDebounce(data, 10);
-  const debouncedData = data;
-
-  const allOverlays = useMemo(() => {
-    return debouncedData?.report?.dependencies?.overlaySources || [];
-  }, [
-    debouncedData?.report?.dependencies?.overlaySources,
-  ]);
-
   const availableReportingLayersQuery = useProjectReportingLayersQuery({
     variables: {
       slug: getSlug(),
@@ -210,9 +167,9 @@ export function useReportState(
   });
 
   const metrics = useMemo(() => {
-    return debouncedData?.report?.dependencies?.metrics || [];
+    return data?.report?.dependencies?.metrics || [];
   }, [
-    debouncedData?.report?.dependencies?.metrics,
+    data?.report?.dependencies?.metrics,
   ]);
 
   const [selectedTabId, setSelectedTabId] = useState<number>(
@@ -243,13 +200,13 @@ export function useReportState(
   useEffect(() => {
     if (!data?.report?.tabs) return;
 
-    const currentTabExists = debouncedData?.report?.tabs?.some(
+    const currentTabExists = data?.report?.tabs?.some(
       (tab) => tab.id === selectedTabId
     );
-    if (!currentTabExists && debouncedData?.report?.tabs?.[0]?.id) {
-      setSelectedTabId(debouncedData.report.tabs[0].id);
+    if (!currentTabExists && data?.report?.tabs?.[0]?.id) {
+      setSelectedTabId(data.report.tabs[0].id);
     }
-  }, [debouncedData?.report?.tabs, selectedTabId]);
+  }, [data?.report?.tabs, selectedTabId]);
 
   const recalculate = useCallback(
     (metricIds: number[], preprocessSources?: boolean) => {
@@ -310,13 +267,13 @@ export function useReportState(
       };
     } = {};
     if (
-      debouncedData?.report?.dependencies?.cardDependencyLists &&
+      data?.report?.dependencies?.cardDependencyLists &&
       metrics.length > 0 &&
-      allOverlays.length > 0
+      (data?.report?.dependencies?.overlaySources || []).length > 0
     ) {
-      for (const cardDependencyList of debouncedData.report.dependencies
+      for (const cardDependencyList of data.report.dependencies
         .cardDependencyLists) {
-        const overlays = allOverlays.filter((overlay) =>
+        const overlays = (data?.report?.dependencies?.overlaySources || []).filter((overlay) =>
           cardDependencyList.overlaySources.includes(
             overlay.tableOfContentsItemId
           )
@@ -357,9 +314,9 @@ export function useReportState(
     }
     return dependencies;
   }, [
-    debouncedData?.report?.dependencies?.cardDependencyLists,
+    data?.report?.dependencies?.cardDependencyLists,
     metrics,
-    allOverlays,
+    data?.report?.dependencies?.overlaySources,
   ]);
 
   const getDependencies = useCallback(
@@ -378,82 +335,6 @@ export function useReportState(
     [dependencies]
   );
 
-  const setCardMapStyle = useCallback(
-    (cardId: number, styleId: string, style: ReportMapStyle | null) => {
-      const manager = mapContext.manager;
-      if (!manager) {
-        return;
-      }
-
-      // Namespace by report, sketch, and card so multiple open reports can't
-      // clobber each other's dynamic layers or sources.
-      const reportIdPart = data?.report?.id ?? "report";
-      const sketchIdPart = selectedSketchId ?? "sketch";
-      // eslint-disable-next-line i18next/no-literal-string
-      const basePrefix = `report-style-${reportIdPart}-${sketchIdPart}-${cardId}-${styleId}`;
-
-      const perCard = cardMapStylesRef.current[cardId];
-      const existing = perCard?.[styleId];
-      if (existing) {
-        for (const sourceId of existing.sources) {
-          manager.removeSource(sourceId);
-        }
-        for (const layerId of existing.layers) {
-          manager.removeLayer(layerId);
-        }
-        if (perCard) {
-          delete perCard[styleId];
-          if (Object.keys(perCard).length === 0) {
-            delete cardMapStylesRef.current[cardId];
-          }
-        }
-      }
-
-      if (!style) {
-        return;
-      }
-
-      const sourceIds: string[] = [];
-      const layerIds: string[] = [];
-
-      for (const [sourceId, source] of Object.entries(style.sources || {})) {
-        const namespacedId = `${basePrefix}-source-${sourceId}`;
-        manager.addSource(namespacedId, source as AnySourceData);
-        sourceIds.push(namespacedId);
-      }
-
-      for (const layer of style.layers || []) {
-        const originalId = layer.id;
-        const namespacedLayerId = `${basePrefix}-layer-${originalId}`;
-        const anyLayer = layer as any;
-        const originalSource: any = anyLayer.source;
-        const namespacedSource =
-          typeof originalSource === "string"
-            ? `${basePrefix}-source-${originalSource}`
-            : originalSource;
-
-        const clonedLayer: AnyLayer = {
-          ...anyLayer,
-          id: namespacedLayerId,
-          ...(namespacedSource !== undefined
-            ? { source: namespacedSource }
-            : {}),
-        };
-
-        manager.addLayer(clonedLayer);
-        layerIds.push(namespacedLayerId);
-      }
-
-      if (!cardMapStylesRef.current[cardId]) {
-        cardMapStylesRef.current[cardId] = {};
-      }
-      cardMapStylesRef.current[cardId][styleId] = {
-        sources: sourceIds,
-        layers: layerIds,
-      };
-    },
-    [data?.report?.id, mapContext.manager, selectedSketchId]
-  );
 
   if (!data?.sketch) {
     return undefined;
@@ -469,8 +350,8 @@ export function useReportState(
       selectedTabId,
       setSelectedTabId,
       selectedTab: selectedTab as ReportConfiguration["tabs"][0],
-      selectedForEditing,
-      setSelectedForEditing,
+      editing: selectedForEditing,
+      setEditing: setSelectedForEditing,
       preselectTitle,
       selectedSketchId,
       sketch: data.sketch!,
@@ -486,7 +367,6 @@ export function useReportState(
       relatedFragments: (data.sketch.relatedFragments ||
         []) as MetricSubjectFragment[],
       metrics: metrics,
-      userIsAdmin: projectMetadata.data?.project?.sessionIsAdmin || false,
       recalculate,
       recalculateState: {
         loading: recalculateState.loading,
@@ -495,14 +375,13 @@ export function useReportState(
       isCollection: Boolean(
         data.sketch.sketchClass?.geometryType === SketchGeometryType.Collection
       ),
-      overlaySources: allOverlays,
+      overlaySources: data?.report?.dependencies?.overlaySources || [],
       geographies: data.report.geographies || [],
       report: data.report as unknown as ReportConfiguration,
       getDependencies,
-      setCardMapStyle,
       showCalcDetails,
       setShowCalcDetails,
-      adminSources:
+      preprocessedOverlaySources:
         availableReportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
     };
   }
@@ -516,45 +395,6 @@ export function useReportContext(): ReportContextState {
     );
   }
   return context;
-}
-
-export function useReportStyleToggle(
-  cardId: number,
-  styleId: string,
-  style: ReportMapStyle | null | undefined
-) {
-  const { setCardMapStyle } = useReportContext();
-  const [visible, setVisible] = useState(false);
-
-  const toggle = useCallback(() => {
-    setVisible((prev) => !prev);
-  }, []);
-
-  useEffect(() => {
-    if (!style && visible) {
-      setVisible(false);
-    }
-  }, [style, visible]);
-
-  useEffect(() => {
-    if (!style || !visible) {
-      setCardMapStyle(cardId, styleId, null);
-    } else {
-      setCardMapStyle(cardId, styleId, style);
-    }
-  }, [visible, style, cardId, styleId, setCardMapStyle]);
-
-  useEffect(() => {
-    return () => {
-      setCardMapStyle(cardId, styleId, null);
-    };
-  }, [cardId, styleId, setCardMapStyle]);
-
-  return {
-    visible,
-    toggle,
-    setVisible,
-  };
 }
 
 export function extractMetricDependenciesFromReportBody(
@@ -591,7 +431,4 @@ type ProsemirrorNode = {
   type: string;
   attrs?: Record<string, any>;
   content?: ProsemirrorNode[];
-};
-type ProsemirrorDocument = ProsemirrorNode & {
-  type: "doc";
 };

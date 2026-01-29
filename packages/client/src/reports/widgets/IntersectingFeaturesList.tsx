@@ -263,15 +263,13 @@ function FeatureAccordionItem({
     <div className="border rounded text-sm border-gray-300 bg-slate-50 overflow-clip">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className={`px-2 py-1 text-left w-full flex items-center space-x-1 ${
-          open ? "border-b border-gray-300" : ""
-        }`}
+        className={`px-2 py-1 text-left w-full flex items-center space-x-1 ${open ? "border-b border-gray-300" : ""
+          }`}
       >
         <div className="flex-1 truncate">{title}</div>
         <CaretDownIcon
-          className={`w-4 h-4 transition-transform ${
-            open ? "transform rotate-180" : ""
-          }`}
+          className={`w-4 h-4 transition-transform ${open ? "transform rotate-180" : ""
+            }`}
         />
       </button>
       {open && (
@@ -282,9 +280,8 @@ function FeatureAccordionItem({
                 const propValue = value[prop];
                 return (
                   <tr
-                    className={`border-b last:border-none border-slate-200 text-left ${
-                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                    }`}
+                    className={`border-b last:border-none border-slate-200 text-left ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                      }`}
                     key={prop}
                   >
                     <td className="font-thin p-1 px-2 text-left w-1/3 truncate">
@@ -318,7 +315,7 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
       const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       return allSources.filter((s) =>
         dependencies.some(
@@ -328,7 +325,7 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
     }, [
       node.attrs?.metrics,
       reportContext.overlaySources,
-      reportContext.adminSources,
+      reportContext.preprocessedOverlaySources,
     ]);
 
     // Get available label columns from geostats
@@ -405,7 +402,7 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
     const relatedOverlay = useMemo(() => {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
       for (const dependency of dependencies) {
@@ -422,7 +419,7 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
     }, [
       node.attrs?.metrics,
       reportContext.overlaySources,
-      reportContext.adminSources,
+      reportContext.preprocessedOverlaySources,
     ]);
 
     // Get buffer from dependencies

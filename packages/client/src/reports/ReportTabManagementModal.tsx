@@ -18,7 +18,6 @@ import {
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import TextInput from "../components/TextInput";
-import useDialog from "../components/useDialog";
 import {
   CheckCircledIcon,
   CrossCircledIcon,
@@ -41,9 +40,9 @@ export function ReportTabManagementModal({
   tabs,
   reportId,
 }: ReportTabManagementModalProps) {
+  console.log("rendering ReportTabManagementModal");
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
-  const dialog = useDialog();
   const langContext = useContext(FormLanguageContext);
 
   // State for editing tab names

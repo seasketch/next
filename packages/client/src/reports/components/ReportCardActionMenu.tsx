@@ -1,7 +1,11 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import React, { useMemo } from "react";
-import { CompatibleSpatialMetricDetailsFragment, OverlaySourceDetailsFragment, SourceProcessingJobDetailsFragment } from "../../generated/graphql";
+import {
+  CompatibleSpatialMetricDetailsFragment,
+  OverlaySourceDetailsFragment,
+  SourceProcessingJobDetailsFragment,
+} from "../../generated/graphql";
 import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 
 export type ReportCardActionMenuProps = {
@@ -11,12 +15,13 @@ export type ReportCardActionMenuProps = {
   className?: string;
   triggerClassName?: string;
   children: React.ReactNode;
-  dependencies?: {
-    loading: boolean;
-    errors: string[];
-    metrics: CompatibleSpatialMetricDetailsFragment[];
-    overlaySources: OverlaySourceDetailsFragment[];
-  }
+  loading: boolean;
+  // dependencies?: {
+  //   loading: boolean;
+  //   errors: string[];
+  //   metrics: CompatibleSpatialMetricDetailsFragment[];
+  //   overlaySources: OverlaySourceDetailsFragment[];
+  // }
 };
 
 export type ReportCardActionMenuItemProps = {
@@ -42,17 +47,21 @@ export function ReportCardActionMenu(
     className,
     triggerClassName,
     children,
+    loading,
   } = props;
 
-  const sourceProcessingJobs = useMemo(() => {
-    const jobs = [] as SourceProcessingJobDetailsFragment[];
-    for (const source of props.dependencies?.overlaySources || []) {
-      if (source.sourceProcessingJob && !jobs.find((j) => j.jobKey === source.sourceProcessingJob?.jobKey)) {
-        jobs.push(source.sourceProcessingJob);
-      }
-    }
-    return jobs;
-  }, [props.dependencies?.overlaySources]);
+  // const sourceProcessingJobs = useMemo(() => {
+  //   const jobs = [] as SourceProcessingJobDetailsFragment[];
+  //   for (const source of props.dependencies?.overlaySources || []) {
+  //     if (
+  //       source.sourceProcessingJob &&
+  //       !jobs.find((j) => j.jobKey === source.sourceProcessingJob?.jobKey)
+  //     ) {
+  //       jobs.push(source.sourceProcessingJob);
+  //     }
+  //   }
+  //   return jobs;
+  // }, [props.dependencies?.overlaySources]);
 
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
@@ -64,25 +73,26 @@ export function ReportCardActionMenu(
           className={classNames(
             "p-1 rounded-full flex items-center justify-center",
             open
-              ? (
-                props.dependencies?.loading
-                  ? "text-gray-600 "
-                  : "text-gray-600 bg-black/5"
-              )
-              : (
-                props.dependencies?.loading ?
-                  " text-gray-500 "
-                  : " text-gray-500 hover:text-gray-600 hover:bg-black/5"
-              ),
+              ? loading
+                ? "text-gray-600 "
+                : "text-gray-600 bg-black/5"
+              : loading
+              ? " text-gray-500 "
+              : " text-gray-500 hover:text-gray-600 hover:bg-black/5",
             triggerClassName
           )}
           aria-label={label}
           title={label}
         >
-          {
-            props.dependencies?.loading ? <ReportCardLoadingIndicator display={true} metrics={props.dependencies.metrics} sourceProcessingJobs={sourceProcessingJobs} /> : <DotsHorizontalIcon className="w-4 h-4" />
-          }
-
+          {loading ? (
+            <ReportCardLoadingIndicator
+              display={true}
+              metrics={[]}
+              sourceProcessingJobs={[]}
+            />
+          ) : (
+            <DotsHorizontalIcon className="w-4 h-4" />
+          )}
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>

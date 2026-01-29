@@ -30,7 +30,7 @@ export function ReportBody() {
               </div>
             )}
             {tab.cards?.map((card) => {
-              const { metrics, loading, errors, overlaySources } =
+              const { metrics, overlaySources } =
                 getDependencies(card.id);
               return (
                 <ReportCard
@@ -38,8 +38,6 @@ export function ReportBody() {
                   config={card}
                   metrics={metrics}
                   sources={overlaySources}
-                // loading={loading}
-                // errors={errors}
                 />
               );
             })}

@@ -229,7 +229,7 @@ export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
     const relatedOverlay = useMemo(() => {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       const dep = dependencies.find((d) => d.tableOfContentsItemId);
       if (!dep?.tableOfContentsItemId) return null;
@@ -239,7 +239,7 @@ export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
     }, [
       dependencies,
       reportContext.overlaySources,
-      reportContext.adminSources,
+      reportContext.preprocessedOverlaySources,
     ]);
 
     return (

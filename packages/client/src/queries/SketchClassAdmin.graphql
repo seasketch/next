@@ -694,6 +694,40 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
   }
 }
 
+fragment BaseReportDetails on Report {
+  id
+  tabs {
+    ...ReportTabDetails
+  }
+}
+
+query BaseReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report {
+      ...BaseReportDetails
+    }
+  }
+}
+
+query BaseDraftReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report: draftReport {
+      ...BaseReportDetails
+    }
+  }
+}
+
+query SubjectReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+    }
+  }
+}
+
 query LegacyReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
     ...ReportContextSketchDetails

@@ -19,12 +19,11 @@ import {
   OverlaySourceDetailsFragment,
   ReportContextSketchClassDetailsFragment,
   SketchGeometryType,
-  SpatialMetricState,
 } from "../../generated/graphql";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import { EditorState } from "prosemirror-state";
-import { hashMetricDependency, MetricDependency } from "overlay-engine";
+import { MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
 import {
@@ -78,7 +77,7 @@ import {
 } from "./RasterStatisticsTable";
 import { Mark, Node } from "prosemirror-model";
 import { useReportContext } from "../ReportContext";
-import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
+import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import {
   DotsHorizontalIcon,
@@ -99,13 +98,96 @@ import {
 import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
-import { DraftReportContext } from "../DraftReportContext";
-import { collectText } from "../../admin/surveys/collectText";
-import { DotsCircleHorizontalIcon } from "@heroicons/react/outline";
 
 type WidgetComponent = React.FC<any>;
 
 const DEBUG_WIDGET_MEMO = false;
+
+/**
+ * HOC that adds mount/unmount logging for debugging widget lifecycle
+ */
+function withMountLogging(
+  Component: WidgetComponent,
+  name: string
+): WidgetComponent {
+  return function MountLoggedComponent(props: any) {
+    useEffect(() => {
+      // eslint-disable-next-line no-console
+      console.warn(`🆕 [${name}] MOUNTED`);
+      return () => {
+        // eslint-disable-next-line no-console
+        console.warn(`💀 [${name}] UNMOUNTED`);
+      };
+    }, []);
+    return <Component {...props} />;
+  };
+}
+
+/**
+ * Deep comparison for widget props that checks value equality for objects
+ * that might have new references but same content (e.g., from ProseMirror nodes)
+ */
+function widgetPropsAreEqual(
+  prevProps: Record<string, any>,
+  nextProps: Record<string, any>
+): boolean {
+  // Props that can be compared by reference (already stabilized by useWidgetDependencies)
+  const stableRefProps = [
+    "metrics",
+    "sources",
+    "geographies",
+    "sketchClass",
+    "errors",
+  ];
+
+  // Props that need value comparison (come from ProseMirror or may change reference)
+  const valueCompareProps = [
+    "componentSettings",
+    "dependencies",
+    "alternateLanguageSettings",
+  ];
+
+  // Primitive props - simple equality
+  const primitiveProps = ["loading", "lang"];
+
+  // Check stable reference props
+  for (const key of stableRefProps) {
+    if (prevProps[key] !== nextProps[key]) {
+      return false;
+    }
+  }
+
+  // Check primitive props
+  for (const key of primitiveProps) {
+    if (prevProps[key] !== nextProps[key]) {
+      return false;
+    }
+  }
+
+  // Check value-compare props using JSON stringification
+  for (const key of valueCompareProps) {
+    const prev = prevProps[key];
+    const next = nextProps[key];
+    if (prev === next) continue;
+    if (prev === undefined || next === undefined) {
+      if (prev !== next) return false;
+      continue;
+    }
+    try {
+      if (JSON.stringify(prev) !== JSON.stringify(next)) {
+        return false;
+      }
+    } catch {
+      // If JSON.stringify fails, fall back to reference comparison
+      if (prev !== next) return false;
+    }
+  }
+
+  // Skip comparing 'node' and 'marks' - they don't affect widget output directly
+  // The relevant data from node is already extracted into componentSettings/dependencies
+
+  return true;
+}
 
 function debugPropsEqual(
   componentName: string,
@@ -120,22 +202,103 @@ function debugPropsEqual(
     (key) => prevProps[key] !== nextProps[key]
   );
   if (changed.length > 0) {
+    // eslint-disable-next-line no-console
+    console.warn(`🔄 [${componentName}] Props changed:`, changed, {
+      prev: Object.fromEntries(changed.map((k) => [k, prevProps[k]])),
+      next: Object.fromEntries(changed.map((k) => [k, nextProps[k]])),
+    });
     return false;
   }
+  // eslint-disable-next-line no-console
+  console.log(`✅ [${componentName}] Props stable, skipping render`);
   return true;
 }
 
 function memoWidget(Component: WidgetComponent, name: string) {
-  return DEBUG_WIDGET_MEMO
-    ? memo(Component, (prevProps, nextProps) =>
+  if (DEBUG_WIDGET_MEMO) {
+    // Wrap with mount logging, then memo with debug comparison
+    const logged = withMountLogging(Component, name);
+    return memo(logged, (prevProps, nextProps) =>
       debugPropsEqual(
         name,
         prevProps as Record<string, any>,
         nextProps as Record<string, any>
       )
-    )
-    : memo(Component);
+    );
+  }
+  return memo(Component, widgetPropsAreEqual);
 }
+
+/**
+ * Error display components that access ReportContext only when errors occur.
+ * By isolating context access here, we avoid subscribing to context in the
+ * normal (non-error) rendering path.
+ */
+const WidgetErrorInline: FC<{ errors: string[]; cardId: number }> = ({
+  errors,
+  cardId,
+}) => {
+  const { setShowCalcDetails } = useReportContext();
+  const { t } = useTranslation("reports");
+  return (
+    <button
+      onClick={() => setShowCalcDetails(cardId)}
+      className="bg-red-700 text-white px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1"
+      title={errors.join(". \n")}
+    >
+      <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
+      <span className="font-semibold">{t("Error")}</span>
+      <span className="max-w-24 truncate text-red-200">
+        {errors.join(". \n")}
+      </span>
+    </button>
+  );
+};
+
+const WidgetErrorBlock: FC<{ errors: string[]; cardId: number }> = ({
+  errors,
+  cardId,
+}) => {
+  const { setShowCalcDetails } = useReportContext();
+  const { t } = useTranslation("reports");
+
+  const errorMap: Record<string, number> = {};
+  for (const error of errors) {
+    if (error in errorMap) {
+      errorMap[error]++;
+    } else {
+      errorMap[error] = 1;
+    }
+  }
+
+  return (
+    <div className="bg-red-700 text-white p-2 rounded shadow-sm w-full text-left my-2">
+      <div className="flex items-center space-x-2 py-1 text-base">
+        <ExclamationTriangleIcon className="w-4 h-4 inline-block" />
+        <div className="font-semibold">{t("Error")}</div>
+      </div>
+      <ul className="list-disc !pl-5 pt-1">
+        {Object.entries(errorMap).map(([msg, count]) => (
+          <li key={msg}>
+            {msg}{" "}
+            {Number(count) > 1 && (
+              <Badge variant="error">
+                {Number(count)}
+                {t("x")}
+              </Badge>
+            )}
+          </li>
+        ))}
+      </ul>
+      <button
+        onClick={() => setShowCalcDetails(cardId)}
+        className=" bg-red-50  text-black px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1 mt-2 mb-1 text-sm "
+      >
+        <span className="">{t("View details")}</span>
+      </button>
+    </div>
+  );
+};
 
 const memoizedWidgets: Record<string, WidgetComponent> = {
   InlineMetric: memoWidget(InlineMetric, "InlineMetric"),
@@ -194,8 +357,8 @@ function groupByForStyle(
     geometry === "Polygon" || geometry === "MultiPolygon"
       ? ["fill-color"]
       : geometry === "LineString" || geometry === "MultiLineString"
-        ? ["line-color"]
-        : ["circle-color", "icon-image"];
+      ? ["line-color"]
+      : ["circle-color", "icon-image"];
 
   for (const layer of mapboxGlStyles) {
     if (!("paint" in layer)) continue;
@@ -347,16 +510,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
 };
 
 export const ReportWidgetNodeViewRouter: FC = (props: any) => {
-  const {
-    geographies,
-    metrics: contextMetrics,
-    overlaySources,
-    sketchClass,
-    adminSources,
-    setShowCalcDetails,
-  } = useReportContext();
-  const draftReportContext = useContext(DraftReportContext);
-  const { t } = useTranslation("reports");
+  // NOTE: We intentionally avoid useReportContext() here to prevent re-renders
+  // when unrelated context data changes. Error components access context themselves.
   const languageContext = useContext(FormLanguageContext);
   const lang = languageContext?.lang?.code;
   const node = props.node as Node;
@@ -370,141 +525,48 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     throw new Error("ReportWidget component settings not specified");
   }
 
-  const { metrics, loading, errors, sources } = useMemo(() => {
-    const allMetrics = [...contextMetrics, ...draftReportContext.draftMetrics];
-    let loading = false;
-    let errors: string[] = [];
-    const metrics = filterMetricsByDependencies(
-      allMetrics,
-      dependencies || [],
-      [
-        ...overlaySources,
-        ...adminSources,
-        ...draftReportContext.draftOverlaySources,
-      ].reduce((acc, s) => {
-        acc[s.tableOfContentsItemId!] = s.sourceUrl!;
-        return acc;
-      }, {} as Record<number, string>)
-    ) as CompatibleSpatialMetricDetailsFragment[];
-    for (const metric of metrics) {
-      if (
-        metric.state === SpatialMetricState.DependencyNotReady ||
-        metric.state === SpatialMetricState.Processing ||
-        metric.state === SpatialMetricState.Queued
-      ) {
-        loading = true;
-      }
-      if (metric.state === SpatialMetricState.Error) {
-        errors.push(metric.errorMessage || "Unknown error");
-      }
-    }
-    let sources = [
-      ...overlaySources,
-      ...adminSources,
-      ...draftReportContext.draftOverlaySources,
-    ].filter((s) =>
-      (dependencies || []).some(
-        (d: MetricDependency) =>
-          d.tableOfContentsItemId === s.tableOfContentsItemId
-      )
-    );
-    // make sure there's only one source for each source id (no duplicates)
-    const sourceIds = new Set<number>(
-      sources.map((s) => s.tableOfContentsItemId!)
-    );
-    sources = Array.from(sourceIds).map(
-      (id) => sources.find((s) => s.tableOfContentsItemId! === id)!
-    );
-    if (!loading) {
-      // check to make sure each dependency has at least one related metric. If
-      // not, that means the client is dynamically fetching metrics from a draft
-      // report body and hasn't received those metrics (finished or not) yet.
-      for (const dependency of dependencies || []) {
-        const hash = hashMetricDependency(dependency);
-        const relatedMetric = metrics.find((m) => m.dependencyHash === hash);
-        if (!relatedMetric) {
-          loading = true;
-          break;
-        }
-      }
-    }
-    // loading = true;
-    return { metrics, sources, loading, errors };
-  }, [
-    contextMetrics,
-    dependencies,
-    overlaySources,
-    adminSources,
-    draftReportContext.draftMetrics,
-    draftReportContext.draftOverlaySources,
-  ]);
+  // Use stable hook that only triggers re-renders when this widget's data changes
+  const { metrics, loading, errors, sources, geographies, sketchClass } =
+    useWidgetDependencies(dependencies);
 
-  const widgetProps: ReportWidgetProps<any> = {
-    dependencies,
-    componentSettings,
-    metrics,
-    sources,
-    loading,
-    errors,
-    geographies,
-    marks: node.marks as Mark[] | undefined,
-    node,
-    sketchClass,
-    alternateLanguageSettings,
-    lang,
-  };
+  // Memoize widgetProps to maintain stable reference
+  const widgetProps = useMemo<ReportWidgetProps<any>>(
+    () => ({
+      dependencies,
+      componentSettings,
+      metrics,
+      sources,
+      loading,
+      errors,
+      geographies,
+      marks: node.marks as Mark[] | undefined,
+      node,
+      sketchClass,
+      alternateLanguageSettings,
+      lang,
+    }),
+    [
+      dependencies,
+      componentSettings,
+      metrics,
+      sources,
+      loading,
+      errors,
+      geographies,
+      node,
+      sketchClass,
+      alternateLanguageSettings,
+      lang,
+    ]
+  );
 
+  // Error components access ReportContext themselves, so we only subscribe
+  // to context when there are actual errors (exceptional case)
   if (errors.length > 0) {
-    const errorMap: Record<string, number> = {};
-    for (const error of errors) {
-      if (error in errorMap) {
-        errorMap[error]++;
-      } else {
-        errorMap[error] = 1;
-      }
-    }
     if (node.isInline) {
-      return (
-        <button
-          onClick={() => setShowCalcDetails(cardId!)}
-          className="bg-red-700 text-white px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1"
-          title={errors.join(". \n")}
-        >
-          <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
-          <span className="font-semibold">{t("Error")}</span>
-          <span className="max-w-24 truncate text-red-200">
-            {errors.join(". \n")}
-          </span>
-        </button>
-      );
+      return <WidgetErrorInline errors={errors} cardId={cardId} />;
     } else {
-      return (
-        <div className="bg-red-700 text-white p-2 rounded shadow-sm w-full text-left my-2">
-          <div className="flex items-center space-x-2 py-1 text-base">
-            <ExclamationTriangleIcon className="w-4 h-4 inline-block" />
-            <div className="font-semibold">{t("Error")}</div>
-          </div>
-          <ul className="list-disc !pl-5 pt-1">
-            {Object.entries(errorMap).map(([msg, count]) => (
-              <li key={msg}>
-                {msg}{" "}
-                {Number(count) > 1 && (
-                  <Badge variant="error">
-                    {Number(count)}
-                    {t("x")}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={() => setShowCalcDetails(cardId!)}
-            className=" bg-red-50  text-black px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1 mt-2 mb-1 text-sm "
-          >
-            <span className="">{t("View details")}</span>
-          </button>
-        </div>
-      );
+      return <WidgetErrorBlock errors={errors} cardId={cardId} />;
     }
   }
 
@@ -630,7 +692,7 @@ export function buildReportCommandGroups({
         id: "clipping-geography-percent",
         label: geography
           ? // eslint-disable-next-line i18next/no-literal-string
-          `Percent of ${geography.name}`
+            `Percent of ${geography.name}`
           : "Percent of Geography",
         description: "Total area as a fraction of the clipping geography.",
         run: (state, dispatch, view) => {
@@ -1030,17 +1092,17 @@ export function buildReportCommandGroups({
                   componentSettings: {
                     columns: [
                       bestNumericColumn ||
-                      source.geostats.layers[0].attributes[0].attribute,
+                        source.geostats.layers[0].attributes[0].attribute,
                     ],
                     displayStats: bestNumericColumn
                       ? {
-                        min: true,
-                        max: true,
-                        mean: true,
-                      }
+                          min: true,
+                          max: true,
+                          mean: true,
+                        }
                       : {
-                        countDistinct: true,
-                      },
+                          countDistinct: true,
+                        },
                   },
                 });
               },
@@ -1201,9 +1263,9 @@ function _insertMetric(
   const selection = $posAfter.parent.inlineContent
     ? TextSelection.create(tr.doc, posAfter)
     : TextSelection.near(
-      $posAfter,
-      -1 /* backward to stay in previous block */
-    );
+        $posAfter,
+        -1 /* backward to stay in previous block */
+      );
   tr = tr.setSelection(selection);
 
   dispatch(tr.scrollIntoView());

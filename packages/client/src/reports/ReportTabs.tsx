@@ -10,18 +10,18 @@ import { useTranslation } from "react-i18next";
 import * as Tabs from "@radix-ui/react-tabs";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
-import { useReportContext } from "./ReportContext";
-import { Droppable } from "react-beautiful-dnd";
 import { FormLanguageContext } from "../formElements/FormElement";
+import { useBaseReportContext } from "./context/BaseReportContext";
+import { ReportUIStateContext } from "./context/ReportUIStateContext";
 
-export function ReportTabs({
-  enableDragDrop = false,
-}: {
-  enableDragDrop?: boolean;
-}) {
+export function ReportTabs() {
+  const { report } = useBaseReportContext();
   const { t } = useTranslation("admin:sketching");
-  const { report, selectedTabId, setSelectedTabId, selectedForEditing } =
-    useReportContext();
+  const {
+    selectedTabId,
+    setSelectedTabId,
+    editing: selectedForEditing,
+  } = useContext(ReportUIStateContext);
   const langContext = useContext(FormLanguageContext);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [visibleTabs, setVisibleTabs] = useState<typeof report.tabs>([]);
@@ -158,7 +158,6 @@ export function ReportTabs({
 
   const isDisabled = !!selectedForEditing;
 
-  // Helper function to render a tab with optional drag & drop
   const renderTab = (tab: (typeof report.tabs)[0]) => {
     const tabContent = (
       <Tabs.Trigger
@@ -185,36 +184,16 @@ export function ReportTabs({
       </Tabs.Trigger>
     );
 
-    if (enableDragDrop) {
-      return (
-        <Droppable key={tab.id} droppableId={`tab-header-${tab.id}`}>
-          {(provided, snapshot) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className={`flex-1 ${
-                snapshot.isDraggingOver
-                  ? "bg-blue-200 border-b-2 border-blue-500 shadow-lg"
-                  : ""
-              }`}
-            >
-              {tabContent}
-            </div>
-          )}
-        </Droppable>
-      );
-    } else {
-      return (
-        <div key={tab.id} className="flex-1">
-          {tabContent}
-        </div>
-      );
-    }
+    return (
+      <div key={tab.id} className="flex-1">
+        {tabContent}
+      </div>
+    );
   };
 
   return (
     <Tabs.Root
-      value={selectedTabId.toString()}
+      value={selectedTabId?.toString() || report.tabs[0].id.toString()}
       onValueChange={(value) => {
         // Only update if the value is a valid tab ID (not "overflow") and not disabled
         if (value !== "overflow" && !isDisabled) {
@@ -241,7 +220,8 @@ export function ReportTabs({
                 <Tabs.Trigger
                   value={
                     isSelectedTabInOverflow
-                      ? selectedTabId.toString()
+                      ? selectedTabId?.toString() ||
+                        report.tabs[0].id.toString()
                       : "overflow"
                   }
                   className={`flex px-4 py-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 w-32 overflow-x-hidden text-center items-center justify-center ${

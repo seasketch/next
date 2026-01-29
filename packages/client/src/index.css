@@ -7438,6 +7438,10 @@ select{
   width:6rem
 }
 
+.w-26{
+  width:6.5rem
+}
+
 .w-27{
   width:6.75rem
 }
@@ -7610,38 +7614,6 @@ select{
 
 .w-screen{
   width:100vw
-}
-
-.w-26{
-  width:6.5rem
-}
-
-.w-\[480px\]{
-  width:480px
-}
-
-.w-\[470px\]{
-  width:470px
-}
-
-.w-\[100px\]{
-  width:100px
-}
-
-.w-\[90px\]{
-  width:90px
-}
-
-.w-\[94px\]{
-  width:94px
-}
-
-.w-\[96px\]{
-  width:96px
-}
-
-.w-\[98px\]{
-  width:98px
 }
 
 .min-w-0{
@@ -13045,11 +13017,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
 }
 
-.hover\:text-gray-800:hover{
-  --tw-text-opacity:1;
-  color:rgb(31 41 55 / var(--tw-text-opacity, 1))
-}
-
 .hover\:underline:hover{
   -webkit-text-decoration-line:underline;
           text-decoration-line:underline
@@ -13612,10 +13579,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   width:auto
 }
 
-.group:hover .group-hover\:w-\[453px\]{
-  width:453px
-}
-
 .group:hover .group-hover\:border-black\/5{
   border-color:rgb(0 0 0 / 0.05)
 }
@@ -13662,19 +13625,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(55 65 81 / var(--tw-text-opacity, 1))
 }
 
-.group:hover .group-hover\:text-gray-900{
-  --tw-text-opacity:1;
-  color:rgb(17 24 39 / var(--tw-text-opacity, 1))
-}
-
 .group:hover .group-hover\:text-gray-800{
   --tw-text-opacity:1;
   color:rgb(31 41 55 / var(--tw-text-opacity, 1))
 }
 
-.group:hover .group-hover\:text-black{
+.group:hover .group-hover\:text-gray-900{
   --tw-text-opacity:1;
-  color:rgb(0 0 0 / var(--tw-text-opacity, 1))
+  color:rgb(17 24 39 / var(--tw-text-opacity, 1))
 }
 
 .group:hover .group-hover\:opacity-100{
@@ -13687,6 +13645,12 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .group:hover .group-hover\:opacity-80{
   opacity:0.8
+}
+
+.group:hover .group-hover\:shadow-sm{
+  --tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
 }
 
 .data-\[state\=active\]\:border-b-2[data-state="active"]{

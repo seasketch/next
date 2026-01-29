@@ -9,6 +9,8 @@ import {
   ReportWidgetTooltipControls,
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
 
 type SketchAttributesTableSettings = {
   /**
@@ -30,10 +32,9 @@ export const SketchAttributesTable: ReportWidget<
   SketchAttributesTableSettings
 > = ({ componentSettings }) => {
   const { t } = useTranslation("reports");
-  const { sketchClass, sketch } = useReportContext();
+  const { sketchClass } = useBaseReportContext();
+  const { sketch } = useSubjectReportContext();
   const langContext = useContext(FormLanguageContext);
-
-  const hiddenIds = new Set(componentSettings?.hiddenAttributeIds || []);
 
   const allFormElements = useMemo(() => {
     const formElements = (sketchClass?.form?.formElements ||
@@ -44,10 +45,10 @@ export const SketchAttributesTable: ReportWidget<
       .sort((a, b) => a.position - b.position);
   }, [sketchClass?.form?.formElements]);
 
-  const visibleFormElements = useMemo(
-    () => allFormElements.filter((el) => !hiddenIds.has(el.id)),
-    [allFormElements, hiddenIds]
-  );
+  const visibleFormElements = useMemo(() => {
+    const hiddenIds = componentSettings?.hiddenAttributeIds || [];
+    return allFormElements.filter((el) => !hiddenIds.includes(el.id));
+  }, [allFormElements, componentSettings?.hiddenAttributeIds]);
 
   const values = (sketch?.properties || {}) as Record<string, any>;
 

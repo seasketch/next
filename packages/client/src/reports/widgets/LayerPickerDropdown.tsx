@@ -110,7 +110,7 @@ function useLayerPickerData({
     if (map.size === 0) {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       for (const s of allSources) {
         const sid = s.tableOfContentsItem?.stableId;
@@ -141,7 +141,7 @@ function useLayerPickerData({
     optionsOverride,
     data?.projectBySlug?.draftTableOfContentsItems,
     reportContext.overlaySources,
-    reportContext.adminSources,
+    reportContext.preprocessedOverlaySources,
     overlayOptions,
     t,
   ]);
@@ -187,10 +187,10 @@ export function LayerPickerList({
   const filteredAll = onlyReportingLayers
     ? []
     : filterItems(
-        allLayers.filter(
-          (l) => !reportingLayers.some((r) => r.stableId === l.stableId)
-        )
-      );
+      allLayers.filter(
+        (l) => !reportingLayers.some((r) => r.stableId === l.stableId)
+      )
+    );
 
   const handleSelect = (
     layer?: LayerPickerOption,
@@ -210,9 +210,8 @@ export function LayerPickerList({
   if (loading) {
     return (
       <div
-        className={`rounded-md border border-gray-200 bg-white shadow-sm text-sm text-gray-600 px-3 py-3 ${
-          className || ""
-        }`}
+        className={`rounded-md border border-gray-200 bg-white shadow-sm text-sm text-gray-600 px-3 py-3 ${className || ""
+          }`}
       >
         {t("Loading…")}
       </div>
@@ -222,9 +221,8 @@ export function LayerPickerList({
   if (error) {
     return (
       <div
-        className={`rounded-md border border-red-200 bg-white shadow-sm text-sm text-red-700 px-3 py-3 ${
-          className || ""
-        }`}
+        className={`rounded-md border border-red-200 bg-white shadow-sm text-sm text-red-700 px-3 py-3 ${className || ""
+          }`}
       >
         {error.message}
       </div>
@@ -234,9 +232,8 @@ export function LayerPickerList({
   return (
     <div
       data-popover-content="true"
-      className={`bg-white text-gray-900 border border-gray-200 rounded-lg shadow-sm w-60 p-1 ${
-        className || ""
-      }`}
+      className={`bg-white text-gray-900 border border-gray-200 rounded-lg shadow-sm w-60 p-1 ${className || ""
+        }`}
       onMouseDown={(e) => {
         // Prevent popover from closing when clicking inside
         e.stopPropagation();
@@ -384,10 +381,10 @@ export function LayerPickerDropdown({
   const filteredAll = onlyReportingLayers
     ? []
     : filterItems(
-        allLayers.filter(
-          (l) => !reportingLayers.some((r) => r.stableId === l.stableId)
-        )
-      );
+      allLayers.filter(
+        (l) => !reportingLayers.some((r) => r.stableId === l.stableId)
+      )
+    );
 
   const suggestedLayers = useMemo(() => {
     if (!suggested || !suggested.length) return [];
@@ -478,9 +475,8 @@ export function LayerPickerDropdown({
               <div className="space-y-1">
                 {filteredSuggested.map((layer) => (
                   <button
-                    key={`suggested-${layer.stableId}-${
-                      layer.tableOfContentsItemId ?? "none"
-                    }`}
+                    key={`suggested-${layer.stableId}-${layer.tableOfContentsItemId ?? "none"
+                      }`}
                     type="button"
                     className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
                     onClick={() => handleSelect(layer)}

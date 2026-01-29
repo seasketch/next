@@ -777,7 +777,7 @@ export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
     const relatedOverlay = useMemo(() => {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       const dep = dependencies.find((d) => d.tableOfContentsItemId);
       if (!dep?.tableOfContentsItemId) return null;
@@ -787,7 +787,7 @@ export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
     }, [
       dependencies,
       reportContext.overlaySources,
-      reportContext.adminSources,
+      reportContext.preprocessedOverlaySources,
     ]);
 
     const numericColumnOptions = useMemo(() => {

@@ -26,9 +26,7 @@ import {
   reportBodySchema,
   setCollapsibleBlocksClosed,
 } from "../widgets/prosemirror/reportBodySchema";
-import {
-  useReactNodeViewPortals,
-} from "../ReactNodeView/PortalProvider";
+import { useReactNodeViewPortals } from "../ReactNodeView/PortalProvider";
 import { createReactNodeView } from "../ReactNodeView";
 import {
   ReportWidgetNodeViewRouter,
@@ -64,6 +62,9 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Button from "../../components/Button";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -86,6 +87,8 @@ interface ReportCardBodyEditorProps {
   cardId: number;
   preselectTitle?: boolean;
   footerContainerRef: React.RefObject<HTMLDivElement>;
+  onDeleteCard?: (cardId: number, skipConfirmation?: boolean) => void;
+  onShowCalculationDetails?: (cardId: number) => void;
 }
 
 type OverlayPickerOption = {
@@ -104,8 +107,12 @@ function ReportCardBodyEditorInner({
   cardId,
   preselectTitle = false,
   footerContainerRef,
+  onDeleteCard,
+  onShowCalculationDetails,
 }: ReportCardBodyEditorProps) {
-  const reportContext = useContext(ReportContext);
+  const { editing, setEditing } = useContext(ReportUIStateContext);
+  const { geographies, sketchClass } = useBaseReportContext();
+  const { sketch } = useSubjectReportContext();
 
   const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
   const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(
@@ -129,8 +136,8 @@ function ReportCardBodyEditorInner({
       refetchQueries: [DraftReportDocument, ReportContextDocument],
       awaitRefetchQueries: true,
     });
-    reportContext?.setSelectedForEditing(null);
-  }, [reportBodyHasChanges, updateReportCard, cardId, draftBody]);
+    setEditing(null);
+  }, [reportBodyHasChanges, updateReportCard, cardId, draftBody, setEditing]);
 
   const history = useHistory();
   const { t } = useTranslation("sketching");
@@ -146,13 +153,10 @@ function ReportCardBodyEditorInner({
           ...d,
           hash: hashMetricDependency(d),
         })),
-        sketchId: reportContext?.selectedSketchId!,
+        sketchId: sketch.id,
       },
     },
-    skip:
-      !additionalDependencies ||
-      additionalDependencies.length === 0 ||
-      !reportContext?.selectedSketchId,
+    skip: additionalDependencies.length === 0 || !editing,
     onError,
     fetchPolicy: "cache-and-network",
   });
@@ -160,7 +164,8 @@ function ReportCardBodyEditorInner({
   useEffect(() => {
     if (
       !draftDependenciesQuery.loading &&
-      !draftDependenciesQuery.data?.draftReportDependencies?.ready
+      !draftDependenciesQuery.data?.draftReportDependencies?.ready &&
+      !(additionalDependencies.length === 0 || !editing)
     ) {
       const ref = setInterval(() => {
         draftDependenciesQuery.refetch();
@@ -171,17 +176,28 @@ function ReportCardBodyEditorInner({
     draftDependenciesQuery.loading,
     draftDependenciesQuery.data?.draftReportDependencies?.ready,
     draftDependenciesQuery,
+    additionalDependencies,
+    editing,
   ]);
 
   const allDependencies = useMemo(() => {
     const allMetrics = [...metrics] as CompatibleSpatialMetricDetailsFragment[];
-    const allSourceProcessingJobs = [...sources.map((s) => s.sourceProcessingJob)] as SourceProcessingJobDetailsFragment[];
-    for (const source of draftDependenciesQuery.data?.draftReportDependencies?.overlaySources || []) {
-      if (source.sourceProcessingJob && !allSourceProcessingJobs.find((j) => j.jobKey === source.sourceProcessingJob?.jobKey)) {
+    const allSourceProcessingJobs = [
+      ...sources.map((s) => s.sourceProcessingJob),
+    ] as SourceProcessingJobDetailsFragment[];
+    for (const source of draftDependenciesQuery.data?.draftReportDependencies
+      ?.overlaySources || []) {
+      if (
+        source.sourceProcessingJob &&
+        !allSourceProcessingJobs.find(
+          (j) => j.jobKey === source.sourceProcessingJob?.jobKey
+        )
+      ) {
         allSourceProcessingJobs.push(source.sourceProcessingJob);
       }
     }
-    for (const metric of draftDependenciesQuery.data?.draftReportDependencies?.metrics || []) {
+    for (const metric of draftDependenciesQuery.data?.draftReportDependencies
+      ?.metrics || []) {
       if (metric.id && !allMetrics.find((m) => m.id === metric.id)) {
         allMetrics.push(metric);
       }
@@ -190,7 +206,7 @@ function ReportCardBodyEditorInner({
       metrics: allMetrics,
       sourceProcessingJobs: allSourceProcessingJobs,
     };
-  }, [draftDependenciesQuery.data?.draftReportDependencies, metrics, sources])
+  }, [draftDependenciesQuery.data?.draftReportDependencies, metrics, sources]);
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -260,19 +276,19 @@ function ReportCardBodyEditorInner({
       const status =
         state || source.sourceProcessingJob?.progressPercentage != null
           ? {
-            state: state || null,
-            progressPercent:
-              source.sourceProcessingJob?.progressPercentage ?? null,
-            label:
-              source.sourceProcessingJob?.state ===
-                SpatialMetricState.Processing &&
+              state: state || null,
+              progressPercent:
+                source.sourceProcessingJob?.progressPercentage ?? null,
+              label:
+                source.sourceProcessingJob?.state ===
+                  SpatialMetricState.Processing &&
                 source.sourceProcessingJob?.progressPercentage != null
-                ? t("Processing {{percent}}%", {
-                  percent:
-                    source.sourceProcessingJob?.progressPercentage ?? 0,
-                })
-                : state || undefined,
-          }
+                  ? t("Processing {{percent}}%", {
+                      percent:
+                        source.sourceProcessingJob?.progressPercentage ?? 0,
+                    })
+                  : state || undefined,
+            }
           : undefined;
       return {
         ...item,
@@ -411,18 +427,17 @@ function ReportCardBodyEditorInner({
       buildReportCommandGroups({
         sources:
           reportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
-        geographies: reportContext?.geographies,
-        clippingGeography:
-          reportContext?.sketchClass?.clippingGeographies?.[0]?.id,
-        sketchClassGeometryType: reportContext?.sketchClass?.geometryType,
+        geographies: geographies,
+        clippingGeography: sketchClass?.clippingGeographies?.[0]?.id,
+        sketchClassGeometryType: sketchClass?.geometryType,
         overlayFooterItem,
         overlayAugmenter,
       }),
     [
       sources,
-      reportContext?.geographies,
-      reportContext?.sketchClass?.clippingGeographies,
-      reportContext?.sketchClass?.geometryType,
+      geographies,
+      sketchClass?.clippingGeographies,
+      sketchClass?.geometryType,
       reportingLayersQuery.data?.projectBySlug?.reportingLayers,
       overlayFooterItem,
       overlayAugmenter,
@@ -591,20 +606,31 @@ function ReportCardBodyEditorInner({
               className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg"
               data-report-card-body-editor-footer="true"
             >
-
               <div className="flex items-center space-x-2 justify-end">
                 <div className="pr-5">
-                  <button onClick={() => {
-                    reportContext?.setShowCalcDetails(cardId);
-                  }}>
-                    <ReportCardLoadingIndicator display={true} metrics={allDependencies.metrics} sourceProcessingJobs={allDependencies.sourceProcessingJobs} />
+                  <button
+                    onClick={() => {
+                      onShowCalculationDetails?.(cardId);
+                    }}
+                  >
+                    <ReportCardLoadingIndicator
+                      display={true}
+                      metrics={allDependencies.metrics}
+                      sourceProcessingJobs={
+                        allDependencies.sourceProcessingJobs
+                      }
+                    />
                   </button>
                 </div>
                 <Button
                   small
                   label={t("Cancel")}
                   onClick={() => {
-                    reportContext?.setSelectedForEditing(null);
+                    if (preselectTitle && onDeleteCard) {
+                      // report card is brand new. delete it if it's not saved
+                      onDeleteCard(cardId, true);
+                    }
+                    setEditing(null);
                   }}
                 />
                 <Button
@@ -620,7 +646,6 @@ function ReportCardBodyEditorInner({
           </>,
           footerContainerRef.current
         )}
-
     </div>
   );
 }
@@ -668,7 +693,5 @@ function OverlayPickerContent({
 }
 
 export default function ReportCardBodyEditor(props: ReportCardBodyEditorProps) {
-  return (
-    <ReportCardBodyEditorInner {...props} />
-  );
+  return <ReportCardBodyEditorInner {...props} />;
 }

@@ -649,7 +649,7 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
     const relatedOverlay = useMemo(() => {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       const dep = dependencies.find((d) => d.tableOfContentsItemId);
       if (!dep?.tableOfContentsItemId) return null;
@@ -659,7 +659,7 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
     }, [
       dependencies,
       reportContext.overlaySources,
-      reportContext.adminSources,
+      reportContext.preprocessedOverlaySources,
     ]);
 
     return (

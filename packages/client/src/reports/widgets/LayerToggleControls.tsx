@@ -38,7 +38,7 @@ export function useOverlayOptionsForLayerToggle(t: (k: string) => string) {
     if (!options.length) {
       const allSources = [
         ...(reportContext.overlaySources || []),
-        ...(reportContext.adminSources || []),
+        ...(reportContext.preprocessedOverlaySources || []),
       ];
       for (const s of allSources) {
         const sid = s.tableOfContentsItem?.stableId;
@@ -54,7 +54,7 @@ export function useOverlayOptionsForLayerToggle(t: (k: string) => string) {
   }, [
     overlaysQuery.data?.projectBySlug?.draftTableOfContentsItems,
     reportContext.overlaySources,
-    reportContext.adminSources,
+    reportContext.preprocessedOverlaySources,
     t,
   ]);
 
@@ -106,7 +106,7 @@ export function LayerToggleTooltipControlsBase({
             <span className="truncate max-w-[160px] text-right">
               {stableId
                 ? overlayOptions.find((o) => o.value === stableId)?.label ||
-                  t("Unknown layer")
+                t("Unknown layer")
                 : t("None")}
             </span>
             <span className="flex items-center justify-center w-4 h-4">
