@@ -7,10 +7,14 @@ export const ReportUIStateContext = createContext<{
   setEditing: (editing: number | null, preselectTitle?: boolean) => void;
   adminMode?: boolean;
   preselectTitle?: boolean;
+  showCalcDetails?: number;
+  setShowCalcDetails: (cardId: number | undefined) => void;
 }>({
   setSelectedTabId: () => {},
   editing: null,
   setEditing: () => {},
   adminMode: false,
   preselectTitle: false,
+  showCalcDetails: undefined,
+  setShowCalcDetails: () => {},
 });

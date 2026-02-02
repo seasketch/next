@@ -24,8 +24,19 @@ export const BaseReportContext = createContext<{
   loading: boolean;
 }>({ loading: true });
 
-export function BaseReportContextProvider({ children, sketchClassId, draft }: { children: React.ReactNode, sketchClassId: number, draft: boolean }) {
-  const { data, loading } = useQuery<BaseReportContextQuery, BaseReportContextQueryVariables>(draft ? BaseDraftReportContextDocument : BaseReportContextDocument, {
+export function BaseReportContextProvider({
+  children,
+  sketchClassId,
+  draft,
+}: {
+  children: React.ReactNode;
+  sketchClassId: number;
+  draft: boolean;
+}) {
+  const { data, loading } = useQuery<
+    BaseReportContextQuery,
+    BaseReportContextQueryVariables
+  >(draft ? BaseDraftReportContextDocument : BaseReportContextDocument, {
     variables: {
       sketchClassId: sketchClassId,
     },
@@ -49,9 +60,11 @@ export function BaseReportContextProvider({ children, sketchClassId, draft }: { 
     }
   }, [data]);
 
-
-
-  return <BaseReportContext.Provider value={{ data: value, loading }}>{children}</BaseReportContext.Provider>;
+  return (
+    <BaseReportContext.Provider value={{ data: value, loading }}>
+      {children}
+    </BaseReportContext.Provider>
+  );
 }
 
 export function useBaseReportContext() {
@@ -60,7 +73,9 @@ export function useBaseReportContext() {
     throw new Error("BaseReportContext not found");
   }
   if (!context.data) {
-    throw new Error("BaseReportContext data still loading. Report rendering should be deferred until the data is loaded.");
+    throw new Error(
+      "BaseReportContext data still loading. Report rendering should be deferred until the data is loaded."
+    );
   }
   return context.data!;
 }

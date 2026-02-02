@@ -12,7 +12,7 @@ import {
 import { MetricDependency } from "overlay-engine";
 import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
-import { useReportContext } from "../ReportContext";
+import { useOverlaySources } from "../hooks/useOverlaySources";
 import getSlug from "../../getSlug";
 import { useOverlaysForReportLayerTogglesQuery } from "../../generated/graphql";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -101,7 +101,7 @@ export const ClassRowSettingsPopover = ({
   t,
 }: ClassRowSettingsPopoverProps) => {
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
-  const reportContext = useReportContext();
+  const { allSources: overlaySources } = useOverlaySources();
   // Hack to handle the fact that we sometimes don't have access to the titles of related table of contents items when the user adds a new source (e.g. when it hasn't been preprocessed yet)
   const [titlesByTableOfContentsItemId, setTitlesByTableOfContentsItemId] =
     useState<Record<number, string>>({});
@@ -156,11 +156,7 @@ export const ClassRowSettingsPopover = ({
     }
 
     if (map.size === 0) {
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      for (const s of allSources) {
+      for (const s of overlaySources) {
         const sid = s.tableOfContentsItem?.stableId;
         if (!sid || map.has(sid)) continue;
         const tocId = s.tableOfContentsItemId;
@@ -198,8 +194,7 @@ export const ClassRowSettingsPopover = ({
     return options;
   }, [
     data?.projectBySlug?.draftTableOfContentsItems,
-    reportContext.overlaySources,
-    reportContext.preprocessedOverlaySources,
+    overlaySources,
     overlayOptions,
     currentSourceIds,
     t,
@@ -255,15 +250,10 @@ export const ClassRowSettingsPopover = ({
         },
       };
 
-      const allSources = [
-        ...reportContext.overlaySources,
-        ...reportContext.preprocessedOverlaySources,
-      ];
-
       const fragmentDeps = newDeps.filter((d) => d.subjectType === "fragments");
       for (const dep of fragmentDeps) {
         if (dep.tableOfContentsItemId) {
-          const relatedSource = allSources.find(
+          const relatedSource = overlaySources.find(
             (s) => s.tableOfContentsItemId === dep.tableOfContentsItemId
           );
           if (relatedSource && dep.parameters?.groupBy) {
@@ -332,12 +322,8 @@ export const ClassRowSettingsPopover = ({
         source?: OverlaySourceDetailsFragment;
       }
     > = {};
-    const allSources = [
-      ...reportContext.overlaySources,
-      ...reportContext.preprocessedOverlaySources,
-    ];
     for (const row of rows) {
-      const source = allSources.find(
+      const source = overlaySources.find(
         (s) => String(s.tableOfContentsItemId) === row.sourceId
       );
       const title =
@@ -351,7 +337,7 @@ export const ClassRowSettingsPopover = ({
       groups[row.sourceId].rows.push(row);
     }
     return Object.values(groups).sort((a, b) => a.title.localeCompare(b.title));
-  }, [rows, sources, t]);
+  }, [rows, overlaySources, titlesByTableOfContentsItemId, t]);
 
   const excludedSet = useMemo(
     () => new Set(settings.excludedRowKeys || []),
@@ -479,12 +465,12 @@ export const ClassRowSettingsPopover = ({
                   <GroupByPicker
                     value={
                       currentGroupByBySource[
-                      String(group.source?.tableOfContentsItemId)
+                        String(group.source?.tableOfContentsItemId)
                       ]
                     }
                     options={
                       groupByOptionsBySource[
-                      String(group.source?.tableOfContentsItemId)
+                        String(group.source?.tableOfContentsItemId)
                       ] || [{ value: "__none__", label: t("None") }]
                     }
                     placeholder={t("None")}
@@ -547,10 +533,10 @@ export const ClassRowSettingsPopover = ({
                   <div
                     key={row.key}
                     className="grid grid-cols-3 gap-2 px-3 py-2 items-center"
-                  // style={{
-                  //   gridTemplateColumns:
-                  //     "minmax(0,200px) minmax(0,200px) minmax(0,200px)",
-                  // }}
+                    // style={{
+                    //   gridTemplateColumns:
+                    //     "minmax(0,200px) minmax(0,200px) minmax(0,200px)",
+                    // }}
                   >
                     <label className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
                       <input
@@ -622,8 +608,8 @@ export const ClassRowSettingsPopover = ({
                         <span className="truncate flex-1 min-w-0">
                           {linkedStableId
                             ? overlayOptions.find(
-                              (o) => o.value === linkedStableId
-                            )?.label || linkedStableId
+                                (o) => o.value === linkedStableId
+                              )?.label || linkedStableId
                             : t("None")}
                         </span>
                         <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />

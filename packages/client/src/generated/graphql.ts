@@ -13654,6 +13654,7 @@ export type ReportCard = Node & {
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
   reportTabId: Scalars['Int'];
+  tab?: Maybe<ReportTab>;
   tint?: Maybe<Scalars['String']>;
   type: Scalars['String'];
   updatedAt: Scalars['Datetime'];
@@ -22840,6 +22841,10 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & ReportTabDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -23065,6 +23070,33 @@ export type ReportContextQuery = (
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps'>
     )>>, dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { overlaySources: Array<(
+        { __typename?: 'ReportOverlaySource' }
+        & OverlaySourceDetailsFragment
+      )>, metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricDetailsFragment
+      )>, cardDependencyLists: Array<(
+        { __typename?: 'CardDependencyLists' }
+        & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )> }
+    ) }
+  )> }
+);
+
+export type ReportDependenciesQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportDependenciesQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
       & { overlaySources: Array<(
         { __typename?: 'ReportOverlaySource' }
@@ -35516,10 +35548,13 @@ export const AddReportCardDocument = gql`
   ) {
     reportCard {
       id
+      tab {
+        ...ReportTabDetails
+      }
     }
   }
 }
-    `;
+    ${ReportTabDetailsFragmentDoc}`;
 export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutation, AddReportCardMutationVariables>;
 
 /**
@@ -35996,6 +36031,56 @@ export function useReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type ReportContextQueryHookResult = ReturnType<typeof useReportContextQuery>;
 export type ReportContextLazyQueryHookResult = ReturnType<typeof useReportContextLazyQuery>;
 export type ReportContextQueryResult = Apollo.QueryResult<ReportContextQuery, ReportContextQueryVariables>;
+export const ReportDependenciesDocument = gql`
+    query ReportDependencies($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useReportDependenciesQuery__
+ *
+ * To run a query within a React component, call `useReportDependenciesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReportDependenciesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportDependenciesQuery({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useReportDependenciesQuery(baseOptions: Apollo.QueryHookOptions<ReportDependenciesQuery, ReportDependenciesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReportDependenciesQuery, ReportDependenciesQueryVariables>(ReportDependenciesDocument, options);
+      }
+export function useReportDependenciesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportDependenciesQuery, ReportDependenciesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReportDependenciesQuery, ReportDependenciesQueryVariables>(ReportDependenciesDocument, options);
+        }
+export type ReportDependenciesQueryHookResult = ReturnType<typeof useReportDependenciesQuery>;
+export type ReportDependenciesLazyQueryHookResult = ReturnType<typeof useReportDependenciesLazyQuery>;
+export type ReportDependenciesQueryResult = Apollo.QueryResult<ReportDependenciesQuery, ReportDependenciesQueryVariables>;
 export const BaseReportContextDocument = gql`
     query BaseReportContext($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
@@ -40060,6 +40145,7 @@ export const namedOperations = {
     AvailableReportLayers: 'AvailableReportLayers',
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
+    ReportDependencies: 'ReportDependencies',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
     SubjectReportContext: 'SubjectReportContext',

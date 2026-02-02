@@ -17,6 +17,8 @@ import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { ReportCardConfiguration } from "./cards/cards";
 import { DraftReportContext } from "./DraftReportContext";
+import { useCardDependenciesContext } from "./context/CardDependenciesContext";
+import { useBaseReportContext } from "./context/BaseReportContext";
 
 export default function ReportMetricsProgressDetails({
   config,
@@ -26,63 +28,30 @@ export default function ReportMetricsProgressDetails({
   isAdmin?: boolean;
 }) {
   const { t } = useTranslation("sketching");
-  const reportContext = useReportContext();
+  const context = useCardDependenciesContext();
   const draftReportContext = useContext(DraftReportContext);
+  const baseReportContext = useBaseReportContext();
 
   const state = useMemo(() => {
-    const geographyMetrics: CompatibleSpatialMetric[] = [];
-    const fragmentMetrics: CompatibleSpatialMetric[] = [];
-    const relatedOverlaySources = new Set<OverlaySourceDetailsFragment>();
     const failedMetrics = [] as number[];
-    const metrics = [
-      ...draftReportContext.draftMetrics,
-      ...reportContext.metrics,
-    ];
+    const metrics = [...draftReportContext.draftMetrics, ...context.metrics];
     const overlaySources = [
       ...draftReportContext.draftOverlaySources,
-      ...reportContext.overlaySources,
+      ...context.sources,
     ];
-    const deps = reportContext.getDependencies(config.id);
-
-    const metricIds = new Set([
-      ...deps.metrics.map((m) => m.id),
-      ...draftReportContext.draftMetrics.map((m) => m.id),
-    ]);
-    for (const metric of metrics) {
-      if (metricIds.has(metric.id)) {
-        if (
-          subjectIsGeography(
-            metric.subject as MetricSubjectFragment | MetricSubjectGeography
-          )
-        ) {
-          geographyMetrics.push(metric);
-        } else {
-          fragmentMetrics.push(metric);
-        }
-        if (metric.sourceUrl || metric.sourceProcessingJobDependency) {
-          const relatedOverlaySource = overlaySources.find(
-            (s) =>
-              s.sourceProcessingJob?.jobKey ===
-              metric.sourceProcessingJobDependency ||
-              (s.sourceUrl && s.sourceUrl === metric.sourceUrl)
-          );
-          if (relatedOverlaySource) {
-            relatedOverlaySources.add(relatedOverlaySource);
-          }
-        }
-        if (metric.state === SpatialMetricState.Error) {
-          failedMetrics.push(metric.id);
-        }
-      }
-    }
 
     return {
-      geographyMetrics,
-      fragmentMetrics,
-      relatedOverlaySources: Array.from(relatedOverlaySources),
+      geographyMetrics: metrics.filter((m) => subjectIsGeography(m.subject)),
+      fragmentMetrics: metrics.filter((m) => subjectIsFragment(m.subject)),
+      relatedOverlaySources: Array.from(overlaySources),
       failedMetrics,
     };
-  }, [draftReportContext.draftMetrics, draftReportContext.draftOverlaySources, reportContext.metrics, reportContext.overlaySources]);
+  }, [
+    draftReportContext.draftMetrics,
+    draftReportContext.draftOverlaySources,
+    context.metrics,
+    context.sources,
+  ]);
 
   return (
     <Tooltip.Provider>
@@ -103,7 +72,7 @@ export default function ReportMetricsProgressDetails({
               {state.relatedOverlaySources.map((layer) => {
                 const isComplete =
                   layer.sourceProcessingJob?.state ===
-                  SpatialMetricState.Complete || Boolean(layer.output);
+                    SpatialMetricState.Complete || Boolean(layer.output);
                 return (
                   <ReportTaskLineItem
                     key={"rtli-layer-" + layer.tableOfContentsItemId}
@@ -112,7 +81,7 @@ export default function ReportMetricsProgressDetails({
                       isComplete
                         ? SpatialMetricState.Complete
                         : layer.sourceProcessingJob?.state ||
-                        SpatialMetricState.Queued
+                          SpatialMetricState.Queued
                     }
                     progress={
                       isComplete
@@ -135,8 +104,8 @@ export default function ReportMetricsProgressDetails({
                         ? "FlatGeobuf"
                         : layer.output?.url &&
                           layer.output?.url.endsWith(".tif")
-                          ? "GeoTIFF"
-                          : undefined
+                        ? "GeoTIFF"
+                        : undefined
                     }
                     isAdmin={isAdmin}
                     estimatedCompletionTime={layer.sourceProcessingJob?.eta}
@@ -161,8 +130,11 @@ export default function ReportMetricsProgressDetails({
                 <ReportTaskLineItem
                   key={"rtli-" + metric.id}
                   title={nameForGeography(
-                    metric.subject as { type: "geography"; id: number },
-                    reportContext.geographies
+                    metric.subject as unknown as {
+                      type: "geography";
+                      id: number;
+                    },
+                    baseReportContext.geographies
                   )}
                   state={metric.state}
                   progress={metric.progress || null}
@@ -178,7 +150,7 @@ export default function ReportMetricsProgressDetails({
                     (layer) =>
                       layer.output ||
                       layer.sourceProcessingJob?.state ===
-                      SpatialMetricState.Complete
+                        SpatialMetricState.Complete
                   )}
                 />
               ))}
@@ -231,7 +203,7 @@ export default function ReportMetricsProgressDetails({
                     (layer) =>
                       layer.output ||
                       layer.sourceProcessingJob?.state ===
-                      SpatialMetricState.Complete
+                        SpatialMetricState.Complete
                   )}
                 />
               ))}

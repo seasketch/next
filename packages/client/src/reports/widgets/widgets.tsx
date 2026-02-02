@@ -76,8 +76,8 @@ import {
   RasterStatisticsTableTooltipControls,
 } from "./RasterStatisticsTable";
 import { Mark, Node } from "prosemirror-model";
-import { useReportContext } from "../ReportContext";
 import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import {
   DotsHorizontalIcon,
@@ -238,7 +238,7 @@ const WidgetErrorInline: FC<{ errors: string[]; cardId: number }> = ({
   errors,
   cardId,
 }) => {
-  const { setShowCalcDetails } = useReportContext();
+  const { setShowCalcDetails } = useContext(ReportUIStateContext);
   const { t } = useTranslation("reports");
   return (
     <button
@@ -259,7 +259,7 @@ const WidgetErrorBlock: FC<{ errors: string[]; cardId: number }> = ({
   errors,
   cardId,
 }) => {
-  const { setShowCalcDetails } = useReportContext();
+  const { setShowCalcDetails } = useContext(ReportUIStateContext);
   const { t } = useTranslation("reports");
 
   const errorMap: Record<string, number> = {};
@@ -1319,7 +1319,10 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   componentSettings: T;
   marks?: Mark[];
   node?: Node;
-  sketchClass: ReportContextSketchClassDetailsFragment;
+  sketchClass: Pick<
+    ReportContextSketchClassDetailsFragment,
+    "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+  >;
   alternateLanguageSettings?: { [langCode: string]: any };
   lang: string;
 }

@@ -1,9 +1,15 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Pencil1Icon, TrashIcon } from "@radix-ui/react-icons";
 import { CalculatorIcon, SwitchHorizontalIcon } from "@heroicons/react/outline";
 import ReportCardActionMenu from "../components/ReportCardActionMenu";
 import Spinner from "../../components/Spinner";
+import useDialog from "../../components/useDialog";
+import {
+  DraftReportDocument,
+  useDeleteReportCardMutation,
+} from "../../generated/graphql";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export interface ReportCardTitleActionMenuProps {
   menuOpen: boolean;
@@ -35,6 +41,33 @@ const ReportCardTitleActionMenu = memo(function ReportCardTitleActionMenu({
   setEditing,
 }: ReportCardTitleActionMenuProps) {
   const { t } = useTranslation("admin:sketching");
+  const { confirmDelete } = useDialog();
+  const onError = useGlobalErrorHandler();
+  const [deleteCardMutation] = useDeleteReportCardMutation({
+    onError,
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
+  });
+  const handleDeleteCard = useCallback(
+    async (cardId: number) => {
+      await confirmDelete({
+        message: t("Are you sure you want to delete this card?"),
+        description: t("This action cannot be undone."),
+        onDelete: async () => {
+          try {
+            await deleteCardMutation({
+              variables: {
+                id: cardId,
+              },
+            });
+          } catch (error) {
+            // Error is handled by onError
+          }
+        },
+      });
+    },
+    [confirmDelete, t, deleteCardMutation]
+  );
 
   return (
     <ReportCardActionMenu
@@ -48,6 +81,19 @@ const ReportCardTitleActionMenu = memo(function ReportCardTitleActionMenu({
           icon={<Pencil1Icon className="h-4 w-4" />}
           onSelect={() => {
             setEditing(cardId);
+            // Scroll the card into view after a frame to ensure the edit mode UI has rendered
+            requestAnimationFrame(() => {
+              const cardElement = document.querySelector(
+                // eslint-disable-next-line i18next/no-literal-string
+                `[data-rbd-draggable-id="${cardId}"]`
+              );
+              if (cardElement) {
+                cardElement.scrollIntoView({
+                  behavior: "smooth",
+                  block: "center",
+                });
+              }
+            });
           }}
         >
           {t("Edit card")}
@@ -82,8 +128,7 @@ const ReportCardTitleActionMenu = memo(function ReportCardTitleActionMenu({
           icon={<TrashIcon className="h-4 w-4" />}
           variant="danger"
           onSelect={() => {
-            throw new Error("Not implemented");
-            // deleteCard?.(cardId);
+            handleDeleteCard(cardId);
           }}
         >
           {t("Delete card")}

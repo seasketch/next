@@ -1,4 +1,8 @@
-import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  isRasterInfo,
+  RasterInfo,
+} from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
@@ -250,14 +254,14 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         async dependencies(report, args, context, resolveInfo) {
           const { pgClient } = context;
 
-          console.time('getOrCreateReportDependencies');
+          console.time("getOrCreateReportDependencies");
           const deps = await getOrCreateReportDependencies(
             report.id,
             pgClient,
             report.projectId,
             args.sketchId
           );
-          console.timeEnd('getOrCreateReportDependencies');
+          console.timeEnd("getOrCreateReportDependencies");
           return deps;
         },
       },
@@ -556,14 +560,19 @@ async function getOrCreateReportDependencies(
         geogs
       );
 
-    for (const tableOfContentsItemId of tableOfContentsItemIds) {
-      relatedTableOfContentsItemIds.add(tableOfContentsItemId);
+    const cardOverlaySources = new Set<number>();
+    for (const dep of dependencies) {
+      if (dep.tableOfContentsItemId) {
+        relatedTableOfContentsItemIds.add(dep.tableOfContentsItemId);
+        cardOverlaySources.add(dep.tableOfContentsItemId);
+      }
     }
+    // for (const tableOfContentsItemId of tableOfContentsItemIds) {
+    //   relatedTableOfContentsItemIds.add(tableOfContentsItemId);
+    // }
+    cardDependencyList.overlaySources = Array.from(cardOverlaySources);
     for (const metric of metrics) {
       cardDependencyList.metrics.push(metric.id);
-      // Note that some performance optimization is possible here in order to
-      // skip runing the getOrCreateSpatialMetric function if the metric already
-      // exists. TODO for later.
       if (!results.metrics.find((m) => m.id === metric.id)) {
         results.metrics.push(metric);
       }
@@ -973,17 +982,20 @@ async function createMetricsForDependencies(
     dependencyHash: string;
   }> = [];
 
+  const overlaySourceIds = Array.from(
+    new Set(
+      dependencies
+        .filter((d) => d.tableOfContentsItemId)
+        .map((d) => d.tableOfContentsItemId!)
+    )
+  );
+
   const overlaySources = await getOverlaySourcesForDependencies(
     pool,
-    Array.from(
-      new Set(
-        dependencies
-          .filter((d) => d.tableOfContentsItemId)
-          .map((d) => d.tableOfContentsItemId!)
-      )
-    ),
+    overlaySourceIds,
     projectId
   );
+
   const tableOfContentsItemIds = Object.keys(overlaySources).map(Number);
 
   for (const dependency of dependencies) {
@@ -1033,18 +1045,21 @@ async function createMetricsForDependencies(
     }
   }
   if (batchInputs.length > 0) {
-    const batchMetrics = await getOrCreateSpatialMetricsBatch(pool, batchInputs);
+    const batchMetrics = await getOrCreateSpatialMetricsBatch(
+      pool,
+      batchInputs
+    );
     metrics.push(...batchMetrics);
   }
   return { tableOfContentsItemIds, metrics, hashes };
 }
 
 function stripUnnecessaryGeostatsFields(geostats: any) {
-  if (geostats && 'layers' in geostats && Array.isArray(geostats.layers)) {
+  if (geostats && "layers" in geostats && Array.isArray(geostats.layers)) {
     const layer = geostats.layers[0];
-    if (layer && 'attributes' in layer && Array.isArray(layer.attributes)) {
+    if (layer && "attributes" in layer && Array.isArray(layer.attributes)) {
       for (const attribute of layer.attributes) {
-        if (attribute && 'stats' in attribute) {
+        if (attribute && "stats" in attribute) {
           delete attribute.stats.equalInterval;
           delete attribute.stats.naturalBreaks;
           delete attribute.stats.quantiles;
@@ -1053,9 +1068,30 @@ function stripUnnecessaryGeostatsFields(geostats: any) {
         }
       }
     } else {
-      console.log('layer is not an array');
+      console.log("layer is not an array");
+    }
+  } else if (isRasterInfo(geostats)) {
+    for (const band of geostats.bands) {
+      if (band.stats) {
+        if (band.stats.equalInterval) {
+          band.stats.equalInterval = undefined as any;
+        }
+        if (band.stats.naturalBreaks) {
+          band.stats.naturalBreaks = undefined as any;
+        }
+        if (band.stats.quantiles) {
+          band.stats.quantiles = undefined as any;
+        }
+        if (band.stats.geometricInterval) {
+          band.stats.geometricInterval = undefined as any;
+        }
+        if (band.stats.standardDeviations) {
+          band.stats.standardDeviations = undefined as any;
+        }
+      }
     }
   } else {
-    console.log('geostats is not an object or layers is not an array');
+    console.warn("geostats is not an object or layers is not an array");
+    console.log("found instead", geostats);
   }
 }

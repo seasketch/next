@@ -45,15 +45,12 @@ import {
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
-  ReportContextDocument,
   SourceProcessingJobDetailsFragment,
+  useDeleteReportCardMutation,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
-import {
-  extractMetricDependenciesFromReportBody,
-  ReportContext,
-} from "../ReportContext";
+import { extractMetricDependenciesFromReportBody } from "../ReportContext";
 import getSlug from "../../getSlug";
 import { LayerPickerList } from "../widgets/LayerPickerDropdown";
 import { useHistory } from "react-router-dom";
@@ -87,16 +84,8 @@ interface ReportCardBodyEditorProps {
   cardId: number;
   preselectTitle?: boolean;
   footerContainerRef: React.RefObject<HTMLDivElement>;
-  onDeleteCard?: (cardId: number, skipConfirmation?: boolean) => void;
   onShowCalculationDetails?: (cardId: number) => void;
 }
-
-type OverlayPickerOption = {
-  id: number;
-  title: string;
-  stableId?: string | null;
-  dataSourceType?: string | null;
-};
 
 function ReportCardBodyEditorInner({
   body,
@@ -107,12 +96,12 @@ function ReportCardBodyEditorInner({
   cardId,
   preselectTitle = false,
   footerContainerRef,
-  onDeleteCard,
   onShowCalculationDetails,
 }: ReportCardBodyEditorProps) {
   const { editing, setEditing } = useContext(ReportUIStateContext);
   const { geographies, sketchClass } = useBaseReportContext();
-  const { sketch } = useSubjectReportContext();
+  const subjectReportContext = useSubjectReportContext();
+  const sketch = subjectReportContext.data?.sketch;
 
   const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
   const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(
@@ -133,11 +122,11 @@ function ReportCardBodyEditorInner({
         id: cardId,
         body: setCollapsibleBlocksClosed(draftBody),
       },
-      refetchQueries: [DraftReportDocument, ReportContextDocument],
+      refetchQueries: [DraftReportDocument],
       awaitRefetchQueries: true,
     });
     setEditing(null);
-  }, [reportBodyHasChanges, updateReportCard, cardId, draftBody, setEditing]);
+  }, [updateReportCard, cardId, draftBody, setEditing]);
 
   const history = useHistory();
   const { t } = useTranslation("sketching");
@@ -153,10 +142,10 @@ function ReportCardBodyEditorInner({
           ...d,
           hash: hashMetricDependency(d),
         })),
-        sketchId: sketch.id,
+        sketchId: sketch?.id,
       },
     },
-    skip: additionalDependencies.length === 0 || !editing,
+    skip: additionalDependencies.length === 0 || !editing || !sketch?.id,
     onError,
     fetchPolicy: "cache-and-network",
   });
@@ -183,7 +172,9 @@ function ReportCardBodyEditorInner({
   const allDependencies = useMemo(() => {
     const allMetrics = [...metrics] as CompatibleSpatialMetricDetailsFragment[];
     const allSourceProcessingJobs = [
-      ...sources.map((s) => s.sourceProcessingJob),
+      ...sources
+        .filter((s) => s.sourceProcessingJob)
+        .map((s) => s.sourceProcessingJob),
     ] as SourceProcessingJobDetailsFragment[];
     for (const source of draftDependenciesQuery.data?.draftReportDependencies
       ?.overlaySources || []) {
@@ -206,7 +197,7 @@ function ReportCardBodyEditorInner({
       metrics: allMetrics,
       sourceProcessingJobs: allSourceProcessingJobs,
     };
-  }, [draftDependenciesQuery.data?.draftReportDependencies, metrics, sources]);
+  }, [metrics, sources, draftDependenciesQuery.data]);
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -261,6 +252,13 @@ function ReportCardBodyEditorInner({
   );
   const [addingOverlayId, setAddingOverlayId] = useState<number | null>(null);
   const [overlayError, setOverlayError] = useState<string | null>(null);
+
+  const [deleteCardMutation, deleteCardMutationState] =
+    useDeleteReportCardMutation({
+      onError,
+      refetchQueries: [DraftReportDocument],
+      awaitRefetchQueries: true,
+    });
 
   const overlayAugmenter = useCallback(
     ({
@@ -625,19 +623,30 @@ function ReportCardBodyEditorInner({
                 <Button
                   small
                   label={t("Cancel")}
+                  disabled={deleteCardMutationState.loading}
+                  loading={deleteCardMutationState.loading}
                   onClick={() => {
-                    if (preselectTitle && onDeleteCard) {
-                      // report card is brand new. delete it if it's not saved
-                      onDeleteCard(cardId, true);
+                    if (preselectTitle) {
+                      deleteCardMutation({
+                        variables: {
+                          id: cardId,
+                        },
+                      }).then(() => {
+                        setEditing(null);
+                      });
+                    } else {
+                      setEditing(null);
                     }
-                    setEditing(null);
                   }}
                 />
                 <Button
                   small
                   label={t("Save")}
                   onClick={handleCardSave}
-                  disabled={updateReportCardState.loading}
+                  disabled={
+                    updateReportCardState.loading ||
+                    deleteCardMutationState.loading
+                  }
                   loading={updateReportCardState.loading}
                   primary
                 />

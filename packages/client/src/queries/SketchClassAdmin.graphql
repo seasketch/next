@@ -505,6 +505,9 @@ mutation AddReportCard(
   ) {
     reportCard {
       id
+      tab {
+        ...ReportTabDetails
+      }
     }
   }
 }
@@ -678,6 +681,25 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
       name
       translatedProps
     }
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+
+query ReportDependencies($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
     dependencies(sketchId: $sketchId) {
       overlaySources {
         ...OverlaySourceDetails

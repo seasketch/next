@@ -2,7 +2,6 @@ import { useContext, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import * as Popover from "@radix-ui/react-popover";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
-import { useReportContext } from "../ReportContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import type { ReportWidget } from "./widgets";
 import {
@@ -33,7 +32,8 @@ export const SketchAttributesTable: ReportWidget<
 > = ({ componentSettings }) => {
   const { t } = useTranslation("reports");
   const { sketchClass } = useBaseReportContext();
-  const { sketch } = useSubjectReportContext();
+  const subjectReportContext = useSubjectReportContext();
+  const sketch = subjectReportContext.data?.sketch;
   const langContext = useContext(FormLanguageContext);
 
   const allFormElements = useMemo(() => {
@@ -122,7 +122,7 @@ export const SketchAttributesTable: ReportWidget<
 export const SketchAttributesTableTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate }) => {
     const { t } = useTranslation("admin:sketching");
-    const { sketchClass } = useReportContext();
+    const { sketchClass } = useBaseReportContext();
     const langContext = useContext(FormLanguageContext);
 
     const componentSettings: SketchAttributesTableSettings =

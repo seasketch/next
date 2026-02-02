@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useReportContext } from "../ReportContext";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -17,7 +16,6 @@ type LayerToggleSettings = {
 };
 
 export function useOverlayOptionsForLayerToggle(t: (k: string) => string) {
-  const reportContext = useReportContext();
   const overlaysQuery = useOverlaysForReportLayerTogglesQuery({
     variables: { slug: getSlug() },
   });
@@ -36,25 +34,25 @@ export function useOverlayOptionsForLayerToggle(t: (k: string) => string) {
       });
     }
     if (!options.length) {
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      for (const s of allSources) {
-        const sid = s.tableOfContentsItem?.stableId;
-        if (!sid || seen.has(sid)) continue;
-        seen.add(sid);
-        options.push({
-          value: sid,
-          label: s.tableOfContentsItem?.title || t("Unknown layer"),
-        });
-      }
+      // const allSources = [
+      //   ...(reportContext.overlaySources || []),
+      //   ...(reportContext.preprocessedOverlaySources || []),
+      // ];
+      // for (const s of allSources) {
+      //   const sid = s.tableOfContentsItem?.stableId;
+      //   if (!sid || seen.has(sid)) continue;
+      //   seen.add(sid);
+      //   options.push({
+      //     value: sid,
+      //     label: s.tableOfContentsItem?.title || t("Unknown layer"),
+      //   });
+      // }
     }
     return options.sort((a, b) => a.label.localeCompare(b.label));
   }, [
     overlaysQuery.data?.projectBySlug?.draftTableOfContentsItems,
-    reportContext.overlaySources,
-    reportContext.preprocessedOverlaySources,
+    // reportContext.overlaySources,
+    // reportContext.preprocessedOverlaySources,
     t,
   ]);
 
@@ -106,7 +104,7 @@ export function LayerToggleTooltipControlsBase({
             <span className="truncate max-w-[160px] text-right">
               {stableId
                 ? overlayOptions.find((o) => o.value === stableId)?.label ||
-                t("Unknown layer")
+                  t("Unknown layer")
                 : t("None")}
             </span>
             <span className="flex items-center justify-center w-4 h-4">

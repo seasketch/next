@@ -13,7 +13,6 @@ import {
   useDeleteReportTabMutation,
   useRenameReportTabMutation,
   useReorderReportTabsMutation,
-  ReportTabDetailsFragment,
   DraftReportDocument,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -27,10 +26,21 @@ import {
 import { FormLanguageContext } from "../formElements/FormElement";
 import EditorLanguageSelector from "../surveys/EditorLanguageSelector";
 
+/**
+ * A tab object compatible with both ReportTabDetailsFragment and ReportTabConfiguration
+ */
+interface ReportTabForModal {
+  id: number;
+  title: string;
+  position: number;
+  alternateLanguageSettings?: { [langCode: string]: any } | null;
+  cards?: { id: number }[] | null;
+}
+
 interface ReportTabManagementModalProps {
   isOpen: boolean;
   onClose: () => void;
-  tabs: ReportTabDetailsFragment[];
+  tabs: ReportTabForModal[];
   reportId: number;
 }
 
@@ -40,7 +50,6 @@ export function ReportTabManagementModal({
   tabs,
   reportId,
 }: ReportTabManagementModalProps) {
-  console.log("rendering ReportTabManagementModal");
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const langContext = useContext(FormLanguageContext);
@@ -51,15 +60,16 @@ export function ReportTabManagementModal({
 
   // State for delete confirmation modal
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [tabToDelete, setTabToDelete] =
-    useState<ReportTabDetailsFragment | null>(null);
+  const [tabToDelete, setTabToDelete] = useState<ReportTabForModal | null>(
+    null
+  );
   const [selectedMoveToTabId, setSelectedMoveToTabId] = useState<number | null>(
     null
   );
 
   // Optimistic state for tab ordering
   const [optimisticTabs, setOptimisticTabs] =
-    useState<ReportTabDetailsFragment[]>(tabs);
+    useState<ReportTabForModal[]>(tabs);
 
   // GraphQL mutations
   const [addReportTab, { loading: addingTab }] = useAddReportTabMutation({
@@ -96,7 +106,7 @@ export function ReportTabManagementModal({
 
   // Helper function to get localized tab title
   const getLocalizedTabTitle = useCallback(
-    (tab: ReportTabDetailsFragment) => {
+    (tab: ReportTabForModal) => {
       if (langContext?.lang?.code !== "EN" && tab.alternateLanguageSettings) {
         const alternateSettings =
           tab.alternateLanguageSettings[langContext.lang.code];
@@ -133,7 +143,7 @@ export function ReportTabManagementModal({
   }, [addReportTab, reportId, optimisticTabs.length, t]);
 
   // Handle starting delete process
-  const handleDeleteTab = useCallback((tab: ReportTabDetailsFragment) => {
+  const handleDeleteTab = useCallback((tab: ReportTabForModal) => {
     setTabToDelete(tab);
     setSelectedMoveToTabId(null);
     setDeleteModalOpen(true);
@@ -167,7 +177,7 @@ export function ReportTabManagementModal({
 
   // Handle starting to edit a tab name
   const handleStartEdit = useCallback(
-    (tab: ReportTabDetailsFragment) => {
+    (tab: ReportTabForModal) => {
       setEditingTabId(tab.id);
       // Use localized title for editing
       setEditingTabName(getLocalizedTabTitle(tab));
@@ -271,6 +281,11 @@ export function ReportTabManagementModal({
 
   const isLoading =
     addingTab || deletingTabLoading || renamingTab || reorderingTabs;
+
+  // Early return when modal is closed to avoid expensive JSX creation
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <>

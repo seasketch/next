@@ -6,13 +6,15 @@ import {
   OverlaySourceDetailsFragment,
   ReportContextSketchClassDetailsFragment,
   SpatialMetricState,
-  useProjectReportingLayersQuery,
 } from "../../generated/graphql";
-import { useReportContext } from "../ReportContext";
 import { DraftReportContext } from "../DraftReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
-import { useBaseReportContext } from "../context/BaseReportContext";
-import getSlug from "../../getSlug";
+import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+
+type SketchClassForWidgets = Pick<
+  ReportContextSketchClassDetailsFragment,
+  "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+>;
 
 export type WidgetDependenciesResult = {
   metrics: CompatibleSpatialMetricDetailsFragment[];
@@ -20,7 +22,7 @@ export type WidgetDependenciesResult = {
   loading: boolean;
   errors: string[];
   geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
-  sketchClass: ReportContextSketchClassDetailsFragment;
+  sketchClass: SketchClassForWidgets;
 };
 
 /**
@@ -76,54 +78,63 @@ function useStableSources(
 /**
  * Hook that returns stable widget dependencies, only triggering re-renders
  * when the widget's specific metrics/sources actually change.
+ *
+ * This hook consumes CardDependenciesContext to get card-scoped metrics and
+ * sources, then filters further based on the widget's specific dependencies.
+ * This prevents re-renders when other cards' data changes.
  */
 export function useWidgetDependencies(
   dependencies: MetricDependency[] | undefined
 ): WidgetDependenciesResult {
-  const { geographies: contextGeographies, sketchClass: contextSketchClass } =
-    useBaseReportContext();
+  // Get card-level dependencies from context (provided by ReportCard)
+  const {
+    metrics: cardMetrics,
+    sources: cardSources,
+    loading: cardLoading,
+    geographies: contextGeographies,
+    sketchClass: contextSketchClass,
+  } = useCardDependenciesContext();
 
-  const { data } = useProjectReportingLayersQuery({
-    variables: {
-      slug: getSlug(),
-    },
-  });
-
-  const adminSources = useMemo(() => {
-    return data?.projectBySlug?.reportingLayers || [];
-  }, [data]);
-
-  const contextMetrics = [] as CompatibleSpatialMetricDetailsFragment[];
-  const overlaySources = [] as OverlaySourceDetailsFragment[];
-  // const {
-  //   metrics: contextMetrics,
-  //   overlaySources,
-  //   // preprocessedOverlaySources: adminSources,
-  //   // geographies: contextGeographies,
-  //   // sketchClass: contextSketchClass,
-  // } = useReportContext();
-
+  // Also get draft metrics/sources for editor scenarios
   const draftReportContext = useContext(DraftReportContext);
 
-  // Compute source URL map for filtering
-  const sourceUrlMap = useMemo(() => {
-    return [
-      ...overlaySources,
-      ...adminSources,
+  // Combine card sources with draft sources
+  const allSources = useMemo(() => {
+    const combined = [
+      ...cardSources,
       ...draftReportContext.draftOverlaySources,
-    ].reduce((acc, s) => {
+    ];
+    // Dedupe by tableOfContentsItemId
+    const sourceIds = new Set<number>();
+    return combined.filter((s) => {
+      if (s.tableOfContentsItemId && sourceIds.has(s.tableOfContentsItemId)) {
+        return false;
+      }
+      if (s.tableOfContentsItemId) {
+        sourceIds.add(s.tableOfContentsItemId);
+      }
+      return true;
+    });
+  }, [cardSources, draftReportContext.draftOverlaySources]);
+
+  // Compute source URL map for filtering metrics
+  const sourceUrlMap = useMemo(() => {
+    return allSources.reduce((acc, s) => {
       if (s.tableOfContentsItemId && s.sourceUrl) {
         acc[s.tableOfContentsItemId] = s.sourceUrl;
       }
       return acc;
     }, {} as Record<number, string>);
-  }, [overlaySources, adminSources, draftReportContext.draftOverlaySources]);
+  }, [allSources]);
+
+  // Combine card metrics with draft metrics
+  const allMetrics = useMemo(() => {
+    return [...cardMetrics, ...draftReportContext.draftMetrics];
+  }, [cardMetrics, draftReportContext.draftMetrics]);
 
   // Filter metrics and sources for this widget
   const { rawMetrics, rawSources, loading, errors } = useMemo(() => {
-    const allMetrics = [...contextMetrics, ...draftReportContext.draftMetrics];
-
-    let loading = false;
+    let loading = cardLoading;
     let errors: string[] = [];
 
     const filteredMetrics = filterMetricsByDependencies(
@@ -147,26 +158,12 @@ export function useWidgetDependencies(
     }
 
     // Filter sources for this widget's dependencies
-    let filteredSources = [
-      ...overlaySources,
-      ...adminSources,
-      ...draftReportContext.draftOverlaySources,
-    ].filter((s) =>
+    const filteredSources = allSources.filter((s) =>
       (dependencies || []).some(
         (d: MetricDependency) =>
           d.tableOfContentsItemId === s.tableOfContentsItemId
       )
     );
-
-    // Dedupe by tableOfContentsItemId
-    const sourceIds = new Set<number>();
-    filteredSources = filteredSources.filter((s) => {
-      if (sourceIds.has(s.tableOfContentsItemId!)) {
-        return false;
-      }
-      sourceIds.add(s.tableOfContentsItemId!);
-      return true;
-    });
 
     // Check if we're still waiting for metrics
     if (!loading) {
@@ -188,15 +185,7 @@ export function useWidgetDependencies(
       loading,
       errors,
     };
-  }, [
-    contextMetrics,
-    draftReportContext.draftMetrics,
-    draftReportContext.draftOverlaySources,
-    dependencies,
-    overlaySources,
-    adminSources,
-    sourceUrlMap,
-  ]);
+  }, [allMetrics, allSources, cardLoading, dependencies, sourceUrlMap]);
 
   // Use stable references - only change when content actually changes
   const metrics = useStableMetrics(rawMetrics);
@@ -269,10 +258,18 @@ function useStableGeographies(
  * Returns stable reference for sketchClass
  */
 function useStableSketchClass(
-  sketchClass: ReportContextSketchClassDetailsFragment
-): ReportContextSketchClassDetailsFragment {
-  const ref = useRef(sketchClass);
+  sketchClass: SketchClassForWidgets | null
+): SketchClassForWidgets {
+  const ref = useRef<SketchClassForWidgets | null>(sketchClass);
   const prevKey = useRef<string>("");
+
+  if (!sketchClass) {
+    // Return existing value if available, otherwise throw
+    if (ref.current) {
+      return ref.current;
+    }
+    throw new Error("sketchClass is required but not available in context");
+  }
 
   // Key based on id and geometry type - these rarely change
   const key = `${sketchClass.id}:${sketchClass.geometryType}`;
@@ -281,5 +278,5 @@ function useStableSketchClass(
     ref.current = sketchClass;
   }
 
-  return ref.current;
+  return ref.current!;
 }

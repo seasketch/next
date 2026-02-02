@@ -3,7 +3,6 @@ import { collectText } from "../../admin/surveys/collectText";
 import { DownloadIcon, DragHandleDots2Icon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import { createContext, useContext, useState, useEffect } from "react";
-import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import ReportCardTitleActionMenu from "./ReportCardTitleActionMenu";
 
 export default function ReportCardTitleToolbar({ node }: { node: Node }) {
@@ -12,9 +11,6 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const title = collectText(node.content);
-  const { setEditing } = useContext(ReportUIStateContext);
-  // const { deleteCard, getDependencies } = useReportContext();
-  // const deps = getDependencies(context.cardId);
   // Clean up dragging state when mouse/touch is released anywhere
   useEffect(() => {
     if (!isDragging) return;
@@ -29,9 +25,6 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
 
   const isActive = menuOpen || isDragging;
 
-  if (context.editing) {
-    return null;
-  }
   return (
     <h1
       className="text-2xl font-bold flex space-x-2 items-center w-[453px] group overflow-visible"
@@ -87,7 +80,7 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
           hasMultipleTabs={context.hasMultipleTabs}
           openMoveCardToTabModal={context.openMoveCardToTabModal}
           openCalculationDetailsModal={context.openCalculationDetailsModal}
-          setEditing={setEditing}
+          setEditing={context.setEditing ?? (() => {})}
         />
       </div>
     </h1>
@@ -98,7 +91,6 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
  * Because titles need to be rendered within a prosemirror body using a react node view, we need to pass a lot of information from the ReportCard component to the toolbar via context.
  */
 export const ReportCardTitleToolbarContext = createContext<{
-  editing: boolean;
   dragHandleProps?: any;
   adminMode: boolean;
   cardId: number;
@@ -107,8 +99,8 @@ export const ReportCardTitleToolbarContext = createContext<{
   openMoveCardToTabModal?: (cardId: number) => void;
   openCalculationDetailsModal?: (cardId: number) => void;
   loading: boolean;
+  setEditing?: (editing: number | null, preselectTitle?: boolean) => void;
 }>({
-  editing: false,
   adminMode: false,
   cardId: 0,
   hasMetrics: false,
@@ -116,4 +108,5 @@ export const ReportCardTitleToolbarContext = createContext<{
   openMoveCardToTabModal: undefined,
   openCalculationDetailsModal: undefined,
   loading: false,
+  setEditing: () => {},
 });

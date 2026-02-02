@@ -13,7 +13,7 @@ import {
   TooltipMorePopover,
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
-import { useReportContext } from "../ReportContext";
+import { useRelatedOverlay } from "../hooks/useOverlaySources";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
@@ -197,7 +197,6 @@ export const RasterStatisticsTable: ReportWidget<
 export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate }) => {
     const { t } = useTranslation("admin:reports");
-    const reportContext = useReportContext();
     const componentSettings = node.attrs?.componentSettings || {};
     const [statsModalOpen, setStatsModalOpen] = useState(false);
     const dependencies = useMemo(
@@ -226,21 +225,7 @@ export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       { key: "invalid", label: t("Invalid Cells") },
     ];
 
-    const relatedOverlay = useMemo(() => {
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      const dep = dependencies.find((d) => d.tableOfContentsItemId);
-      if (!dep?.tableOfContentsItemId) return null;
-      return allSources.find(
-        (s) => s.tableOfContentsItemId === dep.tableOfContentsItemId
-      );
-    }, [
-      dependencies,
-      reportContext.overlaySources,
-      reportContext.preprocessedOverlaySources,
-    ]);
+    const relatedOverlay = useRelatedOverlay(dependencies);
 
     return (
       <Tooltip.Provider>

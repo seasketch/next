@@ -15,7 +15,7 @@ import { UnitSelector } from "./UnitSelector";
 import { AreaUnit } from "../utils/units";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
-import { useReportContext } from "../ReportContext";
+import { useOverlaySources } from "../hooks/useOverlaySources";
 import {
   PaginationFooter,
   PaginationSetting,
@@ -332,7 +332,6 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
     onUpdateAllDependencies,
   }) => {
     const { t } = useTranslation("admin:reports");
-    const reportContext = useReportContext();
     const dependencies = useMemo(
       () => (node.attrs?.metrics || []) as MetricDependency[],
       [node.attrs?.metrics]
@@ -348,23 +347,7 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
     const rowsPerPage = settings.rowsPerPage ?? 10;
     const showPercentColumn = settings.showPercentColumn ?? true;
 
-    // Get sources from report context
-    const sources = useMemo(() => {
-      const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      return allSources.filter((s) =>
-        dependencies.some(
-          (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
-        )
-      );
-    }, [
-      node.attrs?.metrics,
-      reportContext.overlaySources,
-      reportContext.preprocessedOverlaySources,
-    ]);
+    const { filteredSources: sources } = useOverlaySources(dependencies);
 
     const handleUpdate = (patch: Partial<OverlappingAreasTableSettings>) => {
       onUpdate({

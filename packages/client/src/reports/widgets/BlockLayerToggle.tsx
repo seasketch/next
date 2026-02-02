@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { LayersIcon } from "@radix-ui/react-icons";

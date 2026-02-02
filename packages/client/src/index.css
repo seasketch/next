@@ -7852,6 +7852,10 @@ select{
   max-width:20rem
 }
 
+.max-w-\[320px\]{
+  max-width:320px
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -13015,6 +13019,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-white:hover{
   --tw-text-opacity:1;
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-gray-800:hover{
+  --tw-text-opacity:1;
+  color:rgb(31 41 55 / var(--tw-text-opacity, 1))
 }
 
 .hover\:underline:hover{

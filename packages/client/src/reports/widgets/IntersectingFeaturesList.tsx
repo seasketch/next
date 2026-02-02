@@ -15,7 +15,10 @@ import {
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
-import { useReportContext } from "../ReportContext";
+import {
+  useOverlaySources,
+  useRelatedOverlay,
+} from "../hooks/useOverlaySources";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { CaretDownIcon, Pencil2Icon } from "@radix-ui/react-icons";
@@ -263,13 +266,15 @@ function FeatureAccordionItem({
     <div className="border rounded text-sm border-gray-300 bg-slate-50 overflow-clip">
       <button
         onClick={() => setOpen((prev) => !prev)}
-        className={`px-2 py-1 text-left w-full flex items-center space-x-1 ${open ? "border-b border-gray-300" : ""
-          }`}
+        className={`px-2 py-1 text-left w-full flex items-center space-x-1 ${
+          open ? "border-b border-gray-300" : ""
+        }`}
       >
         <div className="flex-1 truncate">{title}</div>
         <CaretDownIcon
-          className={`w-4 h-4 transition-transform ${open ? "transform rotate-180" : ""
-            }`}
+          className={`w-4 h-4 transition-transform ${
+            open ? "transform rotate-180" : ""
+          }`}
         />
       </button>
       {open && (
@@ -280,8 +285,9 @@ function FeatureAccordionItem({
                 const propValue = value[prop];
                 return (
                   <tr
-                    className={`border-b last:border-none border-slate-200 text-left ${index % 2 === 0 ? "bg-white" : "bg-gray-50"
-                      }`}
+                    className={`border-b last:border-none border-slate-200 text-left ${
+                      index % 2 === 0 ? "bg-white" : "bg-gray-50"
+                    }`}
                     key={prop}
                   >
                     <td className="font-thin p-1 px-2 text-left w-1/3 truncate">
@@ -304,29 +310,17 @@ function FeatureAccordionItem({
 export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate, onUpdateDependencyParameters }) => {
     const { t } = useTranslation("admin:reports");
-    const reportContext = useReportContext();
     const settings: IntersectingFeaturesListSettings = useMemo(
       () => node.attrs?.componentSettings || {},
       [node.attrs?.componentSettings]
     );
 
-    // Get sources from report context
-    const sources = useMemo(() => {
-      const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      return allSources.filter((s) =>
-        dependencies.some(
-          (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
-        )
-      );
-    }, [
-      node.attrs?.metrics,
-      reportContext.overlaySources,
-      reportContext.preprocessedOverlaySources,
-    ]);
+    const dependencies = useMemo(
+      () => (node.attrs?.metrics || []) as MetricDependency[],
+      [node.attrs?.metrics]
+    );
+
+    const { filteredSources: sources } = useOverlaySources(dependencies);
 
     // Get available label columns from geostats
     const labelColumnOptions = useMemo(() => {
@@ -398,29 +392,7 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
 
     const [isColumnsPopoverOpen, setIsColumnsPopoverOpen] = useState(false);
 
-    // Get related overlay source
-    const relatedOverlay = useMemo(() => {
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-      for (const dependency of dependencies) {
-        if (dependency.tableOfContentsItemId) {
-          const source = allSources.find(
-            (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
-          );
-          if (source) {
-            return source;
-          }
-        }
-      }
-      return null;
-    }, [
-      node.attrs?.metrics,
-      reportContext.overlaySources,
-      reportContext.preprocessedOverlaySources,
-    ]);
+    const relatedOverlay = useRelatedOverlay(dependencies);
 
     // Get buffer from dependencies
     const buffer = ((node.attrs?.metrics || []) as MetricDependency[]).find(

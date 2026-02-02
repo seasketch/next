@@ -895,3 +895,15 @@ CREATE OR REPLACE FUNCTION public.update_report_card_body(card_id integer, body 
 
 
 grant execute on function update_report_card_body to seasketch_user;
+
+create or replace function report_cards_tab(card report_cards)
+  returns report_tabs
+  language sql
+  stable
+  security definer
+  as $$
+    select * from report_tabs where id = (card.report_tab_id);
+  $$;
+
+grant execute on function report_cards_tab to anon;
+

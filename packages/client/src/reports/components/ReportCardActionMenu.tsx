@@ -1,12 +1,9 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
-import React, { useMemo } from "react";
-import {
-  CompatibleSpatialMetricDetailsFragment,
-  OverlaySourceDetailsFragment,
-  SourceProcessingJobDetailsFragment,
-} from "../../generated/graphql";
+import React from "react";
 import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
+import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+import { SourceProcessingJobDetailsFragment } from "../../generated/graphql";
 
 export type ReportCardActionMenuProps = {
   open?: boolean;
@@ -16,12 +13,6 @@ export type ReportCardActionMenuProps = {
   triggerClassName?: string;
   children: React.ReactNode;
   loading: boolean;
-  // dependencies?: {
-  //   loading: boolean;
-  //   errors: string[];
-  //   metrics: CompatibleSpatialMetricDetailsFragment[];
-  //   overlaySources: OverlaySourceDetailsFragment[];
-  // }
 };
 
 export type ReportCardActionMenuItemProps = {
@@ -50,18 +41,7 @@ export function ReportCardActionMenu(
     loading,
   } = props;
 
-  // const sourceProcessingJobs = useMemo(() => {
-  //   const jobs = [] as SourceProcessingJobDetailsFragment[];
-  //   for (const source of props.dependencies?.overlaySources || []) {
-  //     if (
-  //       source.sourceProcessingJob &&
-  //       !jobs.find((j) => j.jobKey === source.sourceProcessingJob?.jobKey)
-  //     ) {
-  //       jobs.push(source.sourceProcessingJob);
-  //     }
-  //   }
-  //   return jobs;
-  // }, [props.dependencies?.overlaySources]);
+  const context = useCardDependenciesContext();
 
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
@@ -84,11 +64,17 @@ export function ReportCardActionMenu(
           aria-label={label}
           title={label}
         >
-          {loading ? (
+          {context.loading ? (
             <ReportCardLoadingIndicator
               display={true}
-              metrics={[]}
-              sourceProcessingJobs={[]}
+              metrics={context.metrics}
+              sourceProcessingJobs={
+                context.sources
+                  .map((s) => s.sourceProcessingJob)
+                  .filter(
+                    (j) => j !== undefined && j !== null
+                  ) as SourceProcessingJobDetailsFragment[]
+              }
             />
           ) : (
             <DotsHorizontalIcon className="w-4 h-4" />

@@ -6,13 +6,16 @@ import ReportCardBodyViewer from "./components/ReportCardBodyViewer";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
-  SpatialMetricState,
 } from "../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import { useCardDependencies } from "./context/ReportDependenciesContext";
+import { CardDependenciesContext } from "./context/CardDependenciesContext";
+import { useBaseReportContext } from "./context/BaseReportContext";
+import { CalculationDetailsModal } from "./components/CalculationDetailsModal";
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -21,9 +24,6 @@ export type ReportCardComponentProps = {
   backgroundTint?: "blue" | "yellow" | "red"; // Simple color enum
   children?: React.ReactNode;
   className?: string;
-  metrics: CompatibleSpatialMetricDetailsFragment[];
-  sources: OverlaySourceDetailsFragment[];
-  onDeleteCard?: (cardId: number, skipConfirmation?: boolean) => void;
   onShowCalculationDetails?: (cardId: number) => void;
 };
 
@@ -38,6 +38,11 @@ export type InnerReportCardProps = ReportCardComponentProps & {
   editing: number | null;
   preselectTitle?: boolean;
   adminMode?: boolean;
+  // Dependencies from useCardDependencies (including computed loading/errors)
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  loading: boolean;
+  errors: { [errorMessage: string]: number };
 };
 
 /**
@@ -52,7 +57,8 @@ export const InnerReportCard = memo(function InnerReportCard({
   className,
   metrics,
   sources,
-  onDeleteCard,
+  loading,
+  errors,
   onShowCalculationDetails,
   // Context values as props
   editing,
@@ -63,42 +69,14 @@ export const InnerReportCard = memo(function InnerReportCard({
   const icon = config.icon;
   const cardId = config.id;
   const { t } = useTranslation("admin:sketching");
+  const hasErrors = Object.keys(errors).length > 0;
 
-  const { errors, loading } = useMemo(() => {
-    const errors = {} as { [key: string]: number };
-    let loading = false;
-    for (const metric of metrics) {
-      if (metric.state === SpatialMetricState.Error) {
-        const errorMessage = metric.errorMessage || "Unknown error";
-        if (errorMessage in errors) {
-          errors[errorMessage]++;
-        } else {
-          errors[errorMessage] = 1;
-        }
-      } else if (metric.state !== SpatialMetricState.Complete) {
-        loading = true;
-      }
-    }
-    for (const source of sources) {
-      if (source.sourceProcessingJob?.state === SpatialMetricState.Error) {
-        const errorMessage =
-          source.sourceProcessingJob?.errorMessage || "Unknown error";
-        if (errorMessage in errors) {
-          errors[errorMessage]++;
-        } else {
-          errors[errorMessage] = 1;
-        }
-      }
-    }
-    return { errors, loading };
-  }, [metrics, sources]);
-
-  if (Object.keys(errors).length > 0) {
+  if (hasErrors) {
     tint = "text-red-500";
   }
 
   const getBackgroundClasses = () => {
-    if (Object.keys(errors).length > 0) {
+    if (hasErrors) {
       return "bg-red-50 border border-red-500/10";
     }
     switch (backgroundTint) {
@@ -117,7 +95,7 @@ export const InnerReportCard = memo(function InnerReportCard({
   const isDisabled = editing && !isSelectedForEditing;
 
   const presenceAbsenceClassName = useMemo(() => {
-    if (!loading && !Object.values(errors).length) {
+    if (!loading && !hasErrors) {
       const isPresent = metrics.some((m) => {
         if (subjectIsFragment(m.subject)) {
           switch (m.type) {
@@ -142,7 +120,7 @@ export const InnerReportCard = memo(function InnerReportCard({
     } else {
       return "";
     }
-  }, [metrics, loading, errors]);
+  }, [metrics, loading, hasErrors]);
 
   const footerContainerRef = useRef<HTMLDivElement>(null);
 
@@ -155,21 +133,21 @@ export const InnerReportCard = memo(function InnerReportCard({
   const content = (
     <div
       className={`ReportCard ${config.type} ${presenceAbsenceClassName} ${
-        adminMode && editing === cardId ? "editing" : ""
+        adminMode && isSelectedForEditing ? "editing" : ""
       } transition-all opacity-100 relative rounded-lg w-full ${getBackgroundClasses()} ${
         isSelectedForEditing
           ? "shadow-xl ring-1 ring-opacity-5 ring-black"
           : "shadow-sm"
       } ${
         isDisabled ? "opacity-40 blur-sm pointer-events-none select-none" : ""
-      } ${className} ${loading && !editing ? "loadingSkeleton" : ""} ${
-        Object.values(errors).length > 0 ? "hasErrors" : ""
-      }`}
+      } ${className} ${
+        loading && !isSelectedForEditing ? "loadingSkeleton" : ""
+      } ${hasErrors ? "hasErrors" : ""}`}
     >
       <div className="">
         <div className={`px-4 pb-4 text-sm ${loading ? "loading" : ""}`}>
           <ErrorBoundary fallback={errorBoundaryFallback}>
-            {adminMode && editing === cardId ? (
+            {adminMode && isSelectedForEditing ? (
               <ReportCardBodyEditor
                 body={config.body}
                 className={`${tint} ${icon ? "hasIcon" : ""}`}
@@ -178,7 +156,6 @@ export const InnerReportCard = memo(function InnerReportCard({
                 cardId={cardId!}
                 preselectTitle={preselectTitle}
                 footerContainerRef={footerContainerRef}
-                onDeleteCard={onDeleteCard}
                 onShowCalculationDetails={onShowCalculationDetails}
               />
             ) : (
@@ -211,21 +188,56 @@ export const InnerReportCard = memo(function InnerReportCard({
  * to InnerReportCard. The ReportCardTitleToolbarContext should be provided by
  * a parent component (e.g., SortableReportContent) to avoid re-renders when
  * dragHandleProps change.
+ *
+ * It also wraps the card content with CardDependenciesContext to provide
+ * card-scoped metrics and sources to widgets, preventing unnecessary re-renders
+ * when other cards' data changes.
  */
 export default function ReportCard(
   props: ReportCardComponentProps & {
     config: ReportCardConfiguration<any>;
   }
 ) {
-  const { editing, preselectTitle, adminMode } =
-    useContext(ReportUIStateContext);
+  const {
+    editing,
+    preselectTitle,
+    adminMode,
+    showCalcDetails,
+    setShowCalcDetails,
+  } = useContext(ReportUIStateContext);
+
+  const baseReportContext = useBaseReportContext();
+  const cardDependencies = useCardDependencies(props.config.id);
 
   return (
-    <InnerReportCard
-      {...props}
-      editing={editing}
-      preselectTitle={preselectTitle}
-      adminMode={adminMode}
-    />
+    <CardDependenciesContext.Provider
+      value={{
+        metrics: cardDependencies.metrics,
+        sources: cardDependencies.overlaySources,
+        loading: cardDependencies.loading,
+        geographies: baseReportContext.geographies,
+        sketchClass: baseReportContext.sketchClass,
+      }}
+    >
+      <InnerReportCard
+        {...props}
+        editing={editing}
+        preselectTitle={preselectTitle}
+        adminMode={adminMode}
+        metrics={cardDependencies.metrics}
+        sources={cardDependencies.overlaySources}
+        loading={cardDependencies.loading}
+        errors={cardDependencies.errors}
+      />
+      {showCalcDetails && !editing && showCalcDetails === props.config.id && (
+        <CalculationDetailsModal
+          state={{ open: true, cardId: props.config.id }}
+          onClose={() => setShowCalcDetails(undefined)}
+          config={props.config}
+          metrics={[]}
+          adminMode={true}
+        />
+      )}
+    </CardDependenciesContext.Provider>
   );
 }

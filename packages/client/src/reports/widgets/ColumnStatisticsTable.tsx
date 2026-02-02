@@ -19,7 +19,10 @@ import {
   TooltipPopoverContent,
   TooltipInfoIcon,
 } from "../../editor/TooltipMenu";
-import { useReportContext } from "../ReportContext";
+import {
+  useOverlaySources,
+  useRelatedOverlay,
+} from "../hooks/useOverlaySources";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
@@ -149,9 +152,9 @@ export const ColumnStatisticsTable: ReportWidget<
 
   const resolvedDisplayStats = useMemo(() => {
     const defaults: Partial<Record<ColumnValuesStatKey | "presence", boolean>> =
-    {
-      mean: true,
-    };
+      {
+        mean: true,
+      };
     return componentSettings?.displayStats || defaults;
   }, [componentSettings?.displayStats]);
 
@@ -279,9 +282,11 @@ export const ColumnStatisticsTable: ReportWidget<
           className="divide-y divide-gray-100"
           style={{
             display: "grid",
-            gridTemplateColumns: `${hasVisibilityColumn ? "40px " : ""
-              }minmax(140px,1fr) repeat(${statsToShow.length
-              }, minmax(70px, auto))`,
+            gridTemplateColumns: `${
+              hasVisibilityColumn ? "40px " : ""
+            }minmax(140px,1fr) repeat(${
+              statsToShow.length
+            }, minmax(70px, auto))`,
           }}
         >
           <div className="contents bg-gray-50 border-b border-gray-200">
@@ -305,16 +310,17 @@ export const ColumnStatisticsTable: ReportWidget<
           {rows.map((row, idx) => {
             const layerState =
               mapContext?.layerStatesByTocStaticId?.[
-              componentSettings.columnSettings?.[row.column]?.stableId || ""
+                componentSettings.columnSettings?.[row.column]?.stableId || ""
               ];
             return (
               <div key={idx} className="contents hover:bg-gray-50">
                 {hasVisibilityColumn && (
                   <div
-                    className={`px-3 py-2 text-center ${idx % 2 === 1
+                    className={`px-3 py-2 text-center ${
+                      idx % 2 === 1
                         ? "bg-gray-50/50 border-t border-b border-black/5"
                         : ""
-                      }`}
+                    }`}
                   >
                     {componentSettings?.columnSettings?.[row.column]
                       ?.stableId ? (
@@ -353,10 +359,11 @@ export const ColumnStatisticsTable: ReportWidget<
                   </div>
                 )}
                 <div
-                  className={`px-3 py-2 text-sm text-gray-900 truncate group- ${idx % 2 === 1
+                  className={`px-3 py-2 text-sm text-gray-900 truncate group- ${
+                    idx % 2 === 1
                       ? "bg-gray-50/50 border-t border-b border-black/5"
                       : ""
-                    }`}
+                  }`}
                 >
                   {componentSettings?.columnSettings?.[row.column]?.label ||
                     row.column}
@@ -364,11 +371,13 @@ export const ColumnStatisticsTable: ReportWidget<
                 {statsToShow.map((stat) => (
                   <div
                     key={`${row.column}-${String(stat)}`}
-                    className={`px-3 py-2 text-right text-sm text-gray-900 tabular-nums ${stat === "presence" ? "flex items-center" : ""
-                      } ${idx % 2 === 1
+                    className={`px-3 py-2 text-right text-sm text-gray-900 tabular-nums ${
+                      stat === "presence" ? "flex items-center" : ""
+                    } ${
+                      idx % 2 === 1
                         ? "bg-gray-50/50 border-t border-b border-black/5"
                         : ""
-                      }`}
+                    }`}
                   >
                     {loading ? (
                       <MetricLoadingDots />
@@ -389,7 +398,6 @@ export const ColumnStatisticsTable: ReportWidget<
 export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate, onUpdateAllDependencies }) => {
     const { t } = useTranslation("admin:reports");
-    const reportContext = useReportContext();
     const langContext = useContext(FormLanguageContext);
     const componentSettings = node.attrs?.componentSettings || {};
     const [statsModalOpen, setStatsModalOpen] = useState(false);
@@ -401,21 +409,7 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       [node.attrs?.metrics]
     );
 
-    const sources = useMemo(() => {
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      return allSources.filter((s) =>
-        dependencies.some(
-          (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
-        )
-      );
-    }, [
-      dependencies,
-      reportContext.overlaySources,
-      reportContext.preprocessedOverlaySources,
-    ]);
+    const { filteredSources: sources } = useOverlaySources(dependencies);
 
     const numericColumnOptions = useMemo(() => {
       const options: Array<{
@@ -640,34 +634,20 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       key: ColumnValuesStatKey | "presence";
       label: string;
     }> = [
-        { key: "min", label: t("Min") },
-        { key: "max", label: t("Max") },
-        { key: "mean", label: t("Mean") },
-        { key: "stdDev", label: t("Std Dev") },
-        { key: "sum", label: t("Sum") },
-        { key: "count", label: t("Count") },
-        { key: "countDistinct", label: t("Distinct values") },
-        { key: "presence", label: t("Presence") },
-      ];
+      { key: "min", label: t("Min") },
+      { key: "max", label: t("Max") },
+      { key: "mean", label: t("Mean") },
+      { key: "stdDev", label: t("Std Dev") },
+      { key: "sum", label: t("Sum") },
+      { key: "count", label: t("Count") },
+      { key: "countDistinct", label: t("Distinct values") },
+      { key: "presence", label: t("Presence") },
+    ];
 
     const presenceColumnEnabled = !!componentSettings.displayStats?.presence;
     const presencePresentationOptions = getPresencePresentationOptions();
 
-    const relatedOverlay = useMemo(() => {
-      const allSources = [
-        ...(reportContext.overlaySources || []),
-        ...(reportContext.preprocessedOverlaySources || []),
-      ];
-      const dep = dependencies.find((d) => d.tableOfContentsItemId);
-      if (!dep?.tableOfContentsItemId) return null;
-      return allSources.find(
-        (s) => s.tableOfContentsItemId === dep.tableOfContentsItemId
-      );
-    }, [
-      dependencies,
-      reportContext.overlaySources,
-      reportContext.preprocessedOverlaySources,
-    ]);
+    const relatedOverlay = useRelatedOverlay(dependencies);
 
     return (
       <Tooltip.Provider>
@@ -792,8 +772,8 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
                             <span className="truncate flex-1 min-w-0">
                               {colSettings?.stableId
                                 ? overlayOptions.find(
-                                  (o) => o.value === colSettings?.stableId
-                                )?.label || t("Unknown layer")
+                                    (o) => o.value === colSettings?.stableId
+                                  )?.label || t("Unknown layer")
                                 : t("None")}
                             </span>
                             <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />

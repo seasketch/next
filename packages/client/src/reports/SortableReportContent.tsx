@@ -13,16 +13,17 @@ import {
   ReorderReportTabCardsMutationVariables,
   useReorderReportTabCardsMutation,
 } from "../generated/graphql";
-import { useContext, useMemo } from "react";
+import { useMemo } from "react";
 import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar";
-import { ReportUIStateContext } from "./context/ReportUIStateContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
+import { useCardDependencies } from "./context/ReportDependenciesContext";
 
 interface SortableReportContentProps {
   selectedTab: ReportTabConfiguration;
   disabled?: boolean;
   onMoveCardToTab?: (cardId: number) => void;
   onShowCalculationDetails?: (cardId: number) => void;
+  setEditing: (editing: number | null, preselectTitle?: boolean) => void;
 }
 
 /**
@@ -33,32 +34,29 @@ interface SortableReportContentProps {
 function ReportCardWithToolbarContext({
   card,
   dragHandleProps,
-  metrics,
-  sources,
-  adminMode,
-  editing,
   hasMultipleTabs,
   onMoveCardToTab,
   onShowCalculationDetails,
+  setEditing,
 }: {
   card: ReportTabConfiguration["cards"][number];
   dragHandleProps?: any;
-  metrics: any[];
-  sources: any[];
   adminMode?: boolean;
-  editing: number | null;
   hasMultipleTabs: boolean;
   onMoveCardToTab?: (cardId: number) => void;
   onShowCalculationDetails?: (cardId: number) => void;
+  setEditing?: (editing: number | null, preselectTitle?: boolean) => void;
 }) {
   const cardId = card.id;
-  const hasMetrics = metrics.length > 0;
+  // Dependencies are now fetched inside ReportCard via useCardDependencies
+  // We'll determine hasMetrics based on the card's dependency configuration
+  const cardDependencies = useCardDependencies(cardId);
+  const hasMetrics = cardDependencies.metrics.length > 0;
 
   const toolbarContextValue = useMemo(
     () => ({
-      editing: Boolean(adminMode && editing === cardId),
       dragHandleProps,
-      adminMode: Boolean(adminMode),
+      adminMode: true,
       cardId,
       hasMetrics,
       hasMultipleTabs,
@@ -67,16 +65,16 @@ function ReportCardWithToolbarContext({
         ? onShowCalculationDetails
         : undefined,
       loading: false,
+      setEditing,
     }),
     [
-      adminMode,
-      editing,
       cardId,
       dragHandleProps,
       hasMetrics,
       hasMultipleTabs,
       onMoveCardToTab,
       onShowCalculationDetails,
+      setEditing,
     ]
   );
 
@@ -84,8 +82,6 @@ function ReportCardWithToolbarContext({
     <ReportCardTitleToolbarContext.Provider value={toolbarContextValue}>
       <ReportCard
         config={card}
-        metrics={metrics}
-        sources={sources}
         onShowCalculationDetails={onShowCalculationDetails}
       />
     </ReportCardTitleToolbarContext.Provider>
@@ -98,7 +94,6 @@ export function SortableReportContent(props: SortableReportContentProps) {
   const onError = useGlobalErrorHandler();
 
   // Context values for toolbar context
-  const { editing, adminMode } = useContext(ReportUIStateContext);
   const { report } = useBaseReportContext();
 
   const hasMultipleTabs = useMemo(
@@ -152,15 +147,6 @@ export function SortableReportContent(props: SortableReportContentProps) {
       });
     },
   });
-
-  const emptyDependencies = useMemo(() => {
-    return {
-      metrics: [],
-      overlaySources: [],
-      loading: false,
-      errors: [],
-    };
-  }, []);
 
   if (!selectedTab) {
     return null;
@@ -247,15 +233,12 @@ export function SortableReportContent(props: SortableReportContentProps) {
                           dragHandleProps={
                             disabled ? undefined : provided.dragHandleProps
                           }
-                          metrics={emptyDependencies.metrics}
-                          sources={emptyDependencies.overlaySources}
-                          adminMode={adminMode}
-                          editing={editing}
                           hasMultipleTabs={hasMultipleTabs}
                           onMoveCardToTab={props.onMoveCardToTab}
                           onShowCalculationDetails={
                             props.onShowCalculationDetails
                           }
+                          setEditing={props.setEditing}
                         />
                       </div>
                     )}

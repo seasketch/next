@@ -8,7 +8,7 @@ import {
 import { MetricSubjectFragment } from "overlay-engine";
 import { BaseReportContext } from "./BaseReportContext";
 
-type SubjectReportContextValue = {
+type SubjectReportContextData = {
   /**
    * Whether the sketch is a collection
    */
@@ -19,10 +19,10 @@ type SubjectReportContextValue = {
   relatedFragments: MetricSubjectFragment[];
 };
 
-export const SubjectReportContext = createContext<
-  | SubjectReportContextValue
-  | { data?: SubjectReportContextValue; loading: boolean }
->({ data: undefined, loading: true });
+export const SubjectReportContext = createContext<{
+  data?: SubjectReportContextData;
+  loading: boolean;
+}>({ loading: true });
 
 export function SubjectReportContextProvider({
   children,
@@ -36,7 +36,7 @@ export function SubjectReportContextProvider({
       sketchId: sketchId,
     },
   });
-  const value = useMemo<SubjectReportContextValue | undefined>(() => {
+  const value = useMemo<SubjectReportContextData | undefined>(() => {
     if (data) {
       if (!data.sketch) {
         throw new Error("Sketch not found");
@@ -58,28 +58,14 @@ export function SubjectReportContextProvider({
     return undefined;
   }, [data]);
 
-  const baseContext = useContext(BaseReportContext);
   return (
     <SubjectReportContext.Provider value={{ data: value, loading }}>
-      {loading || baseContext.loading ? <div></div> : children}
+      {children}
     </SubjectReportContext.Provider>
   );
 }
 
-export function useSubjectReportContext(): SubjectReportContextValue {
+export function useSubjectReportContext() {
   const context = useContext(SubjectReportContext);
-  if (!context) {
-    throw new Error("SubjectReportContext not found");
-  }
-  if ("loading" in context) {
-    if (context.loading) {
-      throw new Error(
-        "SubjectReportContext data still loading. Report rendering should be deferred until the data is loaded."
-      );
-    } else {
-      return context.data!;
-    }
-  } else {
-    return context;
-  }
+  return context;
 }

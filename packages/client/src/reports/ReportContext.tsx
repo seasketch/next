@@ -26,15 +26,10 @@ import {
   DraftReportDependenciesDocument,
 } from "../generated/graphql";
 import { ReportConfiguration } from "./cards/cards";
-import {
-  MetricDependency,
-  MetricSubjectFragment,
-} from "overlay-engine";
+import { MetricDependency, MetricSubjectFragment } from "overlay-engine";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { ApolloError } from "@apollo/client";
 import type { AnyLayer, AnySourceData } from "mapbox-gl";
-import { MapContext } from "../dataLayers/MapContextManager";
 import getSlug from "../getSlug";
 import { gql } from "@apollo/client";
 // @ts-ignore
@@ -89,10 +84,7 @@ export interface ReportContextState {
   /**
    * Function to set the card selected for editing
    */
-  setEditing: (
-    cardId: number | null,
-    preselectTitle?: boolean
-  ) => void;
+  setEditing: (cardId: number | null, preselectTitle?: boolean) => void;
 
   /**
    * Function to delete a card
@@ -146,7 +138,6 @@ export function useReportState(
   );
   const [showCalcDetails, setShowCalcDetails] = useState<number | undefined>();
 
-
   const onError = useGlobalErrorHandler();
 
   const { data, refetch, loading } = useReportContextQuery({
@@ -168,9 +159,7 @@ export function useReportState(
 
   const metrics = useMemo(() => {
     return data?.report?.dependencies?.metrics || [];
-  }, [
-    data?.report?.dependencies?.metrics,
-  ]);
+  }, [data?.report?.dependencies?.metrics]);
 
   const [selectedTabId, setSelectedTabId] = useState<number>(
     initialSelectedTabId || data?.report?.tabs?.[0]?.id || 0
@@ -181,12 +170,12 @@ export function useReportState(
     (tab) => tab.id === selectedTabId
   ) ||
     data?.report?.tabs?.[0] || {
-    id: 0,
-    title: "Default Tab",
-    position: 0,
-    cards: [],
-    alternateLanguageSettings: {},
-  };
+      id: 0,
+      title: "Default Tab",
+      position: 0,
+      cards: [],
+      alternateLanguageSettings: {},
+    };
 
   const [recalculateMutation, recalculateState] =
     useRecalculateSpatialMetricsMutation({
@@ -194,7 +183,6 @@ export function useReportState(
       refetchQueries: [ReportContextDocument, DraftReportDependenciesDocument],
       awaitRefetchQueries: true,
     });
-
 
   // Update selectedTabId if the current one is no longer valid
   useEffect(() => {
@@ -273,7 +261,9 @@ export function useReportState(
     ) {
       for (const cardDependencyList of data.report.dependencies
         .cardDependencyLists) {
-        const overlays = (data?.report?.dependencies?.overlaySources || []).filter((overlay) =>
+        const overlays = (
+          data?.report?.dependencies?.overlaySources || []
+        ).filter((overlay) =>
           cardDependencyList.overlaySources.includes(
             overlay.tableOfContentsItemId
           )
@@ -335,7 +325,6 @@ export function useReportState(
     [dependencies]
   );
 
-
   if (!data?.sketch) {
     return undefined;
   } else {
@@ -382,7 +371,8 @@ export function useReportState(
       showCalcDetails,
       setShowCalcDetails,
       preprocessedOverlaySources:
-        availableReportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
+        availableReportingLayersQuery.data?.projectBySlug?.reportingLayers ||
+        [],
     };
   }
 }

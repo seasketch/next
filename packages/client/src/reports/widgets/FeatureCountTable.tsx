@@ -19,7 +19,7 @@ import {
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
-import { useReportContext } from "../ReportContext";
+import { useOverlaySources } from "../hooks/useOverlaySources";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
   extractColorForLayers,
@@ -420,8 +420,9 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
             {nameLabel}
           </div>
           <div
-            className={`flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] ${showPercentColumn ? "text-center" : "text-right"
-              }`}
+            className={`flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] ${
+              showPercentColumn ? "text-center" : "text-right"
+            }`}
           >
             {countLabel}
           </div>
@@ -435,8 +436,8 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
           const color = row.color;
           const percent =
             !loading &&
-              typeof row.geographyTotal === "number" &&
-              row.geographyTotal > 0
+            typeof row.geographyTotal === "number" &&
+            row.geographyTotal > 0
               ? row.count / row.geographyTotal
               : undefined;
           const hasColor = color;
@@ -452,8 +453,9 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
           return (
             <div
               key={row.key}
-              className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${row.count === 0 ? "opacity-50" : ""
-                }`}
+              className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
+                row.count === 0 ? "opacity-50" : ""
+              }`}
             >
               {hasVisibilityColumn && (
                 <div className="flex-none w-6 flex justify-center">
@@ -505,8 +507,9 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
                 </span>
               </div>
               <div
-                className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${showPercentColumn ? "text-center" : "text-right"
-                  }`}
+                className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
+                  showPercentColumn ? "text-center" : "text-right"
+                }`}
               >
                 {loading ? <MetricLoadingDots /> : row.count.toLocaleString()}
               </div>
@@ -554,7 +557,6 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
   const { t } = useTranslation("admin:reports");
   const dependencies = node.attrs?.metrics as MetricDependency[] | undefined;
 
-  const reportContext = useReportContext();
   const settings: FeatureCountTableSettings = useMemo(
     () => node.attrs?.componentSettings || {},
     [node.attrs?.componentSettings]
@@ -565,18 +567,7 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
   const rowsPerPage = settings.rowsPerPage ?? 10;
   const showPercentColumn = settings.showPercentColumn ?? true;
 
-  // Get sources from report context
-  const sources = useMemo(() => {
-    const allSources = [
-      ...(reportContext.overlaySources || []),
-      ...(reportContext.preprocessedOverlaySources || []),
-    ];
-    return allSources.filter((s) =>
-      dependencies?.some(
-        (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
-      )
-    );
-  }, [reportContext.overlaySources, reportContext.preprocessedOverlaySources, dependencies]);
+  const { filteredSources: sources } = useOverlaySources(dependencies || []);
 
   // Get current groupBy from dependencies
   const handleUpdate = (patch: Partial<FeatureCountTableSettings>) => {

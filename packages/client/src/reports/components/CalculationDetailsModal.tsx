@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
 import {
   CompatibleSpatialMetricDetailsFragment,
+  ReportDependenciesDocument,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
   useRetryFailedSpatialMetricsMutation,
@@ -12,6 +13,7 @@ import ReportMetricsProgressDetails from "../ReportMetricsProgressDetails";
 import { collectReportCardTitle } from "../../admin/sketchClasses/SketchClassReportsAdmin";
 import { ReportCardConfiguration } from "../cards/cards";
 import { subjectIsFragment } from "overlay-engine";
+import { useCardDependenciesContext } from "../context/CardDependenciesContext";
 
 export interface CalculationDetailsModalState {
   open: boolean;
@@ -63,11 +65,11 @@ export function CalculationDetailsModal({
   state,
   onClose,
   config,
-  metrics = [],
   adminMode = false,
 }: CalculationDetailsModalProps) {
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
+  const context = useCardDependenciesContext();
 
   // Recalculate modal state (nested modal)
   const [recalcOpen, setRecalcOpen] = useState(false);
@@ -78,17 +80,18 @@ export function CalculationDetailsModal({
     onError,
   });
 
-  const [retryFailedMetrics, retryState] =
-    useRetryFailedSpatialMetricsMutation({
+  const [retryFailedMetrics, retryState] = useRetryFailedSpatialMetricsMutation(
+    {
       onError,
-    });
+    }
+  );
 
   // Compute loading and failed metrics
   const { loading, failedMetrics } = useMemo(() => {
     let loading = false;
     const failedMetrics: number[] = [];
 
-    for (const metric of metrics) {
+    for (const metric of context.metrics) {
       if (metric.state === SpatialMetricState.Error) {
         failedMetrics.push(metric.id);
       } else if (metric.state !== SpatialMetricState.Complete) {
@@ -97,11 +100,11 @@ export function CalculationDetailsModal({
     }
 
     return { loading, failedMetrics };
-  }, [metrics]);
+  }, [context.metrics]);
 
   const handleRecalculate = useCallback(async () => {
     const metricsToRecalculate: number[] = [];
-    for (const metric of metrics) {
+    for (const metric of context.metrics) {
       if (subjectIsFragment(metric.subject) || recomputeTotals) {
         metricsToRecalculate.push(metric.id);
       }
@@ -110,18 +113,20 @@ export function CalculationDetailsModal({
     await recalculate({
       variables: {
         metricIds: metricsToRecalculate,
-        recomputePreprocessed,
+        preprocessSources: recomputePreprocessed,
       },
+      refetchQueries: [ReportDependenciesDocument],
+      awaitRefetchQueries: true,
     });
     setRecalcOpen(false);
-  }, [metrics, recomputeTotals, recomputePreprocessed, recalculate]);
+  }, [context.metrics, recomputeTotals, recomputePreprocessed, recalculate]);
 
   const handleRecalculateClick = useCallback(async () => {
     if (adminMode) {
       setRecalcOpen(true);
     } else {
       const metricsToRecalculate: number[] = [];
-      for (const metric of metrics) {
+      for (const metric of context.metrics) {
         if (subjectIsFragment(metric.subject)) {
           metricsToRecalculate.push(metric.id);
         }
@@ -129,11 +134,11 @@ export function CalculationDetailsModal({
       await recalculate({
         variables: {
           metricIds: metricsToRecalculate,
-          recomputePreprocessed: false,
+          preprocessSources: false,
         },
       });
     }
-  }, [adminMode, metrics, recalculate]);
+  }, [adminMode, context.metrics, recalculate]);
 
   const handleRetryFailed = useCallback(async () => {
     await retryFailedMetrics({

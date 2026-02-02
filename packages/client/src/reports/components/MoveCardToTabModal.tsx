@@ -1,7 +1,10 @@
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
-import { useMoveCardToTabMutation } from "../../generated/graphql";
+import {
+  DraftReportDocument,
+  useMoveCardToTabMutation,
+} from "../../generated/graphql";
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -47,22 +50,34 @@ interface MoveCardToTabModalProps {
  * Modal for moving a report card to a different tab.
  * Gets tab information from useBaseReportContext.
  */
-export function MoveCardToTabModal({ state, onClose }: MoveCardToTabModalProps) {
+export function MoveCardToTabModal({
+  state,
+  onClose,
+}: MoveCardToTabModalProps) {
   const { t, i18n } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const { report } = useBaseReportContext();
-  const { selectedTabId } = useContext(ReportUIStateContext);
+  const { selectedTabId, setSelectedTabId } = useContext(ReportUIStateContext);
 
   const [selectedTargetTabId, setSelectedTargetTabId] = useState<number | null>(
     null
   );
 
+  useEffect(() => {
+    if (state.cardId && report?.tabs) {
+      const tab = report.tabs.find((tab) =>
+        tab.cards.some((card) => card.id === state.cardId)
+      );
+      if (tab) {
+        setSelectedTargetTabId(tab.id);
+      }
+    }
+  }, [state.cardId, report?.tabs]);
+
   const [moveCardToTab, { loading }] = useMoveCardToTabMutation({
     onError,
-    onCompleted: () => {
-      onClose();
-      setSelectedTargetTabId(null);
-    },
+    refetchQueries: [DraftReportDocument],
+    awaitRefetchQueries: true,
   });
 
   // Sort tabs by position
@@ -78,7 +93,9 @@ export function MoveCardToTabModal({ state, onClose }: MoveCardToTabModalProps) 
       typeof tab.alternateLanguageSettings === "object" &&
       lang in tab.alternateLanguageSettings
     ) {
-      const langSettings = (tab.alternateLanguageSettings as Record<string, { title?: string }>)[lang];
+      const langSettings = (
+        tab.alternateLanguageSettings as Record<string, { title?: string }>
+      )[lang];
       if (langSettings?.title) {
         return langSettings.title;
       }
@@ -89,14 +106,17 @@ export function MoveCardToTabModal({ state, onClose }: MoveCardToTabModalProps) 
   // Determine which tab is currently active (where the card currently lives)
   const currentTabId = selectedTabId ?? report?.tabs?.[0]?.id;
 
-  const handleMove = () => {
+  const handleMove = async () => {
     if (state.cardId !== null && selectedTargetTabId !== null) {
-      moveCardToTab({
+      await moveCardToTab({
         variables: {
           cardId: state.cardId,
           tabId: selectedTargetTabId,
         },
       });
+      onClose();
+      setSelectedTargetTabId(null);
+      setSelectedTabId(selectedTargetTabId);
     }
   };
 
@@ -129,9 +149,7 @@ export function MoveCardToTabModal({ state, onClose }: MoveCardToTabModalProps) 
           variant: "primary",
           loading: loading,
           disabled:
-            loading ||
-            selectedTargetTabId === null ||
-            state.cardId === null,
+            loading || selectedTargetTabId === null || state.cardId === null,
         },
       ]}
     >
@@ -160,7 +178,9 @@ export function MoveCardToTabModal({ state, onClose }: MoveCardToTabModalProps) 
                   disabled={loading}
                 />
                 <div className="flex-1">
-                  <span className="text-sm text-gray-800">{localizedTitle}</span>
+                  <span className="text-sm text-gray-800">
+                    {localizedTitle}
+                  </span>
                   {isCurrentTab && (
                     <span className="ml-2 text-xs text-gray-500">
                       {t("Current tab")}

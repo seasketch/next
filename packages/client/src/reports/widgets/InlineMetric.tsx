@@ -40,7 +40,10 @@ import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { SketchGeometryType } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
-import { useReportContext } from "../ReportContext";
+import {
+  useOverlaySources,
+  useRelatedOverlay,
+} from "../hooks/useOverlaySources";
 import useCurrentLang from "../../useCurrentLang";
 import * as Popover from "@radix-ui/react-popover";
 import { Pencil2Icon } from "@radix-ui/react-icons";
@@ -296,13 +299,13 @@ export type InlineMetricComponentSettings = {
   unitDisplay?: "long" | "short";
   minimumFractionDigits: number;
   presentation:
-  | "total_area"
-  | "percent_area"
-  | "distance_to_shore"
-  | "overlay_area"
-  | "count"
-  | "column_values"
-  | "raster_stats";
+    | "total_area"
+    | "percent_area"
+    | "distance_to_shore"
+    | "overlay_area"
+    | "count"
+    | "column_values"
+    | "raster_stats";
   stat?: ColumnValuesStatKey;
   rasterStat?: RasterValuesStatKey;
   hideLabelForCount?: boolean;
@@ -321,9 +324,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   dependencies,
   marks,
   sketchClass,
-  lang
+  lang,
 }) => {
-  console.log("rendering inline metric");
   const {
     pluralRules,
     countDefaultMessages,
@@ -333,8 +335,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   } = useMemo(() => {
     const pluralRules = new Intl.PluralRules(lang);
     const countDefaultMessages =
-      defaultPluralizedCountLabels[lang] ||
-      defaultPluralizedCountLabels.en;
+      defaultPluralizedCountLabels[lang] || defaultPluralizedCountLabels.en;
     const countCustomMessages =
       componentSettings?.pluralizedCountLabels?.[lang];
     const distinctDefaultMessages =
@@ -501,9 +502,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         }
       }
       case "raster_stats": {
-        const rasterStats = metrics.find(
-          (m) => m.type === "raster_stats"
-        );
+        const rasterStats = metrics.find((m) => m.type === "raster_stats");
         if (!rasterStats) {
           throw new Error("Raster stats not found in metrics.");
         }
@@ -564,8 +563,9 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
       marks?.some((m) => m.type.name === "link" && m.attrs?.underline);
     return (
       <span
-        className={`metric font-semibold rounded-sm inline-block ${underline ? "underline" : ""
-          }`}
+        className={`metric font-semibold rounded-sm inline-block ${
+          underline ? "underline" : ""
+        }`}
         style={underline ? { textDecorationStyle: "solid" } : undefined}
       >
         {formattedValue}
@@ -613,7 +613,9 @@ function inlineMetricPropsEqual(
   if (prevProps.node !== nextProps.node) {
     changes.push("node");
   }
-  if (prevProps.alternateLanguageSettings !== nextProps.alternateLanguageSettings) {
+  if (
+    prevProps.alternateLanguageSettings !== nextProps.alternateLanguageSettings
+  ) {
     changes.push("alternateLanguageSettings");
   }
 
@@ -639,7 +641,6 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   const t = i18n.t;
 
   const type = formatPresentationLabel(componentSettings.presentation);
-  const reportContext = useReportContext();
   const lang = useCurrentLang();
   const pluralCategories = useMemo(() => {
     return new Intl.PluralRules(lang.code).resolvedOptions().pluralCategories;
@@ -661,45 +662,13 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     return { distinctDefaultMessages, distinctCustomMessages };
   }, [lang.code, componentSettings?.pluralizedDistinctValueLabels]);
 
-  const sources = useMemo(() => {
-    const dependencies = (node.attrs?.metrics || []) as MetricDependency[];
-    const allSources = [
-      ...(reportContext.overlaySources || []),
-      ...(reportContext.preprocessedOverlaySources || []),
-    ];
-    return allSources.filter((s) =>
-      dependencies.some(
-        (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
-      )
-    );
-  }, [
-    node.attrs?.metrics,
-    reportContext.overlaySources,
-    reportContext.preprocessedOverlaySources,
-  ]);
+  const dependencies = useMemo(
+    () => (node.attrs?.metrics || []) as MetricDependency[],
+    [node.attrs?.metrics]
+  );
 
-  const relatedOverlay = useMemo(() => {
-    const allSources = [
-      ...(reportContext.overlaySources || []),
-      ...(reportContext.preprocessedOverlaySources || []),
-    ];
-    const dependencies = (node.attrs.metrics || []) as MetricDependency[];
-    for (const dependency of dependencies) {
-      if (dependency.tableOfContentsItemId) {
-        const source = allSources.find(
-          (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
-        );
-        if (source) {
-          return source;
-        }
-      }
-    }
-    return null;
-  }, [
-    node.attrs.metrics,
-    reportContext.overlaySources,
-    reportContext.preprocessedOverlaySources,
-  ]);
+  const { filteredSources: sources } = useOverlaySources(dependencies);
+  const relatedOverlay = useRelatedOverlay(dependencies);
 
   const { valueColumnOptions, valueColumnAttributesByName } = useMemo(() => {
     const options: Array<{ value: string; label: ReactNode }> = [];
@@ -816,7 +785,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   const selectedStat: ColumnValuesStatKey = selectedValueColumnIsNumeric
     ? (componentSettings.stat as ColumnValuesStatKey) ||
-    ("mean" as ColumnValuesStatKey)
+      ("mean" as ColumnValuesStatKey)
     : ("countDistinct" as ColumnValuesStatKey);
 
   const selectedRasterStat: RasterValuesStatKey =

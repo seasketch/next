@@ -13652,6 +13652,7 @@ export type ReportCard = Node & {
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
   reportTabId: Scalars['Int'];
+  tab?: Maybe<ReportTab>;
   tint?: Maybe<Scalars['String']>;
   type: Scalars['String'];
   updatedAt: Scalars['Datetime'];
@@ -22838,6 +22839,10 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & ReportTabDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -23063,6 +23068,33 @@ export type ReportContextQuery = (
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps'>
     )>>, dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { overlaySources: Array<(
+        { __typename?: 'ReportOverlaySource' }
+        & OverlaySourceDetailsFragment
+      )>, metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricDetailsFragment
+      )>, cardDependencyLists: Array<(
+        { __typename?: 'CardDependencyLists' }
+        & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )> }
+    ) }
+  )> }
+);
+
+export type ReportDependenciesQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportDependenciesQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
       & { overlaySources: Array<(
         { __typename?: 'ReportOverlaySource' }
@@ -29950,10 +29982,13 @@ export const AddReportCardDocument = /*#__PURE__*/ gql`
   ) {
     reportCard {
       id
+      tab {
+        ...ReportTabDetails
+      }
     }
   }
 }
-    `;
+    ${ReportTabDetailsFragmentDoc}`;
 export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
     mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
   reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
@@ -30099,6 +30134,27 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
 ${ReportContextSketchClassDetailsFragmentDoc}
 ${ReportTabDetailsFragmentDoc}
 ${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const ReportDependenciesDocument = /*#__PURE__*/ gql`
+    query ReportDependencies($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}
 ${CompatibleSpatialMetricDetailsFragmentDoc}`;
 export const BaseReportContextDocument = /*#__PURE__*/ gql`
     query BaseReportContext($sketchClassId: Int!) {
@@ -31531,6 +31587,7 @@ export const namedOperations = {
     AvailableReportLayers: 'AvailableReportLayers',
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
+    ReportDependencies: 'ReportDependencies',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
     SubjectReportContext: 'SubjectReportContext',

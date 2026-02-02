@@ -162,10 +162,9 @@ export default function ReportCardLoadingIndicator({
   className?: string;
 }) {
   const { t } = useTranslation("sketching");
-  const sourceJobs = useMemo(
-    () => toMinimalJobsFromSources(sourceProcessingJobs || []),
-    [sourceProcessingJobs]
-  );
+  const sourceJobs = useMemo(() => {
+    return toMinimalJobsFromSources(sourceProcessingJobs || []);
+  }, [sourceProcessingJobs]);
   const metricJobs = useMemo(
     () => toMinimalJobsFromMetrics(metrics as any),
     [metrics]
@@ -196,8 +195,8 @@ export default function ReportCardLoadingIndicator({
   const currentPhase: "sources" | "metrics" | "complete" = isComplete
     ? "complete"
     : stage === "sources"
-      ? "sources"
-      : "metrics";
+    ? "sources"
+    : "metrics";
 
   // Synchronous reset when switching phases to avoid a one-frame lag
   if (
@@ -213,8 +212,8 @@ export default function ReportCardLoadingIndicator({
   const targetPercent = isComplete
     ? 100
     : typeof progressPercent === "number"
-      ? Math.max(0, Math.min(94, progressPercent))
-      : prevPercentRef.current; // hold if unknown
+    ? Math.max(0, Math.min(94, progressPercent))
+    : prevPercentRef.current; // hold if unknown
 
   const nextPercent = Math.max(prevPercentRef.current, targetPercent);
   if (nextPercent !== prevPercentRef.current) {
@@ -252,8 +251,7 @@ export default function ReportCardLoadingIndicator({
     } else {
       setReadyToShow(false);
     }
-  }, [display, isComplete]);
-
+  }, [display, isComplete, farthestEta]);
 
   if (!display || (!isComplete && !readyToShow)) return null;
 

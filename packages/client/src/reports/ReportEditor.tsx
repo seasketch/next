@@ -1,7 +1,20 @@
 import { useTranslation } from "react-i18next";
-import { Sketch } from "../generated/graphql";
+import {
+  DraftReportDocument,
+  ReportTabDetailsFragment,
+  Sketch,
+  useAddReportCardMutation,
+} from "../generated/graphql";
 import { BaseReportContext } from "./context/BaseReportContext";
-import { memo, useCallback, useContext, useMemo, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { ReportTabs } from "./ReportTabs";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
 import { DemonstrationSketchDropdown } from "./components/DemonstrationSketchDropdown";
@@ -14,6 +27,10 @@ import {
   CalculationDetailsModal,
   useCalculationDetailsModalState,
 } from "./components/CalculationDetailsModal";
+import { ReportTabManagementModal } from "./ReportTabManagementModal";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { PlusIcon } from "@radix-ui/react-icons";
 
 export default function ReportEditor({
   demonstrationSketches,
@@ -41,6 +58,131 @@ export default function ReportEditor({
 
   const moveCardModalState = useMoveCardToTabState();
   const calcDetailsModalState = useCalculationDetailsModalState();
+  const [manageTabsOpen, setManageTabsOpen] = useState(false);
+  const openManageTabs = useCallback(() => setManageTabsOpen(true), []);
+  const closeManageTabs = useCallback(() => setManageTabsOpen(false), []);
+  const onError = useGlobalErrorHandler();
+
+  // Track a newly created card that needs to be scrolled into view and focused
+  const [pendingNewCardId, setPendingNewCardId] = useState<number | null>(null);
+  const pendingNewCardIdRef = useRef<number | null>(null);
+
+  // Get all card IDs from the current tabs data
+  const allCardIds = useMemo(() => {
+    return new Set(
+      baseContext.data?.report?.tabs?.flatMap((tab) =>
+        tab.cards.map((card) => card.id)
+      ) || []
+    );
+  }, [baseContext.data?.report?.tabs]);
+
+  // When the pending card appears in the data, scroll to it and focus
+  useLayoutEffect(() => {
+    if (pendingNewCardId && allCardIds.has(pendingNewCardId)) {
+      const cardId = pendingNewCardId;
+      // Clear the pending state first to avoid re-running
+      setPendingNewCardId(null);
+      pendingNewCardIdRef.current = null;
+
+      // Use requestAnimationFrame to ensure DOM has painted
+      requestAnimationFrame(() => {
+        const cardElement = document.querySelector(
+          // eslint-disable-next-line i18next/no-literal-string
+          `[data-rbd-draggable-id="${cardId}"]`
+        );
+        if (cardElement) {
+          cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+
+        const editor = document.querySelector(
+          // eslint-disable-next-line i18next/no-literal-string
+          `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
+        );
+        if (editor) {
+          (editor as HTMLElement).focus();
+        }
+      });
+    }
+  }, [pendingNewCardId, allCardIds]);
+
+  const [addReportCard] = useAddReportCardMutation({
+    awaitRefetchQueries: true,
+    // refetchQueries: [DraftReportDocument],
+    onError,
+  });
+
+  const addACard = useCallback(async () => {
+    const currentTabId =
+      selectedTabId ?? baseContext.data?.report?.tabs?.[0]?.id;
+    if (!currentTabId) {
+      console.error("No tab selected");
+      return;
+    }
+
+    const body = {
+      type: "doc",
+      content: [
+        {
+          type: "reportTitle",
+          content: [
+            {
+              type: "text",
+              text: "Card title",
+            },
+          ],
+        },
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "Use ",
+            },
+            {
+              type: "text",
+              text: "Text Blocks",
+              marks: [{ type: "strong" }],
+            },
+            {
+              type: "text",
+              text: " to add instructions or other details to your report.",
+            },
+          ],
+        },
+      ],
+    };
+
+    try {
+      const { data } = await addReportCard({
+        variables: {
+          reportTabId: currentTabId,
+          componentSettings: {
+            type: "textBlock",
+          },
+          cardType: "TextBlock",
+          body,
+        },
+      });
+      const newCardId = data?.addReportCard?.reportCard?.id || null;
+      if (!newCardId) {
+        console.error("No new card id");
+        return;
+      }
+      // Set the pending card ID - the useLayoutEffect will handle scrolling
+      // and focusing once the card appears in the data
+      setPendingNewCardId(newCardId);
+      pendingNewCardIdRef.current = newCardId;
+      // Put the card into edit mode
+      setEditing(newCardId, true);
+    } catch (error) {
+      // Error is handled by onError
+    }
+  }, [
+    addReportCard,
+    selectedTabId,
+    baseContext.data?.report?.tabs,
+    setEditing,
+  ]);
 
   // Find the card config for the calculation details modal
   const calcDetailsCard = calcDetailsModalState.state.cardId
@@ -59,6 +201,17 @@ export default function ReportEditor({
     };
   }, []);
 
+  const setShowCalcDetails = useCallback(
+    (cardId: number | undefined) => {
+      if (!cardId) {
+        calcDetailsModalState.closeModal();
+      } else {
+        calcDetailsModalState.openModal(cardId);
+      }
+    },
+    [calcDetailsModalState]
+  );
+
   const uiStateContextValue = useMemo(() => {
     return {
       selectedTabId: selectedTabId,
@@ -67,8 +220,18 @@ export default function ReportEditor({
       setEditing: setEditing,
       adminMode: true,
       preselectTitle: preselectTitle,
+      showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
+      setShowCalcDetails: setShowCalcDetails,
     };
-  }, [selectedTabId, setSelectedTabId, editing, setEditing, preselectTitle]);
+  }, [
+    selectedTabId,
+    setSelectedTabId,
+    editing,
+    setEditing,
+    preselectTitle,
+    calcDetailsModalState.state.cardId,
+    setShowCalcDetails,
+  ]);
 
   if (baseContext.loading) {
     return <div>{t("Loading report data...")}</div>;
@@ -87,6 +250,36 @@ export default function ReportEditor({
                 setSelectedSketchId={setSelectedSketchId}
               />
             </div>
+            <DropdownMenu.Root>
+              <DropdownMenu.Trigger asChild>
+                <button
+                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
+                  aria-label={t("Report actions")}
+                >
+                  <PlusIcon className="w-5 h-5" />
+                </button>
+              </DropdownMenu.Trigger>
+              <DropdownMenu.Portal>
+                <DropdownMenu.Content
+                  className="bg-white rounded-md shadow-lg border border-gray-200 py-1 min-w-[160px] z-50"
+                  sideOffset={5}
+                  align="end"
+                >
+                  <DropdownMenu.Item
+                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
+                    onSelect={addACard}
+                  >
+                    {t("Add Card")}
+                  </DropdownMenu.Item>
+                  <DropdownMenu.Item
+                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
+                    onSelect={openManageTabs}
+                  >
+                    {t("Manage Tabs")}
+                  </DropdownMenu.Item>
+                </DropdownMenu.Content>
+              </DropdownMenu.Portal>
+            </DropdownMenu.Root>
           </div>
           {/* report tabs */}
           <ReportTabs />
@@ -108,6 +301,7 @@ export default function ReportEditor({
                     disabled={isActive && Boolean(editing)}
                     onMoveCardToTab={moveCardModalState.openModal}
                     onShowCalculationDetails={calcDetailsModalState.openModal}
+                    setEditing={setEditing}
                   />
                 </div>
               );
@@ -119,13 +313,16 @@ export default function ReportEditor({
         state={moveCardModalState.state}
         onClose={moveCardModalState.closeModal}
       />
-      <CalculationDetailsModal
-        state={calcDetailsModalState.state}
-        onClose={calcDetailsModalState.closeModal}
-        config={calcDetailsCard}
-        metrics={emptyDependencies.metrics}
-        adminMode={true}
-      />
+      {baseContext.data?.report && manageTabsOpen && (
+        <ReportTabManagementModal
+          isOpen={manageTabsOpen}
+          onClose={closeManageTabs}
+          tabs={
+            (baseContext.data.report.tabs as ReportTabDetailsFragment[]) || []
+          }
+          reportId={baseContext.data.report.id}
+        />
+      )}
     </ReportUIStateContext.Provider>
   );
 }
