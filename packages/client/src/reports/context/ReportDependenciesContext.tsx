@@ -88,7 +88,7 @@ export default function ReportDependenciesContextProvider({
     if (anyMetricsLoading || anyOverlaySourcesLoading) {
       const interval = setInterval(() => {
         refetch();
-      }, 1200);
+      }, 600);
       return () => clearInterval(interval);
     }
   }, [data, loading, refetch, value.metrics, value.overlaySources]);

@@ -53,10 +53,10 @@ export function ReportCardActionMenu(
           className={classNames(
             "p-1 rounded-full flex items-center justify-center",
             open
-              ? loading
+              ? loading || context.loading
                 ? "text-gray-600 "
                 : "text-gray-600 bg-black/5"
-              : loading
+              : loading || context.loading
               ? " text-gray-500 "
               : " text-gray-500 hover:text-gray-600 hover:bg-black/5",
             triggerClassName
