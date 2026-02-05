@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import {
-  DraftReportDocument,
   ReportTabDetailsFragment,
   Sketch,
   useAddReportCardMutation,
@@ -23,10 +22,7 @@ import {
   MoveCardToTabModal,
   useMoveCardToTabState,
 } from "./components/MoveCardToTabModal";
-import {
-  CalculationDetailsModal,
-  useCalculationDetailsModalState,
-} from "./components/CalculationDetailsModal";
+import { useCalculationDetailsModalState } from "./components/CalculationDetailsModal";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -92,6 +88,8 @@ export default function ReportEditor({
         );
         if (cardElement) {
           cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        } else {
+          console.error("No card element found for card", cardId);
         }
 
         const editor = document.querySelector(
@@ -100,6 +98,23 @@ export default function ReportEditor({
         );
         if (editor) {
           (editor as HTMLElement).focus();
+        } else {
+          // Try again using a timeout
+          setTimeout(() => {
+            const editor = document.querySelector(
+              // eslint-disable-next-line i18next/no-literal-string
+              `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
+            );
+            if (editor) {
+              (editor as HTMLElement).focus();
+            } else {
+              console.error(
+                "No editor found for card",
+                cardId,
+                `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
+              );
+            }
+          }, 60);
         }
       });
     }
@@ -184,22 +199,7 @@ export default function ReportEditor({
     setEditing,
   ]);
 
-  // Find the card config for the calculation details modal
-  const calcDetailsCard = calcDetailsModalState.state.cardId
-    ? baseContext.data?.report?.tabs
-        ?.flatMap((tab) => tab.cards)
-        .find((card) => card.id === calcDetailsModalState.state.cardId)
-    : undefined;
-
   const { t } = useTranslation("admin:sketching");
-  const emptyDependencies = useMemo(() => {
-    return {
-      metrics: [],
-      overlaySources: [],
-      loading: false,
-      errors: [],
-    };
-  }, []);
 
   const setShowCalcDetails = useCallback(
     (cardId: number | undefined) => {

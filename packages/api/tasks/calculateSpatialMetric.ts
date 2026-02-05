@@ -34,6 +34,19 @@ export default async function calculateSpatialMetric(
 
   try {
     const metric = await getSpatialMetric(payload.metricId, helpers);
+    console.log("calculating spatial metric", {
+      type: metric.type,
+      subject: metric.subject,
+      fragment: subjectIsFragment(metric.subject)
+        ? (metric.subject as MetricSubjectFragment).hash
+        : undefined,
+      geography: !subjectIsFragment(metric.subject)
+        ? metric.subject.id
+        : undefined,
+      sourceUrl: metric.sourceUrl,
+      parameters: metric.parameters,
+      hash: metric.dependencyHash,
+    });
     if (metric.type === "total_area") {
       if (subjectIsFragment(metric.subject)) {
         // very simple to do, just ask postgis to calculate the area
@@ -49,7 +62,7 @@ export default async function calculateSpatialMetric(
           metric.subject.id,
           helpers
         );
-        await callOverlayWorker({
+        callOverlayWorker({
           type: "total_area",
           jobKey: metric.jobKey,
           queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
@@ -59,7 +72,21 @@ export default async function calculateSpatialMetric(
             clippingLayers,
           },
           ...metric.parameters,
-        } as OverlayWorkerPayload);
+        } as OverlayWorkerPayload)
+          .catch(async (e) => {
+            helpers.logger.error("Error calling overlay worker", {
+              error: e instanceof Error ? e.message : String(e),
+            });
+            await helpers.withPgClient(async (client) => {
+              await client.query(
+                `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where id = $2`,
+                [e instanceof Error ? e.message : "Unknown error", metric.id]
+              );
+            });
+          })
+          .finally(() => {
+            clearTimeout(timeout);
+          });
       }
     } else if (
       metric.type === "overlay_area" ||
@@ -113,7 +140,7 @@ export default async function calculateSpatialMetric(
             metric.subject.id,
             helpers
           );
-          await callOverlayWorker({
+          callOverlayWorker({
             type: metric.type,
             jobKey: metric.jobKey,
             subject: {
@@ -126,7 +153,21 @@ export default async function calculateSpatialMetric(
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
             epsg,
             ...metric.parameters,
-          });
+          })
+            .catch(async (e) => {
+              helpers.logger.error("Error calling overlay worker", {
+                error: e instanceof Error ? e.message : String(e),
+              });
+              await helpers.withPgClient(async (client) => {
+                await client.query(
+                  `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where id = $2`,
+                  [e instanceof Error ? e.message : "Unknown error", metric.id]
+                );
+              });
+            })
+            .finally(() => {
+              clearTimeout(timeout);
+            });
         }
       }
     } else {
@@ -234,6 +275,7 @@ function getSpatialMetric(metricId: number, helpers: Helpers) {
       sourceUrl: string;
       sourceType: SourceType;
       parameters: any;
+      dependencyHash: string;
     };
   });
 }

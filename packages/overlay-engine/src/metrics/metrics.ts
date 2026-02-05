@@ -359,7 +359,6 @@ export function combineRasterBandStats(
   // Calculate combined mean using sum/count (not average of means)
   const combinedMean = totalCount > 0 ? totalSum / totalCount : NaN;
 
-  
   // Calculate combined range
   const combinedMin = mins.length > 0 ? min(mins) : NaN;
   const combinedMax = maxs.length > 0 ? max(maxs) : NaN;
@@ -579,9 +578,24 @@ export type MetricDependencyParameters = {
  * report card widget.
  *
  * @param dependency The dependency to hash
+ * @param overlaySourceUrls A map of table of contents item ids to overlay source urls. If provided, the hash will be based on the overlay source url, rather than the tableOfContentsItemId. This way, metrics can be reused across draft and published table of contents items.
  * @returns A unique id for the dependency
  */
-export function hashMetricDependency(dependency: MetricDependency): string {
+export function hashMetricDependency(
+  dependency: MetricDependency,
+  overlaySourceUrls: { [tableOfContentsItemId: number]: string }
+): string {
+  if (
+    dependency.tableOfContentsItemId &&
+    overlaySourceUrls[dependency.tableOfContentsItemId]
+  ) {
+    dependency = {
+      ...dependency,
+      // @ts-ignore
+      tableOfContentsItemId:
+        overlaySourceUrls[dependency.tableOfContentsItemId],
+    };
+  }
   const canonical = stableSerialize(dependency);
   return fnv1a(canonical);
 }
@@ -603,7 +617,12 @@ function stableSerialize(value: unknown): string {
   }
 
   const entries = Object.keys(value)
-    .filter((key) => (value as any)[key] !== undefined && key !== "hash")
+    .filter(
+      (key) =>
+        (value as any)[key] !== undefined &&
+        key !== "hash" &&
+        key !== "__typename"
+    )
     .sort()
     .map(
       (key) => `${JSON.stringify(key)}:${stableSerialize((value as any)[key])}`

@@ -168,7 +168,7 @@ export function useWidgetDependencies(
     // Check if we're still waiting for metrics
     if (!loading) {
       for (const dependency of dependencies || []) {
-        const hash = hashMetricDependency(dependency);
+        const hash = hashMetricDependency(dependency, sourceUrlMap);
         const relatedMetric = filteredMetrics.find(
           (m) => m.dependencyHash === hash
         );

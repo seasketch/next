@@ -41,7 +41,7 @@ export default function ReportMetricsProgressDetails({
     ];
 
     return {
-      geographyMetrics: metrics.filter((m) => subjectIsGeography(m.subject)),
+      geographyMetrics: metrics.filter((m) => !subjectIsFragment(m.subject)),
       fragmentMetrics: metrics.filter((m) => subjectIsFragment(m.subject)),
       relatedOverlaySources: Array.from(overlaySources),
       failedMetrics,

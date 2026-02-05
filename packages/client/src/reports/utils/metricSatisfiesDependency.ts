@@ -12,7 +12,10 @@ export function metricSatisfiesDependency(
   dependency: MetricDependency,
   overlaySourceUrls: { [tableOfContentsItemId: number]: string }
 ): boolean {
-  if (metric.dependencyHash === hashMetricDependency(dependency)) {
+  if (
+    metric.dependencyHash ===
+    hashMetricDependency(dependency, overlaySourceUrls)
+  ) {
     return true;
   }
   return false;

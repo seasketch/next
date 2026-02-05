@@ -1,9 +1,18 @@
 import { Trans } from "react-i18next";
-import { useReportContext } from "./ReportContext";
-import ReportCard from "./ReportCard";
+import { useContext, useMemo } from "react";
+import { useBaseReportContext } from "./context/BaseReportContext";
+import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import { ReportCardWithToolbarContext } from "./SortableReportContent";
 
 export function ReportBody() {
-  const { report, selectedTabId } = useReportContext();
+  const { report } = useBaseReportContext();
+  const uiState = useContext(ReportUIStateContext);
+  const selectedTabId = uiState.selectedTabId;
+
+  const hasMultipleTabs = useMemo(
+    () => (report.tabs || []).length > 1,
+    [report.tabs]
+  );
 
   if (!report?.tabs || report.tabs.length === 0) {
     return null;
@@ -30,7 +39,14 @@ export function ReportBody() {
               </div>
             )}
             {tab.cards?.map((card) => (
-              <ReportCard key={card.id} config={card} />
+              <ReportCardWithToolbarContext
+                key={card.id}
+                card={card}
+                hasMultipleTabs={hasMultipleTabs}
+                onShowCalculationDetails={uiState.setShowCalcDetails}
+                setEditing={uiState.setEditing}
+                adminMode={false}
+              />
             ))}
           </div>
         );

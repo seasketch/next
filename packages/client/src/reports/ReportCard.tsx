@@ -12,7 +12,7 @@ import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
-import { useCardDependencies } from "./context/ReportDependenciesContext";
+import { useCardDependencies } from "./context/useCardDependencies";
 import { CardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { CalculationDetailsModal } from "./components/CalculationDetailsModal";
@@ -24,7 +24,6 @@ export type ReportCardComponentProps = {
   backgroundTint?: "blue" | "yellow" | "red"; // Simple color enum
   children?: React.ReactNode;
   className?: string;
-  onShowCalculationDetails?: (cardId: number) => void;
 };
 
 /**
@@ -59,7 +58,6 @@ export const InnerReportCard = memo(function InnerReportCard({
   sources,
   loading,
   errors,
-  onShowCalculationDetails,
   // Context values as props
   editing,
   preselectTitle,
@@ -156,7 +154,6 @@ export const InnerReportCard = memo(function InnerReportCard({
                 cardId={cardId!}
                 preselectTitle={preselectTitle}
                 footerContainerRef={footerContainerRef}
-                onShowCalculationDetails={onShowCalculationDetails}
               />
             ) : (
               <ReportCardBodyViewer
@@ -235,7 +232,7 @@ export default function ReportCard(
           onClose={() => setShowCalcDetails(undefined)}
           config={props.config}
           metrics={[]}
-          adminMode={true}
+          adminMode={adminMode}
         />
       )}
     </CardDependenciesContext.Provider>

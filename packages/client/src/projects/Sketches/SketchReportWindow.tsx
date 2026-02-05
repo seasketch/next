@@ -1,5 +1,5 @@
 import { XIcon } from "@heroicons/react/outline";
-import { useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import Skeleton from "../../components/Skeleton";
 import { useSketchReportingDetailsQuery } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
@@ -10,6 +10,17 @@ import { FormLanguageContext } from "../../formElements/FormElement";
 import { ReportContext, useReportState } from "../../reports/ReportContext";
 import { ReportTabs } from "../../reports/ReportTabs";
 import { ReportBody } from "../../reports/ReportBody";
+import { useCalculationDetailsModalState } from "../../reports/components/CalculationDetailsModal";
+import { ReportUIStateContext } from "../../reports/context/ReportUIStateContext";
+import {
+  BaseReportContext,
+  BaseReportContextProvider,
+} from "../../reports/context/BaseReportContext";
+import ReportDependenciesContextProvider from "../../reports/context/ReportDependenciesContext";
+import {
+  SubjectReportContext,
+  SubjectReportContextProvider,
+} from "../../reports/context/SubjectReportContext";
 // import { registerCards } from "../../reports/cards/cards";
 
 // registerCards();
@@ -17,6 +28,7 @@ import { ReportBody } from "../../reports/ReportBody";
 export default function SketchReportWindow({
   sketchId,
   sketchClassId,
+  reportId,
   uiState,
   selected,
   onRequestClose,
@@ -25,41 +37,15 @@ export default function SketchReportWindow({
 }: {
   sketchClassId: number;
   sketchId: number;
+  reportId: number;
   uiState: ReportWindowUIState;
   selected: boolean;
   onRequestClose: (id: number) => void;
   reportingAccessToken?: string | null;
   onClick?: (metaKey: boolean, id: number) => void;
 }) {
-  const { data, loading } = useSketchReportingDetailsQuery({
-    variables: {
-      id: sketchId,
-      sketchClassId: sketchClassId,
-    },
-    fetchPolicy: "cache-first",
-  });
-
-  const reportState = useReportState(
-    (data?.sketchClass?.report?.id as number) || undefined,
-    data?.sketchClass?.id || 0,
-    data?.sketch?.id || 0
-  );
-
-  const filteredLanguages = useMemo(
-    () =>
-      languages.filter(
-        (f) =>
-          !data?.sketchClass?.project?.supportedLanguages ||
-          data?.sketchClass?.project?.supportedLanguages.find(
-            (o) => o === f.code
-          ) ||
-          f.code === "EN"
-      ),
-    [data?.sketchClass?.project?.supportedLanguages]
-  );
-
   const { i18n } = useTranslation();
-  const lang = getSelectedLanguage(i18n, filteredLanguages);
+  const lang = getSelectedLanguage(i18n, languages);
 
   return (
     <FormLanguageContext.Provider
@@ -72,62 +58,122 @@ export default function SketchReportWindow({
           }
           i18n.changeLanguage(lang.code);
         },
-        supportedLanguages: filteredLanguages.map((l) => l.code),
+        supportedLanguages: languages.map((l) => l.code),
       }}
     >
-      <div
-        className="flex-none flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg pointer-events-auto"
-        style={{ maxHeight: 1024 }}
-        onClick={(e) => {
-          // Don't intercept clicks on links - let them work normally
-          const link = (e.target as HTMLElement)?.closest("a");
-          if (link) {
-            return;
-          }
-          if (onClick) {
-            e.stopPropagation();
-            e.preventDefault();
-            e.nativeEvent.stopImmediatePropagation();
-            e.nativeEvent.preventDefault();
-            onClick(e.metaKey, sketchId);
-            return false;
-          }
-        }}
-      >
-        <div className="p-4 border-b flex items-center">
-          <h1 className="flex-1 truncate text-lg">
-            {loading && !data?.sketch?.name ? (
-              <Skeleton className="h-5 w-36" />
-            ) : (
-              data?.sketch?.name
-            )}
-          </h1>
-          <button
-            autoFocus
-            className="hover:bg-gray-100 rounded-full p-2 -mr-2"
-            onClick={() => onRequestClose(sketchId)}
-          >
-            <XIcon className="w-5 h-5 text-black" />
-          </button>
-        </div>
-        {reportState && (
-          <ReportContext.Provider
-            value={{
-              ...reportState,
-            }}
-          >
-            <>
-              <ReportTabs />
-              <div
-                className="flex-1 overflow-x-hidden overflow-y-auto"
-                style={{ backgroundColor: "#efefef" }}
-              >
-                <ReportBody />
-              </div>
-            </>
-          </ReportContext.Provider>
-        )}
-      </div>
+      <BaseReportContextProvider sketchClassId={sketchClassId} draft={false}>
+        <SketchReportWindowInner
+          sketchId={sketchId}
+          reportId={reportId}
+          onClick={onClick}
+          onRequestClose={onRequestClose}
+        />
+      </BaseReportContextProvider>
     </FormLanguageContext.Provider>
   );
+}
+
+function SketchReportWindowInner({
+  sketchId,
+  reportId,
+  onClick,
+  onRequestClose,
+}: {
+  sketchId: number;
+  reportId: number;
+  onClick?: (metaKey: boolean, id: number) => void;
+  onRequestClose: (id: number) => void;
+}) {
+  const calcDetailsModalState = useCalculationDetailsModalState();
+  const baseReportContext = useContext(BaseReportContext);
+  const [selectedTabId, setSelectedTabId] = useState<number | undefined>(
+    baseReportContext.data?.report?.tabs?.[0]?.id ?? undefined
+  );
+
+  useEffect(() => {
+    if (baseReportContext.data?.report?.tabs && selectedTabId === undefined) {
+      setSelectedTabId(baseReportContext.data.report.tabs[0].id);
+    }
+  }, [baseReportContext.data?.report?.tabs, setSelectedTabId, selectedTabId]);
+
+  const uiStateContextValue = useMemo(() => {
+    return {
+      selectedTabId: selectedTabId,
+      setSelectedTabId: setSelectedTabId,
+      editing: null,
+      setEditing: () => {},
+      adminMode: false,
+      preselectTitle: false,
+      showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
+      setShowCalcDetails: (cardId: number | undefined) => {
+        if (!cardId) {
+          calcDetailsModalState.closeModal();
+        } else {
+          calcDetailsModalState.openModal(cardId);
+        }
+      },
+    };
+  }, [selectedTabId, calcDetailsModalState, setSelectedTabId]);
+
+  // Wait for BaseReportContext data to be ready before rendering
+  if (baseReportContext.loading || !baseReportContext.data) {
+    return null;
+  }
+
+  return (
+    <ReportDependenciesContextProvider sketchId={sketchId} reportId={reportId}>
+      <SubjectReportContextProvider sketchId={sketchId}>
+        <ReportUIStateContext.Provider value={uiStateContextValue}>
+          <div
+            className="flex-none flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg pointer-events-auto"
+            style={{ maxHeight: 1024 }}
+            onClick={(e) => {
+              // Don't intercept clicks on links - let them work normally
+              const link = (e.target as HTMLElement)?.closest("a");
+              if (link) {
+                return;
+              }
+              if (onClick) {
+                e.stopPropagation();
+                e.preventDefault();
+                e.nativeEvent.stopImmediatePropagation();
+                e.nativeEvent.preventDefault();
+                onClick(e.metaKey, sketchId);
+                return false;
+              }
+            }}
+          >
+            <div className="p-4 border-b flex items-center">
+              <h1 className="flex-1 truncate text-lg">
+                <ReportTitle />
+              </h1>
+              <button
+                autoFocus
+                className="hover:bg-gray-100 rounded-full p-2 -mr-2"
+                onClick={() => onRequestClose(sketchId)}
+              >
+                <XIcon className="w-5 h-5 text-black" />
+              </button>
+            </div>
+            <ReportTabs />
+            <div
+              className="flex-1 overflow-x-hidden overflow-y-auto"
+              style={{ backgroundColor: "#efefef" }}
+            >
+              <ReportBody />
+            </div>
+          </div>
+        </ReportUIStateContext.Provider>
+      </SubjectReportContextProvider>
+    </ReportDependenciesContextProvider>
+  );
+}
+
+function ReportTitle() {
+  const subjectContext = useContext(SubjectReportContext);
+  if (subjectContext.data?.sketch?.name) {
+    return <span>{subjectContext.data.sketch.name}</span>;
+  } else {
+    return <Skeleton className="h-5 w-36" />;
+  }
 }

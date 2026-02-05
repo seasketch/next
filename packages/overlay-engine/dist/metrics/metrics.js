@@ -290,9 +290,18 @@ function combineStringOrBooleanColumnValueStats(statsArray) {
  * report card widget.
  *
  * @param dependency The dependency to hash
+ * @param overlaySourceUrls A map of table of contents item ids to overlay source urls. If provided, the hash will be based on the overlay source url, rather than the tableOfContentsItemId. This way, metrics can be reused across draft and published table of contents items.
  * @returns A unique id for the dependency
  */
-function hashMetricDependency(dependency) {
+function hashMetricDependency(dependency, overlaySourceUrls) {
+    if (dependency.tableOfContentsItemId &&
+        overlaySourceUrls[dependency.tableOfContentsItemId]) {
+        dependency = {
+            ...dependency,
+            // @ts-ignore
+            tableOfContentsItemId: overlaySourceUrls[dependency.tableOfContentsItemId],
+        };
+    }
     const canonical = stableSerialize(dependency);
     return fnv1a(canonical);
 }
@@ -311,7 +320,9 @@ function stableSerialize(value) {
         return `[${normalized.map((item) => stableSerialize(item)).join(",")}]`;
     }
     const entries = Object.keys(value)
-        .filter((key) => value[key] !== undefined && key !== "hash")
+        .filter((key) => value[key] !== undefined &&
+        key !== "hash" &&
+        key !== "__typename")
         .sort()
         .map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`);
     return `{${entries.join(",")}}`;

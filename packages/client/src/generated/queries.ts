@@ -11971,6 +11971,7 @@ export type Query = Node & {
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extensionToSourceType?: Maybe<Scalars['String']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  extractTableOfContentsItemIdsFromBody?: Maybe<Array<Maybe<Scalars['Int']>>>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
   fileUploadByNodeId?: Maybe<FileUpload>;
@@ -12016,6 +12017,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
+  getReferencedTableOfContentsItemsForReport?: Maybe<Array<Maybe<Scalars['Int']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
@@ -12463,6 +12465,12 @@ export type QueryExtractSpriteIdsArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryExtractTableOfContentsItemIdsFromBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryFileUploadArgs = {
   id: Scalars['UUID'];
 };
@@ -12661,6 +12669,12 @@ export type QueryGetFirstBandOffsetArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryGetFirstBandScaleArgs = {
   geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetReferencedTableOfContentsItemsForReportArgs = {
+  _reportId?: Maybe<Scalars['Int']>;
 };
 
 

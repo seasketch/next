@@ -227,6 +227,14 @@ div[attachments="forumAttachments"] {
   content: "Learn More...";
 }
 
+.ReportCardBody .ProseMirror h2 {
+  @apply text-base font-medium my-2;
+}
+
+.ReportCardBody .ProseMirror h3 {
+  @apply text-sm font-semibold my-2;
+}
+
 .ReportCardBody h2[data-footer-title="yes"],
 .ReportCardBodyEditor h2[data-footer-title="yes"] {
   @apply text-sm font-medium;

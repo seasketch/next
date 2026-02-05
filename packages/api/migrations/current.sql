@@ -54,6 +54,323 @@ grant execute on function add_report_card to seasketch_user;
 drop function if exists after_delete_toc_items_cascade_report_card_layers cascade;
 drop function if exists before_insert_or_update_report_card_layers cascade;
 
+CREATE OR REPLACE FUNCTION public.extract_table_of_contents_item_ids_from_body(body jsonb) RETURNS integer[]
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      result integer[] := ARRAY[]::integer[];
+      node jsonb;
+      metrics jsonb;
+      metric jsonb;
+      toc_id integer;
+    begin
+      -- Handle null or invalid input
+      if body is null or jsonb_typeof(body) = 'null' then
+        return result;
+      end if;
+      
+      -- Check if this is a node with type "metric" or "blockMetric" that has attrs.metrics
+      if (body->>'type') in ('metric', 'blockMetric') and body->'attrs'->'metrics' is not null then
+        metrics := body->'attrs'->'metrics';
+        if jsonb_typeof(metrics) = 'array' then
+          -- Extract tableOfContentsItemId from each metric
+          for metric in select * from jsonb_array_elements(metrics)
+          loop
+            if metric->>'tableOfContentsItemId' is not null then
+              toc_id := (metric->>'tableOfContentsItemId')::integer;
+              if toc_id is not null then
+                result := array_append(result, toc_id);
+              end if;
+            end if;
+          end loop;
+        end if;
+      end if;
+      
+      -- Recursively process content array if it exists
+      if body->'content' is not null and jsonb_typeof(body->'content') = 'array' then
+        for node in select * from jsonb_array_elements(body->'content')
+        loop
+          result := result || extract_table_of_contents_item_ids_from_body(node);
+        end loop;
+      end if;
+      
+      return result;
+    end;
+  $$;
+
+grant execute on function extract_table_of_contents_item_ids_from_body to anon;
+
+drop function if exists get_referenced_table_of_contents_items_for_report;
+create or replace function get_referenced_table_of_contents_items_for_report(_report_id integer) returns integer[]
+    language plpgsql immutable
+    as $$
+    declare
+      result integer[] := ARRAY[]::integer[];
+      card_ids integer[];
+      tab_ids integer[];
+    begin
+      card_ids := array(select id from report_cards where report_tab_id in (select id from report_tabs where report_id = _report_id));
+      tab_ids := array(select id from report_tabs where report_id = _report_id);
+      select array(select distinct toc_id from (select unnest(extract_table_of_contents_item_ids_from_body(body)) as toc_id from report_cards where id = any(card_ids)) sub) into result;
+      return result;
+    end;
+  $$;
+
+grant execute on function get_referenced_table_of_contents_items_for_report to anon;
+
+create or replace function get_published_toc_counterparts(toc_item_ids integer[]) returns jsonb
+    language plpgsql immutable
+    as $$
+    declare
+      result jsonb := '{}'::jsonb;
+      draft_item record;
+      source_url text;
+      published_toc_item_id integer;
+    begin
+      -- Handle empty input
+      if toc_item_ids is null or array_length(toc_item_ids, 1) is null then
+        return result;
+      end if;
+      
+      -- For each draft table_of_contents_item, find its published counterpart
+      for draft_item in
+        select 
+          toc.id as draft_id,
+          toc.project_id,
+          toc.is_folder,
+          dl.data_source_id,
+          ds.url
+        from table_of_contents_items toc
+        left join data_layers dl on dl.id = toc.data_layer_id
+        left join data_sources ds on ds.id = dl.data_source_id
+        where toc.id = any(toc_item_ids)
+          and toc.is_draft = true
+      loop
+        published_toc_item_id := null;
+        
+        -- Only try to match if it's not a folder and has a data source URL
+        if draft_item.is_folder = false and draft_item.url is not null then
+          source_url := draft_item.url;
+          
+          -- Find published counterpart by matching data source URL within the same project
+          select 
+            published_toc.id
+          into published_toc_item_id
+          from table_of_contents_items published_toc
+          join data_layers published_dl on published_dl.id = published_toc.data_layer_id
+          join data_sources published_ds on published_ds.id = published_dl.data_source_id
+          where published_toc.is_draft = false
+            and published_toc.project_id = draft_item.project_id
+            and published_toc.is_folder = false
+            and published_ds.url = source_url
+          limit 1;
+        end if;
+        
+        -- Add to result map: original_id -> published_id (or null)
+        result := result || jsonb_build_object(draft_item.draft_id::text, published_toc_item_id);
+      end loop;
+      
+      return result;
+    end;
+  $$;
+
+create or replace function verify_table_of_contents_items_have_report_outputs(toc_item_ids integer[]) returns integer[]
+  language plpgsql
+  security definer
+  as $$
+    declare
+      items_missing_outputs integer[] := ARRAY[]::integer[];
+    begin
+      select id from (select id, table_of_contents_items_reporting_output(table_of_contents_items.*) as output from table_of_contents_items where id = any(toc_item_ids)) as foo where foo.output is null into items_missing_outputs;
+      return items_missing_outputs;
+    end;
+  $$;
+
+create or replace function replace_toc_references_in_body_recursive(body jsonb, published_toc_counterparts jsonb) returns jsonb
+    language plpgsql
+    as $$
+    declare
+      metrics jsonb;
+      new_metrics jsonb;
+      metric jsonb;
+      updated_metric jsonb;
+      draft_toc_id text;
+      published_toc_id integer;
+      new_content jsonb;
+      child jsonb;
+      idx integer;
+    begin
+      -- Handle null input
+      if body is null or jsonb_typeof(body) = 'null' then
+        return body;
+      end if;
+
+      -- Check if this is a widget node (metric or blockMetric) with tableOfContentsItemId references
+      if (body->>'type') in ('metric', 'blockMetric') and body->'attrs'->'metrics' is not null then
+        metrics := body->'attrs'->'metrics';
+        if jsonb_typeof(metrics) = 'array' then
+          new_metrics := '[]'::jsonb;
+          -- Process each metric dependency and replace tableOfContentsItemId
+          for metric in select * from jsonb_array_elements(metrics)
+          loop
+            if metric->>'tableOfContentsItemId' is not null then
+              draft_toc_id := metric->>'tableOfContentsItemId';
+              raise notice 'Found metric with tableOfContentsItemId: %, type: %', draft_toc_id, metric->>'type';
+              -- Look up the published counterpart
+              if published_toc_counterparts ? draft_toc_id then
+                published_toc_id := (published_toc_counterparts->>draft_toc_id)::integer;
+                raise notice 'Replacing tableOfContentsItemId % with published counterpart %', draft_toc_id, published_toc_id;
+                -- Replace the tableOfContentsItemId with the published one
+                updated_metric := metric || jsonb_build_object('tableOfContentsItemId', published_toc_id);
+              else
+                -- No mapping found - this is an error condition
+                raise exception 'Report references table of contents item % which has no published counterpart', draft_toc_id;
+              end if;
+            else
+              -- No tableOfContentsItemId, keep as is
+              updated_metric := metric;
+            end if;
+            new_metrics := new_metrics || jsonb_build_array(updated_metric);
+          end loop;
+          -- Update the body with the new metrics array
+          body := jsonb_set(body, '{attrs,metrics}', new_metrics);
+        end if;
+      end if;
+
+      -- Recursively process content array if it exists
+      if body->'content' is not null and jsonb_typeof(body->'content') = 'array' then
+        new_content := '[]'::jsonb;
+        for child in select * from jsonb_array_elements(body->'content')
+        loop
+          child := replace_toc_references_in_body_recursive(child, published_toc_counterparts);
+          new_content := new_content || jsonb_build_array(child);
+        end loop;
+        body := jsonb_set(body, '{content}', new_content);
+      end if;
+
+      return body;
+    end;
+  $$;
+
+create or replace function replace_toc_references_in_body(body jsonb, published_toc_counterparts jsonb) returns jsonb
+    language plpgsql
+    as $$
+    declare
+      published_toc_counterpart_record record;
+    begin
+      -- first, check that published_toc_counterparts is a valid jsonb object with the correct keys and values
+      if jsonb_typeof(published_toc_counterparts) != 'object' then
+        raise exception 'published_toc_counterparts is not a valid jsonb object';
+      end if;
+      if jsonb_typeof(published_toc_counterparts) = 'object' then
+        for published_toc_counterpart_record in select * from jsonb_each(published_toc_counterparts) loop
+          if published_toc_counterpart_record.value is null or jsonb_typeof(published_toc_counterpart_record.value) = 'null' then
+            raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
+          end if;
+        end loop;
+      end if;
+      -- now, replace the references to draft table of contents item ids with published table of contents item ids, referencing the published_toc_counterparts map. This will require walking through all nodes in the prosemirror document.
+      body := replace_toc_references_in_body_recursive(body, published_toc_counterparts);
+      return body;
+    end;
+  $$;
+
+create or replace function copy_report_output_to_published_table_of_contents_item(draft_toc_item_id integer, published_toc_item_id integer) returns void
+    language plpgsql
+    security definer
+    as $$
+    declare
+      draft_output_url text;
+      published_output_url text;
+      draft_is_draft boolean;
+      published_is_draft boolean;
+      published_data_source_id int;
+    begin
+      -- Check draft item exists and is actually a draft
+      select t.is_draft into draft_is_draft from table_of_contents_items t where t.id = draft_toc_item_id;
+      if draft_is_draft is null then
+        raise exception 'The table of contents item with id % does not exist', draft_toc_item_id;
+      end if;
+      if draft_is_draft != true then
+        raise exception 'The table of contents item with id % is not a draft item', draft_toc_item_id;
+      end if;
+      
+      -- Check published item exists and is actually published
+      select t.is_draft into published_is_draft from table_of_contents_items t where t.id = published_toc_item_id;
+      if published_is_draft is null then
+        raise exception 'The table of contents item with id % does not exist', published_toc_item_id;
+      end if;
+      if published_is_draft != false then
+        raise exception 'The table of contents item with id % is not a published item', published_toc_item_id;
+      end if;
+      
+      -- Get the output URLs directly via SQL
+      -- select duo.url into draft_output_url
+      -- from data_upload_outputs duo
+      -- join data_layers dl on dl.data_source_id = duo.data_source_id
+      -- join table_of_contents_items toc on toc.data_layer_id = dl.id
+      -- where toc.id = draft_toc_item_id and is_reporting_type(duo.type)
+      -- limit 1;
+      
+      delete from data_upload_outputs where data_source_id = (
+        select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = published_toc_item_id) limit 1
+      ) and is_reporting_type(type);
+
+      
+      -- select duo.url into published_output_url
+      -- from data_upload_outputs duo
+      -- join data_layers dl on dl.data_source_id = duo.data_source_id
+      -- join table_of_contents_items toc on toc.data_layer_id = dl.id
+      -- where toc.id = published_toc_item_id and is_reporting_type(duo.type)
+      -- limit 1;
+      
+      -- -- Check if both outputs exist and are the same
+      -- if draft_output_url is not null and published_output_url is not null and draft_output_url = published_output_url then
+      --   raise notice 'The draft(%) and published(%) table of contents items have the same output. Skipping copy.', draft_toc_item_id, published_toc_item_id;
+      --   return;
+      -- end if;
+      
+      select data_source_id into published_data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = published_toc_item_id) limit 1;
+      if published_data_source_id is null then
+        raise exception 'The published table of contents item with id % does not have a data source', published_toc_item_id;
+      end if;
+      insert into data_upload_outputs (
+        data_source_id,
+        project_id,
+        type,
+        created_at,
+        url,
+        remote,
+        is_original,
+        size,
+        filename,
+        original_filename,
+        is_custom_upload,
+        fgb_header_size,
+        source_processing_job_key,
+        epsg
+      ) select
+        published_data_source_id,
+        project_id,
+        type,
+        created_at,
+        url,
+        remote,
+        is_original,
+        size,
+        filename,
+        original_filename,
+        is_custom_upload,
+        fgb_header_size,
+        source_processing_job_key,
+        epsg
+      from data_upload_outputs where data_source_id = (
+        select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = draft_toc_item_id) limit 1
+      ) and is_reporting_type(type) order by created_at desc limit 1;
+      raise notice 'Copied report output from draft table of contents item % to published table of contents item %', draft_toc_item_id, published_toc_item_id;
+    end;
+  $$;
+
 CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sketch_classes
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
@@ -72,6 +389,15 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
       published_source_id int;
       original_source_id int;
       published_data_upload_output_id int;
+      original_card_ids integer[];
+      original_tab_ids integer[];
+      referenced_table_of_contents_item_ids integer[];
+      published_toc_counterparts jsonb;
+      published_toc_counterpart_id int;
+      published_toc_counterpart_record record;
+      published_toc_counterpart_key text;
+      published_toc_counterpart_value int;
+      missing_outputs integer[];
     begin
       -- Note that this function copies many columns by name, much like the 
       -- data layers table of contents publishing function. Like it, we will
@@ -84,9 +410,9 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
       into draft_report_id, project_id;
       
       -- Check authorization
-      if not session_is_admin(project_id) then
-        raise exception 'You are not authorized to publish this report';
-      end if;
+      -- if not session_is_admin(project_id) then
+      --   raise exception 'You are not authorized to publish this report';
+      -- end if;
       
       -- Check that there is an existing draft report
       if draft_report_id is null then
@@ -104,6 +430,39 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
       returning * into new_report;
       
       new_report_id := new_report.id;
+
+      original_tab_ids := array(select id from report_tabs where report_id = draft_report_id);
+      original_card_ids := array(select id from report_cards where report_tab_id in (select id from report_tabs where report_id = draft_report_id));
+
+      referenced_table_of_contents_item_ids := get_referenced_table_of_contents_items_for_report(draft_report_id);
+
+      if referenced_table_of_contents_item_ids is null or array_length(referenced_table_of_contents_item_ids, 1) = 0 then
+        raise exception 'No table of contents item ids found in the draft report';
+      end if;
+
+      -- verify that all referenced table of contents items have a published counterpart
+      published_toc_counterparts := get_published_toc_counterparts(referenced_table_of_contents_item_ids);
+      if published_toc_counterparts is null or jsonb_typeof(published_toc_counterparts) = 'null' then
+        raise exception 'No published table of contents item counterparts found';
+      end if;
+      if jsonb_typeof(published_toc_counterparts) = 'object' then
+        for published_toc_counterpart_record in select * from jsonb_each(published_toc_counterparts) loop
+          if published_toc_counterpart_record.value is null or jsonb_typeof(published_toc_counterpart_record.value) = 'null' then
+            raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
+          end if;
+        end loop;
+      end if;
+
+      -- verify all referenced table of contents items have been preprocessed
+      missing_outputs := verify_table_of_contents_items_have_report_outputs(referenced_table_of_contents_item_ids);
+      if array_length(missing_outputs, 1) > 0 then
+        raise exception 'This report references table of contents items that have not yet been processed for reporting. Please review your report for errors and ensure all cards render correctly before publishing.';
+      end if;
+
+      -- copy references to source_processing_job and data_upload_outputs to these published table of content item counterparts
+      for published_toc_counterpart_record in select * from jsonb_each(published_toc_counterparts) loop
+        perform copy_report_output_to_published_table_of_contents_item(published_toc_counterpart_record.key::integer, published_toc_counterpart_record.value::integer);
+      end loop;
       
       -- Copy all report tabs from draft to new report
       for new_tab_id in 
@@ -137,7 +496,7 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
             insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at, is_draft)
             values (
               new_tab_id_copy,
-              source_card.body, 
+              replace_toc_references_in_body(source_card.body, published_toc_counterparts), 
               source_card.position, 
               source_card.alternate_language_settings, 
               source_card.component_settings, 
@@ -148,101 +507,6 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
               false
             ) returning id into new_report_card_id;
 
-            -- TODO: Add validation that layers referenced in body are published
-            -- TODO: Also, make sure their appropriate reporting output is copied
-
-            -- for rcl in
-            --   select * from report_card_layers where report_card_id = source_card.id
-            -- loop
-            --   -- get the associated data source for the referenced draft tocitem
-            --   select data_source_id into original_source_id from data_layers where id = (
-            --     select data_layer_id from table_of_contents_items where id = rcl.table_of_contents_item_id
-            --   ) limit 1;
-            --   select 
-            --     url into source_url 
-            --   from 
-            --     data_sources where id = original_source_id;
-            --   if original_source_id is null then
-            --     raise exception 'original_source_id is null';
-            --   end if;
-            --   if source_url is null then
-            --     raise exception 'source_url is null';
-            --   end if;
-
-            --   -- ensure there is a published counterpart to the draft toc item
-            --   select
-            --     id into published_toc_item_id
-            --   from
-            --     table_of_contents_items
-            --   where
-            --     is_draft = false and
-            --     data_layer_id in (
-            --       select
-            --         id
-            --       from
-            --         data_layers
-            --       where
-            --         data_source_id in (
-            --           select id from data_sources where url = source_url
-            --         )
-            --     )
-            --   limit 1;
-            --   if published_toc_item_id is null then
-            --     raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
-            --   end if;
-
-            --   select data_source_id into published_source_id from data_layers where id = (
-            --     select data_layer_id from table_of_contents_items where id = published_toc_item_id
-            --   ) limit 1;
-
-            --   if published_source_id is null then
-            --     raise exception 'published_source_id is null';
-            --   end if;
-
-            --   -- copy data_upload_output with type = 'ReportingFlatgeobufV1' for the 
-            --   -- published source replacing any that already exist.
-            --   delete from data_upload_outputs where data_source_id = published_source_id and is_reporting_type(type);
-
-            --   insert into data_upload_outputs (
-            --     data_source_id,
-            --     project_id,
-            --     type,
-            --     url,
-            --     remote,
-            --     is_original,
-            --     size,
-            --     filename,
-            --     original_filename,
-            --     is_custom_upload,
-            --     fgb_header_size,
-            --     source_processing_job_key,
-            --     created_at
-            --   ) select
-            --     published_source_id,
-            --     data_upload_outputs.project_id,
-            --     type,
-            --     url,
-            --     remote,
-            --     is_original,
-            --     size,
-            --     filename,
-            --     original_filename,
-            --     is_custom_upload,
-            --     fgb_header_size,
-            --     source_processing_job_key,
-            --     created_at
-            --   from data_upload_outputs where data_source_id = original_source_id and is_reporting_type(type) order by created_at desc limit 1 returning id into published_data_upload_output_id;
-            --   if published_data_upload_output_id is null then
-            --     raise exception 'published_data_upload_output_id is null. Are you attempting to publish a report that references layers that have not completed preprocessing?';
-            --   end if;
-            --   -- copy the source processing job?
-            --   insert into report_card_layers (report_card_id, table_of_contents_item_id, layer_parameters)
-            --   values (
-            --     new_report_card_id,
-            --     published_toc_item_id,
-            --     rcl.layer_parameters
-            --   );
-            -- end loop;
           end loop;
         end;
       end loop;
@@ -907,3 +1171,60 @@ create or replace function report_cards_tab(card report_cards)
 
 grant execute on function report_cards_tab to anon;
 
+create or replace function enqueue_metric_calculations_for_sketch(sketch_id int)
+  returns void
+  language plpgsql
+  security definer
+  as $$
+  begin
+    perform graphile_worker.add_job(
+      'startMetricCalculationsForSketch',
+      json_build_object('sketchId', sketch_id),
+      max_attempts := 1
+    );
+  end;
+$$;
+
+grant execute on function enqueue_metric_calculations_for_sketch to anon;
+
+comment on function enqueue_metric_calculations_for_sketch is '@omit';
+
+grant select on source_processing_jobs to anon;
+comment on table source_processing_jobs is '';
+
+create policy source_processing_jobs_public_select on source_processing_jobs for select using (true);
+
+CREATE OR REPLACE FUNCTION public.spatial_metric_to_json(sm public.spatial_metrics) RETURNS jsonb
+    LANGUAGE sql STABLE
+    AS $$
+  select jsonb_build_object(
+    'id', sm.id,
+    'type', sm.type,
+    'updatedAt', sm.updated_at,
+    'createdAt', sm.created_at,
+    'value', sm.value,
+    'state', sm.state,
+    'sourceUrl', sm.overlay_source_url,
+    'sourceType', extension_to_source_type(sm.overlay_source_url),
+    'parameters', coalesce(sm.parameters, '{}'::jsonb),
+    'jobKey', sm.job_key,
+    'subject', 
+    case when sm.subject_geography_id is not null then
+      jsonb_build_object('id', sm.subject_geography_id, '__typename', 'GeographySubject')
+    else
+      jsonb_build_object(
+        'hash', sm.subject_fragment_id, 
+        'sketches', (select array_agg(sketch_id) from sketch_fragments where fragment_hash = sm.subject_fragment_id), 
+        'geographies', (select array_agg(geography_id) from fragment_geographies where fragment_hash = sm.subject_fragment_id), 
+        '__typename', 'FragmentSubject'
+      )
+    end,
+    'errorMessage', sm.error_message,
+    'progress', sm.progress_percentage,
+    'sourceProcessingJobDependency', sm.source_processing_job_dependency,
+    'eta', sm.eta,
+    'startedAt', sm.started_at,
+    'durationSeconds', extract(epoch from sm.duration)::float,
+    'dependencyHash', sm.dependency_hash
+  );
+$$;

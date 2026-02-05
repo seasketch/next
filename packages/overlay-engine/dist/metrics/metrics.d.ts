@@ -197,9 +197,12 @@ export type MetricDependencyParameters = {
  * report card widget.
  *
  * @param dependency The dependency to hash
+ * @param overlaySourceUrls A map of table of contents item ids to overlay source urls. If provided, the hash will be based on the overlay source url, rather than the tableOfContentsItemId. This way, metrics can be reused across draft and published table of contents items.
  * @returns A unique id for the dependency
  */
-export declare function hashMetricDependency(dependency: MetricDependency): string;
+export declare function hashMetricDependency(dependency: MetricDependency, overlaySourceUrls: {
+    [tableOfContentsItemId: number]: string;
+}): string;
 export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
 /**
  * Finds the primary geography id from a list of metrics. The primary

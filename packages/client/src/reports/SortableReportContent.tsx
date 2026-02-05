@@ -16,7 +16,7 @@ import {
 import { useMemo } from "react";
 import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar";
 import { useBaseReportContext } from "./context/BaseReportContext";
-import { useCardDependencies } from "./context/ReportDependenciesContext";
+import { useCardDependencies } from "./context/useCardDependencies";
 
 interface SortableReportContentProps {
   selectedTab: ReportTabConfiguration;
@@ -31,13 +31,14 @@ interface SortableReportContentProps {
  * This is extracted to its own component to properly memoize the context value
  * and prevent ReportCard from re-rendering when dragHandleProps change.
  */
-function ReportCardWithToolbarContext({
+export function ReportCardWithToolbarContext({
   card,
   dragHandleProps,
   hasMultipleTabs,
   onMoveCardToTab,
   onShowCalculationDetails,
   setEditing,
+  adminMode,
 }: {
   card: ReportTabConfiguration["cards"][number];
   dragHandleProps?: any;
@@ -56,7 +57,7 @@ function ReportCardWithToolbarContext({
   const toolbarContextValue = useMemo(
     () => ({
       dragHandleProps,
-      adminMode: true,
+      adminMode: Boolean(adminMode),
       cardId,
       hasMetrics,
       hasMultipleTabs,
@@ -75,15 +76,13 @@ function ReportCardWithToolbarContext({
       onMoveCardToTab,
       onShowCalculationDetails,
       setEditing,
+      adminMode,
     ]
   );
 
   return (
     <ReportCardTitleToolbarContext.Provider value={toolbarContextValue}>
-      <ReportCard
-        config={card}
-        onShowCalculationDetails={onShowCalculationDetails}
-      />
+      <ReportCard config={card} />
     </ReportCardTitleToolbarContext.Provider>
   );
 }
@@ -239,6 +238,7 @@ export function SortableReportContent(props: SortableReportContentProps) {
                             props.onShowCalculationDetails
                           }
                           setEditing={props.setEditing}
+                          adminMode={true}
                         />
                       </div>
                     )}

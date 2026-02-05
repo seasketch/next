@@ -1,8 +1,9 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
 import {
   CompatibleSpatialMetricDetailsFragment,
+  DraftReportDependenciesDocument,
   ReportDependenciesDocument,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
@@ -14,6 +15,7 @@ import { collectReportCardTitle } from "../../admin/sketchClasses/SketchClassRep
 import { ReportCardConfiguration } from "../cards/cards";
 import { subjectIsFragment } from "overlay-engine";
 import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+import { DraftReportContext } from "../DraftReportContext";
 
 export interface CalculationDetailsModalState {
   open: boolean;
@@ -70,6 +72,7 @@ export function CalculationDetailsModal({
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const context = useCardDependenciesContext();
+  const draftReportContext = useContext(DraftReportContext);
 
   // Recalculate modal state (nested modal)
   const [recalcOpen, setRecalcOpen] = useState(false);
@@ -104,7 +107,10 @@ export function CalculationDetailsModal({
 
   const handleRecalculate = useCallback(async () => {
     const metricsToRecalculate: number[] = [];
-    for (const metric of context.metrics) {
+    for (const metric of [
+      ...draftReportContext.draftMetrics,
+      ...context.metrics,
+    ]) {
       if (subjectIsFragment(metric.subject) || recomputeTotals) {
         metricsToRecalculate.push(metric.id);
       }
@@ -115,11 +121,20 @@ export function CalculationDetailsModal({
         metricIds: metricsToRecalculate,
         preprocessSources: recomputePreprocessed,
       },
-      refetchQueries: [ReportDependenciesDocument],
+      refetchQueries: [
+        ReportDependenciesDocument,
+        DraftReportDependenciesDocument,
+      ],
       awaitRefetchQueries: true,
     });
     setRecalcOpen(false);
-  }, [context.metrics, recomputeTotals, recomputePreprocessed, recalculate]);
+  }, [
+    context.metrics,
+    draftReportContext.draftMetrics,
+    recomputeTotals,
+    recomputePreprocessed,
+    recalculate,
+  ]);
 
   const handleRecalculateClick = useCallback(async () => {
     if (adminMode) {
@@ -136,6 +151,8 @@ export function CalculationDetailsModal({
           metricIds: metricsToRecalculate,
           preprocessSources: false,
         },
+        refetchQueries: [ReportDependenciesDocument],
+        awaitRefetchQueries: true,
       });
     }
   }, [adminMode, context.metrics, recalculate]);
@@ -181,7 +198,7 @@ export function CalculationDetailsModal({
           {
             label: t("Recalculate"),
             onClick: handleRecalculateClick,
-            disabled: loading,
+            disabled: loading || recalculateState.loading,
             variant: "secondary",
             loading: recalculateState.loading,
           },

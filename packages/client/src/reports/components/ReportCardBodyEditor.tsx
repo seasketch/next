@@ -47,6 +47,7 @@ import {
   useDraftReportDependenciesQuery,
   SourceProcessingJobDetailsFragment,
   useDeleteReportCardMutation,
+  ReportDependenciesDocument,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -62,6 +63,7 @@ import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
+import { CalculationDetailsModal } from "./CalculationDetailsModal";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -84,7 +86,6 @@ interface ReportCardBodyEditorProps {
   cardId: number;
   preselectTitle?: boolean;
   footerContainerRef: React.RefObject<HTMLDivElement>;
-  onShowCalculationDetails?: (cardId: number) => void;
 }
 
 function ReportCardBodyEditorInner({
@@ -96,10 +97,10 @@ function ReportCardBodyEditorInner({
   cardId,
   preselectTitle = false,
   footerContainerRef,
-  onShowCalculationDetails,
 }: ReportCardBodyEditorProps) {
-  const { editing, setEditing } = useContext(ReportUIStateContext);
-  const { geographies, sketchClass } = useBaseReportContext();
+  const { editing, setEditing, setShowCalcDetails, showCalcDetails } =
+    useContext(ReportUIStateContext);
+  const { geographies, sketchClass, report } = useBaseReportContext();
   const subjectReportContext = useSubjectReportContext();
   const sketch = subjectReportContext.data?.sketch;
 
@@ -108,6 +109,15 @@ function ReportCardBodyEditorInner({
     JSON.parse(JSON.stringify(body))
   );
   const onError = useGlobalErrorHandler();
+
+  const sourceUrlMap = useMemo(() => {
+    return sources.reduce((acc, s) => {
+      if (s.tableOfContentsItemId && s.sourceUrl) {
+        acc[s.tableOfContentsItemId] = s.sourceUrl;
+      }
+      return acc;
+    }, {} as { [tableOfContentsItemId: number]: string });
+  }, [sources]);
 
   const [updateReportCard, updateReportCardState] =
     useUpdateReportCardBodyMutation({
@@ -122,7 +132,7 @@ function ReportCardBodyEditorInner({
         id: cardId,
         body: setCollapsibleBlocksClosed(draftBody),
       },
-      refetchQueries: [DraftReportDocument],
+      refetchQueries: [DraftReportDocument, ReportDependenciesDocument],
       awaitRefetchQueries: true,
     });
     setEditing(null);
@@ -140,7 +150,7 @@ function ReportCardBodyEditorInner({
       input: {
         nodeDependencies: additionalDependencies.map((d) => ({
           ...d,
-          hash: hashMetricDependency(d),
+          hash: hashMetricDependency(d, sourceUrlMap),
         })),
         sketchId: sketch?.id,
       },
@@ -336,7 +346,7 @@ function ReportCardBodyEditorInner({
         setAddingOverlayId(null);
       }
     },
-    [fetchOverlayDetails, preprocessSourceMutation]
+    [fetchOverlayDetails, preprocessSourceMutation, t]
   );
 
   const overlayFooterItem = useMemo<CommandPaletteItem>(() => {
@@ -369,6 +379,7 @@ function ReportCardBodyEditorInner({
     addingOverlayId,
     overlayError,
     handleOverlaySelection,
+    t,
   ]);
 
   const viewRef = useRef<EditorView>();
@@ -406,7 +417,7 @@ function ReportCardBodyEditorInner({
       const deps = extractMetricDependenciesFromReportBody(body);
       let missing: MetricDependency[] = [];
       for (const dep of deps) {
-        const hash = hashMetricDependency(dep);
+        const hash = hashMetricDependency(dep, sourceUrlMap);
         if (metrics.find((m) => m.dependencyHash === hash)) {
           continue;
         }
@@ -416,7 +427,12 @@ function ReportCardBodyEditorInner({
     },
     100,
     { leading: true, trailing: true },
-    [setReportBodyHasChanges, setDraftBody, setAdditionalDependencies]
+    [
+      setReportBodyHasChanges,
+      setDraftBody,
+      setAdditionalDependencies,
+      sourceUrlMap,
+    ]
   );
   saveRef.current = save;
 
@@ -432,7 +448,6 @@ function ReportCardBodyEditorInner({
         overlayAugmenter,
       }),
     [
-      sources,
       geographies,
       sketchClass?.clippingGeographies,
       sketchClass?.geometryType,
@@ -553,6 +568,7 @@ function ReportCardBodyEditorInner({
     removePortal,
     setSelection,
     preselectTitle,
+    cardId,
   ]);
 
   // Update editor state when language changes (body will be different for different languages)
@@ -600,6 +616,18 @@ function ReportCardBodyEditorInner({
       {footerContainerRef.current &&
         createReactPortal(
           <>
+            {showCalcDetails && cardId === showCalcDetails && (
+              <CalculationDetailsModal
+                state={{ open: true, cardId }}
+                onClose={() => setShowCalcDetails(undefined)}
+                metrics={allDependencies.metrics}
+                config={report.tabs
+                  ?.find((t) => t.cards?.find((c) => c.id === cardId))
+                  ?.cards?.find((c) => c.id === cardId)}
+                adminMode={true}
+              />
+            )}
+
             <div
               className="p-2 text-sm bg-gray-50 border-t border-gray-200 shadow-inner rounded-b-lg"
               data-report-card-body-editor-footer="true"
@@ -608,7 +636,7 @@ function ReportCardBodyEditorInner({
                 <div className="pr-5">
                   <button
                     onClick={() => {
-                      onShowCalculationDetails?.(cardId);
+                      setShowCalcDetails(cardId);
                     }}
                   >
                     <ReportCardLoadingIndicator
@@ -670,7 +698,6 @@ function OverlayPickerContent({
   loadingId: number | null;
   errorMessage?: string | null;
 }) {
-  const { t } = useTranslation("sketching");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {

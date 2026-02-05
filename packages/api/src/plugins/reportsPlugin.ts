@@ -6,7 +6,7 @@ import {
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
-import { Pool } from "pg";
+import { Pool, PoolClient } from "pg";
 
 const geographyMetricTopicFromContext = async (args: any, context: any) => {
   // check that user has access to the project
@@ -484,7 +484,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
 
 async function getOrCreateReportDependencies(
   reportId: number,
-  pool: Pool,
+  pool: Pool | PoolClient,
   projectId: number,
   sketchId?: number
 ) {
@@ -605,64 +605,64 @@ async function getOrCreateReportDependencies(
   return results;
 }
 
-async function getOrCreateSpatialMetric({
-  pool,
-  subjectFragmentId,
-  subjectGeographyId,
-  type,
-  overlaySourceUrl,
-  parameters,
-  sourceProcessingJobDependency,
-  projectId,
-  dependencyHash,
-}: {
-  pool: Pool;
-  subjectFragmentId?: string;
-  subjectGeographyId?: number;
-  type: string;
-  overlaySourceUrl?: string;
-  parameters: any;
-  sourceProcessingJobDependency?: string;
-  projectId: number;
-  dependencyHash: string;
-}): Promise<any> {
-  if (!subjectFragmentId && !subjectGeographyId) {
-    throw new Error(
-      "Either subjectFragmentId or subjectGeographyId must be provided"
-    );
-  }
-  if (type === "distance_to_shore" && !overlaySourceUrl) {
-    overlaySourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
-  }
-  if (
-    type !== "total_area" &&
-    !overlaySourceUrl &&
-    !sourceProcessingJobDependency
-  ) {
-    throw new Error(
-      "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
-    );
-  }
-  const result = await pool.query(
-    `
-    select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int, $8::text) as metric
-  `,
-    [
-      subjectFragmentId || null,
-      subjectGeographyId || null,
-      type,
-      overlaySourceUrl || null,
-      parameters,
-      sourceProcessingJobDependency || null,
-      projectId,
-      dependencyHash,
-    ]
-  );
-  return result.rows[0].metric;
-}
+// async function getOrCreateSpatialMetric({
+//   pool,
+//   subjectFragmentId,
+//   subjectGeographyId,
+//   type,
+//   overlaySourceUrl,
+//   parameters,
+//   sourceProcessingJobDependency,
+//   projectId,
+//   dependencyHash,
+// }: {
+//   pool: Pool;
+//   subjectFragmentId?: string;
+//   subjectGeographyId?: number;
+//   type: string;
+//   overlaySourceUrl?: string;
+//   parameters: any;
+//   sourceProcessingJobDependency?: string;
+//   projectId: number;
+//   dependencyHash: string;
+// }): Promise<any> {
+//   if (!subjectFragmentId && !subjectGeographyId) {
+//     throw new Error(
+//       "Either subjectFragmentId or subjectGeographyId must be provided"
+//     );
+//   }
+//   if (type === "distance_to_shore" && !overlaySourceUrl) {
+//     overlaySourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+//   }
+//   if (
+//     type !== "total_area" &&
+//     !overlaySourceUrl &&
+//     !sourceProcessingJobDependency
+//   ) {
+//     throw new Error(
+//       "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
+//     );
+//   }
+//   const result = await pool.query(
+//     `
+//     select get_or_create_spatial_metric($1::text, $2::int, $3::spatial_metric_type, $4::text, $5::jsonb, $6::text, $7::int, $8::text) as metric
+//   `,
+//     [
+//       subjectFragmentId || null,
+//       subjectGeographyId || null,
+//       type,
+//       overlaySourceUrl || null,
+//       parameters,
+//       sourceProcessingJobDependency || null,
+//       projectId,
+//       dependencyHash,
+//     ]
+//   );
+//   return result.rows[0].metric;
+// }
 
 async function getOrCreateSpatialMetricsBatch(
-  pool: Pool,
+  pool: Pool | PoolClient,
   inputs: Array<{
     subjectFragmentId?: string;
     subjectGeographyId?: number;
@@ -714,6 +714,8 @@ async function getOrCreateSpatialMetricsBatch(
     projectIds.push(input.projectId);
     dependencyHashes.push(input.dependencyHash);
   }
+
+  console.log("dependencyHashes", dependencyHashes);
 
   const result = await pool.query(
     `
@@ -769,7 +771,7 @@ async function getOrCreateSpatialMetricsBatch(
  * user to open the report.
  */
 export async function startMetricCalculationsForSketch(
-  pool: Pool,
+  pool: Pool | PoolClient,
   sketchId: number,
   draft?: boolean
 ) {
@@ -834,7 +836,7 @@ type ProsemirrorNode = {
 };
 
 async function getOverlaySourcesForDependencies(
-  pool: Pool,
+  pool: Pool | PoolClient,
   tableOfContentsItemIds: number[],
   projectId: number
 ): Promise<{
@@ -847,6 +849,7 @@ async function getOverlaySourcesForDependencies(
     outputId?: number;
   };
 }> {
+  console.log("getOverlaySourcesForDependencies", tableOfContentsItemIds);
   const results: {
     [tableOfContentsItemId: number]: {
       sourceUrl?: string;
@@ -861,7 +864,7 @@ async function getOverlaySourcesForDependencies(
     const { rows: overlaySourceRows } = await pool.query<{
       table_of_contents_item_id: number;
       source_url: string;
-      source_processing_job_id: string;
+      job_key: string;
       geostats: any;
       mapbox_gl_styles: any;
       output_id?: number;
@@ -869,24 +872,16 @@ async function getOverlaySourcesForDependencies(
       `
       select
         items.id as table_of_contents_item_id,
-        outputs.url as source_url,
-        jobs.job_key as source_processing_job_id,
+        reporting_output.url as source_url,
+        reporting_output.source_processing_job_key as job_key,
+        reporting_output.id as output_id,
         sources.geostats as geostats,
-        layers.mapbox_gl_styles as mapbox_gl_styles,
-        outputs.id as output_id
+        layers.mapbox_gl_styles as mapbox_gl_styles
       from
         table_of_contents_items items
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
-        join lateral (
-          select url, id
-          from data_upload_outputs o
-          where o.data_source_id = sources.id
-            and is_reporting_type(o.type)
-          order by o.created_at desc
-          limit 1
-        ) outputs on true
-        left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+        left join lateral table_of_contents_items_reporting_output(items) as reporting_output on true
       where
         items.id = ANY($1::int[])
       `,
@@ -896,7 +891,7 @@ async function getOverlaySourcesForDependencies(
       stripUnnecessaryGeostatsFields(row.geostats);
       results[row.table_of_contents_item_id] = {
         sourceUrl: row.source_url,
-        sourceProcessingJobId: row.source_processing_job_id,
+        sourceProcessingJobId: row.job_key,
         tableOfContentsItemId: row.table_of_contents_item_id,
         geostats: row.geostats,
         mapboxGlStyles: row.mapbox_gl_styles,
@@ -911,14 +906,11 @@ async function getOverlaySourcesForDependencies(
         !sourceProcessingJobId &&
         !results[tableOfContentsItemId]?.sourceUrl
       ) {
+        throw new Error("Wants to preprocess source TODO: remove this");
         await pool.query(
           `select preprocess_source((select slug from projects where id = $1), (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = $2))) as table_of_contents_item_id`,
           [projectId, tableOfContentsItemId]
         );
-        // const rows = await pool.query<{ job_key: string }>(
-        //   `select job_key from source_processing_jobs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = $1))`,
-        //   [tableOfContentsItemId]
-        // );
         const { rows } = await pool.query<{
           table_of_contents_item_id: number;
           source_url: string;
@@ -963,7 +955,7 @@ async function getOverlaySourcesForDependencies(
 }
 
 async function createMetricsForDependencies(
-  pool: Pool,
+  pool: Pool | PoolClient,
   dependencies: MetricDependency[],
   projectId: number,
   fragments: string[],
@@ -990,6 +982,7 @@ async function createMetricsForDependencies(
     )
   );
 
+  console.log("dependencies", dependencies);
   const overlaySources = await getOverlaySourcesForDependencies(
     pool,
     overlaySourceIds,
@@ -997,9 +990,16 @@ async function createMetricsForDependencies(
   );
 
   const tableOfContentsItemIds = Object.keys(overlaySources).map(Number);
+  const overlaySourceUrls = {} as { [tableOfContentsItemId: number]: string };
+  for (const tableOfContentsItemId of tableOfContentsItemIds) {
+    if (overlaySources[tableOfContentsItemId]?.sourceUrl) {
+      overlaySourceUrls[tableOfContentsItemId] =
+        overlaySources[tableOfContentsItemId].sourceUrl;
+    }
+  }
 
   for (const dependency of dependencies) {
-    const dependencyHash = hashMetricDependency(dependency);
+    const dependencyHash = hashMetricDependency(dependency, overlaySourceUrls);
     if (hashes.includes(dependencyHash)) {
       continue;
     }
