@@ -15,6 +15,7 @@ export type CardDependenciesValue = {
     ReportContextSketchClassDetailsFragment,
     "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
   > | null;
+  errors: { [errorMessage: string]: number };
 };
 
 export const CardDependenciesContext = createContext<CardDependenciesValue>({
@@ -23,6 +24,7 @@ export const CardDependenciesContext = createContext<CardDependenciesValue>({
   loading: true,
   geographies: [],
   sketchClass: null,
+  errors: {},
 });
 
 /**

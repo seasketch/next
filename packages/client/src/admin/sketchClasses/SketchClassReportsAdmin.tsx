@@ -9,6 +9,9 @@ import {
   usePublishReportMutation,
   useDraftReportDebuggingMaterialsQuery,
   usePublishTableOfContentsMutation,
+  PublishedTableOfContentsDocument,
+  LayersAndSourcesForItemsDocument,
+  BaseDraftReportContextDocument,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
@@ -26,6 +29,7 @@ import ReportDependenciesContextProvider, {
   ReportDependenciesContext,
 } from "../../reports/context/ReportDependenciesContext";
 import useIsSuperuser from "../../useIsSuperuser";
+import { BaseReportContextDocument } from "../../generated/queries";
 
 export default function SketchClassReportsAdmin({
   sketchClass,
@@ -116,7 +120,12 @@ export default function SketchClassReportsAdmin({
       refetchQueries: [DraftReportDocument],
     });
 
-  const [publishTableOfContents] = usePublishTableOfContentsMutation();
+  const [publishTableOfContents] = usePublishTableOfContentsMutation({
+    refetchQueries: [
+      PublishedTableOfContentsDocument,
+      LayersAndSourcesForItemsDocument,
+    ],
+  });
 
   const [publishReport, publishReportState] = usePublishReportMutation({
     onError: (err) => {
@@ -124,12 +133,27 @@ export default function SketchClassReportsAdmin({
       if (
         message
           .toLowerCase()
-          .includes("references data layers that have not yet been published")
+          .includes(
+            "references data layers that have not yet been published"
+          ) ||
+        message
+          .toLowerCase()
+          .includes(
+            "references updated versions of data sources which have not yet been published"
+          )
       ) {
         confirm(t("Report contains unpublished layers"), {
-          description: t(
-            "This report references data layers from the draft layer list that have not yet been published. Would you like to publish the overlays now?"
-          ),
+          description: message
+            .toLowerCase()
+            .includes(
+              "references updated versions of data sources which have not yet been published"
+            )
+            ? t(
+                "This report references data layers which updates to their sources that have not yet been published. Would you like to publish the overlays now?"
+              )
+            : t(
+                "This report references data layers from the draft layer list that have not yet been published. Would you like to publish the overlays now?"
+              ),
           primaryButtonText: t("Publish draft layers and report"),
           secondaryButtonText: t("Cancel"),
           onSubmit: async () => {
@@ -154,7 +178,11 @@ export default function SketchClassReportsAdmin({
       }
       onError(err);
     },
-    refetchQueries: [DraftReportDocument],
+    refetchQueries: [
+      DraftReportDocument,
+      BaseDraftReportContextDocument,
+      BaseReportContextDocument,
+    ],
     awaitRefetchQueries: true,
   });
 

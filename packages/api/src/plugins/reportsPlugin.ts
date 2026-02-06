@@ -129,8 +129,32 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       extend type Project {
         reportingLayers: [ReportOverlaySource!]! @requires(columns: ["id"])
       }
+
+      extend type RelatedReportCard {
+        sketchClass: SketchClass! @requires(columns: ["sketch_class_id"])
+      }
     `,
     resolvers: {
+      RelatedReportCard: {
+        async sketchClass(
+          relatedReportCard,
+          args,
+          context,
+          { graphile: { selectGraphQLResultFromTable } }
+        ) {
+          const rows = await selectGraphQLResultFromTable(
+            sql.fragment`sketch_classes`,
+            (tableAlias, sqlBuilder) => {
+              return sqlBuilder.where(
+                sql.fragment`${tableAlias}.id = ${sql.value(
+                  relatedReportCard.sketchClassId
+                )}`
+              );
+            }
+          );
+          return rows[0];
+        },
+      },
       Project: {
         async reportingLayers(project, args, context, resolveInfo) {
           const { pgClient } = context;
@@ -457,9 +481,16 @@ async function getOrCreateSpatialMetricsBatch(
       !overlaySourceUrl &&
       !input.sourceProcessingJobDependency
     ) {
-      throw new Error(
-        "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
-      );
+      if (input.sourceProcessingJobDependency) {
+        // likely the preprocessed report output just isn't finished yet.
+        // don't return anything for this one
+        continue;
+      } else {
+        continue;
+        // throw new Error(
+        //   "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
+        // );
+      }
     }
 
     subjectFragmentIds.push(input.subjectFragmentId || null);
@@ -588,7 +619,7 @@ async function getOverlaySourcesByStableIds(
         items.id as "tableOfContentsItemId",
         items.stable_id as "stableId",
         reporting_output.url as "sourceUrl",
-        reporting_output.source_processing_job_key as "sourceProcessingJobId",
+        coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
         reporting_output.id as "outputId",
         sources.geostats as "geostats",
         layers.mapbox_gl_styles as "mapboxGlStyles"
@@ -597,6 +628,7 @@ async function getOverlaySourcesByStableIds(
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
         left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
+        left join source_processing_jobs jobs on jobs.data_source_id = sources.id
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
       `,
@@ -605,6 +637,11 @@ async function getOverlaySourcesByStableIds(
     for (const row of overlaySourceRows) {
       stripUnnecessaryGeostatsFields(row.geostats);
       results[row.stableId] = row;
+    }
+    for (const row of overlaySourceRows) {
+      if (!row.sourceProcessingJobId) {
+        console.log("no source processing job id for", row.stableId);
+      }
     }
   }
   return results;

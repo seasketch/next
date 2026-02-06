@@ -373,6 +373,14 @@ fragment FullAdminOverlay on TableOfContentsItem {
   dataLayer {
     ...FullAdminDataLayer
   }
+  relatedReportCardDetails {
+    isDraft
+    title
+    sketchClassId
+    sketchClass {
+      name
+    }
+  }
 }
 
 query GetLayerItem($id: Int!) {

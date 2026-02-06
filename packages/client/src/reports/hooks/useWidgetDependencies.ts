@@ -1,4 +1,4 @@
-import { useContext, useMemo, useRef } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -93,10 +93,19 @@ export function useWidgetDependencies(
     loading: cardLoading,
     geographies: contextGeographies,
     sketchClass: contextSketchClass,
+    errors: cardErrors,
   } = useCardDependenciesContext();
 
   // Also get draft metrics/sources for editor scenarios
   const draftReportContext = useContext(DraftReportContext);
+
+  // State for delayed error when a dependency's source is missing for 5+ seconds
+  const [deletedLayerError, setDeletedLayerError] = useState<string | null>(
+    null
+  );
+  const missingSourceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
 
   // Combine card sources with draft sources
   const allSources = useMemo(() => {
@@ -133,7 +142,13 @@ export function useWidgetDependencies(
   }, [cardMetrics, draftReportContext.draftMetrics]);
 
   // Filter metrics and sources for this widget
-  const { rawMetrics, rawSources, loading, errors } = useMemo(() => {
+  const {
+    rawMetrics,
+    rawSources,
+    loading,
+    errors,
+    hasMissingDependencyWithoutSource,
+  } = useMemo(() => {
     let loading = cardLoading;
     let errors: string[] = [];
 
@@ -165,17 +180,27 @@ export function useWidgetDependencies(
     );
 
     // Check if we're still waiting for metrics
+    let hasMissingDependencyWithoutSource: string[] = [];
     if (!loading) {
       for (const dependency of dependencies || []) {
         const hash = hashMetricDependency(dependency, sourceUrlMap);
         const relatedMetric = filteredMetrics.find(
           (m) => m.dependencyHash === hash
         );
+        const relatedSource = filteredSources.find(
+          (s) => s.stableId === dependency.stableId
+        );
         if (!relatedMetric) {
           loading = true;
-          break;
+          if (!relatedSource && dependency.stableId) {
+            hasMissingDependencyWithoutSource.push(dependency.stableId);
+          }
         }
       }
+    }
+
+    if (cardErrors) {
+      errors.push(...Object.keys(cardErrors));
     }
 
     return {
@@ -183,8 +208,50 @@ export function useWidgetDependencies(
       rawSources: filteredSources,
       loading,
       errors,
+      hasMissingDependencyWithoutSource,
     };
-  }, [allMetrics, allSources, cardLoading, dependencies, sourceUrlMap]);
+  }, [
+    allMetrics,
+    allSources,
+    cardLoading,
+    dependencies,
+    sourceUrlMap,
+    cardErrors,
+  ]);
+
+  // Manage 5-second timer for missing dependency without source.
+  // If a dependency's metric is missing, the card is done loading, and no
+  // related source exists, wait 5 seconds before treating it as an error
+  // (to allow for transient states to resolve).
+  useEffect(() => {
+    if (hasMissingDependencyWithoutSource.length > 0 && !cardLoading) {
+      if (!missingSourceTimerRef.current && !deletedLayerError) {
+        missingSourceTimerRef.current = setTimeout(() => {
+          setDeletedLayerError(
+            // eslint-disable-next-line i18next/no-literal-string
+            `Metrics missing. This report widget may be referencing a deleted layer (${Array.from(
+              new Set(hasMissingDependencyWithoutSource)
+            ).join(", ")})`
+          );
+          missingSourceTimerRef.current = null;
+        }, 5000);
+      }
+    } else {
+      if (missingSourceTimerRef.current) {
+        clearTimeout(missingSourceTimerRef.current);
+        missingSourceTimerRef.current = null;
+      }
+      if (deletedLayerError) {
+        setDeletedLayerError(null);
+      }
+    }
+    return () => {
+      if (missingSourceTimerRef.current) {
+        clearTimeout(missingSourceTimerRef.current);
+        missingSourceTimerRef.current = null;
+      }
+    };
+  }, [hasMissingDependencyWithoutSource, cardLoading, deletedLayerError]);
 
   // Use stable references - only change when content actually changes
   const metrics = useStableMetrics(rawMetrics);
@@ -198,11 +265,19 @@ export function useWidgetDependencies(
   const geographies = useStableGeographies(contextGeographies);
   const sketchClass = useStableSketchClass(contextSketchClass);
 
+  // When deletedLayerError is set, override loading to false and merge error
+  const finalLoading = deletedLayerError ? false : stableLoading;
+  const finalErrors = useMemo(
+    () =>
+      deletedLayerError ? [...stableErrors, deletedLayerError] : stableErrors,
+    [stableErrors, deletedLayerError]
+  );
+
   return {
     metrics,
     sources,
-    loading: stableLoading,
-    errors: stableErrors,
+    loading: finalLoading,
+    errors: finalErrors,
     geographies,
     sketchClass,
   };

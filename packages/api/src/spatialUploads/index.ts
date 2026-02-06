@@ -293,12 +293,13 @@ export async function createDBRecordsForProcessedLayer(
       );
     }
     const tocItem = tocResults.rows[0];
+    console.log("calling replace_data_source", dataLayer.id, tocItem.stable_id);
     // attach the new data source to the existing layer
     // Do this as a single transaction using a stored procedure to avoid any
     // inconsistency in state
     await client.query(
       `
-        select replace_data_source($1, $2, $3, $4, $5)
+        select replace_data_source($1, $2, $3, $4, $5, $6)
       `,
       [
         dataLayer.id,
@@ -325,6 +326,7 @@ export async function createDBRecordsForProcessedLayer(
                 layer.geostats
               )
             ),
+        tocItem.stable_id,
       ]
     );
 

@@ -85,6 +85,8 @@ export default function LayerTableOfContentsItemEditor(
     fetchPolicy: "cache-and-network",
   });
 
+  console.log(data?.tableOfContentsItem);
+
   const mapContext = useContext(MapContext);
 
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();

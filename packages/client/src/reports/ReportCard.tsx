@@ -205,7 +205,6 @@ export default function ReportCard(
 
   const baseReportContext = useBaseReportContext();
   const cardDependencies = useCardDependencies(props.config.id);
-
   return (
     <CardDependenciesContext.Provider
       value={{
@@ -214,6 +213,7 @@ export default function ReportCard(
         loading: cardDependencies.loading,
         geographies: baseReportContext.geographies,
         sketchClass: baseReportContext.sketchClass,
+        errors: cardDependencies.errors,
       }}
     >
       <InnerReportCard

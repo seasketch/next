@@ -14528,6 +14528,14 @@ type RecalculateSpatialMetricsPayload {
   query: Query
 }
 
+type RelatedReportCard {
+  isDraft: Boolean
+  reportCardId: Int
+  sketchClass: SketchClass!
+  sketchClassId: Int
+  title: String
+}
+
 """All input for the `removeGroupFromAcl` mutation."""
 input RemoveGroupFromAclInput {
   aclId: Int
@@ -16900,6 +16908,7 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
+  relatedReportCardDetails: [RelatedReportCard]
   reportingOutput: DataUploadOutput
 
   """

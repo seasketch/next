@@ -34,19 +34,6 @@ export default async function calculateSpatialMetric(
 
   try {
     const metric = await getSpatialMetric(payload.metricId, helpers);
-    console.log("calculating spatial metric", {
-      type: metric.type,
-      subject: metric.subject,
-      fragment: subjectIsFragment(metric.subject)
-        ? (metric.subject as MetricSubjectFragment).hash
-        : undefined,
-      geography: !subjectIsFragment(metric.subject)
-        ? metric.subject.id
-        : undefined,
-      sourceUrl: metric.sourceUrl,
-      parameters: metric.parameters,
-      hash: metric.dependencyHash,
-    });
     if (metric.type === "total_area") {
       if (subjectIsFragment(metric.subject)) {
         // very simple to do, just ask postgis to calculate the area

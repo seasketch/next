@@ -13454,6 +13454,15 @@ export type RecalculateSpatialMetricsPayload = {
   query?: Maybe<Query>;
 };
 
+export type RelatedReportCard = {
+  __typename?: 'RelatedReportCard';
+  isDraft?: Maybe<Scalars['Boolean']>;
+  reportCardId?: Maybe<Scalars['Int']>;
+  sketchClass: SketchClass;
+  sketchClassId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -15466,6 +15475,7 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
   reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
@@ -20004,7 +20014,14 @@ export type FullAdminOverlayFragment = (
   )>>, dataLayer?: Maybe<(
     { __typename?: 'DataLayer' }
     & FullAdminDataLayerFragment
-  )> }
+  )>, relatedReportCardDetails?: Maybe<Array<Maybe<(
+    { __typename?: 'RelatedReportCard' }
+    & Pick<RelatedReportCard, 'isDraft' | 'title' | 'sketchClassId'>
+    & { sketchClass: (
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'name'>
+    ) }
+  )>>> }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -25885,6 +25902,14 @@ export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
   hasOriginalSourceUpload
   dataLayer {
     ...FullAdminDataLayer
+  }
+  relatedReportCardDetails {
+    isDraft
+    title
+    sketchClassId
+    sketchClass {
+      name
+    }
   }
 }
     ${FullAdminDataLayerFragmentDoc}`;

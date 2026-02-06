@@ -302,9 +302,6 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
         raise exception 'No stable ids found in the draft report';
       end if;
 
-      raise notice 'number of referenced stable ids: %', array_length(referenced_stable_ids, 1);
-      raise notice 'referenced stable ids: %', referenced_stable_ids;
-
       -- verify that all referenced stable ids have a published counterpart
       if (select count(*) from table_of_contents_items where stable_id = any(referenced_stable_ids) and is_draft = false) < array_length(referenced_stable_ids, 1) then
         raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
@@ -1208,3 +1205,301 @@ CREATE OR REPLACE FUNCTION public.convert_widget_table_of_contents_item_id_refer
       return body;
     end;
   $$;
+
+
+-- Extract text from a reportTitle node in a ProseMirror document
+-- Based on collect_text_from_prosemirror_body but specifically targets reportTitle nodes
+CREATE OR REPLACE FUNCTION public.extract_report_title_from_prosemirror_body(body jsonb) RETURNS text
+    LANGUAGE plpgsql IMMUTABLE
+    AS $$
+    declare
+      node jsonb;
+      title_node jsonb;
+      output text := '';
+    begin
+      -- Handle null input
+      if body is null or jsonb_typeof(body) = 'null' then
+        return null;
+      end if;
+      
+      -- Check if this is a doc with content array
+      if body->>'type' = 'doc' and body->'content' is not null then
+        -- Look for reportTitle node in content
+        for node in select * from jsonb_array_elements(body->'content')
+        loop
+          if node->>'type' = 'reportTitle' then
+            title_node := node;
+            exit;
+          end if;
+        end loop;
+      -- Or if this is directly a reportTitle node
+      elsif body->>'type' = 'reportTitle' then
+        title_node := body;
+      end if;
+      
+      -- Extract text from the title node
+      if title_node is not null then
+        output := collect_text_from_prosemirror_body(title_node);
+      end if;
+      
+      return nullif(trim(output), '');
+    end;
+  $$;
+
+drop type if exists related_report_cards cascade;
+create type related_report_cards as (
+  report_card_id integer,
+  title text,
+  sketch_class_id integer,
+  is_draft boolean
+);
+
+create or replace function table_of_contents_items_related_report_card_details(item table_of_contents_items)
+  returns related_report_cards[]
+  language plpgsql
+  stable
+  security definer
+  as $$
+  declare
+    result related_report_cards[] := ARRAY[]::related_report_cards[];
+    data_upload_output data_upload_outputs;
+    cards related_report_cards[];
+    card report_cards;
+    sketch_class_ids integer[];
+    report_ids integer[];
+    draft_report_ids integer[];
+    sketchclassid integer;
+    report_tab_ids integer[];
+    sketchclass sketch_classes;
+  begin
+    select * from table_of_contents_items_reporting_output(item) into data_upload_output;
+    select array_agg(id) from sketch_classes where project_id = data_upload_output.project_id into sketch_class_ids;
+    select array_agg(report_id) from sketch_classes where id = any(sketch_class_ids) into report_ids;
+    select array_agg(draft_report_id) from sketch_classes where id = any(sketch_class_ids) into draft_report_ids;
+    if data_upload_output.id is not null then
+      foreach sketchclassid in array coalesce(sketch_class_ids, '{}') loop
+        select * from sketch_classes where id = sketchclassid into sketchclass;
+        select array_agg(id) from report_tabs where report_id = sketchclass.report_id into report_tab_ids;
+        for card in (select * from report_cards where report_tab_id = any(report_tab_ids) and item.stable_id = any(extract_stable_ids_from_body(report_cards.body))) loop
+          result := array_append(result, (card.id, extract_report_title_from_prosemirror_body(card.body), sketchclass.id, false)::related_report_cards);
+        end loop;
+        select array_agg(id) from report_tabs where report_id = sketchclass.draft_report_id into report_tab_ids;
+        for card in (select * from report_cards where report_tab_id = any(report_tab_ids) and item.stable_id = any(extract_stable_ids_from_body(report_cards.body))) loop
+          result := array_append(result, (card.id, extract_report_title_from_prosemirror_body(card.body), sketchclass.id, true)::related_report_cards);
+        end loop;
+      end loop;
+    end if;
+    return result;
+  end;
+  $$;
+
+grant execute on function table_of_contents_items_related_report_card_details to anon;
+
+drop function if exists replace_data_source;
+
+CREATE OR REPLACE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id integer, source_layer text, bounds numeric[], gl_styles jsonb, stableid text) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare
+      old_source_id integer;
+      old_source_type text;
+      old_metadata_is_dynamic boolean;
+      dl_template_id text;
+      replacing_reporting_layer boolean := false;
+      projectid integer;
+      stable_ids text[];
+      source_processing_job_key text;
+    begin
+        -- first, determine if a related table_of_contents_item has
+        -- data_library_template_id set. If so, we need to update the
+        -- related Toc items that have copied_from_data_library_template_id
+        -- matching.
+
+        select data_library_template_id into dl_template_id from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and data_library_template_id is not null limit 1;
+
+        select project_id from data_sources where id = replace_data_source.data_source_id into projectid;
+
+        -- Check to see if this layer is used in reporting
+        if dl_template_id is null then
+          select 
+            array_agg(distinct stable_id)
+            into stable_ids
+          from 
+            report_cards
+            cross join lateral unnest(extract_stable_ids_from_body(report_cards.body)) as stable_id
+          where
+            report_tab_id in (
+              select id from report_tabs where report_id in (
+                select id from reports where project_id = projectid
+              )
+            );
+          if stableid = any(coalesce(stable_ids, '{}')) then
+            replacing_reporting_layer := true;
+          end if;
+        end if;
+
+
+        select data_layers.data_source_id into old_source_id from data_layers where id = replace_data_source.data_layer_id;
+        select type into old_source_type from data_sources where id = old_source_id;
+        select metadata is null and (old_source_type = 'arcgis-vector' or old_source_type = 'arcgis-dynamic-mapserver') into old_metadata_is_dynamic from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id limit 1;
+        insert into archived_data_sources (
+          data_source_id,
+          data_layer_id,
+          version,
+          mapbox_gl_style,
+          changelog,
+          source_layer,
+          bounds,
+          sublayer,
+          sublayer_type,
+          dynamic_metadata,
+          project_id
+        ) values (
+          old_source_id,
+          replace_data_source.data_layer_id,
+          (
+            select 
+              coalesce(max(version), 0) + 1 
+            from 
+              archived_data_sources 
+            where archived_data_sources.data_layer_id = replace_data_source.data_layer_id
+          ),
+          (
+            select 
+              mapbox_gl_styles
+            from 
+              data_layers 
+            where id = replace_data_source.data_layer_id
+          ),
+          (select changelog from data_sources where id = replace_data_source.data_source_id),
+          (select data_layers.source_layer from data_layers where data_layers.id = replace_data_source.data_layer_id),
+          (select table_of_contents_items.bounds from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and table_of_contents_items.bounds is not null limit 1),
+          (select sublayer from data_layers where id = replace_data_source.data_layer_id),
+          (select sublayer_type from data_layers where id = replace_data_source.data_layer_id),
+          old_metadata_is_dynamic,
+          projectid
+        );
+        
+        if dl_template_id is not null then
+          update 
+            data_sources
+          set data_library_template_id = dl_template_id
+          where 
+          id = replace_data_source.data_source_id or
+          id = any((
+            select
+              data_layers.data_source_id
+            from
+              data_layers
+            where
+              id = any (
+                select
+                  table_of_contents_items.data_layer_id
+                from
+                  table_of_contents_items
+                where
+                  copied_from_data_library_template_id = dl_template_id or
+                  data_library_template_id = dl_template_id
+              )
+          )) or id = any ((
+            select 
+              data_layers.data_source_id 
+            from
+              data_layers
+            where
+              id = replace_data_source.data_layer_id 
+          ));
+        end if;
+
+        update 
+          data_layers 
+        set 
+          data_source_id = replace_data_source.data_source_id, 
+          source_layer = replace_data_source.source_layer, 
+          mapbox_gl_styles = coalesce(
+            gl_styles, data_layers.mapbox_gl_styles
+          ), 
+          sublayer = null 
+        where 
+          id = replace_data_source.data_layer_id;
+
+        if dl_template_id is not null then
+          update
+            data_layers
+          set
+            data_source_id = replace_data_source.data_source_id,
+            source_layer = replace_data_source.source_layer
+          where
+            id = any (
+              select table_of_contents_items.data_layer_id from table_of_contents_items where copied_from_data_library_template_id = dl_template_id
+            );
+        end if;
+        
+        update 
+          table_of_contents_items 
+        set bounds = replace_data_source.bounds 
+        where 
+          table_of_contents_items.data_layer_id = replace_data_source.data_layer_id or (
+            case 
+              when dl_template_id is not null then copied_from_data_library_template_id = dl_template_id
+              else false
+            end
+          );
+
+        if replacing_reporting_layer then
+          -- trigger proprocessing graphile-worker job
+          insert into source_processing_jobs (data_source_id, project_id) values (replace_data_source.data_source_id, projectid) on conflict do nothing returning job_key into source_processing_job_key;
+          if source_processing_job_key is not null then
+            PERFORM graphile_worker.add_job(
+              'preprocessSource',
+              json_build_object('jobKey', source_processing_job_key),
+              max_attempts := 1
+            );
+          end if;
+        end if;
+
+    end;
+  $$;
+
+
+CREATE OR REPLACE FUNCTION public._delete_table_of_contents_item(tid integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    layer_id int;
+    source_id int;
+    layer_count int;
+    stableid text;
+    pid integer;
+    referenced_stable_ids text[];
+  begin
+    select stable_id, project_id into stableid, pid from table_of_contents_items where id = "tid";
+
+    select array(
+      select distinct stable_id
+      from report_cards
+      cross join lateral unnest(extract_stable_ids_from_body(report_cards.body)) as stable_id
+      where report_tab_id in (
+        select id from report_tabs where report_id in (
+          select id from reports where project_id = pid
+        )
+      )
+    ) into referenced_stable_ids;
+
+    if stableid = any(referenced_stable_ids) then
+      raise exception 'This item is referenced by a report card. Please remove the layer from the report and publish the changes first before deleting this layer.';
+    end if;
+
+    select data_layer_id into layer_id from table_of_contents_items where id = "tid";
+    select data_source_id into source_id from data_layers where id = layer_id;
+    delete from table_of_contents_items where id = "tid";
+    delete from data_layers where id = layer_id;
+    if source_id is not null then
+      select count(id) into layer_count from data_layers where data_source_id = source_id;
+      if layer_count = 0 then
+        delete from data_sources where id = source_id;
+      end if;
+    end if;
+    return;
+  end;
+$$;

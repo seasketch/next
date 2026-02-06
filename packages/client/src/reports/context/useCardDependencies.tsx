@@ -50,6 +50,9 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
           errors[errorMessage] = (errors[errorMessage] || 0) + 1;
         }
       }
+      if (context.error) {
+        errors["Dependency retrieval error: " + context.error.message] = 1;
+      }
 
       return {
         metrics,
@@ -58,11 +61,16 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         errors,
       };
     } else {
+      const errors: { [errorMessage: string]: number } = {};
+      if (context.error) {
+        errors["Dependency retrieval error: " + context.error.message] = 1;
+      }
+
       return {
         metrics: [],
         overlaySources: [],
         loading: context.loading,
-        errors: {},
+        errors: errors,
       };
     }
   }, [
@@ -71,6 +79,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
     context.metrics,
     context.overlaySources,
     cardId,
+    context.error,
   ]);
 
   return dependencies;
