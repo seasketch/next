@@ -54,6 +54,7 @@ export {
   MetricDependencyParameters,
   hashMetricDependency,
   findPrimaryGeographyId,
+  extractMetricDependenciesFromReportBody,
 } from "./metrics/metrics";
 export {
   createUniqueIdIndex,

@@ -9,6 +9,7 @@ exports.combineStringOrBooleanColumnValueStats = combineStringOrBooleanColumnVal
 exports.hashMetricDependency = hashMetricDependency;
 exports.combineMetricsForFragments = combineMetricsForFragments;
 exports.findPrimaryGeographyId = findPrimaryGeographyId;
+exports.extractMetricDependenciesFromReportBody = extractMetricDependenciesFromReportBody;
 const simple_statistics_1 = require("simple-statistics");
 const uniqueIdIndex_1 = require("../utils/uniqueIdIndex");
 /**
@@ -539,5 +540,29 @@ function findPrimaryGeographyId(metrics) {
         throw new Error("No primary geography id found.");
     }
     return primaryGeographyId;
+}
+function extractMetricDependenciesFromReportBody(node, dependencies = []) {
+    if (typeof node !== "object" || node === null || !node.type) {
+        throw new Error("Invalid node");
+    }
+    if ((node.type === "metric" || node.type === "blockMetric") &&
+        node.attrs?.metrics) {
+        const metrics = node.attrs.metrics;
+        if (!Array.isArray(metrics)) {
+            throw new Error("Invalid metrics");
+        }
+        if (metrics.length > 0) {
+            if (typeof metrics[0] !== "object") {
+                throw new Error("Invalid metric");
+            }
+            dependencies.push(...metrics);
+        }
+    }
+    if (Array.isArray(node.content)) {
+        for (const child of node.content) {
+            extractMetricDependenciesFromReportBody(child, dependencies);
+        }
+    }
+    return dependencies;
 }
 //# sourceMappingURL=metrics.js.map

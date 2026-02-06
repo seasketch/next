@@ -621,15 +621,6 @@ query SourceProcessingJobs($projectId: Int!) {
   }
 }
 
-subscription ReportOverlaySourcesSubscription($projectId: Int!) {
-  reportOverlaySources(projectId: $projectId) {
-    jobKey
-    source {
-      ...OverlaySourceDetails
-    }
-  }
-}
-
 mutation RecalculateSpatialMetrics(
   $metricIds: [BigInt!]!
   $preprocessSources: Boolean!

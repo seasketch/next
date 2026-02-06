@@ -17,7 +17,7 @@ type ColumnHistogramEntry = [number, number];
  */
 function downsampleColumnHistogram(
   histogram: ColumnHistogramEntry[],
-  maxEntries: number,
+  maxEntries: number
 ): ColumnHistogramEntry[] {
   if (histogram.length === 0 || histogram.length <= maxEntries) {
     return histogram;
@@ -170,7 +170,7 @@ export type NumberColumnValueStats = {
 };
 
 export function isNumberColumnValueStats(
-  stats: NumberColumnValueStats | StringOrBooleanColumnValueStats,
+  stats: NumberColumnValueStats | StringOrBooleanColumnValueStats
 ): stats is NumberColumnValueStats {
   return stats.type === "number";
 }
@@ -251,13 +251,13 @@ export type MetricTypeMap = {
 };
 
 export function subjectIsFragment(
-  subject: any | MetricSubjectFragment | MetricSubjectGeography,
+  subject: any | MetricSubjectFragment | MetricSubjectGeography
 ): subject is MetricSubjectFragment {
   return "hash" in subject;
 }
 
 export function subjectIsGeography(
-  subject: any | MetricSubjectFragment | MetricSubjectGeography,
+  subject: any | MetricSubjectFragment | MetricSubjectGeography
 ): subject is MetricSubjectGeography {
   return "id" in subject;
 }
@@ -268,7 +268,7 @@ function equalIntervalBuckets(
   data: number[],
   numBuckets: number,
   max?: number,
-  fraction = false,
+  fraction = false
 ): [number, number | null][] {
   const breaks = equalIntervalBreaks(data, numBuckets);
   breaks.pop();
@@ -282,7 +282,7 @@ function breaksToBuckets(
   max: number,
   breaks: number[],
   values: number[],
-  fraction = false,
+  fraction = false
 ): [number, number | null][] {
   const buckets: [number, number | null][] = [];
   for (const b of breaks) {
@@ -312,7 +312,7 @@ function breaksToBuckets(
  * @returns Combined RasterBandStats, or undefined if the array is empty
  */
 export function combineRasterBandStats(
-  statsArray: RasterBandStats[],
+  statsArray: RasterBandStats[]
 ): RasterBandStats {
   if (statsArray.length === 0) {
     throw new Error("Cannot combine empty array of RasterBandStats");
@@ -351,7 +351,7 @@ export function combineRasterBandStats(
 
   // Convert histogram map back to array and sort by value
   const combinedHistogram: [number, number][] = Array.from(
-    histogramMap.entries(),
+    histogramMap.entries()
   )
     .map(([value, count]) => [value, count] as [number, number])
     .sort((a, b) => a[0] - b[0]);
@@ -387,7 +387,7 @@ export function combineRasterBandStats(
  * Otherwise, they are weighted by count.
  */
 export function combineNumberColumnValueStats(
-  statsArray: NumberColumnValueStats[],
+  statsArray: NumberColumnValueStats[]
 ): NumberColumnValueStats | undefined {
   if (statsArray.length === 0) {
     return undefined;
@@ -399,7 +399,7 @@ export function combineNumberColumnValueStats(
 
   // Determine whether to weight by area or by count
   const useAreaWeight = statsArray.some(
-    (s) => typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0,
+    (s) => typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
   );
 
   let totalCount = 0;
@@ -488,7 +488,7 @@ export function combineNumberColumnValueStats(
   if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
     combinedHistogram = downsampleColumnHistogram(
       combinedHistogram as [number, number][],
-      MAX_HISTOGRAM_ENTRIES,
+      MAX_HISTOGRAM_ENTRIES
     );
   }
 
@@ -499,7 +499,7 @@ export function combineNumberColumnValueStats(
           (typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
             ? s.totalAreaSqKm
             : 0),
-        0,
+        0
       )
     : undefined;
 
@@ -518,7 +518,7 @@ export function combineNumberColumnValueStats(
 }
 
 export function combineStringOrBooleanColumnValueStats(
-  statsArray: StringOrBooleanColumnValueStats[],
+  statsArray: StringOrBooleanColumnValueStats[]
 ): StringOrBooleanColumnValueStats | undefined {
   if (statsArray.length === 0) {
     return undefined;
@@ -583,14 +583,14 @@ export type MetricDependencyParameters = {
  */
 export function hashMetricDependency(
   dependency: MetricDependency,
-  overlaySourceUrls: { [stableId: string]: string },
+  overlaySourceUrls: { [stableId: string]: string }
 ): string {
   if (dependency.stableId && overlaySourceUrls[dependency.stableId]) {
     if (!overlaySourceUrls[dependency.stableId]) {
       console.log("overlaySourceUrls", overlaySourceUrls);
       console.log("dependency", dependency);
       throw new Error(
-        `Hashing Error. Overlay source URL not found for stable id: ${dependency.stableId}`,
+        `Hashing Error. Overlay source URL not found for stable id: ${dependency.stableId}`
       );
     }
     dependency = {
@@ -623,11 +623,11 @@ function stableSerialize(value: unknown): string {
       (key) =>
         (value as any)[key] !== undefined &&
         key !== "hash" &&
-        key !== "__typename",
+        key !== "__typename"
     )
     .sort()
     .map(
-      (key) => `${JSON.stringify(key)}:${stableSerialize((value as any)[key])}`,
+      (key) => `${JSON.stringify(key)}:${stableSerialize((value as any)[key])}`
     );
 
   return `{${entries.join(",")}}`;
@@ -646,7 +646,7 @@ function fnv1a(input: string): string {
 }
 
 export function combineMetricsForFragments(
-  metrics: Pick<Metric, "type" | "value">[],
+  metrics: Pick<Metric, "type" | "value">[]
 ): Pick<Metric, "type" | "value"> {
   if (metrics.length === 0) {
     throw new Error("Cannot combine empty array of metrics");
@@ -656,8 +656,8 @@ export function combineMetricsForFragments(
   if (types.size > 1) {
     throw new Error(
       `All metrics must have the same type. Found types: ${Array.from(
-        types,
-      ).join(", ")}`,
+        types
+      ).join(", ")}`
     );
   }
   const type = Array.from(types)[0];
@@ -670,7 +670,7 @@ export function combineMetricsForFragments(
         }
       }
       const values = metrics.map(
-        (m) => (m.value as RasterStats["value"]).bands[0],
+        (m) => (m.value as RasterStats["value"]).bands[0]
       );
       return {
         type: "raster_stats",
@@ -701,24 +701,24 @@ export function combineMetricsForFragments(
               .map((entry) => entry?.[attr])
               .filter(
                 (
-                  v,
+                  v
                 ): v is
                   | StringOrBooleanColumnValueStats
-                  | NumberColumnValueStats => v !== undefined,
+                  | NumberColumnValueStats => v !== undefined
               );
 
             if (attrValues.length === 0) continue;
 
             if (isNumberColumnValueStats(attrValues[0])) {
               const combined = combineNumberColumnValueStats(
-                attrValues as NumberColumnValueStats[],
+                attrValues as NumberColumnValueStats[]
               );
               if (combined) {
                 stats[attr] = combined;
               }
             } else {
               const combined = combineStringOrBooleanColumnValueStats(
-                attrValues as StringOrBooleanColumnValueStats[],
+                attrValues as StringOrBooleanColumnValueStats[]
               );
               if (combined) {
                 stats[attr] = combined;
@@ -743,7 +743,7 @@ export function combineMetricsForFragments(
         type: "count",
         value: combineGroupedValues(values, (value) => {
           const mergedIndexes = mergeUniqueIdIndexes(
-            ...value.map((v) => v.uniqueIdIndex),
+            ...value.map((v) => v.uniqueIdIndex)
           );
           const count = countUniqueIds(mergedIndexes);
           return {
@@ -755,7 +755,7 @@ export function combineMetricsForFragments(
     }
     case "distance_to_shore": {
       const values = metrics.map(
-        (m) => m.value as DistanceToShoreMetric["value"],
+        (m) => m.value as DistanceToShoreMetric["value"]
       );
       // return the closest
       const closest = values.reduce((acc, v) => {
@@ -778,7 +778,7 @@ export function combineMetricsForFragments(
     }
     case "presence_table": {
       const values = metrics.map(
-        (m) => m.value as PresenceTableMetric["value"],
+        (m) => m.value as PresenceTableMetric["value"]
       );
       const exceededLimit = values.some((v) => v.exceededLimit);
       const features: PresenceTableValue[] = [];
@@ -804,7 +804,7 @@ export function combineMetricsForFragments(
       return {
         type: "overlay_area",
         value: combineGroupedValues(values, (v) =>
-          v.reduce((acc, v) => acc + v, 0),
+          v.reduce((acc, v) => acc + v, 0)
         ),
       };
     }
@@ -815,7 +815,7 @@ export function combineMetricsForFragments(
 
 function combineGroupedValues<T>(
   values: { [groupBy: string]: T }[],
-  combineFn: (values: T[]) => T,
+  combineFn: (values: T[]) => T
 ): { [groupBy: string]: T } {
   const result: { [groupBy: string]: T } = {};
   const keys = new Set<string>();
@@ -848,7 +848,7 @@ function combineGroupedValues<T>(
  * @returns The primary geography id
  */
 export function findPrimaryGeographyId(
-  metrics: Pick<Metric, "type" | "value" | "subject">[],
+  metrics: Pick<Metric, "type" | "value" | "subject">[]
 ): number {
   const foundGeographyIds: { [geographyId: number]: number } = {};
   const fragmentMetrics = metrics.filter((m) => subjectIsFragment(m.subject));
@@ -877,4 +877,40 @@ export function findPrimaryGeographyId(
     throw new Error("No primary geography id found.");
   }
   return primaryGeographyId;
+}
+
+type ProsemirrorNode = {
+  type: string;
+  attrs?: Record<string, any>;
+  content?: ProsemirrorNode[];
+};
+
+export function extractMetricDependenciesFromReportBody(
+  node: ProsemirrorNode,
+  dependencies: MetricDependency[] = []
+) {
+  if (typeof node !== "object" || node === null || !node.type) {
+    throw new Error("Invalid node");
+  }
+  if (
+    (node.type === "metric" || node.type === "blockMetric") &&
+    node.attrs?.metrics
+  ) {
+    const metrics = node.attrs.metrics;
+    if (!Array.isArray(metrics)) {
+      throw new Error("Invalid metrics");
+    }
+    if (metrics.length > 0) {
+      if (typeof metrics[0] !== "object") {
+        throw new Error("Invalid metric");
+      }
+      dependencies.push(...metrics);
+    }
+  }
+  if (Array.isArray(node.content)) {
+    for (const child of node.content) {
+      extractMetricDependenciesFromReportBody(child, dependencies);
+    }
+  }
+  return dependencies;
 }

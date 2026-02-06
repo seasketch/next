@@ -211,5 +211,11 @@ export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" 
  * @returns The primary geography id
  */
 export declare function findPrimaryGeographyId(metrics: Pick<Metric, "type" | "value" | "subject">[]): number;
+type ProsemirrorNode = {
+    type: string;
+    attrs?: Record<string, any>;
+    content?: ProsemirrorNode[];
+};
+export declare function extractMetricDependenciesFromReportBody(node: ProsemirrorNode, dependencies?: MetricDependency[]): MetricDependency[];
 export {};
 //# sourceMappingURL=metrics.d.ts.map

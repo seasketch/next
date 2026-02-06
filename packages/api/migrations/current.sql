@@ -1146,3 +1146,65 @@ CREATE OR REPLACE FUNCTION public.spatial_metric_to_json(sm public.spatial_metri
     'dependencyHash', sm.dependency_hash
   );
 $$;
+
+DROP TRIGGER IF EXISTS trigger_report_overlay_source_subscription_trigger ON public.source_processing_jobs;
+
+DROP TRIGGER IF EXISTS trigger_geography_metric_subscription_trigger ON public.spatial_metrics;
+
+
+DROP FUNCTION IF EXISTS convert_widget_table_of_contents_item_id_references_to_stable_ids;
+
+CREATE OR REPLACE FUNCTION public.convert_widget_table_of_contents_item_id_references_to_stable_ids(body jsonb) RETURNS jsonb
+    LANGUAGE plpgsql STABLE
+    AS $$
+    declare
+      node jsonb;
+      metrics jsonb;
+      metric jsonb;
+      new_metrics jsonb;
+      new_content jsonb;
+      stableId text;
+      toc_id integer;
+    begin
+      -- Handle null or invalid input
+      if body is null or jsonb_typeof(body) = 'null' then
+        return body;
+      end if;
+      
+      -- Check if this is a node with type "metric" or "blockMetric" that has attrs.metrics
+      if (body->>'type') in ('metric', 'blockMetric') and body->'attrs'->'metrics' is not null then
+        metrics := body->'attrs'->'metrics';
+        if jsonb_typeof(metrics) = 'array' then
+          new_metrics := '[]'::jsonb;
+          -- Process each metric
+          for metric in select * from jsonb_array_elements(metrics)
+          loop
+            if metric->>'tableOfContentsItemId' is not null then
+              toc_id := (metric->>'tableOfContentsItemId')::integer;
+              stableId := (select stable_id from table_of_contents_items where id = toc_id limit 1);
+              if stableId is not null then
+                -- Add stableId and remove tableOfContentsItemId
+                metric := jsonb_set(metric, '{stableId}', to_jsonb(stableId));
+                metric := metric - 'tableOfContentsItemId';
+              end if;
+            end if;
+            new_metrics := new_metrics || jsonb_build_array(metric);
+          end loop;
+          -- Update body with new metrics
+          body := jsonb_set(body, '{attrs,metrics}', new_metrics);
+        end if;
+      end if;
+      
+      -- Recursively process content array if it exists
+      if body->'content' is not null and jsonb_typeof(body->'content') = 'array' then
+        new_content := '[]'::jsonb;
+        for node in select * from jsonb_array_elements(body->'content')
+        loop
+          new_content := new_content || jsonb_build_array(convert_widget_table_of_contents_item_id_references_to_stable_ids(node));
+        end loop;
+        body := jsonb_set(body, '{content}', new_content);
+      end if;
+      
+      return body;
+    end;
+  $$;

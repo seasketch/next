@@ -1832,6 +1832,39 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` to be created by this mutation. */
+  originalSourceId: OriginalSourceIdInput;
+};
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayload = {
+  __typename?: 'CreateOriginalSourceIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` that was created by this mutation. */
+  originalSourceId?: Maybe<OriginalSourceId>;
+  /** An edge for our `OriginalSourceId`. May be used by Relay 1. */
+  originalSourceIdEdge?: Maybe<OriginalSourceIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -1963,6 +1996,39 @@ export type CreateProjectsSharedBasemapPayload = {
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` to be created by this mutation. */
+  publishedTocItemId: PublishedTocItemIdInput;
+};
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayload = {
+  __typename?: 'CreatePublishedTocItemIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` that was created by this mutation. */
+  publishedTocItemId?: Maybe<PublishedTocItemId>;
+  /** An edge for our `PublishedTocItemId`. May be used by Relay 1. */
+  publishedTocItemIdEdge?: Maybe<PublishedTocItemIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayloadPublishedTocItemIdEdgeArgs = {
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 /** All input for the `createRemoteGeojsonSource` mutation. */
@@ -6394,14 +6460,6 @@ export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   srid: Scalars['Int'];
 };
 
-export type GeographyMetricSubscriptionPayload = {
-  __typename?: 'GeographyMetricSubscriptionPayload';
-  geographyId: Scalars['Int'];
-  metric?: Maybe<CompatibleSpatialMetric>;
-  metricId: Scalars['BigInt'];
-  projectId: Scalars['Int'];
-};
-
 /** Represents an update to a `Geography`. Fields that are set will be updated. */
 export type GeographyPatch = {
   clientTemplate?: Maybe<Scalars['String']>;
@@ -6702,6 +6760,29 @@ export type GetChildFoldersRecursivePayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -7605,6 +7686,8 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /** Creates a single `OriginalSourceId`. */
+  createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -7628,6 +7711,8 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  /** Creates a single `PublishedTocItemId`. */
+  createPublishedTocItemId?: Maybe<CreatePublishedTocItemIdPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
@@ -7818,6 +7903,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8422,6 +8508,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOriginalSourceIdArgs = {
+  input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   message: Scalars['JSON'];
   topicId: Scalars['Int'];
@@ -8449,6 +8541,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreatePublishedTocItemIdArgs = {
+  input: CreatePublishedTocItemIdInput;
 };
 
 
@@ -9033,6 +9131,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -10190,6 +10294,43 @@ export enum OptionalBasemapLayersOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export type OriginalSourceId = {
+  __typename?: 'OriginalSourceId';
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OriginalSourceId` */
+export type OriginalSourceIdInput = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `OriginalSourceId` values. */
+export type OriginalSourceIdsConnection = {
+  __typename?: 'OriginalSourceIdsConnection';
+  /** A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination. */
+  edges: Array<OriginalSourceIdsEdge>;
+  /** A list of `OriginalSourceId` objects. */
+  nodes: Array<OriginalSourceId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OriginalSourceId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OriginalSourceId` edge in the connection. */
+export type OriginalSourceIdsEdge = {
+  __typename?: 'OriginalSourceIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OriginalSourceId` at the end of the edge. */
+  node: OriginalSourceId;
+};
+
+/** Methods to use when ordering `OriginalSourceId`. */
+export enum OriginalSourceIdsOrderBy {
+  Natural = 'NATURAL'
 }
 
 export type OutstandingSurveyInvites = {
@@ -11716,6 +11857,43 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+export type PublishedTocItemId = {
+  __typename?: 'PublishedTocItemId';
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `PublishedTocItemId` */
+export type PublishedTocItemIdInput = {
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `PublishedTocItemId` values. */
+export type PublishedTocItemIdsConnection = {
+  __typename?: 'PublishedTocItemIdsConnection';
+  /** A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination. */
+  edges: Array<PublishedTocItemIdsEdge>;
+  /** A list of `PublishedTocItemId` objects. */
+  nodes: Array<PublishedTocItemId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `PublishedTocItemId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `PublishedTocItemId` edge in the connection. */
+export type PublishedTocItemIdsEdge = {
+  __typename?: 'PublishedTocItemIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `PublishedTocItemId` at the end of the edge. */
+  node: PublishedTocItemId;
+};
+
+/** Methods to use when ordering `PublishedTocItemId`. */
+export enum PublishedTocItemIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
@@ -11877,6 +12055,8 @@ export type Query = Node & {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
+  /** Reads and enables pagination through a set of `OriginalSourceId`. */
+  originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -11908,6 +12088,8 @@ export type Query = Node & {
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
   publicSprites?: Maybe<Array<Sprite>>;
+  /** Reads and enables pagination through a set of `PublishedTocItemId`. */
+  publishedTocItemIdsConnection?: Maybe<PublishedTocItemIdsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -12663,6 +12845,17 @@ export type QueryOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOriginalSourceIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -12816,6 +13009,17 @@ export type QueryProjectsSharedBasemapsConnectionArgs = {
 export type QueryPublicSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryPublishedTocItemIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 
@@ -13504,14 +13708,6 @@ export type ReportOverlaySource = {
   stableId: Scalars['String'];
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
-};
-
-export type ReportOverlaySourcesSubscriptionPayload = {
-  __typename?: 'ReportOverlaySourcesSubscriptionPayload';
-  dataSourceId: Scalars['Int'];
-  jobKey: Scalars['String'];
-  projectId: Scalars['Int'];
-  source: ReportOverlaySource;
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -14441,13 +14637,6 @@ export enum SketchGeometryType {
   Polygon = 'POLYGON'
 }
 
-export type SketchMetricSubscriptionPayload = {
-  __typename?: 'SketchMetricSubscriptionPayload';
-  metric?: Maybe<CompatibleSpatialMetric>;
-  metricId: Scalars['BigInt'];
-  sketchId: Scalars['Int'];
-};
-
 /** The return type of our `relatedFragmentsConnection` query. */
 export type SketchesRelatedFragmentsRecord = {
   __typename?: 'SketchesRelatedFragmentsRecord';
@@ -14685,15 +14874,12 @@ export type Subscription = {
   backgroundJobs?: Maybe<ProjectBackgroundJobSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
-  geographyMetrics?: Maybe<GeographyMetricSubscriptionPayload>;
   /**
    * Triggered when the status of a project invite changes, generally because
    * of a change in the delivery status of a related InviteEmail. Uses
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
-  reportOverlaySources?: Maybe<ReportOverlaySourcesSubscriptionPayload>;
-  sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
@@ -14710,24 +14896,6 @@ export type SubscriptionBackgroundJobsArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
   slug: Scalars['String'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionGeographyMetricsArgs = {
-  projectId: Scalars['Int'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionReportOverlaySourcesArgs = {
-  projectId: Scalars['Int'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionSketchMetricsArgs = {
-  sketchId: Scalars['Int'];
 };
 
 
@@ -22808,23 +22976,6 @@ export type SourceProcessingJobsQuery = (
   )> }
 );
 
-export type ReportOverlaySourcesSubscriptionSubscriptionVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type ReportOverlaySourcesSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { reportOverlaySources?: Maybe<(
-    { __typename?: 'ReportOverlaySourcesSubscriptionPayload' }
-    & Pick<ReportOverlaySourcesSubscriptionPayload, 'jobKey'>
-    & { source: (
-      { __typename?: 'ReportOverlaySource' }
-      & OverlaySourceDetailsFragment
-    ) }
-  )> }
-);
-
 export type RecalculateSpatialMetricsMutationVariables = Exact<{
   metricIds: Array<Scalars['BigInt']> | Scalars['BigInt'];
   preprocessSources: Scalars['Boolean'];
@@ -23440,40 +23591,6 @@ export type CompatibleSpatialMetricDetailsFragment = (
 export type MinimalSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
   & Pick<CompatibleSpatialMetric, 'id' | 'updatedAt' | 'state' | 'value' | 'errorMessage' | 'progress'>
-);
-
-export type GeographyMetricSubscriptionSubscriptionVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type GeographyMetricSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { geographyMetrics?: Maybe<(
-    { __typename?: 'GeographyMetricSubscriptionPayload' }
-    & Pick<GeographyMetricSubscriptionPayload, 'metricId' | 'geographyId' | 'projectId'>
-    & { metric?: Maybe<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  )> }
-);
-
-export type SketchMetricSubscriptionSubscriptionVariables = Exact<{
-  sketchId: Scalars['Int'];
-}>;
-
-
-export type SketchMetricSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { sketchMetrics?: Maybe<(
-    { __typename?: 'SketchMetricSubscriptionPayload' }
-    & Pick<SketchMetricSubscriptionPayload, 'metricId' | 'sketchId'>
-    & { metric?: Maybe<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  )> }
 );
 
 export type RetryFailedSpatialMetricsMutationVariables = Exact<{
@@ -35702,39 +35819,6 @@ export function useSourceProcessingJobsLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourceProcessingJobsQuery>;
 export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
 export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
-export const ReportOverlaySourcesSubscriptionDocument = gql`
-    subscription ReportOverlaySourcesSubscription($projectId: Int!) {
-  reportOverlaySources(projectId: $projectId) {
-    jobKey
-    source {
-      ...OverlaySourceDetails
-    }
-  }
-}
-    ${OverlaySourceDetailsFragmentDoc}`;
-
-/**
- * __useReportOverlaySourcesSubscriptionSubscription__
- *
- * To run a query within a React component, call `useReportOverlaySourcesSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useReportOverlaySourcesSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useReportOverlaySourcesSubscriptionSubscription({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
-export function useReportOverlaySourcesSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>(ReportOverlaySourcesSubscriptionDocument, options);
-      }
-export type ReportOverlaySourcesSubscriptionSubscriptionHookResult = ReturnType<typeof useReportOverlaySourcesSubscriptionSubscription>;
-export type ReportOverlaySourcesSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ReportOverlaySourcesSubscriptionSubscription>;
 export const RecalculateSpatialMetricsDocument = gql`
     mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!) {
   recalculateSpatialMetrics(
@@ -36651,75 +36735,6 @@ export function useCopyTocItemMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CopyTocItemMutationHookResult = ReturnType<typeof useCopyTocItemMutation>;
 export type CopyTocItemMutationResult = Apollo.MutationResult<CopyTocItemMutation>;
 export type CopyTocItemMutationOptions = Apollo.BaseMutationOptions<CopyTocItemMutation, CopyTocItemMutationVariables>;
-export const GeographyMetricSubscriptionDocument = gql`
-    subscription GeographyMetricSubscription($projectId: Int!) {
-  geographyMetrics(projectId: $projectId) {
-    metricId
-    geographyId
-    projectId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-
-/**
- * __useGeographyMetricSubscriptionSubscription__
- *
- * To run a query within a React component, call `useGeographyMetricSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useGeographyMetricSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGeographyMetricSubscriptionSubscription({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
-export function useGeographyMetricSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<GeographyMetricSubscriptionSubscription, GeographyMetricSubscriptionSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<GeographyMetricSubscriptionSubscription, GeographyMetricSubscriptionSubscriptionVariables>(GeographyMetricSubscriptionDocument, options);
-      }
-export type GeographyMetricSubscriptionSubscriptionHookResult = ReturnType<typeof useGeographyMetricSubscriptionSubscription>;
-export type GeographyMetricSubscriptionSubscriptionResult = Apollo.SubscriptionResult<GeographyMetricSubscriptionSubscription>;
-export const SketchMetricSubscriptionDocument = gql`
-    subscription SketchMetricSubscription($sketchId: Int!) {
-  sketchMetrics(sketchId: $sketchId) {
-    metricId
-    sketchId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-
-/**
- * __useSketchMetricSubscriptionSubscription__
- *
- * To run a query within a React component, call `useSketchMetricSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useSketchMetricSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSketchMetricSubscriptionSubscription({
- *   variables: {
- *      sketchId: // value for 'sketchId'
- *   },
- * });
- */
-export function useSketchMetricSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<SketchMetricSubscriptionSubscription, SketchMetricSubscriptionSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<SketchMetricSubscriptionSubscription, SketchMetricSubscriptionSubscriptionVariables>(SketchMetricSubscriptionDocument, options);
-      }
-export type SketchMetricSubscriptionSubscriptionHookResult = ReturnType<typeof useSketchMetricSubscriptionSubscription>;
-export type SketchMetricSubscriptionSubscriptionResult = Apollo.SubscriptionResult<SketchMetricSubscriptionSubscription>;
 export const RetryFailedSpatialMetricsDocument = gql`
     mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {
   retryFailedSpatialMetrics(input: {metricIds: $metricIds}) {
@@ -40186,9 +40201,6 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
-    ReportOverlaySourcesSubscription: 'ReportOverlaySourcesSubscription',
-    GeographyMetricSubscription: 'GeographyMetricSubscription',
-    SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DraftReportDocument,
@@ -22,7 +22,10 @@ import { SketchingIcon } from "../../projects/ToolbarButtons";
 import { BaseReportContextProvider } from "../../reports/context/BaseReportContext";
 import { SubjectReportContextProvider } from "../../reports/context/SubjectReportContext";
 import ReportEditor from "../../reports/ReportEditor";
-import ReportDependenciesContextProvider from "../../reports/context/ReportDependenciesContext";
+import ReportDependenciesContextProvider, {
+  ReportDependenciesContext,
+} from "../../reports/context/ReportDependenciesContext";
+import useIsSuperuser from "../../useIsSuperuser";
 
 export default function SketchClassReportsAdmin({
   sketchClass,
@@ -246,7 +249,7 @@ export default function SketchClassReportsAdmin({
             <div className="flex flex-col w-full h-full overflow-y-hidden">
               {/* Header */}
               <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
-                <div className="flex-none space-x-2">
+                <div className="flex w-full space-x-2 items-center">
                   <Button
                     small
                     disabled={
@@ -277,6 +280,7 @@ export default function SketchClassReportsAdmin({
                           data.sketchClass.report.createdAt
                         ).toLocaleDateString()}
                   </span>
+                  <FragmentCalculationsRuntimeIndicator />
                 </div>
                 {/* <EditorLanguageSelector /> */}
               </div>
@@ -347,4 +351,22 @@ export function collectReportCardTitle(body: any) {
     }
   }
   return null;
+}
+
+function FragmentCalculationsRuntimeIndicator() {
+  const { fragmentCalculationsRuntime } = useContext(ReportDependenciesContext);
+  const { t } = useTranslation("admin:sketching");
+  const isSuperuser = useIsSuperuser();
+  if (!fragmentCalculationsRuntime) {
+    return null;
+  }
+  if (!isSuperuser) {
+    return null;
+  }
+  return (
+    <span className="flex-1 text-right text-gray-500 text-xs italic">
+      {Math.round((fragmentCalculationsRuntime / 1000) * 10) / 10}{" "}
+      {t("seconds total lambda runtime")}
+    </span>
+  );
 }

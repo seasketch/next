@@ -342,27 +342,6 @@ fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
   progress
 }
 
-subscription GeographyMetricSubscription($projectId: Int!) {
-  geographyMetrics(projectId: $projectId) {
-    metricId
-    geographyId
-    projectId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-
-subscription SketchMetricSubscription($sketchId: Int!) {
-  sketchMetrics(sketchId: $sketchId) {
-    metricId
-    sketchId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-
 mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {
   retryFailedSpatialMetrics(input: { metricIds: $metricIds }) {
     boolean
