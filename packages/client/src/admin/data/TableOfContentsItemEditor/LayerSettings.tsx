@@ -20,6 +20,7 @@ import {
 } from "../../../components/Tooltip";
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
+import Warning from "../../../components/Warning";
 
 export default function LayerSettings({
   item,
@@ -160,6 +161,7 @@ export default function LayerSettings({
           }
           variables={{ id: source?.id }}
         />
+
         {/* TODO: Disabled for now because working it into MapContextManager is tricky */}
         {/* {source && (
       <TranslatedPropControl
@@ -172,6 +174,28 @@ export default function LayerSettings({
       />
     )} */}
       </div>
+      {item.relatedReportCardDetails &&
+        item.relatedReportCardDetails.length > 0 && (
+          <>
+            <Warning level="warning" className="mt-5">
+              <p>
+                <Trans ns="admin:data">
+                  This layer is referenced in analytical reports. Making changes
+                  to the data or cartography may impact report outputs.
+                </Trans>
+              </p>
+              <ul className="mt-1 text-sm text-gray-500 space-y-0.5">
+                {item.relatedReportCardDetails
+                  .filter((detail) => detail?.isDraft)
+                  .map((detail) => (
+                    <li key={detail?.sketchClassId}>
+                      {detail?.sketchClass?.name} - {detail?.title}
+                    </li>
+                  ))}
+              </ul>
+            </Warning>
+          </>
+        )}
       <div className="mt-5">
         {item.acl?.nodeId && (
           <AccessControlListEditor nodeId={item.acl?.nodeId} />
