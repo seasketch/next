@@ -326,7 +326,16 @@ CREATE OR REPLACE FUNCTION public.publish_report(sketch_class_id integer) RETURN
 
 
       -- copy missing report-ready data_upload_outputs, if necessary
-      stable_ids_missing_outputs := (select array_agg(stable_id) from table_of_contents_items where stable_id = any(referenced_stable_ids) and is_draft = false and table_of_contents_items_reporting_output(table_of_contents_items.*) is null);
+      stable_ids_missing_outputs := (
+        select 
+          array_agg(stable_id) 
+        from 
+          table_of_contents_items 
+        where 
+          stable_id = any(referenced_stable_ids) and 
+          is_draft = false and 
+          table_of_contents_items_reporting_output(table_of_contents_items.*) is null
+        );
       if array_length(stable_ids_missing_outputs, 1) > 0 then
         -- We already know these layers reference the same "version" based on the data_source_url checks above, so it's safe to just copy the appropriate data_upload_outputs to the published table of contents item counterparts.
         foreach sid in array stable_ids_missing_outputs loop
@@ -745,7 +754,9 @@ CREATE OR REPLACE FUNCTION public.publish_table_of_contents("projectId" integer)
           is_original,
           size,
           filename,
-          original_filename
+          original_filename,
+          source_processing_job_key,
+          epsg
         ) select 
             copied_source_id,
             project_id,
@@ -756,7 +767,9 @@ CREATE OR REPLACE FUNCTION public.publish_table_of_contents("projectId" integer)
             is_original,
             size,
             filename,
-            original_filename
+            original_filename,
+            source_processing_job_key,
+            epsg
           from 
             data_upload_outputs 
           where 

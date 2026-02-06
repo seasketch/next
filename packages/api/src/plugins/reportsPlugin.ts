@@ -778,7 +778,7 @@ async function getOverlaySourcesForDependencies(
         table_of_contents_items items
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
-        left join lateral table_of_contents_items_reporting_output(items) as reporting_output on true
+        left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
       `,
@@ -788,6 +788,7 @@ async function getOverlaySourcesForDependencies(
       stripUnnecessaryGeostatsFields(row.geostats);
       results[row.stableId] = row;
     }
+    console.log("overlaySourceRows", overlaySourceRows);
     // if any of the source processing job ids are null, throw an error
     for (const stableId of stableIds) {
       const sourceProcessingJobId = results[stableId]?.sourceProcessingJobId;
