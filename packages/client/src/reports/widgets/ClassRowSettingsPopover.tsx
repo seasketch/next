@@ -100,11 +100,16 @@ export const ClassRowSettingsPopover = ({
   onUpdateAllDependencies,
   t,
 }: ClassRowSettingsPopoverProps) => {
+  console.log("ClassRowSettingsPopover", {
+    dependencies,
+    sources,
+  });
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const { allSources: overlaySources } = useOverlaySources();
   // Hack to handle the fact that we sometimes don't have access to the titles of related table of contents items when the user adds a new source (e.g. when it hasn't been preprocessed yet)
-  const [titlesByTableOfContentsItemId, setTitlesByTableOfContentsItemId] =
-    useState<Record<number, string>>({});
+  const [titlesByStableId, setTitlesByStableId] = useState<
+    Record<string, string>
+  >({});
   const { data } = useOverlaysForReportLayerTogglesQuery({
     variables: { slug: getSlug() },
   });
@@ -125,8 +130,8 @@ export const ClassRowSettingsPopover = ({
   const currentSourceIds = useMemo(() => {
     return new Set(
       dependencies
-        .map((d) => d.tableOfContentsItemId)
-        .filter((id): id is number => id !== undefined)
+        .map((d) => d.stableId)
+        .filter((id): id is string => id !== undefined)
     );
   }, [dependencies]);
 
@@ -135,7 +140,7 @@ export const ClassRowSettingsPopover = ({
     const map = new Map<
       string,
       {
-        tableOfContentsItemId?: number;
+        stableId?: string;
         title: string;
         hasReportingOutput: boolean;
       }
@@ -148,8 +153,7 @@ export const ClassRowSettingsPopover = ({
     for (const item of items) {
       if (!item.stableId) continue;
       map.set(item.stableId, {
-        tableOfContentsItemId:
-          typeof item.id === "number" ? item.id : undefined,
+        stableId: typeof item.stableId === "string" ? item.stableId : undefined,
         title: item.title || t("Unknown layer"),
         hasReportingOutput: !!item.reportingOutput,
       });
@@ -159,9 +163,8 @@ export const ClassRowSettingsPopover = ({
       for (const s of overlaySources) {
         const sid = s.tableOfContentsItem?.stableId;
         if (!sid || map.has(sid)) continue;
-        const tocId = s.tableOfContentsItemId;
         map.set(sid, {
-          tableOfContentsItemId: typeof tocId === "number" ? tocId : undefined,
+          stableId: typeof sid === "string" ? sid : undefined,
           title: s.tableOfContentsItem?.title || t("Unknown layer"),
           hasReportingOutput: false,
         });
@@ -171,23 +174,18 @@ export const ClassRowSettingsPopover = ({
     const options: Array<{
       stableId: string;
       title: string;
-      tableOfContentsItemId?: number;
       reporting?: boolean;
     }> = [];
     for (const opt of overlayOptions) {
       const info = map.get(opt.value);
       if (!info) continue;
       // Filter out already-used layers
-      if (
-        info.tableOfContentsItemId &&
-        currentSourceIds.has(info.tableOfContentsItemId)
-      ) {
+      if (info.stableId && currentSourceIds.has(info.stableId)) {
         continue;
       }
       options.push({
         stableId: opt.value,
         title: info.title,
-        tableOfContentsItemId: info.tableOfContentsItemId,
         reporting: info.hasReportingOutput,
       });
     }
@@ -201,17 +199,17 @@ export const ClassRowSettingsPopover = ({
   ]);
 
   const handleAddSource = (layerValue: LayerPickerValue | undefined) => {
-    if (!layerValue?.tableOfContentsItemId) return;
+    if (!layerValue?.stableId) return;
     // Don't add if already in use
-    if (currentSourceIds.has(layerValue.tableOfContentsItemId)) return;
-    if (!layerValue.tableOfContentsItemId) {
+    if (currentSourceIds.has(layerValue.stableId)) return;
+    if (!layerValue.stableId) {
       return;
     }
 
-    if (layerValue.tableOfContentsItemId) {
-      setTitlesByTableOfContentsItemId((prev) => {
+    if (layerValue.stableId) {
+      setTitlesByStableId((prev) => {
         const next = { ...prev };
-        next[layerValue.tableOfContentsItemId!] = layerValue.title;
+        next[layerValue.stableId!] = layerValue.title;
         return next;
       });
     }
@@ -226,14 +224,14 @@ export const ClassRowSettingsPopover = ({
       newDeps.push({
         type: metricType,
         subjectType: "fragments",
-        tableOfContentsItemId: layerValue.tableOfContentsItemId,
+        stableId: layerValue.stableId,
         parameters: params,
       });
       // Add geographies dependency
       newDeps.push({
         type: metricType,
         subjectType: "geographies",
-        tableOfContentsItemId: layerValue.tableOfContentsItemId,
+        stableId: layerValue.stableId,
         parameters: params,
       });
 
@@ -252,9 +250,9 @@ export const ClassRowSettingsPopover = ({
 
       const fragmentDeps = newDeps.filter((d) => d.subjectType === "fragments");
       for (const dep of fragmentDeps) {
-        if (dep.tableOfContentsItemId) {
+        if (dep.stableId) {
           const relatedSource = overlaySources.find(
-            (s) => s.tableOfContentsItemId === dep.tableOfContentsItemId
+            (s) => s.stableId === dep.stableId
           );
           if (relatedSource && dep.parameters?.groupBy) {
             // set layer toggle for each key in the groupBy
@@ -264,24 +262,20 @@ export const ClassRowSettingsPopover = ({
               ]?.values || {}
             );
             for (const value of values) {
-              const rowKey = classTableRowKey(
-                dep.tableOfContentsItemId!,
-                value
-              );
+              const rowKey = classTableRowKey(dep.stableId!, value);
               if (!(rowKey in newSettings.rowLinkedStableIds)) {
-                newSettings.rowLinkedStableIds[rowKey] =
-                  relatedSource.tableOfContentsItem?.stableId;
+                newSettings.rowLinkedStableIds[rowKey] = relatedSource.stableId;
               }
             }
           } else {
             // set layer toggle
             const stableId =
               relatedSource?.tableOfContentsItem?.stableId ||
-              (layerValue.tableOfContentsItemId === dep.tableOfContentsItemId
+              (layerValue.stableId === dep.stableId
                 ? layerValue.stableId
                 : undefined);
             if (stableId) {
-              const rowKey = classTableRowKey(dep.tableOfContentsItemId!, "*");
+              const rowKey = classTableRowKey(dep.stableId!, "*");
               if (!(rowKey in newSettings.rowLinkedStableIds)) {
                 newSettings.rowLinkedStableIds[rowKey] = stableId;
               }
@@ -297,9 +291,9 @@ export const ClassRowSettingsPopover = ({
     });
   };
 
-  const handleRemoveSource = (sourceId: number) => {
+  const handleRemoveSource = (sourceId: string) => {
     onUpdateAllDependencies((currentDeps) => {
-      return currentDeps.filter((d) => d.tableOfContentsItemId !== sourceId);
+      return currentDeps.filter((d) => d.stableId !== sourceId);
     });
   };
 
@@ -323,12 +317,11 @@ export const ClassRowSettingsPopover = ({
       }
     > = {};
     for (const row of rows) {
-      const source = overlaySources.find(
-        (s) => String(s.tableOfContentsItemId) === row.sourceId
-      );
+      const source = overlaySources.find((s) => s.stableId === row.sourceId);
+      console.log("source", source, titlesByStableId);
       const title =
         source?.tableOfContentsItem?.title ||
-        titlesByTableOfContentsItemId[parseInt(row.sourceId)] ||
+        titlesByStableId[row.sourceId] ||
         t("Unknown source") ||
         "";
       if (!groups[row.sourceId]) {
@@ -337,7 +330,7 @@ export const ClassRowSettingsPopover = ({
       groups[row.sourceId].rows.push(row);
     }
     return Object.values(groups).sort((a, b) => a.title.localeCompare(b.title));
-  }, [rows, overlaySources, titlesByTableOfContentsItemId, t]);
+  }, [rows, overlaySources, titlesByStableId, t]);
 
   const excludedSet = useMemo(
     () => new Set(settings.excludedRowKeys || []),
@@ -347,8 +340,8 @@ export const ClassRowSettingsPopover = ({
   const currentGroupByBySource = useMemo(() => {
     const map: Record<string, string | undefined> = {};
     (dependencies || []).forEach((d) => {
-      if (d.tableOfContentsItemId !== undefined) {
-        map[String(d.tableOfContentsItemId)] = d.parameters?.groupBy;
+      if (d.stableId !== undefined) {
+        map[String(d.stableId)] = d.parameters?.groupBy;
       }
     });
     return map;
@@ -396,7 +389,7 @@ export const ClassRowSettingsPopover = ({
           }
         }
       }
-      map[String(source.tableOfContentsItemId)] = options;
+      map[source.stableId] = options;
     }
     return map;
   }, [sources, t]);
@@ -463,25 +456,21 @@ export const ClassRowSettingsPopover = ({
                     {t("Group by")}
                   </span>
                   <GroupByPicker
-                    value={
-                      currentGroupByBySource[
-                        String(group.source?.tableOfContentsItemId)
-                      ]
-                    }
+                    value={currentGroupByBySource[group.source?.stableId!]}
                     options={
-                      groupByOptionsBySource[
-                        String(group.source?.tableOfContentsItemId)
-                      ] || [{ value: "__none__", label: t("None") }]
+                      groupByOptionsBySource[group.source?.stableId!] || [
+                        { value: "__none__", label: t("None") },
+                      ]
                     }
                     placeholder={t("None")}
                     onChange={(groupByValue) => {
-                      const targetId = group.source?.tableOfContentsItemId;
+                      const targetId = group.source?.stableId;
                       if (!targetId) return;
                       onUpdateDependencyParameters((dependency) => {
                         const nextParams = {
                           ...(dependency.parameters || {}),
                         };
-                        if (dependency.tableOfContentsItemId === targetId) {
+                        if (dependency.stableId === targetId) {
                           nextParams.groupBy = groupByValue;
                         }
                         return nextParams;
@@ -489,46 +478,41 @@ export const ClassRowSettingsPopover = ({
                     }}
                   />
                 </div>
-                {groupedRows.length > 1 &&
-                  group.source?.tableOfContentsItemId && (
-                    <Tooltip.Provider delayDuration={100}>
-                      <Tooltip.Root>
-                        <Tooltip.Trigger asChild>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleRemoveSource(
-                                group.source!.tableOfContentsItemId!
-                              )
-                            }
-                            className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        </Tooltip.Trigger>
-                        <Tooltip.Portal>
-                          <Tooltip.Content
-                            side="top"
-                            align="center"
-                            sideOffset={6}
-                            className="bg-gray-900 text-white text-[11px] px-2 py-1 rounded shadow-lg z-[60]"
-                          >
-                            {t("Remove source")}
-                            <Tooltip.Arrow className="fill-gray-900" />
-                          </Tooltip.Content>
-                        </Tooltip.Portal>
-                      </Tooltip.Root>
-                    </Tooltip.Provider>
-                  )}
+                {groupedRows.length > 1 && group.source?.stableId && (
+                  <Tooltip.Provider delayDuration={100}>
+                    <Tooltip.Root>
+                      <Tooltip.Trigger asChild>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleRemoveSource(group.source!.stableId!)
+                          }
+                          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
+                        >
+                          <TrashIcon className="w-4 h-4" />
+                        </button>
+                      </Tooltip.Trigger>
+                      <Tooltip.Portal>
+                        <Tooltip.Content
+                          side="top"
+                          align="center"
+                          sideOffset={6}
+                          className="bg-gray-900 text-white text-[11px] px-2 py-1 rounded shadow-lg z-[60]"
+                        >
+                          {t("Remove source")}
+                          <Tooltip.Arrow className="fill-gray-900" />
+                        </Tooltip.Content>
+                      </Tooltip.Portal>
+                    </Tooltip.Root>
+                  </Tooltip.Provider>
+                )}
               </div>
 
               {group.rows.map((row) => {
                 const checked = !excludedSet.has(row.key);
                 const linkedStableId = settings.rowLinkedStableIds?.[row.key];
                 const customLabel = settings.customRowLabels?.[row.key] || "";
-                const tableOfContentsItemId = row.sourceId
-                  ? parseInt(row.sourceId)
-                  : undefined;
+                const stableId = row.sourceId ? row.sourceId : undefined;
                 return (
                   <div
                     key={row.key}
@@ -578,11 +562,7 @@ export const ClassRowSettingsPopover = ({
                       }}
                     />
                     <LayerPickerDropdown
-                      suggested={
-                        tableOfContentsItemId
-                          ? [tableOfContentsItemId]
-                          : undefined
-                      }
+                      suggested={stableId ? [stableId] : undefined}
                       value={linkedStableId}
                       onChange={(layerValue) => {
                         const next = { ...(settings.rowLinkedStableIds || {}) };

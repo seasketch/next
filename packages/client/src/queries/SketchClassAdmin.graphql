@@ -643,6 +643,7 @@ mutation RecalculateSpatialMetrics(
 
 fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
+  stableId
   tableOfContentsItem {
     title
     stableId

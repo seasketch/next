@@ -100,13 +100,13 @@ export function getClassTableRows(options: {
   // console.log("getClassTableRows", options);
   const rows = [] as ClassTableRow[];
   const fragmentDependencies = options.dependencies.filter(
-    (d) => d.subjectType === "fragments" && Boolean(d.tableOfContentsItemId)
+    (d) => d.subjectType === "fragments" && Boolean(d.stableId)
   );
   const multiSource =
     fragmentDependencies.length > 1 && options.sources.length > 1;
   for (const dependency of fragmentDependencies) {
     const source = options.sources.find(
-      (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
+      (s) => s.stableId === dependency.stableId
     );
     const layer = source?.geostats?.layers?.[0] as GeostatsLayer | undefined;
     if (!source || !layer) {
@@ -114,20 +114,20 @@ export function getClassTableRows(options: {
         [1, 2, 3].forEach((i) => {
           rows.push({
             // eslint-disable-next-line i18next/no-literal-string
-            key: `${dependency.tableOfContentsItemId}-placeholder-${i}`,
+            key: `${dependency.stableId}-placeholder-${i}`,
             label: `-`,
             // eslint-disable-next-line i18next/no-literal-string
-            groupByKey: `${dependency.tableOfContentsItemId}-placeholder-${i}`,
-            sourceId: dependency.tableOfContentsItemId!.toString(),
+            groupByKey: `${dependency.stableId}-placeholder-${i}`,
+            sourceId: dependency.stableId!.toString(),
           });
         });
       } else {
-        const key = classTableRowKey(dependency.tableOfContentsItemId!, "*");
+        const key = classTableRowKey(dependency.stableId!, "*");
         rows.push({
           key,
           label: options.customLabels?.[key] || options.allFeaturesLabel,
           groupByKey: "*",
-          sourceId: dependency.tableOfContentsItemId!.toString(),
+          sourceId: dependency.stableId!.toString(),
           stableId: options.stableIds?.[key],
         });
       }
@@ -148,10 +148,7 @@ export function getClassTableRows(options: {
           source.mapboxGlStyles as AnyLayer[]
         );
         for (const value of values) {
-          const key = classTableRowKey(
-            dependency.tableOfContentsItemId!,
-            value
-          );
+          const key = classTableRowKey(dependency.stableId!, value);
           let color: string | undefined =
             colors[value] ||
             extractColorForLayers(source.mapboxGlStyles as AnyLayer[]);
@@ -162,13 +159,13 @@ export function getClassTableRows(options: {
             key,
             label: options.customLabels?.[key] || value,
             groupByKey: value,
-            sourceId: dependency.tableOfContentsItemId!.toString(),
+            sourceId: dependency.stableId!.toString(),
             stableId: options.stableIds?.[key],
             color,
           });
         }
       } else {
-        const key = classTableRowKey(dependency.tableOfContentsItemId!, "*");
+        const key = classTableRowKey(dependency.stableId!, "*");
         let color: string | undefined = extractColorForLayers(
           source.mapboxGlStyles as AnyLayer[]
         );
@@ -183,7 +180,7 @@ export function getClassTableRows(options: {
               ? source.tableOfContentsItem?.title || options.allFeaturesLabel
               : options.allFeaturesLabel),
           groupByKey: "*",
-          sourceId: dependency.tableOfContentsItemId!.toString(),
+          sourceId: dependency.stableId!.toString(),
           stableId: options.stableIds?.[key],
           color,
         });
@@ -197,11 +194,8 @@ export function getClassTableRows(options: {
   return rows.filter((r) => !options.excludedRowKeys?.includes(r.key));
 }
 
-export function classTableRowKey(
-  tableOfContentsItemId: number,
-  groupByKey?: string
-) {
-  return `${tableOfContentsItemId}-${groupByKey || "*"}`;
+export function classTableRowKey(stableId: string, groupByKey?: string) {
+  return `${stableId}-${groupByKey || "*"}`;
 }
 
 export function combineMetricsBySource<T extends Metric>(
@@ -227,17 +221,15 @@ export function combineMetricsBySource<T extends Metric>(
     if (metric.sourceUrl) {
       const source = sources.find((s) => s.sourceUrl === metric.sourceUrl);
       if (source) {
-        sourceIds.add(source.tableOfContentsItemId.toString());
+        sourceIds.add(source.stableId);
       }
     }
   }
   // then for each sourceId, combine the metrics
   for (const sourceId of sourceIds) {
-    const source = sources.find(
-      (s) => s.tableOfContentsItemId.toString() === sourceId
-    );
+    const source = sources.find((s) => s.stableId === sourceId);
     if (source) {
-      result[sourceId] = {
+      result[source.stableId] = {
         fragments: combineMetricsForFragments(
           metrics.filter(
             (m) =>

@@ -963,7 +963,7 @@ type CancelBackgroundJobPayload {
 type CardDependencyLists {
   cardId: Int!
   metrics: [BigInt!]!
-  overlaySources: [Int!]!
+  overlaySources: [String!]!
 }
 
 """All input for the `clearFormElementStyle` mutation."""
@@ -10989,8 +10989,8 @@ input NodeDependency {
   geographies: [Int!]
   hash: String!
   parameters: JSON
+  stableId: String
   subjectType: String!
-  tableOfContentsItemId: Int
   type: String!
 }
 
@@ -13278,6 +13278,7 @@ type Query implements Node {
   ): EmailNotificationPreferencesConnection
   extensionToSourceType(url: String): String
   extractSpriteIds(t: String): [Int]
+  extractStableIdsFromBody(body: JSON): [String]
   extractTableOfContentsItemIdsFromBody(body: JSON): [Int]
   fileUpload(id: UUID!): FileUpload
 
@@ -13467,7 +13468,7 @@ type Query implements Node {
   getDefaultDataSourcesBucket: String
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
-  getReferencedTableOfContentsItemsForReport(_reportId: Int): [Int]
+  getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
 
@@ -14557,6 +14558,7 @@ type ReportOverlaySource {
   sourceProcessingJob: SourceProcessingJob
   sourceProcessingJobId: String
   sourceUrl: String
+  stableId: String!
   tableOfContentsItem: TableOfContentsItem!
   tableOfContentsItemId: Int!
 }

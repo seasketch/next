@@ -290,16 +290,19 @@ function combineStringOrBooleanColumnValueStats(statsArray) {
  * report card widget.
  *
  * @param dependency The dependency to hash
- * @param overlaySourceUrls A map of table of contents item ids to overlay source urls. If provided, the hash will be based on the overlay source url, rather than the tableOfContentsItemId. This way, metrics can be reused across draft and published table of contents items.
+ * @param overlaySourceUrls A map of table of contents item stable ids to overlay source urls. The hash will be based on the overlay source url, rather than the stable id. This way, updates to the underlying source will trigger a cache miss and trigger recalculation of the metric.
  * @returns A unique id for the dependency
  */
 function hashMetricDependency(dependency, overlaySourceUrls) {
-    if (dependency.tableOfContentsItemId &&
-        overlaySourceUrls[dependency.tableOfContentsItemId]) {
+    if (dependency.stableId && overlaySourceUrls[dependency.stableId]) {
+        if (!overlaySourceUrls[dependency.stableId]) {
+            console.log("overlaySourceUrls", overlaySourceUrls);
+            console.log("dependency", dependency);
+            throw new Error(`Hashing Error. Overlay source URL not found for stable id: ${dependency.stableId}`);
+        }
         dependency = {
             ...dependency,
-            // @ts-ignore
-            tableOfContentsItemId: overlaySourceUrls[dependency.tableOfContentsItemId],
+            stableId: overlaySourceUrls[dependency.stableId],
         };
     }
     const canonical = stableSerialize(dependency);

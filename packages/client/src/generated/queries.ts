@@ -832,7 +832,7 @@ export type CardDependencyLists = {
   __typename?: 'CardDependencyLists';
   cardId: Scalars['Int'];
   metrics: Array<Scalars['BigInt']>;
-  overlaySources: Array<Scalars['Int']>;
+  overlaySources: Array<Scalars['String']>;
 };
 
 /** All input for the `clearFormElementStyle` mutation. */
@@ -9918,8 +9918,8 @@ export type NodeDependency = {
   geographies?: Maybe<Array<Scalars['Int']>>;
   hash: Scalars['String'];
   parameters?: Maybe<Scalars['JSON']>;
+  stableId?: Maybe<Scalars['String']>;
   subjectType: Scalars['String'];
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
   type: Scalars['String'];
 };
 
@@ -11785,6 +11785,7 @@ export type Query = Node & {
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extensionToSourceType?: Maybe<Scalars['String']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  extractStableIdsFromBody?: Maybe<Array<Maybe<Scalars['String']>>>;
   extractTableOfContentsItemIdsFromBody?: Maybe<Array<Maybe<Scalars['Int']>>>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
@@ -11831,7 +11832,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
-  getReferencedTableOfContentsItemsForReport?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
@@ -12275,6 +12276,12 @@ export type QueryExtractSpriteIdsArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryExtractStableIdsFromBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryExtractTableOfContentsItemIdsFromBodyArgs = {
   body?: Maybe<Scalars['JSON']>;
 };
@@ -12483,7 +12490,7 @@ export type QueryGetFirstBandScaleArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
-export type QueryGetReferencedTableOfContentsItemsForReportArgs = {
+export type QueryGetReferencedStableIdsForReportArgs = {
   _reportId?: Maybe<Scalars['Int']>;
 };
 
@@ -13492,6 +13499,7 @@ export type ReportOverlaySource = {
   sourceProcessingJob?: Maybe<SourceProcessingJob>;
   sourceProcessingJobId?: Maybe<Scalars['String']>;
   sourceUrl?: Maybe<Scalars['String']>;
+  stableId: Scalars['String'];
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
 };
@@ -22831,7 +22839,7 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -26482,6 +26490,7 @@ export const SourceProcessingJobDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
+  stableId
   tableOfContentsItem {
     title
     stableId

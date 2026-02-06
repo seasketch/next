@@ -18,9 +18,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
       const overlaySources = list.overlaySources
         .map(
           (overlay) =>
-            context.overlaySources.find(
-              (s) => s.tableOfContentsItemId === overlay
-            )!
+            context.overlaySources.find((s) => s.stableId === overlay)!
         )
         .filter((s) => s !== undefined);
 

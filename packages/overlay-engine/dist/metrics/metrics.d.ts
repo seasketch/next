@@ -176,7 +176,7 @@ export type MetricDependencySubjectType = "fragments" | "geographies";
 export type MetricDependency = {
     type: MetricType;
     subjectType: MetricDependencySubjectType;
-    tableOfContentsItemId?: number;
+    stableId?: string;
     parameters?: MetricDependencyParameters;
 };
 export type MetricDependencyParameters = {
@@ -197,11 +197,11 @@ export type MetricDependencyParameters = {
  * report card widget.
  *
  * @param dependency The dependency to hash
- * @param overlaySourceUrls A map of table of contents item ids to overlay source urls. If provided, the hash will be based on the overlay source url, rather than the tableOfContentsItemId. This way, metrics can be reused across draft and published table of contents items.
+ * @param overlaySourceUrls A map of table of contents item stable ids to overlay source urls. The hash will be based on the overlay source url, rather than the stable id. This way, updates to the underlying source will trigger a cache miss and trigger recalculation of the metric.
  * @returns A unique id for the dependency
  */
 export declare function hashMetricDependency(dependency: MetricDependency, overlaySourceUrls: {
-    [tableOfContentsItemId: number]: string;
+    [stableId: string]: string;
 }): string;
 export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
 /**

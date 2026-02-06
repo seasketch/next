@@ -21,7 +21,8 @@ export type LayerPickerDropdownProps = {
   popoverSideOffset?: number;
   children: ReactNode;
   optionsOverride?: LayerPickerOption[];
-  suggested?: number[];
+  /** And array of stableIds to suggest */
+  suggested?: string[];
   title?: string;
   description?: string;
 };
@@ -390,15 +391,15 @@ export function LayerPickerDropdown({
   const suggestedLayers = useMemo(() => {
     if (!suggested || !suggested.length) return [];
     const allOptions = [...reportingLayers, ...allLayers];
-    const byTocId = new Map<number, LayerPickerOption>();
+    const byStableId = new Map<string, LayerPickerOption>();
     for (const opt of allOptions) {
       if (typeof opt.tableOfContentsItemId === "number") {
-        byTocId.set(opt.tableOfContentsItemId, opt);
+        byStableId.set(opt.stableId, opt);
       }
     }
     const found: LayerPickerOption[] = [];
     for (const id of suggested) {
-      const match = byTocId.get(id);
+      const match = byStableId.get(id);
       if (match) found.push(match);
     }
     return found;

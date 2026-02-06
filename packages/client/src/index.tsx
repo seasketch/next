@@ -240,7 +240,7 @@ function ApolloProviderWithToken(props: any) {
             keyFields: ["jobKey"],
           },
           ReportOverlaySource: {
-            keyFields: ["tableOfContentsItemId"],
+            keyFields: ["stableId"],
           },
         },
       });

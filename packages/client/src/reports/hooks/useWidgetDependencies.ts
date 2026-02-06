@@ -104,14 +104,14 @@ export function useWidgetDependencies(
       ...cardSources,
       ...draftReportContext.draftOverlaySources,
     ];
-    // Dedupe by tableOfContentsItemId
-    const sourceIds = new Set<number>();
+    // Dedupe by stableId
+    const sourceIds = new Set<string>();
     return combined.filter((s) => {
-      if (s.tableOfContentsItemId && sourceIds.has(s.tableOfContentsItemId)) {
+      if (s.stableId && sourceIds.has(s.stableId)) {
         return false;
       }
-      if (s.tableOfContentsItemId) {
-        sourceIds.add(s.tableOfContentsItemId);
+      if (s.stableId) {
+        sourceIds.add(s.stableId);
       }
       return true;
     });
@@ -120,11 +120,11 @@ export function useWidgetDependencies(
   // Compute source URL map for filtering metrics
   const sourceUrlMap = useMemo(() => {
     return allSources.reduce((acc, s) => {
-      if (s.tableOfContentsItemId && s.sourceUrl) {
-        acc[s.tableOfContentsItemId] = s.sourceUrl;
+      if (s.stableId && s.sourceUrl) {
+        acc[s.stableId] = s.sourceUrl;
       }
       return acc;
-    }, {} as Record<number, string>);
+    }, {} as Record<string, string>);
   }, [allSources]);
 
   // Combine card metrics with draft metrics
@@ -160,8 +160,7 @@ export function useWidgetDependencies(
     // Filter sources for this widget's dependencies
     const filteredSources = allSources.filter((s) =>
       (dependencies || []).some(
-        (d: MetricDependency) =>
-          d.tableOfContentsItemId === s.tableOfContentsItemId
+        (d: MetricDependency) => d.stableId === s.stableId
       )
     );
 

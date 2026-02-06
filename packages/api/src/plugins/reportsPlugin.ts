@@ -49,6 +49,7 @@ const reportOverlaySourceTopicFromContext = async (args: any, context: any) => {
 
 type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
+  stableId: string;
   geostats: GeostatsLayer | RasterInfo;
   mapboxGlStyles: AnyLayer[];
   sourceProcessingJobId?: string;
@@ -119,6 +120,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
 
       type ReportOverlaySource {
         tableOfContentsItemId: Int!
+        stableId: String!
         tableOfContentsItem: TableOfContentsItem!
         geostats: JSON!
         mapboxGlStyles: JSON!
@@ -156,7 +158,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         type: String!
         # "fragments" or "geographies"
         subjectType: String!
-        tableOfContentsItemId: Int
+        stableId: String
         geographies: [Int!]
         parameters: JSON
         hash: String!
@@ -165,7 +167,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       type CardDependencyLists {
         cardId: Int!
         metrics: [BigInt!]!
-        overlaySources: [Int!]!
+        # References the stable id of the related layer (table of contents item)
+        overlaySources: [String!]!
       }
 
       type ReportOverlayDependencies {
@@ -208,14 +211,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             `
             select
               items.id as table_of_contents_item_id,
+              items.stable_id as stable_id,
               s.geostats as geostats,
               l.mapbox_gl_styles as mapbox_gl_styles,
               o.id as output_id,
-              o.url as source_url
+              o.url as source_url,
+              jobs.job_key as source_processing_job_id
             from
               data_sources s
             inner join data_layers l on l.data_source_id = s.id
             inner join table_of_contents_items items on items.data_layer_id = l.id
+            inner join source_processing_jobs jobs on jobs.data_source_id = s.id
             left join lateral (
               select
                 o.id,
@@ -241,6 +247,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           }
           return result.rows.map((row: any) => ({
             __typename: "ReportOverlaySource",
+            stableId: row.stable_id,
             tableOfContentsItemId: row.table_of_contents_item_id,
             geostats: row.geostats,
             mapboxGlStyles: row.mapbox_gl_styles,
@@ -254,14 +261,12 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         async dependencies(report, args, context, resolveInfo) {
           const { pgClient } = context;
 
-          console.time("getOrCreateReportDependencies");
           const deps = await getOrCreateReportDependencies(
             report.id,
             pgClient,
             report.projectId,
             args.sketchId,
           );
-          console.timeEnd("getOrCreateReportDependencies");
           return deps;
         },
       },
@@ -370,6 +375,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             `
             select
               items.id as table_of_contents_item_id,
+              items.stable_id as stable_id,
               s.geostats as geostats,
               l.mapbox_gl_styles as mapbox_gl_styles,
               o.id as output_id,
@@ -394,6 +400,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           return {
             __typename: "ReportOverlaySource",
             tableOfContentsItemId: result.rows[0].table_of_contents_item_id,
+            stableId: result.rows[0].stable_id,
             geostats: result.rows[0].geostats,
             mapboxGlStyles: result.rows[0].mapbox_gl_styles,
             sourceProcessingJobId: jobKey,
@@ -452,24 +459,16 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("No geographies found");
           }
 
-          const { tableOfContentsItemIds, metrics, hashes } =
+          const { metrics, overlaySources } =
             await createMetricsForDependencies(
               pgClient,
               args.input.nodeDependencies,
+              true,
               projectId,
               fragments,
               geogs,
             );
 
-          const relatedTableOfContentsItemIds = new Set<number>(
-            tableOfContentsItemIds,
-          );
-
-          const overlaySources = await getOverlaySourcesForDependencies(
-            pool,
-            Array.from(relatedTableOfContentsItemIds),
-            projectId,
-          );
           return {
             overlaySources: Object.values(overlaySources),
             metrics,
@@ -488,10 +487,10 @@ async function getOrCreateReportDependencies(
   projectId: number,
   sketchId?: number,
 ) {
+  const isDraft = await isDraftReport(reportId, projectId, pool);
   // Retrieve all overlay sources related to the report
   // const overlaySources = await getOverlaySources(reportId, pool);
 
-  const relatedTableOfContentsItemIds = new Set<number>();
   const results = {
     overlaySources: [] as ReportOverlaySourcePartial[],
     ready: true,
@@ -499,7 +498,7 @@ async function getOrCreateReportDependencies(
     cardDependencyLists: [] as {
       cardId: number;
       metrics: number[];
-      overlaySources: number[];
+      overlaySources: string[];
     }[],
   };
 
@@ -516,6 +515,10 @@ async function getOrCreateReportDependencies(
   if (geogs.length === 0) {
     throw new Error("No geographies found");
   }
+
+  const allOverlaySources = {} as {
+    [stableId: string]: ReportOverlaySourcePartial;
+  };
 
   const cards = await pool.query(
     `
@@ -536,30 +539,27 @@ async function getOrCreateReportDependencies(
     const cardDependencyList = {
       cardId: card.id,
       metrics: [] as number[],
-      overlaySources: [] as number[],
+      overlaySources: [] as string[],
     };
     const dependencies = extractMetricDependenciesFromReportBody(card.body);
 
-    const { tableOfContentsItemIds, metrics, hashes } =
-      await createMetricsForDependencies(
-        pool,
-        dependencies,
-        projectId,
-        fragments,
-        geogs,
-      );
+    const { metrics, overlaySources } = await createMetricsForDependencies(
+      pool,
+      dependencies,
+      isDraft,
+      projectId,
+      fragments,
+      geogs,
+    );
 
-    const cardOverlaySources = new Set<number>();
+    const cardOverlaySources = new Set<string>();
     for (const dep of dependencies) {
-      if (dep.tableOfContentsItemId) {
-        relatedTableOfContentsItemIds.add(dep.tableOfContentsItemId);
-        cardOverlaySources.add(dep.tableOfContentsItemId);
+      if (dep.stableId) {
+        cardOverlaySources.add(dep.stableId);
       }
     }
-    // for (const tableOfContentsItemId of tableOfContentsItemIds) {
-    //   relatedTableOfContentsItemIds.add(tableOfContentsItemId);
-    // }
     cardDependencyList.overlaySources = Array.from(cardOverlaySources);
+
     for (const metric of metrics) {
       cardDependencyList.metrics.push(metric.id);
       if (!results.metrics.find((m) => m.id === metric.id)) {
@@ -568,27 +568,12 @@ async function getOrCreateReportDependencies(
     }
 
     results.cardDependencyLists.push(cardDependencyList);
+    for (const stableId in overlaySources) {
+      allOverlaySources[stableId] = overlaySources[stableId];
+    }
   }
 
-  const overlaySources = await getOverlaySourcesForDependencies(
-    pool,
-    Array.from(relatedTableOfContentsItemIds),
-    projectId,
-  );
-
-  for (const tableOfContentsItemIdString in overlaySources) {
-    const tableOfContentsItemId = Number(tableOfContentsItemIdString);
-    results.overlaySources.push({
-      tableOfContentsItemId: tableOfContentsItemId,
-      geostats: overlaySources[tableOfContentsItemIdString].geostats,
-      mapboxGlStyles:
-        overlaySources[tableOfContentsItemIdString].mapboxGlStyles,
-      sourceProcessingJobId:
-        overlaySources[tableOfContentsItemIdString].sourceProcessingJobId,
-      outputId: overlaySources[tableOfContentsItemIdString].outputId,
-      sourceUrl: overlaySources[tableOfContentsItemIdString].sourceUrl,
-    });
-  }
+  results.overlaySources = Object.values(allOverlaySources);
 
   // add all metrics to the results
   return results;
@@ -768,76 +753,48 @@ type ProsemirrorNode = {
 
 async function getOverlaySourcesForDependencies(
   pool: Pool | PoolClient,
-  tableOfContentsItemIds: number[],
+  stableIds: string[],
+  isDraft: boolean,
   projectId: number,
 ): Promise<{
-  [tableOfContentsItemId: number]: {
-    sourceUrl?: string;
-    sourceProcessingJobId?: string;
-    tableOfContentsItemId: number;
-    geostats: any;
-    mapboxGlStyles: any;
-    outputId?: number;
-  };
+  [stableId: string]: ReportOverlaySourcePartial;
 }> {
   const results: {
-    [tableOfContentsItemId: number]: {
-      sourceUrl?: string;
-      sourceProcessingJobId?: string;
-      tableOfContentsItemId: number;
-      geostats: any;
-      mapboxGlStyles: any;
-      outputId?: number;
-    };
+    [stableId: string]: ReportOverlaySourcePartial;
   } = {};
-  if (tableOfContentsItemIds.length > 0) {
-    const { rows: overlaySourceRows } = await pool.query<{
-      table_of_contents_item_id: number;
-      source_url: string;
-      job_key: string;
-      geostats: any;
-      mapbox_gl_styles: any;
-      output_id?: number;
-    }>(
-      `
+  if (stableIds.length > 0) {
+    const { rows: overlaySourceRows } =
+      await pool.query<ReportOverlaySourcePartial>(
+        `
       select
-        items.id as table_of_contents_item_id,
-        reporting_output.url as source_url,
-        reporting_output.source_processing_job_key as job_key,
-        reporting_output.id as output_id,
-        sources.geostats as geostats,
-        layers.mapbox_gl_styles as mapbox_gl_styles
+        items.id as "tableOfContentsItemId",
+        items.stable_id as "stableId",
+        reporting_output.url as "sourceUrl",
+        reporting_output.source_processing_job_key as "sourceProcessingJobId",
+        reporting_output.id as "outputId",
+        sources.geostats as "geostats",
+        layers.mapbox_gl_styles as "mapboxGlStyles"
       from
         table_of_contents_items items
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
         left join lateral table_of_contents_items_reporting_output(items) as reporting_output on true
       where
-        items.id = ANY($1::int[])
+        items.stable_id = ANY($1::text[]) and items.is_draft = $2
       `,
-      [tableOfContentsItemIds],
-    );
+        [stableIds, isDraft],
+      );
     for (const row of overlaySourceRows) {
       stripUnnecessaryGeostatsFields(row.geostats);
-      results[row.table_of_contents_item_id] = {
-        sourceUrl: row.source_url,
-        sourceProcessingJobId: row.job_key,
-        tableOfContentsItemId: row.table_of_contents_item_id,
-        geostats: row.geostats,
-        mapboxGlStyles: row.mapbox_gl_styles,
-        outputId: row.output_id,
-      };
+      results[row.stableId] = row;
     }
     // if any of the source processing job ids are null, throw an error
-    for (const tableOfContentsItemId of tableOfContentsItemIds) {
-      const sourceProcessingJobId =
-        results[tableOfContentsItemId]?.sourceProcessingJobId;
-      if (
-        !sourceProcessingJobId &&
-        !results[tableOfContentsItemId]?.sourceUrl
-      ) {
+    for (const stableId of stableIds) {
+      const sourceProcessingJobId = results[stableId]?.sourceProcessingJobId;
+      if (!sourceProcessingJobId && !results[stableId]?.sourceUrl) {
+        console.log("results", results);
         throw new Error(
-          `Source processing job not found for table of contents item: ${tableOfContentsItemId}`,
+          `Source processing job not found for stable id: ${stableId}. isDraft: ${isDraft}`,
         );
       }
     }
@@ -848,6 +805,7 @@ async function getOverlaySourcesForDependencies(
 async function createMetricsForDependencies(
   pool: Pool | PoolClient,
   dependencies: MetricDependency[],
+  isDraft: boolean,
   projectId: number,
   fragments: string[],
   geogs: { id: number }[],
@@ -865,26 +823,30 @@ async function createMetricsForDependencies(
     dependencyHash: string;
   }> = [];
 
-  const overlaySourceIds = Array.from(
-    new Set(
-      dependencies
-        .filter((d) => d.tableOfContentsItemId)
-        .map((d) => d.tableOfContentsItemId!),
-    ),
+  const overlaySourceStableIds = Array.from(
+    new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
   );
 
   const overlaySources = await getOverlaySourcesForDependencies(
     pool,
-    overlaySourceIds,
+    overlaySourceStableIds,
+    isDraft,
     projectId,
   );
 
-  const tableOfContentsItemIds = Object.keys(overlaySources).map(Number);
-  const overlaySourceUrls = {} as { [tableOfContentsItemId: number]: string };
-  for (const tableOfContentsItemId of tableOfContentsItemIds) {
-    if (overlaySources[tableOfContentsItemId]?.sourceUrl) {
-      overlaySourceUrls[tableOfContentsItemId] =
-        overlaySources[tableOfContentsItemId].sourceUrl;
+  // const tableOfContentsItemIds = Object.keys(overlaySources).map(Number);
+  // const overlaySourceUrls = {} as { [tableOfContentsItemId: number]: string };
+  // for (const tableOfContentsItemId of tableOfContentsItemIds) {
+  //   if (overlaySources[tableOfContentsItemId]?.sourceUrl) {
+  //     overlaySourceUrls[tableOfContentsItemId] =
+  //       overlaySources[tableOfContentsItemId].sourceUrl;
+  //   }
+  // }
+
+  const overlaySourceUrls = {} as { [stableId: string]: string };
+  for (const stableId in overlaySources) {
+    if (overlaySources[stableId]?.sourceUrl) {
+      overlaySourceUrls[stableId] = overlaySources[stableId].sourceUrl;
     }
   }
 
@@ -903,12 +865,11 @@ async function createMetricsForDependencies(
           parameters: dependency.parameters || {},
           projectId,
           dependencyHash,
-          overlaySourceUrl: dependency.tableOfContentsItemId
-            ? overlaySources[dependency.tableOfContentsItemId]?.sourceUrl
+          overlaySourceUrl: dependency.stableId
+            ? overlaySources[dependency.stableId]?.sourceUrl
             : undefined,
-          sourceProcessingJobDependency: dependency.tableOfContentsItemId
-            ? overlaySources[dependency.tableOfContentsItemId]
-                ?.sourceProcessingJobId
+          sourceProcessingJobDependency: dependency.stableId
+            ? overlaySources[dependency.stableId]?.sourceProcessingJobId
             : undefined,
         });
       }
@@ -921,12 +882,11 @@ async function createMetricsForDependencies(
           parameters: dependency.parameters || {},
           projectId,
           dependencyHash,
-          overlaySourceUrl: dependency.tableOfContentsItemId
-            ? overlaySources[dependency.tableOfContentsItemId]?.sourceUrl
+          overlaySourceUrl: dependency.stableId
+            ? overlaySources[dependency.stableId]?.sourceUrl
             : undefined,
-          sourceProcessingJobDependency: dependency.tableOfContentsItemId
-            ? overlaySources[dependency.tableOfContentsItemId]
-                ?.sourceProcessingJobId
+          sourceProcessingJobDependency: dependency.stableId
+            ? overlaySources[dependency.stableId]?.sourceProcessingJobId
             : undefined,
         });
       }
@@ -941,7 +901,7 @@ async function createMetricsForDependencies(
     );
     metrics.push(...batchMetrics);
   }
-  return { tableOfContentsItemIds, metrics, hashes };
+  return { metrics, hashes, overlaySources };
 }
 
 function stripUnnecessaryGeostatsFields(geostats: any) {
@@ -1005,4 +965,22 @@ async function getFragmentHashesForSketch(
     }
   }
   return fragments;
+}
+
+async function isDraftReport(
+  reportId: number,
+  projectId: number,
+  pool: Pool | PoolClient,
+) {
+  const { rows: reportRows } = await pool.query(
+    `
+      SELECT EXISTS(
+        SELECT 1 FROM sketch_classes 
+        WHERE draft_report_id = $1
+        and project_id = $2
+      ) as is_draft
+    `,
+    [reportId, projectId],
+  );
+  return reportRows[0].is_draft;
 }

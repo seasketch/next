@@ -833,6 +833,8 @@ export function buildReportCommandGroups({
         const title =
           source.tableOfContentsItem?.title || "Layer Overlay Analysis";
         const tocId = source.tableOfContentsItemId!;
+        const sourceUrl = source.sourceUrl;
+        const stableId = source.tableOfContentsItem?.stableId;
         let children: CommandPaletteItem[] = [];
         if ("bands" in source.geostats && source.geostats.bands.length === 1) {
           const band = source.geostats.bands[0] as RasterBandInfo;
@@ -850,7 +852,7 @@ export function buildReportCommandGroups({
                   {
                     type: "raster_stats",
                     subjectType: "fragments",
-                    tableOfContentsItemId: tocId,
+                    stableId,
                   },
                 ],
                 componentSettings: {
@@ -873,7 +875,7 @@ export function buildReportCommandGroups({
                   {
                     type: "raster_stats",
                     subjectType: "fragments",
-                    tableOfContentsItemId: tocId,
+                    stableId,
                   },
                 ],
                 componentSettings: {
@@ -900,7 +902,7 @@ export function buildReportCommandGroups({
                   {
                     type: "raster_stats",
                     subjectType: "fragments",
-                    tableOfContentsItemId: tocId,
+                    stableId,
                   },
                 ],
                 componentSettings: {
@@ -956,7 +958,7 @@ export function buildReportCommandGroups({
                     {
                       type: "count",
                       subjectType: "fragments",
-                      tableOfContentsItemId: tocId,
+                      stableId,
                       parameters: {},
                     },
                   ],
@@ -977,7 +979,7 @@ export function buildReportCommandGroups({
                     {
                       type: "count",
                       subjectType: "fragments",
-                      tableOfContentsItemId: tocId,
+                      stableId,
                       parameters: {
                         groupBy: groupByColumn,
                       },
@@ -985,7 +987,7 @@ export function buildReportCommandGroups({
                     {
                       type: "count",
                       subjectType: "geographies",
-                      tableOfContentsItemId: tocId,
+                      stableId,
                       parameters: {
                         groupBy: groupByColumn,
                       },
@@ -1008,7 +1010,7 @@ export function buildReportCommandGroups({
                     {
                       type: "count",
                       subjectType: "fragments",
-                      tableOfContentsItemId: tocId,
+                      stableId,
                       parameters: {
                         groupBy: groupByColumn,
                       },
@@ -1032,7 +1034,7 @@ export function buildReportCommandGroups({
                     {
                       type: "presence_table",
                       subjectType: "fragments",
-                      tableOfContentsItemId: tocId,
+                      stableId,
                       parameters: {
                         maxResults: 25,
                       },
@@ -1058,7 +1060,7 @@ export function buildReportCommandGroups({
                       {
                         type: "column_values",
                         subjectType: "fragments",
-                        tableOfContentsItemId: tocId,
+                        stableId,
                       },
                     ],
                     componentSettings: {
@@ -1086,7 +1088,7 @@ export function buildReportCommandGroups({
                     {
                       type: "column_values",
                       subjectType: "fragments",
-                      tableOfContentsItemId: tocId,
+                      stableId,
                     },
                   ],
                   componentSettings: {
@@ -1121,7 +1123,7 @@ export function buildReportCommandGroups({
                       {
                         type: "column_values",
                         subjectType: "fragments",
-                        tableOfContentsItemId: tocId,
+                        stableId,
                       },
                     ],
                     componentSettings: {
@@ -1154,7 +1156,7 @@ export function buildReportCommandGroups({
                       {
                         type: "overlay_area",
                         subjectType: "fragments",
-                        tableOfContentsItemId: tocId,
+                        stableId,
                       },
                     ],
                     componentSettings: {
@@ -1176,7 +1178,7 @@ export function buildReportCommandGroups({
                       {
                         type: "overlay_area",
                         subjectType: "fragments",
-                        tableOfContentsItemId: tocId,
+                        stableId,
                         parameters: {
                           groupBy: groupByColumn,
                         },
@@ -1184,7 +1186,7 @@ export function buildReportCommandGroups({
                       {
                         type: "overlay_area",
                         subjectType: "geographies",
-                        tableOfContentsItemId: tocId,
+                        stableId,
                         parameters: {
                           groupBy: groupByColumn,
                         },

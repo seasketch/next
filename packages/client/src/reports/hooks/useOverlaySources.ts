@@ -38,9 +38,7 @@ export function useOverlaySources(dependencies?: MetricDependency[]): {
       return [];
     }
     return allSources.filter((s) =>
-      dependencies.some(
-        (d) => d.tableOfContentsItemId === s.tableOfContentsItemId
-      )
+      dependencies.some((d) => d.stableId === s.stableId)
     );
   }, [allSources, dependencies]);
 
@@ -65,9 +63,9 @@ export function useRelatedOverlay(
       return null;
     }
     for (const dependency of dependencies) {
-      if (dependency.tableOfContentsItemId) {
+      if (dependency.stableId) {
         const source = allSources.find(
-          (s) => s.tableOfContentsItemId === dependency.tableOfContentsItemId
+          (s) => s.stableId === dependency.stableId
         );
         if (source) {
           return source;
