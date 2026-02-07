@@ -1401,10 +1401,14 @@ export function TableHeadingsEditor({
   const [localState, setLocalState] = useState(initialLabels);
   const debouncedLocalState = useDebounce(localState, 100);
 
-  // Sync local state when componentSettings change externally
+  // Sync local state when componentSettings change externally,
+  // but only when the popover is closed to avoid overwriting
+  // in-progress edits (the debounce round-trip would reset local state)
   useEffect(() => {
-    setLocalState(initialLabels);
-  }, [initialLabels]);
+    if (!isPopoverOpen) {
+      setLocalState(initialLabels);
+    }
+  }, [initialLabels, isPopoverOpen]);
 
   // Debounced update of componentSettings
   useEffect(() => {

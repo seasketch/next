@@ -177,7 +177,7 @@ export default function ReportDependenciesContextProvider({
     ) {
       interval = setInterval(() => {
         refetch();
-      }, 600);
+      }, 1000);
     }
 
     return () => {
