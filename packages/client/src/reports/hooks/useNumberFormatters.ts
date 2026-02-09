@@ -196,7 +196,10 @@ export function useNumberFormatters({
 
   const percent = useCallback(
     (value: number) => {
-      if (value > 1.02) {
+      if (value > 1.05) {
+        throw new Error(
+          `Percent value is greater than 100%. Value: ${value * 100}%`
+        );
         console.error(
           Error(`Percent value is greater than 100%. Value: ${value * 100}%`)
         );
