@@ -14805,8 +14805,8 @@ type ReportOverlaySource {
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
-  sourceProcessingJob: SourceProcessingJob
-  sourceProcessingJobId: String
+  sourceProcessingJob: SourceProcessingJob!
+  sourceProcessingJobId: String!
   sourceUrl: String
   stableId: String!
   tableOfContentsItem: TableOfContentsItem!

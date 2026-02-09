@@ -13711,8 +13711,8 @@ export type ReportOverlaySource = {
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
-  sourceProcessingJob?: Maybe<SourceProcessingJob>;
-  sourceProcessingJobId?: Maybe<Scalars['String']>;
+  sourceProcessingJob: SourceProcessingJob;
+  sourceProcessingJobId: Scalars['String'];
   sourceUrl?: Maybe<Scalars['String']>;
   stableId: Scalars['String'];
   tableOfContentsItem: TableOfContentsItem;
@@ -23013,10 +23013,10 @@ export type OverlaySourceDetailsFragment = (
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
-  ), sourceProcessingJob?: Maybe<(
+  ), sourceProcessingJob: (
     { __typename?: 'SourceProcessingJob' }
     & SourceProcessingJobDetailsFragment
-  )>, output?: Maybe<(
+  ), output?: Maybe<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt'>
   )> }

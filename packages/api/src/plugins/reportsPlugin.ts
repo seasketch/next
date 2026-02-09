@@ -71,8 +71,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         tableOfContentsItem: TableOfContentsItem!
         geostats: JSON!
         mapboxGlStyles: JSON!
-        sourceProcessingJob: SourceProcessingJob
-        sourceProcessingJobId: String
+        sourceProcessingJob: SourceProcessingJob!
+        sourceProcessingJobId: String!
         outputId: Int!
         output: DataUploadOutput
         sourceUrl: String
@@ -486,10 +486,9 @@ async function getOrCreateSpatialMetricsBatch(
         // don't return anything for this one
         continue;
       } else {
-        continue;
-        // throw new Error(
-        //   "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
-        // );
+        throw new Error(
+          "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
+        );
       }
     }
 
@@ -640,7 +639,9 @@ async function getOverlaySourcesByStableIds(
     }
     for (const row of overlaySourceRows) {
       if (!row.sourceProcessingJobId) {
-        console.log("no source processing job id for", row.stableId);
+        throw new Error(
+          `No source processing job id for overlay source: ${row.stableId}`
+        );
       }
     }
   }
