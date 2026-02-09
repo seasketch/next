@@ -163,6 +163,7 @@ export const OverlappingAreasTable: ReportWidget<
     showZero,
     sortBy,
     t,
+    loading,
   ]);
 
   const hasVisibilityColumn = useMemo(
