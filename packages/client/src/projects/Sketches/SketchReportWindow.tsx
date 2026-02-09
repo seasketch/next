@@ -157,7 +157,7 @@ function SketchReportWindowInner({
             </div>
             <ReportTabs />
             <div
-              className="flex-1 overflow-x-hidden overflow-y-auto"
+              className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
               style={{ backgroundColor: "#efefef" }}
             >
               <ReportBody />
