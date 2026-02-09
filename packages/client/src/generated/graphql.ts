@@ -23201,6 +23201,65 @@ export type ProjectReportingLayersQuery = (
     & { reportingLayers: Array<(
       { __typename?: 'ReportOverlaySource' }
       & OverlaySourceDetailsFragment
+    )>, draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'copiedFromDataLibraryTemplateId'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'type'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
+export type OverlaySourceProcessingStatusQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlaySourceProcessingStatusQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id'>
+        & { sourceProcessingJob?: Maybe<(
+          { __typename?: 'SourceProcessingJob' }
+          & SourceProcessingJobDetailsFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlayLayerAuthorInfoQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlayLayerAuthorInfoQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'version'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'attribution' | 'id' | 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & AuthorProfileFragment
+        )> }
+      )> }
     )> }
   )> }
 );
@@ -36211,6 +36270,18 @@ export const ProjectReportingLayersDocument = gql`
     reportingLayers {
       ...OverlaySourceDetails
     }
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      copiedFromDataLibraryTemplateId
+      dataLayer {
+        dataSource {
+          id
+          type
+        }
+      }
+    }
   }
 }
     ${OverlaySourceDetailsFragmentDoc}`;
@@ -36242,6 +36313,95 @@ export function useProjectReportingLayersLazyQuery(baseOptions?: Apollo.LazyQuer
 export type ProjectReportingLayersQueryHookResult = ReturnType<typeof useProjectReportingLayersQuery>;
 export type ProjectReportingLayersLazyQueryHookResult = ReturnType<typeof useProjectReportingLayersLazyQuery>;
 export type ProjectReportingLayersQueryResult = Apollo.QueryResult<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>;
+export const OverlaySourceProcessingStatusDocument = gql`
+    query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      dataSource {
+        id
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+
+/**
+ * __useOverlaySourceProcessingStatusQuery__
+ *
+ * To run a query within a React component, call `useOverlaySourceProcessingStatusQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlaySourceProcessingStatusQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlaySourceProcessingStatusQuery({
+ *   variables: {
+ *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
+ *   },
+ * });
+ */
+export function useOverlaySourceProcessingStatusQuery(baseOptions: Apollo.QueryHookOptions<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>(OverlaySourceProcessingStatusDocument, options);
+      }
+export function useOverlaySourceProcessingStatusLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>(OverlaySourceProcessingStatusDocument, options);
+        }
+export type OverlaySourceProcessingStatusQueryHookResult = ReturnType<typeof useOverlaySourceProcessingStatusQuery>;
+export type OverlaySourceProcessingStatusLazyQueryHookResult = ReturnType<typeof useOverlaySourceProcessingStatusLazyQuery>;
+export type OverlaySourceProcessingStatusQueryResult = Apollo.QueryResult<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>;
+export const OverlayLayerAuthorInfoDocument = gql`
+    query OverlayLayerAuthorInfo($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      version
+      dataSource {
+        attribution
+        id
+        createdAt
+        authorProfile {
+          ...AuthorProfile
+        }
+      }
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}`;
+
+/**
+ * __useOverlayLayerAuthorInfoQuery__
+ *
+ * To run a query within a React component, call `useOverlayLayerAuthorInfoQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlayLayerAuthorInfoQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlayLayerAuthorInfoQuery({
+ *   variables: {
+ *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
+ *   },
+ * });
+ */
+export function useOverlayLayerAuthorInfoQuery(baseOptions: Apollo.QueryHookOptions<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>(OverlayLayerAuthorInfoDocument, options);
+      }
+export function useOverlayLayerAuthorInfoLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>(OverlayLayerAuthorInfoDocument, options);
+        }
+export type OverlayLayerAuthorInfoQueryHookResult = ReturnType<typeof useOverlayLayerAuthorInfoQuery>;
+export type OverlayLayerAuthorInfoLazyQueryHookResult = ReturnType<typeof useOverlayLayerAuthorInfoLazyQuery>;
+export type OverlayLayerAuthorInfoQueryResult = Apollo.QueryResult<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>;
 export const PreprocessSourceDocument = gql`
     mutation PreprocessSource($slug: String!, $sourceId: Int!) {
   preprocessSource(input: {slug: $slug, sourceId: $sourceId}) {
@@ -40003,6 +40163,8 @@ export const namedOperations = {
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
     ProjectReportingLayers: 'ProjectReportingLayers',
+    OverlaySourceProcessingStatus: 'OverlaySourceProcessingStatus',
+    OverlayLayerAuthorInfo: 'OverlayLayerAuthorInfo',
     OverlaysForReportLayerToggles: 'OverlaysForReportLayerToggles',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',

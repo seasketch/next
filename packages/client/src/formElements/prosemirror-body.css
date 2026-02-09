@@ -387,18 +387,27 @@ div[attachments="forumAttachments"] {
   @apply mb-0;
 }
 
-.ReportCardBodyEditor .ProseMirror p.empty-active-paragraph {
+.ReportCardBodyEditor .ProseMirror p.has-placeholder {
   position: relative;
-  @apply text-gray-400;
 }
 
-.ReportCardBodyEditor .ProseMirror p.empty-active-paragraph::before {
-  content: "Start writing or type / for commands";
+.ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder {
   @apply text-gray-400;
   pointer-events: none;
+  user-select: none;
   position: absolute;
   top: 0;
   left: 0;
+  white-space: nowrap;
+}
+
+.ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder kbd {
+  @apply text-gray-500 bg-gray-100 border border-gray-300 rounded;
+  font-family: inherit;
+  font-size: 0.75em;
+  padding: 1px 5px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  padding-bottom: 1px;
 }
 
 .ReportCardBody details {

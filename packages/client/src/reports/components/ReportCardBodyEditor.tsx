@@ -32,15 +32,12 @@ import {
   ReportWidgetNodeViewRouter,
   buildReportCommandGroups,
 } from "../widgets/widgets";
-import { CommandPaletteItem } from "../commandPalette/types";
 import { DetailsView } from "../widgets/prosemirror/details";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
   ProjectReportingLayersDocument,
-  SpatialMetricState,
   useProjectReportingLayersQuery,
-  useDataDownloadInfoLazyQuery,
   usePreprocessSourceMutation,
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
@@ -48,6 +45,7 @@ import {
   SourceProcessingJobDetailsFragment,
   useDeleteReportCardMutation,
   ReportDependenciesDocument,
+  DataSourceTypes,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -254,14 +252,10 @@ function ReportCardBodyEditorInner({
     },
   });
 
-  const [fetchOverlayDetails] = useDataDownloadInfoLazyQuery();
-  const [preprocessSourceMutation, preprocessSourceState] =
-    usePreprocessSourceMutation();
+  const [preprocessSourceMutation] = usePreprocessSourceMutation();
   const [pendingOverlayKey, setPendingOverlayKey] = useState<string | null>(
     null
   );
-  const [addingOverlayId, setAddingOverlayId] = useState<number | null>(null);
-  const [overlayError, setOverlayError] = useState<string | null>(null);
 
   const [deleteCardMutation, deleteCardMutationState] =
     useDeleteReportCardMutation({
@@ -270,117 +264,27 @@ function ReportCardBodyEditorInner({
       awaitRefetchQueries: true,
     });
 
-  const overlayAugmenter = useCallback(
-    ({
-      source,
-      item,
-    }: {
-      source: OverlaySourceDetailsFragment;
-      item: CommandPaletteItem;
-    }): CommandPaletteItem => {
-      const state =
-        source.sourceProcessingJob?.state ||
-        (source.output ? null : SpatialMetricState.Queued);
-      const status =
-        state || source.sourceProcessingJob?.progressPercentage != null
-          ? {
-              state: state || null,
-              progressPercent:
-                source.sourceProcessingJob?.progressPercentage ?? null,
-              label:
-                source.sourceProcessingJob?.state ===
-                  SpatialMetricState.Processing &&
-                source.sourceProcessingJob?.progressPercentage != null
-                  ? t("Processing {{percent}}%", {
-                      percent:
-                        source.sourceProcessingJob?.progressPercentage ?? 0,
-                    })
-                  : state || undefined,
-            }
-          : undefined;
-      return {
-        ...item,
-        status,
-      };
-    },
-    []
-  );
-
   const handleOverlaySelection = useCallback(
-    async (tocId: number) => {
-      setOverlayError(null);
-      setAddingOverlayId(tocId);
-      try {
-        const overlayDetails = await fetchOverlayDetails({
-          variables: { tocId },
-        });
-        const sourceId =
-          overlayDetails.data?.tableOfContentsItem?.dataLayer?.dataSource?.id;
-        if (!sourceId) {
-          throw new Error(t("Layer is missing a data source id"));
-        }
-        await preprocessSourceMutation({
-          variables: {
-            slug: getSlug(),
-            sourceId,
+    async (tocId: number, sourceId: number) => {
+      await preprocessSourceMutation({
+        variables: {
+          slug: getSlug(),
+          sourceId,
+        },
+        refetchQueries: [
+          {
+            query: ProjectReportingLayersDocument,
+            variables: { slug: getSlug() },
           },
-          refetchQueries: [
-            {
-              query: ProjectReportingLayersDocument,
-              variables: { slug: getSlug() },
-            },
-          ],
-          awaitRefetchQueries: true,
-        });
-        // eslint-disable-next-line i18next/no-literal-string
-        setPendingOverlayKey(`layer-overlay-analysis:overlay-layer-${tocId}`);
-        return true;
-      } catch (err) {
-        setOverlayError(
-          err instanceof Error
-            ? err.message
-            : t("Unable to start preprocessing")
-        );
-        return false;
-      } finally {
-        setAddingOverlayId(null);
-      }
+        ],
+        awaitRefetchQueries: true,
+      });
+      // eslint-disable-next-line i18next/no-literal-string
+      setPendingOverlayKey(`layer-overlay-analysis:overlay-layer-${tocId}`);
+      return true;
     },
-    [fetchOverlayDetails, preprocessSourceMutation, t]
+    [preprocessSourceMutation]
   );
-
-  const overlayFooterItem = useMemo<CommandPaletteItem>(() => {
-    return {
-      id: "choose-overlay",
-      label: t("Choose from overlays…"),
-      description: t("Add a reporting layer by preprocessing an overlay."),
-      customPopoverContent: ({ closePopover, focusPalette }) => (
-        <OverlayPickerContent
-          isLoading={
-            preprocessSourceState.loading || typeof addingOverlayId === "number"
-          }
-          loadingId={addingOverlayId}
-          errorMessage={overlayError}
-          onSelect={async (overlayId) => {
-            const success = await handleOverlaySelection(overlayId);
-            if (success) {
-              closePopover();
-              focusPalette();
-            }
-            return success;
-          }}
-        />
-      ),
-      disabled:
-        preprocessSourceState.loading || typeof addingOverlayId === "number",
-    };
-  }, [
-    preprocessSourceState.loading,
-    addingOverlayId,
-    overlayError,
-    handleOverlaySelection,
-    t,
-  ]);
 
   const viewRef = useRef<EditorView>();
   const root = useRef<HTMLDivElement>(null);
@@ -441,19 +345,21 @@ function ReportCardBodyEditorInner({
       buildReportCommandGroups({
         sources:
           reportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
+        draftTableOfContentsItems:
+          reportingLayersQuery.data?.projectBySlug?.draftTableOfContentsItems ||
+          [],
         geographies: geographies,
         clippingGeography: sketchClass?.clippingGeographies?.[0]?.id,
         sketchClassGeometryType: sketchClass?.geometryType,
-        overlayFooterItem,
-        overlayAugmenter,
+        onProcessLayer: handleOverlaySelection,
       }),
     [
       geographies,
       sketchClass?.clippingGeographies,
       sketchClass?.geometryType,
       reportingLayersQuery.data?.projectBySlug?.reportingLayers,
-      overlayFooterItem,
-      overlayAugmenter,
+      reportingLayersQuery.data?.projectBySlug?.draftTableOfContentsItems,
+      handleOverlaySelection,
     ]
   );
 

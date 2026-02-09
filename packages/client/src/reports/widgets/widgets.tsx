@@ -15,10 +15,14 @@ import {
 } from "../commandPalette/types";
 import {
   CompatibleSpatialMetricDetailsFragment,
+  DataSourceTypes,
   GeographyDetailsFragment,
   OverlaySourceDetailsFragment,
   ReportContextSketchClassDetailsFragment,
   SketchGeometryType,
+  SpatialMetricState,
+  useOverlaySourceProcessingStatusQuery,
+  useOverlayLayerAuthorInfoQuery,
 } from "../../generated/graphql";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
@@ -86,6 +90,8 @@ import {
   Pencil2Icon,
 } from "@radix-ui/react-icons";
 import Badge from "../../components/Badge";
+import ProfilePhoto from "../../admin/users/ProfilePhoto";
+import Spinner from "../../components/Spinner";
 import {
   GeostatsLayer,
   isGeostatsLayer,
@@ -611,6 +617,18 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
 
 export type BuildReportCommandGroupsArgs = {
   sources?: OverlaySourceDetailsFragment[];
+  draftTableOfContentsItems?: Array<{
+    id: number;
+    title: string;
+    stableId: string;
+    copiedFromDataLibraryTemplateId?: string;
+    dataLayer?: {
+      dataSource?: {
+        id: number;
+        type: DataSourceTypes;
+      } | null;
+    } | null;
+  }>;
   geographies?: Pick<GeographyDetailsFragment, "id" | "name">[];
   clippingGeography?: number;
   sketchClassGeometryType?: SketchGeometryType;
@@ -619,7 +637,177 @@ export type BuildReportCommandGroupsArgs = {
     source: OverlaySourceDetailsFragment;
     item: CommandPaletteItem;
   }) => CommandPaletteItem;
+  onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
 };
+
+function UnprocessedLayerPopover({
+  title,
+  onProcess,
+  closePopover,
+  focusPalette,
+}: {
+  title: string;
+  onProcess: () => Promise<boolean>;
+  closePopover: () => void;
+  focusPalette: () => void;
+}) {
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  return (
+    <div className="w-64 rounded-md border border-gray-200 bg-white shadow-xl">
+      <div className="px-3 py-2 border-b border-gray-100">
+        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          {title}
+        </div>
+      </div>
+      <div className="p-2">
+        {error && <p className="text-xs text-red-600 mb-2 px-1">{error}</p>}
+        <button
+          className="w-full px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-wait transition-colors flex items-center justify-center gap-2"
+          disabled={isProcessing}
+          onClick={async (e) => {
+            e.preventDefault();
+            setIsProcessing(true);
+            setError(null);
+            try {
+              const success = await onProcess();
+              if (success) {
+                closePopover();
+                focusPalette();
+              }
+            } catch (err) {
+              setError(
+                err instanceof Error
+                  ? err.message
+                  : "Unable to start processing"
+              );
+            } finally {
+              setIsProcessing(false);
+            }
+          }}
+        >
+          {isProcessing && <Spinner mini color="white" />}
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          {isProcessing ? "Processing\u2026" : "Process for Reporting"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Fetches and displays version, author, and creation date for an overlay layer.
+ */
+function OverlayLayerInfo({
+  tableOfContentsItemId,
+}: {
+  tableOfContentsItemId: number;
+}) {
+  const { data, loading } = useOverlayLayerAuthorInfoQuery({
+    variables: { tableOfContentsItemId },
+  });
+
+  if (loading || !data) return null;
+
+  const dataLayer = data.tableOfContentsItem?.dataLayer;
+  const ds = dataLayer?.dataSource;
+  if (!ds) return null;
+
+  const profile = ds.authorProfile;
+  const createdAt = ds.createdAt ? new Date(ds.createdAt) : null;
+  const version = dataLayer?.version;
+  const attribution = ds.attribution;
+
+  return (
+    // eslint-disable-next-line i18next/no-literal-string
+    <div className="mt-1.5 space-y-1">
+      {attribution && (
+        <div className="text-xs text-gray-500 italic max-w-full truncate">
+          {attribution}
+        </div>
+      )}
+      <div className="flex items-center gap-1.5 text-xs text-gray-500">
+        <div className="w-5 h-5 flex-shrink-0">
+          <ProfilePhoto
+            fullname={profile?.fullname || undefined}
+            email={profile?.email || undefined}
+            canonicalEmail={profile?.email || ""}
+            picture={profile?.picture || undefined}
+          />
+        </div>
+        <span className="truncate">
+          {profile?.fullname || profile?.email || "Unknown"}
+          {createdAt ? `, ${createdAt.toLocaleDateString()}` : ""}
+        </span>
+        {version != null && version > 1 && (
+          <span className="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-400 px-1 py-0 rounded-md">
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              `v${version}`
+            }
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Polls the OverlaySourceProcessingStatus query while a layer is being
+ * processed. Renders nothing when processing is complete. Automatically
+ * stops polling on completion or error.
+ */
+function OverlayProcessingStatus({
+  tableOfContentsItemId,
+}: {
+  tableOfContentsItemId: number;
+}) {
+  const { data, stopPolling } = useOverlaySourceProcessingStatusQuery({
+    variables: { tableOfContentsItemId },
+    pollInterval: 1000,
+    fetchPolicy: "network-only",
+  });
+
+  const job =
+    data?.tableOfContentsItem?.dataLayer?.dataSource?.sourceProcessingJob;
+  const state = job?.state as SpatialMetricState | undefined;
+
+  useEffect(() => {
+    if (
+      state === SpatialMetricState.Complete ||
+      state === SpatialMetricState.Error
+    ) {
+      stopPolling();
+    }
+  }, [state, stopPolling]);
+
+  // Don't show anything when complete or no job
+  if (!job || state === SpatialMetricState.Complete) return null;
+
+  const isActive =
+    state === SpatialMetricState.Processing ||
+    state === SpatialMetricState.Queued;
+
+  return (
+    // eslint-disable-next-line i18next/no-literal-string
+    <div className="flex items-center gap-1.5 mt-1">
+      {isActive && <Spinner mini />}
+      <span className="text-xs text-gray-600">
+        {state === SpatialMetricState.Processing &&
+        job.progressPercentage != null
+          ? // eslint-disable-next-line i18next/no-literal-string
+            `Processing ${job.progressPercentage}%`
+          : state === SpatialMetricState.Queued
+          ? "Queued"
+          : state === SpatialMetricState.Error
+          ? // eslint-disable-next-line i18next/no-literal-string
+            `Error: ${job.errorMessage || "Processing failed"}`
+          : job.progressMessage || "Processing\u2026"}
+      </span>
+    </div>
+  );
+}
 
 /**
  * Build context-dependent command groups for the report body editor.
@@ -631,70 +819,54 @@ export type BuildReportCommandGroupsArgs = {
  */
 export function buildReportCommandGroups({
   sources,
+  draftTableOfContentsItems,
   geographies,
   clippingGeography,
   sketchClassGeometryType,
   overlayFooterItem,
   overlayAugmenter,
+  onProcessLayer,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
 
-  const attributesGroup: CommandPaletteGroup = {
-    id: "attributes",
-    label: "Attributes",
-    items: [
-      {
-        id: "sketch-attributes-table",
-        label: "Sketch Attributes Table",
-        description: "Table of the current sketch's attributes.",
-        run: (state, dispatch, view) => {
-          return insertBlockMetric(view, state.selection.ranges[0], {
-            type: "SketchAttributesTable",
-            metrics: [],
-            componentSettings: {},
-          });
-        },
-      },
-    ],
+  const inlineSketchMetricsGroup: CommandPaletteGroup = {
+    id: "inline-sketch-metrics",
+    label: "Inline Sketch Metrics",
+    items: [],
   };
-  commandGroups.push(attributesGroup);
-
   if (sketchClassGeometryType === SketchGeometryType.Polygon) {
-    const sizeGroup: CommandPaletteGroup = {
-      id: "Size",
-      label: "Sketch Size Metrics",
-      items: [
-        {
-          id: "sketch-size",
-          label: "Area",
-          description: "The total area of the sketch",
-          run: (state, dispatch, view) => {
-            return insertInlineMetric(view, state.selection.ranges[0], {
-              type: "InlineMetric",
-              metrics: [
-                {
-                  type: "total_area",
-                  subjectType: "fragments",
-                },
-              ],
-              componentSettings: {
-                presentation: "total_area",
-              },
-            });
+    inlineSketchMetricsGroup.items.push({
+      id: "sketch-size",
+      label: "Area",
+      description: "Inline metric displays total area in chosen units.",
+      screenshotSrc: "/slashCommands/inline-area.png",
+      run: (state, dispatch, view) => {
+        return insertInlineMetric(view, state.selection.ranges[0], {
+          type: "InlineMetric",
+          metrics: [
+            {
+              type: "total_area",
+              subjectType: "fragments",
+            },
+          ],
+          componentSettings: {
+            presentation: "total_area",
           },
-        },
-      ],
-    };
-    commandGroups.push(sizeGroup);
+        });
+      },
+    });
     if (clippingGeography) {
       const geography = geographies?.find((g) => g.id === clippingGeography);
-      sizeGroup.items.push({
+      const label = geography?.name || "Geography";
+      inlineSketchMetricsGroup.items.push({
         id: "clipping-geography-percent",
         label: geography
           ? // eslint-disable-next-line i18next/no-literal-string
             `Percent of ${geography.name}`
           : "Percent of Geography",
-        description: "Total area as a fraction of the clipping geography.",
+        // eslint-disable-next-line i18next/no-literal-string
+        description: `Fraction of the ${label} covered by the sketch.`,
+        screenshotSrc: "/slashCommands/percent-geography.png",
         run: (state, dispatch, view) => {
           return insertInlineMetric(view, state.selection.ranges[0], {
             type: "InlineMetric",
@@ -715,11 +887,56 @@ export function buildReportCommandGroups({
         },
       });
     }
+    inlineSketchMetricsGroup.items.push({
+      id: "inline-distance-to-shore",
+      label: "Distance to Shore",
+      screenshotSrc: "/slashCommands/distance-to-shore.png",
+      description: "Closest distance between the sketch and the shoreline.",
+      run: (state, dispatch, view) => {
+        return insertInlineMetric(view, state.selection.ranges[0], {
+          type: "InlineMetric",
+          metrics: [
+            {
+              type: "distance_to_shore",
+              subjectType: "fragments",
+            },
+          ],
+          componentSettings: {
+            presentation: "distance_to_shore",
+          },
+        });
+      },
+    });
+  }
+  commandGroups.push(inlineSketchMetricsGroup);
+
+  const sketchBlockWidgetsGroup: CommandPaletteGroup = {
+    id: "sketch-block-widgets",
+    label: "Sketch Block Widgets",
+    items: [],
+  };
+  if (sketchClassGeometryType === SketchGeometryType.Polygon) {
+    sketchBlockWidgetsGroup.items.push({
+      id: "sketch-attributes-table",
+      label: "Sketch Attributes Table",
+      description:
+        "Displays user contributed information from the attributes form.",
+      screenshotSrc: "/slashCommands/attributes-table.png",
+      run: (state, dispatch, view) => {
+        return insertBlockMetric(view, state.selection.ranges[0], {
+          type: "SketchAttributesTable",
+          metrics: [],
+          componentSettings: {},
+        });
+      },
+    });
     if (geographies && geographies.length > 1) {
-      sizeGroup.items.push({
+      sketchBlockWidgetsGroup.items.push({
         id: "geography-size-table",
         label: "Geography Size Table",
-        description: "A table of the sizes of the sketch in each geography.",
+        description:
+          "Table displaying the size of the sketch in relation to each geography.",
+        screenshotSrc: "/slashCommands/size-table.png",
         run: (state, dispatch, view) => {
           return insertBlockMetric(view, state.selection.ranges[0], {
             metrics: [
@@ -739,36 +956,9 @@ export function buildReportCommandGroups({
           });
         },
       });
-
-      const distanceGroup: CommandPaletteGroup = {
-        id: "distance",
-        label: "Distance",
-        items: [
-          {
-            id: "inline-distance-to-shore",
-            label: "Distance to Shore",
-            description:
-              "Closest distance between the sketch and the shoreline.",
-            run: (state, dispatch, view) => {
-              return insertInlineMetric(view, state.selection.ranges[0], {
-                type: "InlineMetric",
-                metrics: [
-                  {
-                    type: "distance_to_shore",
-                    subjectType: "fragments",
-                  },
-                ],
-                componentSettings: {
-                  presentation: "distance_to_shore",
-                },
-              });
-            },
-          },
-        ],
-      };
-      commandGroups.push(distanceGroup);
     }
   }
+  commandGroups.push(sketchBlockWidgetsGroup);
 
   if (sources) {
     commandGroups.push({
@@ -779,6 +969,7 @@ export function buildReportCommandGroups({
           id: "block-layer-toggle",
           label: "Block Layer Toggle",
           description: "Toggle an overlay layer on the map",
+          screenshotSrc: "/slashCommands/layer-toggle-block.png",
           run: () => false,
           customPopoverContent: ({ closePopover, apply, focusPalette }) => (
             <OverlayTogglePicker
@@ -803,7 +994,8 @@ export function buildReportCommandGroups({
         {
           id: "inline-layer-toggle",
           label: "Inline Layer Toggle",
-          description: "Inline toggle for an overlay layer",
+          description: "Place layer toggle inputs inline with any text.",
+          screenshotSrc: "/slashCommands/layer-toggle-inline.png",
           run: () => false,
           customPopoverContent: ({ closePopover, apply }) => (
             <OverlayTogglePicker
@@ -833,18 +1025,24 @@ export function buildReportCommandGroups({
         const title =
           source.tableOfContentsItem?.title || "Layer Overlay Analysis";
         const tocId = source.tableOfContentsItemId!;
-        const sourceUrl = source.sourceUrl;
         const stableId = source.tableOfContentsItem?.stableId;
         let children: CommandPaletteItem[] = [];
+        let childGroups: CommandPaletteGroup[] | undefined;
         if ("bands" in source.geostats && source.geostats.bands.length === 1) {
-          const band = source.geostats.bands[0] as RasterBandInfo;
+          const inlineGroup: CommandPaletteGroup = {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-group`,
+            label: "Inline Metrics",
+            items: [],
+          };
           // Raster handling can be added here if needed
-          children.push({
+          inlineGroup.items.push({
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-inline-band-stats`,
-            label: "Inline Raster Band Statistics",
+            label: "Raster Statistics",
             description:
-              "Summarize a raster band with a mean, min, max, or distinct value count.",
+              "Insert a raster statistic such as mean, min, max, or count.",
+            screenshotSrc: "/slashCommands/inline-raster-metric.png",
             run: (state, dispatch, view) => {
               return insertInlineMetric(view, state.selection.ranges[0], {
                 type: "InlineMetric",
@@ -862,12 +1060,19 @@ export function buildReportCommandGroups({
               });
             },
           });
-          children.push({
+          const blockGroup: CommandPaletteGroup = {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-block-group`,
+            label: "Block Widgets",
+            items: [],
+          };
+          blockGroup.items.push({
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-raster-stats-table`,
             label: "Raster Statistics Table",
             description:
               "Table of raster band statistics such as mean, min, max, sum, and invalid pixels.",
+            screenshotSrc: "/slashCommands/raster-stats-table.png",
             run: (state, dispatch, view) => {
               return insertBlockMetric(view, state.selection.ranges[0], {
                 type: "RasterStatisticsTable",
@@ -889,12 +1094,13 @@ export function buildReportCommandGroups({
               });
             },
           });
-          children.push({
+          blockGroup.items.push({
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-raster-histogram`,
-            label: "Raster Values Histogram",
+            label: "Values Histogram",
             description:
               "Histogram of raster values for the sketch, using the layer's bin definitions.",
+            screenshotSrc: "/slashCommands/raster-histogram.png",
             run: (state, dispatch, view) => {
               return insertBlockMetric(view, state.selection.ranges[0], {
                 type: "RasterValuesHistogram",
@@ -916,6 +1122,7 @@ export function buildReportCommandGroups({
               });
             },
           });
+          childGroups = [inlineGroup, blockGroup];
         } else if (
           "layers" in source.geostats &&
           isGeostatsLayer(source.geostats.layers[0])
@@ -934,6 +1141,18 @@ export function buildReportCommandGroups({
             .map((attr) => attr.attribute);
           const bestNumericColumn =
             numericColumns.length > 0 ? numericColumns[0] : undefined;
+          const inlineGroup: CommandPaletteGroup = {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-group`,
+            label: "Inline Metrics",
+            items: [],
+          };
+          const blockGroup: CommandPaletteGroup = {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-block-group`,
+            label: "Block Widgets",
+            items: [],
+          };
           if (
             [
               "Polygon",
@@ -943,11 +1162,12 @@ export function buildReportCommandGroups({
               "LineString",
             ].includes(geostatsLayer.geometry)
           ) {
-            children.push({
+            inlineGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-feature-count`,
               label: "Feature Count",
-              description: "Count of the number of overlapping features.",
+              description: "Count the number of overlapping features.",
+              screenshotSrc: "/slashCommands/feature-count.png",
               run: (state, dispatch, view) => {
                 return insertInlineMetric(view, state.selection.ranges[0], {
                   type: "InlineMetric",
@@ -965,12 +1185,13 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            children.push({
+            blockGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-feature-count-table`,
               label: "Feature Count Table",
               description:
-                "Table with feature counts, optionally grouped by a class key and compared to counts in the entire geography.",
+                "Table of feature counts, optionally grouped by a class key and compared to geography totals.",
+              screenshotSrc: "/slashCommands/feature-count-table.png",
               run: (state, dispatch, view) => {
                 return insertBlockMetric(view, state.selection.ranges[0], {
                   type: "FeatureCountTable",
@@ -996,12 +1217,13 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            children.push({
+            blockGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-feature-presence-table`,
               label: "Feature Presence Table",
               description:
                 "Table that shows presence/absence based on intersecting feature counts, optionally grouped by a class key.",
+              screenshotSrc: "/slashCommands/feature-presence-table.png",
               run: (state, dispatch, view) => {
                 return insertBlockMetric(view, state.selection.ranges[0], {
                   type: "FeaturePresenceTable",
@@ -1019,11 +1241,13 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            children.push({
+            blockGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-intersecting-features-list`,
               label: "Intersecting Features List",
-              description: "List of features that intersect with the sketch.",
+              description:
+                "List of features that intersect with the sketch, with access to column values.",
+              screenshotSrc: "/slashCommands/intersecting-features-list.png",
               run: (state, dispatch, view) => {
                 return insertBlockMetric(view, state.selection.ranges[0], {
                   type: "IntersectingFeaturesList",
@@ -1047,12 +1271,13 @@ export function buildReportCommandGroups({
               bestNumericColumn ||
               source.geostats.layers[0]?.attributes?.[0]?.attribute
             ) {
-              children.push({
+              inlineGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-inline-column-stats`,
-                label: "Inline Column Stats",
+                label: "Column Statistic",
                 description:
                   "Summarize numeric columns with a mean, min, max, or distinct value count.",
+                screenshotSrc: "/slashCommands/column-stats-inline.png",
                 run: (state, dispatch, view) => {
                   return insertInlineMetric(view, state.selection.ranges[0], {
                     type: "InlineMetric",
@@ -1075,12 +1300,13 @@ export function buildReportCommandGroups({
               });
             }
 
-            children.push({
+            blockGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-column-stats-table`,
               label: "Column Statistics Table",
               description:
                 "Show key statistics for a column such as min, max, mean, sum, and distinct value count.",
+              screenshotSrc: "/slashCommands/column-stats-table.png",
               run: (state, dispatch, view) => {
                 return insertBlockMetric(view, state.selection.ranges[0], {
                   type: "ColumnStatisticsTable",
@@ -1111,11 +1337,12 @@ export function buildReportCommandGroups({
             });
 
             if (bestNumericColumn) {
-              children.push({
+              blockGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-column-value-histogram`,
-                label: "Column Value Histogram",
+                label: "Values Histogram",
                 description: "Histogram of values for a numeric column.",
+                screenshotSrc: "/slashCommands/values-histogram.png",
                 run: (state, dispatch, view) => {
                   return insertBlockMetric(view, state.selection.ranges[0], {
                     type: "ColumnValuesHistogram",
@@ -1143,12 +1370,13 @@ export function buildReportCommandGroups({
           switch (geostatsLayer.geometry) {
             case "Polygon":
             case "MultiPolygon": {
-              children.push({
+              inlineGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-overlap-area`,
                 label: "Overlapping Area",
                 description:
-                  "Inline metric representing the total area of the sketch that overlaps with the layer.",
+                  "Display the total area of the sketch that overlaps with the layer.",
+                screenshotSrc: "/slashCommands/overlapping-area.png",
                 run: (state, dispatch, view) => {
                   return insertInlineMetric(view, state.selection.ranges[0], {
                     type: "InlineMetric",
@@ -1165,12 +1393,13 @@ export function buildReportCommandGroups({
                   });
                 },
               });
-              children.push({
+              blockGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-overlap-table`,
                 label: "Overlapping Area Table",
                 description:
                   "Table of overlapping area statistics. Works best when grouped by a class key. May include percent overlapped for a geography.",
+                screenshotSrc: "/slashCommands/overlapping-area-table.png",
                 run: (state, dispatch, view) => {
                   return insertBlockMetric(view, state.selection.ranges[0], {
                     type: "OverlappingAreasTable",
@@ -1201,20 +1430,79 @@ export function buildReportCommandGroups({
               break;
             }
           }
+          childGroups = [inlineGroup, blockGroup];
         }
         let item: CommandPaletteItem = {
           // eslint-disable-next-line i18next/no-literal-string
           id: `overlay-layer-${tocId}`,
           label: title,
-          // description: "Layer-specific overlay analysis options.",
           run: () => false,
-          children,
+          children: childGroups ? undefined : children,
+          childGroups,
+          activateOnHover: true,
+          popoverHeader: <OverlayLayerInfo tableOfContentsItemId={tocId} />,
+          popoverStatus: (
+            <OverlayProcessingStatus tableOfContentsItemId={tocId} />
+          ),
         };
         if (overlayAugmenter) {
           item = overlayAugmenter({ source, item });
         }
         return item;
       });
+
+    // Add unprocessed layers from draftTableOfContentsItems
+    if (draftTableOfContentsItems) {
+      const processedTocIds = new Set(
+        sources
+          .filter((s) => s.tableOfContentsItemId)
+          .map((s) => s.tableOfContentsItemId!)
+      );
+      const ELIGIBLE_TYPES = new Set([
+        DataSourceTypes.SeasketchMvt,
+        DataSourceTypes.SeasketchRaster,
+        DataSourceTypes.SeasketchVector,
+      ]);
+      for (const tocItem of draftTableOfContentsItems) {
+        if (tocItem.copiedFromDataLibraryTemplateId) {
+          if (/MARINE_REGIONS/.test(tocItem.copiedFromDataLibraryTemplateId)) {
+            continue;
+          } else if (/DAYLIGHT/.test(tocItem.copiedFromDataLibraryTemplateId)) {
+            continue;
+          }
+        }
+        const dsType = tocItem.dataLayer?.dataSource?.type;
+        const sourceId = tocItem.dataLayer?.dataSource?.id;
+        if (
+          dsType &&
+          sourceId &&
+          ELIGIBLE_TYPES.has(dsType) &&
+          !processedTocIds.has(tocItem.id)
+        ) {
+          const capturedSourceId = sourceId;
+          overlayItems.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocItem.id}`,
+            label: tocItem.title,
+            muted: true,
+            activateOnHover: true,
+            run: () => false,
+            customPopoverContent: onProcessLayer
+              ? ({ closePopover, focusPalette }) => (
+                  <UnprocessedLayerPopover
+                    title={tocItem.title}
+                    onProcess={() =>
+                      onProcessLayer(tocItem.id, capturedSourceId)
+                    }
+                    closePopover={closePopover}
+                    focusPalette={focusPalette}
+                  />
+                )
+              : undefined,
+          });
+        }
+      }
+    }
 
     if (overlayItems.length || overlayFooterItem) {
       const sortedItems = overlayItems.sort((a, b) =>

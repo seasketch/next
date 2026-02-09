@@ -208,7 +208,12 @@ export function combineMetricsBySource<T extends Metric>(
     geographies: T;
   };
 } {
+  // handle duplicates
+  const metricIds = new Set<string>(metrics.map((m) => m.id));
   metrics = metrics.filter((m) => m.state === SpatialMetricState.Complete);
+  metrics = Array.from(metricIds)
+    .map((id) => metrics.find((m) => m.id === id))
+    .filter(Boolean) as CompatibleSpatialMetricDetailsFragment[];
   const result: {
     [sourceId: string]: {
       fragments: T;

@@ -23,8 +23,90 @@ import Spinner from "../../components/Spinner";
 type CommandPalettePreviewItem = CommandPaletteItem & {
   screenshotSrc?: string;
   screenshotAlt?: string;
+  muted?: boolean;
+  activateOnHover?: boolean;
+  popoverHeader?: React.ReactNode;
+  popoverStatus?: React.ReactNode;
   children?: CommandPalettePreviewItem[];
+  childGroups?: {
+    id: string;
+    label: string;
+    items: CommandPalettePreviewItem[];
+  }[];
 };
+
+/**
+ * Renders a single widget child item with a hover-activated preview card
+ * showing the screenshot and description. The preview uses Radix Popover
+ * with collision detection so it respects viewport bounds.
+ */
+function ChildItemWithPreview({
+  child,
+  onApply,
+}: {
+  child: CommandPalettePreviewItem;
+  onApply: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const hasPreview = !!(child.screenshotSrc || child.description);
+
+  return (
+    <Popover.Root open={hovered && hasPreview}>
+      <Popover.Anchor asChild>
+        <button
+          className="w-full px-3 py-1.5 text-left text-sm font-medium text-gray-900 hover:bg-gray-50"
+          onClick={(e) => {
+            e.preventDefault();
+            onApply();
+          }}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
+        >
+          {child.label}
+        </button>
+      </Popover.Anchor>
+      {hasPreview && hovered && (
+        <Popover.Portal>
+          <Popover.Content
+            side="right"
+            align="center"
+            sideOffset={8}
+            collisionPadding={16}
+            avoidCollisions
+            className="z-[60] outline-none focus:outline-none pointer-events-none"
+            onOpenAutoFocus={(e) => e.preventDefault()}
+            onCloseAutoFocus={(e) => e.preventDefault()}
+          >
+            <div className="w-56 rounded-lg border border-gray-700 bg-gray-800 shadow-xl overflow-hidden">
+              {child.screenshotSrc && (
+                <div className="p-3 pb-2">
+                  <div
+                    className="h-20 w-full overflow-hidden rounded bg-gray-700"
+                    role="img"
+                    aria-label={child.screenshotAlt || `${child.label} preview`}
+                    style={{
+                      backgroundImage: `url(${child.screenshotSrc})`,
+                      backgroundSize: "cover",
+                      backgroundPosition: "top",
+                      backgroundRepeat: "no-repeat",
+                    }}
+                  />
+                </div>
+              )}
+              {child.description && (
+                <div className={child.screenshotSrc ? "px-3 pb-3" : "p-3"}>
+                  <div className="text-xs text-gray-300 whitespace-pre-line">
+                    {child.description}
+                  </div>
+                </div>
+              )}
+            </div>
+          </Popover.Content>
+        </Popover.Portal>
+      )}
+    </Popover.Root>
+  );
+}
 
 type TriggerSource = "slash" | "manual";
 
@@ -87,12 +169,17 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
   // }
 
   if (schema.nodes.heading) {
+    const headingScreenshots: Record<number, string> = {
+      2: "/slashCommands/h2.png",
+      3: "/slashCommands/h3.png",
+    };
     [2, 3].forEach((level) => {
       blocks.push({
         id: `heading-${level}`,
         label: `Heading ${level}`,
-        description: `Title level ${level}`,
+        description: level === 2 ? "Largest heading" : "Smaller heading",
         keywords: ["title", "heading"],
+        screenshotSrc: headingScreenshots[level],
         run: (state, dispatch) => {
           setBlockType(schema.nodes.heading, { level })(state, dispatch);
         },
@@ -134,6 +221,7 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
       label: "Bulleted list",
       description: "Start a bulleted list",
       keywords: ["list", "bullets"],
+      screenshotSrc: "/slashCommands/list.png",
       run: (state, dispatch) => {
         wrapInList(schema.nodes.bullet_list)(state, dispatch);
       },
@@ -147,6 +235,7 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
       label: "Numbered list",
       description: "Start a numbered list",
       keywords: ["list", "ordered", "numbers"],
+      screenshotSrc: "/slashCommands/ordered-list.png",
       run: (state, dispatch) => {
         wrapInList(schema.nodes.ordered_list)(state, dispatch);
       },
@@ -158,7 +247,8 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
     blocks.push({
       id: "collapsible-block",
       label: "Collapsible Block",
-      description: "Accordion-style container with editable heading.",
+      description: "Accordion-style container with an editable heading.",
+      screenshotSrc: "/slashCommands/collapsible-block.png",
       run: (state, dispatch, view) => {
         const { schema } = state;
         const detailsType = schema.nodes.details;
@@ -183,8 +273,9 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
     blocks.push({
       id: "results-paragraph",
       label: "Results Paragraph",
-      description: "Highlighted paragraph for calculated results.",
+      description: "Highlighted paragraph used to emphasize information.",
       keywords: ["results", "highlight", "box"],
+      screenshotSrc: "/slashCommands/results-paragraph.png",
       run: (state, dispatch) => {
         const resultsParagraphType = schema.nodes.resultsParagraph;
         if (!resultsParagraphType) return false;
@@ -248,6 +339,7 @@ export function useSlashCommandPalette({
   const [trigger, setTrigger] = useState<TriggerState | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
   const [previewKey, setPreviewKey] = useState<string | null>(null);
+  const [activatedKey, setActivatedKey] = useState<string | null>(null);
   const itemRefs = useRef<Map<string, HTMLButtonElement | null>>(new Map());
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const previousBodyOverflowRef = useRef<string | null>(null);
@@ -485,10 +577,13 @@ export function useSlashCommandPalette({
           return;
         }
         event.preventDefault();
-        const selected = filtered.flatItems[activeIndex]?.item;
-        if (selected?.children?.length) {
-          const key = `${filtered.flatItems[activeIndex]?.groupId}:${selected.id}`;
+        const selected = filtered.flatItems[activeIndex]?.item as
+          | CommandPalettePreviewItem
+          | undefined;
+        const key = `${filtered.flatItems[activeIndex]?.groupId}:${selected?.id}`;
+        if (selected?.children?.length || selected?.customPopoverContent) {
           setPreviewKey(key);
+          setActivatedKey(key);
         } else {
           applyCommand(selected);
         }
@@ -522,6 +617,7 @@ export function useSlashCommandPalette({
   useEffect(() => {
     if (!trigger) {
       setPreviewKey(null);
+      setActivatedKey(null);
     }
   }, [trigger]);
 
@@ -609,25 +705,9 @@ export function useSlashCommandPalette({
     }
   }, [trigger]);
 
-  const normalizeState = (state?: string | null) => {
-    if (!state) return null;
-    const label = state.replace(/_/g, " ").toLowerCase();
-    return label.charAt(0).toUpperCase() + label.slice(1);
-  };
-
   const statusIsActive = (status?: CommandPaletteItem["status"]) => {
     const normalized = status?.state?.toLowerCase();
     return normalized === "processing" || normalized === "queued";
-  };
-
-  const statusLabel = (status?: CommandPaletteItem["status"]) => {
-    if (!status) return null;
-    if (status.label) return status.label;
-    if (status.progressPercent != null) {
-      const base = normalizeState(status.state) || "Processing";
-      return `${base} ${status.progressPercent}%`;
-    }
-    return normalizeState(status.state);
   };
 
   const renderStatusIcon = (status?: CommandPaletteItem["status"]) => {
@@ -659,7 +739,7 @@ export function useSlashCommandPalette({
     const availableAbove =
       viewportHeight != null ? trigger.coords.top - offset - margin : null;
 
-    const desiredHeight = 320;
+    const desiredHeight = 416;
     const shouldOpenUp =
       viewportHeight != null &&
       availableAbove != null &&
@@ -670,8 +750,8 @@ export function useSlashCommandPalette({
 
     const availableHeight = shouldOpenUp ? availableAbove : availableBelow;
     const maxHeight = viewportHeight
-      ? Math.max(120, Math.min(320, Math.max(0, availableHeight ?? 320)))
-      : 320;
+      ? Math.max(120, Math.min(416, Math.max(0, availableHeight ?? 416)))
+      : 416;
 
     const rawTop = shouldOpenUp
       ? trigger.coords.top - offset - maxHeight
@@ -705,7 +785,7 @@ export function useSlashCommandPalette({
           <div className="relative">
             <div
               className="w-72 overflow-auto rounded-md border border-gray-200 bg-white shadow-xl"
-              style={{ maxHeight: palettePosition?.maxHeight ?? 320 }}
+              style={{ maxHeight: palettePosition?.maxHeight ?? 416 }}
               ref={listContainerRef}
             >
               {filtered.groups.length === 0 ? (
@@ -733,10 +813,16 @@ export function useSlashCommandPalette({
                       const refKey = `${group.id}:${previewItem.id}`;
                       const hasChildren =
                         !!previewItem.children?.length ||
+                        !!previewItem.childGroups?.length ||
                         !!previewItem.customPopoverContent;
+                      const isActivated = activatedKey === refKey;
                       const isDisabled = previewItem.disabled;
+                      const isMuted = previewItem.muted;
                       const inlineStatus = renderStatusIcon(previewItem.status);
-                      const closePopover = () => setPreviewKey(null);
+                      const closePopover = () => {
+                        setPreviewKey(null);
+                        setActivatedKey(null);
+                      };
                       const focusPalette = () => viewRef.current?.focus();
                       return (
                         <Popover.Root
@@ -751,7 +837,11 @@ export function useSlashCommandPalette({
                               ref={(el) => itemRefs.current.set(refKey, el)}
                               className={`w-full px-3 py-1.5 text-left transition-colors ${
                                 isActive
-                                  ? "bg-blue-50 text-blue-900"
+                                  ? isMuted
+                                    ? "bg-gray-100 text-gray-500"
+                                    : "bg-blue-50 text-blue-900"
+                                  : isMuted
+                                  ? "text-gray-400 hover:bg-gray-50"
                                   : "hover:bg-gray-50 text-gray-900"
                               } ${
                                 isDisabled
@@ -764,6 +854,7 @@ export function useSlashCommandPalette({
                                 if (isDisabled) return;
                                 if (hasChildren) {
                                   setPreviewKey(refKey);
+                                  setActivatedKey(refKey);
                                 } else {
                                   applyCommand(previewItem);
                                 }
@@ -771,6 +862,14 @@ export function useSlashCommandPalette({
                               onMouseEnter={() => {
                                 setActiveIndex(itemIndex);
                                 setPreviewKey(refKey);
+                                if (
+                                  previewItem.activateOnHover &&
+                                  hasChildren
+                                ) {
+                                  setActivatedKey(refKey);
+                                } else {
+                                  setActivatedKey(null);
+                                }
                               }}
                               onFocus={() => {
                                 if (hasChildren) {
@@ -788,7 +887,7 @@ export function useSlashCommandPalette({
                                   ) : null}
                                   <span className="text-sm">{item.label}</span>
                                 </div>
-                                {inlineStatus}
+                                {!previewItem.activateOnHover && inlineStatus}
                               </div>
                             </button>
                           </Popover.Anchor>
@@ -812,7 +911,9 @@ export function useSlashCommandPalette({
                               const relatedTarget =
                                 event.relatedTarget as HTMLElement;
                               if (
-                                relatedTarget?.closest("[data-popover-content]")
+                                relatedTarget?.closest?.(
+                                  "[data-popover-content]"
+                                )
                               ) {
                                 return;
                               }
@@ -821,8 +922,8 @@ export function useSlashCommandPalette({
                           >
                             {(() => {
                               if (
-                                previewItem.customPopoverContent &&
-                                hasChildren
+                                isActivated &&
+                                previewItem.customPopoverContent
                               ) {
                                 return previewItem.customPopoverContent({
                                   closePopover: () => {
@@ -832,77 +933,100 @@ export function useSlashCommandPalette({
                                   apply: applyCommand,
                                 });
                               }
-                              if (hasChildren) {
+                              if (isActivated && hasChildren) {
                                 return (
                                   <div className="w-64 rounded-md border border-gray-200 bg-white shadow-xl">
-                                    <div className="px-3 py-2 border-b border-gray-100">
-                                      <div className="flex items-center justify-between gap-2">
-                                        <div className=" text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                          {previewItem.label}
-                                        </div>
-                                        {renderStatusIcon(previewItem.status)}
+                                    <div className="px-3 py-2.5 border-b border-gray-100">
+                                      <div className="text-sm font-semibold text-gray-800">
+                                        {previewItem.label}
                                       </div>
-                                      {statusLabel(previewItem.status) ? (
-                                        <div className="mt-1 text-xs text-gray-600">
-                                          {statusLabel(previewItem.status)}
-                                        </div>
-                                      ) : null}
+                                      {previewItem.popoverHeader}
+                                      {previewItem.popoverStatus}
                                       {previewItem.description ? (
                                         <div className="mt-1 text-xs text-gray-600">
                                           {previewItem.description}
                                         </div>
                                       ) : null}
                                     </div>
-                                    <div className="py-1">
-                                      {previewItem.children?.map((child) => (
-                                        <button
-                                          key={child.id}
-                                          className="w-full px-3 py-1.5 text-left text-sm text-gray-900 hover:bg-gray-50"
-                                          onClick={(e) => {
-                                            e.preventDefault();
-                                            applyCommand(child);
-                                            setPreviewKey(null);
-                                          }}
-                                        >
-                                          <div className="flex flex-col gap-0.5">
-                                            <span className="font-medium">
-                                              {child.label}
-                                            </span>
-                                            {child.description ? (
-                                              <span className="text-xs text-gray-600">
-                                                {child.description}
-                                              </span>
-                                            ) : null}
+                                    {previewItem.childGroups ? (
+                                      previewItem.childGroups.map((grp) => (
+                                        <div key={grp.id}>
+                                          <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-gray-400 tracking-wide uppercase">
+                                            {grp.label}
                                           </div>
-                                        </button>
-                                      ))}
-                                    </div>
+                                          <div className="pb-1">
+                                            {grp.items.map((child) => (
+                                              <ChildItemWithPreview
+                                                key={child.id}
+                                                child={child}
+                                                onApply={() => {
+                                                  applyCommand(child);
+                                                  setPreviewKey(null);
+                                                }}
+                                              />
+                                            ))}
+                                          </div>
+                                        </div>
+                                      ))
+                                    ) : (
+                                      <div className="py-1">
+                                        {previewItem.children?.map((child) => (
+                                          <ChildItemWithPreview
+                                            key={child.id}
+                                            child={child}
+                                            onApply={() => {
+                                              applyCommand(child);
+                                              setPreviewKey(null);
+                                            }}
+                                          />
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+                              if (previewItem.muted) {
+                                return (
+                                  <div className="w-56 rounded-md border border-gray-200 bg-white shadow-lg overflow-hidden p-3">
+                                    <p className="text-xs text-gray-500">
+                                      {previewItem.description ||
+                                        "Not yet processed for reporting."}
+                                    </p>
                                   </div>
                                 );
                               }
                               return (
-                                <div className="w-64 rounded-md outline-none border border-gray-200 bg-white shadow-xl focus:outline-none ring-0">
-                                  <div className="h-32 w-full overflow-hidden rounded-t-md bg-gray-100">
-                                    {previewItem.screenshotSrc ? (
-                                      <img
-                                        src={previewItem.screenshotSrc}
-                                        alt={
-                                          previewItem.screenshotAlt ||
-                                          `${previewItem.label} preview`
-                                        }
-                                        className="h-full w-full object-cover"
-                                      />
-                                    ) : (
-                                      <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-                                        Screenshot coming soon
-                                      </div>
-                                    )}
-                                  </div>
-                                  <div className="px-3 py-2">
-                                    <div className="text-sm font-semibold text-gray-900">
-                                      {previewItem.label}
+                                <div className="w-56 rounded-lg outline-none border border-gray-700 bg-gray-800 shadow-xl focus:outline-none ring-0 overflow-hidden">
+                                  <div className="p-3 pb-2">
+                                    <div
+                                      className="h-20 w-full overflow-hidden rounded bg-gray-700"
+                                      role="img"
+                                      aria-label={
+                                        previewItem.screenshotSrc
+                                          ? previewItem.screenshotAlt ||
+                                            `${previewItem.label} preview`
+                                          : undefined
+                                      }
+                                      style={
+                                        previewItem.screenshotSrc
+                                          ? {
+                                              backgroundImage: `url(${previewItem.screenshotSrc})`,
+                                              backgroundSize: "cover",
+                                              backgroundPosition: "center",
+                                              backgroundRepeat: "no-repeat",
+                                            }
+                                          : undefined
+                                      }
+                                    >
+                                      {!previewItem.screenshotSrc && (
+                                        <div className="flex h-full w-full items-center justify-center text-xs text-gray-500">
+                                          Screenshot coming soon
+                                        </div>
+                                      )}
                                     </div>
-                                    <div className="mt-1 text-xs text-gray-600 whitespace-pre-line">
+                                  </div>
+                                  <div className="px-3 pb-3">
+                                    <div className="text-xs text-gray-300 whitespace-pre-line">
                                       {previewItem.description ||
                                         "No description provided yet."}
                                     </div>

@@ -93,7 +93,7 @@ export function LayerToggleTooltipControlsBase({
               },
             });
           }}
-          required={false}
+          required={true}
           onlyReportingLayers={false}
           hideSearch={false}
         >

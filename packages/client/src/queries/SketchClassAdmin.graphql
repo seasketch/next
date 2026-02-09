@@ -774,6 +774,49 @@ query ProjectReportingLayers($slug: String!) {
     reportingLayers {
       ...OverlaySourceDetails
     }
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      copiedFromDataLibraryTemplateId
+      dataLayer {
+        dataSource {
+          id
+          type
+        }
+      }
+    }
+  }
+}
+
+query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      dataSource {
+        id
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+
+query OverlayLayerAuthorInfo($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      version
+      dataSource {
+        attribution
+        id
+        createdAt
+        authorProfile {
+          ...AuthorProfile
+        }
+      }
+    }
   }
 }
 

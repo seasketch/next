@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  ReactNode,
+} from "react";
 import { useTranslation } from "react-i18next";
 import * as Popover from "@radix-ui/react-popover";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
@@ -361,6 +368,8 @@ export function LayerPickerDropdown({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
+  const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const listRef = useRef<HTMLDivElement>(null);
 
   const { reportingLayers, allLayers, loading, error } = useLayerPickerData({
     t,
@@ -373,20 +382,31 @@ export function LayerPickerDropdown({
     }
   }, [open, hideSearch]);
 
-  const filterItems = (items: LayerPickerOption[]): LayerPickerOption[] => {
-    const term = search.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter((i) => i.title.toLowerCase().includes(term));
-  };
+  const filterItems = useCallback(
+    (items: LayerPickerOption[]): LayerPickerOption[] => {
+      const term = search.trim().toLowerCase();
+      if (!term) return items;
+      return items.filter((i) => i.title.toLowerCase().includes(term));
+    },
+    [search]
+  );
 
-  const filteredReporting = filterItems(reportingLayers);
-  const filteredAll = onlyReportingLayers
-    ? []
-    : filterItems(
-        allLayers.filter(
-          (l) => !reportingLayers.some((r) => r.stableId === l.stableId)
-        )
-      );
+  const filteredReporting = useMemo(
+    () => filterItems(reportingLayers),
+    [filterItems, reportingLayers]
+  );
+
+  const filteredAll = useMemo(
+    () =>
+      onlyReportingLayers
+        ? []
+        : filterItems(
+            allLayers.filter(
+              (l) => !reportingLayers.some((r) => r.stableId === l.stableId)
+            )
+          ),
+    [onlyReportingLayers, filterItems, allLayers, reportingLayers]
+  );
 
   const suggestedLayers = useMemo(() => {
     if (!suggested || !suggested.length) return [];
@@ -410,6 +430,66 @@ export function LayerPickerDropdown({
     return filterItems(suggestedLayers);
   }, [filterItems, suggestedLayers]);
 
+  // Build a flat list of all visible selectable items (in render order)
+  const flatItems = useMemo(() => {
+    const items: (
+      | { type: "none" }
+      | { type: "layer"; layer: LayerPickerOption }
+    )[] = [];
+    if (!required) {
+      items.push({ type: "none" });
+    }
+    for (const layer of filteredSuggested) {
+      items.push({ type: "layer", layer });
+    }
+    for (const layer of filteredReporting) {
+      items.push({ type: "layer", layer });
+    }
+    if (!onlyReportingLayers) {
+      for (const layer of filteredAll) {
+        items.push({ type: "layer", layer });
+      }
+    }
+    return items;
+  }, [
+    required,
+    filteredSuggested,
+    filteredReporting,
+    filteredAll,
+    onlyReportingLayers,
+  ]);
+
+  // Offsets for computing data-option-index per section
+  const noneCount = required ? 0 : 1;
+  const suggestedStart = noneCount;
+  const reportingStart = suggestedStart + filteredSuggested.length;
+  const allStart = reportingStart + filteredReporting.length;
+
+  // Reset highlight when search text changes
+  useEffect(() => {
+    setHighlightedIndex(-1);
+  }, [search]);
+
+  // Reset highlight and search when popover closes
+  useEffect(() => {
+    if (!open) {
+      setHighlightedIndex(-1);
+      setSearch("");
+    }
+  }, [open]);
+
+  // Scroll highlighted item into view
+  useEffect(() => {
+    if (highlightedIndex >= 0 && listRef.current) {
+      // eslint-disable-next-line i18next/no-literal-string
+      const selector = `[data-option-index="${highlightedIndex}"]`;
+      const el = listRef.current.querySelector(selector);
+      if (el) {
+        el.scrollIntoView({ block: "nearest" });
+      }
+    }
+  }, [highlightedIndex]);
+
   const handleSelect = (layer?: LayerPickerOption) => {
     if (!layer) {
       onChange(undefined);
@@ -425,6 +505,36 @@ export function LayerPickerDropdown({
     setOpen(false);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    switch (e.key) {
+      case "ArrowDown":
+        e.preventDefault();
+        setHighlightedIndex((prev) =>
+          prev < flatItems.length - 1 ? prev + 1 : prev
+        );
+        break;
+      case "ArrowUp":
+        e.preventDefault();
+        setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+        break;
+      case "Enter":
+        if (highlightedIndex >= 0 && highlightedIndex < flatItems.length) {
+          e.preventDefault();
+          const item = flatItems[highlightedIndex];
+          if (item.type === "none") {
+            handleSelect(undefined);
+          } else {
+            handleSelect(item.layer);
+          }
+        }
+        break;
+      case "Escape":
+        e.preventDefault();
+        setOpen(false);
+        break;
+    }
+  };
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
       <Popover.Trigger asChild disabled={loading || !!error}>
@@ -434,6 +544,7 @@ export function LayerPickerDropdown({
         side={popoverSide}
         sideOffset={popoverSideOffset}
         className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-50 w-60 p-1"
+        onKeyDown={handleKeyDown}
       >
         {(title || description) && (
           <div className="px-2 pb-2 pt-1">
@@ -458,11 +569,16 @@ export function LayerPickerDropdown({
             />
           </div>
         )}
-        <div className="max-h-64 overflow-auto space-y-1.5 pb-1">
+        <div ref={listRef} className="max-h-64 overflow-auto space-y-1.5 pb-1">
           {!required && (
             <button
               type="button"
-              className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors truncate"
+              data-option-index={0}
+              className={`w-full text-left px-2.5 py-1.5 text-sm rounded-md transition-colors truncate ${
+                highlightedIndex === 0
+                  ? "bg-blue-50"
+                  : "hover:bg-gray-50 focus:bg-gray-50"
+              }`}
               onClick={() => handleSelect(undefined)}
               title={t("None")}
             >
@@ -475,13 +591,18 @@ export function LayerPickerDropdown({
                 {t("Suggested")}
               </div>
               <div className="space-y-1">
-                {filteredSuggested.map((layer) => (
+                {filteredSuggested.map((layer, i) => (
                   <button
                     key={`suggested-${layer.stableId}-${
                       layer.tableOfContentsItemId ?? "none"
                     }`}
                     type="button"
-                    className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
+                    data-option-index={suggestedStart + i}
+                    className={`w-full text-left px-2.5 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                      highlightedIndex === suggestedStart + i
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50 focus:bg-gray-50"
+                    }`}
                     onClick={() => handleSelect(layer)}
                     title={layer.title}
                   >
@@ -497,11 +618,16 @@ export function LayerPickerDropdown({
                 {t("Reporting Layers")}
               </div>
               <div className="space-y-1">
-                {filteredReporting.map((layer) => (
+                {filteredReporting.map((layer, i) => (
                   <button
                     key={layer.stableId}
                     type="button"
-                    className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
+                    data-option-index={reportingStart + i}
+                    className={`w-full text-left px-2.5 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                      highlightedIndex === reportingStart + i
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50 focus:bg-gray-50"
+                    }`}
                     onClick={() => handleSelect(layer)}
                     title={layer.title}
                   >
@@ -517,11 +643,16 @@ export function LayerPickerDropdown({
                 {t("All Layers")}
               </div>
               <div className="space-y-1">
-                {filteredAll.map((layer) => (
+                {filteredAll.map((layer, i) => (
                   <button
                     key={layer.stableId}
                     type="button"
-                    className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
+                    data-option-index={allStart + i}
+                    className={`w-full text-left px-2.5 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                      highlightedIndex === allStart + i
+                        ? "bg-blue-50"
+                        : "hover:bg-gray-50 focus:bg-gray-50"
+                    }`}
                     onClick={() => handleSelect(layer)}
                     title={layer.title}
                   >

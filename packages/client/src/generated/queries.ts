@@ -23199,6 +23199,65 @@ export type ProjectReportingLayersQuery = (
     & { reportingLayers: Array<(
       { __typename?: 'ReportOverlaySource' }
       & OverlaySourceDetailsFragment
+    )>, draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'copiedFromDataLibraryTemplateId'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'type'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
+export type OverlaySourceProcessingStatusQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlaySourceProcessingStatusQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id'>
+        & { sourceProcessingJob?: Maybe<(
+          { __typename?: 'SourceProcessingJob' }
+          & SourceProcessingJobDetailsFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlayLayerAuthorInfoQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlayLayerAuthorInfoQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'version'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'attribution' | 'id' | 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & AuthorProfileFragment
+        )> }
+      )> }
     )> }
   )> }
 );
@@ -30169,9 +30228,54 @@ export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
     reportingLayers {
       ...OverlaySourceDetails
     }
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      copiedFromDataLibraryTemplateId
+      dataLayer {
+        dataSource {
+          id
+          type
+        }
+      }
+    }
   }
 }
     ${OverlaySourceDetailsFragmentDoc}`;
+export const OverlaySourceProcessingStatusDocument = /*#__PURE__*/ gql`
+    query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      dataSource {
+        id
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+export const OverlayLayerAuthorInfoDocument = /*#__PURE__*/ gql`
+    query OverlayLayerAuthorInfo($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      version
+      dataSource {
+        attribution
+        id
+        createdAt
+        authorProfile {
+          ...AuthorProfile
+        }
+      }
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}`;
 export const PreprocessSourceDocument = /*#__PURE__*/ gql`
     mutation PreprocessSource($slug: String!, $sourceId: Int!) {
   preprocessSource(input: {slug: $slug, sourceId: $sourceId}) {
@@ -31514,6 +31618,8 @@ export const namedOperations = {
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
     ProjectReportingLayers: 'ProjectReportingLayers',
+    OverlaySourceProcessingStatus: 'OverlaySourceProcessingStatus',
+    OverlayLayerAuthorInfo: 'OverlayLayerAuthorInfo',
     OverlaysForReportLayerToggles: 'OverlaysForReportLayerToggles',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',

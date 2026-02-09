@@ -1270,20 +1270,36 @@ div[attachments="forumAttachments"] {
   margin-bottom:0px
 }
 
-.ReportCardBodyEditor .ProseMirror p.empty-active-paragraph {
+.ReportCardBodyEditor .ProseMirror p.has-placeholder {
   position: relative;
-  --tw-text-opacity:1;
-  color:rgb(156 163 175 / var(--tw-text-opacity, 1));
 }
 
-.ReportCardBodyEditor .ProseMirror p.empty-active-paragraph::before {
-  content: "Start writing or type / for commands";
+.ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder{
   --tw-text-opacity:1;
   color:rgb(156 163 175 / var(--tw-text-opacity, 1));
   pointer-events: none;
+  -webkit-user-select: none;
+          user-select: none;
   position: absolute;
   top: 0;
   left: 0;
+  white-space: nowrap
+}
+
+.ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder kbd{
+  border-radius:0.25rem;
+  border-width:1px;
+  --tw-border-opacity:1;
+  border-color:rgb(209 213 219 / var(--tw-border-opacity, 1));
+  --tw-bg-opacity:1;
+  background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1));
+  --tw-text-opacity:1;
+  color:rgb(107 114 128 / var(--tw-text-opacity, 1));
+  font-family: inherit;
+  font-size: 0.75em;
+  padding: 1px 5px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  padding-bottom: 1px
 }
 
 .ReportCardBody details {
@@ -13558,9 +13574,18 @@ input[type="checkbox"][indeterminate="true"]:checked {
   cursor:not-allowed
 }
 
+.disabled\:cursor-wait:disabled{
+  cursor:wait
+}
+
 .disabled\:bg-gray-100:disabled{
   --tw-bg-opacity:1;
   background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
+}
+
+.disabled\:bg-blue-400:disabled{
+  --tw-bg-opacity:1;
+  background-color:rgb(96 165 250 / var(--tw-bg-opacity, 1))
 }
 
 .disabled\:text-gray-500:disabled{

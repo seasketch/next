@@ -230,6 +230,12 @@ export const OverlappingAreasTable: ReportWidget<
             row.geographyTotal > 0
               ? row.overlap / row.geographyTotal
               : undefined;
+          if (percent && percent > 1.05) {
+            console.log(row);
+            throw new Error(
+              `Percent is greater than 100%. Value: ${percent * 100}%`
+            );
+          }
           const layerState =
             row.stableId && mapContext
               ? mapContext.layerStatesByTocStaticId?.[row.stableId] || undefined
