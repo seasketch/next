@@ -108,6 +108,7 @@ export async function calculateRasterStats(
     console.error("Error calculating raster stats", e);
     console.log(sourceUrl);
     console.log(feature);
+    console.log(feature.geometry.coordinates);
     if (typeof e === "string" && e.includes("No Values")) {
       return {
         bands: [
