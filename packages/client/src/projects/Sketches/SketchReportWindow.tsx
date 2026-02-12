@@ -1,5 +1,5 @@
 import { XIcon } from "@heroicons/react/outline";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { memo, useContext, useEffect, useMemo, useState } from "react";
 import Skeleton from "../../components/Skeleton";
 import { useSketchReportingDetailsQuery } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
@@ -25,7 +25,7 @@ import {
 
 // registerCards();
 
-export default function SketchReportWindow({
+function SketchReportWindow({
   sketchId,
   sketchClassId,
   reportId,
@@ -72,6 +72,8 @@ export default function SketchReportWindow({
     </FormLanguageContext.Provider>
   );
 }
+
+export default memo(SketchReportWindow);
 
 function SketchReportWindowInner({
   sketchId,

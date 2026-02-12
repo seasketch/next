@@ -11,7 +11,7 @@ import {
   MenuBarItemClasses,
 } from "../components/Menubar";
 import clsx from "clsx";
-import { MapContext } from "./MapContextManager";
+import { MapManagerContext, SketchLayerContext } from "./MapContextManager";
 
 export type SketchClassMenuItemType = {
   id: string;
@@ -33,16 +33,17 @@ export const SketchClassItemMenu = React.forwardRef<
   ) => {
     const MenuType = type;
 
-    const mapContext = useContext(MapContext);
+    const { sketchClassLayerStates } = useContext(SketchLayerContext);
+    const { manager } = useContext(MapManagerContext);
     const [opacity, setOpacity] = useState(
-      mapContext.sketchClassLayerStates[sketchClassId]?.opacity || 1
+      sketchClassLayerStates[sketchClassId]?.opacity || 1
     );
 
     const currentOpacity =
-      mapContext.sketchClassLayerStates[sketchClassId]?.opacity || 1;
+      sketchClassLayerStates[sketchClassId]?.opacity || 1;
 
     useEffect(() => {
-      const setting = mapContext.sketchClassLayerStates[sketchClassId]?.opacity;
+      const setting = sketchClassLayerStates[sketchClassId]?.opacity;
       if (typeof setting === "number") {
         setOpacity(setting);
       } else {
@@ -61,7 +62,7 @@ export const SketchClassItemMenu = React.forwardRef<
           disabled={top}
           className={MenuBarItemClasses}
           onSelect={() => {
-            mapContext?.manager?.moveLayerToTop(item.id, true);
+            manager?.moveLayerToTop(item.id, true);
           }}
         >
           <span>
@@ -73,7 +74,7 @@ export const SketchClassItemMenu = React.forwardRef<
           disabled={bottom}
           className={MenuBarItemClasses}
           onSelect={() => {
-            mapContext?.manager?.moveLayerToBottom(item.id, true);
+            manager?.moveLayerToBottom(item.id, true);
           }}
         >
           <span>
@@ -95,7 +96,7 @@ export const SketchClassItemMenu = React.forwardRef<
             onChange={(e) => {
               const val = parseFloat(e.target.value);
               setOpacity(val);
-              mapContext.manager?.setSketchClassOpacity(sketchClassId, val);
+              manager?.setSketchClassOpacity(sketchClassId, val);
             }}
             name="opacity"
             min="0"

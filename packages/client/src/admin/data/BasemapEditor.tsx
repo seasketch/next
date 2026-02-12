@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from "react";
 import Button from "../../components/Button";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
+import { BasemapContext } from "../../dataLayers/BasemapContext";
 import {
   useGetBasemapsQuery,
   useDeleteBasemapMutation,
@@ -16,13 +17,28 @@ import useDialog from "../../components/useDialog";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function BaseMapEditor() {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(BasemapContext);
+  const { manager } = useContext(MapManagerContext);
   const { slug } = useParams<{ slug: string }>();
   const { data } = useGetBasemapsQuery({
     variables: {
       slug: slug,
     },
   });
+
+  useEffect(() => {
+    console.log("BasemapEditor: mapContext changed");
+  }, [mapContext.selectedBasemap]);
+
+  useEffect(() => {
+    console.log("BasemapEditor: manager changed");
+  }, [manager]);
+
+  useEffect(() => {
+    console.log("BasemapEditor: mounted");
+  }, []);
+
+  console.log("BasemapEditor: render");
 
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -31,10 +47,10 @@ export default function BaseMapEditor() {
   const projectData = useGetProjectBySlugQuery({ variables: { slug } });
   const client = useApolloClient();
   useEffect(() => {
-    if (data?.projectBySlug?.basemaps && mapContext.manager) {
-      mapContext.manager.setBasemaps(data.projectBySlug.basemaps);
+    if (data?.projectBySlug?.basemaps && manager) {
+      manager.setBasemaps(data.projectBySlug.basemaps);
     }
-  }, [data?.projectBySlug?.basemaps, mapContext.manager]);
+  }, [data?.projectBySlug?.basemaps, manager]);
   const onError = useGlobalErrorHandler();
 
   const { confirmDelete } = useDialog();
@@ -112,7 +128,7 @@ export default function BaseMapEditor() {
           <CreateBasemapModal
             onRequestClose={() => setAddModalOpen(false)}
             onSave={(id) => {
-              mapContext.manager?.setSelectedBasemap(id.toString());
+              manager?.setSelectedBasemap(id.toString());
             }}
           />
         )}

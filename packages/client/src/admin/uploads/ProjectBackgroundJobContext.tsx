@@ -26,7 +26,7 @@ import { ExclamationCircleIcon } from "@heroicons/react/outline";
 import useProjectId from "../../useProjectId";
 import { useApolloClient } from "@apollo/client";
 
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
 import ProjectBackgroundJobManager, {
@@ -92,7 +92,7 @@ export default function DataUploadDropzone({
     finishedWithChangelog: true,
   });
   const client = useApolloClient();
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
   const { t } = useTranslation("admin:data");
@@ -105,7 +105,7 @@ export default function DataUploadDropzone({
   });
 
   useEffect(() => {
-    const mapManager = mapContext.manager;
+    const mapManager = manager;
     if (projectId && mapManager) {
       const manager = new ProjectBackgroundJobManager(slug, projectId, client);
       manager.on(
@@ -165,7 +165,7 @@ export default function DataUploadDropzone({
         manager.destroy();
       };
     }
-  }, [client, slug, projectId, mapContext.manager, alert, onError, t]);
+  }, [client, slug, projectId, manager, alert, onError, t]);
 
   const { confirm } = useDialog();
 

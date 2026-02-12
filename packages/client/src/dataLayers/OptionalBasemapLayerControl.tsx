@@ -6,7 +6,8 @@ import {
   useGetOptionalBasemapLayerMetadataQuery,
 } from "../generated/graphql";
 import { useContext, useState } from "react";
-import { MapContext } from "./MapContextManager";
+import { MapManagerContext } from "./MapContextManager";
+import { BasemapContext } from "./BasemapContext";
 import RadioGroup from "../components/RadioGroup";
 import MetadataIcon from "../components/MetadataIcon";
 import MetadataModal from "./MetadataModal";
@@ -27,7 +28,8 @@ export default function OptionalBasemapLayerControl({
     | "metadata"
   >;
 }) {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(BasemapContext);
+  const { manager } = useContext(MapManagerContext);
   const [metadataOpen, setMetadataOpen] = useState(false);
 
   let options = layer.options as {
@@ -72,8 +74,8 @@ export default function OptionalBasemapLayerControl({
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
               onChange={(e) => {
                 const value = e.target.value;
-                if (mapContext.manager) {
-                  mapContext.manager.updateOptionalBasemapSetting(layer, value);
+                if (manager) {
+                  manager.updateOptionalBasemapSetting(layer, value);
                 }
                 if (onChange) {
                   onChange(value);
@@ -102,8 +104,8 @@ export default function OptionalBasemapLayerControl({
           }
           value={mapContext.basemapOptionalLayerStates[layer.id]}
           onChange={(value) => {
-            if (mapContext.manager) {
-              mapContext.manager.updateOptionalBasemapSetting(layer, value);
+            if (manager) {
+              manager.updateOptionalBasemapSetting(layer, value);
             }
             if (onChange) {
               onChange(value);
@@ -131,8 +133,8 @@ export default function OptionalBasemapLayerControl({
             <Switch
               isToggled={mapContext.basemapOptionalLayerStates[layer.id]}
               onClick={(value) => {
-                if (mapContext.manager) {
-                  mapContext.manager.updateOptionalBasemapSetting(layer, value);
+                if (manager) {
+                  manager.updateOptionalBasemapSetting(layer, value);
                 }
                 if (onChange) {
                   onChange(value);

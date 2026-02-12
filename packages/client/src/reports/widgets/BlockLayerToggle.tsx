@@ -1,8 +1,11 @@
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { LayersIcon } from "@radix-ui/react-icons";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import {
+  LayerTreeContext,
+  MapManagerContext,
+} from "../../dataLayers/MapContextManager";
 import { ReportWidget } from "./widgets";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import { LayerToggleTooltipControlsBase } from "./LayerToggleControls";
@@ -16,7 +19,8 @@ export const BlockLayerToggle: ReportWidget<BlockLayerToggleSettings> = ({
   componentSettings,
   sources,
 }) => {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   const { t } = useTranslation("reports");
   const stableId = componentSettings?.stableId;
 
@@ -48,19 +52,18 @@ export const BlockLayerToggle: ReportWidget<BlockLayerToggleSettings> = ({
     return { isVisible: visible, isLoading: loading, error: errorString };
   }, [stableId, mapContext?.layerStatesByTocStaticId]);
 
+  const handleToggle = useCallback(() => {
+    if (!manager || !stableId) return;
+    if (isVisible) {
+      manager.hideTocItems([stableId]);
+    } else {
+      manager.showTocItems([stableId]);
+    }
+  }, [manager, stableId, isVisible]);
+
   if (!stableId) {
     return null;
   }
-
-  const handleToggle = () => {
-    const mgr: any = (mapContext as any)?.manager;
-    if (!mgr) return;
-    if (isVisible) {
-      mgr.hideTocItems([stableId]);
-    } else {
-      mgr.showTocItems([stableId]);
-    }
-  };
 
   return (
     <div className="flex items-center space-x-2 px-4 py-2 mt-2 -mx-4">

@@ -27,8 +27,10 @@ import useDialog from "../../components/useDialog";
 import {
   BASE_SERVER_ENDPOINT,
   LayerState,
-  MapContext,
+  MapManagerContext,
+  SketchLayerContext,
 } from "../../dataLayers/MapContextManager";
+import { MapUIStateContext } from "../../dataLayers/MapUIContext";
 import { download } from "../../download";
 import {
   GetSketchForEditingDocument,
@@ -176,6 +178,10 @@ const NotImplemented = () => {
   throw new Error("Not implemented");
 };
 
+// Usefull for avoiding unnecessary re-renders
+const EmptyArray: string[] = [];
+const EmptyObject: { [id: string]: string } = {};
+
 const defaultValue: SketchUIStateContextValue = {
   selectedIds: [],
   clearSelection: NotImplemented,
@@ -211,7 +217,9 @@ export default function SketchUIStateContextProvider({
   children: ReactNode;
 }) {
   const { t } = useTranslation("sketching");
-  const mapContext = useContext(MapContext);
+  const { manager, ready } = useContext(MapManagerContext);
+  const { sketchLayerStates } = useContext(SketchLayerContext);
+  const uiState = useContext(MapUIStateContext);
   const client = useApolloClient();
   const slug = getSlug();
   const projectMetadata = useProjectMetadataQuery({
@@ -240,7 +248,7 @@ export default function SketchUIStateContextProvider({
   >([]);
 
   useEffect(() => {
-    if (mapContext.manager && mapContext.ready) {
+    if (manager && ready) {
       const styles: { [sketchClassId: number]: any[] } = {};
       const layerConfig: {
         [sketchClassId: number]: {
@@ -315,9 +323,9 @@ export default function SketchUIStateContextProvider({
           };
         }
       }
-      mapContext.manager.setSketchClassLayerConfig(layerConfig);
+      manager.setSketchClassLayerConfig(layerConfig);
     }
-  }, [mapContext.manager, mapContext.ready, sketchClasses]);
+  }, [manager, ready, sketchClasses]);
 
   const { expandItem, collapseItem, onExpand } = useMemo(() => {
     const expandItem = (item: { id: string }) => {
@@ -376,7 +384,7 @@ export default function SketchUIStateContextProvider({
   }, [setVisibleSketches]);
 
   useEffect(() => {
-    if (mapContext.manager) {
+    if (manager) {
       const sketches: {
         id: number;
         timestamp?: string;
@@ -418,15 +426,15 @@ export default function SketchUIStateContextProvider({
           }
         }
       }
-      mapContext.manager.setVisibleSketches(sketches);
+      manager.setVisibleSketches(sketches);
     }
-  }, [visibleSketches, mapContext.manager, cacheState, client]);
+  }, [visibleSketches, manager, cacheState, client]);
 
   const { loading, errors } = useMemo(() => {
     const loading: string[] = [];
     const errors: { [id: string]: string } = {};
-    for (const key in mapContext.sketchLayerStates) {
-      const state = mapContext.sketchLayerStates[key];
+    for (const key in sketchLayerStates) {
+      const state = sketchLayerStates[key];
       if (state.error) {
         errors[`Sketch:${key}`] = state.error.toString();
       }
@@ -435,8 +443,14 @@ export default function SketchUIStateContextProvider({
         loading.push(`Sketch:${key}`);
       }
     }
-    return { loading, errors };
-  }, [mapContext.sketchLayerStates]);
+    return {
+      loading: loading.length > 0 ? loading : (EmptyArray as string[]),
+      errors:
+        Object.keys(errors).length > 0
+          ? errors
+          : (EmptyObject as { [id: string]: string }),
+    };
+  }, [sketchLayerStates]);
 
   // # Sketch and SketchFolder Selection
   const [selectedIds, _setSelectedIds] = useState<string[]>([]);
@@ -691,8 +705,8 @@ export default function SketchUIStateContextProvider({
   );
 
   useEffect(() => {
-    const interactivityManager = mapContext.manager?.interactivityManager;
-    const map = mapContext.manager?.map;
+    const interactivityManager = uiState.interactivityManager;
+    const map = manager?.map;
     if (interactivityManager && map) {
       const handler = (feature: Feature<any>, e: MapMouseEvent) => {
         if (
@@ -1008,8 +1022,8 @@ export default function SketchUIStateContextProvider({
   }, [
     editSketch,
     focusOnTableOfContentsItem,
-    mapContext.manager?.interactivityManager,
-    mapContext.manager?.map,
+    uiState.interactivityManager,
+    manager?.map,
     setSelectedIds,
     t,
     projectMetadata.data?.me?.id,
@@ -1019,7 +1033,7 @@ export default function SketchUIStateContextProvider({
   ]);
 
   useEffect(() => {
-    if (mapContext?.manager) {
+    if (manager) {
       const sketches: SketchTocDetailsFragment[] = [];
       const folders: SketchFolderDetailsFragment[] = [];
       // @ts-ignore private api
@@ -1064,7 +1078,7 @@ export default function SketchUIStateContextProvider({
           .map((s) => parseInt(s.split(":")[1])),
         ...children,
       ];
-      mapContext.manager.setSelectedSketches(selection);
+      manager.setSelectedSketches(selection);
 
       // TODO: make a combined bbox and set selectedBBOX so folders can have a zoom-to context menu option
       const bbox = bboxForSelection(
@@ -1073,7 +1087,7 @@ export default function SketchUIStateContextProvider({
       );
       setBBOX(bbox as number[]);
     }
-  }, [selectedIds, mapContext.manager, client]);
+  }, [selectedIds, manager, client]);
   // mySketches, myFolders]);
 
   const onRequestReportClose = useCallback(
@@ -1353,8 +1367,8 @@ export default function SketchUIStateContextProvider({
             if (visibleSketches.indexOf(selectedIds[0]) === -1) {
               onChecked(selectedIds, true);
             }
-            if (mapContext.manager?.map) {
-              mapContext.manager.map.fitBounds(
+            if (manager?.map) {
+              manager.map.fitBounds(
                 selectionBBox as mapboxgl.LngLatBoundsLike,
                 {
                   animate: true,
@@ -1564,7 +1578,7 @@ export default function SketchUIStateContextProvider({
       focusOnTableOfContentsItem,
       openSketchReport,
       visibleSketches,
-      mapContext.manager?.map,
+      manager?.map,
       onChecked,
       renameFolder,
       editSketch,
@@ -1694,38 +1708,64 @@ export default function SketchUIStateContextProvider({
     [lang.selectedLang, setFormLanguage, data?.project?.supportedLanguages]
   );
 
+  const SketchUIStateContextValue = useMemo(() => {
+    return {
+      ...defaultValue,
+      expandedIds,
+      expandItem,
+      onExpand,
+      collapseItem,
+      clearSelection,
+      setToolbarRef,
+      selectedIds,
+      onSelect,
+      focusOnTableOfContentsItem,
+      selectionBBox,
+      selectionType,
+      onChecked,
+      visibleSketches,
+      updateFromCache,
+      openReports,
+      setOpenReports,
+      editorIsOpen: editor !== false,
+      editSketch,
+      menuOptions,
+      getMenuOptions,
+      showSketches,
+      hideSketches,
+      setVisibleSketches,
+      loading,
+      errors,
+      setSketchClasses,
+    };
+  }, [
+    expandedIds,
+    expandItem,
+    onExpand,
+    collapseItem,
+    clearSelection,
+    selectedIds,
+    onSelect,
+    focusOnTableOfContentsItem,
+    selectionBBox,
+    selectionType,
+    onChecked,
+    visibleSketches,
+    updateFromCache,
+    openReports,
+    editor,
+    editSketch,
+    menuOptions,
+    getMenuOptions,
+    showSketches,
+    hideSketches,
+    setVisibleSketches,
+    loading,
+    errors,
+  ]);
+
   return (
-    <SketchUIStateContext.Provider
-      value={{
-        ...defaultValue,
-        expandedIds,
-        expandItem,
-        onExpand,
-        collapseItem,
-        clearSelection,
-        setToolbarRef,
-        selectedIds,
-        onSelect,
-        focusOnTableOfContentsItem,
-        selectionBBox,
-        selectionType,
-        onChecked,
-        visibleSketches,
-        updateFromCache,
-        openReports,
-        setOpenReports,
-        editorIsOpen: editor !== false,
-        editSketch,
-        menuOptions,
-        getMenuOptions,
-        showSketches,
-        hideSketches,
-        setVisibleSketches,
-        loading,
-        errors,
-        setSketchClasses,
-      }}
-    >
+    <SketchUIStateContext.Provider value={SketchUIStateContextValue}>
       <FormLanguageContext.Provider value={formLanguageContextValue}>
         {children}
         {openReports.length > 0 &&

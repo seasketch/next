@@ -2,7 +2,7 @@ import { Suspense, useCallback, useContext, useEffect, useState } from "react";
 import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import {
   GetLayerItemDocument,
   useDisableDownloadForSharedLayersMutation,
@@ -107,7 +107,7 @@ export default function TableOfContentsEditor() {
     : /quota/.test(history.location.pathname)
     ? "quota"
     : "tree";
-  const { manager } = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const tocQuery = useDraftTableOfContentsQuery({
     variables: { slug },
@@ -117,7 +117,6 @@ export default function TableOfContentsEditor() {
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
-  const mapContext = useContext(MapContext);
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
@@ -393,7 +392,7 @@ export default function TableOfContentsEditor() {
           onRequestOpenFolder={() => {
             layerEditingContext.setCreateFolderModal({ open: true });
           }}
-          map={mapContext.manager?.map}
+          map={manager?.map}
           region={tocQuery.data?.projectBySlug?.region.geojson}
           selectedView={selectedView}
           setSelectedView={setSelectedView}
@@ -471,7 +470,7 @@ export default function TableOfContentsEditor() {
                       (item) => item.stableId === treeItemId
                     );
                   let sorted =
-                    mapContext.manager?.getVisibleLayersByZIndex() || [];
+                    manager?.getVisibleLayersByZIndex() || [];
                   sorted.filter(
                     (l) => !l.sketchClassLayerState && l.dataLayer?.tocId
                   );

@@ -4,7 +4,10 @@ import { CameraOptions } from "mapbox-gl";
 import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import { useMapContext } from "../../dataLayers/MapContextManager";
+import {
+  MapManagerContext,
+  useMapContext,
+} from "../../dataLayers/MapContextManager";
 import {
   BasemapDetailsFragment,
   useGetBasemapsAndRegionQuery,
@@ -42,7 +45,17 @@ export default function useMapEssentials({
       slug,
     },
   });
-  const mapContext = useMapContext({ camera: cameraOptions, bounds });
+  const {
+    managerState,
+    sketchLayerState,
+    basemapState,
+    legendsState,
+    mapOverlayState,
+  } = useMapContext({
+    camera: cameraOptions,
+    bounds,
+  });
+  const { manager } = managerState;
   const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
   bounds =
     bounds ||
@@ -58,7 +71,7 @@ export default function useMapEssentials({
   const filterBasemapIdsString = filterBasemapIds?.join(",");
   useEffect(
     () => {
-      if (mapContext?.manager && data?.projectBySlug?.basemaps) {
+      if (manager && data?.projectBySlug?.basemaps) {
         let basemaps: BasemapDetailsFragment[] = [];
         const allBasemaps = [
           ...(data.projectBySlug.basemaps || []),
@@ -87,13 +100,13 @@ export default function useMapEssentials({
               }
             }
             setBasemaps(offlineBasemaps.length ? offlineBasemaps : basemaps);
-            mapContext.manager?.setBasemaps(
+            manager?.setBasemaps(
               offlineBasemaps.length ? offlineBasemaps : basemaps
             );
           });
         } else {
           setBasemaps(basemaps);
-          mapContext.manager?.setBasemaps(basemaps);
+          manager?.setBasemaps(basemaps);
         }
       }
     },
@@ -101,20 +114,29 @@ export default function useMapEssentials({
     [
       basemapsString,
       surveyBasemapsString,
-      mapContext.manager,
+      manager,
       filterBasemapIdsString,
       online,
     ]
   );
 
   useEffect(() => {
-    if (mapContext?.manager?.map && debouncedCamera) {
-      const map = mapContext.manager.map;
+    if (manager?.map && debouncedCamera) {
+      const map = manager.map;
       map.flyTo({
         ...debouncedCamera,
       });
     }
-  }, [debouncedCamera, mapContext.manager?.map]);
+  }, [debouncedCamera, manager?.map]);
 
-  return { basemaps, mapContext, bounds, cameraOptions };
+  return {
+    basemaps,
+    managerState,
+    sketchLayerState,
+    basemapState,
+    legendsState,
+    mapOverlayState,
+    bounds,
+    cameraOptions,
+  };
 }

@@ -20,6 +20,7 @@ import {
   createContext,
   Dispatch,
   useEffect,
+  useRef,
   useState,
   SetStateAction,
 } from "react";
@@ -57,7 +58,6 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import { LegendItem } from "./Legend";
 import { EventEmitter } from "eventemitter3";
-import { MeasureControlState } from "../MeasureControl";
 import cloneDeep from "lodash.clonedeep";
 import {
   ArcGISDynamicMapService,
@@ -73,11 +73,11 @@ import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 import { createBoundsRecursive } from "../projects/OverlayLayers";
 import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
 import { isExpression } from "./legends/utils";
-import CoordinatesControl from "./CoordinatesControl";
 import {
   buildInaturalistSourcesAndLayers,
   normalizeInaturalistParams,
 } from "./inaturalist";
+import type { BasemapContextState } from "./BasemapContext";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -177,9 +177,15 @@ export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
   filterMvtUrl?: string;
 }
+/**
+ * Internal state type that combines MapContextInterface with
+ * SketchLayerContextState. The manager tracks all state internally
+ * but pushes to separate React contexts.
+ */
+type FullInternalState = MapContextInterface & SketchLayerContextState;
+
 class MapContextManager extends EventEmitter {
   map?: Map;
-  interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
   private clientDataSources: {
     [dataSourceId: string]: DataSourceDetailsFragment;
@@ -195,15 +201,22 @@ class MapContextManager extends EventEmitter {
   // problem with really long layer lists if the user toggles all the layers
   private visibleLayers: { [id: string]: LayerState } = {};
   private basemaps: { [id: string]: BasemapDetailsFragment } = {};
-  private _setState: Dispatch<SetStateAction<MapContextInterface>>;
+  private _setManagerState?: Dispatch<SetStateAction<MapManagerState>>;
+  private _setSketchLayerState?: Dispatch<
+    SetStateAction<SketchLayerContextState>
+  >;
+  private _setMapOverlayState?: Dispatch<
+    SetStateAction<MapOverlayContextState>
+  >;
+  private _setBasemapState?: Dispatch<SetStateAction<BasemapContextState>>;
+  private _setLegendsState?: Dispatch<SetStateAction<LegendsContextState>>;
+  private _ready = false;
   private updateStateDebouncerReference?: any;
   private initialCameraOptions?: CameraOptions;
   private initialBounds?: LngLatBoundsLike;
-  private internalState: MapContextInterface;
+  private internalState: FullInternalState;
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
-  private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
-  private coordinatesControl = new CoordinatesControl();
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
   private editableSketchId?: number;
@@ -243,7 +256,12 @@ class MapContextManager extends EventEmitter {
 
   constructor(
     initialState: MapContextInterface,
-    setState: Dispatch<SetStateAction<MapContextInterface>>,
+    initialSketchState: SketchLayerContextState,
+    setManagerState: Dispatch<SetStateAction<MapManagerState>>,
+    setSketchLayerState: Dispatch<SetStateAction<SketchLayerContextState>>,
+    setMapOverlayState: Dispatch<SetStateAction<MapOverlayContextState>>,
+    setBasemapState: Dispatch<SetStateAction<BasemapContextState>>,
+    setLegendsState: Dispatch<SetStateAction<LegendsContextState>>,
     initialCameraOptions?: CameraOptions,
     preferencesKey?: string,
     cacheSize?: number,
@@ -251,11 +269,15 @@ class MapContextManager extends EventEmitter {
   ) {
     super();
     cacheSize = cacheSize || bytes("50mb");
-    this._setState = setState;
+    this._setManagerState = setManagerState;
+    this._setSketchLayerState = setSketchLayerState;
+    this._setMapOverlayState = setMapOverlayState;
+    this._setBasemapState = setBasemapState;
+    this._setLegendsState = setLegendsState;
     // @ts-ignore
     window.mapContext = this;
     this.preferencesKey = preferencesKey;
-    this.internalState = initialState;
+    this.internalState = { ...initialState, ...initialSketchState };
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
     this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
@@ -268,15 +290,116 @@ class MapContextManager extends EventEmitter {
   }
 
   private setState = (action: SetStateAction<MapContextInterface>) => {
+    const sketchState = {
+      sketchLayerStates: this.internalState.sketchLayerStates,
+      sketchClassLayerStates: this.internalState.sketchClassLayerStates,
+    };
     if (typeof action === "function") {
-      this.internalState = action(this.internalState);
+      this.internalState = { ...action(this.internalState), ...sketchState };
     } else {
-      this.internalState = action;
+      this.internalState = { ...action, ...sketchState };
     }
-    this._setState((prev) => ({
-      ...prev,
-      ...this.internalState,
-    }));
+    this.pushSubContexts();
+  };
+
+  /**
+   * Pushes the current internal state to all focused sub-contexts.
+   * Each setter uses a functional update that returns the previous reference
+   * when nothing has changed, so React will skip re-renders for stable slices.
+   */
+  private pushSubContexts = () => {
+    this._setMapOverlayState?.((prev) => {
+      if (
+        prev.layerStatesByTocStaticId ===
+          this.internalState.layerStatesByTocStaticId &&
+        prev.styleHash === this.internalState.styleHash
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        layerStatesByTocStaticId: this.internalState.layerStatesByTocStaticId,
+        styleHash: this.internalState.styleHash,
+      };
+    });
+
+    this._setBasemapState?.((prev) => {
+      console.log("whats different?");
+      console.log(
+        "selectedBasemap",
+        prev.selectedBasemap === this.internalState.selectedBasemap
+      );
+      console.log(
+        "terrainEnabled",
+        prev.terrainEnabled === this.internalState.terrainEnabled
+      );
+      console.log(
+        "prefersTerrainEnabled",
+        prev.prefersTerrainEnabled === this.internalState.prefersTerrainEnabled
+      );
+      console.log(
+        "basemapError",
+        prev.basemapError === this.internalState.basemapError
+      );
+      console.log(
+        "basemapOptionalLayerStates",
+        prev.basemapOptionalLayerStates ===
+          this.internalState.basemapOptionalLayerStates
+      );
+      console.log(
+        "basemapOptionalLayerStatePreferences",
+        prev.basemapOptionalLayerStatePreferences ===
+          this.internalState.basemapOptionalLayerStatePreferences
+      );
+      console.log("--------------------------------");
+      if (
+        prev.selectedBasemap === this.internalState.selectedBasemap &&
+        prev.terrainEnabled === this.internalState.terrainEnabled &&
+        prev.prefersTerrainEnabled ===
+          this.internalState.prefersTerrainEnabled &&
+        prev.basemapError === this.internalState.basemapError &&
+        prev.basemapOptionalLayerStates ===
+          this.internalState.basemapOptionalLayerStates &&
+        prev.basemapOptionalLayerStatePreferences ===
+          this.internalState.basemapOptionalLayerStatePreferences
+      ) {
+        console.log("no changes");
+        return prev;
+      }
+      console.log("changes");
+      return {
+        selectedBasemap: this.internalState.selectedBasemap,
+        terrainEnabled: this.internalState.terrainEnabled,
+        prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
+        basemapError: this.internalState.basemapError,
+        basemapOptionalLayerStates:
+          this.internalState.basemapOptionalLayerStates,
+        basemapOptionalLayerStatePreferences:
+          this.internalState.basemapOptionalLayerStatePreferences,
+      };
+    });
+
+    this._setLegendsState?.((prev) => {
+      if (prev.legends === this.internalState.legends) {
+        return prev;
+      }
+      return {
+        legends: this.internalState.legends,
+      };
+    });
+  };
+
+  /**
+   * Pushes the current sketch layer state to the SketchLayerContext.
+   * Call this after updating internalState sketch fields.
+   */
+  private pushSketchState = () => {
+    this._setSketchLayerState?.({
+      sketchLayerStates: { ...this.internalState.sketchLayerStates },
+      sketchClassLayerStates: {
+        ...this.internalState.sketchClassLayerStates,
+      },
+    });
   };
 
   setToken(token: string | null | undefined) {
@@ -314,20 +437,10 @@ class MapContextManager extends EventEmitter {
   }
 
   setLoadingOverlay(loadingOverlay: string | null) {
-    this.setState((prev) => {
-      if (loadingOverlay !== null) {
-        return {
-          ...prev,
-          loadingOverlay,
-          showLoadingOverlay: true,
-        };
-      } else {
-        return {
-          ...prev,
-          showLoadingOverlay: false,
-        };
-      }
-    });
+    this.emit("uiUpdate", {
+      loadingOverlay: loadingOverlay ?? undefined,
+      showLoadingOverlay: loadingOverlay !== null,
+    } as Partial<MapUIStateContextState>);
   }
 
   /**
@@ -387,21 +500,17 @@ class MapContextManager extends EventEmitter {
     if (this.map) {
       // throw new Error("Map already created in this context");
       console.warn("Map already created in this context");
-      if (this.interactivityManager) {
-        this.interactivityManager.destroy();
-        delete this.interactivityManager;
-        this.map.off("error", this.onMapError);
-        this.map.off("data", this.onMapDataEvent);
-        this.map.off("dataloading", this.onMapDataEvent);
-        this.map.off("moveend", this.onMapMove);
-        this.map.remove();
-      }
-      for (const key in this.customSources) {
-        this.customSources[key].customSource.destroy();
-        delete this.customSources[key];
-      }
+      this.map.off("error", this.onMapError);
+      this.map.off("data", this.onMapDataEvent);
+      this.map.off("dataloading", this.onMapDataEvent);
+      this.map.off("moveend", this.onMapMove);
+      this.map.remove();
     }
-    if (!this.internalState.ready) {
+    for (const key in this.customSources) {
+      this.customSources[key].customSource.destroy();
+      delete this.customSources[key];
+    }
+    if (!this._ready) {
       throw new Error(
         "Wait to call createMap until after MapContext.ready = true"
       );
@@ -442,28 +551,6 @@ class MapContextManager extends EventEmitter {
     this.map = new Map(mapOptions);
 
     this.addSprites(sprites, this.map);
-
-    this.interactivityManager = new LayerInteractivityManager(
-      this.map,
-      this.setState
-    );
-
-    this.interactivityManager.setVisibleLayers(
-      Object.keys(this.visibleLayers)
-        .filter((id) => this.visibleLayers[id]?.visible && this.layers[id])
-        .map((id) => this.layers[id]),
-      this.clientDataSources,
-      this.getSelectedBasemap()!,
-      this.tocItems
-    );
-
-    if (this.internalState.showScale) {
-      this.map.addControl(this.scaleControl, "bottom-right");
-    }
-
-    if (this.internalState.showCoordinates) {
-      this.map.addControl(this.coordinatesControl, "bottom-right");
-    }
 
     this.map.on("error", this.onMapError);
     this.map.on("data", this.onMapDataEvent);
@@ -604,54 +691,6 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  toggleScale(show: boolean) {
-    this.setState((prev) => ({
-      ...prev,
-      showScale: show,
-    }));
-
-    if (this.map) {
-      if (show) {
-        if (!this.map.hasControl(this.scaleControl)) {
-          this.map.hasControl(this.scaleControl);
-          this.map.addControl(this.scaleControl, "bottom-right");
-        }
-      } else {
-        if (this.map.hasControl(this.scaleControl)) {
-          this.map.removeControl(this.scaleControl);
-        }
-      }
-    }
-    this.debouncedUpdatePreferences();
-  }
-
-  toggleCoordinates(show: boolean) {
-    this.setState((prev) => ({
-      ...prev,
-      showCoordinates: show,
-    }));
-    if (this.map) {
-      if (this.internalState.showCoordinates) {
-        if (!this.map.hasControl(this.coordinatesControl)) {
-          this.map.addControl(this.coordinatesControl, "bottom-right");
-        }
-      } else {
-        if (this.map.hasControl(this.coordinatesControl)) {
-          this.map.removeControl(this.coordinatesControl);
-        }
-      }
-    }
-    this.debouncedUpdatePreferences();
-  }
-
-  get scaleVisible() {
-    return !!this.internalState.showScale;
-  }
-
-  get coordinatesVisible() {
-    return !!this.internalState.showCoordinates;
-  }
-
   /**
    * @deprecated
    */
@@ -700,11 +739,12 @@ class MapContextManager extends EventEmitter {
         this.setSelectedBasemap(basemaps[0].id.toString());
       }
     }
+    this._ready =
+      !!(this.initialCameraOptions || this.initialBounds) &&
+      this.basemapsWereSet;
+    this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
     this.setState((prev) => ({
       ...prev,
-      ready:
-        !!(this.initialCameraOptions || this.initialBounds) &&
-        this.basemapsWereSet,
       terrainEnabled: this.shouldEnableTerrain(),
       basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
         this.internalState.selectedBasemap
@@ -714,7 +754,6 @@ class MapContextManager extends EventEmitter {
       ),
     }));
     this.debouncedUpdateStyle();
-    this.updateInteractivitySettings();
   }
 
   /**
@@ -724,12 +763,10 @@ class MapContextManager extends EventEmitter {
   setProjectBounds(feature: Feature<Polygon>) {
     const box = bbox(feature);
     this.initialBounds = box.slice(0, 4) as [number, number, number, number];
-    this.setState((prev) => ({
-      ...prev,
-      ready:
-        !!(this.initialCameraOptions || this.initialBounds) &&
-        this.basemapsWereSet,
-    }));
+    this._ready =
+      !!(this.initialCameraOptions || this.initialBounds) &&
+      this.basemapsWereSet;
+    this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
   }
 
   private computeBasemapOptionalLayerStates(
@@ -846,7 +883,6 @@ class MapContextManager extends EventEmitter {
         this.force2dView();
       }
     }
-    this.updateInteractivitySettings();
   }
 
   clearTerrainSettings() {
@@ -932,8 +968,6 @@ class MapContextManager extends EventEmitter {
         basemapOptionalLayerStatePreferences:
           this.internalState.basemapOptionalLayerStatePreferences,
         sketchClassLayerStates: sketchClassLayerStates,
-        showScale: this.internalState.showScale,
-        showCoordinates: this.internalState.showCoordinates,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
@@ -972,10 +1006,9 @@ class MapContextManager extends EventEmitter {
         ...this.clientDataSources[key],
         queryParameters: params,
       } as any;
-      this.setState((prev) => ({
-        ...prev,
+      this.emit("uiUpdate", {
         inaturalistCallToActions: this.computeInatCtas(),
-      }));
+      } as Partial<MapUIStateContextState>);
       this.debouncedUpdateStyle();
     }
   }
@@ -1012,16 +1045,19 @@ class MapContextManager extends EventEmitter {
   }
 
   async updateStyle() {
-    if (this.map && this.internalState.ready) {
+    if (this.map && this._ready) {
       this.updateStyleInfiniteLoopDetector++;
       this.updateStyleInfiniteLoopDetector = 0;
       if (this.updateStyleInfiniteLoopDetector > 10) {
         this.updateStyleInfiniteLoopDetector = 0;
         throw new Error("Infinite loop");
       }
-      const { style, sprites } = await this.getComputedStyle(() => {
-        this.debouncedUpdateStyle();
-      });
+      const { style, sprites, sketchLayerIds } = await this.getComputedStyle(
+        () => {
+          this.debouncedUpdateStyle();
+        }
+      );
+      this.emit("sketchLayerIdsChanged", sketchLayerIds);
       const styleHash = md5(JSON.stringify(style));
       this.addSprites(sprites, this.map);
       const update = () => {
@@ -1075,7 +1111,7 @@ class MapContextManager extends EventEmitter {
             sources[id] = customSource;
           }
         }
-        this.interactivityManager?.setCustomSources(sources);
+        this.emit("customSourcesChanged", sources);
         this.setState((prev) => ({ ...prev, styleHash }));
       };
       if (!this.mapIsLoaded) {
@@ -1090,6 +1126,18 @@ class MapContextManager extends EventEmitter {
       } else {
         this.debouncedUpdateStyle();
       }
+    }
+  }
+
+  /**
+   * Emits the current sketch layer IDs for late-joining listeners (e.g. when
+   * MapUIProvider's interactivityManager is created after the style was loaded).
+   */
+  emitCurrentSketchLayerIds() {
+    if (this.map && this._ready) {
+      this.getComputedStyle().then(({ sketchLayerIds }) => {
+        this.emit("sketchLayerIdsChanged", sketchLayerIds);
+      });
     }
   }
 
@@ -1246,10 +1294,7 @@ class MapContextManager extends EventEmitter {
       }
     }
     // update public state
-    this.setState((prev) => ({
-      ...prev,
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-    }));
+    this.pushSketchState();
     for (const sketch of sketches) {
       if (sketch.timestamp) {
         this.sketchTimestamps.set(sketch.id, sketch.timestamp);
@@ -1319,14 +1364,14 @@ class MapContextManager extends EventEmitter {
 
   markSketchAsEditable(sketchId: number) {
     this.editableSketchId = sketchId;
-    this.interactivityManager?.setFocusedSketchId(sketchId);
+    this.emit("focusedSketchIdChanged", sketchId);
     // request a redraw
     this.debouncedUpdateStyle();
   }
 
   unmarkSketchAsEditable() {
     delete this.editableSketchId;
-    this.interactivityManager?.setFocusedSketchId(null);
+    this.emit("focusedSketchIdChanged", null);
     // request a redraw
     this.debouncedUpdateStyle();
   }
@@ -1521,6 +1566,7 @@ class MapContextManager extends EventEmitter {
   async getComputedStyle(unfinishedCustomSourceCallback?: () => void): Promise<{
     style: Style;
     sprites: SpriteDetailsFragment[];
+    sketchLayerIds: string[];
   }> {
     this.inaturalistSourceIdMap = {};
     // this.resetLayersByZIndex();
@@ -1979,11 +2025,7 @@ class MapContextManager extends EventEmitter {
     //   this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     // }
 
-    if (this.interactivityManager) {
-      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
-    }
-
-    return { style: baseStyle, sprites };
+    return { style: baseStyle, sprites, sketchLayerIds };
   }
 
   resetToProjectBounds = () => {
@@ -2280,24 +2322,6 @@ class MapContextManager extends EventEmitter {
     }
   };
 
-  async updateInteractivitySettings() {
-    if (this.interactivityManager) {
-      const visibleLayers: DataLayerDetailsFragment[] = [];
-      for (const id in this.visibleLayers) {
-        const state = this.visibleLayers[id];
-        if (state.visible && !state.hidden) {
-          visibleLayers.push(this.layers[id]);
-        }
-      }
-      this.interactivityManager.setVisibleLayers(
-        visibleLayers,
-        this.clientDataSources,
-        this.getSelectedBasemap()!,
-        this.tocItems
-      );
-    }
-  }
-
   _updateSourceStatesLoopDetector = 0;
 
   private updateSourceStates() {
@@ -2468,7 +2492,6 @@ class MapContextManager extends EventEmitter {
       this.debouncedUpdatePreferences();
     }
     this.debouncedUpdateStyle();
-    this.updateInteractivitySettings();
     this.updateLegends();
     return;
   }
@@ -2575,9 +2598,9 @@ class MapContextManager extends EventEmitter {
       digitizingLockedBy: id || undefined,
     });
     if (state === DigitizingLockState.CursorActive) {
-      this.interactivityManager?.pause();
+      this.emit("pauseInteractivity");
     } else {
-      this.interactivityManager?.resume();
+      this.emit("resumeInteractivity");
     }
   }
 
@@ -2692,12 +2715,7 @@ class MapContextManager extends EventEmitter {
     //     pixelRatio: spriteImage.pixelRatio,
     //   });
     // } else if (spriteImage.url) {
-    const image = await loadImage(
-      spriteImage.width,
-      spriteImage.height,
-      spriteImage.url,
-      map
-    );
+    const image = await loadImage(spriteImage.url, map);
     map.addImage(spriteId, image, {
       pixelRatio: spriteImage.pixelRatio,
     });
@@ -2721,12 +2739,10 @@ class MapContextManager extends EventEmitter {
     this.setState((oldState) => ({
       ...oldState,
       layerStatesByTocStaticId: { ...this.visibleLayers },
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
       inaturalistCallToActions: this.computeInatCtas(),
     }));
+    this.pushSketchState();
     this.debouncedUpdatePreferences();
-    this.updateInteractivitySettings();
   };
 
   private debouncedUpdateLayerState = debounce(this.updateLayerState, 5, {
@@ -2859,10 +2875,9 @@ class MapContextManager extends EventEmitter {
     if (!enabled) {
       throw new Error("Invalid response from service worker");
     }
-    this.setState((prev) => ({
-      ...prev,
+    this.emit("uiUpdate", {
       offlineTileSimulatorActive: true,
-    }));
+    } as Partial<MapUIStateContextState>);
     this.updateStyle();
     // Using a bunch of undocumented private apis here to reset tile caches.
     // See:
@@ -2893,10 +2908,9 @@ class MapContextManager extends EventEmitter {
     if (enabled) {
       throw new Error("Invalid response from service worker");
     }
-    this.setState((prev) => ({
-      ...prev,
+    this.emit("uiUpdate", {
       offlineTileSimulatorActive: false,
-    }));
+    } as Partial<MapUIStateContextState>);
     this.updateStyle();
   }
 
@@ -3049,14 +3063,13 @@ class MapContextManager extends EventEmitter {
       animate: true,
     });
     if (savePreviousState && bookmark.id) {
-      this.setState((prev) => ({
-        ...prev,
+      this.emit("uiUpdate", {
         displayedMapBookmark: {
           id: bookmark.id!,
           errors: this.getErrorsForBookmark(bookmark, client),
           supportsUndo: true,
         },
-      }));
+      } as Partial<MapUIStateContextState>);
       this.hideBookmarkBanner(6000);
     }
   }
@@ -3111,17 +3124,15 @@ class MapContextManager extends EventEmitter {
     }
     if (delay) {
       this.bookmarkBannerHideTimeout = setTimeout(() => {
-        this.setState((prev) => ({
-          ...prev,
+        this.emit("uiUpdate", {
           displayedMapBookmark: undefined,
-        }));
+        } as Partial<MapUIStateContextState>);
         this.bookmarkBannerHideTimeout = undefined;
       }, delay);
     } else {
-      this.setState((prev) => ({
-        ...prev,
+      this.emit("uiUpdate", {
         displayedMapBookmark: undefined,
-      }));
+      } as Partial<MapUIStateContextState>);
     }
   }
 
@@ -3415,16 +3426,8 @@ class MapContextManager extends EventEmitter {
       const id = parseInt(stableId.replace("sketch-class-", ""));
       const state = this.internalState.sketchClassLayerStates[id];
       if (state) {
-        this.setState((prev) => ({
-          ...prev,
-          sketchClassLayerStates: {
-            ...prev.sketchClassLayerStates,
-            [id]: {
-              ...prev.sketchClassLayerStates[id],
-              zOrderOverride: zOrder,
-            },
-          },
-        }));
+        state.zOrderOverride = zOrder;
+        this.pushSketchState();
       }
     } else {
       const state = this.visibleLayers[stableId];
@@ -3703,10 +3706,7 @@ class MapContextManager extends EventEmitter {
       this.internalState.sketchClassLayerStates[classId].hidden = hidden;
     }
 
-    this.setState((prev) => ({
-      ...prev,
-      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
-    }));
+    this.pushSketchState();
 
     this.debouncedUpdateStyle();
   }
@@ -3720,10 +3720,7 @@ class MapContextManager extends EventEmitter {
         zOrder;
     }
 
-    this.setState((prev) => ({
-      ...prev,
-      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
-    }));
+    this.pushSketchState();
 
     this.debouncedUpdateStyle();
   }
@@ -3839,11 +3836,82 @@ export interface Tooltip {
   messages: string[];
 }
 
-export interface MapContextInterface {
-  layerStatesByTocStaticId: { [id: string]: LayerState };
+/**
+ * Stable context for the MapContextManager instance, ready state, and
+ * container portal. These values are set once (or very rarely) and almost
+ * never change after initialisation, making this context safe to consume
+ * without worrying about re-renders from map interaction.
+ */
+export interface MapManagerState {
+  manager?: MapContextManager;
+  /** Indicates the map state is ready to render a map */
+  ready: boolean;
+  containerPortal: HTMLDivElement | null;
+}
+
+export interface SketchLayerContextState {
   sketchLayerStates: { [id: number]: SketchLayerState };
   sketchClassLayerStates: { [sketchClassId: string]: SketchClassLayerState };
-  manager?: MapContextManager;
+}
+
+/** @deprecated Import from ./BasemapContext instead */
+export type { BasemapContextState } from "./BasemapContext";
+export { BasemapContext } from "./BasemapContext";
+
+/** UI-driven state: tooltips, banners, popups, digitizing locks, etc. */
+export interface MapUIStateContextState {
+  bannerMessages: string[];
+  tooltip?: Tooltip;
+  fixedBlocks: string[];
+  sidebarPopupContent?: string;
+  sidebarPopupTitle?: string;
+  displayedMapBookmark?: {
+    id: string;
+    errors: {
+      missingLayers: string[];
+      missingBasemap: boolean;
+      missingSketches: number[];
+    };
+    supportsUndo: boolean;
+  };
+  loadingOverlay?: string | null;
+  showLoadingOverlay?: boolean;
+  offlineTileSimulatorActive?: boolean;
+  digitizingLockState: DigitizingLockState;
+  digitizingLockedBy?: string;
+  showScale?: boolean;
+  showCoordinates?: boolean;
+  toggleScale: (show: boolean) => void;
+  toggleCoordinates: (show: boolean) => void;
+  inaturalistCallToActions?: {
+    projectId: string;
+    label?: string;
+  }[];
+  languageCode?: string;
+  /** Exposed for SketchUIStateContextProvider, SketchEditorModal, MapboxMap */
+  interactivityManager?: LayerInteractivityManager;
+}
+
+/** Legend entries derived from visible layers. */
+export interface LegendsContextState {
+  legends: { [layerId: string]: LegendItem | null };
+}
+
+/** Layer visibility/loading state and style hash – the hot-path context. */
+export interface MapOverlayContextState {
+  layerStatesByTocStaticId: { [id: string]: LayerState };
+  styleHash: string;
+  /** Overlay data from useMapData - exposed for component consumption */
+  dataLayers?: DataLayerDetailsFragment[];
+  dataSources?: DataSourceDetailsFragment[];
+  tableOfContentsItems?: OverlayFragment[];
+}
+
+/** @deprecated Use MapOverlayContextState */
+export type LayerTreeContextState = MapOverlayContextState;
+
+export interface MapContextInterface {
+  layerStatesByTocStaticId: { [id: string]: LayerState };
   bannerMessages: string[];
   tooltip?: Tooltip;
   fixedBlocks: string[];
@@ -3851,8 +3919,6 @@ export interface MapContextInterface {
   sidebarPopupTitle?: string;
   selectedBasemap?: string;
   cameraOptions?: CameraOptions;
-  /* Indicates the map state is ready to render a map */
-  ready: boolean;
   terrainEnabled: boolean;
   prefersTerrainEnabled?: boolean;
   basemapError?: Error;
@@ -3861,7 +3927,6 @@ export interface MapContextInterface {
   showScale?: boolean;
   offlineTileSimulatorActive?: boolean;
   styleHash: string;
-  containerPortal: HTMLDivElement | null;
   loadingOverlay?: string | null;
   showLoadingOverlay?: boolean;
   inaturalistCallToActions?: {
@@ -3881,7 +3946,6 @@ export interface MapContextInterface {
   legends: {
     [layerId: string]: LegendItem | null;
   };
-  measureControlState?: MeasureControlState;
   digitizingLockState: DigitizingLockState;
   digitizingLockedBy?: string;
   showCoordinates?: boolean;
@@ -3918,20 +3982,20 @@ export function useMapContext(options?: MapContextOptions) {
     defaultShowScale = false,
   } = options || {};
   let initialState: MapContextInterface = {
-    sketchLayerStates: {},
     layerStatesByTocStaticId: {},
     bannerMessages: [],
     fixedBlocks: [],
-    ready: false,
     terrainEnabled: false,
     basemapOptionalLayerStates: {},
     styleHash: "",
-    containerPortal: containerPortal || null,
     legends: {},
     digitizingLockState: DigitizingLockState.Free,
-    sketchClassLayerStates: {},
     showScale: defaultShowScale,
     inaturalistCallToActions: [],
+  };
+  let initialSketchState: SketchLayerContextState = {
+    sketchLayerStates: {},
+    sketchClassLayerStates: {},
   };
   const token = useAccessToken();
   let initialCameraOptions: CameraOptions | undefined = camera;
@@ -3960,7 +4024,7 @@ export function useMapContext(options?: MapContextOptions) {
         };
       }
       if (prefs.sketchClassLayerStates) {
-        initialState.sketchClassLayerStates = {
+        initialSketchState.sketchClassLayerStates = {
           ...prefs.sketchClassLayerStates,
         };
       }
@@ -3975,7 +4039,33 @@ export function useMapContext(options?: MapContextOptions) {
       }
     }
   }
-  const [state, setState] = useState<MapContextInterface>(initialState);
+  const [managerState, setManagerState] = useState<MapManagerState>({
+    ready: false,
+    containerPortal: containerPortal || null,
+  });
+  const [sketchLayerState, setSketchLayerState] =
+    useState<SketchLayerContextState>(initialSketchState);
+
+  // Focused sub-context states
+  const [mapOverlayState, setMapOverlayState] =
+    useState<MapOverlayContextState>({
+      layerStatesByTocStaticId: initialState.layerStatesByTocStaticId,
+      styleHash: initialState.styleHash,
+    });
+  const [basemapState, setBasemapState] = useState<BasemapContextState>({
+    selectedBasemap: initialState.selectedBasemap,
+    terrainEnabled: initialState.terrainEnabled,
+    prefersTerrainEnabled: initialState.prefersTerrainEnabled,
+    basemapError: initialState.basemapError,
+    basemapOptionalLayerStates: initialState.basemapOptionalLayerStates,
+    basemapOptionalLayerStatePreferences:
+      initialState.basemapOptionalLayerStatePreferences,
+  });
+  const [legendsState, setLegendsState] = useState<LegendsContextState>({
+    legends: initialState.legends,
+  });
+
+  const managerRef = useRef<MapContextManager | null>(null);
   const { data, error } = useProjectRegionQuery({
     variables: {
       slug,
@@ -3984,77 +4074,81 @@ export function useMapContext(options?: MapContextOptions) {
   useEffect(() => {
     const manager = new MapContextManager(
       initialState,
-      setState,
+      initialSketchState,
+      setManagerState,
+      setSketchLayerState,
+      setMapOverlayState,
+      setBasemapState,
+      setLegendsState,
       initialCameraOptions,
       preferencesKey ? `${slug}-${preferencesKey}` : undefined,
       cacheSize,
       bounds as LngLatBoundsLike
     );
-    const newState = {
-      ...state,
-      manager,
-    };
-    setState(newState);
+    managerRef.current = manager;
+    setManagerState((prev) => ({ ...prev, manager }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
-    state.manager?.setToken(token);
-  }, [token, state.manager]);
+    managerRef.current?.setToken(token);
+  }, [token]);
 
   useEffect(() => {
     if (error) {
       console.error(error);
       return;
     }
-    if (data?.projectBySlug?.region.geojson && state.manager) {
-      state.manager.setProjectBounds(data.projectBySlug.region.geojson);
+    if (data?.projectBySlug?.region.geojson && managerRef.current) {
+      managerRef.current.setProjectBounds(data.projectBySlug.region.geojson);
     }
-  }, [data?.projectBySlug, error, state.manager]);
+  }, [data?.projectBySlug, error]);
 
-  return state;
+  return {
+    managerState,
+    sketchLayerState,
+    mapOverlayState,
+    basemapState,
+    legendsState,
+  };
 }
 
-export const MapContext = createContext<MapContextInterface>({
-  layerStatesByTocStaticId: {},
+/**
+ * Context for sketch layer visibility and loading state.
+ * Changes when sketches are toggled or loading status changes.
+ */
+export const SketchLayerContext = createContext<SketchLayerContextState>({
   sketchLayerStates: {},
   sketchClassLayerStates: {},
-  styleHash: "",
-  manager: new MapContextManager(
-    {
-      layerStatesByTocStaticId: {},
-      sketchLayerStates: {},
-      sketchClassLayerStates: {},
-      bannerMessages: [],
-      fixedBlocks: [],
-      ready: false,
-      terrainEnabled: false,
-      basemapOptionalLayerStates: {},
-      styleHash: "",
-      containerPortal: null,
-      legends: {},
-      digitizingLockState: DigitizingLockState.Free,
-      inaturalistCallToActions: [],
-    },
-    (state) => {}
-  ),
-  bannerMessages: [],
-  fixedBlocks: [],
-  ready: false,
-  terrainEnabled: false,
-  basemapOptionalLayerStates: {},
-  containerPortal: null,
-  legends: {},
-  digitizingLockState: DigitizingLockState.Free,
-  inaturalistCallToActions: [],
 });
 
-async function loadImage(
-  width: number,
-  height: number,
-  url: string,
-  map: mapboxgl.Map
-): Promise<any> {
+/**
+ * A lightweight context that provides only the stable manager reference,
+ * ready flag, and container portal. Consumers that only need to call
+ * methods on the manager (and don't need reactive layer/UI state) should
+ * prefer this context to avoid unnecessary re-renders.
+ */
+export const MapManagerContext = createContext<MapManagerState>({
+  manager: undefined,
+  ready: false,
+  containerPortal: null,
+});
+
+/** Legend entries for visible layers. */
+export const LegendsContext = createContext<LegendsContextState>({
+  legends: {},
+});
+
+/** Layer visibility/loading and style hash – the hot-path context that changes on zoom/pan. */
+export const MapOverlayContext = createContext<MapOverlayContextState>({
+  layerStatesByTocStaticId: {},
+  styleHash: "",
+});
+
+/** @deprecated Use MapOverlayContext */
+export const LayerTreeContext = MapOverlayContext;
+
+async function loadImage(url: string, map: mapboxgl.Map): Promise<any> {
   return new Promise((resolve, reject) => {
     map.loadImage(url, (error: Error | undefined, image: any) => {
       if (error) {

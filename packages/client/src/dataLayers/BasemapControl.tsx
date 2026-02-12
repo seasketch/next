@@ -1,7 +1,8 @@
 import React, { useContext } from "react";
 import InputBlock from "../components/InputBlock";
 import Switch from "../components/Switch";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
+import { BasemapContext } from "./BasemapContext";
 import { useTranslation, Trans } from "react-i18next";
 import OptionalBasemapLayerControl from "../dataLayers/OptionalBasemapLayerControl";
 import { BasemapDetailsFragment } from "../generated/graphql";
@@ -12,9 +13,10 @@ interface BasemapControlProps {
 }
 
 export default function BasemapControl(props: BasemapControlProps) {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(BasemapContext);
+  const { manager } = useContext(MapManagerContext);
   const { t } = useTranslation("basemaps");
-  const selectedBasemap = mapContext.manager?.getSelectedBasemap();
+  const selectedBasemap = manager?.getSelectedBasemap();
   const terrainOptional =
     selectedBasemap &&
     selectedBasemap.terrainUrl &&
@@ -37,7 +39,7 @@ export default function BasemapControl(props: BasemapControlProps) {
                   key={b.id}
                   basemap={b}
                   onClick={() => {
-                    mapContext.manager?.setSelectedBasemap(b.id.toString());
+                    manager?.setSelectedBasemap(b.id.toString());
                   }}
                 />
               ))}
@@ -55,14 +57,14 @@ export default function BasemapControl(props: BasemapControlProps) {
                       isToggled={mapContext.terrainEnabled}
                       onClick={() => {
                         if (
-                          mapContext.manager?.map &&
+                          manager?.map &&
                           !mapContext.prefersTerrainEnabled &&
-                          mapContext.manager.map.getPitch() === 0
+                          manager.map.getPitch() === 0
                         ) {
                           // turning on, add some pitch
-                          mapContext.manager.map.easeTo({ pitch: 75 });
+                          manager.map.easeTo({ pitch: 75 });
                         }
-                        mapContext.manager?.toggleTerrain();
+                        manager?.toggleTerrain();
                       }}
                     />
                   }
@@ -70,7 +72,7 @@ export default function BasemapControl(props: BasemapControlProps) {
               </div>
             )}
             {(
-              mapContext.manager!.getSelectedBasemap()!.optionalBasemapLayers ||
+              manager!.getSelectedBasemap()!.optionalBasemapLayers ||
               []
             ).map((layer) => {
               return (
@@ -80,9 +82,9 @@ export default function BasemapControl(props: BasemapControlProps) {
             <button
               className="underline text-gray-500 text-sm"
               onClick={() => {
-                if (mapContext.manager) {
-                  mapContext.manager.clearOptionalBasemapSettings();
-                  mapContext.manager.clearTerrainSettings();
+                if (manager) {
+                  manager.clearOptionalBasemapSettings();
+                  manager.clearTerrainSettings();
                 }
               }}
             >

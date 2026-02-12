@@ -31,8 +31,7 @@ import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { CaretDownIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { ColumnValuesStatKey } from "./InlineMetric";
-import { MapContext } from "../../dataLayers/MapContextManager";
-import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import { LayerPickerDropdown } from "./LayerPickerDropdown";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
@@ -126,7 +125,6 @@ export const ColumnStatisticsTable: ReportWidget<
   ColumnStatisticsTableSettings
 > = ({ metrics, componentSettings, sources, loading }) => {
   const { t } = useTranslation("reports");
-  const mapContext = useContext(MapContext);
   const langContext = useContext(FormLanguageContext);
   const formatters = useNumberFormatters({
     minimumFractionDigits: componentSettings?.minimumFractionDigits,
@@ -308,10 +306,8 @@ export const ColumnStatisticsTable: ReportWidget<
             ))}
           </div>
           {rows.map((row, idx) => {
-            const layerState =
-              mapContext?.layerStatesByTocStaticId?.[
-                componentSettings.columnSettings?.[row.column]?.stableId || ""
-              ];
+            const stableId =
+              componentSettings?.columnSettings?.[row.column]?.stableId;
             return (
               <div key={idx} className="contents hover:bg-gray-50">
                 {hasVisibilityColumn && (
@@ -322,37 +318,8 @@ export const ColumnStatisticsTable: ReportWidget<
                         : ""
                     }`}
                   >
-                    {componentSettings?.columnSettings?.[row.column]
-                      ?.stableId ? (
-                      <VisibilityCheckboxAnimated
-                        id={
-                          componentSettings.columnSettings?.[row.column]
-                            ?.stableId || ""
-                        }
-                        onClick={() => {
-                          const sid =
-                            componentSettings.columnSettings?.[row.column]
-                              ?.stableId;
-                          if (!sid) return;
-                          if (
-                            mapContext?.layerStatesByTocStaticId?.[sid]?.visible
-                          ) {
-                            mapContext.manager?.hideTocItems?.([sid]);
-                          } else {
-                            mapContext?.manager?.showTocItems?.([sid]);
-                          }
-                        }}
-                        disabled={!mapContext?.manager}
-                        visibility={
-                          layerState?.visible && layerState?.hidden !== true
-                        }
-                        loading={layerState?.loading}
-                        error={
-                          layerState?.error
-                            ? String(layerState?.error)
-                            : undefined
-                        }
-                      />
+                    {stableId ? (
+                      <ReportLayerVisibilityCheckbox stableId={stableId} />
                     ) : (
                       <span className="text-xs text-gray-400"></span>
                     )}

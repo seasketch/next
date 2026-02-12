@@ -6,7 +6,7 @@ import {
   useUpdateTableOfContentsItemMutation,
 } from "../../../generated/graphql";
 import MutableAutosaveInput from "../../MutableAutosaveInput";
-import { MapContext } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import TranslatedPropControl from "../../../components/TranslatedPropControl";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
@@ -27,7 +27,7 @@ export default function LayerSettings({
 }: {
   item: FullAdminOverlayFragment;
 }) {
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const { t } = useTranslation("admin:data");
   const layer = item.dataLayer;
   const source = layer!.dataSource;
@@ -41,8 +41,8 @@ export default function LayerSettings({
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation({
     onCompleted: (data) => {
       const item = data.updateTableOfContentsItem?.tableOfContentsItem;
-      if (item?.geoprocessingReferenceId && mapContext.manager) {
-        mapContext.manager.setGeoprocessingReferenceId(
+      if (item?.geoprocessingReferenceId && manager) {
+        manager.setGeoprocessingReferenceId(
           item.geoprocessingReferenceId,
           item.stableId
         );
@@ -109,7 +109,7 @@ export default function LayerSettings({
           label={t("Attribution")}
           onChange={async (value) => {
             const sourceObj = source?.id
-              ? mapContext.manager?.map?.getSource(source.id.toString())
+              ? manager?.map?.getSource(source.id.toString())
               : undefined;
             if (!sourceObj) {
               return;
@@ -117,7 +117,7 @@ export default function LayerSettings({
             // Danger Danger! Private method used here!
             // https://gis.stackexchange.com/questions/407876/how-to-update-source-property-attribution-in-mapbox-gl
             // @ts-ignore
-            const controls = mapContext.manager?.map?._controls;
+            const controls = manager?.map?._controls;
             let updateAttribution: undefined | Function;
             if (controls && Array.isArray(controls)) {
               for (const control of controls) {
@@ -136,9 +136,7 @@ export default function LayerSettings({
             }
             if (updateAttribution) {
               if (value?.trim().length === 0 && source?.id) {
-                const customSource = mapContext.manager?.getCustomGLSource(
-                  source?.id
-                );
+                const customSource = manager?.getCustomGLSource(source?.id);
                 if (!customSource) {
                   updateAttribution("");
                 } else {

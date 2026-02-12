@@ -14,7 +14,7 @@ import { DraftTableOfContentsDocument } from "../../generated/graphql";
 import * as GeneratedGraphql from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import getSlug from "../../getSlug";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 
 import {
   DEFAULT_ZOOM_CUTOFF,
@@ -81,7 +81,7 @@ export default function AddINaturalistLayerModal({
   const [map, setMap] = useState<Map | null>(null);
   const [currentZoom, setCurrentZoom] = useState<number | null>(null);
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const onError = useGlobalErrorHandler();
   const [mutation, mutationState] =
     useCreateINaturalistTableOfContentsItemMutation({
@@ -512,8 +512,8 @@ export default function AddINaturalistLayerModal({
         const stableId =
           result.data?.createInaturalistTableOfContentsItem?.tableOfContentsItem
             ?.stableId;
-        if (stableId && mapContext.manager) {
-          mapContext.manager.showTocItems([stableId]);
+        if (stableId && manager) {
+          manager.showTocItems([stableId]);
         }
         onRequestClose();
       })

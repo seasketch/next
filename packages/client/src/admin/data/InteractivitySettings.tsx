@@ -7,6 +7,7 @@ import {
   useUpdateInteractivitySettingsMutation,
   useInteractivitySettingsByIdQuery,
   BasemapDetailsFragment,
+  LayersAndSourcesForItemsDocument,
 } from "../../generated/graphql";
 import * as CodeMirror from "react-codemirror2";
 import "codemirror/lib/codemirror.css";
@@ -18,7 +19,7 @@ import sanitizeHtml from "sanitize-html";
 import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
 import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
@@ -47,7 +48,9 @@ export default function InteractivitySettings({
   });
   const [type, setType] = useState<InteractivityType>();
 
-  const [mutate, mutationState] = useUpdateInteractivitySettingsMutation();
+  const [mutate, mutationState] = useUpdateInteractivitySettingsMutation({
+    refetchQueries: [LayersAndSourcesForItemsDocument],
+  });
 
   const settings = data?.interactivitySetting;
 
@@ -351,7 +354,7 @@ function TemplateEditor(props: {
 }) {
   const { t } = useTranslation("admin");
   const onSave = () => props.onSave(props.propName);
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const attributes = useMemo(() => {
     if (props.geostats) {
@@ -360,13 +363,10 @@ function TemplateEditor(props: {
     if (props.attributeNames.length > 0) {
       return props.attributeNames;
     }
-    if (props.basemap && props.layers && mapContext.manager?.map) {
-      const features = mapContext.manager?.map.queryRenderedFeatures(
-        undefined,
-        {
-          layers: [props.layers[0]],
-        }
-      );
+    if (props.basemap && props.layers && manager?.map) {
+      const features = manager?.map.queryRenderedFeatures(undefined, {
+        layers: [props.layers[0]],
+      });
       if (features && features.length > 0) {
         const feature = features[0];
         const props = Object.keys(feature.properties || {});
@@ -377,7 +377,7 @@ function TemplateEditor(props: {
   }, [
     props.geostats,
     props.layers,
-    mapContext.manager?.map,
+    manager?.map,
     props.basemap,
     props.attributeNames,
   ]);

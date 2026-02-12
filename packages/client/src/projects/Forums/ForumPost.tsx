@@ -23,7 +23,7 @@ import {
   FileUploadAttachment,
   MapBookmarkAttachment,
 } from "./PostContentEditor";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import BookmarkItem from "./BookmarkItem";
 import { SketchUIStateContext } from "../Sketches/SketchUIStateContextProvider";
 import {
@@ -72,7 +72,7 @@ export default function ForumPost({
     }
   }, [location?.hash, post.id]);
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const [hoveredBookmarkId, setHoveredBookmarkId] = useState<
     string | null | undefined
   >(null);
@@ -137,8 +137,8 @@ export default function ForumPost({
           const type = e.target.getAttribute("data-type");
           if (id && type === "MapBookmark") {
             const attachment = bookmarkAttachments.find((b) => b.id === id);
-            if (attachment && mapContext.manager) {
-              mapContext.manager.showMapBookmark(
+            if (attachment && manager) {
+              manager.showMapBookmark(
                 attachment.data,
                 true,
                 apolloClient
@@ -177,7 +177,7 @@ export default function ForumPost({
       setSketchPortals([]);
       setAttachments([]);
     }
-  }, [bodyRef, mapContext?.manager, apolloClient]);
+  }, [bodyRef, manager, apolloClient]);
 
   useEffect(() => {
     if (bodyRef) {
@@ -203,8 +203,8 @@ export default function ForumPost({
 
   const onMapBookmarkClick = useCallback(
     (bookmark: MapBookmarkDetailsFragment) => {
-      if (mapContext.manager) {
-        mapContext.manager.showMapBookmark(bookmark, true, apolloClient);
+      if (manager) {
+        manager.showMapBookmark(bookmark, true, apolloClient);
         if (bookmark.visibleSketches) {
           sketchUIContext.setVisibleSketches(
             // eslint-disable-next-line i18next/no-literal-string
@@ -213,7 +213,7 @@ export default function ForumPost({
         }
       }
     },
-    [mapContext.manager, sketchUIContext, apolloClient]
+    [manager, sketchUIContext, apolloClient]
   );
 
   const {

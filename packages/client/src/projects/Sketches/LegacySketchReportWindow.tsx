@@ -10,7 +10,7 @@ import useAccessToken from "../../useAccessToken";
 import Warning from "../../components/Warning";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { LayerTreeContext, MapManagerContext } from "../../dataLayers/MapContextManager";
 import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { evaluateVisibilityRules } from "./SketchForm";
@@ -32,7 +32,8 @@ export default function LegacySketchReportWindow({
   reportingAccessToken?: string | null;
   onClick?: (metaKey: boolean, id: number) => void;
 }) {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   const token = useAccessToken();
   const { data, loading, error } = useLegacyReportContextQuery({
     variables: {
@@ -66,14 +67,14 @@ export default function LegacySketchReportWindow({
     if (iframe.current?.contentWindow) {
       const message = {
         type: "SeaSketchReportingVisibleLayersChangeEvent",
-        visibleLayers: mapContext.manager?.getVisibleLayerReferenceIds() || [],
+        visibleLayers: manager?.getVisibleLayerReferenceIds() || [],
       };
       iframe.current.contentWindow.postMessage(message, "*");
     }
   }, [
     mapContext.layerStatesByTocStaticId,
     iframe.current?.contentWindow,
-    mapContext.manager,
+    manager,
   ]);
 
   useEffect(() => {
@@ -125,7 +126,7 @@ export default function LegacySketchReportWindow({
           language: lang?.selectedLang?.code || "en",
           geometryUri,
           visibleLayers:
-            mapContext.manager?.getVisibleLayerReferenceIds() || [],
+            manager?.getVisibleLayerReferenceIds() || [],
           sketchProperties: {
             id: sketchId,
             name: data?.sketch?.name,
@@ -164,11 +165,11 @@ export default function LegacySketchReportWindow({
         e.data.layerId
       ) {
         const { layerId, on } = e.data as { layerId: string; on: boolean };
-        if (mapContext.manager) {
+        if (manager) {
           if (on) {
-            mapContext.manager.showTocItems([layerId]);
+            manager.showTocItems([layerId]);
           } else {
-            mapContext.manager.hideTocItems([layerId]);
+            manager.hideTocItems([layerId]);
           }
         }
       } else if (
@@ -196,7 +197,7 @@ export default function LegacySketchReportWindow({
     sketchClassId,
     reportingAccessToken,
     mapContext?.layerStatesByTocStaticId,
-    mapContext?.manager,
+    manager,
     onRequestClose,
     lang?.selectedLang?.code,
   ]);

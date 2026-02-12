@@ -8389,10 +8389,6 @@ select{
   gap:0px
 }
 
-.gap-0\.5{
-  gap:0.125rem
-}
-
 .gap-1{
   gap:0.25rem
 }
@@ -13578,14 +13574,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
   cursor:wait
 }
 
-.disabled\:bg-gray-100:disabled{
-  --tw-bg-opacity:1;
-  background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
-}
-
 .disabled\:bg-blue-400:disabled{
   --tw-bg-opacity:1;
   background-color:rgb(96 165 250 / var(--tw-bg-opacity, 1))
+}
+
+.disabled\:bg-gray-100:disabled{
+  --tw-bg-opacity:1;
+  background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
 }
 
 .disabled\:text-gray-500:disabled{

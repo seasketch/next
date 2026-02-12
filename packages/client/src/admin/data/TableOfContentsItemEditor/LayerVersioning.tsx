@@ -33,7 +33,7 @@ import { motion } from "framer-motion";
 import { XIcon } from "@heroicons/react/outline";
 import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobContext";
 import ProgressBar from "../../../components/ProgressBar";
-import { MapContext } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import Warning from "../../../components/Warning";
 import { createPortal } from "react-dom";
 import useDialog from "../../../components/useDialog";
@@ -70,7 +70,7 @@ export default function LayerVersioning({
   useEffect(() => {
     if (item.dataLayer?.dataSourceId) {
       setSelectedItemId(item.dataLayer.dataSourceId);
-      mapContext.manager?.zoomToTocItem(item.stableId, {
+      manager?.zoomToTocItem(item.stableId, {
         onlyIfNotVisible: true,
       });
     }
@@ -138,7 +138,7 @@ export default function LayerVersioning({
     versions[0]?.source?.id
   );
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   useEffect(() => {
     if (jobContext.manager && !item.copiedFromDataLibraryTemplateId) {
@@ -166,7 +166,6 @@ export default function LayerVersioning({
     currentJob?.progress < 1;
 
   useEffect(() => {
-    const manager = mapContext.manager;
     if (
       typeof selectedItemId === "number" &&
       selectedItemId !== item.dataLayer?.dataSourceId &&
@@ -184,9 +183,9 @@ export default function LayerVersioning({
         };
       }
     } else {
-      mapContext.manager?.clearArchivedSource();
+      manager?.clearArchivedSource();
     }
-  }, [selectedItemId, item.dataLayer?.dataSourceId, mapContext.manager]);
+  }, [selectedItemId, item.dataLayer?.dataSourceId, manager]);
 
   const submitChangelog = useCallback(() => {
     if (currentJob!.dataUploadTask) {

@@ -6,7 +6,7 @@ import Spinner from "./Spinner";
 import { motion } from "framer-motion";
 import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 import { useTranslation, Trans } from "react-i18next";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
 import { XCircleIcon } from "@heroicons/react/solid";
 import Warning from "./Warning";
 
@@ -48,7 +48,7 @@ export default function MapBookmarkDetailsOverlay({
     };
   }, [onRequestClose]);
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const bookmark = data?.bookmarkById;
 
   const imageRatio = useMemo(() => {
@@ -76,12 +76,12 @@ export default function MapBookmarkDetailsOverlay({
   }, [data?.bookmarkById?.mapDimensions]);
 
   const errors = useMemo(() => {
-    if (data?.bookmarkById && mapContext.manager) {
-      return mapContext.manager.getErrorsForBookmark(data.bookmarkById);
+    if (data?.bookmarkById && manager) {
+      return manager.getErrorsForBookmark(data.bookmarkById);
     } else {
       return null;
     }
-  }, [data?.bookmarkById, mapContext.manager]);
+  }, [data?.bookmarkById, manager]);
 
   const hasErrors = useMemo(() => {
     return (

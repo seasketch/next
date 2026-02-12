@@ -18,9 +18,10 @@ import { Icons } from "../components/SketchGeometryTypeSelector";
 import Switch from "../components/Switch";
 import MapContextManager, {
   DigitizingLockState,
-  MapContext,
-  MapContextInterface,
+  MapManagerContext,
 } from "../dataLayers/MapContextManager";
+import { BasemapContext } from "../dataLayers/BasemapContext";
+import { MapUIStateContext } from "../dataLayers/MapUIContext";
 import OptionalBasemapLayerControl from "../dataLayers/OptionalBasemapLayerControl";
 import {
   BasemapDetailsFragment,
@@ -336,7 +337,7 @@ export function ResetCamera(
 
 export function Measure(props: MapSettingsActionItem<{}>) {
   const { t } = useTranslation("surveys");
-  const mapContext = useContext(MapContext);
+  const uiState = useContext(MapUIStateContext);
   const measureContext = useContext(MeasureControlContext);
   const { alert } = useDialog();
   return (
@@ -344,8 +345,8 @@ export function Measure(props: MapSettingsActionItem<{}>) {
       {...props}
       disabled={
         !measureContext ||
-        (mapContext?.digitizingLockState !== DigitizingLockState.Free &&
-          mapContext?.digitizingLockedBy !== MeasureControlLockId)
+        (uiState?.digitizingLockState !== DigitizingLockState.Free &&
+          uiState?.digitizingLockedBy !== MeasureControlLockId)
       }
       Icon={({ className }: { className?: string }) => (
         <svg
@@ -412,13 +413,10 @@ export function ZoomToFeature(
   );
 }
 
-export function ShowScaleBar(
-  props: MapSettingsActionItem<{
-    mapContext?: MapContextInterface;
-  }>
-) {
+export function ShowScaleBar(props: MapSettingsActionItem) {
   const { t } = useTranslation("surveys");
-  const show = !!props.mapContext?.manager?.scaleVisible;
+  const uiState = useContext(MapUIStateContext);
+  const show = !!uiState?.showScale;
 
   return (
     <Item
@@ -434,42 +432,26 @@ export function ShowScaleBar(
               e.preventDefault();
               e.stopPropagation();
             }
-            if (props.mapContext?.manager) {
-              props.mapContext.manager.toggleScale(value);
-            }
+            uiState.toggleScale(value);
           }}
         />
       )}
-      onClick={
-        (e) => {
-          if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          if (props.mapContext?.manager) {
-            props.mapContext.manager.toggleScale(
-              !props.mapContext.manager.scaleVisible
-            );
-          }
+      onClick={(e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
         }
-        // props.map.fitBounds(bbox(props.feature) as LngLatBoundsLike, {
-        //   animate: true,
-        //   padding: props.isSmall ? 50 : 100,
-        //   maxZoom: 17,
-        // })
-      }
+        uiState.toggleScale(!show);
+      }}
       title={t("Show scale bar", { ns: "surveys" })}
     />
   );
 }
 
-export function ShowCoordinates(
-  props: MapSettingsActionItem<{
-    mapContext?: MapContextInterface;
-  }>
-) {
+export function ShowCoordinates(props: MapSettingsActionItem) {
   const { t } = useTranslation("surveys");
-  const show = !!props.mapContext?.manager?.coordinatesVisible;
+  const uiState = useContext(MapUIStateContext);
+  const show = !!uiState?.showCoordinates;
 
   return (
     <Item
@@ -485,30 +467,17 @@ export function ShowCoordinates(
               e.preventDefault();
               e.stopPropagation();
             }
-            if (props.mapContext?.manager) {
-              props.mapContext.manager.toggleCoordinates(value);
-            }
+            uiState.toggleCoordinates(value);
           }}
         />
       )}
-      onClick={
-        (e) => {
-          if (e) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-          if (props.mapContext?.manager) {
-            props.mapContext.manager.toggleCoordinates(
-              !props.mapContext.manager.coordinatesVisible
-            );
-          }
+      onClick={(e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
         }
-        // props.map.fitBounds(bbox(props.feature) as LngLatBoundsLike, {
-        //   animate: true,
-        //   padding: props.isSmall ? 50 : 100,
-        //   maxZoom: 17,
-        // })
-      }
+        uiState.toggleCoordinates(!show);
+      }}
       title={t("Show coordinates", { ns: "homepage" })}
     />
   );
@@ -521,8 +490,13 @@ export function BasemapControl({
   basemaps: BasemapDetailsFragment[];
   afterChange?: () => void;
 }) {
-  const mapContext = useContext(MapContext);
-  const selectedBasemap = mapContext.manager?.getSelectedBasemap();
+  const { manager } = useContext(MapManagerContext);
+  const basemapState = useContext(BasemapContext);
+  const selectedBasemap = useMemo(
+    () =>
+      basemaps.find((b) => b.id.toString() === basemapState.selectedBasemap),
+    [basemaps, basemapState.selectedBasemap]
+  );
   const { t } = useTranslation("surveys");
 
   return (
@@ -552,10 +526,8 @@ export function BasemapControl({
                 )}
                 title={basemap.name}
                 onClick={(e) => {
-                  if (mapContext.manager) {
-                    mapContext.manager.setSelectedBasemap(
-                      basemap.id.toString()
-                    );
+                  if (manager) {
+                    manager.setSelectedBasemap(basemap.id.toString());
                     if (afterChange) {
                       afterChange();
                     }

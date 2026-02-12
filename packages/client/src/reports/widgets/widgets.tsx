@@ -621,7 +621,7 @@ export type BuildReportCommandGroupsArgs = {
     id: number;
     title: string;
     stableId: string;
-    copiedFromDataLibraryTemplateId?: string;
+    copiedFromDataLibraryTemplateId?: string | null;
     dataLayer?: {
       dataSource?: {
         id: number;

@@ -1,4 +1,4 @@
-import { useMemo, useContext } from "react";
+import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, CountMetric } from "overlay-engine";
 import { ReportWidget, TableHeadingsEditor } from "./widgets";
@@ -16,8 +16,7 @@ import {
 } from "./Pagination";
 import { usePagination } from "../hooks/usePagination";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
-import { MapContext } from "../../dataLayers/MapContextManager";
-import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
@@ -57,8 +56,6 @@ export const FeaturePresenceTable: ReportWidget<
   dependencies,
 }) => {
   const { t } = useTranslation("reports");
-  const mapContext = useContext(MapContext);
-
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const presenceLabel = componentSettings.presenceLabel || t("Presence");
@@ -179,9 +176,6 @@ export const FeaturePresenceTable: ReportWidget<
               (row.groupByKey
                 ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
                 : undefined);
-            const layerState = stableId
-              ? mapContext?.layerStatesByTocStaticId?.[stableId]
-              : undefined;
             const isPresent = row.count > 0;
             return (
               <div
@@ -191,31 +185,7 @@ export const FeaturePresenceTable: ReportWidget<
                 {hasVisibilityColumn && (
                   <div className="flex-none w-6 flex justify-center">
                     {stableId ? (
-                      <VisibilityCheckboxAnimated
-                        id={stableId}
-                        onClick={() => {
-                          if (!mapContext?.manager) return;
-                          const visible =
-                            layerState?.visible && layerState?.hidden !== true;
-                          if (visible) {
-                            mapContext.manager.hideTocItems?.([stableId]);
-                          } else {
-                            mapContext.manager.showTocItems?.([stableId]);
-                          }
-                        }}
-                        disabled={!mapContext?.manager}
-                        visibility={
-                          (layerState?.visible &&
-                            layerState?.hidden !== true) ||
-                          false
-                        }
-                        loading={layerState?.loading}
-                        error={
-                          layerState?.error
-                            ? String(layerState?.error)
-                            : undefined
-                        }
-                      />
+                      <ReportLayerVisibilityCheckbox stableId={stableId} />
                     ) : (
                       <span className="text-xs text-gray-400"></span>
                     )}

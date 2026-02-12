@@ -13,7 +13,7 @@ import {
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import getSlug from "../../getSlug";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import Spinner from "../../components/Spinner";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 
@@ -71,7 +71,7 @@ export default function AddRemoteGeoJSONModal({
       },
     ],
   });
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const onSubmit = useCallback(
     async (e: FormEvent<HTMLFormElement>) => {
@@ -369,10 +369,10 @@ export default function AddRemoteGeoJSONModal({
                           const stableId =
                             response.data!.createRemoteGeojsonSource!
                               .tableOfContentsItem.stableId;
-                          if (mapContext.manager) {
-                            mapContext.manager.showTocItems([stableId]);
+                          if (manager) {
+                            manager.showTocItems([stableId]);
                             setTimeout(() => {
-                              mapContext.manager?.zoomToTocItem(stableId);
+                              manager?.zoomToTocItem(stableId);
                             }, 200);
                           }
                         }

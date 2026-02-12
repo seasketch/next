@@ -4,7 +4,7 @@ import {
 } from "../../generated/graphql";
 import { useContext, useEffect } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import { isArcGISTiledMapservice } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISTiledMapService";
 import ArcGISTiledRasterBaseSettings from "./ArcGISTiledRasterBaseSettings";
 
@@ -35,17 +35,17 @@ export default function ArcGISTiledRasterSettings({
     onError,
   });
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   useEffect(() => {
-    if (mapContext.manager) {
+    if (manager) {
       // Update the source maxzoom
-      const customSource = mapContext.manager.getCustomGLSource(source.id);
+      const customSource = manager.getCustomGLSource(source.id);
       if (customSource && isArcGISTiledMapservice(customSource)) {
         customSource.updateMaxZoom(source.maxzoom || undefined);
       }
     }
-  }, [mapContext.manager, source.id, source.maxzoom]);
+  }, [manager, source.id, source.maxzoom]);
 
   return (
     <ArcGISTiledRasterBaseSettings

@@ -46,7 +46,7 @@ import getSlug from "../../../getSlug";
 import SpritePopover from "./SpritePopover";
 import { validateGLStyleFragment } from "./extensions/validateGLStyleFragment";
 import { undo, undoDepth, redo, redoDepth } from "@codemirror/commands";
-import { MapContext } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import GeostatsModal, { Geostats } from "./GeostatsModal";
 import { glStyleHoverTooltips } from "./extensions/glStyleHoverTooltips";
 import {
@@ -248,26 +248,26 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
     spriteQuery.data?.projectBySlug?.sprites,
   ]);
 
-  const mapContext = useContext(MapContext);
-  const visibleLayers = mapContext.manager?.getVisibleLayerReferenceIds();
+  const { manager } = useContext(MapManagerContext);
+  const visibleLayers = manager?.getVisibleLayerReferenceIds();
   const { t } = useTranslation("admin:data");
 
   const [zoom, setZoom] = useState(0);
 
   useEffect(() => {
-    if (mapContext.manager?.map) {
+    if (manager?.map) {
       const onZoom = () => {
         setZoom(
-          Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10
+          Math.round((manager?.map?.getZoom() || 0) * 10) / 10
         );
       };
-      mapContext.manager.map.on("zoom", onZoom);
-      setZoom(Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10);
+      manager.map.on("zoom", onZoom);
+      setZoom(Math.round((manager?.map?.getZoom() || 0) * 10) / 10);
       return () => {
-        mapContext.manager?.map?.off("zoom", onZoom);
+        manager?.map?.off("zoom", onZoom);
       };
     }
-  }, [mapContext.manager?.map]);
+  }, [manager?.map]);
 
   const mac = navigator.appVersion.indexOf("Mac");
   const editorState = editorRef.current?.view?.state;
@@ -296,8 +296,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                       onClick={() => {
                         if (props.bounds && props.onRequestShowBounds) {
                           props.onRequestShowBounds(props.bounds);
-                        } else if (mapContext.manager && props.bounds) {
-                          mapContext.manager.map?.fitBounds(props.bounds);
+                        } else if (manager && props.bounds) {
+                          manager.map?.fitBounds(props.bounds);
                         }
                       }}
                     >
@@ -310,8 +310,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                           visibleLayers[0] === props.tocItemId)
                       }
                       onClick={() => {
-                        if (mapContext.manager && props.geostats) {
-                          mapContext.manager.setVisibleTocItems([
+                        if (manager && props.geostats) {
+                          manager.setVisibleTocItems([
                             props.tocItemId!,
                           ]);
                         }

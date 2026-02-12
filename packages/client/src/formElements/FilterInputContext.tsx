@@ -11,7 +11,7 @@ import {
   useState,
 } from "react";
 import { FilterLayerManager } from "./FilterLayerManager";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
 import { FormElementDetailsFragment } from "../generated/graphql";
 import useDebounce from "../useDebounce";
 
@@ -132,7 +132,7 @@ export function FilterInputServiceContextProvider({
     opacity: 1,
   });
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const getAttributeDetails = useCallback(
     (attribute: string) => {
@@ -176,11 +176,11 @@ export function FilterInputServiceContextProvider({
   >();
 
   useEffect(() => {
-    if (mapContext.manager && state.metadata && serviceLocation && !skipMap) {
+    if (manager && state.metadata && serviceLocation && !skipMap) {
       const mngr = new FilterLayerManager(
         serviceLocation,
         state.metadata,
-        mapContext.manager,
+        manager,
         filterStateToSearchString(startingProperties || {})
       );
       setFilterLayerManager(mngr);
@@ -188,11 +188,11 @@ export function FilterInputServiceContextProvider({
         mngr.destroy();
       };
     }
-  }, [mapContext.manager, state.metadata, serviceLocation]);
+  }, [manager, state.metadata, serviceLocation]);
 
   const [zoom, setZoom] = useState(0);
   useEffect(() => {
-    const map = mapContext.manager?.map;
+    const map = manager?.map;
     if (map) {
       const listener = () => {
         setZoom(map.getZoom());
@@ -202,7 +202,7 @@ export function FilterInputServiceContextProvider({
         map.off("zoom", listener);
       };
     }
-  }, [mapContext.manager?.map]);
+  }, [manager?.map]);
 
   const stopInformation = useMemo(() => {
     const stop = zoomToStop(Math.floor(zoom), stops);

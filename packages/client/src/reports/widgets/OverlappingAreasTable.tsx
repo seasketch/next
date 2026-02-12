@@ -1,4 +1,4 @@
-import { useContext, useMemo } from "react";
+import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, OverlayAreaMetric } from "overlay-engine";
 import {
@@ -30,8 +30,7 @@ import {
 } from "./FeatureCountTable";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
-import { MapContext } from "../../dataLayers/MapContextManager";
-import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
+import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 
 // Accept both area and length style units; default to km (area).
@@ -170,7 +169,6 @@ export const OverlappingAreasTable: ReportWidget<
     () => rows.some((r) => r.stableId),
     [rows]
   );
-  const mapContext = useContext(MapContext);
 
   const {
     currentPage,
@@ -231,15 +229,10 @@ export const OverlappingAreasTable: ReportWidget<
               ? row.overlap / row.geographyTotal
               : undefined;
           if (percent && percent > 1.05) {
-            console.log(row);
             throw new Error(
               `Percent is greater than 100%. Value: ${percent * 100}%`
             );
           }
-          const layerState =
-            row.stableId && mapContext
-              ? mapContext.layerStatesByTocStaticId?.[row.stableId] || undefined
-              : undefined;
           return (
             <div
               key={row.key}
@@ -250,32 +243,7 @@ export const OverlappingAreasTable: ReportWidget<
               {hasVisibilityColumn && (
                 <div className="flex-none w-6 flex justify-center">
                   {row.stableId ? (
-                    <VisibilityCheckboxAnimated
-                      id={row.stableId}
-                      onClick={() => {
-                        const sid = row.stableId;
-                        if (!sid || !mapContext?.manager) return;
-                        if (
-                          layerState?.visible &&
-                          layerState?.hidden !== true
-                        ) {
-                          mapContext.manager.hideTocItems?.([sid]);
-                        } else {
-                          mapContext.manager.showTocItems?.([sid]);
-                        }
-                      }}
-                      disabled={!mapContext?.manager}
-                      visibility={
-                        (layerState?.visible && layerState?.hidden !== true) ||
-                        false
-                      }
-                      loading={layerState?.loading}
-                      error={
-                        layerState?.error
-                          ? String(layerState?.error)
-                          : undefined
-                      }
-                    />
+                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
                   ) : null}
                 </div>
               )}

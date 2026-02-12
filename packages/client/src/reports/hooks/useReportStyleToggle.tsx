@@ -1,8 +1,7 @@
 import type { AnySourceData, AnyLayer } from "mapbox-gl";
 import { useContext, useRef, useCallback, useState, useEffect } from "react";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import { ReportMapStyle } from "../ReportContext";
-
 
 export function useReportStyleToggle(
   cardId: number,
@@ -10,18 +9,16 @@ export function useReportStyleToggle(
   styleId: string,
   style: ReportMapStyle | null | undefined
 ) {
-
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const cardMapStylesRef = useRef<{
     [cardId: number]: {
-      [styleId: string]: { sources: string[]; layers: string[]; };
+      [styleId: string]: { sources: string[]; layers: string[] };
     };
   }>({});
 
   const setCardMapStyle = useCallback(
     (cardId: number, styleId: string, style: ReportMapStyle | null) => {
-      const manager = mapContext.manager;
       if (!manager) {
         return;
       }
@@ -69,10 +66,11 @@ export function useReportStyleToggle(
         const namespacedLayerId = `${basePrefix}-layer-${originalId}`;
         const anyLayer = layer as any;
         const originalSource: any = anyLayer.source;
-        const namespacedSource = typeof originalSource === "string"
-          // eslint-disable-next-line i18next/no-literal-string
-          ? `${basePrefix}-source-${originalSource}`
-          : originalSource;
+        const namespacedSource =
+          typeof originalSource === "string"
+            ? // eslint-disable-next-line i18next/no-literal-string
+              `${basePrefix}-source-${originalSource}`
+            : originalSource;
 
         const clonedLayer: AnyLayer = {
           ...anyLayer,
@@ -94,7 +92,7 @@ export function useReportStyleToggle(
         layers: layerIds,
       };
     },
-    [mapContext.manager, selectedSketchId]
+    [manager, selectedSketchId]
   );
 
   const [visible, setVisible] = useState(false);

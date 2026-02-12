@@ -29,7 +29,8 @@ import useMapboxGLDraw, {
   DigitizingState,
   EMPTY_FEATURE_COLLECTION,
 } from "../../draw/useMapboxGLDraw";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
+import { MapUIStateContext } from "../../dataLayers/MapUIContext";
 import DigitizingTools from "../../formElements/DigitizingTools";
 import { ZoomToFeature } from "../../draw/MapSettingsPopup";
 import { BBox, Feature, Geometry } from "geojson";
@@ -70,7 +71,8 @@ function SketchEditorModal({
   const { t } = useTranslation("sketching");
   const [left, setLeft] = useState(true);
   const baseRoute = useRouteMatch(`/${getSlug()}/app`);
-  const mapContext = useContext(MapContext);
+  const uiState = useContext(MapUIStateContext);
+  const { manager, containerPortal } = useContext(MapManagerContext);
   const [feature, setFeature] = useState<Feature | null>(null);
   const [preprocessedGeometry, setPreprocessedGeometry] =
     useState<Geometry | null>(null);
@@ -82,16 +84,15 @@ function SketchEditorModal({
   useEffect(() => {
     if (
       sketchClass.geometryType === SketchGeometryType.FilteredPlanningUnits &&
-      mapContext.manager &&
+      manager &&
       sketch
     ) {
-      const manager = mapContext.manager;
       manager.hideEditableSketch(sketch.id);
       return () => {
         manager.unhideEditableSketch();
       };
     }
-  }, [sketchClass.geometryType, mapContext.manager, sketch]);
+  }, [sketchClass.geometryType, manager, sketch]);
   //   const styleRelevantProps = useMemo(() => {
   //     return extractRelevantPropsFromStyle(sketchClass.mapboxGlStyle || []);
   //   }, [sketchClass]);
@@ -99,7 +100,7 @@ function SketchEditorModal({
 
   // useEffect(() => {
   //   const elements = sketchClass.form?.formElements || [];
-  //   if (styleRelevantProps.length && elements.length && mapContext.manager) {
+  //   if (styleRelevantProps.length && elements.length && manager) {
   //     const newProperties: { [key: string]: any } = {};
   //     styleRelevantProps.forEach((prop) => {
   //       const element =
@@ -110,13 +111,13 @@ function SketchEditorModal({
   //         newProperties[prop] = properties[element.id];
   //       }
   //     });
-  //     mapContext.manager.updateSketchProperties(sketch?.id || 0, newProperties);
+  //     manager.updateSketchProperties(sketch?.id || 0, newProperties);
   //   }
   // }, [
   //   styleRelevantProps,
   //   properties,
   //   sketchClass.form?.formElements,
-  //   mapContext.manager,
+  //   manager,
   // ]);
 
   const scrollableAreaRef = useRef<HTMLDivElement>(null);
@@ -151,9 +152,9 @@ function SketchEditorModal({
   }, [sketch, formElements]);
 
   const handleCancel = useCallback(() => {
-    mapContext.manager?.clearSketchEditingState();
+    manager?.clearSketchEditingState();
     onCancel();
-  }, [onCancel, mapContext.manager]);
+  }, [onCancel, manager]);
 
   const [createSketch, createSketchState] = useCreateSketchMutation({
     update: (cache, { data }) => {
@@ -240,7 +241,7 @@ function SketchEditorModal({
   }, [sketchClass.isGeographyClippingEnabled, sketchClass.clippingGeographies]);
 
   const draw = useMapboxGLDraw(
-    mapContext,
+    uiState,
     sketchClass.geometryType,
     EMPTY_FEATURE_COLLECTION,
     (feature) => {
@@ -276,14 +277,14 @@ function SketchEditorModal({
   useEffect(() => {
     if (
       sketch?.bbox &&
-      mapContext.manager?.map &&
+      manager?.map &&
       sketchClass.geometryType !== SketchGeometryType.Collection &&
       sketchClass.geometryType !== SketchGeometryType.Point &&
       sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
     ) {
       // If the sketch is not within the current viewport bounds, or is very
       // small or otherwise hard to see, zoom to it.
-      const map = mapContext.manager.map;
+      const map = manager.map;
       const bbox = sketch.bbox as number[];
       const boundsLike = [
         [bbox[0], bbox[1]],
@@ -322,16 +323,15 @@ function SketchEditorModal({
           : 150,
       });
     }
-  }, [sketch?.bbox, mapContext.manager?.map, sketchClass.geometryType]);
+  }, [sketch?.bbox, manager?.map, sketchClass.geometryType]);
 
   useEffect(() => {
+    const interactivityManager = uiState.interactivityManager;
     if (
-      mapContext.manager &&
+      manager &&
       sketch &&
-      mapContext.manager.interactivityManager
+      interactivityManager
     ) {
-      const manager = mapContext.manager;
-      const interactivityManager = mapContext.manager.interactivityManager;
       const focusedSketchClickHandler = (
         focusedFeature: Feature<any>,
         originalEvent: MapMouseEvent
@@ -362,16 +362,16 @@ function SketchEditorModal({
           focusedSketchClickHandler
         );
       };
-    } else if (mapContext.manager && sketch) {
+    } else if (manager && sketch) {
       // draw.disable();
-      mapContext.manager?.clearSketchEditingState();
+      manager?.clearSketchEditingState();
     } else {
-      mapContext.manager?.clearSketchEditingState();
+      manager?.clearSketchEditingState();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    mapContext.manager,
-    mapContext.manager?.interactivityManager,
+    manager,
+    uiState.interactivityManager,
     sketch?.id,
   ]);
 
@@ -517,7 +517,6 @@ function SketchEditorModal({
       });
       data = response.data?.createSketch || undefined;
     }
-    const manager = mapContext.manager;
     if (manager && data) {
       if (geometryChanged && feature) {
         await manager.pushLocalSketchGeometryCopy(
@@ -543,7 +542,7 @@ function SketchEditorModal({
       onComplete(data);
     } else {
       throw new Error(
-        "No response from mutation or mapContext.manager is unset"
+        "No response from mutation or manager is unset"
       );
     }
   }, [
@@ -558,7 +557,7 @@ function SketchEditorModal({
     createSketch,
     sketchClass.id,
     folderId,
-    mapContext.manager,
+    manager,
     preprocessedGeometry,
     sketchClass.geometryType,
     hasValidationErrors,
@@ -751,7 +750,7 @@ function SketchEditorModal({
         </motion.div>,
         document.body
       )}
-      {mapContext.containerPortal &&
+      {containerPortal &&
         createPortal(
           <div className="flex items-center justify-center w-screen h-full">
             <DigitizingTools
@@ -783,13 +782,13 @@ function SketchEditorModal({
               onRequestEdit={draw.actions.edit}
             >
               <ZoomToFeature
-                map={mapContext.manager?.map!}
+                map={manager?.map!}
                 isSmall={false}
                 geometryType={sketchClass.geometryType}
               />
             </DigitizingTools>
           </div>,
-          mapContext.containerPortal
+          containerPortal
         )}
     </>
   );

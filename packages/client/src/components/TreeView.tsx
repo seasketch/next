@@ -6,8 +6,12 @@ import {
   useContext,
   ReactNode,
   useRef,
+  memo,
 } from "react";
-import { MapContext } from "../dataLayers/MapContextManager";
+import {
+  LayerTreeContext,
+  MapManagerContext,
+} from "../dataLayers/MapContextManager";
 import { OverlayFragment } from "../generated/graphql";
 import TreeItemComponent, {
   SortingState,
@@ -165,7 +169,7 @@ export interface TreeNode {
   hidden: boolean;
 }
 
-export default function TreeView({
+const TreeView = memo(function TreeView({
   onSelect,
   onExpand,
   clearSelection,
@@ -332,6 +336,9 @@ export default function TreeView({
     props.hiddenItems,
   ]);
 
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
   const handleChecked = useCallback(
     (item: TreeItem, isChecked: boolean, children?: TreeNode[]) => {
       if (onChecked) {
@@ -380,7 +387,7 @@ export default function TreeView({
         }
         onChecked(ids, isChecked);
         if (isChecked && item.parentId) {
-          const parent = findTreeNodeRecursive(data, item.parentId);
+          const parent = findTreeNodeRecursive(dataRef.current, item.parentId);
           if (parent?.radioFolder) {
             // Find and hide any visible siblings and their children
             const siblings = parent.children.filter(
@@ -403,7 +410,7 @@ export default function TreeView({
         }
       }
     },
-    [onChecked, data]
+    [onChecked]
   );
 
   const updateContextMenuTargetRef = useCallback(
@@ -539,8 +546,9 @@ export default function TreeView({
       </ContextMenu.Root>
     </div>
   );
-}
+});
 
+export default TreeView;
 export function treeItemIdForFragment(fragment: {
   id: number;
   __typename?: string;
@@ -574,7 +582,8 @@ export function useOverlayState(
   localStoragePrefix?: string
 ) {
   const getTranslatedProp = useTranslatedProps();
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
     `${localStoragePrefix}-overlays-expanded-ids`,
     []
@@ -644,21 +653,21 @@ export function useOverlayState(
         .filter((item) => Boolean(item.dataLayerId))
         .map((item) => item.stableId);
       if (isChecked) {
-        mapContext.manager?.showTocItems(staticIds);
+        manager?.showTocItems(staticIds);
       } else {
-        mapContext.manager?.hideTocItems(staticIds);
+        manager?.hideTocItems(staticIds);
       }
     },
-    [items, mapContext.manager]
+    [items, manager]
   );
 
   const onUnhide = useCallback(
     (stableId: string) => {
-      if (mapContext.manager) {
-        mapContext.manager.showHiddenLayer(stableId);
+      if (manager) {
+        manager.showHiddenLayer(stableId);
       }
     },
-    [mapContext.manager]
+    [manager]
   );
 
   const hasLocalState = useMemo(() => {
@@ -670,13 +679,13 @@ export function useOverlayState(
   }, [expandedIds, checkedItems, hiddenItems]);
 
   const resetLocalState = useCallback(() => {
-    mapContext.manager?.resetLayers();
+    manager?.resetLayers();
     setExpandedIds([]);
     window.localStorage.removeItem(
       // eslint-disable-next-line i18next/no-literal-string
       `${localStoragePrefix}-overlays-expanded-ids`
     );
-  }, [setExpandedIds, mapContext.manager, localStoragePrefix]);
+  }, [setExpandedIds, manager, localStoragePrefix]);
 
   return {
     expandedIds,

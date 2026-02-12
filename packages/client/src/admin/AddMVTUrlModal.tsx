@@ -26,7 +26,7 @@ import Switch from "../components/Switch";
 import Warning from "../components/Warning";
 import { GeoJSONSource } from "mapbox-gl";
 import bbox from "@turf/bbox";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 
 export default function AddMVTUrlModal({
@@ -60,7 +60,7 @@ export default function AddMVTUrlModal({
     refetchQueries: [DraftTableOfContentsDocument],
   });
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const resetMap = useCallback(() => {
     if (map) {
@@ -573,8 +573,8 @@ export default function AddMVTUrlModal({
                       ?.tableOfContentsItems || []
                   ).length
                 ) {
-                  if (mapContext.manager) {
-                    mapContext.manager.showTocItems(
+                  if (manager) {
+                    manager.showTocItems(
                       response.data!.createRemoteMvtSource!.tableOfContentsItems!.map(
                         (t) => {
                           return t.stableId;

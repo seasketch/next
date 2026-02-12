@@ -1,7 +1,7 @@
 import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { LayerTreeContext, MapManagerContext } from "../../dataLayers/MapContextManager";
 import { ReportWidget } from "./widgets";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import { LayerToggleTooltipControlsBase } from "./LayerToggleControls";
@@ -15,7 +15,8 @@ export const InlineLayerToggle: ReportWidget<InlineLayerToggleSettings> = ({
   componentSettings,
   sources,
 }) => {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   const { t } = useTranslation("reports");
   const stableId = componentSettings?.stableId;
 
@@ -47,15 +48,15 @@ export const InlineLayerToggle: ReportWidget<InlineLayerToggleSettings> = ({
     return { isVisible: visible, isLoading: loading, error: errorString };
   }, [stableId, mapContext?.layerStatesByTocStaticId]);
 
-  if (!stableId || !mapContext?.manager) {
+  if (!stableId || !manager) {
     return null;
   }
 
   const handleToggle = () => {
     if (isVisible) {
-      mapContext.manager?.hideTocItems?.([stableId]);
+      manager?.hideTocItems?.([stableId]);
     } else {
-      mapContext.manager?.showTocItems?.([stableId]);
+      manager?.showTocItems?.([stableId]);
     }
   };
 

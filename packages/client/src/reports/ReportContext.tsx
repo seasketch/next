@@ -264,9 +264,7 @@ export function useReportState(
         const overlays = (
           data?.report?.dependencies?.overlaySources || []
         ).filter((overlay) =>
-          cardDependencyList.overlaySources.includes(
-            overlay.tableOfContentsItemId
-          )
+          cardDependencyList.overlaySources.includes(overlay.stableId)
         );
         const cardMetrics = metrics.filter((metric) =>
           cardDependencyList.metrics.includes(metric.id)

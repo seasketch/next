@@ -204,10 +204,50 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     [dropFolder, dropSketch]
   );
 
+  const showContextMenuButtons = useCallback((node: TreeItem) => {
+    return true;
+  }, []);
+
+  const getContextMenuContent = useCallback(
+    (treeItemId: string, clickEvent: React.MouseEvent) => {
+      const item = treeItems.find((item) => item.id === treeItemId);
+      if (!item) {
+        return null;
+      } else {
+        const items = getContextMenuItems(item);
+        const intersectsBottom =
+          (clickEvent?.clientY || 0) > window.innerHeight - 260;
+
+        return (
+          <ContextMenu.Content
+            style={{
+              transform: `translate(${clickEvent.clientX}px, ${
+                clickEvent.clientY
+              }px)${intersectsBottom ? ` translateY(-100%)` : ""}`,
+              backdropFilter: "blur(3px)",
+            }}
+            className={MenuBarContentClasses}
+          >
+            {items.map((item) => (
+              <ContextMenu.Item
+                key={item.id}
+                className={MenuBarItemClasses}
+                // @ts-ignore
+                onSelect={item.onClick}
+              >
+                {item.label}
+              </ContextMenu.Item>
+            ))}
+          </ContextMenu.Content>
+        );
+      }
+    },
+    [getContextMenuItems, treeItems]
+  );
+
   if (!user || (!loading && !data?.me)) {
     return <LoginPrompt hidden={hidden} />;
   }
-
   return (
     <div style={{ display: hidden ? "none" : "block" }}>
       {!hidden && (
@@ -293,40 +333,8 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
               errors={errors}
               loadingItems={loadingSketches}
               // getContextMenuItems={getContextMenuItems}
-              showContextMenuButtons={(node) => true}
-              getContextMenuContent={(treeItemId, clickEvent) => {
-                const item = treeItems.find((item) => item.id === treeItemId);
-                if (!item) {
-                  return null;
-                } else {
-                  const items = getContextMenuItems(item);
-                  const intersectsBottom =
-                    (clickEvent?.clientY || 0) > window.innerHeight - 260;
-
-                  return (
-                    <ContextMenu.Content
-                      style={{
-                        transform: `translate(${clickEvent.clientX}px, ${
-                          clickEvent.clientY
-                        }px)${intersectsBottom ? ` translateY(-100%)` : ""}`,
-                        backdropFilter: "blur(3px)",
-                      }}
-                      className={MenuBarContentClasses}
-                    >
-                      {items.map((item) => (
-                        <ContextMenu.Item
-                          key={item.id}
-                          className={MenuBarItemClasses}
-                          // @ts-ignore
-                          onSelect={item.onClick}
-                        >
-                          {item.label}
-                        </ContextMenu.Item>
-                      ))}
-                    </ContextMenu.Content>
-                  );
-                }
-              }}
+              showContextMenuButtons={showContextMenuButtons}
+              getContextMenuContent={getContextMenuContent}
               onDrop={onDrop}
             />
           )}

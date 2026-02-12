@@ -35,7 +35,7 @@ import {
 import { sketchType } from "./config";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 import { SketchUIStateContext } from "../projects/Sketches/SketchUIStateContextProvider";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
 import useDialog from "../components/useDialog";
 import { treeItemId } from "../components/TreeView";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
@@ -82,7 +82,7 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
     title?: string;
   } | null>(null);
   const [chooseSketchesOpen, setChooseSketchesOpen] = useState(false);
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const [disableSharing, setDisableSharing] = useState(false);
   const dialog = useDialog();
   const { isSmall } = currentSidebarState();
@@ -486,8 +486,8 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                 <DropdownMenu.Item
                   className={MenuBarItemClasses}
                   onSelect={async () => {
-                    if (mapContext.manager) {
-                      const relatedSketchIds = mapContext.manager
+                    if (manager) {
+                      const relatedSketchIds = manager
                         .getVisibleSketchIds()
                         .filter(({ sharedInForum }) => !sharedInForum);
                       // TODO: have an option to just share these sketches from here
@@ -508,15 +508,15 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                     }
                     if (props.createMapBookmark && props.view) {
                       setDisableSharing(true);
-                      if (mapContext?.manager) {
-                        mapContext.manager.setLoadingOverlay(
+                      if (manager) {
+                        manager.setLoadingOverlay(
                           t("Saving map bookmark")
                         );
                       }
                       try {
                         const bookmark = await props.createMapBookmark();
-                        if (mapContext?.manager) {
-                          mapContext.manager.setLoadingOverlay(null);
+                        if (manager) {
+                          manager.setLoadingOverlay(null);
                         }
                         setDisableSharing(false);
                         if (bookmark) {
@@ -536,14 +536,14 @@ export default function EditorMenuBar(props: EditorMenuBarProps) {
                             )
                           );
                           setDisableSharing(false);
-                          if (mapContext?.manager) {
-                            mapContext.manager.setLoadingOverlay(null);
+                          if (manager) {
+                            manager.setLoadingOverlay(null);
                           }
                         } else {
                           onError(e);
                           setDisableSharing(false);
-                          if (mapContext?.manager) {
-                            mapContext.manager.setLoadingOverlay(null);
+                          if (manager) {
+                            manager.setLoadingOverlay(null);
                           }
                         }
                       }
