@@ -5,25 +5,21 @@ import { useContext, useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
-  MapManagerContext,
-  useMapContext,
-} from "../../dataLayers/MapContextManager";
-import {
   BasemapDetailsFragment,
   useGetBasemapsAndRegionQuery,
 } from "../../generated/graphql";
 import { normalizeStyleUrl } from "../../offline/mapboxApiHelpers";
 import { MAP_STATIC_ASSETS_CACHE_NAME } from "../../offline/MapTileCache";
 import { OfflineStateContext } from "../../offline/OfflineStateContext";
-import useDebounce from "../../useDebounce";
 
 export const defaultStartingBounds = [
   -119.91579655058345, 33.87415760617607, -119.24033098014716, 34.2380902987356,
 ] as BBox;
 
 /**
- * Sets up a map with basemaps, starting bounds, and a mapContext. Using for
- * surveys now but may be more widely useful
+ * Fetches basemaps and project region, computing starting bounds.
+ * Returns basemaps and bounds that can be passed to BasemapProvider
+ * and MapManagerContextProvider.
  */
 export default function useMapEssentials({
   bounds,
@@ -45,18 +41,9 @@ export default function useMapEssentials({
       slug,
     },
   });
-  const {
-    managerState,
-    sketchLayerState,
-    basemapState,
-    legendsState,
-    mapOverlayState,
-  } = useMapContext({
-    camera: cameraOptions,
-    bounds,
-  });
-  const { manager } = managerState;
-  const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
+  const [basemaps, setBasemaps] = useState<
+    BasemapDetailsFragment[] | undefined
+  >(undefined);
   bounds =
     bounds ||
     (data?.projectBySlug?.region.geojson
@@ -64,14 +51,13 @@ export default function useMapEssentials({
       : defaultStartingBounds) ||
     defaultStartingBounds;
 
-  const debouncedCamera = useDebounce(cameraOptions, 30);
   const { online } = useContext(OfflineStateContext);
   const basemapsString = data?.projectBySlug?.basemaps?.join(",");
   const surveyBasemapsString = data?.projectBySlug?.surveyBasemaps?.join(",");
   const filterBasemapIdsString = filterBasemapIds?.join(",");
   useEffect(
     () => {
-      if (manager && data?.projectBySlug?.basemaps) {
+      if (data?.projectBySlug?.basemaps) {
         let basemaps: BasemapDetailsFragment[] = [];
         const allBasemaps = [
           ...(data.projectBySlug.basemaps || []),
@@ -100,42 +86,18 @@ export default function useMapEssentials({
               }
             }
             setBasemaps(offlineBasemaps.length ? offlineBasemaps : basemaps);
-            manager?.setBasemaps(
-              offlineBasemaps.length ? offlineBasemaps : basemaps
-            );
           });
         } else {
           setBasemaps(basemaps);
-          manager?.setBasemaps(basemaps);
         }
       }
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [
-      basemapsString,
-      surveyBasemapsString,
-      manager,
-      filterBasemapIdsString,
-      online,
-    ]
+    [basemapsString, surveyBasemapsString, filterBasemapIdsString, online]
   );
-
-  useEffect(() => {
-    if (manager?.map && debouncedCamera) {
-      const map = manager.map;
-      map.flyTo({
-        ...debouncedCamera,
-      });
-    }
-  }, [debouncedCamera, manager?.map]);
 
   return {
     basemaps,
-    managerState,
-    sketchLayerState,
-    basemapState,
-    legendsState,
-    mapOverlayState,
     bounds,
     cameraOptions,
   };

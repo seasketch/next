@@ -54,8 +54,8 @@ export function ReportCardWithToolbarContext({
   const cardDependencies = useCardDependencies(cardId);
   const hasMetrics = cardDependencies.metrics.length > 0;
 
-  const toolbarContextValue = useMemo(
-    () => ({
+  const toolbarContextValue = useMemo(() => {
+    return {
       dragHandleProps,
       adminMode: Boolean(adminMode),
       cardId,
@@ -67,18 +67,17 @@ export function ReportCardWithToolbarContext({
         : undefined,
       loading: false,
       setEditing,
-    }),
-    [
-      cardId,
-      dragHandleProps,
-      hasMetrics,
-      hasMultipleTabs,
-      onMoveCardToTab,
-      onShowCalculationDetails,
-      setEditing,
-      adminMode,
-    ]
-  );
+    };
+  }, [
+    cardId,
+    dragHandleProps,
+    hasMetrics,
+    hasMultipleTabs,
+    onMoveCardToTab,
+    onShowCalculationDetails,
+    setEditing,
+    adminMode,
+  ]);
 
   return (
     <ReportCardTitleToolbarContext.Provider value={toolbarContextValue}>

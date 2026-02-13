@@ -1,6 +1,5 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import Button from "../../components/Button";
-import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import { BasemapContext } from "../../dataLayers/BasemapContext";
 import {
   useGetBasemapsQuery,
@@ -17,8 +16,7 @@ import useDialog from "../../components/useDialog";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function BaseMapEditor() {
-  const mapContext = useContext(BasemapContext);
-  const { manager } = useContext(MapManagerContext);
+  const basemapContext = useContext(BasemapContext);
   const { slug } = useParams<{ slug: string }>();
   const { data } = useGetBasemapsQuery({
     variables: {
@@ -26,31 +24,12 @@ export default function BaseMapEditor() {
     },
   });
 
-  useEffect(() => {
-    console.log("BasemapEditor: mapContext changed");
-  }, [mapContext.selectedBasemap]);
-
-  useEffect(() => {
-    console.log("BasemapEditor: manager changed");
-  }, [manager]);
-
-  useEffect(() => {
-    console.log("BasemapEditor: mounted");
-  }, []);
-
-  console.log("BasemapEditor: render");
-
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [deleteBasemap, deleteMutationState] = useDeleteBasemapMutation();
   const { t } = useTranslation("admin");
   const projectData = useGetProjectBySlugQuery({ variables: { slug } });
   const client = useApolloClient();
-  useEffect(() => {
-    if (data?.projectBySlug?.basemaps && manager) {
-      manager.setBasemaps(data.projectBySlug.basemaps);
-    }
-  }, [data?.projectBySlug?.basemaps, manager]);
   const onError = useGlobalErrorHandler();
 
   const { confirmDelete } = useDialog();
@@ -66,7 +45,7 @@ export default function BaseMapEditor() {
           <Button
             className="ml-2"
             small
-            disabled={!mapContext.selectedBasemap}
+            disabled={basemapContext.selectedBasemap == null}
             label={t("Edit")}
             onClick={() => setEditModalOpen(true)}
           />
@@ -74,7 +53,8 @@ export default function BaseMapEditor() {
             className="ml-2"
             small
             disabled={
-              !mapContext.selectedBasemap || deleteMutationState.loading
+              basemapContext.selectedBasemap == null ||
+              deleteMutationState.loading
             }
             label={t("Delete")}
             onClick={() => {
@@ -84,13 +64,13 @@ export default function BaseMapEditor() {
                 onDelete: async () => {
                   await deleteBasemap({
                     variables: {
-                      id: parseInt(mapContext.selectedBasemap!),
+                      id: basemapContext.selectedBasemap!,
                     },
                     onError,
                     update: (cache) => {
                       const id = cache.identify(
                         data!.projectBySlug!.basemaps!.find(
-                          (b) => b.id === parseInt(mapContext.selectedBasemap!)
+                          (b) => b.id === basemapContext.selectedBasemap!
                         )!
                       );
 
@@ -109,7 +89,7 @@ export default function BaseMapEditor() {
                               // @ts-ignore
                               (basemapRef) => {
                                 return (
-                                  mapContext.selectedBasemap !==
+                                  basemapContext.selectedBasemap !==
                                   readField("id", basemapRef)
                                 );
                               }
@@ -128,18 +108,18 @@ export default function BaseMapEditor() {
           <CreateBasemapModal
             onRequestClose={() => setAddModalOpen(false)}
             onSave={(id) => {
-              manager?.setSelectedBasemap(id.toString());
+              basemapContext.setSelectedBasemap(id);
             }}
           />
         )}
         <div className="flex-1 overflow-y-auto">
-          <BasemapControl basemaps={data?.projectBySlug?.basemaps || []} />
+          <BasemapControl />
         </div>
       </div>
-      {editModalOpen && mapContext.selectedBasemap && (
+      {editModalOpen && basemapContext.selectedBasemap != null && (
         <BasemapEditorPanel
           onRequestClose={() => setEditModalOpen(false)}
-          basemapId={parseInt(mapContext.selectedBasemap)}
+          basemapId={basemapContext.selectedBasemap}
         />
       )}
     </>

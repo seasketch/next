@@ -18,15 +18,11 @@ import { Icons } from "../components/SketchGeometryTypeSelector";
 import Switch from "../components/Switch";
 import MapContextManager, {
   DigitizingLockState,
-  MapManagerContext,
 } from "../dataLayers/MapContextManager";
 import { BasemapContext } from "../dataLayers/BasemapContext";
 import { MapUIStateContext } from "../dataLayers/MapUIContext";
 import OptionalBasemapLayerControl from "../dataLayers/OptionalBasemapLayerControl";
-import {
-  BasemapDetailsFragment,
-  SketchGeometryType,
-} from "../generated/graphql";
+import { SketchGeometryType } from "../generated/graphql";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import { MeasureControlContext, MeasureControlLockId } from "../MeasureControl";
 import useDialog from "../components/useDialog";
@@ -484,19 +480,12 @@ export function ShowCoordinates(props: MapSettingsActionItem) {
 }
 
 export function BasemapControl({
-  basemaps,
   afterChange,
 }: {
-  basemaps: BasemapDetailsFragment[];
   afterChange?: () => void;
 }) {
-  const { manager } = useContext(MapManagerContext);
-  const basemapState = useContext(BasemapContext);
-  const selectedBasemap = useMemo(
-    () =>
-      basemaps.find((b) => b.id.toString() === basemapState.selectedBasemap),
-    [basemaps, basemapState.selectedBasemap]
-  );
+  const basemapContext = useContext(BasemapContext);
+  const selectedBasemap = basemapContext.getSelectedBasemap();
   const { t } = useTranslation("surveys");
 
   return (
@@ -509,7 +498,7 @@ export function BasemapControl({
           {t("Basemap")}
         </h4>
         <div>
-          {basemaps.map((basemap) => {
+          {basemapContext.basemaps.map((basemap) => {
             const selected = basemap.id === selectedBasemap?.id;
             return (
               <Item
@@ -526,11 +515,9 @@ export function BasemapControl({
                 )}
                 title={basemap.name}
                 onClick={(e) => {
-                  if (manager) {
-                    manager.setSelectedBasemap(basemap.id.toString());
-                    if (afterChange) {
-                      afterChange();
-                    }
+                  basemapContext.setSelectedBasemap(basemap.id);
+                  if (afterChange) {
+                    afterChange();
                   }
                   e.preventDefault();
                   e.stopPropagation();

@@ -15,15 +15,15 @@ import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import BoundsInput from "../admin/surveys/BoundsInput";
-import useMapEssentials from "../admin/surveys/useMapEssentials";
 import {
-  LegendsContext,
   MapManagerContext,
   MapOverlayContext,
-  SketchLayerContext,
 } from "../dataLayers/MapContextManager";
 import { BasemapContext } from "../dataLayers/BasemapContext";
+import BasemapContextProvider from "../dataLayers/BasemapContext";
+import MapManagerContextProvider from "../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../dataLayers/MapUIContext";
+import useMapEssentials from "../admin/surveys/useMapEssentials";
 import Button from "../components/Button";
 import MapboxMap from "../components/MapboxMap";
 import SketchGeometryTypeSelector, {
@@ -52,6 +52,7 @@ import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
+  FormElementProps,
   SurveyMapPortal,
 } from "./FormElement";
 import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
@@ -62,6 +63,7 @@ import MapPicker from "../components/MapPicker";
 import useDialog from "../components/useDialog";
 import { SketchClassDetailsFragment } from "../generated/queries";
 import SketchForm from "../projects/Sketches/SketchForm";
+import getSlug from "../getSlug";
 
 export enum STAGES {
   DRAWING_INTRO,
@@ -100,21 +102,39 @@ const MultiSpatialInput: FormElementComponent<
   MultiSpatialInputProps,
   MultiSpatialInputValueType
 > = (props) => {
-  const { t } = useTranslation("admin:surveys");
-  const context = useContext(FormElementLayoutContext);
-  const {
-    managerState,
-    sketchLayerState,
-    basemapState,
-    legendsState,
-    mapOverlayState,
-    basemaps,
-    bounds,
-  } = useMapEssentials({
+  const { basemaps, bounds } = useMapEssentials({
     bounds: props.componentSettings.startingBounds,
     filterBasemapIds: props.componentSettings.basemaps,
   });
-  const { manager } = managerState;
+
+  const slug = getSlug();
+
+  return (
+    <BasemapContextProvider
+      basemaps={basemaps}
+      preferencesKey={`${slug}-${props.id}-multi-spatial-input`}
+    >
+      <MapManagerContextProvider bounds={bounds}>
+        <MultiSpatialInputInner {...props} slug={slug} />
+      </MapManagerContextProvider>
+    </BasemapContextProvider>
+  );
+};
+
+function MultiSpatialInputInner(
+  props: FormElementProps<
+    MultiSpatialInputProps,
+    MultiSpatialInputValueType
+  > & {
+    slug?: string;
+  }
+) {
+  const { t } = useTranslation("admin:surveys");
+  const context = useContext(FormElementLayoutContext);
+  const { manager } = useContext(MapManagerContext);
+  const { basemaps } = useContext(BasemapContext);
+  const { styleHash } = useContext(MapOverlayContext);
+  const bounds: BBox = props.componentSettings.startingBounds || [0, 0, 0, 0];
   const [animating, setAnimating] = useState(false);
   const debouncedAnimating = useDebounce(animating, 10);
   const style = context.style;
@@ -331,11 +351,11 @@ const MultiSpatialInput: FormElementComponent<
   }, [selection, alert]);
 
   useEffect(() => {
-    if (manager && basemaps && mapOverlayState.styleHash.length > 0) {
+    if (manager && basemaps && styleHash.length > 0) {
       manager.getComputedStyle().then((style) => setMiniMapStyle(style.style));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [manager, mapOverlayState.styleHash]);
+  }, [manager, styleHash]);
 
   function onClickSave() {
     if (selfIntersects) {
@@ -490,589 +510,542 @@ const MultiSpatialInput: FormElementComponent<
   );
 
   return (
-    <MapManagerContext.Provider value={managerState}>
-      <SketchLayerContext.Provider value={sketchLayerState}>
-        <BasemapContext.Provider
-          value={{ ...basemapState, basemaps }}
+    <MapUIProvider preferencesKey={`${props.slug}-multi-spatial-input`}>
+      <>
+        <AnimatePresence
+          initial={false}
+          exitBeforeEnter={true}
+          presenceAffectsLayout={false}
         >
-          <MapOverlayContext.Provider value={mapOverlayState}>
-            <MapUIProvider preferencesKey="multi-spatial-input">
-            <>
-              <AnimatePresence
-                initial={false}
-                exitBeforeEnter={true}
-                presenceAffectsLayout={false}
-              >
-                <motion.div
-                  onAnimationStart={() => setAnimating(true)}
-                  onAnimationComplete={() => setAnimating(false)}
-                  custom={{
-                    direction: context.navigatingBackwards,
-                    stage: props.stage,
-                    isSmall: style.isSmall,
-                  }}
-                  className="relative w-full"
-                  variants={{
-                    exit: ({
-                      direction,
-                      stage,
-                      isSmall,
-                    }: {
-                      direction: boolean;
-                      stage: STAGES;
-                      isSmall: boolean;
-                    }) => {
-                      return {
-                        opacity: 0,
-                        translateY: direction ? 100 : -100,
-                        position: "relative",
-                        transition:
-                          isSmall && stage === STAGES.SHAPE_EDITOR
-                            ? { duration: 0 }
-                            : {
-                                duration: 0.3,
-                              },
-                      };
-                    },
-                    enter: ({
-                      direction,
-                    }: {
-                      direction: boolean;
-                      stage: STAGES;
-                    }) => ({
-                      opacity: 0,
-                      translateY: direction ? -100 : 100,
-                      position: "relative",
-                    }),
-                    show: ({
-                      direction,
-                    }: {
-                      direction: boolean;
-                      stage: STAGES;
-                    }) => ({
-                      opacity: 1,
-                      translateY: 0,
-                      position: "relative",
-                    }),
-                  }}
-                  transition={
-                    style.isSmall
+          <motion.div
+            onAnimationStart={() => setAnimating(true)}
+            onAnimationComplete={() => setAnimating(false)}
+            custom={{
+              direction: context.navigatingBackwards,
+              stage: props.stage,
+              isSmall: style.isSmall,
+            }}
+            className="relative w-full"
+            variants={{
+              exit: ({
+                direction,
+                stage,
+                isSmall,
+              }: {
+                direction: boolean;
+                stage: STAGES;
+                isSmall: boolean;
+              }) => {
+                return {
+                  opacity: 0,
+                  translateY: direction ? 100 : -100,
+                  position: "relative",
+                  transition:
+                    isSmall && stage === STAGES.SHAPE_EDITOR
                       ? { duration: 0 }
                       : {
                           duration: 0.3,
-                        }
+                        },
+                };
+              },
+              enter: ({
+                direction,
+              }: {
+                direction: boolean;
+                stage: STAGES;
+              }) => ({
+                opacity: 0,
+                translateY: direction ? -100 : 100,
+                position: "relative",
+              }),
+              show: ({ direction }: { direction: boolean; stage: STAGES }) => ({
+                opacity: 1,
+                translateY: 0,
+                position: "relative",
+              }),
+            }}
+            transition={
+              style.isSmall
+                ? { duration: 0 }
+                : {
+                    duration: 0.3,
                   }
-                  key={props.stage}
-                  initial="enter"
-                  animate="show"
-                  exit="exit"
-                >
-                  {(props.stage === STAGES.DRAWING_INTRO ||
-                    props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
-                    <>
-                      <FormElementBody
-                        formElementId={props.id}
-                        isInput={true}
-                        body={props.body}
-                        required={props.isRequired}
-                        editable={props.editable}
-                        alternateLanguageSettings={
-                          props.alternateLanguageSettings
-                        }
-                      />
-                      {style.isSmall && (
-                        <SurveyButton
-                          label={t("Begin", { ns: "surveys" })}
-                          className="pt-5"
-                          onClick={() =>
-                            props.onRequestStageChange(
-                              STAGES.MOBILE_DRAW_FIRST_SHAPE
-                            )
-                          }
-                        />
-                      )}
-                      {!props.isRequired && !style.isSmall && (
-                        <SurveyButton
-                          label={t("Skip Question", { ns: "surveys" })}
-                          className="mt-10"
-                          onClick={() => props.onRequestNext()}
-                        />
-                      )}
-                    </>
-                  )}
-                  {props.stage === STAGES.LIST_SHAPES && (
-                    <>
-                      <FormElementBody
-                        alternateLanguageSettings={
-                          props.alternateLanguageSettings
-                        }
-                        required={false}
-                        componentSettings={props.componentSettings}
-                        componentSettingName={"listShapesBody"}
-                        formElementId={props.id}
-                        isInput={false}
-                        body={
-                          props.componentSettings.listShapesBody ||
-                          MultiSpatialInput.defaultComponentSettings
-                            ?.listShapesBody
-                        }
-                        editable={props.editable}
-                      />
-                      <div
-                        className="my-8"
-                        style={{
-                          gridRowGap: "5px",
-                          display: "grid",
-                          grid: `
+            }
+            key={props.stage}
+            initial="enter"
+            animate="show"
+            exit="exit"
+          >
+            {(props.stage === STAGES.DRAWING_INTRO ||
+              props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) && (
+              <>
+                <FormElementBody
+                  formElementId={props.id}
+                  isInput={true}
+                  body={props.body}
+                  required={props.isRequired}
+                  editable={props.editable}
+                  alternateLanguageSettings={props.alternateLanguageSettings}
+                />
+                {style.isSmall && (
+                  <SurveyButton
+                    label={t("Begin", { ns: "surveys" })}
+                    className="pt-5"
+                    onClick={() =>
+                      props.onRequestStageChange(STAGES.MOBILE_DRAW_FIRST_SHAPE)
+                    }
+                  />
+                )}
+                {!props.isRequired && !style.isSmall && (
+                  <SurveyButton
+                    label={t("Skip Question", { ns: "surveys" })}
+                    className="mt-10"
+                    onClick={() => props.onRequestNext()}
+                  />
+                )}
+              </>
+            )}
+            {props.stage === STAGES.LIST_SHAPES && (
+              <>
+                <FormElementBody
+                  alternateLanguageSettings={props.alternateLanguageSettings}
+                  required={false}
+                  componentSettings={props.componentSettings}
+                  componentSettingName={"listShapesBody"}
+                  formElementId={props.id}
+                  isInput={false}
+                  body={
+                    props.componentSettings.listShapesBody ||
+                    MultiSpatialInput.defaultComponentSettings?.listShapesBody
+                  }
+                  editable={props.editable}
+                />
+                <div
+                  className="my-8"
+                  style={{
+                    gridRowGap: "5px",
+                    display: "grid",
+                    grid: `
                   [row1-start] "shape" 1fr [row1-end]
                   / 1fr
                   `,
-                        }}
-                      >
-                        {(props.value?.collection?.features || []).map(
-                          (feature) => (
-                            <button
-                              key={feature.id}
-                              className="block ltr:rounded-l rtl:rounded-r w-full text-left rtl:text-right px-4 py-2 border-opacity-50 h-full"
-                              style={{
-                                backgroundColor: colord(style.backgroundColor)
-                                  .darken(0.025)
-                                  .toHex(),
-                                // gridArea: "shape",
-                              }}
-                              onClick={() => {
-                                if (style.isSmall) {
-                                  props.onRequestStageChange(
-                                    STAGES.MOBILE_EDIT_PROPERTIES
-                                  );
-                                  if (manager?.map) {
-                                    manager.map.resize();
-                                    setTimeout(() => {
-                                      if (style.isSmall && manager?.map) {
-                                        manager.map.fitBounds(
-                                          bbox(feature) as LngLatBoundsLike,
-                                          { padding: 20, animate: false }
-                                        );
-                                      }
-                                    }, 100);
-                                  }
-                                  actions.selectFeature(feature.id as string);
-                                } else {
-                                  props.onRequestStageChange(
-                                    STAGES.SHAPE_EDITOR
-                                  );
-                                  actions.selectFeature(feature.id as string);
-                                }
-                              }}
-                            >
-                              {nameElementId
-                                ? feature.properties[nameElementId]
-                                : ""}
-                            </button>
-                          )
-                        )}
-                      </div>
-                      <div className="space-y-2 sm:space-y-0 sm:space-x-2 sm:rtl:space-x-reverse sm:flex sm:w-full">
-                        <SurveyButton
-                          className="w-full sm:w-auto block"
-                          buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
-                          label={
-                            <span className="space-x-1 rtl:space-x-reverse flex">
-                              <PlusCircleIcon className="w-5 h-5" />
-                              <span>
-                                <Trans ns="surveys">New Shape</Trans>
-                              </span>
-                            </span>
-                          }
-                          onClick={() => {
-                            setState({ submissionAttempted: false });
-                            setGeometryEditingState({
-                              isNew: true,
-                            });
-                            if (style.isSmall) {
-                              props.onRequestStageChange(
-                                STAGES.MOBILE_DRAW_FIRST_SHAPE
-                              );
-                            } else {
-                              props.onRequestStageChange(STAGES.SHAPE_EDITOR);
-                            }
-                            create(true);
-                          }}
-                        />
-                        {style.isSmall && (
-                          <SurveyButton
-                            className="w-full sm:w-auto block"
-                            buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
-                            label={
-                              <span className="space-x-1 rtl:space-x-reverse flex">
-                                <MapIcon className="w-5 h-5" />
-                                <span>
-                                  <Trans ns="surveys">View Map</Trans>
-                                </span>
-                              </span>
-                            }
-                            onClick={() =>
-                              props.onRequestStageChange(STAGES.SHAPE_EDITOR)
-                            }
-                          />
-                        )}
-                        <SurveyButton
-                          className="w-full sm:w-auto block"
-                          buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
-                          label={
-                            <span className="space-x-1 rtl:space-x-reverse flex">
-                              <span>
-                                <Trans ns="surveys">Next Question</Trans>
-                              </span>
-                            </span>
-                          }
-                          onClick={() => {
-                            props.onRequestNext();
-                          }}
-                        />
-                      </div>
-                    </>
-                  )}
-                  {(props.stage === STAGES.SHAPE_EDITOR ||
-                    props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
-                    <div className="py-5 space-y-2">
-                      <SketchForm
-                        key={state.featureId}
-                        formElements={
-                          (props.sketchClass?.form?.formElements ||
-                            []) as FormElementFullDetailsFragment[]
-                        }
-                        logicRules={props.sketchClass?.form?.logicRules || []}
-                        startingProperties={state}
-                        submissionAttempted={state.submissionAttempted}
-                        editable={props.editable}
-                        featureNumber={
-                          ((props.value?.collection.features || []).length ||
-                            0) + 1
-                        }
-                        onSubmissionRequested={onClickSave}
-                        onChange={(newProperties, hasValidationErrors) => {
-                          setState((prev) => {
-                            return {
-                              ...prev,
-                              ...newProperties,
-                              hasValidationErrors,
-                            };
-                          });
-                          // If editing an existing shape and there are no validation errors,
-                          // update the feature in the collection and props.value immediately
-                          if (
-                            !hasValidationErrors &&
-                            state.featureId &&
-                            geometryEditingState?.isNew !== true
-                          ) {
-                            onChange({
-                              collection: updateFeatureInCollection(
-                                state.featureId as string,
-                                {
-                                  props: newProperties,
-                                },
-                                props.value?.collection ||
-                                  EMPTY_FEATURE_COLLECTION
-                              ),
-                            });
-                          }
-                        }}
-                      />
-                      <div className="space-x-2 rtl:space-x-reverse">
-                        {geometryEditingState?.isNew && (
-                          <SurveyButton
-                            secondary={true}
-                            label={<Trans ns="surveys">Cancel</Trans>}
-                            onClick={async () => {
-                              if (!geometryEditingState?.isNew) {
-                                throw new Error(
-                                  "Editor is not in state geometryEditingState.isNew"
-                                );
-                              }
-                              if (
-                                !geometryEditingState.feature ||
-                                (await confirm(
-                                  t(
-                                    "Are you sure you want to delete this shape?",
-                                    {
-                                      ns: "surveys",
-                                    }
-                                  )
-                                ))
-                              ) {
-                                if (geometryEditingState.feature) {
-                                  const collection = removeFeatureFromValue(
-                                    geometryEditingState.feature.id!
-                                  );
-                                  setFilteredCollection(collection);
-                                }
-                                setGeometryEditingState({ isNew: false });
-                                props.onRequestStageChange(STAGES.LIST_SHAPES);
-                                actions.finishEditing();
-                                setFilteredCollection(props.value!.collection);
-                              }
-                            }}
-                          />
-                        )}
-                        <SurveyButton
-                          label={
-                            geometryEditingState?.isNew
-                              ? t("Save", { ns: "surveys" })
-                              : t("Close", { ns: "surveys" })
-                          }
-                          onClick={onClickSave}
-                        />
-                        {!geometryEditingState?.isNew && style.isSmall && (
-                          <>
-                            <SurveyButton
-                              label={t("Edit on Map", {
-                                ns: "surveys",
-                              })}
-                              onClick={onClickMapNonInteractive}
-                            />
-                            <SurveyButton
-                              label={t("Delete", { ns: "surveys" })}
-                              onClick={async () => {
-                                if (!selection?.id) {
-                                  throw new Error("No selection to delete");
-                                }
-                                if (!props.value) {
-                                  throw new Error(
-                                    "No collection to delete feature from"
-                                  );
-                                }
-                                if (
-                                  await confirm(
-                                    t(
-                                      "Are you sure you want to delete this shape?",
-                                      {
-                                        ns: "surveys",
-                                      }
-                                    )
-                                  )
-                                ) {
-                                  const collection = removeFeatureFromValue(
-                                    selection.id
-                                  );
-                                  setFilteredCollection(collection);
-                                  if (geometryEditingState?.isNew) {
-                                    setGeometryEditingState({
-                                      isNew: false,
-                                    });
-                                  }
-                                  props.onRequestStageChange(
-                                    STAGES.LIST_SHAPES
-                                  );
-                                }
-                              }}
-                            />
-                          </>
-                        )}
-                        {style.isSmall && !geometryEditingState?.isNew && (
-                          <div
-                            className={`rounded-full fixed top-4 right-2 z-10 shadow-lg bg-black bg-opacity-20`}
-                            onClick={onClickSave}
-                            // style={{ backgroundColor: style.secondaryColor }}
-                          >
-                            <XIcon className="w-10 h-10" />
-                            {/* <XCircleIcon className="w-10 h-10" /> */}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
-
-              <SurveyMapPortal>
-                <div
-                  className={`flex items-center justify-center w-full h-full ${
-                    props.stage === STAGES.MOBILE_EDIT_PROPERTIES
-                      ? "hide-all-gl-controls"
-                      : ""
-                  }`}
+                  }}
                 >
-                  {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
-                    <DigitizingTools
-                      selfIntersects={selfIntersects}
-                      multiFeature={true}
-                      state={digitizingState}
-                      geometryType={props.sketchClass!.geometryType}
-                      onRequestEdit={actions.edit}
-                      onRequestFinishEditing={actions.finishEditing}
-                      createStateButtons={
-                        style.isSmall && (
-                          <Button
-                            label={t("Cancel", { ns: "surveys" })}
-                            onClick={() => {
-                              if (geometryEditingState?.feature) {
-                                const collection = removeFeatureFromValue(
-                                  geometryEditingState.feature.id!
+                  {(props.value?.collection?.features || []).map((feature) => (
+                    <button
+                      key={feature.id}
+                      className="block ltr:rounded-l rtl:rounded-r w-full text-left rtl:text-right px-4 py-2 border-opacity-50 h-full"
+                      style={{
+                        backgroundColor: colord(style.backgroundColor)
+                          .darken(0.025)
+                          .toHex(),
+                        // gridArea: "shape",
+                      }}
+                      onClick={() => {
+                        if (style.isSmall) {
+                          props.onRequestStageChange(
+                            STAGES.MOBILE_EDIT_PROPERTIES
+                          );
+                          if (manager?.map) {
+                            manager.map.resize();
+                            setTimeout(() => {
+                              if (style.isSmall && manager?.map) {
+                                manager.map.fitBounds(
+                                  bbox(feature) as LngLatBoundsLike,
+                                  { padding: 20, animate: false }
                                 );
-                                setFilteredCollection(collection);
                               }
-                              setGeometryEditingState({ isNew: false });
-                              props.onRequestStageChange(STAGES.LIST_SHAPES);
-                              actions.finishEditing();
-                              setFilteredCollection(props.value!.collection);
-                            }}
-                            buttonClassName={
-                              style.isSmall
-                                ? "py-3 flex-1 justify-center content-center text-base"
-                                : ""
-                            }
-                          />
-                        )
-                      }
-                      unfinishedStateButtons={
-                        <Button
-                          className="pointer-events-auto"
-                          primary
-                          label={t("Done", { ns: "surveys" })}
-                          onClick={
-                            style.isSmall ? onClickDoneMobile : onClickSave
+                            }, 100);
                           }
-                          buttonClassName={
-                            style.isSmall
-                              ? "py-3 flex-1 justify-center content-center text-base"
-                              : ""
-                          }
-                        />
-                      }
-                      noSelectionStateButtons={
-                        style.isSmall && !geometryEditingState?.isNew ? (
-                          <>
-                            <Button
-                              className="pointer-events-auto"
-                              label={<Trans ns="surveys">Back to List</Trans>}
-                              onClick={() => {
-                                props.onRequestStageChange(STAGES.LIST_SHAPES);
-                              }}
-                              buttonClassName={
-                                style.isSmall
-                                  ? "py-3 flex-1 justify-center content-center text-base"
-                                  : ""
-                              }
-                            />
-                            <Button
-                              className="pointer-events-auto"
-                              label={<Trans ns="surveys">New Shape</Trans>}
-                              onClick={() => {
-                                create(true);
-                              }}
-                              buttonClassName={
-                                style.isSmall
-                                  ? "py-3 flex-1 justify-center content-center text-base"
-                                  : ""
-                              }
-                            />
-                          </>
-                        ) : undefined
-                      }
-                      onRequestResetFeature={() => {
-                        if (!selection) {
-                          throw new Error(
-                            "No selection to perform feature reset"
-                          );
-                        }
-                        if (geometryEditingState?.isNew) {
-                          throw new Error(
-                            "Reset cannot be performed if geometry is new"
-                          );
+                          actions.selectFeature(feature.id as string);
                         } else {
-                          const goodFeature =
-                            props.value?.collection.features.find(
-                              (f) => f.id === selection.id
-                            );
-                          if (goodFeature) {
-                            resetFeature(goodFeature);
-                          } else {
-                            throw new Error(
-                              "Cannot find feature with id " + selection.id
-                            );
-                          }
+                          props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+                          actions.selectFeature(feature.id as string);
                         }
                       }}
-                      onRequestDelete={async () => {
-                        if (!selection?.id) {
-                          throw new Error("No selection to delete");
-                        }
-                        if (!props.value) {
+                    >
+                      {nameElementId ? feature.properties[nameElementId] : ""}
+                    </button>
+                  ))}
+                </div>
+                <div className="space-y-2 sm:space-y-0 sm:space-x-2 sm:rtl:space-x-reverse sm:flex sm:w-full">
+                  <SurveyButton
+                    className="w-full sm:w-auto block"
+                    buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
+                    label={
+                      <span className="space-x-1 rtl:space-x-reverse flex">
+                        <PlusCircleIcon className="w-5 h-5" />
+                        <span>
+                          <Trans ns="surveys">New Shape</Trans>
+                        </span>
+                      </span>
+                    }
+                    onClick={() => {
+                      setState({ submissionAttempted: false });
+                      setGeometryEditingState({
+                        isNew: true,
+                      });
+                      if (style.isSmall) {
+                        props.onRequestStageChange(
+                          STAGES.MOBILE_DRAW_FIRST_SHAPE
+                        );
+                      } else {
+                        props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+                      }
+                      create(true);
+                    }}
+                  />
+                  {style.isSmall && (
+                    <SurveyButton
+                      className="w-full sm:w-auto block"
+                      buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
+                      label={
+                        <span className="space-x-1 rtl:space-x-reverse flex">
+                          <MapIcon className="w-5 h-5" />
+                          <span>
+                            <Trans ns="surveys">View Map</Trans>
+                          </span>
+                        </span>
+                      }
+                      onClick={() =>
+                        props.onRequestStageChange(STAGES.SHAPE_EDITOR)
+                      }
+                    />
+                  )}
+                  <SurveyButton
+                    className="w-full sm:w-auto block"
+                    buttonClassName="w-full justify-center sm:w-auto text-base sm:text-sm"
+                    label={
+                      <span className="space-x-1 rtl:space-x-reverse flex">
+                        <span>
+                          <Trans ns="surveys">Next Question</Trans>
+                        </span>
+                      </span>
+                    }
+                    onClick={() => {
+                      props.onRequestNext();
+                    }}
+                  />
+                </div>
+              </>
+            )}
+            {(props.stage === STAGES.SHAPE_EDITOR ||
+              props.stage === STAGES.MOBILE_EDIT_PROPERTIES) && (
+              <div className="py-5 space-y-2">
+                <SketchForm
+                  key={state.featureId}
+                  formElements={
+                    (props.sketchClass?.form?.formElements ||
+                      []) as FormElementFullDetailsFragment[]
+                  }
+                  logicRules={props.sketchClass?.form?.logicRules || []}
+                  startingProperties={state}
+                  submissionAttempted={state.submissionAttempted}
+                  editable={props.editable}
+                  featureNumber={
+                    ((props.value?.collection.features || []).length || 0) + 1
+                  }
+                  onSubmissionRequested={onClickSave}
+                  onChange={(newProperties, hasValidationErrors) => {
+                    setState((prev) => {
+                      return {
+                        ...prev,
+                        ...newProperties,
+                        hasValidationErrors,
+                      };
+                    });
+                    // If editing an existing shape and there are no validation errors,
+                    // update the feature in the collection and props.value immediately
+                    if (
+                      !hasValidationErrors &&
+                      state.featureId &&
+                      geometryEditingState?.isNew !== true
+                    ) {
+                      onChange({
+                        collection: updateFeatureInCollection(
+                          state.featureId as string,
+                          {
+                            props: newProperties,
+                          },
+                          props.value?.collection || EMPTY_FEATURE_COLLECTION
+                        ),
+                      });
+                    }
+                  }}
+                />
+                <div className="space-x-2 rtl:space-x-reverse">
+                  {geometryEditingState?.isNew && (
+                    <SurveyButton
+                      secondary={true}
+                      label={<Trans ns="surveys">Cancel</Trans>}
+                      onClick={async () => {
+                        if (!geometryEditingState?.isNew) {
                           throw new Error(
-                            "No collection to delete feature from"
+                            "Editor is not in state geometryEditingState.isNew"
                           );
                         }
                         if (
-                          await confirm(
+                          !geometryEditingState.feature ||
+                          (await confirm(
                             t("Are you sure you want to delete this shape?", {
                               ns: "surveys",
                             })
-                          )
+                          ))
                         ) {
-                          const collection = removeFeatureFromValue(
-                            selection.id
-                          );
-                          setFilteredCollection(collection);
-                          if (props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) {
-                            create(true);
-                          } else {
+                          if (geometryEditingState.feature) {
+                            const collection = removeFeatureFromValue(
+                              geometryEditingState.feature.id!
+                            );
+                            setFilteredCollection(collection);
+                          }
+                          setGeometryEditingState({ isNew: false });
+                          props.onRequestStageChange(STAGES.LIST_SHAPES);
+                          actions.finishEditing();
+                          setFilteredCollection(props.value!.collection);
+                        }
+                      }}
+                    />
+                  )}
+                  <SurveyButton
+                    label={
+                      geometryEditingState?.isNew
+                        ? t("Save", { ns: "surveys" })
+                        : t("Close", { ns: "surveys" })
+                    }
+                    onClick={onClickSave}
+                  />
+                  {!geometryEditingState?.isNew && style.isSmall && (
+                    <>
+                      <SurveyButton
+                        label={t("Edit on Map", {
+                          ns: "surveys",
+                        })}
+                        onClick={onClickMapNonInteractive}
+                      />
+                      <SurveyButton
+                        label={t("Delete", { ns: "surveys" })}
+                        onClick={async () => {
+                          if (!selection?.id) {
+                            throw new Error("No selection to delete");
+                          }
+                          if (!props.value) {
+                            throw new Error(
+                              "No collection to delete feature from"
+                            );
+                          }
+                          if (
+                            await confirm(
+                              t("Are you sure you want to delete this shape?", {
+                                ns: "surveys",
+                              })
+                            )
+                          ) {
+                            const collection = removeFeatureFromValue(
+                              selection.id
+                            );
+                            setFilteredCollection(collection);
                             if (geometryEditingState?.isNew) {
-                              setGeometryEditingState({ isNew: false });
+                              setGeometryEditingState({
+                                isNew: false,
+                              });
                             }
                             props.onRequestStageChange(STAGES.LIST_SHAPES);
                           }
-                        }
-                      }}
-                      onRequestSubmit={() => {
-                        // if (props.value?.collection.features?.length) {
-                        // props.onSubmit();
-                        // }
-                      }}
-                    ></DigitizingTools>
+                        }}
+                      />
+                    </>
                   )}
-                  <MapboxMap
-                    key={`sap-map-${props.id}`}
-                    interactive={props.stage !== STAGES.MOBILE_EDIT_PROPERTIES}
-                    onClickNonInteractive={onClickMapNonInteractive}
-                    showNavigationControls
-                    hideDrawControls
-                    className="w-full h-full absolute top-0 bottom-0"
-                    initOptions={mapInitOptions}
-                    lazyLoadReady={!animating && !debouncedAnimating}
-                  />
-                  {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
-                    <MapPicker basemaps={basemaps}>{popupActions}</MapPicker>
-                  )}
-                  {miniMapStyle && manager?.map && (
-                    <DigitizingMiniMap
-                      topologyErrors={selfIntersects}
-                      style={miniMapStyle}
-                      dragTarget={dragTarget}
-                      onLoad={setMiniMap}
-                    />
+                  {style.isSmall && !geometryEditingState?.isNew && (
+                    <div
+                      className={`rounded-full fixed top-4 right-2 z-10 shadow-lg bg-black bg-opacity-20`}
+                      onClick={onClickSave}
+                      // style={{ backgroundColor: style.secondaryColor }}
+                    >
+                      <XIcon className="w-10 h-10" />
+                      {/* <XCircleIcon className="w-10 h-10" /> */}
+                    </div>
                   )}
                 </div>
-              </SurveyMapPortal>
+              </div>
+            )}
+          </motion.div>
+        </AnimatePresence>
 
-              <Admin
-                map={manager?.map}
-                bounds={bounds}
-                disableDraw={disable}
-                enableDraw={enable}
-                componentSettings={props.componentSettings}
-                id={props.id}
-                alternateLanguageSettings={props.alternateLanguageSettings}
-                sketchClass={props.sketchClass!}
+        <SurveyMapPortal>
+          <div
+            className={`flex items-center justify-center w-full h-full ${
+              props.stage === STAGES.MOBILE_EDIT_PROPERTIES
+                ? "hide-all-gl-controls"
+                : ""
+            }`}
+          >
+            {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
+              <DigitizingTools
+                selfIntersects={selfIntersects}
+                multiFeature={true}
+                state={digitizingState}
+                geometryType={props.sketchClass!.geometryType}
+                onRequestEdit={actions.edit}
+                onRequestFinishEditing={actions.finishEditing}
+                createStateButtons={
+                  style.isSmall && (
+                    <Button
+                      label={t("Cancel", { ns: "surveys" })}
+                      onClick={() => {
+                        if (geometryEditingState?.feature) {
+                          const collection = removeFeatureFromValue(
+                            geometryEditingState.feature.id!
+                          );
+                          setFilteredCollection(collection);
+                        }
+                        setGeometryEditingState({ isNew: false });
+                        props.onRequestStageChange(STAGES.LIST_SHAPES);
+                        actions.finishEditing();
+                        setFilteredCollection(props.value!.collection);
+                      }}
+                      buttonClassName={
+                        style.isSmall
+                          ? "py-3 flex-1 justify-center content-center text-base"
+                          : ""
+                      }
+                    />
+                  )
+                }
+                unfinishedStateButtons={
+                  <Button
+                    className="pointer-events-auto"
+                    primary
+                    label={t("Done", { ns: "surveys" })}
+                    onClick={style.isSmall ? onClickDoneMobile : onClickSave}
+                    buttonClassName={
+                      style.isSmall
+                        ? "py-3 flex-1 justify-center content-center text-base"
+                        : ""
+                    }
+                  />
+                }
+                noSelectionStateButtons={
+                  style.isSmall && !geometryEditingState?.isNew ? (
+                    <>
+                      <Button
+                        className="pointer-events-auto"
+                        label={<Trans ns="surveys">Back to List</Trans>}
+                        onClick={() => {
+                          props.onRequestStageChange(STAGES.LIST_SHAPES);
+                        }}
+                        buttonClassName={
+                          style.isSmall
+                            ? "py-3 flex-1 justify-center content-center text-base"
+                            : ""
+                        }
+                      />
+                      <Button
+                        className="pointer-events-auto"
+                        label={<Trans ns="surveys">New Shape</Trans>}
+                        onClick={() => {
+                          create(true);
+                        }}
+                        buttonClassName={
+                          style.isSmall
+                            ? "py-3 flex-1 justify-center content-center text-base"
+                            : ""
+                        }
+                      />
+                    </>
+                  ) : undefined
+                }
+                onRequestResetFeature={() => {
+                  if (!selection) {
+                    throw new Error("No selection to perform feature reset");
+                  }
+                  if (geometryEditingState?.isNew) {
+                    throw new Error(
+                      "Reset cannot be performed if geometry is new"
+                    );
+                  } else {
+                    const goodFeature = props.value?.collection.features.find(
+                      (f) => f.id === selection.id
+                    );
+                    if (goodFeature) {
+                      resetFeature(goodFeature);
+                    } else {
+                      throw new Error(
+                        "Cannot find feature with id " + selection.id
+                      );
+                    }
+                  }
+                }}
+                onRequestDelete={async () => {
+                  if (!selection?.id) {
+                    throw new Error("No selection to delete");
+                  }
+                  if (!props.value) {
+                    throw new Error("No collection to delete feature from");
+                  }
+                  if (
+                    await confirm(
+                      t("Are you sure you want to delete this shape?", {
+                        ns: "surveys",
+                      })
+                    )
+                  ) {
+                    const collection = removeFeatureFromValue(selection.id);
+                    setFilteredCollection(collection);
+                    if (props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) {
+                      create(true);
+                    } else {
+                      if (geometryEditingState?.isNew) {
+                        setGeometryEditingState({ isNew: false });
+                      }
+                      props.onRequestStageChange(STAGES.LIST_SHAPES);
+                    }
+                  }
+                }}
+                onRequestSubmit={() => {
+                  // if (props.value?.collection.features?.length) {
+                  // props.onSubmit();
+                  // }
+                }}
+              ></DigitizingTools>
+            )}
+            <MapboxMap
+              key={`sap-map-${props.id}`}
+              interactive={props.stage !== STAGES.MOBILE_EDIT_PROPERTIES}
+              onClickNonInteractive={onClickMapNonInteractive}
+              showNavigationControls
+              hideDrawControls
+              className="w-full h-full absolute top-0 bottom-0"
+              initOptions={mapInitOptions}
+              lazyLoadReady={!animating && !debouncedAnimating}
+            />
+            {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
+              <MapPicker>{popupActions}</MapPicker>
+            )}
+            {miniMapStyle && manager?.map && (
+              <DigitizingMiniMap
+                topologyErrors={selfIntersects}
+                style={miniMapStyle}
+                dragTarget={dragTarget}
+                onLoad={setMiniMap}
               />
-            </>
-            </MapUIProvider>
-          </MapOverlayContext.Provider>
-        </BasemapContext.Provider>
-      </SketchLayerContext.Provider>
-    </MapManagerContext.Provider>
+            )}
+          </div>
+        </SurveyMapPortal>
+
+        <Admin
+          map={manager?.map}
+          bounds={bounds}
+          disableDraw={disable}
+          enableDraw={enable}
+          componentSettings={props.componentSettings}
+          id={props.id}
+          alternateLanguageSettings={props.alternateLanguageSettings}
+          sketchClass={props.sketchClass!}
+        />
+      </>
+    </MapUIProvider>
   );
-};
+}
 
 MultiSpatialInput.icon = ({ componentSettings, sketchClass }) => {
   const Icon = Icons[sketchClass?.geometryType || SketchGeometryType.Polygon];

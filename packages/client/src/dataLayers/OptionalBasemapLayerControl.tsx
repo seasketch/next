@@ -6,8 +6,10 @@ import {
   useGetOptionalBasemapLayerMetadataQuery,
 } from "../generated/graphql";
 import { useContext, useState } from "react";
-import { MapManagerContext } from "./MapContextManager";
-import { BasemapContext } from "./BasemapContext";
+import {
+  BasemapContext,
+  type OptionalBasemapLayerValue,
+} from "./BasemapContext";
 import RadioGroup from "../components/RadioGroup";
 import MetadataIcon from "../components/MetadataIcon";
 import MetadataModal from "./MetadataModal";
@@ -16,7 +18,7 @@ export default function OptionalBasemapLayerControl({
   layer,
   onChange,
 }: {
-  onChange?: (value: any) => void;
+  onChange?: (value: OptionalBasemapLayerValue) => void;
   layer: Pick<
     OptionalBasemapLayer,
     | "id"
@@ -28,8 +30,7 @@ export default function OptionalBasemapLayerControl({
     | "metadata"
   >;
 }) {
-  const mapContext = useContext(BasemapContext);
-  const { manager } = useContext(MapManagerContext);
+  const basemapContext = useContext(BasemapContext);
   const [metadataOpen, setMetadataOpen] = useState(false);
 
   let options = layer.options as {
@@ -70,13 +71,14 @@ export default function OptionalBasemapLayerControl({
           }
           input={
             <select
-              value={mapContext.basemapOptionalLayerStates[layer.id]}
+              value={
+                (basemapContext.basemapOptionalLayerStates[layer.id] ??
+                  "") as string
+              }
               className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
               onChange={(e) => {
                 const value = e.target.value;
-                if (manager) {
-                  manager.updateOptionalBasemapSetting(layer, value);
-                }
+                basemapContext.updateOptionalBasemapSetting(layer, value);
                 if (onChange) {
                   onChange(value);
                 }
@@ -102,11 +104,12 @@ export default function OptionalBasemapLayerControl({
               {layer.name} {metadataButton}
             </span>
           }
-          value={mapContext.basemapOptionalLayerStates[layer.id]}
+          value={
+            (basemapContext.basemapOptionalLayerStates[layer.id] ??
+              "") as string
+          }
           onChange={(value) => {
-            if (manager) {
-              manager.updateOptionalBasemapSetting(layer, value);
-            }
+            basemapContext.updateOptionalBasemapSetting(layer, value);
             if (onChange) {
               onChange(value);
             }
@@ -131,11 +134,11 @@ export default function OptionalBasemapLayerControl({
           }
           input={
             <Switch
-              isToggled={mapContext.basemapOptionalLayerStates[layer.id]}
+              isToggled={
+                !!basemapContext.basemapOptionalLayerStates[layer.id]
+              }
               onClick={(value) => {
-                if (manager) {
-                  manager.updateOptionalBasemapSetting(layer, value);
-                }
+                basemapContext.updateOptionalBasemapSetting(layer, value);
                 if (onChange) {
                   onChange(value);
                 }

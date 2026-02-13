@@ -10,7 +10,6 @@ import {
   usePublishedTableOfContentsQuery,
   useDraftTableOfContentsQuery,
 } from "../generated/graphql";
-import MapContextManager from "./MapContextManager";
 
 export interface UseMapDataOptions {
   /** When true, use draft table of contents (for admin preview). Default: false (published). */
@@ -18,17 +17,15 @@ export interface UseMapDataOptions {
 }
 
 /**
- * Retrieves table of contents items, basemaps, data sources and data layers.
- * Also updates the given map context with these values.
- * @param draft When true, uses draft ToC for admin preview (interactivity changes reflect immediately).
+ * Pure data-fetching hook. Returns basemaps, table of contents items,
+ * data layers, and data sources for the current project.
  */
-export default function useMapData(
-  manager: MapContextManager | undefined,
-  options?: UseMapDataOptions
-) {
+export default function useMapData(options?: UseMapDataOptions) {
   const { draft = false } = options ?? {};
   const { slug } = useParams<{ slug: string }>();
-  const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
+  const [basemaps, setBasemaps] = useState<
+    BasemapDetailsFragment[] | undefined
+  >(undefined);
   const [tableOfContentsItems, setTableOfContentsItems] = useState<
     OverlayFragment[]
   >([]);
@@ -61,16 +58,14 @@ export default function useMapData(
       slug,
     },
   });
+
   useEffect(() => {
     if (basemapsQuery.data?.projectBySlug?.basemaps) {
-      const basemaps = basemapsQuery.data.projectBySlug
-        .basemaps as BasemapDetailsFragment[];
-      if (manager) {
-        manager.setBasemaps(basemaps);
-      }
-      setBasemaps(basemaps);
+      setBasemaps(
+        basemapsQuery.data.projectBySlug.basemaps as BasemapDetailsFragment[]
+      );
     }
-  }, [manager, basemapsQuery.data]);
+  }, [basemapsQuery.data]);
 
   useEffect(() => {
     if (tocItems) {
@@ -81,19 +76,16 @@ export default function useMapData(
   useEffect(() => {
     if (
       layersAndSourcesQuery.data?.projectBySlug?.dataLayersForItems &&
-      layersAndSourcesQuery.data?.projectBySlug?.dataSourcesForItems &&
-      tocItems
+      layersAndSourcesQuery.data?.projectBySlug?.dataSourcesForItems
     ) {
-      const layers =
-        layersAndSourcesQuery.data.projectBySlug.dataLayersForItems;
-      const sources =
-        layersAndSourcesQuery.data.projectBySlug.dataSourcesForItems;
-      if (manager) {
-        manager.reset(sources, layers, tocItems);
-      }
-      setDataLayers(layers);
-      setDataSources(sources);
+      setDataLayers(
+        layersAndSourcesQuery.data.projectBySlug.dataLayersForItems
+      );
+      setDataSources(
+        layersAndSourcesQuery.data.projectBySlug.dataSourcesForItems
+      );
     }
-  }, [layersAndSourcesQuery.data, manager, tocItems]);
+  }, [layersAndSourcesQuery.data]);
+
   return { basemaps, tableOfContentsItems, dataSources, dataLayers };
 }

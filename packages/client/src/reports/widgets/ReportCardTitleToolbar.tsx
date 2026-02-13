@@ -80,12 +80,14 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
           hasMultipleTabs={context.hasMultipleTabs}
           openMoveCardToTabModal={context.openMoveCardToTabModal}
           openCalculationDetailsModal={context.openCalculationDetailsModal}
-          setEditing={context.setEditing ?? (() => {})}
+          setEditing={context.setEditing ?? noop}
         />
       </div>
     </h1>
   );
 }
+
+const noop = () => {};
 
 /**
  * Because titles need to be rendered within a prosemirror body using a react node view, we need to pass a lot of information from the ReportCard component to the toolbar via context.

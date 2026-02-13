@@ -1,5 +1,5 @@
 import React, { useState, useContext } from "react";
-import { MapManagerContext } from "../../dataLayers/MapContextManager";
+import { BasemapContext } from "../../dataLayers/BasemapContext";
 import { BasemapDetailsFragment } from "../../generated/graphql";
 
 export default function MiniBasemapSelector({
@@ -12,8 +12,8 @@ export default function MiniBasemapSelector({
   right?: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const { manager } = useContext(MapManagerContext);
-  const selected = manager?.getSelectedBasemap();
+  const basemapContext = useContext(BasemapContext);
+  const selected = basemapContext.getSelectedBasemap();
   return (
     <div
       className={`absolute ${
@@ -38,7 +38,7 @@ export default function MiniBasemapSelector({
             <button
               key={b.id}
               onClick={() => {
-                manager?.setSelectedBasemap(b.id.toString());
+                basemapContext.setSelectedBasemap(b.id);
                 setOpen(false);
               }}
               className={`${

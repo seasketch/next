@@ -16,15 +16,8 @@ import mapboxgl, {
   VectorSource,
   LineLayer,
 } from "mapbox-gl";
-import {
-  createContext,
-  Dispatch,
-  useEffect,
-  useRef,
-  useState,
-  SetStateAction,
-} from "react";
-import { BBox, Feature, Polygon } from "geojson";
+import { createContext, Dispatch, SetStateAction } from "react";
+import { Feature, Polygon } from "geojson";
 import {
   ArcgisFeatureLayerFetchStrategy,
   ArchivedSourceFragment,
@@ -35,22 +28,18 @@ import {
   DataSourceTypes,
   InteractivityType,
   MapBookmarkDetailsFragment,
-  OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   OverlayFragment,
   SketchPresentFragmentDoc,
   SpriteDetailsFragment,
-  useProjectRegionQuery,
 } from "../generated/graphql";
 import { fetchGlStyle } from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import bytes from "bytes";
 import bbox from "@turf/bbox";
-import { useParams } from "react-router";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
-import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
@@ -77,7 +66,10 @@ import {
   buildInaturalistSourcesAndLayers,
   normalizeInaturalistParams,
 } from "./inaturalist";
-import type { BasemapContextState } from "./BasemapContext";
+import type {
+  BasemapContextState,
+  OptionalBasemapLayerValue,
+} from "./BasemapContext";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -208,8 +200,9 @@ class MapContextManager extends EventEmitter {
   private _setMapOverlayState?: Dispatch<
     SetStateAction<MapOverlayContextState>
   >;
-  private _setBasemapState?: Dispatch<SetStateAction<BasemapContextState>>;
   private _setLegendsState?: Dispatch<SetStateAction<LegendsContextState>>;
+  /** Basemap state from BasemapContext, set via updateBasemapState by MapManagerContextProvider */
+  private basemapState: BasemapContextState | null = null;
   private _ready = false;
   private updateStateDebouncerReference?: any;
   private initialCameraOptions?: CameraOptions;
@@ -260,7 +253,6 @@ class MapContextManager extends EventEmitter {
     setManagerState: Dispatch<SetStateAction<MapManagerState>>,
     setSketchLayerState: Dispatch<SetStateAction<SketchLayerContextState>>,
     setMapOverlayState: Dispatch<SetStateAction<MapOverlayContextState>>,
-    setBasemapState: Dispatch<SetStateAction<BasemapContextState>>,
     setLegendsState: Dispatch<SetStateAction<LegendsContextState>>,
     initialCameraOptions?: CameraOptions,
     preferencesKey?: string,
@@ -272,7 +264,6 @@ class MapContextManager extends EventEmitter {
     this._setManagerState = setManagerState;
     this._setSketchLayerState = setSketchLayerState;
     this._setMapOverlayState = setMapOverlayState;
-    this._setBasemapState = setBasemapState;
     this._setLegendsState = setLegendsState;
     // @ts-ignore
     window.mapContext = this;
@@ -281,12 +272,30 @@ class MapContextManager extends EventEmitter {
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
     this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
-    this.internalState.inaturalistCallToActions =
-      initialState.inaturalistCallToActions || [];
   }
 
   getCustomGLSource(sourceId: number) {
     return this.customSources[sourceId]?.customSource;
+  }
+
+  /**
+   * Update basemap state from BasemapContext. Called by MapManagerContextProvider.
+   */
+  updateBasemapState(state: BasemapContextState) {
+    this.basemapState = state;
+    // Sync the basemaps lookup for bookmark/style code
+    this.basemaps = {};
+    for (const b of state.basemaps) {
+      this.basemaps[b.id.toString()] = b;
+    }
+    // Mark ready when basemaps are set
+    if (state.ready && state.basemaps.length > 0 && !this.basemapsWereSet) {
+      this.basemapsWereSet = true;
+      this._ready =
+        !!(this.initialCameraOptions || this.initialBounds) &&
+        this.basemapsWereSet;
+      this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
+    }
   }
 
   private setState = (action: SetStateAction<MapContextInterface>) => {
@@ -320,62 +329,6 @@ class MapContextManager extends EventEmitter {
         ...prev,
         layerStatesByTocStaticId: this.internalState.layerStatesByTocStaticId,
         styleHash: this.internalState.styleHash,
-      };
-    });
-
-    this._setBasemapState?.((prev) => {
-      console.log("whats different?");
-      console.log(
-        "selectedBasemap",
-        prev.selectedBasemap === this.internalState.selectedBasemap
-      );
-      console.log(
-        "terrainEnabled",
-        prev.terrainEnabled === this.internalState.terrainEnabled
-      );
-      console.log(
-        "prefersTerrainEnabled",
-        prev.prefersTerrainEnabled === this.internalState.prefersTerrainEnabled
-      );
-      console.log(
-        "basemapError",
-        prev.basemapError === this.internalState.basemapError
-      );
-      console.log(
-        "basemapOptionalLayerStates",
-        prev.basemapOptionalLayerStates ===
-          this.internalState.basemapOptionalLayerStates
-      );
-      console.log(
-        "basemapOptionalLayerStatePreferences",
-        prev.basemapOptionalLayerStatePreferences ===
-          this.internalState.basemapOptionalLayerStatePreferences
-      );
-      console.log("--------------------------------");
-      if (
-        prev.selectedBasemap === this.internalState.selectedBasemap &&
-        prev.terrainEnabled === this.internalState.terrainEnabled &&
-        prev.prefersTerrainEnabled ===
-          this.internalState.prefersTerrainEnabled &&
-        prev.basemapError === this.internalState.basemapError &&
-        prev.basemapOptionalLayerStates ===
-          this.internalState.basemapOptionalLayerStates &&
-        prev.basemapOptionalLayerStatePreferences ===
-          this.internalState.basemapOptionalLayerStatePreferences
-      ) {
-        console.log("no changes");
-        return prev;
-      }
-      console.log("changes");
-      return {
-        selectedBasemap: this.internalState.selectedBasemap,
-        terrainEnabled: this.internalState.terrainEnabled,
-        prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
-        basemapError: this.internalState.basemapError,
-        basemapOptionalLayerStates:
-          this.internalState.basemapOptionalLayerStates,
-        basemapOptionalLayerStatePreferences:
-          this.internalState.basemapOptionalLayerStatePreferences,
       };
     });
 
@@ -672,37 +625,6 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  /**
-   * @deprecated
-   */
-  toggleTerrain() {
-    let on = true;
-    if (this.internalState.terrainEnabled) {
-      on = false;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      terrainEnabled: on,
-      prefersTerrainEnabled: on,
-    }));
-    this.debouncedUpdateStyle();
-    if (!on) {
-      this.force2dView();
-    }
-  }
-
-  /**
-   * @deprecated
-   */
-  private force2dView() {
-    if (this.map && this.map.getPitch() > 0) {
-      this.map.easeTo({
-        pitch: 0,
-        bearing: 0,
-      });
-    }
-  }
-
   onMapMoveDebouncerReference: any | undefined;
 
   onMapMove = (event: MouseEvent) => {
@@ -718,45 +640,6 @@ class MapContextManager extends EventEmitter {
   setViewport(center: [number, number], zoom: number) {}
 
   /**
-   * A component somewhere in the MapContext will need to set the list of basemaps
-   * before a MapboxMap will be initialized. It can be re-set whenever the list is
-   * updated.
-   * @param basemaps List of Basemap objects
-   */
-  setBasemaps(basemaps: BasemapDetailsFragment[]) {
-    this.basemapsWereSet = true;
-    this.basemaps = {};
-    for (const basemap of basemaps) {
-      if (basemap) {
-        this.basemaps[basemap.id.toString()] = basemap;
-      }
-    }
-    if (
-      !this.internalState.selectedBasemap ||
-      !this.basemaps[this.internalState.selectedBasemap]
-    ) {
-      if (basemaps.length && basemaps[0]) {
-        this.setSelectedBasemap(basemaps[0].id.toString());
-      }
-    }
-    this._ready =
-      !!(this.initialCameraOptions || this.initialBounds) &&
-      this.basemapsWereSet;
-    this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
-    this.setState((prev) => ({
-      ...prev,
-      terrainEnabled: this.shouldEnableTerrain(),
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        this.internalState.selectedBasemap
-          ? this.basemaps[this.internalState.selectedBasemap] || basemaps[0]
-          : basemaps[0],
-        this.internalState.basemapOptionalLayerStatePreferences
-      ),
-    }));
-    this.debouncedUpdateStyle();
-  }
-
-  /**
    * Map will not be rended (state.ready=false) until set.
    * @param feature Rectangulare box will be created from input polygon
    */
@@ -769,37 +652,15 @@ class MapContextManager extends EventEmitter {
     this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
   }
 
-  private computeBasemapOptionalLayerStates(
-    basemap: BasemapDetailsFragment | null,
-    preferences?: { [layerName: string]: any }
-  ) {
-    const states: { [layerName: string]: any } = {};
-    if (basemap) {
-      for (const layer of basemap.optionalBasemapLayers) {
-        const preference =
-          preferences && layer.name in preferences
-            ? preferences[layer.name]
-            : undefined;
-        if (layer.groupType === OptionalBasemapLayersGroupType.None) {
-          states[layer.id] = preference ?? layer.defaultVisibility;
-        } else if (layer.groupType === OptionalBasemapLayersGroupType.Select) {
-          states[layer.id] = preference ?? (layer.options || [])[0]?.name;
-        } else {
-          states[layer.id] = preference ?? (layer.options || [])[0]?.name;
-        }
-      }
-    }
-    return states;
-  }
+  // computeBasemapOptionalLayerStates has been moved to BasemapProvider
 
   private applyOptionalBasemapLayerStates(
     baseStyle: Style,
     basemap: BasemapDetailsFragment | undefined
   ) {
-    const optionalBasemapLayerStates = this.computeBasemapOptionalLayerStates(
-      this.getSelectedBasemap(),
-      this.internalState.basemapOptionalLayerStatePreferences
-    );
+    if (!this.basemapState) return;
+    const optionalBasemapLayerStates =
+      this.basemapState.basemapOptionalLayerStates;
 
     // If set to true, display the optional layer, else filter out
     const optionalLayersToggleState: { [layerId: string]: boolean } = {};
@@ -809,7 +670,7 @@ class MapContextManager extends EventEmitter {
           if (id) {
             optionalLayersToggleState[id] =
               optionalLayersToggleState[id] ||
-              optionalBasemapLayerStates[layer.id];
+              !!optionalBasemapLayerStates[layer.id];
           }
         }
       } else {
@@ -854,76 +715,6 @@ class MapContextManager extends EventEmitter {
     });
   }
 
-  /**
-   * Set the basemap that should be displayed on the map. Updates
-   * MapContext.selectedBasemap
-   * @param id String ID for the basemap to select
-   */
-  setSelectedBasemap(id: string) {
-    const previousBasemap =
-      this.internalState.selectedBasemap &&
-      this.basemaps[this.internalState.selectedBasemap];
-    this.internalState.selectedBasemap = id;
-    const terrainEnabled = this.shouldEnableTerrain();
-    const basemap = this.basemaps[id];
-    this.setState((prev) => ({
-      ...prev,
-      selectedBasemap: this.internalState.selectedBasemap,
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        basemap,
-        this.internalState.basemapOptionalLayerStatePreferences
-      ),
-      terrainEnabled,
-    }));
-    this.debouncedUpdatePreferences();
-    // this.updateState();
-    this.debouncedUpdateStyle();
-    if (previousBasemap && basemap) {
-      if (!this.internalState.terrainEnabled) {
-        this.force2dView();
-      }
-    }
-  }
-
-  clearTerrainSettings() {
-    const selectedBasemap = this.getSelectedBasemap();
-    this.setState((prev) => ({
-      ...prev,
-      prefersTerrainEnabled: undefined,
-      terrainEnabled:
-        !!selectedBasemap?.terrainUrl &&
-        (!selectedBasemap?.terrainOptional ||
-          selectedBasemap?.terrainVisibilityDefault === true),
-    }));
-    this.debouncedUpdatePreferences();
-  }
-
-  /**
-   * @deprecated
-   */
-  private shouldEnableTerrain() {
-    const state = this.internalState;
-    if (this.basemaps && state.selectedBasemap) {
-      const basemap = this.basemaps[state.selectedBasemap];
-      if (basemap && basemap.terrainUrl) {
-        if (basemap.terrainOptional) {
-          if (this.internalState.prefersTerrainEnabled === true) {
-            return true;
-          } else if (this.internalState.prefersTerrainEnabled === false) {
-            return false;
-          } else {
-            return basemap.terrainVisibilityDefault || false;
-          }
-        } else {
-          return true;
-        }
-      } else {
-        return false;
-      }
-    }
-    return false;
-  }
-
   private updatePreferences() {
     const sketchClassLayerStates = cloneDeep(
       this.internalState.sketchClassLayerStates || {}
@@ -952,7 +743,6 @@ class MapContextManager extends EventEmitter {
     }
     if (this.preferencesKey) {
       const prefs = {
-        basemap: this.internalState.selectedBasemap,
         layers: this.visibleLayers,
         ...(this.map
           ? {
@@ -964,9 +754,6 @@ class MapContextManager extends EventEmitter {
               },
             }
           : {}),
-        prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
-        basemapOptionalLayerStatePreferences:
-          this.internalState.basemapOptionalLayerStatePreferences,
         sketchClassLayerStates: sketchClassLayerStates,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
@@ -1396,9 +1183,12 @@ class MapContextManager extends EventEmitter {
   }
 
   async getComputedBaseStyle() {
-    const basemap = this.basemaps[this.internalState.selectedBasemap || ""] as
-      | BasemapDetailsFragment
-      | undefined;
+    if (!this.basemapState) {
+      throw new Error(
+        "Basemap state not set; ensure MapManagerContextProvider is nested under BasemapProvider"
+      );
+    }
+    const basemap = this.basemapState.getSelectedBasemap();
     const labelsID = basemap?.labelsLayerId;
     const url =
       basemap?.url ||
@@ -1446,16 +1236,15 @@ class MapContextManager extends EventEmitter {
     } else {
       try {
         baseStyle = await fetchGlStyle(url);
-        if (this.internalState.basemapError) {
-          this.setState((prev) => ({
-            ...prev,
-            basemapError: undefined,
-          }));
-        }
+        // Clear any previous style error
+        this._setManagerState?.((prev) =>
+          prev.styleError ? { ...prev, styleError: undefined } : prev
+        );
       } catch (e) {
-        this.setState((prev) => ({
+        // Set styleError on MapManagerState
+        this._setManagerState?.((prev) => ({
           ...prev,
-          basemapError: e,
+          styleError: e instanceof Error ? e : new Error(String(e)),
         }));
         console.warn(e);
         baseStyle = await fetchGlStyle(
@@ -1470,7 +1259,7 @@ class MapContextManager extends EventEmitter {
       // @ts-ignore
       terrain: undefined,
     };
-    if (this.internalState.terrainEnabled && basemap) {
+    if (this.basemapState?.terrainEnabled && basemap) {
       const newSource = {
         type: "raster-dem",
         url: basemap.terrainUrl,
@@ -2257,14 +2046,6 @@ class MapContextManager extends EventEmitter {
     return layers;
   }
 
-  getSelectedBasemap() {
-    if (this.basemaps && this.internalState.selectedBasemap) {
-      return this.basemaps[this.internalState.selectedBasemap];
-    } else {
-      return null;
-    }
-  }
-
   private onMapDataEvent = (
     event: MapDataEvent & { source: Source; sourceId: string }
   ) => {
@@ -2739,8 +2520,10 @@ class MapContextManager extends EventEmitter {
     this.setState((oldState) => ({
       ...oldState,
       layerStatesByTocStaticId: { ...this.visibleLayers },
-      inaturalistCallToActions: this.computeInatCtas(),
     }));
+    this.emit("uiUpdate", {
+      inaturalistCallToActions: this.computeInatCtas(),
+    } as Partial<MapUIStateContextState>);
     this.pushSketchState();
     this.debouncedUpdatePreferences();
   };
@@ -2749,64 +2532,6 @@ class MapContextManager extends EventEmitter {
     maxWait: 100,
     trailing: true,
   });
-
-  updateOptionalBasemapSettings(settings: { [layerName: string]: any }) {
-    this.setState((prev) => {
-      const newState = {
-        ...prev,
-        basemapOptionalLayerStatePreferences: {
-          ...prev.basemapOptionalLayerStatePreferences,
-          ...settings,
-        },
-        basemapOptionalLayerStates: {
-          ...this.computeBasemapOptionalLayerStates(this.getSelectedBasemap(), {
-            ...this.internalState.basemapOptionalLayerStatePreferences,
-          }),
-          ...settings,
-        },
-      };
-      return newState;
-    });
-
-    this.debouncedUpdatePreferences();
-    this.debouncedUpdateStyle();
-  }
-
-  updateOptionalBasemapSetting(
-    layer: Pick<OptionalBasemapLayer, "id" | "options" | "groupType" | "name">,
-    value: any
-  ) {
-    const key = layer.name;
-    this.setState((prev) => ({
-      ...prev,
-      basemapOptionalLayerStatePreferences: {
-        ...prev.basemapOptionalLayerStatePreferences,
-        [key]: value,
-      },
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        this.getSelectedBasemap(),
-        {
-          ...this.internalState.basemapOptionalLayerStatePreferences,
-          [key]: value,
-        }
-      ),
-    }));
-    this.debouncedUpdatePreferences();
-    this.debouncedUpdateStyle();
-  }
-
-  clearOptionalBasemapSettings() {
-    this.setState((prev) => ({
-      ...prev,
-      basemapOptionalLayerStatePreferences: undefined,
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        this.getSelectedBasemap(),
-        {}
-      ),
-    }));
-    this.debouncedUpdatePreferences();
-    this.debouncedUpdateStyle();
-  }
 
   setCamera(camera: CameraOptions) {
     if (this.map) {
@@ -2875,6 +2600,7 @@ class MapContextManager extends EventEmitter {
     if (!enabled) {
       throw new Error("Invalid response from service worker");
     }
+    this.setState((prev) => ({ ...prev, offlineTileSimulatorActive: true }));
     this.emit("uiUpdate", {
       offlineTileSimulatorActive: true,
     } as Partial<MapUIStateContextState>);
@@ -2908,6 +2634,7 @@ class MapContextManager extends EventEmitter {
     if (enabled) {
       throw new Error("Invalid response from service worker");
     }
+    this.setState((prev) => ({ ...prev, offlineTileSimulatorActive: false }));
     this.emit("uiUpdate", {
       offlineTileSimulatorActive: false,
     } as Partial<MapUIStateContextState>);
@@ -2937,6 +2664,7 @@ class MapContextManager extends EventEmitter {
     const clientGeneratedThumbnail = skipThumbnail
       ? undefined
       : await this.getMapThumbnail(sidebarState);
+    const selectedId = this.basemapState?.selectedBasemap;
     return {
       cameraOptions: {
         center: this.map.getCenter().toArray(),
@@ -2945,14 +2673,14 @@ class MapContextManager extends EventEmitter {
         pitch: this.map.getPitch(),
       },
       basemapOptionalLayerStates:
-        this.internalState.basemapOptionalLayerStates || {},
+        this.basemapState?.basemapOptionalLayerStates || {},
       visibleDataLayers,
-      selectedBasemap: parseInt(this.internalState.selectedBasemap!),
+      selectedBasemap: selectedId ?? 0,
       style,
       mapDimensions: [canvas.clientWidth, canvas.clientHeight],
       sidebarState,
       visibleSketches,
-      basemapName: this.basemaps[this.internalState.selectedBasemap!].name,
+      basemapName: selectedId ? this.basemaps[selectedId]?.name || "" : "",
       clientGeneratedThumbnail,
     };
   }
@@ -3053,9 +2781,25 @@ class MapContextManager extends EventEmitter {
     if (!this.map) {
       throw new Error("Map not ready to show bookmark");
     }
-    this.setSelectedBasemap(bookmark.selectedBasemap.toString());
+    if (!this.basemapState) {
+      throw new Error("BasemapContext not available when showing bookmark");
+    }
+    this.basemapState.setSelectedBasemap(bookmark.selectedBasemap);
     if (bookmark.basemapOptionalLayerStates) {
-      this.updateOptionalBasemapSettings(bookmark.basemapOptionalLayerStates);
+      const basemap = this.basemaps[bookmark.selectedBasemap];
+      for (const [key, value] of Object.entries(
+        bookmark.basemapOptionalLayerStates
+      )) {
+        const layer = basemap?.optionalBasemapLayers.find(
+          (l) => l.name === key
+        );
+        if (layer) {
+          this.basemapState.updateOptionalBasemapSetting(
+            layer,
+            value as OptionalBasemapLayerValue
+          );
+        }
+      }
     }
     this.setVisibleTocItems((bookmark.visibleDataLayers || []) as string[]);
     this.map.flyTo({
@@ -3847,6 +3591,8 @@ export interface MapManagerState {
   /** Indicates the map state is ready to render a map */
   ready: boolean;
   containerPortal: HTMLDivElement | null;
+  /** Populated when a basemap style fails to load */
+  styleError?: Error;
 }
 
 export interface SketchLayerContextState {
@@ -3855,7 +3601,10 @@ export interface SketchLayerContextState {
 }
 
 /** @deprecated Import from ./BasemapContext instead */
-export type { BasemapContextState } from "./BasemapContext";
+export type {
+  BasemapContextState,
+  OptionalBasemapLayerValue,
+} from "./BasemapContext";
 export { BasemapContext } from "./BasemapContext";
 
 /** UI-driven state: tooltips, banners, popups, digitizing locks, etc. */
@@ -3912,37 +3661,9 @@ export type LayerTreeContextState = MapOverlayContextState;
 
 export interface MapContextInterface {
   layerStatesByTocStaticId: { [id: string]: LayerState };
-  bannerMessages: string[];
-  tooltip?: Tooltip;
-  fixedBlocks: string[];
-  sidebarPopupContent?: string;
-  sidebarPopupTitle?: string;
-  selectedBasemap?: string;
   cameraOptions?: CameraOptions;
-  terrainEnabled: boolean;
-  prefersTerrainEnabled?: boolean;
-  basemapError?: Error;
-  basemapOptionalLayerStates: { [layerName: string]: any };
-  basemapOptionalLayerStatePreferences?: { [layerName: string]: any };
-  showScale?: boolean;
   offlineTileSimulatorActive?: boolean;
   styleHash: string;
-  loadingOverlay?: string | null;
-  showLoadingOverlay?: boolean;
-  inaturalistCallToActions?: {
-    projectId: string;
-    label?: string;
-  }[];
-  displayedMapBookmark?: {
-    id: string;
-    errors: {
-      missingLayers: string[];
-      missingBasemap: boolean;
-      missingSketches: number[];
-    };
-    supportsUndo: boolean;
-  };
-  languageCode?: string;
   legends: {
     [layerId: string]: LegendItem | null;
   };
@@ -3950,168 +3671,7 @@ export interface MapContextInterface {
   digitizingLockedBy?: string;
   showCoordinates?: boolean;
 }
-interface MapContextOptions {
-  /** If provided, map state will be restored upon return to the map by storing state in localStorage */
-  preferencesKey?: string;
-  /** For arcgis vector sources. defaults to 50mb */
-  cacheSize?: number;
-  /** Starting bounds of map. If camera option is set, it will take priority */
-  bounds?: BBox;
-  /** Starting camera of map. Will override bounds if both are provided */
-  camera?: CameraOptions;
-  containerPortal?: HTMLDivElement | null;
-  /** Default visibility of the scale bar. Only used if no user preferences are available. Defaults to false */
-  defaultShowScale?: boolean;
-}
-
-/**
- * Returns a MapContextManager instance that can be used to store state used by
- * instances of Mapbox GL, Layer lists, Basemap selectors, and layer interactivity
- * indicators.
- *
- * @param preferencesKey If provided, map state will be restored upon return to the map by storing state in localStorage
- * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
- */
-export function useMapContext(options?: MapContextOptions) {
-  const {
-    preferencesKey,
-    cacheSize,
-    bounds,
-    camera,
-    containerPortal,
-    defaultShowScale = false,
-  } = options || {};
-  let initialState: MapContextInterface = {
-    layerStatesByTocStaticId: {},
-    bannerMessages: [],
-    fixedBlocks: [],
-    terrainEnabled: false,
-    basemapOptionalLayerStates: {},
-    styleHash: "",
-    legends: {},
-    digitizingLockState: DigitizingLockState.Free,
-    showScale: defaultShowScale,
-    inaturalistCallToActions: [],
-  };
-  let initialSketchState: SketchLayerContextState = {
-    sketchLayerStates: {},
-    sketchClassLayerStates: {},
-  };
-  const token = useAccessToken();
-  let initialCameraOptions: CameraOptions | undefined = camera;
-  const { slug } = useParams<{ slug: string }>();
-  if (preferencesKey) {
-    const preferencesString = window.localStorage.getItem(
-      `${slug}-${preferencesKey}`
-    );
-    if (preferencesString) {
-      const prefs = JSON.parse(preferencesString);
-      if (prefs.basemap) {
-        initialState.selectedBasemap = prefs.basemap as string;
-      }
-      if (prefs.layers) {
-        initialState.layerStatesByTocStaticId = prefs.layers;
-      }
-      if (prefs.cameraOptions) {
-        initialCameraOptions = prefs.cameraOptions;
-      }
-      if (prefs.basemapOptionalLayerStatePreferences) {
-        initialState.basemapOptionalLayerStatePreferences = {
-          ...prefs.basemapOptionalLayerStatePreferences,
-        };
-        initialState.basemapOptionalLayerStates = {
-          ...prefs.basemapOptionalLayerStates,
-        };
-      }
-      if (prefs.sketchClassLayerStates) {
-        initialSketchState.sketchClassLayerStates = {
-          ...prefs.sketchClassLayerStates,
-        };
-      }
-      if ("prefersTerrainEnabled" in prefs) {
-        initialState.prefersTerrainEnabled = prefs.prefersTerrainEnabled;
-      }
-      if ("showScale" in prefs) {
-        initialState.showScale = Boolean(prefs.showScale);
-      }
-      if ("showCoordinates" in prefs) {
-        initialState.showCoordinates = Boolean(prefs.showCoordinates);
-      }
-    }
-  }
-  const [managerState, setManagerState] = useState<MapManagerState>({
-    ready: false,
-    containerPortal: containerPortal || null,
-  });
-  const [sketchLayerState, setSketchLayerState] =
-    useState<SketchLayerContextState>(initialSketchState);
-
-  // Focused sub-context states
-  const [mapOverlayState, setMapOverlayState] =
-    useState<MapOverlayContextState>({
-      layerStatesByTocStaticId: initialState.layerStatesByTocStaticId,
-      styleHash: initialState.styleHash,
-    });
-  const [basemapState, setBasemapState] = useState<BasemapContextState>({
-    selectedBasemap: initialState.selectedBasemap,
-    terrainEnabled: initialState.terrainEnabled,
-    prefersTerrainEnabled: initialState.prefersTerrainEnabled,
-    basemapError: initialState.basemapError,
-    basemapOptionalLayerStates: initialState.basemapOptionalLayerStates,
-    basemapOptionalLayerStatePreferences:
-      initialState.basemapOptionalLayerStatePreferences,
-  });
-  const [legendsState, setLegendsState] = useState<LegendsContextState>({
-    legends: initialState.legends,
-  });
-
-  const managerRef = useRef<MapContextManager | null>(null);
-  const { data, error } = useProjectRegionQuery({
-    variables: {
-      slug,
-    },
-  });
-  useEffect(() => {
-    const manager = new MapContextManager(
-      initialState,
-      initialSketchState,
-      setManagerState,
-      setSketchLayerState,
-      setMapOverlayState,
-      setBasemapState,
-      setLegendsState,
-      initialCameraOptions,
-      preferencesKey ? `${slug}-${preferencesKey}` : undefined,
-      cacheSize,
-      bounds as LngLatBoundsLike
-    );
-    managerRef.current = manager;
-    setManagerState((prev) => ({ ...prev, manager }));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    managerRef.current?.setToken(token);
-  }, [token]);
-
-  useEffect(() => {
-    if (error) {
-      console.error(error);
-      return;
-    }
-    if (data?.projectBySlug?.region.geojson && managerRef.current) {
-      managerRef.current.setProjectBounds(data.projectBySlug.region.geojson);
-    }
-  }, [data?.projectBySlug, error]);
-
-  return {
-    managerState,
-    sketchLayerState,
-    mapOverlayState,
-    basemapState,
-    legendsState,
-  };
-}
+// useMapContext has been removed. Use MapManagerContextProvider + BasemapProvider instead.
 
 /**
  * Context for sketch layer visibility and loading state.

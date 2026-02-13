@@ -279,7 +279,6 @@ export default class LayerInteractivityManager extends EventEmitter {
   private lastMouseEvent: MapMouseEvent | undefined = undefined;
 
   private updateUI(update: InteractivityUIUpdate) {
-    console.log("update UI");
     const next = { ...this._previousUIState, ...update };
     const prev = this._previousUIState;
     if (

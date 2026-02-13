@@ -53,7 +53,7 @@ function buildVisibleLayers(
   const dataSourcesList = overlay.dataSources ?? [];
   const tableOfContentsItems = overlay.tableOfContentsItems ?? [];
   const layerStates = overlay.layerStatesByTocStaticId ?? {};
-  const basemaps = basemap.basemaps ?? [];
+  const basemaps = basemap.basemaps;
   const selectedBasemap = basemap.selectedBasemap;
 
   const layersById: { [id: number]: DataLayerDetailsFragment } = {};
@@ -86,7 +86,7 @@ function buildVisibleLayers(
   }
 
   const resolvedBasemap = selectedBasemap
-    ? basemaps.find((b) => b.id.toString() === selectedBasemap)
+    ? basemaps.find((b) => b.id === selectedBasemap)
     : basemaps[0];
 
   return {
@@ -99,13 +99,22 @@ function buildVisibleLayers(
 
 export interface MapUIProviderProps {
   children: React.ReactNode;
-  /** For persisting showScale/showCoordinates. Format: slug-preferencesKey (e.g. myproject-homepage) */
+  /**
+   * Full localStorage key for persisting showScale/showCoordinates.
+   * Must include project slug to avoid cross-project leakage (e.g. myproject-homepage).
+   */
   preferencesKey?: string;
+  /** Default for showScale when no preference is saved (e.g. project.showScalebarByDefault) */
+  defaultShowScale?: boolean;
+  /** Default for showCoordinates when no preference is saved */
+  defaultShowCoordinates?: boolean;
 }
 
 export default function MapUIProvider({
   children,
   preferencesKey,
+  defaultShowScale = false,
+  defaultShowCoordinates = false,
 }: MapUIProviderProps) {
   const { manager, ready } = useContext(MapManagerContext);
   const mapOverlay = useContext(MapOverlayContext);
@@ -141,10 +150,12 @@ export default function MapUIProvider({
 
   const prefs = getPreferences();
   const [showScale, setShowScale] = useState(() =>
-    typeof prefs.showScale === "boolean" ? prefs.showScale : false
+    typeof prefs.showScale === "boolean" ? prefs.showScale : defaultShowScale
   );
   const [showCoordinates, setShowCoordinates] = useState(() =>
-    typeof prefs.showCoordinates === "boolean" ? prefs.showCoordinates : false
+    typeof prefs.showCoordinates === "boolean"
+      ? prefs.showCoordinates
+      : defaultShowCoordinates
   );
 
   const interactivityManagerRef = useRef<LayerInteractivityManager | null>(
@@ -219,7 +230,8 @@ export default function MapUIProvider({
         setLoadingOverlay(update.loadingOverlay);
       if (update.showLoadingOverlay !== undefined)
         setShowLoadingOverlay(update.showLoadingOverlay);
-      if (update.displayedMapBookmark !== undefined)
+      // Use 'in' check so displayedMapBookmark: undefined (clear) triggers the setter
+      if ("displayedMapBookmark" in update)
         setDisplayedMapBookmark(update.displayedMapBookmark);
       if (update.offlineTileSimulatorActive !== undefined)
         setOfflineTileSimulatorActive(update.offlineTileSimulatorActive);
@@ -298,10 +310,11 @@ export default function MapUIProvider({
     };
   }, [manager, interactivityManager]);
 
-  // Update visible layers when overlay or basemap data changes. Runs after manager is created.
+  // Update visible layers when overlay or basemap data changes, or when the
+  // interactivity manager is first created (it may be created after the data
+  // is already available).
   useEffect(() => {
-    const im = interactivityManagerRef.current;
-    if (!im) return;
+    if (!interactivityManager) return;
 
     const {
       visibleLayers,
@@ -310,7 +323,7 @@ export default function MapUIProvider({
       tocItemLabels,
     } = buildVisibleLayers(mapOverlay, basemap);
     if (resolvedBasemap) {
-      im.setVisibleLayers(
+      interactivityManager.setVisibleLayers(
         visibleLayers,
         dataSources,
         resolvedBasemap,
@@ -324,6 +337,9 @@ export default function MapUIProvider({
     mapOverlay.tableOfContentsItems,
     basemap.selectedBasemap,
     basemap.basemaps,
+    interactivityManager,
+    basemap,
+    mapOverlay,
   ]);
 
   useEffect(() => {

@@ -16,14 +16,12 @@ import { useUpdateFormElementMapCameraMutation } from "../generated/graphql";
 import useWindowSize from "../useWindowSize";
 import { getMapTopLayoutMapHeight } from "./SurveyAppLayout";
 import SurveyButton from "./SurveyButton";
-import {
-  LegendsContext,
-  MapManagerContext,
-  MapOverlayContext,
-  SketchLayerContext,
-} from "../dataLayers/MapContextManager";
-import { BasemapContext } from "../dataLayers/BasemapContext";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
+import BasemapContextProvider from "../dataLayers/BasemapContext";
+import MapManagerContextProvider from "../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../dataLayers/MapUIContext";
+import { useContext } from "react";
+import getSlug from "../getSlug";
 
 export default function SurveyContextualMap(props: {
   basemaps: number[];
@@ -36,123 +34,130 @@ export default function SurveyContextualMap(props: {
   displayHideMapButton?: boolean;
   isSmall: boolean;
 }) {
-  const {
-    basemaps,
-    managerState,
-    sketchLayerState,
-    basemapState,
-    legendsState,
-    mapOverlayState,
-  } = useMapEssentials({
+  const { basemaps, bounds, cameraOptions } = useMapEssentials({
     filterBasemapIds: props.basemaps,
     cameraOptions: props.cameraOptions,
   });
-  const { manager } = managerState;
+  const slug = getSlug();
+
+  return (
+    <BasemapContextProvider
+      basemaps={basemaps}
+      preferencesKey={`${slug}-${props.formElementId}-survey-contextual-map-basemap`}
+    >
+      <MapManagerContextProvider bounds={bounds} camera={cameraOptions}>
+        <MapUIProvider
+          preferencesKey={`${slug}-${props.formElementId}-survey-contextual-map-ui`}
+        >
+          <SurveyContextualMapInner {...props} />
+        </MapUIProvider>
+      </MapManagerContextProvider>
+    </BasemapContextProvider>
+  );
+}
+
+function SurveyContextualMapInner(props: {
+  basemaps: number[];
+  cameraOptions?: CameraOptions;
+  admin?: boolean;
+  formElementId?: number;
+  hideControls?: boolean;
+  displayShowMapButton?: boolean;
+  onRequestStageChange?: (stage: number) => void;
+  displayHideMapButton?: boolean;
+  isSmall: boolean;
+}) {
+  const { manager } = useContext(MapManagerContext);
   const onError = useGlobalErrorHandler();
   const [mutate, state] = useUpdateFormElementMapCameraMutation({ onError });
   const windowSize = useWindowSize();
 
   return (
-    <MapManagerContext.Provider value={managerState}>
-      <SketchLayerContext.Provider value={sketchLayerState}>
-        <BasemapContext.Provider value={{ ...basemapState, basemaps }}>
-          <MapOverlayContext.Provider value={mapOverlayState}>
-            <LegendsContext.Provider value={legendsState}>
-              <MapUIProvider preferencesKey="survey-contextual-map">
-                  <SurveyMapPortal>
-                    {!props.displayShowMapButton && (
-                      <MapPicker basemaps={basemaps}>
-                        <ShowScaleBar />
-                        <ShowCoordinates />
-                        {manager?.map && props.cameraOptions && (
-                          <ResetCamera
-                            mapContextManager={manager}
-                            camera={props.cameraOptions}
-                          />
-                        )}
-                      </MapPicker>
-                    )}
-                    <MapboxMap
-                      className={`w-full h-full ${
-                        props.hideControls ? "hide-all-gl-controls" : ""
-                      }`}
-                      showNavigationControls={true}
-                    />
-                    {props.displayShowMapButton && (
-                      <button
-                        onClick={() => {
-                          if (props.onRequestStageChange) {
-                            props.onRequestStageChange(1);
-                            manager?.map?.resize();
-                            setTimeout(() => {
-                              manager?.map?.resize();
-                            }, 32);
-                          } else {
-                            throw new Error("onRequestStageChange not set");
-                          }
-                        }}
-                        style={{
-                          height:
-                            getMapTopLayoutMapHeight(
-                              props.isSmall,
-                              windowSize.height
-                            ) - 18,
-                        }}
-                        className="z-50 absolute top-0 text-white flex items-center w-full justify-center font-semibold space-x-2"
-                      >
-                        <ArrowsExpandIcon className="w-8 h-8" />
-                        <span>
-                          <Trans ns="surveys">Expand Map</Trans>
-                        </span>
-                      </button>
-                    )}
-                    {props.displayHideMapButton && (
-                      <div className="absolute z-40 bottom-10 w-full justify-center flex">
-                        <SurveyButton
-                          onClick={() => {
-                            if (props.onRequestStageChange) {
-                              props.onRequestStageChange(0);
-                              manager?.map?.resize();
-                              setTimeout(() => {
-                                manager?.map?.resize();
-                              }, 32);
-                            } else {
-                              throw new Error("onRequestStageChange not set");
-                            }
-                          }}
-                          label={
-                            <div className="flex items-center space-x-4 text-base">
-                              <ArrowLeftIcon className="w-5 h-5" />
-                              <span>
-                                <Trans ns="surveys">Return to Survey</Trans>
-                              </span>
-                            </div>
-                          }
-                        />
-                      </div>
-                    )}
-                    {props.admin && (
-                      <MapCameraCaptureButton
-                        saving={state.loading}
-                        onClick={(cameraOptions) => {
-                          if (props.formElementId) {
-                            mutate({
-                              variables: {
-                                id: props.formElementId,
-                                mapCameraOptions: cameraOptions,
-                              },
-                            });
-                          }
-                        }}
-                        map={manager?.map}
-                      />
-                    )}
-                  </SurveyMapPortal>
-              </MapUIProvider>
-            </LegendsContext.Provider>
-          </MapOverlayContext.Provider>
-        </BasemapContext.Provider>
-      </SketchLayerContext.Provider>
-    </MapManagerContext.Provider>
+    <SurveyMapPortal>
+      {!props.displayShowMapButton && (
+        <MapPicker>
+          <ShowScaleBar />
+          <ShowCoordinates />
+          {manager?.map && props.cameraOptions && (
+            <ResetCamera
+              mapContextManager={manager}
+              camera={props.cameraOptions}
+            />
+          )}
+        </MapPicker>
+      )}
+      <MapboxMap
+        className={`w-full h-full ${
+          props.hideControls ? "hide-all-gl-controls" : ""
+        }`}
+        showNavigationControls={true}
+      />
+      {props.displayShowMapButton && (
+        <button
+          onClick={() => {
+            if (props.onRequestStageChange) {
+              props.onRequestStageChange(1);
+              manager?.map?.resize();
+              setTimeout(() => {
+                manager?.map?.resize();
+              }, 32);
+            } else {
+              throw new Error("onRequestStageChange not set");
+            }
+          }}
+          style={{
+            height:
+              getMapTopLayoutMapHeight(props.isSmall, windowSize.height) - 18,
+          }}
+          className="z-50 absolute top-0 text-white flex items-center w-full justify-center font-semibold space-x-2"
+        >
+          <ArrowsExpandIcon className="w-8 h-8" />
+          <span>
+            <Trans ns="surveys">Expand Map</Trans>
+          </span>
+        </button>
+      )}
+      {props.displayHideMapButton && (
+        <div className="absolute z-40 bottom-10 w-full justify-center flex">
+          <SurveyButton
+            onClick={() => {
+              if (props.onRequestStageChange) {
+                props.onRequestStageChange(0);
+                manager?.map?.resize();
+                setTimeout(() => {
+                  manager?.map?.resize();
+                }, 32);
+              } else {
+                throw new Error("onRequestStageChange not set");
+              }
+            }}
+            label={
+              <div className="flex items-center space-x-4 text-base">
+                <ArrowLeftIcon className="w-5 h-5" />
+                <span>
+                  <Trans ns="surveys">Return to Survey</Trans>
+                </span>
+              </div>
+            }
+          />
+        </div>
+      )}
+      {props.admin && (
+        <MapCameraCaptureButton
+          saving={state.loading}
+          onClick={(cameraOptions) => {
+            if (props.formElementId) {
+              mutate({
+                variables: {
+                  id: props.formElementId,
+                  mapCameraOptions: cameraOptions,
+                },
+              });
+            }
+          }}
+          map={manager?.map}
+        />
+      )}
+    </SurveyMapPortal>
   );
 }

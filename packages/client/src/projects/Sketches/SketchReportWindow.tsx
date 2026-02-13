@@ -1,13 +1,18 @@
 import { XIcon } from "@heroicons/react/outline";
-import { memo, useContext, useEffect, useMemo, useState } from "react";
+import {
+  memo,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Skeleton from "../../components/Skeleton";
-import { useSketchReportingDetailsQuery } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import languages from "../../lang/supported";
 import { getSelectedLanguage } from "../../surveys/LanguageSelector";
 import { ReportWindowUIState } from "./LegacySketchReportWindow";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import { ReportContext, useReportState } from "../../reports/ReportContext";
 import { ReportTabs } from "../../reports/ReportTabs";
 import { ReportBody } from "../../reports/ReportBody";
 import { useCalculationDetailsModalState } from "../../reports/components/CalculationDetailsModal";
@@ -25,6 +30,7 @@ import {
 
 // registerCards();
 
+const noop = () => {};
 function SketchReportWindow({
   sketchId,
   sketchClassId,
@@ -87,6 +93,7 @@ function SketchReportWindowInner({
   onRequestClose: (id: number) => void;
 }) {
   const calcDetailsModalState = useCalculationDetailsModalState();
+  const { closeModal, openModal } = calcDetailsModalState;
   const baseReportContext = useContext(BaseReportContext);
   const [selectedTabId, setSelectedTabId] = useState<number | undefined>(
     baseReportContext.data?.report?.tabs?.[0]?.id ?? undefined
@@ -98,24 +105,34 @@ function SketchReportWindowInner({
     }
   }, [baseReportContext.data?.report?.tabs, setSelectedTabId, selectedTabId]);
 
+  const setShowCalcDetails = useCallback(
+    (cardId: number | undefined) => {
+      if (!cardId) {
+        closeModal();
+      } else {
+        openModal(cardId);
+      }
+    },
+    [closeModal, openModal]
+  );
+
   const uiStateContextValue = useMemo(() => {
     return {
       selectedTabId: selectedTabId,
       setSelectedTabId: setSelectedTabId,
       editing: null,
-      setEditing: () => {},
+      setEditing: noop,
       adminMode: false,
       preselectTitle: false,
       showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
-      setShowCalcDetails: (cardId: number | undefined) => {
-        if (!cardId) {
-          calcDetailsModalState.closeModal();
-        } else {
-          calcDetailsModalState.openModal(cardId);
-        }
-      },
+      setShowCalcDetails: setShowCalcDetails,
     };
-  }, [selectedTabId, calcDetailsModalState, setSelectedTabId]);
+  }, [
+    selectedTabId,
+    calcDetailsModalState,
+    setSelectedTabId,
+    setShowCalcDetails,
+  ]);
 
   // Wait for BaseReportContext data to be ready before rendering
   if (baseReportContext.loading || !baseReportContext.data) {

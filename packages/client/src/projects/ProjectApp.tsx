@@ -13,17 +13,11 @@ import MapboxMap from "../components/MapboxMap";
 import {
   MapManagerContext,
   MapOverlayContext,
-  LegendsContext,
-  SketchLayerContext,
-  useMapContext,
 } from "../dataLayers/MapContextManager";
-import { BasemapContext } from "../dataLayers/BasemapContext";
+import BasemapContextProvider from "../dataLayers/BasemapContext";
+import MapManagerContextProvider from "../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../dataLayers/MapUIContext";
 import {
-  BasemapDetailsFragment,
-  DataLayerDetailsFragment,
-  DataSourceDetailsFragment,
-  OverlayFragment,
   TableOfContentsItem,
   useProjectMetadataQuery,
 } from "../generated/graphql";
@@ -84,32 +78,25 @@ function MapSettingsActions() {
   );
 }
 
-interface ProjectAppProps {
-  setMapContainerPortal: React.Dispatch<
-    React.SetStateAction<HTMLDivElement | null>
-  >;
-  showLegendByDefault: boolean;
-  basemaps: BasemapDetailsFragment[];
-  tableOfContentsItems: OverlayFragment[];
-  dataLayers: DataLayerDetailsFragment[];
-  dataSources: DataSourceDetailsFragment[];
-}
-
-const ProjectApp = React.memo(function ProjectApp({
-  setMapContainerPortal,
-  showLegendByDefault,
-  basemaps,
-  tableOfContentsItems,
-  dataLayers,
-  dataSources,
-}: ProjectAppProps) {
+export default function ProjectApp() {
+  const [mapContainerPortal, setMapContainerPortal] =
+    useState<null | HTMLDivElement>(null);
+  const slug = getSlug();
   const history = useHistory();
   const { location } = history;
-  const { slug } = useParams<{ slug: string }>();
+  const { slug: routeSlug } = useParams<{ slug: string }>();
   const showSidebar = useRouteMatch<{ sidebar: string }>(
     // eslint-disable-next-line
-    `/${slug}/app/:sidebar`
+    `/${routeSlug}/app/:sidebar`
   );
+
+  const { data } = useProjectMetadataQuery({
+    variables: { slug },
+    skip: !slug,
+  });
+
+  const { basemaps, dataLayers, dataSources, tableOfContentsItems } =
+    useMapData();
 
   const [expandSidebar, setExpandSidebar] = useState(!showSidebar);
 
@@ -125,14 +112,10 @@ const ProjectApp = React.memo(function ProjectApp({
   };
   const onExpandSidebar = useCallback(() => {
     setExpandSidebar((prev) => !prev);
-    history.replace(`/${slug}/app`);
-  }, [setExpandSidebar, history, slug]);
+    history.replace(`/${routeSlug}/app`);
+  }, [setExpandSidebar, history, routeSlug]);
 
-  // Disabling until I can see some Divehi translations -cb 3/29/23
-  // Might need to just enable this for forum content and attribute forms
-  // const { selectedLang } = getSelectedLanguage(i18n);
   const dark = true;
-
   const mapSettingsActions = useMemo(() => <MapSettingsActions />, []);
 
   const onRequestSidebarClose = useCallback(() => {
@@ -140,258 +123,238 @@ const ProjectApp = React.memo(function ProjectApp({
   }, [setExpandSidebar]);
 
   return (
-    <>
-      <Toolbar
-        dark={dark}
-        onExpand={onExpandSidebar}
-        expanded={expandSidebar}
-      />
-
-      <Route path={`/${slug}/profile`}>
-        <UserProfileModal onRequestClose={() => history.push(`/${slug}/app`)} />
-      </Route>
-      <AnimatePresence initial={false}>
-        <ProjectAppSidebar
-          title={sidebarTitles[showSidebar?.params["sidebar"] || ""]}
-          onClose={() => history.replace(`/${slug}/app`)}
-          dark={dark}
-          hidden={
-            Boolean(!showSidebar) || showSidebar?.params["sidebar"] === "embed"
-          }
-          noPadding={
-            /sketches/.test(history.location.pathname) ||
-            /forums/.test(history.location.pathname) ||
-            /overlays/.test(history.location.pathname)
-          }
-        >
-          <Suspense
-            fallback={
-              <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                <Spinner />
-              </div>
-            }
-          >
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className={`flex flex-col ${
-                /app\/forums\//.test(location.pathname)
-                  ? "max-h-full overflow-hidden fffff"
-                  : ""
-              }`}
-            >
-              <Route path={`/${slug}/app/about`}>
-                <AboutPage />
-              </Route>
-              <Route path={`/${slug}/app/maps`}>
-                <BasemapControl basemaps={basemaps} />
-              </Route>
-              <Route path={`/${slug}/app/overlays`}>
-                <LazyOverlays
-                  layers={dataLayers || []}
-                  sources={dataSources || []}
-                  items={tableOfContentsItems as TableOfContentsItem[]}
-                />
-              </Route>
-              <Route
-                children={(match) => {
-                  return (
-                    <LazyForums
-                      hidden={!Boolean(match.match?.url)}
-                      forumId={
-                        match.match &&
-                        match.match.params &&
-                        "id" in match.match.params
-                          ? parseInt(match.match.params.id)
-                          : undefined
-                      }
-                      topicId={
-                        match.match &&
-                        match.match.params &&
-                        "topicId" in match.match.params
-                          ? parseInt(match.match.params.topicId)
-                          : undefined
-                      }
-                      postNewTopic={Boolean(
-                        match.match?.path && /new-post/.test(match.match.path)
-                      )}
-                    />
-                  );
-                }}
-                path={[
-                  `/${slug}/app/forums/:id/new-post`,
-                  `/${slug}/app/forums/:id/:topicId`,
-                  `/${slug}/app/forums/:id`,
-                  `/${slug}/app/forums`,
-                ]}
-                // component={SketchingTools}
-              />
-              <Route
-                children={(match) => (
-                  <LazySketchingTools hidden={!Boolean(match.match)} />
-                )}
-                path={`/${slug}/app/sketches`}
-              />
-              <Route path={`/${slug}/app/settings`}>
-                <LazyCacheSettingsPage />
-              </Route>
-              <Route path={`/${slug}/app/accessibility`}>
-                <div className="space-y-2 mt-2">
-                  <p className="text-sm">
-                    <Trans ns="accessibility">
-                      Our team is committed to making SeaSketch accessible to
-                      all users, including those with disabilities. We strive to
-                      follow the Web Content Accessibility Guidelines (WCAG) to
-                      ensure a seamless experience, particularly around keyboard
-                      navigation and overall usability. While we continually
-                      work to improve accessibility, we welcome feedback from
-                      our users. If you encounter any issues or have
-                      suggestions, please contact us at{" "}
-                      <a
-                        className="text-primary-500"
-                        href="mailto:accessibility@seasketch.org"
-                      >
-                        accessibility@seasketch.org
-                      </a>
-                      .
-                    </Trans>
-                  </p>
-                  <h3 className="pt-5">
-                    <Trans ns="accessibility">Recent Updates</Trans>
-                  </h3>
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-700">
-                      {new Date("Jan 29 2025").toLocaleDateString()}
-                    </h4>
-                    <p className="text-sm">
-                      <Trans ns="accessibility">
-                        We conducted a comprehensive review of the SeaSketch
-                        interface to improve accessibility. Users can now fully
-                        navigate basemaps, overlay layers, and discussion forums
-                        using only keyboard input. Additionally, we have
-                        implemented numerous ARIA attributes to enhance
-                        compatibility with screen readers and other assistive
-                        technologies, ensuring a more inclusive experience for
-                        all users.
-                      </Trans>
-                    </p>
-                  </div>
-                </div>
-              </Route>
-            </motion.div>
-          </Suspense>
-        </ProjectAppSidebar>
-      </AnimatePresence>
-      <div className="flex flex-grow w-full h-full">
-        <ProjectMapLegend
-          showByDefault={showLegendByDefault}
-          toolbarExpanded={expandSidebar}
-          sidebarOpen={Boolean(showSidebar)}
-        />
-        <MapboxMap
-          className="ml-2"
-          showNavigationControls
-          navigationControlsLocation="top-right"
-          onRequestSidebarClose={onRequestSidebarClose}
-          mapSettingsPopupActions={mapSettingsActions}
-        />
-        <div
-          className="absolute flex items-center justify-center h-full pointer-events-none"
-          style={{ width: "calc(100vw - 3.5rem)" }}
-          ref={setMapContainerPortal}
-        ></div>
-      </div>
-      <OfflineToastNotification />
-      <OfflineResponsesToastNotification />
-    </>
-  );
-});
-
-/**
- * Outer wrapper that owns map context state, data queries, and context
- * providers. The inner ProjectApp is memoized so that re-renders caused by
- * map context state changes (e.g. layer visibility, basemap updates) don't
- * cascade into the UI tree unnecessarily.
- */
-export default function ProjectAppContext() {
-  const [mapContainerPortal, setMapContainerPortal] =
-    useState<null | HTMLDivElement>(null);
-
-  const { data } = useProjectMetadataQuery({
-    variables: {
-      slug: getSlug(),
-    },
-    skip: !getSlug(),
-  });
-
-  const {
-    managerState,
-    sketchLayerState,
-    mapOverlayState,
-    basemapState,
-    legendsState,
-  } = useMapContext({
-    preferencesKey: "homepage",
-    cacheSize: bytes("200mb"),
-    containerPortal: mapContainerPortal,
-    defaultShowScale: data?.project?.showScalebarByDefault || false,
-  });
-
-  const { basemaps, tableOfContentsItems, dataLayers, dataSources } =
-    useMapData(managerState?.manager);
-
-  return (
     <div
       className="h-screen overflow-hidden flex flex-col ml-14"
       style={{ width: "calc(100vw - 3.5rem)" }}
-      // dir={selectedLang.rtl ? "rtl" : "ltr"}
     >
       <DndProvider backend={HTML5Backend}>
-        {/* <ProjectAppHeader /> */}
-        <MapManagerContext.Provider value={managerState}>
-          <SketchLayerContext.Provider value={sketchLayerState}>
-            <BasemapContext.Provider
-              value={{
-                ...basemapState,
-                basemaps,
-              }}
+        <BasemapContextProvider
+          basemaps={basemaps}
+          preferencesKey={`${slug}-homepage-basemap`}
+        >
+          <MapOverlayContext.Provider
+            value={{
+              layerStatesByTocStaticId: {},
+              styleHash: "",
+              dataLayers,
+              dataSources,
+              tableOfContentsItems,
+            }}
+          >
+            <MapManagerContextProvider
+              preferencesKey={`${slug}-homepage`}
+              cacheSize={bytes("200mb")}
+              containerPortal={mapContainerPortal}
             >
-              <MapOverlayContext.Provider
-                value={{
-                  ...mapOverlayState,
-                  dataLayers,
-                  dataSources,
-                  tableOfContentsItems,
-                }}
+              <MapUIProvider
+                preferencesKey={`${slug}-homepage-ui`}
+                defaultShowScale={data?.project?.showScalebarByDefault || false}
               >
-                <MapUIProvider preferencesKey={`${getSlug()}-homepage`}>
-                  <LegendsContext.Provider value={legendsState}>
-                    <MeasureControlContextProvider>
-                      <SketchUIStateContextProvider>
-                        <DataDownloadModalProvider>
-                          <TableOfContentsMetadataModalProvider>
-                            <ProjectApp
-                              setMapContainerPortal={setMapContainerPortal}
-                              showLegendByDefault={
-                                data?.project?.showLegendByDefault || false
+                <MeasureControlContextProvider>
+                  <SketchUIStateContextProvider>
+                    <DataDownloadModalProvider>
+                      <TableOfContentsMetadataModalProvider>
+                        <Toolbar
+                          dark={dark}
+                          onExpand={onExpandSidebar}
+                          expanded={expandSidebar}
+                        />
+                        <Route path={`/${routeSlug}/profile`}>
+                          <UserProfileModal
+                            onRequestClose={() =>
+                              history.push(`/${routeSlug}/app`)
+                            }
+                          />
+                        </Route>
+                        <AnimatePresence initial={false}>
+                          <ProjectAppSidebar
+                            title={
+                              sidebarTitles[
+                                showSidebar?.params["sidebar"] || ""
+                              ]
+                            }
+                            onClose={() => history.replace(`/${routeSlug}/app`)}
+                            dark={dark}
+                            hidden={
+                              Boolean(!showSidebar) ||
+                              showSidebar?.params["sidebar"] === "embed"
+                            }
+                            noPadding={
+                              /sketches/.test(history.location.pathname) ||
+                              /forums/.test(history.location.pathname) ||
+                              /overlays/.test(history.location.pathname)
+                            }
+                          >
+                            <Suspense
+                              fallback={
+                                <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                                  <Spinner />
+                                </div>
                               }
-                              basemaps={basemaps}
-                              tableOfContentsItems={tableOfContentsItems}
-                              dataLayers={dataLayers}
-                              dataSources={dataSources}
-                            />
-                          </TableOfContentsMetadataModalProvider>
-                        </DataDownloadModalProvider>
-                      </SketchUIStateContextProvider>
-                    </MeasureControlContextProvider>
-                  </LegendsContext.Provider>
-                </MapUIProvider>
-              </MapOverlayContext.Provider>
-            </BasemapContext.Provider>
-          </SketchLayerContext.Provider>
-        </MapManagerContext.Provider>
+                            >
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className={`flex flex-col ${
+                                  /app\/forums\//.test(location.pathname)
+                                    ? "max-h-full overflow-hidden fffff"
+                                    : ""
+                                }`}
+                              >
+                                <Route path={`/${routeSlug}/app/about`}>
+                                  <AboutPage />
+                                </Route>
+                                <Route path={`/${routeSlug}/app/maps`}>
+                                  <BasemapControl />
+                                </Route>
+                                <Route path={`/${routeSlug}/app/overlays`}>
+                                  <LazyOverlays
+                                    layers={dataLayers || []}
+                                    sources={dataSources || []}
+                                    items={
+                                      (tableOfContentsItems ||
+                                        []) as TableOfContentsItem[]
+                                    }
+                                  />
+                                </Route>
+                                <Route
+                                  children={(match) => {
+                                    return (
+                                      <LazyForums
+                                        hidden={!Boolean(match.match?.url)}
+                                        forumId={
+                                          match.match &&
+                                          match.match.params &&
+                                          "id" in match.match.params
+                                            ? parseInt(match.match.params.id)
+                                            : undefined
+                                        }
+                                        topicId={
+                                          match.match &&
+                                          match.match.params &&
+                                          "topicId" in match.match.params
+                                            ? parseInt(
+                                                match.match.params.topicId
+                                              )
+                                            : undefined
+                                        }
+                                        postNewTopic={Boolean(
+                                          match.match?.path &&
+                                            /new-post/.test(match.match.path)
+                                        )}
+                                      />
+                                    );
+                                  }}
+                                  path={[
+                                    `/${routeSlug}/app/forums/:id/new-post`,
+                                    `/${routeSlug}/app/forums/:id/:topicId`,
+                                    `/${routeSlug}/app/forums/:id`,
+                                    `/${routeSlug}/app/forums`,
+                                  ]}
+                                />
+                                <Route
+                                  children={(match) => (
+                                    <LazySketchingTools
+                                      hidden={!Boolean(match.match)}
+                                    />
+                                  )}
+                                  path={`/${routeSlug}/app/sketches`}
+                                />
+                                <Route path={`/${routeSlug}/app/settings`}>
+                                  <LazyCacheSettingsPage />
+                                </Route>
+                                <Route path={`/${routeSlug}/app/accessibility`}>
+                                  <div className="space-y-2 mt-2">
+                                    <p className="text-sm">
+                                      <Trans ns="accessibility">
+                                        Our team is committed to making
+                                        SeaSketch accessible to all users,
+                                        including those with disabilities. We
+                                        strive to follow the Web Content
+                                        Accessibility Guidelines (WCAG) to
+                                        ensure a seamless experience,
+                                        particularly around keyboard navigation
+                                        and overall usability. While we
+                                        continually work to improve
+                                        accessibility, we welcome feedback from
+                                        our users. If you encounter any issues
+                                        or have suggestions, please contact us
+                                        at{" "}
+                                        <a
+                                          className="text-primary-500"
+                                          href="mailto:accessibility@seasketch.org"
+                                        >
+                                          accessibility@seasketch.org
+                                        </a>
+                                        .
+                                      </Trans>
+                                    </p>
+                                    <h3 className="pt-5">
+                                      <Trans ns="accessibility">
+                                        Recent Updates
+                                      </Trans>
+                                    </h3>
+                                    <div>
+                                      <h4 className="text-sm font-bold text-gray-700">
+                                        {new Date(
+                                          "Jan 29 2025"
+                                        ).toLocaleDateString()}
+                                      </h4>
+                                      <p className="text-sm">
+                                        <Trans ns="accessibility">
+                                          We conducted a comprehensive review of
+                                          the SeaSketch interface to improve
+                                          accessibility. Users can now fully
+                                          navigate basemaps, overlay layers, and
+                                          discussion forums using only keyboard
+                                          input. Additionally, we have
+                                          implemented numerous ARIA attributes
+                                          to enhance compatibility with screen
+                                          readers and other assistive
+                                          technologies, ensuring a more
+                                          inclusive experience for all users.
+                                        </Trans>
+                                      </p>
+                                    </div>
+                                  </div>
+                                </Route>
+                              </motion.div>
+                            </Suspense>
+                          </ProjectAppSidebar>
+                        </AnimatePresence>
+                        <div className="flex flex-grow w-full h-full">
+                          <ProjectMapLegend
+                            showByDefault={
+                              data?.project?.showLegendByDefault || false
+                            }
+                            toolbarExpanded={expandSidebar}
+                            sidebarOpen={Boolean(showSidebar)}
+                          />
+                          <MapboxMap
+                            className="ml-2"
+                            showNavigationControls
+                            navigationControlsLocation="top-right"
+                            onRequestSidebarClose={onRequestSidebarClose}
+                            mapSettingsPopupActions={mapSettingsActions}
+                          />
+                          <div
+                            className="absolute flex items-center justify-center h-full pointer-events-none"
+                            style={{ width: "calc(100vw - 3.5rem)" }}
+                            ref={setMapContainerPortal}
+                          ></div>
+                        </div>
+                        <OfflineToastNotification />
+                        <OfflineResponsesToastNotification />
+                      </TableOfContentsMetadataModalProvider>
+                    </DataDownloadModalProvider>
+                  </SketchUIStateContextProvider>
+                </MeasureControlContextProvider>
+              </MapUIProvider>
+            </MapManagerContextProvider>
+          </MapOverlayContext.Provider>
+        </BasemapContextProvider>
       </DndProvider>
     </div>
   );

@@ -5,18 +5,13 @@ import { MapManagerContext } from "../dataLayers/MapContextManager";
 import { BasemapContext } from "./BasemapContext";
 import { useTranslation, Trans } from "react-i18next";
 import OptionalBasemapLayerControl from "../dataLayers/OptionalBasemapLayerControl";
-import { BasemapDetailsFragment } from "../generated/graphql";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
 
-interface BasemapControlProps {
-  basemaps?: BasemapDetailsFragment[];
-}
-
-export default function BasemapControl(props: BasemapControlProps) {
-  const mapContext = useContext(BasemapContext);
-  const { manager } = useContext(MapManagerContext);
+export default function BasemapControl() {
+  const basemapContext = useContext(BasemapContext);
+  const { manager, styleError } = useContext(MapManagerContext);
   const { t } = useTranslation("basemaps");
-  const selectedBasemap = manager?.getSelectedBasemap();
+  const selectedBasemap = basemapContext.getSelectedBasemap();
   const terrainOptional =
     selectedBasemap &&
     selectedBasemap.terrainUrl &&
@@ -30,16 +25,18 @@ export default function BasemapControl(props: BasemapControlProps) {
       <div>
         <div className="">
           <div className="w-full flex flex-wrap justify-center">
-            {[...(props.basemaps || [])]
+            {[...basemapContext.basemaps]
               .sort((a, b) => a.name.localeCompare(b.name))
               .map((b) => (
                 <BasemapSquareItem
-                  selected={mapContext.selectedBasemap === b.id.toString()}
-                  error={mapContext.basemapError}
+                  selected={
+                    basemapContext.selectedBasemap === b.id
+                  }
+                  error={styleError}
                   key={b.id}
                   basemap={b}
                   onClick={() => {
-                    manager?.setSelectedBasemap(b.id.toString());
+                    basemapContext.setSelectedBasemap(b.id);
                   }}
                 />
               ))}
@@ -54,27 +51,24 @@ export default function BasemapControl(props: BasemapControlProps) {
                   title={<span className="font-light">{t("3d Terrain")}</span>}
                   input={
                     <Switch
-                      isToggled={mapContext.terrainEnabled}
+                      isToggled={basemapContext.terrainEnabled}
                       onClick={() => {
                         if (
                           manager?.map &&
-                          !mapContext.prefersTerrainEnabled &&
+                          !basemapContext.prefersTerrainEnabled &&
                           manager.map.getPitch() === 0
                         ) {
                           // turning on, add some pitch
                           manager.map.easeTo({ pitch: 75 });
                         }
-                        manager?.toggleTerrain();
+                        basemapContext.toggleTerrain();
                       }}
                     />
                   }
                 ></InputBlock>
               </div>
             )}
-            {(
-              manager!.getSelectedBasemap()!.optionalBasemapLayers ||
-              []
-            ).map((layer) => {
+            {(selectedBasemap!.optionalBasemapLayers || []).map((layer) => {
               return (
                 <OptionalBasemapLayerControl key={layer.id} layer={layer} />
               );
@@ -82,10 +76,8 @@ export default function BasemapControl(props: BasemapControlProps) {
             <button
               className="underline text-gray-500 text-sm"
               onClick={() => {
-                if (manager) {
-                  manager.clearOptionalBasemapSettings();
-                  manager.clearTerrainSettings();
-                }
+                basemapContext.clearOptionalBasemapSettings();
+                basemapContext.clearTerrainSettings();
               }}
             >
               <Trans ns="data">reset to defaults</Trans>

@@ -47,16 +47,11 @@ export interface OverlayMapProps {
 mapboxgl.prewarm();
 
 export default React.memo(function MapboxMap(props: OverlayMapProps) {
-  console.log("MapboxMap rendered");
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
   const uiState = useContext(MapUIStateContext);
-
   const basemapState = useContext(BasemapContext);
-  useEffect(() => {
-    console.log("MapboxMap: basemapState changed", basemapState);
-  }, [basemapState]);
-  const { manager, ready } = useContext(MapManagerContext);
+  const { manager, ready, styleError } = useContext(MapManagerContext);
   const [showSpinner, setShowSpinner] = useState(true);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
@@ -393,13 +388,13 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           onRequestClose={() => setShowBookmarkOverlayId(null)}
         />
       )}
-      {basemapState.basemapError && (
+      {styleError && (
         <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
           <div className=" bg-red-900 text-white p-1 text-sm">
             {
               //eslint-disable-next-line
             }
-            Basemap Error: {basemapState.basemapError.message}
+            Basemap Error: {styleError.message}
           </div>
         </div>
       )}
