@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
   useCallback,
+  useReducer,
 } from "react";
 import {
   MapManagerContext,
@@ -97,6 +98,81 @@ function buildVisibleLayers(
   };
 }
 
+/** Shallow-equal check for string arrays. */
+function stringArraysEqual(a: string[], b: string[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+}
+
+/** Consolidated state managed by LayerInteractivityManager via onUIUpdate. */
+interface InteractivityUIState {
+  bannerMessages: string[];
+  tooltip: Tooltip | undefined;
+  fixedBlocks: string[];
+  sidebarPopupContent: string | undefined;
+  sidebarPopupTitle: string | undefined;
+}
+
+const initialInteractivityUIState: InteractivityUIState = {
+  bannerMessages: [],
+  tooltip: undefined,
+  fixedBlocks: [],
+  sidebarPopupContent: undefined,
+  sidebarPopupTitle: undefined,
+};
+
+/**
+ * Reducer that merges an InteractivityUIUpdate into state with
+ * shallow-equality checks.  Returns the *same* state reference
+ * (→ no re-render) when nothing actually changed.
+ */
+function interactivityUIReducer(
+  state: InteractivityUIState,
+  update: InteractivityUIUpdate
+): InteractivityUIState {
+  let changed = false;
+  const next = { ...state };
+
+  if (update.bannerMessages !== undefined) {
+    if (!stringArraysEqual(state.bannerMessages, update.bannerMessages)) {
+      next.bannerMessages = update.bannerMessages;
+      changed = true;
+    }
+  }
+  // Use 'in' check so tooltip: undefined (clear) triggers the update
+  if ("tooltip" in update && state.tooltip !== update.tooltip) {
+    next.tooltip = update.tooltip;
+    changed = true;
+  }
+  if (update.fixedBlocks !== undefined) {
+    if (!stringArraysEqual(state.fixedBlocks, update.fixedBlocks)) {
+      next.fixedBlocks = update.fixedBlocks;
+      changed = true;
+    }
+  }
+  // Use 'in' check so undefined (clear) triggers the update
+  if (
+    "sidebarPopupContent" in update &&
+    state.sidebarPopupContent !== update.sidebarPopupContent
+  ) {
+    next.sidebarPopupContent = update.sidebarPopupContent;
+    changed = true;
+  }
+  if (
+    "sidebarPopupTitle" in update &&
+    state.sidebarPopupTitle !== update.sidebarPopupTitle
+  ) {
+    next.sidebarPopupTitle = update.sidebarPopupTitle;
+    changed = true;
+  }
+
+  return changed ? next : state;
+}
+
 export interface MapUIProviderProps {
   children: React.ReactNode;
   /**
@@ -121,15 +197,10 @@ export default function MapUIProvider({
   const basemap = useContext(BasemapContext);
   const { getPreferences, updateSlice } = useMapPreferences(preferencesKey);
 
-  const [bannerMessages, setBannerMessages] = useState<string[]>([]);
-  const [tooltip, setTooltip] = useState<Tooltip | undefined>();
-  const [fixedBlocks, setFixedBlocks] = useState<string[]>([]);
-  const [sidebarPopupContent, setSidebarPopupContent] = useState<
-    string | undefined
-  >();
-  const [sidebarPopupTitle, setSidebarPopupTitle] = useState<
-    string | undefined
-  >();
+  const [interactivityUI, dispatchInteractivityUI] = useReducer(
+    interactivityUIReducer,
+    initialInteractivityUIState
+  );
   const [digitizingLockState, setDigitizingLockState] = useState<
     typeof DigitizingLockState.Free
   >(DigitizingLockState.Free);
@@ -169,19 +240,6 @@ export default function MapUIProvider({
     []
   );
   const coordinatesControl = useMemo(() => new CoordinatesControl(), []);
-
-  const onUIUpdate = useCallback((update: InteractivityUIUpdate) => {
-    if (update.bannerMessages !== undefined)
-      setBannerMessages(update.bannerMessages);
-    // Use 'in' check so tooltip: undefined (clear) triggers setTooltip(undefined)
-    if ("tooltip" in update) setTooltip(update.tooltip);
-    if (update.fixedBlocks !== undefined) setFixedBlocks(update.fixedBlocks);
-    // Use 'in' check so undefined (clear) triggers the setter
-    if ("sidebarPopupContent" in update)
-      setSidebarPopupContent(update.sidebarPopupContent);
-    if ("sidebarPopupTitle" in update)
-      setSidebarPopupTitle(update.sidebarPopupTitle);
-  }, []);
 
   const toggleScale = useCallback(
     (show: boolean) => {
@@ -264,7 +322,7 @@ export default function MapUIProvider({
     if (!manager?.map || !ready) return;
 
     const map = manager.map;
-    const im = new LayerInteractivityManager(map, onUIUpdate);
+    const im = new LayerInteractivityManager(map, dispatchInteractivityUI);
     interactivityManagerRef.current = im;
     setInteractivityManager(im);
 
@@ -273,7 +331,8 @@ export default function MapUIProvider({
       interactivityManagerRef.current = null;
       setInteractivityManager(undefined);
     };
-  }, [manager?.map, ready, onUIUpdate]);
+    // dispatchInteractivityUI is stable (React useReducer guarantee)
+  }, [manager?.map, ready, dispatchInteractivityUI]);
 
   useEffect(() => {
     const interactivityManager = interactivityManagerRef.current;
@@ -376,11 +435,11 @@ export default function MapUIProvider({
 
   const value = useMemo<MapUIStateContextState>(
     () => ({
-      bannerMessages,
-      tooltip,
-      fixedBlocks,
-      sidebarPopupContent,
-      sidebarPopupTitle,
+      bannerMessages: interactivityUI.bannerMessages,
+      tooltip: interactivityUI.tooltip,
+      fixedBlocks: interactivityUI.fixedBlocks,
+      sidebarPopupContent: interactivityUI.sidebarPopupContent,
+      sidebarPopupTitle: interactivityUI.sidebarPopupTitle,
       displayedMapBookmark,
       loadingOverlay,
       showLoadingOverlay,
@@ -395,11 +454,7 @@ export default function MapUIProvider({
       interactivityManager,
     }),
     [
-      bannerMessages,
-      tooltip,
-      fixedBlocks,
-      sidebarPopupContent,
-      sidebarPopupTitle,
+      interactivityUI,
       displayedMapBookmark,
       loadingOverlay,
       showLoadingOverlay,

@@ -86,6 +86,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   useEffect(() => {
     if (mapContainer.current) {
       const clickHandler = (e: MouseEvent) => {
+        console.time("clickHandler");
         // If it is a click on an anchor tag, nested under .mapboxgl-popup-content, don't do anything
         const link = (e.target as HTMLElement)?.closest(
           ".mapboxgl-popup-content a"
@@ -99,6 +100,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             return;
           }
         }
+        console.timeEnd("clickHandler");
       };
       const container = mapContainer.current;
       container.addEventListener("click", clickHandler);
