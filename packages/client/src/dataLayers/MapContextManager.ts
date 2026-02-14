@@ -70,6 +70,7 @@ import type {
   BasemapContextState,
   OptionalBasemapLayerValue,
 } from "./BasemapContext";
+import { LayerStateManager } from "./LayerStateManager";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -187,11 +188,10 @@ class MapContextManager extends EventEmitter {
       tocId: string;
     } & DataLayerDetailsFragment;
   } = {};
-  // TODO: it probably makes sense to "garbage collect" visibleLayers at some
-  // point since it is stored in localstorage. If there's a lot of churn in
-  // layers there will be stale entries, and eventually there could even be a
-  // problem with really long layer lists if the user toggles all the layers
-  private visibleLayers: { [id: string]: LayerState } = {};
+  /** Manages overlay layer state (keyed by stableId). */
+  private overlayStates: LayerStateManager<LayerState>;
+  /** Manages per-sketch layer state (keyed by string sketch id). */
+  private sketchStates: LayerStateManager<SketchLayerState>;
   private basemaps: { [id: string]: BasemapDetailsFragment } = {};
   private _setManagerState?: Dispatch<SetStateAction<MapManagerState>>;
   private _setSketchLayerState?: Dispatch<
@@ -204,7 +204,10 @@ class MapContextManager extends EventEmitter {
   /** Basemap state from BasemapContext, set via updateBasemapState by MapManagerContextProvider */
   private basemapState: BasemapContextState | null = null;
   private _ready = false;
-  private updateStateDebouncerReference?: any;
+
+  /** Cached result of computeInatCtas for referential stability. */
+  private _lastInatCtas: { projectId: string; label?: string }[] = [];
+
   private initialCameraOptions?: CameraOptions;
   private initialBounds?: LngLatBoundsLike;
   private internalState: FullInternalState;
@@ -271,7 +274,24 @@ class MapContextManager extends EventEmitter {
     this.internalState = { ...initialState, ...initialSketchState };
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
-    this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
+    this.overlayStates = new LayerStateManager<LayerState>(
+      initialState.layerStatesByTocStaticId
+    );
+    this.sketchStates = new LayerStateManager<SketchLayerState>(
+      // Convert numeric-keyed initial state to string keys
+      Object.fromEntries(
+        Object.entries(initialSketchState.sketchLayerStates).map(
+          ([k, v]) => [k.toString(), v]
+        )
+      )
+    );
+
+    // When effective state changes, push to the relevant React context(s).
+    // Overlay and sketch managers have separate handlers so that overlay
+    // loading events don't needlessly churn the SketchLayerContext (and
+    // vice-versa).
+    this.overlayStates.on("stateChanged", this.onOverlayStateChanged);
+    this.sketchStates.on("stateChanged", this.onSketchStateChanged);
   }
 
   getCustomGLSource(sourceId: number) {
@@ -299,8 +319,14 @@ class MapContextManager extends EventEmitter {
   }
 
   private setState = (action: SetStateAction<MapContextInterface>) => {
+    // Build sketchLayerStates from sketchStates manager (convert string→number keys)
+    const sketchLayerStates: { [id: number]: SketchLayerState } = {};
+    for (const key of this.sketchStates.keys()) {
+      const raw = this.sketchStates.getRaw(key);
+      if (raw) sketchLayerStates[parseInt(key)] = raw;
+    }
     const sketchState = {
-      sketchLayerStates: this.internalState.sketchLayerStates,
+      sketchLayerStates,
       sketchClassLayerStates: this.internalState.sketchClassLayerStates,
     };
     if (typeof action === "function") {
@@ -344,11 +370,21 @@ class MapContextManager extends EventEmitter {
 
   /**
    * Pushes the current sketch layer state to the SketchLayerContext.
-   * Call this after updating internalState sketch fields.
+   * Call this after updating sketchStates or sketchClassLayerStates.
+   *
+   * NOTE: Now that overlay state changes and sketch state changes have
+   * separate handlers, this is only called when sketch-related state
+   * actually changes (from onSketchStateChanged or explicit calls).
    */
   private pushSketchState = () => {
+    // Convert string-keyed sketchStates back to number-keyed for context
+    const sketchState = this.sketchStates.getState();
+    const sketchLayerStates: { [id: number]: SketchLayerState } = {};
+    for (const key of Object.keys(sketchState)) {
+      sketchLayerStates[parseInt(key)] = sketchState[key];
+    }
     this._setSketchLayerState?.({
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
+      sketchLayerStates,
       sketchClassLayerStates: {
         ...this.internalState.sketchClassLayerStates,
       },
@@ -377,8 +413,9 @@ class MapContextManager extends EventEmitter {
    * a layer if available, or fall back to the TableOfContents.stableId.
    */
   getVisibleLayerReferenceIds() {
-    return Object.keys(this.visibleLayers)
-      .filter((id) => this.visibleLayers[id].visible)
+    return this.overlayStates
+      .keys()
+      .filter((id) => this.overlayStates.getRaw(id)?.visible)
       .map((id) => {
         const reference = this.geoprocessingReferenceIds[id];
         if (reference) {
@@ -429,6 +466,8 @@ class MapContextManager extends EventEmitter {
    * Call whenever the context will be replaced or no longer used
    */
   destroy() {
+    this.overlayStates.destroy();
+    this.sketchStates.destroy();
     for (const key in this.customSources) {
       this.customSources[key].customSource.destroy();
       delete this.customSources[key];
@@ -743,7 +782,7 @@ class MapContextManager extends EventEmitter {
     }
     if (this.preferencesKey) {
       const prefs = {
-        layers: this.visibleLayers,
+        layers: this.overlayStates.getState(),
         ...(this.map
           ? {
               cameraOptions: {
@@ -765,9 +804,9 @@ class MapContextManager extends EventEmitter {
   }, 200);
 
   resetLayers() {
-    const visibleLayerIds = Object.keys(this.visibleLayers);
+    const visibleLayerIds = this.overlayStates.keys();
     this.hideTocItems(visibleLayerIds);
-    this.visibleLayers = {};
+    this.overlayStates.retainOnly([]);
     this.debouncedUpdatePreferences();
   }
 
@@ -803,8 +842,8 @@ class MapContextManager extends EventEmitter {
   private computeInatCtas() {
     const ctas: { projectId: string; label?: string }[] = [];
     const seen = new Set<string>();
-    for (const stableId in this.visibleLayers) {
-      const state = this.visibleLayers[stableId];
+    for (const stableId of this.overlayStates.keys()) {
+      const state = this.overlayStates.getRaw(stableId);
       if (!state?.visible) continue;
       const layer = this.layers[stableId];
       if (!layer) continue;
@@ -973,17 +1012,16 @@ class MapContextManager extends EventEmitter {
         : id
     );
 
-    for (const id in this.visibleLayers) {
+    for (const id of this.overlayStates.keys()) {
       if (stableIds.indexOf(id) === -1) {
         this.hideTocItem(id);
       }
     }
     for (const id of stableIds) {
-      if (!this.visibleLayers[id]) {
+      if (!this.overlayStates.has(id)) {
         this.showTocItem(id);
       }
     }
-    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
     this.updateLegends();
   }
@@ -997,15 +1035,15 @@ class MapContextManager extends EventEmitter {
       id in this.geoprocessingReferenceIds
         ? this.geoprocessingReferenceIds[id]
         : id;
-    const state = this.visibleLayers[stableId];
+    const state = this.overlayStates.getRaw(stableId);
     if (state?.visible) {
       if (
         (state.opacity !== undefined && state.opacity !== 1) ||
         state.zOrderOverride !== undefined
       ) {
-        this.visibleLayers[stableId].visible = false;
+        this.overlayStates.setVisible(stableId, false);
       } else {
-        delete this.visibleLayers[stableId];
+        this.overlayStates.removeLayer(stableId);
       }
     }
     this.updateLegends();
@@ -1020,19 +1058,19 @@ class MapContextManager extends EventEmitter {
       id in this.geoprocessingReferenceIds
         ? this.geoprocessingReferenceIds[id]
         : id;
-    if (this.visibleLayers[stableId]) {
-      const state = this.visibleLayers[stableId];
+    if (this.overlayStates.has(stableId)) {
+      const state = this.overlayStates.getRaw(stableId)!;
       if (state.error) {
         // do nothing
       } else {
         if (!state.visible) {
-          state.visible = true;
-          state.loading = true;
-          state.hidden = false;
+          this.overlayStates.setVisible(stableId, true);
+          this.overlayStates.setLoading(stableId, true);
+          this.overlayStates.setHidden(stableId, false);
         }
       }
     } else {
-      this.visibleLayers[stableId] = {
+      this.overlayStates.addLayer(stableId, {
         loading: true,
         visible: true,
         opacity:
@@ -1040,7 +1078,15 @@ class MapContextManager extends EventEmitter {
         hidden: false,
         zOrderOverride:
           this.internalState.layerStatesByTocStaticId[stableId]?.zOrderOverride,
-      };
+      });
+      // Register source mapping for event triage
+      const layer = this.layers[stableId];
+      if (layer) {
+        this.overlayStates.setSourceForKey(
+          stableId,
+          layer.dataSourceId.toString()
+        );
+      }
     }
     this.updateLegends();
   }
@@ -1057,27 +1103,25 @@ class MapContextManager extends EventEmitter {
       filterMvtUrl?: string;
     }[]
   ) {
-    const sketchIds = sketches.map(({ id }) => id);
-    // remove missing ids from internal state
-    for (const id in this.internalState.sketchLayerStates) {
-      if (sketchIds.indexOf(parseInt(id)) === -1) {
-        delete this.internalState.sketchLayerStates[parseInt(id)];
-      }
-    }
-    // add new sketches to internal state
+    const sketchIdStrings = new Set(sketches.map(({ id }) => id.toString()));
+    // remove missing ids
+    this.sketchStates.retainOnly(sketchIdStrings);
+    // add new sketches
     for (const sketch of sketches) {
-      if (!this.internalState.sketchLayerStates[sketch.id]?.visible) {
-        this.internalState.sketchLayerStates[sketch.id] = {
+      const key = sketch.id.toString();
+      const existing = this.sketchStates.getRaw(key);
+      if (!existing?.visible) {
+        this.sketchStates.addLayer(key, {
           loading: true,
           visible: true,
           sketchClassId: sketch.sketchClassId,
           filterMvtUrl: sketch.filterMvtUrl,
-        };
+        });
+        // Register source mapping for event triage
+        // eslint-disable-next-line i18next/no-literal-string
+        this.sketchStates.setSourceForKey(key, `sketch-${sketch.id}`);
       } else {
-        this.internalState.sketchLayerStates[sketch.id] = {
-          ...this.internalState.sketchLayerStates[sketch.id],
-          filterMvtUrl: sketch.filterMvtUrl,
-        };
+        this.sketchStates.patch(key, { filterMvtUrl: sketch.filterMvtUrl } as Partial<SketchLayerState>);
       }
     }
     // update public state
@@ -1093,10 +1137,9 @@ class MapContextManager extends EventEmitter {
     for (const id in this.internalState.sketchClassLayerStates) {
       this.internalState.sketchClassLayerStates[id].visible = false;
       // see if any sketches are visible for this sketch class
-      for (const sketchState of Object.values(
-        this.internalState.sketchLayerStates
-      )) {
-        if (sketchState.sketchClassId === parseInt(id) && sketchState.visible) {
+      for (const skKey of this.sketchStates.keys()) {
+        const skState = this.sketchStates.getRaw(skKey);
+        if (skState?.sketchClassId === parseInt(id) && skState.visible) {
           this.internalState.sketchClassLayerStates[id].visible = true;
           break;
         }
@@ -1138,7 +1181,8 @@ class MapContextManager extends EventEmitter {
         sketchClassId: parseInt(key),
       };
     }
-    this.debouncedUpdateLayerState();
+    this.pushSketchState();
+    this.debouncedUpdatePreferences();
     this.debouncedUpdateStyle();
     this.updateLegends();
   }
@@ -1466,7 +1510,7 @@ class MapContextManager extends EventEmitter {
       if (layerId === "LABELS") {
         isUnderLabels = false;
       } else {
-        if (this.visibleLayers[layerId]?.visible) {
+        if (this.overlayStates.getRaw(layerId)?.visible) {
           const layer = this.layers[layerId];
           // If layer or source are not set yet, they will be ignored
           if (layer) {
@@ -1548,8 +1592,8 @@ class MapContextManager extends EventEmitter {
                           layerIdBase: layer.tocId || source.id.toString(),
                           attribution: source.attribution || "",
                           opacity:
-                            this.visibleLayers[layerId]?.opacity !== undefined
-                              ? this.visibleLayers[layerId].opacity
+                            this.overlayStates.getRaw(layerId)?.opacity !== undefined
+                              ? this.overlayStates.getRaw(layerId)!.opacity
                               : 1,
                         }
                       );
@@ -1610,21 +1654,22 @@ class MapContextManager extends EventEmitter {
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
                         if (
-                          !this.visibleLayers[layerId]?.hidden ||
+                          !this.overlayStates.getRaw(layerId)?.hidden ||
                           source.type === DataSourceTypes.ArcgisDynamicMapserver
                         ) {
                           let layersToAdd = styleData.layers;
+                          const _overlayState = this.overlayStates.getRaw(layerId);
                           if (
                             source.type !==
                               DataSourceTypes.ArcgisDynamicMapserver &&
-                            this.visibleLayers[layerId] &&
-                            "opacity" in this.visibleLayers[layerId] &&
-                            typeof this.visibleLayers[layerId].opacity ===
+                            _overlayState &&
+                            "opacity" in _overlayState &&
+                            typeof _overlayState.opacity ===
                               "number"
                           ) {
                             layersToAdd = adjustLayerOpacities(
                               layersToAdd as mapboxgl.AnyLayer[],
-                              this.visibleLayers[layerId].opacity!
+                              _overlayState.opacity!
                             );
                           }
                           if (
@@ -1700,18 +1745,19 @@ class MapContextManager extends EventEmitter {
                       : {}),
                   } as AnyLayer;
                 });
+                const _staticOverlay = this.overlayStates.getRaw(layerId);
                 if (
-                  this.visibleLayers[layerId] &&
-                  "opacity" in this.visibleLayers[layerId] &&
-                  typeof this.visibleLayers[layerId].opacity === "number"
+                  _staticOverlay &&
+                  "opacity" in _staticOverlay &&
+                  typeof _staticOverlay.opacity === "number"
                 ) {
                   glLayers = adjustLayerOpacities(
                     glLayers,
-                    this.visibleLayers[layerId].opacity!
+                    _staticOverlay.opacity!
                   );
                 }
                 const layers = isUnderLabels ? underLabels : overLabels;
-                if (!this.visibleLayers[layerId]?.hidden) {
+                if (!_staticOverlay?.hidden) {
                   if (
                     layer.interactivitySettings?.type ===
                     InteractivityType.SidebarOverlay
@@ -1722,7 +1768,7 @@ class MapContextManager extends EventEmitter {
                 }
               } else if (source.type === DataSourceTypes.Inaturalist) {
                 const inatLayers = inaturalistGeneratedLayers[layerId];
-                if (inatLayers && !this.visibleLayers[layerId]?.hidden) {
+                if (inatLayers && !this.overlayStates.getRaw(layerId)?.hidden) {
                   const targetLayers = isUnderLabels ? underLabels : overLabels;
                   targetLayers.push(...inatLayers);
                 }
@@ -1737,7 +1783,7 @@ class MapContextManager extends EventEmitter {
                 if (!Array.isArray(this.customSources[source.id].sublayers)) {
                   this.customSources[source.id].sublayers = [];
                 }
-                const settings = this.visibleLayers[layerId];
+                const settings = this.overlayStates.getRaw(layerId);
                 if (!settings) {
                   throw new Error("Visible layer settings missing");
                 }
@@ -1747,7 +1793,7 @@ class MapContextManager extends EventEmitter {
                   this.archivedSource.sublayer
                     ? this.archivedSource.sublayer
                     : layer.sublayer;
-                if (!this.visibleLayers[layerId]?.hidden) {
+                if (!settings?.hidden) {
                   this.customSources[source.id].sublayers!.unshift({
                     id: sublayer!,
                     opacity:
@@ -1831,10 +1877,10 @@ class MapContextManager extends EventEmitter {
     const sketchClassLayers: {
       [id: number]: { layers: string[]; sources: string[] };
     } = {};
-    for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
+    for (const stringId of this.sketchStates.keys()) {
       const id = parseInt(stringId);
       const sketchClassId =
-        this.internalState.sketchLayerStates[id].sketchClassId;
+        this.sketchStates.getRaw(stringId)?.sketchClassId;
       if (!sketchClassId) {
         throw new Error(
           `Sketch ${id} has no sketchClassId. This is required for sketch layers`
@@ -1867,11 +1913,11 @@ class MapContextManager extends EventEmitter {
         if (
           layers.length > 0 &&
           "metadata" in layers[0] &&
-          this.internalState.sketchLayerStates[id].filterMvtUrl
+          this.sketchStates.getRaw(stringId)?.filterMvtUrl
         ) {
           sources[`sketch-${id}`] = {
             type: "vector",
-            tiles: [this.internalState.sketchLayerStates[id].filterMvtUrl],
+            tiles: [this.sketchStates.getRaw(stringId)!.filterMvtUrl!],
             maxzoom: 14,
           };
           allLayers.push(...layers);
@@ -2049,73 +2095,61 @@ class MapContextManager extends EventEmitter {
   private onMapDataEvent = (
     event: MapDataEvent & { source: Source; sourceId: string }
   ) => {
-    // let anyChanges = false;
     if (event.sourceId === "composite") {
-      // ignore
       return;
     }
-
-    // Filter out events that are related to styles, or about turning geojson
-    // or image data into tiles. We don't care about stuff that isn't related to
-    // network activity
+    if (event.dataType !== "source") {
+      return;
+    }
+    // Event triage: only process events relevant to tracked layers
     if (
-      event.dataType === "source"
-      // this filtering might not be necessary, since we are debouncing updates
-      // anyways. It looked to be skipping important events related to sketch
-      // geojson loading
-      //  &&
-      // ((event.source.type !== "geojson" && event.source.type !== "image") ||
-      //   !event.tile)
+      this.overlayStates.hasRelevanceToSource(event.sourceId) ||
+      this.sketchStates.hasRelevanceToSource(event.sourceId)
     ) {
-      this.debouncedUpdateSourceStates();
+      // Update source states immediately (no debounce) so that
+      // LayerStateManager receives loading updates ASAP for correct
+      // loadingAt timing behavior.
+      this.updateSourceStates();
     }
   };
 
   private onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
-      let anySet = false;
       // Questionable behavior from mapbox-gl-js here
       // https://github.com/mapbox/mapbox-gl-js/issues/9304
       if (/source image could not be decoded/.test(event.error.message)) {
         return;
       }
       if (/sketch-\d+$/.test(event.sourceId)) {
-        const id = parseInt(event.sourceId.split("-")[1]);
-        const state = this.internalState.sketchLayerStates[id];
-        if (state) {
-          anySet = true;
-          state.error = event.error;
-          state.loading = false;
+        const key = event.sourceId.split("-")[1];
+        if (this.sketchStates.has(key)) {
+          this.sketchStates.setError(key, event.error);
+          this.sketchStates.setLoading(key, false);
         }
       } else {
-        for (const staticId of Object.keys(this.visibleLayers)) {
+        for (const staticId of this.overlayStates.keys()) {
           const sourceId = this.layers[staticId]?.dataSourceId.toString();
           if (event.sourceId === sourceId) {
-            this.visibleLayers[staticId].error = event.error;
-            this.visibleLayers[staticId].loading = false;
-            anySet = true;
+            this.overlayStates.setError(staticId, event.error);
+            this.overlayStates.setLoading(staticId, false);
           }
         }
       }
-      if (anySet) {
-        this.debouncedUpdateLayerState();
-      }
+      // LayerStateManager auto-notifies on setError/setLoading mutations
     }
   };
 
   _updateSourceStatesLoopDetector = 0;
 
   private updateSourceStates() {
-    let anyChanges = false;
     let anyLoading = false;
     if (!this.map) {
       throw new Error("MapContextManager.map not set");
     }
 
-    // For each layer/tocItem, check it's source
-
+    // For each overlay layer, check its source
     let sources: { [sourceId: string]: string[] } = {};
-    for (const id of Object.keys(this.visibleLayers)) {
+    for (const id of this.overlayStates.keys()) {
       const layer = this.layers[id];
       if (layer) {
         if (!sources[layer.dataSourceId]) {
@@ -2143,44 +2177,36 @@ class MapContextManager extends EventEmitter {
         anyLoading = true;
       }
       for (const stableId of sources[sourceId]) {
-        if (this.visibleLayers[stableId]?.loading !== loading) {
-          this.visibleLayers[stableId].loading = loading;
-          anyChanges = true;
-        }
-        if (this.visibleLayers[stableId]?.error && loading) {
-          delete this.visibleLayers[stableId].error;
-          anyChanges = true;
+        // Update LayerStateManager immediately (no debounce)
+        this.overlayStates.setLoading(stableId, loading);
+        if (this.overlayStates.getRaw(stableId)?.error && loading) {
+          this.overlayStates.setError(stableId, undefined);
         }
       }
     }
     // update states of sketch layers
-    for (const id in this.internalState.sketchLayerStates) {
-      const state = this.internalState.sketchLayerStates[id];
-      if (state.visible) {
+    for (const id of this.sketchStates.keys()) {
+      const state = this.sketchStates.getRaw(id);
+      if (state?.visible) {
         // eslint-disable-next-line i18next/no-literal-string
         const loading = !this.map!.isSourceLoaded(`sketch-${id}`);
         if (loading) {
           anyLoading = true;
         }
-        if (state.loading !== loading) {
-          this.internalState.sketchLayerStates[id].loading = loading;
-          anyChanges = true;
-        }
+        this.sketchStates.setLoading(id, loading);
         if (state.error && loading) {
-          delete this.internalState.sketchLayerStates[id].error;
-          anyChanges = true;
+          this.sketchStates.setError(id, undefined);
         }
       }
     }
-    if (anyChanges) {
-      this.debouncedUpdateLayerState();
-    }
-    // This is needed for geojson sources
+    // LayerStateManager auto-notifies when effective state changes
+    // (loading mutations use 10ms debounce internally).
+    // Re-poll when any source is still loading (needed for geojson sources)
     if (anyLoading) {
       this._updateSourceStatesLoopDetector++;
       setTimeout(
         () => {
-          this.debouncedUpdateSourceStates();
+          this.updateSourceStates();
         },
         this._updateSourceStatesLoopDetector > 100 ? 1000 : 100
       );
@@ -2188,12 +2214,6 @@ class MapContextManager extends EventEmitter {
       this._updateSourceStatesLoopDetector = 0;
     }
   }
-
-  private debouncedUpdateSourceStates = debounce(this.updateSourceStates, 10, {
-    leading: true,
-    trailing: true,
-    maxWait: 100,
-  });
 
   private tocItems: {
     [stableId: string]: {
@@ -2264,10 +2284,17 @@ class MapContextManager extends EventEmitter {
       }
     }
     if (Object.keys(layers).length) {
-      // Cleanup entries in visibleLayers that no longer exist
-      for (const key in this.visibleLayers) {
-        if (!tocItems.find((i) => i.stableId === key)) {
-          delete this.visibleLayers[key];
+      // Cleanup entries in overlayStates that no longer exist
+      const validKeys = new Set(tocItems.map((i) => i.stableId));
+      this.overlayStates.retainOnly(validKeys);
+      // Register source mappings for event triage
+      for (const stableId of this.overlayStates.keys()) {
+        const layer = this.layers[stableId];
+        if (layer) {
+          this.overlayStates.setSourceForKey(
+            stableId,
+            layer.dataSourceId.toString()
+          );
         }
       }
       this.debouncedUpdatePreferences();
@@ -2281,7 +2308,6 @@ class MapContextManager extends EventEmitter {
     for (const id of stableIds) {
       this.hideTocItem(id);
     }
-    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -2289,7 +2315,6 @@ class MapContextManager extends EventEmitter {
     for (const id of stableIds) {
       this.showTocItem(id);
     }
-    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -2515,23 +2540,49 @@ class MapContextManager extends EventEmitter {
     }
   };
 
-  private updateLayerState = () => {
-    delete this.updateStateDebouncerReference;
+  /**
+   * Called when `overlayStates` emits `"stateChanged"`.
+   * Pushes overlay state (and iNaturalist CTAs) to React contexts.
+   * Does NOT push sketch state — overlay loading churn should not cause
+   * SketchLayerContext consumers to re-render.
+   */
+  private onOverlayStateChanged = () => {
     this.setState((oldState) => ({
       ...oldState,
-      layerStatesByTocStaticId: { ...this.visibleLayers },
+      layerStatesByTocStaticId: this.overlayStates.getState(),
     }));
-    this.emit("uiUpdate", {
-      inaturalistCallToActions: this.computeInatCtas(),
-    } as Partial<MapUIStateContextState>);
+    // Only emit uiUpdate when the iNaturalist CTAs actually changed.
+    const nextCtas = this.computeInatCtas();
+    if (!this.inatCtasEqual(this._lastInatCtas, nextCtas)) {
+      this._lastInatCtas = nextCtas;
+      this.emit("uiUpdate", {
+        inaturalistCallToActions: nextCtas,
+      } as Partial<MapUIStateContextState>);
+    }
+    this.debouncedUpdatePreferences();
+  };
+
+  /**
+   * Called when `sketchStates` emits `"stateChanged"`.
+   * Pushes sketch state to its React context.
+   */
+  private onSketchStateChanged = () => {
     this.pushSketchState();
     this.debouncedUpdatePreferences();
   };
 
-  private debouncedUpdateLayerState = debounce(this.updateLayerState, 5, {
-    maxWait: 100,
-    trailing: true,
-  });
+  /** Shallow-compare two iNaturalist CTA arrays by projectId + label. */
+  private inatCtasEqual(
+    a: { projectId: string; label?: string }[],
+    b: { projectId: string; label?: string }[]
+  ): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].projectId !== b[i].projectId || a[i].label !== b[i].label)
+        return false;
+    }
+    return true;
+  }
 
   setCamera(camera: CameraOptions) {
     if (this.map) {
@@ -2646,14 +2697,14 @@ class MapContextManager extends EventEmitter {
       throw new Error("Map not ready to create bookmark data");
     }
     const visibleDataLayers: string[] = [];
-    for (const stableId in this.visibleLayers) {
-      if (this.visibleLayers[stableId]?.visible && this.layers[stableId]) {
+    for (const stableId of this.overlayStates.keys()) {
+      if (this.overlayStates.getRaw(stableId)?.visible && this.layers[stableId]) {
         visibleDataLayers.push(stableId);
       }
     }
     const visibleSketches: number[] = [];
-    for (const key in this.internalState.sketchLayerStates) {
-      if (this.internalState.sketchLayerStates[key].visible) {
+    for (const key of this.sketchStates.keys()) {
+      if (this.sketchStates.getRaw(key)?.visible) {
         visibleSketches.push(parseInt(key));
       }
     }
@@ -2926,7 +2977,7 @@ class MapContextManager extends EventEmitter {
         }
       } else if (
         layer.dataLayer?.tocId &&
-        this.visibleLayers[layer.dataLayer.tocId]?.visible
+        this.overlayStates.getRaw(layer.dataLayer.tocId)?.visible
       ) {
         const id = layer.dataLayer.tocId;
         if (clearCache === true && id in this.internalState.legends) {
@@ -3124,40 +3175,12 @@ class MapContextManager extends EventEmitter {
   });
 
   hideLayer(stableId: string) {
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.hidden = true;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      layerStatesByTocStaticId: {
-        ...prev.layerStatesByTocStaticId,
-        [stableId]: {
-          ...prev.layerStatesByTocStaticId[stableId],
-          hidden: true,
-        },
-      },
-    }));
-    this.debouncedUpdateLayerState();
+    this.overlayStates.setHidden(stableId, true);
     this.updateStyle();
   }
 
   showHiddenLayer(stableId: string) {
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.hidden = false;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      layerStatesByTocStaticId: {
-        ...prev.layerStatesByTocStaticId,
-        [stableId]: {
-          ...prev.layerStatesByTocStaticId[stableId],
-          hidden: false,
-        },
-      },
-    }));
-    this.debouncedUpdateLayerState();
+    this.overlayStates.setHidden(stableId, false);
     this.updateStyle();
   }
 
@@ -3174,29 +3197,15 @@ class MapContextManager extends EventEmitter {
         this.pushSketchState();
       }
     } else {
-      const state = this.visibleLayers[stableId];
-      if (state) {
-        state.zOrderOverride = zOrder;
-      }
-      this.setState((prev) => ({
-        ...prev,
-        layerStatesByTocStaticId: {
-          ...prev.layerStatesByTocStaticId,
-          [stableId]: {
-            ...prev.layerStatesByTocStaticId[stableId],
-            zOrderOverride: zOrder,
-          },
-        },
-      }));
+      this.overlayStates.setZOrderOverride(stableId, zOrder);
     }
     // this.resetLayersByZIndex();
-    this.debouncedUpdateLayerState();
     this.updateStyle();
   }
 
   getVisibleLayersByZIndex() {
     const visibleLayers = Object.values(this.layers).filter(
-      (l) => this.visibleLayers[l.tocId]?.visible === true
+      (l) => this.overlayStates.getRaw(l.tocId)?.visible === true
     );
     const visibleSketchClassLayers = Object.values(
       this.internalState.sketchClassLayerStates
@@ -3211,8 +3220,8 @@ class MapContextManager extends EventEmitter {
       if (layer.sublayer !== undefined && layer.sublayer !== null) {
         const dataSourceId = layer.dataSourceId;
         const zIndex =
-          typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
-            ? this.visibleLayers[layer.tocId].zOrderOverride!
+          typeof this.overlayStates.getRaw(layer.tocId)?.zOrderOverride === "number"
+            ? this.overlayStates.getRaw(layer.tocId)!.zOrderOverride!
             : layer.zIndex;
         if (
           !(dataSourceId in sublayerZIndexLookup) ||
@@ -3229,7 +3238,7 @@ class MapContextManager extends EventEmitter {
       if (isSketchClassLayerState(layer)) {
         return layer.zOrderOverride || undefined;
       } else {
-        return this.visibleLayers[layer.tocId]?.zOrderOverride || undefined;
+        return this.overlayStates.getRaw(layer.tocId)?.zOrderOverride || undefined;
       }
     };
 
@@ -3360,24 +3369,7 @@ class MapContextManager extends EventEmitter {
     if (opacity > 1 || opacity < 0) {
       throw new Error("Opacity should be between 0 and 1");
     }
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.opacity = opacity;
-    }
-    this.setState((prev) => {
-      const newState = {
-        ...prev,
-        layerStatesByTocStaticId: {
-          ...prev.layerStatesByTocStaticId,
-          [stableId]: {
-            ...prev.layerStatesByTocStaticId[stableId],
-            opacity,
-          },
-        },
-      };
-      return newState;
-    });
-    this.debouncedUpdateLayerState();
+    this.overlayStates.setOpacity(stableId, opacity);
     const layer = this.layers[stableId];
     const source = this.clientDataSources[layer.dataSourceId];
     // TODO: consider customsource layer types
@@ -3417,8 +3409,9 @@ class MapContextManager extends EventEmitter {
     }
 
     // see if you can do an update of layers in place
-    for (const sketchId in this.internalState.sketchLayerStates) {
-      const sketchLayerState = this.internalState.sketchLayerStates[sketchId];
+    for (const sketchId of this.sketchStates.keys()) {
+      const sketchLayerState = this.sketchStates.getRaw(sketchId);
+      if (!sketchLayerState) continue;
       const layers = this.map?.getStyle().layers;
       if (layers?.length) {
         if (
@@ -3437,7 +3430,8 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    this.debouncedUpdateLayerState();
+    this.pushSketchState();
+    this.debouncedUpdatePreferences();
 
     // this.debouncedUpdateStyle();
   }

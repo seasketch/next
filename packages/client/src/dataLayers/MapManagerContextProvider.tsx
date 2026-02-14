@@ -1,20 +1,11 @@
-import React, {
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { BBox } from "geojson";
 import type { CameraOptions } from "mapbox-gl";
 import bytes from "bytes";
 import useAccessToken from "../useAccessToken";
 import { useProjectRegionQuery } from "../generated/graphql";
-import {
-  BasemapContext,
-  type BasemapContextState,
-} from "./BasemapContext";
+import { BasemapContext, type BasemapContextState } from "./BasemapContext";
 import MapContextManager, {
   type MapContextInterface,
   type MapManagerState,
@@ -112,9 +103,20 @@ export default function MapManagerContextProvider({
       layerStatesByTocStaticId: initialState.layerStatesByTocStaticId,
       styleHash: initialState.styleHash,
     });
+
   const [legendsState, setLegendsState] = useState<LegendsContextState>({
     legends: initialState.legends,
   });
+
+  // Sync the containerPortal prop into managerState when it becomes available
+  // (it starts as null and is set via a ref callback after mount).
+  useEffect(() => {
+    setManagerState((prev) => {
+      const next = containerPortal || null;
+      if (prev.containerPortal === next) return prev;
+      return { ...prev, containerPortal: next };
+    });
+  }, [containerPortal]);
 
   const managerRef = useRef<MapContextManager | null>(null);
   const { data, error } = useProjectRegionQuery({
