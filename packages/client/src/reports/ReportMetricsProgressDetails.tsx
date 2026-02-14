@@ -1,18 +1,7 @@
 import { Trans, useTranslation } from "react-i18next";
-import { useReportContext } from "./ReportContext";
 import { useContext, useMemo } from "react";
-import {
-  CompatibleSpatialMetric,
-  Geography,
-  OverlaySourceDetailsFragment,
-  SpatialMetricState,
-} from "../generated/graphql";
-import {
-  MetricSubjectFragment,
-  MetricSubjectGeography,
-  subjectIsFragment,
-  subjectIsGeography,
-} from "overlay-engine";
+import { Geography, SpatialMetricState } from "../generated/graphql";
+import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { ReportCardConfiguration } from "./cards/cards";

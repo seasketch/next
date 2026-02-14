@@ -53,20 +53,32 @@ function SketchReportWindow({
   const { i18n } = useTranslation();
   const lang = getSelectedLanguage(i18n, languages);
 
+  // Memoize FormLanguageContext value to prevent unnecessary re-renders of report
+  // widgets (e.g. OverlappingAreasTable) when parent re-renders for unrelated
+  // reasons (e.g. map sketch selection changes). Without this, the inline object
+  // creates a new reference every render, causing all context consumers to re-render.
+  const setFormLanguage = useCallback(
+    (code: string) => {
+      const found = languages.find((l) => l.code === code);
+      if (!found) {
+        throw new Error(`Unrecognized language ${code}`);
+      }
+      i18n.changeLanguage(found.code);
+    },
+    [i18n]
+  );
+
+  const formLanguageContextValue = useMemo(
+    () => ({
+      lang: lang.selectedLang,
+      setLanguage: setFormLanguage,
+      supportedLanguages: languages.map((l) => l.code),
+    }),
+    [lang.selectedLang, setFormLanguage]
+  );
+
   return (
-    <FormLanguageContext.Provider
-      value={{
-        lang: lang.selectedLang,
-        setLanguage: (code: string) => {
-          const lang = languages.find((lang) => lang.code === code);
-          if (!lang) {
-            throw new Error(`Unrecognized language ${code}`);
-          }
-          i18n.changeLanguage(lang.code);
-        },
-        supportedLanguages: languages.map((l) => l.code),
-      }}
-    >
+    <FormLanguageContext.Provider value={formLanguageContextValue}>
       <BaseReportContextProvider sketchClassId={sketchClassId} draft={false}>
         <SketchReportWindowInner
           sketchId={sketchId}

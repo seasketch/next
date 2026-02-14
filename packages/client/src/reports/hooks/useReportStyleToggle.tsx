@@ -1,7 +1,7 @@
 import type { AnySourceData, AnyLayer } from "mapbox-gl";
 import { useContext, useRef, useCallback, useState, useEffect } from "react";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
-import { ReportMapStyle } from "../ReportContext";
+import type { ReportMapStyle } from "../reportUtils";
 
 export function useReportStyleToggle(
   cardId: number,

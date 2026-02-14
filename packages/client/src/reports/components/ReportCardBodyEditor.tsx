@@ -49,14 +49,17 @@ import {
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
-import { extractMetricDependenciesFromReportBody } from "../ReportContext";
 import getSlug from "../../getSlug";
 import { LayerPickerList } from "../widgets/LayerPickerDropdown";
 import { useHistory } from "react-router-dom";
 import { ProsemirrorBodyJSON } from "../cards/cards";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Button from "../../components/Button";
-import { hashMetricDependency, MetricDependency } from "overlay-engine";
+import {
+  extractMetricDependenciesFromReportBody,
+  hashMetricDependency,
+  MetricDependency,
+} from "overlay-engine";
 import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useBaseReportContext } from "../context/BaseReportContext";
