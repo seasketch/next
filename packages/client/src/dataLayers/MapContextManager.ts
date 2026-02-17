@@ -280,9 +280,10 @@ class MapContextManager extends EventEmitter {
     this.sketchStates = new LayerStateManager<SketchLayerState>(
       // Convert numeric-keyed initial state to string keys
       Object.fromEntries(
-        Object.entries(initialSketchState.sketchLayerStates).map(
-          ([k, v]) => [k.toString(), v]
-        )
+        Object.entries(initialSketchState.sketchLayerStates).map(([k, v]) => [
+          k.toString(),
+          v,
+        ])
       )
     );
 
@@ -1121,7 +1122,9 @@ class MapContextManager extends EventEmitter {
         // eslint-disable-next-line i18next/no-literal-string
         this.sketchStates.setSourceForKey(key, `sketch-${sketch.id}`);
       } else {
-        this.sketchStates.patch(key, { filterMvtUrl: sketch.filterMvtUrl } as Partial<SketchLayerState>);
+        this.sketchStates.patch(key, {
+          filterMvtUrl: sketch.filterMvtUrl,
+        } as Partial<SketchLayerState>);
       }
     }
     // update public state
@@ -1592,7 +1595,8 @@ class MapContextManager extends EventEmitter {
                           layerIdBase: layer.tocId || source.id.toString(),
                           attribution: source.attribution || "",
                           opacity:
-                            this.overlayStates.getRaw(layerId)?.opacity !== undefined
+                            this.overlayStates.getRaw(layerId)?.opacity !==
+                            undefined
                               ? this.overlayStates.getRaw(layerId)!.opacity
                               : 1,
                         }
@@ -1658,14 +1662,14 @@ class MapContextManager extends EventEmitter {
                           source.type === DataSourceTypes.ArcgisDynamicMapserver
                         ) {
                           let layersToAdd = styleData.layers;
-                          const _overlayState = this.overlayStates.getRaw(layerId);
+                          const _overlayState =
+                            this.overlayStates.getRaw(layerId);
                           if (
                             source.type !==
                               DataSourceTypes.ArcgisDynamicMapserver &&
                             _overlayState &&
                             "opacity" in _overlayState &&
-                            typeof _overlayState.opacity ===
-                              "number"
+                            typeof _overlayState.opacity === "number"
                           ) {
                             layersToAdd = adjustLayerOpacities(
                               layersToAdd as mapboxgl.AnyLayer[],
@@ -1879,8 +1883,7 @@ class MapContextManager extends EventEmitter {
     } = {};
     for (const stringId of this.sketchStates.keys()) {
       const id = parseInt(stringId);
-      const sketchClassId =
-        this.sketchStates.getRaw(stringId)?.sketchClassId;
+      const sketchClassId = this.sketchStates.getRaw(stringId)?.sketchClassId;
       if (!sketchClassId) {
         throw new Error(
           `Sketch ${id} has no sketchClassId. This is required for sketch layers`
@@ -2698,7 +2701,10 @@ class MapContextManager extends EventEmitter {
     }
     const visibleDataLayers: string[] = [];
     for (const stableId of this.overlayStates.keys()) {
-      if (this.overlayStates.getRaw(stableId)?.visible && this.layers[stableId]) {
+      if (
+        this.overlayStates.getRaw(stableId)?.visible &&
+        this.layers[stableId]
+      ) {
         visibleDataLayers.push(stableId);
       }
     }
@@ -3220,7 +3226,8 @@ class MapContextManager extends EventEmitter {
       if (layer.sublayer !== undefined && layer.sublayer !== null) {
         const dataSourceId = layer.dataSourceId;
         const zIndex =
-          typeof this.overlayStates.getRaw(layer.tocId)?.zOrderOverride === "number"
+          typeof this.overlayStates.getRaw(layer.tocId)?.zOrderOverride ===
+          "number"
             ? this.overlayStates.getRaw(layer.tocId)!.zOrderOverride!
             : layer.zIndex;
         if (
@@ -3238,7 +3245,9 @@ class MapContextManager extends EventEmitter {
       if (isSketchClassLayerState(layer)) {
         return layer.zOrderOverride || undefined;
       } else {
-        return this.overlayStates.getRaw(layer.tocId)?.zOrderOverride || undefined;
+        return (
+          this.overlayStates.getRaw(layer.tocId)?.zOrderOverride || undefined
+        );
       }
     };
 
