@@ -1,3 +1,4 @@
+--! AllowInvalidHash
 --! Previous: sha1:2d6321d59ed1cad7392b58f7ca9cc3c8840b8e00
 --! Hash: sha1:978d45fdaa52fc81400a6148bcb46109b1c2a7ca
 
@@ -620,6 +621,7 @@ CREATE OR REPLACE FUNCTION public.publish_table_of_contents("projectId" integer)
     end;
   $$;
 
+drop function if exists report_cards_reporting_layers;
 
 CREATE OR REPLACE FUNCTION public.report_cards_reporting_layers(rc public.report_cards) RETURNS SETOF public.reporting_layer
     LANGUAGE sql STABLE SECURITY DEFINER COST 1 ROWS 1 PARALLEL SAFE
