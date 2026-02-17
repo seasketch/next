@@ -100,10 +100,6 @@ export const ClassRowSettingsPopover = ({
   onUpdateAllDependencies,
   t,
 }: ClassRowSettingsPopoverProps) => {
-  console.log("ClassRowSettingsPopover", {
-    dependencies,
-    sources,
-  });
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const { allSources: overlaySources } = useOverlaySources();
   // Hack to handle the fact that we sometimes don't have access to the titles of related table of contents items when the user adds a new source (e.g. when it hasn't been preprocessed yet)
@@ -318,7 +314,6 @@ export const ClassRowSettingsPopover = ({
     > = {};
     for (const row of rows) {
       const source = overlaySources.find((s) => s.stableId === row.sourceId);
-      console.log("source", source, titlesByStableId);
       const title =
         source?.tableOfContentsItem?.title ||
         titlesByStableId[row.sourceId] ||

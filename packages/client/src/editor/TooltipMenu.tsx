@@ -722,7 +722,6 @@ export default function TooltipMenu({
         return ds?.reportCardBodyEditorFooter === "true";
       });
       if (inFooter) {
-        console.log("in footer");
         setPosition(null);
         return;
       }
