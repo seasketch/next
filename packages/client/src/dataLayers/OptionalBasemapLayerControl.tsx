@@ -6,10 +6,8 @@ import {
   useGetOptionalBasemapLayerMetadataQuery,
 } from "../generated/graphql";
 import { useContext, useState } from "react";
-import {
-  BasemapContext,
-  type OptionalBasemapLayerValue,
-} from "./BasemapContext";
+import { BasemapContext } from "./BasemapContext";
+import type { OptionalBasemapLayerValue } from "./BasemapContext";
 import RadioGroup from "../components/RadioGroup";
 import MetadataIcon from "../components/MetadataIcon";
 import MetadataModal from "./MetadataModal";

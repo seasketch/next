@@ -5,18 +5,21 @@ import type { CameraOptions } from "mapbox-gl";
 import bytes from "bytes";
 import useAccessToken from "../useAccessToken";
 import { useProjectRegionQuery } from "../generated/graphql";
-import { BasemapContext, type BasemapContextState } from "./BasemapContext";
+import { BasemapContext } from "./BasemapContext";
+import type { BasemapContextState } from "./BasemapContext";
 import MapContextManager, {
-  type MapContextInterface,
-  type MapManagerState,
-  type SketchLayerContextState,
-  type MapOverlayContextState,
-  type LegendsContextState,
   DigitizingLockState,
   MapManagerContext,
   SketchLayerContext,
   MapOverlayContext,
   LegendsContext,
+} from "./MapContextManager";
+import type {
+  MapContextInterface,
+  MapManagerState,
+  SketchLayerContextState,
+  MapOverlayContextState,
+  LegendsContextState,
 } from "./MapContextManager";
 
 export interface MapManagerContextProviderProps {

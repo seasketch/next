@@ -14,14 +14,16 @@ import {
   MapOverlayContext,
   DigitizingLockState,
   DigitizingLockStateChangeEventType,
-  type MapUIStateContextState,
-  type MapOverlayContextState,
-  type Tooltip,
 } from "./MapContextManager";
-import { BasemapContext, type BasemapContextState } from "./BasemapContext";
-import LayerInteractivityManager, {
-  type InteractivityUIUpdate,
-} from "./LayerInteractivityManager";
+import type {
+  MapUIStateContextState,
+  MapOverlayContextState,
+  Tooltip,
+} from "./MapContextManager";
+import { BasemapContext } from "./BasemapContext";
+import type { BasemapContextState } from "./BasemapContext";
+import LayerInteractivityManager from "./LayerInteractivityManager";
+import type { InteractivityUIUpdate } from "./LayerInteractivityManager";
 import CoordinatesControl from "./CoordinatesControl";
 import { useMapPreferences } from "./useMapPreferences";
 import type {
