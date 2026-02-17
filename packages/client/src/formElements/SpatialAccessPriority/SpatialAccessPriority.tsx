@@ -34,7 +34,9 @@ import { BasemapContext } from "../../dataLayers/BasemapContext";
 import BasemapContextProvider from "../../dataLayers/BasemapContext";
 import MapManagerContextProvider from "../../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../../dataLayers/MapUIContext";
-import useMapEssentials from "../../admin/surveys/useMapEssentials";
+import useMapEssentials, {
+  defaultStartingBounds,
+} from "../../admin/surveys/useMapEssentials";
 import Button from "../../components/Button";
 import MapboxMap from "../../components/MapboxMap";
 import {
@@ -156,7 +158,11 @@ const SpatialAccessPriority: FormElementComponent<
       preferencesKey={`${slug}-${props.id}-spatial-access-priority`}
     >
       <MapManagerContextProvider bounds={bounds}>
-        <SpatialAccessPriorityInner {...props} slug={slug} />
+        <SpatialAccessPriorityInner
+          {...props}
+          slug={slug}
+          fallbackBounds={bounds}
+        />
       </MapManagerContextProvider>
     </BasemapContextProvider>
   );
@@ -165,6 +171,8 @@ const SpatialAccessPriority: FormElementComponent<
 function SpatialAccessPriorityInner(
   props: FormElementProps<SpatialAccessPriorityProps, SAPValueType> & {
     slug?: string;
+    /** Bounds from project region when startingBounds not set in survey config */
+    fallbackBounds?: BBox;
   }
 ) {
   const { t } = useTranslation("admin:surveys");
@@ -172,7 +180,10 @@ function SpatialAccessPriorityInner(
   const { manager } = useContext(MapManagerContext);
   const { basemaps } = useContext(BasemapContext);
   const { styleHash } = useContext(MapOverlayContext);
-  const bounds: BBox = props.componentSettings.startingBounds || [0, 0, 0, 0];
+  const bounds: BBox =
+    props.componentSettings.startingBounds ||
+    props.fallbackBounds ||
+    defaultStartingBounds;
   const [animating, setAnimating] = useState(false);
   const debouncedAnimating = useDebounce(animating, 10);
   const style = context.style;
@@ -1229,6 +1240,7 @@ function SpatialAccessPriorityInner(
                 showNavigationControls
                 hideDrawControls
                 className="w-full h-full absolute top-0 bottom-0"
+                bounds={bounds.slice(0, 4) as [number, number, number, number]}
                 initOptions={mapInitOptions}
                 lazyLoadReady={
                   !animating &&

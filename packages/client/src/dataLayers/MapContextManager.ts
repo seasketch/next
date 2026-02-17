@@ -523,6 +523,7 @@ class MapContextManager extends EventEmitter {
       logoPosition: "bottom-right",
       transformRequest: this.requestTransformer,
     };
+    const effectiveBounds = bounds ?? this.initialBounds;
     if (this.initialCameraOptions) {
       mapOptions = {
         ...mapOptions,
@@ -532,10 +533,10 @@ class MapContextManager extends EventEmitter {
         bearing: this.initialCameraOptions.bearing,
         ...options,
       };
-    } else if (this.initialBounds) {
+    } else if (effectiveBounds) {
       mapOptions = {
         ...mapOptions,
-        bounds: this.initialBounds,
+        bounds: effectiveBounds,
         ...options,
       };
     } else {
