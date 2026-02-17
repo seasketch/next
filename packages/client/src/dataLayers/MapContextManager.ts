@@ -484,7 +484,8 @@ class MapContextManager extends EventEmitter {
   async createMap(
     container: HTMLDivElement,
     bounds?: [number, number, number, number],
-    options?: Partial<MapboxOptions>
+    options?: Partial<MapboxOptions>,
+    basemapStateOverride?: BasemapContextState
   ) {
     if (this.mapContainer === container) {
       console.warn("Already initializing map");
@@ -507,6 +508,13 @@ class MapContextManager extends EventEmitter {
       throw new Error(
         "Wait to call createMap until after MapContext.ready = true"
       );
+    }
+    const effectiveBasemapState = basemapStateOverride ?? this.basemapState;
+    if (!effectiveBasemapState?.getSelectedBasemap()?.url) {
+      return;
+    }
+    if (basemapStateOverride) {
+      this.basemapState = basemapStateOverride;
     }
     const { style, sprites } = await this.getComputedStyle();
     const styleHash = md5(JSON.stringify(style));
@@ -873,6 +881,10 @@ class MapContextManager extends EventEmitter {
   }
 
   async updateStyle() {
+    if (!this.basemapState?.getSelectedBasemap()?.url) {
+      this.debouncedUpdateStyle();
+      return;
+    }
     if (this.map && this._ready) {
       this.updateStyleInfiniteLoopDetector++;
       this.updateStyleInfiniteLoopDetector = 0;
@@ -962,7 +974,11 @@ class MapContextManager extends EventEmitter {
    * MapUIProvider's interactivityManager is created after the style was loaded).
    */
   emitCurrentSketchLayerIds() {
-    if (this.map && this._ready) {
+    if (
+      this.map &&
+      this._ready &&
+      this.basemapState?.getSelectedBasemap()?.url
+    ) {
       this.getComputedStyle().then(({ sketchLayerIds }) => {
         this.emit("sketchLayerIdsChanged", sketchLayerIds);
       });
@@ -1238,6 +1254,9 @@ class MapContextManager extends EventEmitter {
     }
     const basemap = this.basemapState.getSelectedBasemap();
     const labelsID = basemap?.labelsLayerId;
+    // if (!basemap?.url) {
+    //   throw new Error("No basemap URL set");
+    // }
     const url =
       basemap?.url ||
       "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";

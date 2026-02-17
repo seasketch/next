@@ -167,7 +167,9 @@ export default function MapManagerContextProvider({
     const manager = managerRef.current;
     if (!manager || !basemapState) return;
     manager.updateBasemapState(basemapState as BasemapContextState);
-    manager.updateStyle();
+    if (basemapState.getSelectedBasemap()?.url) {
+      manager.updateStyle();
+    }
   }, [basemapState]);
 
   // Bridge parent MapOverlayContext data → manager.reset()

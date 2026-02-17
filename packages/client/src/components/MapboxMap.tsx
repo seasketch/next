@@ -109,17 +109,24 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   }, [mapContainer]);
 
   useEffect(() => {
+    const selectedBasemap = basemapState.getSelectedBasemap();
     if (
       !map &&
       mapContainer.current &&
       manager &&
       ready &&
+      selectedBasemap?.url &&
       (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
     ) {
       let cancelled = false;
       const container = mapContainer.current;
       manager
-        .createMap(mapContainer.current, props.bounds, props.initOptions)
+        .createMap(
+          mapContainer.current,
+          props.bounds,
+          props.initOptions,
+          basemapState
+        )
         .then((map) => {
           if (!cancelled && map) {
             setMap(map);
