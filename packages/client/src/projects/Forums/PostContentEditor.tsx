@@ -32,7 +32,7 @@ import {
   useCreateMapBookmarkMutation,
   usePublishedTableOfContentsQuery,
 } from "../../generated/graphql";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import getSlug from "../../getSlug";
 import { AnimatePresence } from "framer-motion";
 import BookmarkItem from "./BookmarkItem";
@@ -156,7 +156,7 @@ export default function PostContentEditor({
     }
   }, [state]);
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   useEffect(() => {
     const el = root.current;
@@ -189,8 +189,8 @@ export default function PostContentEditor({
             const attachment = allAttachments.find(
               (b) => b.id === id
             ) as MapBookmarkAttachment;
-            if (attachment && mapContext.manager) {
-              mapContext.manager.showMapBookmark(
+            if (attachment && manager) {
+              manager.showMapBookmark(
                 attachment.data,
                 true,
                 apolloClient
@@ -206,12 +206,12 @@ export default function PostContentEditor({
         el.removeEventListener("click", onClickListener);
       };
     }
-  }, [root, allAttachments, mapContext?.manager, apolloClient]);
+  }, [root, allAttachments, manager, apolloClient]);
 
   const createMapBookmark = useCallback(async () => {
     try {
-      if (mapContext.manager) {
-        const bookmark = await mapContext.manager.getMapBookmarkData();
+      if (manager) {
+        const bookmark = await manager.getMapBookmarkData();
         if (state?.doc) {
           const sketchIds = [
             ...collectExistingSketchIds(state),
@@ -304,7 +304,7 @@ export default function PostContentEditor({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     createBookmark,
-    mapContext.manager,
+    manager,
     state?.doc,
     accessibleSketchIds,
     tableOfContentsData.data?.projectBySlug?.tableOfContentsItems,
@@ -416,8 +416,8 @@ export default function PostContentEditor({
 
   const onMapBookmarkClick = useCallback(
     (bookmark: MapBookmarkDetailsFragment) => {
-      if (mapContext.manager) {
-        mapContext.manager.showMapBookmark(bookmark, true, apolloClient);
+      if (manager) {
+        manager.showMapBookmark(bookmark, true, apolloClient);
         if (bookmark.visibleSketches) {
           sketchUIContext.setVisibleSketches(
             // eslint-disable-next-line i18next/no-literal-string
@@ -426,7 +426,7 @@ export default function PostContentEditor({
         }
       }
     },
-    [mapContext.manager, sketchUIContext, apolloClient]
+    [manager, sketchUIContext, apolloClient]
   );
 
   const {

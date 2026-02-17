@@ -14,7 +14,7 @@ import {
 import INaturalistLayerOptionsForm, {
   InaturalistOptionsFormValue,
 } from "./INaturalistLayerOptionsForm";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 
 export default function INaturalistLayerSettingsForm({
   item,
@@ -22,7 +22,7 @@ export default function INaturalistLayerSettingsForm({
   item: FullAdminOverlayFragment;
 }) {
   useTranslation("admin:data");
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const source = item.dataLayer?.dataSource;
   const params: InaturalistQueryParams = normalizeInaturalistParams(
     (source?.queryParameters as any) || {}
@@ -101,7 +101,7 @@ export default function INaturalistLayerSettingsForm({
         },
       } as UpdateQueryParametersMutation,
     });
-    mapContext.manager?.setDataSourceQueryParameters(Number(source?.id), {
+    manager?.setDataSourceQueryParameters(Number(source?.id), {
       ...(source?.queryParameters as Record<string, any>),
       d1: next.d1,
       d2: next.d2,

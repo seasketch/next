@@ -3,10 +3,9 @@ import React, {
   CSSProperties,
   useState,
   useEffect,
-  DetailedHTMLProps,
   ButtonHTMLAttributes,
 } from "react";
-import { Link, useHistory } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { colord } from "colord";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 
@@ -62,7 +61,6 @@ export default function Button(props: ButtonProps) {
   }, [dropdownOpen]);
 
   let C = (props: any) => <div {...props} />;
-  const history = useHistory();
   let onClick = props.onClick;
   if (props.href) {
     let href = props.href;

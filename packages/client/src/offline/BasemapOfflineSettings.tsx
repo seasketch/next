@@ -17,7 +17,7 @@ import {
   Polygon,
 } from "geojson";
 import Spinner from "../components/Spinner";
-import MapContextManager, { MapContext } from "../dataLayers/MapContextManager";
+import MapContextManager, { MapManagerContext } from "../dataLayers/MapContextManager";
 import { MapboxEvent, MapWheelEvent } from "mapbox-gl";
 import debounce from "lodash.debounce";
 import splitGeojson from "geojson-antimeridian-cut";
@@ -246,7 +246,7 @@ export default function BasemapOfflineSettings({
   const [simulate, setSimulate] = useState(false);
   const [showTiles, setShowTiles] = useState(true);
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   function settingsToOfflineSettings(settings: Settings): OfflineTileSettings {
     if (settings.detailedShoreline) {
@@ -270,77 +270,77 @@ export default function BasemapOfflineSettings({
   const abortController = useRef<AbortController>(new AbortController());
 
   useEffect(() => {
-    if (data?.basemap?.project?.region.geojson && mapContext.manager) {
-      addTileLayers(mapContext.manager, data.basemap.project.region.geojson);
+    if (data?.basemap?.project?.region.geojson && manager) {
+      addTileLayers(manager, data.basemap.project.region.geojson);
 
       return () => {
-        if (mapContext.manager) {
-          mapContext.manager.removeSource("project-region");
-          mapContext.manager.removeSource("start-tile");
-          mapContext.manager.removeLayer("project-region-outline");
-          mapContext.manager.removeLayer("start-tile-outline");
+        if (manager) {
+          manager.removeSource("project-region");
+          manager.removeSource("start-tile");
+          manager.removeLayer("project-region-outline");
+          manager.removeLayer("start-tile-outline");
         }
       };
     }
-  }, [data?.basemap?.project?.region.geojson, mapContext.manager]);
+  }, [data?.basemap?.project?.region.geojson, manager]);
 
   useEffect(() => {
-    if (mapContext.manager && settings) {
+    if (manager && settings) {
       if (simulate) {
-        mapContext.manager.enableOfflineTileSimulator(
+        manager.enableOfflineTileSimulator(
           settingsToOfflineSettings(settings)
         );
       } else {
-        mapContext.manager.disableOfflineTileSimulator();
+        manager.disableOfflineTileSimulator();
       }
     }
-  }, [settings, mapContext.manager, simulate]);
+  }, [settings, manager, simulate]);
 
   useEffect(() => {
-    if (mapContext.manager?.map) {
-      const bounds = mapContext.manager.map.getBounds();
+    if (manager?.map) {
+      const bounds = manager.map.getBounds();
       setViewport([
         bounds.getWest(),
         bounds.getNorth(),
         bounds.getEast(),
         bounds.getSouth(),
       ]);
-      setZ(Math.round(mapContext.manager.map.getZoom()));
+      setZ(Math.round(manager.map.getZoom()));
       const listener = (e: MapboxEvent<MapWheelEvent>) => {
-        if (mapContext?.manager?.map) {
-          const bounds = mapContext.manager.map.getBounds();
+        if (manager?.map) {
+          const bounds = manager.map.getBounds();
           setViewport([
             bounds.getWest(),
             bounds.getNorth(),
             bounds.getEast(),
             bounds.getSouth(),
           ]);
-          setZ(Math.round(mapContext.manager.map.getZoom()));
+          setZ(Math.round(manager.map.getZoom()));
         }
       };
       const debouncedListener = debounce(listener, 32);
-      mapContext.manager.map.on("zoom", debouncedListener);
-      mapContext.manager.map.on("drag", debouncedListener);
-      mapContext.manager.map.on("move", debouncedListener);
+      manager.map.on("zoom", debouncedListener);
+      manager.map.on("drag", debouncedListener);
+      manager.map.on("move", debouncedListener);
       return () => {
-        if (mapContext?.manager?.map) {
-          mapContext.manager.map.off("zoom", debouncedListener);
-          mapContext.manager.map.off("drag", debouncedListener);
-          mapContext.manager.map.off("move", debouncedListener);
+        if (manager?.map) {
+          manager.map.off("zoom", debouncedListener);
+          manager.map.off("drag", debouncedListener);
+          manager.map.off("move", debouncedListener);
         }
       };
     }
-  }, [mapContext.manager?.map]);
+  }, [manager?.map]);
 
   useEffect(() => {
     if (
-      mapContext.manager?.map &&
+      manager?.map &&
       data?.basemap?.project?.region.geojson &&
       settings?.projectRegion &&
       showTiles
     ) {
       const region = data.basemap.project.region.geojson;
-      const bounds = mapContext.manager.map.getBounds();
+      const bounds = manager.map.getBounds();
       Calculator.getTilesForScene(
         [
           bounds.getWest(),
@@ -366,10 +366,10 @@ export default function BasemapOfflineSettings({
             points.features.push(point);
             points.features.reverse();
           }
-          if (mapContext.manager?.map) {
-            let source = mapContext.manager.map.getSource("tile-bounds");
+          if (manager?.map) {
+            let source = manager.map.getSource("tile-bounds");
             if (!source) {
-              addTileLayers(mapContext.manager, region, {
+              addTileLayers(manager, region, {
                 polygons,
                 points,
               });
@@ -377,7 +377,7 @@ export default function BasemapOfflineSettings({
               if (source && source.type === "geojson") {
                 source.setData(polygons);
               }
-              const corners = mapContext.manager.map.getSource("tile-corners");
+              const corners = manager.map.getSource("tile-corners");
               if (corners && corners.type === "geojson") {
                 corners.setData(points);
               }
@@ -392,8 +392,8 @@ export default function BasemapOfflineSettings({
           }
         });
     } else {
-      if (mapContext.manager?.map) {
-        let source = mapContext.manager.map.getSource("tile-bounds");
+      if (manager?.map) {
+        let source = manager.map.getSource("tile-bounds");
         if (!source) {
           return;
         } else {
@@ -403,7 +403,7 @@ export default function BasemapOfflineSettings({
               features: [],
             });
           }
-          const corners = mapContext.manager.map.getSource("tile-corners");
+          const corners = manager.map.getSource("tile-corners");
           if (corners && corners.type === "geojson") {
             corners.setData({
               type: "FeatureCollection",
@@ -415,13 +415,13 @@ export default function BasemapOfflineSettings({
     }
   }, [
     z,
-    mapContext.manager?.map?.loaded,
-    mapContext.manager?.map,
+    manager?.map?.loaded,
+    manager?.map,
     settings,
     viewport,
     simulate,
     showTiles,
-    mapContext.manager,
+    manager,
     data?.basemap?.project?.region.geojson,
   ]);
 
@@ -435,7 +435,7 @@ export default function BasemapOfflineSettings({
       if (
         settings?.projectRegion &&
         data?.basemap?.id &&
-        mapContext.manager?.map &&
+        manager?.map &&
         style.data
       ) {
         abortController.current = new AbortController();
@@ -456,7 +456,7 @@ export default function BasemapOfflineSettings({
           });
       }
     })();
-  }, [settings, data?.basemap?.id, mapContext?.manager?.map, style.data]);
+  }, [settings, data?.basemap?.id, manager?.map, style.data]);
 
   if (!settings) {
     return <Spinner />;

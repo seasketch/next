@@ -1,16 +1,14 @@
 import { useMediaQuery } from "beautiful-react-hooks";
 import { useState, useContext, useRef, FunctionComponent } from "react";
-import { MapContext } from "../dataLayers/MapContextManager";
 import MapSettingsPopup, { BasemapControl } from "../draw/MapSettingsPopup";
-import { BasemapDetailsFragment } from "../generated/graphql";
+import { BasemapContext } from "../dataLayers/BasemapContext";
 
 const MapPicker: FunctionComponent<{
-  basemaps: BasemapDetailsFragment[];
   className?: string;
-}> = ({ basemaps, className, children }) => {
+}> = ({ className, children }) => {
   const [open, setOpen] = useState(false);
-  const mapContext = useContext(MapContext);
-  const selected = mapContext.manager?.getSelectedBasemap();
+  const basemapContext = useContext(BasemapContext);
+  const selected = basemapContext.getSelectedBasemap();
   const isPhone = useMediaQuery("(max-width: 767px)");
   const anchor = useRef<HTMLButtonElement>(null);
 
@@ -47,7 +45,7 @@ const MapPicker: FunctionComponent<{
         {children && (
           <hr className="my-3 w-full mx-auto dark:border-gray-500" />
         )}
-        <BasemapControl basemaps={basemaps} />
+        <BasemapControl />
       </MapSettingsPopup>
     </>
   );

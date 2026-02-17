@@ -1,10 +1,17 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.isNumberColumnValueStats = isNumberColumnValueStats;
 exports.subjectIsFragment = subjectIsFragment;
 exports.subjectIsGeography = subjectIsGeography;
 exports.combineRasterBandStats = combineRasterBandStats;
-exports.combineColumnValueStats = combineColumnValueStats;
+exports.combineNumberColumnValueStats = combineNumberColumnValueStats;
+exports.combineStringOrBooleanColumnValueStats = combineStringOrBooleanColumnValueStats;
+exports.hashMetricDependency = hashMetricDependency;
+exports.combineMetricsForFragments = combineMetricsForFragments;
+exports.findPrimaryGeographyId = findPrimaryGeographyId;
+exports.extractMetricDependenciesFromReportBody = extractMetricDependenciesFromReportBody;
 const simple_statistics_1 = require("simple-statistics");
+const uniqueIdIndex_1 = require("../utils/uniqueIdIndex");
 /**
  * Downsamples a histogram of [value, count] pairs to a maximum number of
  * entries, preserving the overall distribution across the full value range.
@@ -42,6 +49,9 @@ function downsampleColumnHistogram(histogram, maxEntries) {
         result.push([value, count]);
     }
     return result;
+}
+function isNumberColumnValueStats(stats) {
+    return stats.type === "number";
 }
 function subjectIsFragment(subject) {
     return "hash" in subject;
@@ -84,7 +94,7 @@ function breaksToBuckets(max, breaks, values, fraction = false) {
  */
 function combineRasterBandStats(statsArray) {
     if (statsArray.length === 0) {
-        return undefined;
+        throw new Error("Cannot combine empty array of RasterBandStats");
     }
     if (statsArray.length === 1) {
         return statsArray[0];
@@ -101,8 +111,12 @@ function combineRasterBandStats(statsArray) {
         totalCount += stats.count;
         totalSum += stats.sum;
         totalInvalid += stats.invalid;
-        mins.push(stats.min);
-        maxs.push(stats.max);
+        if (isFinite(stats.min) && stats.min !== null) {
+            mins.push(stats.min);
+        }
+        if (isFinite(stats.max) && stats.max !== null) {
+            maxs.push(stats.max);
+        }
         // Merge histogram entries
         for (const [value, count] of stats.histogram) {
             histogramMap.set(value, (histogramMap.get(value) || 0) + count);
@@ -115,8 +129,8 @@ function combineRasterBandStats(statsArray) {
     // Calculate combined mean using sum/count (not average of means)
     const combinedMean = totalCount > 0 ? totalSum / totalCount : NaN;
     // Calculate combined range
-    const combinedMin = (0, simple_statistics_1.min)(mins);
-    const combinedMax = (0, simple_statistics_1.max)(maxs);
+    const combinedMin = mins.length > 0 ? (0, simple_statistics_1.min)(mins) : NaN;
+    const combinedMax = maxs.length > 0 ? (0, simple_statistics_1.max)(maxs) : NaN;
     const combinedRange = combinedMax - combinedMin;
     // For median, we can't easily combine without the full dataset, so we'll use NaN
     // or could potentially estimate from the combined histogram, but that's complex
@@ -138,7 +152,7 @@ function combineRasterBandStats(statsArray) {
  * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
  * Otherwise, they are weighted by count.
  */
-function combineColumnValueStats(statsArray) {
+function combineNumberColumnValueStats(statsArray) {
     if (statsArray.length === 0) {
         return undefined;
     }
@@ -207,13 +221,19 @@ function combineColumnValueStats(statsArray) {
     // Convert histogram map back to array and sort by value
     let combinedHistogram = Array.from(histogramMap.entries())
         .map(([value, count]) => [value, count])
-        .sort((a, b) => a[0] - b[0]);
+        .sort((a, b) => {
+        if (typeof a[0] === "number" && typeof b[0] === "number") {
+            return a[0] - b[0];
+        }
+        else {
+            return 0;
+        }
+    });
     // Limit histogram size similarly to raster stats by downsampling
     const MAX_HISTOGRAM_ENTRIES = 200;
     if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
         combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
     }
-    const countDistinct = histogramMap.size;
     const totalAreaSqKm = useAreaWeight
         ? statsArray.reduce((acc, s) => acc +
             (typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
@@ -221,15 +241,328 @@ function combineColumnValueStats(statsArray) {
                 : 0), 0)
         : undefined;
     return {
+        type: "number",
         count: combinedCount,
         min: combinedMin,
         max: combinedMax,
         mean: combinedMean,
         stdDev: combinedStdDev,
         histogram: combinedHistogram,
-        countDistinct,
+        countDistinct: histogramMap.size,
         sum: combinedSum,
         totalAreaSqKm,
     };
+}
+function combineStringOrBooleanColumnValueStats(statsArray) {
+    if (statsArray.length === 0) {
+        return undefined;
+    }
+    if (statsArray.length === 1) {
+        return statsArray[0];
+    }
+    const distinctValues = [];
+    for (const stats of statsArray) {
+        for (const record of stats.distinctValues) {
+            const value = record[0];
+            const count = record[1];
+            const existing = distinctValues.find(([v]) => v === value);
+            if (existing) {
+                existing[1] += count;
+            }
+            else {
+                distinctValues.push([value, count]);
+            }
+        }
+    }
+    const outputType = statsArray[0]?.type === "boolean" ? "boolean" : "string";
+    return {
+        type: outputType,
+        distinctValues,
+        countDistinct: distinctValues.length,
+    };
+}
+/**
+ * Creates a unique id for a given metric dependency. Any difference in
+ * MetricDependency properties, or parameters within MetricDependencyParameters
+ * will result in a different hash.
+ *
+ * This hash is set on CompatibleSpatialMetric objects in the GraphQL API so
+ * that clients can quickly determine which metrics are relevant to a given
+ * report card widget.
+ *
+ * @param dependency The dependency to hash
+ * @param overlaySourceUrls A map of table of contents item stable ids to overlay source urls. The hash will be based on the overlay source url, rather than the stable id. This way, updates to the underlying source will trigger a cache miss and trigger recalculation of the metric.
+ * @returns A unique id for the dependency
+ */
+function hashMetricDependency(dependency, overlaySourceUrls) {
+    if (dependency.stableId && overlaySourceUrls[dependency.stableId]) {
+        if (!overlaySourceUrls[dependency.stableId]) {
+            console.log("overlaySourceUrls", overlaySourceUrls);
+            console.log("dependency", dependency);
+            throw new Error(`Hashing Error. Overlay source URL not found for stable id: ${dependency.stableId}`);
+        }
+        dependency = {
+            ...dependency,
+            stableId: overlaySourceUrls[dependency.stableId],
+        };
+    }
+    const canonical = stableSerialize(dependency);
+    return fnv1a(canonical);
+}
+/**
+ * Produces a stable, order-independent string representation of a dependency.
+ * Object keys are sorted; arrays retain their order so that reordering values
+ * still produces a different hash.
+ */
+function stableSerialize(value) {
+    if (value === null || typeof value !== "object") {
+        return JSON.stringify(value);
+    }
+    if (Array.isArray(value)) {
+        const isStringArray = value.every((item) => typeof item === "string");
+        const normalized = isStringArray ? [...value].sort() : value;
+        return `[${normalized.map((item) => stableSerialize(item)).join(",")}]`;
+    }
+    const entries = Object.keys(value)
+        .filter((key) => value[key] !== undefined &&
+        key !== "hash" &&
+        key !== "__typename")
+        .sort()
+        .map((key) => `${JSON.stringify(key)}:${stableSerialize(value[key])}`);
+    return `{${entries.join(",")}}`;
+}
+/**
+ * Fast, cross-environment 32-bit FNV-1a hash. Returns an 8-char hex string.
+ */
+function fnv1a(input) {
+    let hash = 0x811c9dc5;
+    for (let i = 0; i < input.length; i++) {
+        hash ^= input.charCodeAt(i);
+        hash = Math.imul(hash, 0x01000193);
+    }
+    return (hash >>> 0).toString(16).padStart(8, "0");
+}
+function combineMetricsForFragments(metrics) {
+    if (metrics.length === 0) {
+        throw new Error("Cannot combine empty array of metrics");
+    }
+    // first, ensure that all metrics have the same type
+    const types = new Set(metrics.map((m) => m.type));
+    if (types.size > 1) {
+        throw new Error(`All metrics must have the same type. Found types: ${Array.from(types).join(", ")}`);
+    }
+    const type = Array.from(types)[0];
+    // then, combine the values
+    switch (type) {
+        case "raster_stats": {
+            for (const metric of metrics) {
+                if (metric.value.bands.length > 1) {
+                    throw new Error("Multiple bands are not supported for raster_stats");
+                }
+            }
+            const values = metrics.map((m) => m.value.bands[0]);
+            return {
+                type: "raster_stats",
+                value: {
+                    bands: [combineRasterBandStats(values)],
+                },
+            };
+        }
+        case "column_values": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "column_values",
+                value: combineGroupedValues(values, (groupedValues) => {
+                    const stats = {};
+                    const attrNames = new Set();
+                    // Collect all attribute names across fragments for this class key
+                    for (const entry of groupedValues) {
+                        if (entry && typeof entry === "object") {
+                            for (const attr in entry) {
+                                attrNames.add(attr);
+                            }
+                        }
+                    }
+                    for (const attr of attrNames) {
+                        const attrValues = groupedValues
+                            .map((entry) => entry?.[attr])
+                            .filter((v) => v !== undefined);
+                        if (attrValues.length === 0)
+                            continue;
+                        if (isNumberColumnValueStats(attrValues[0])) {
+                            const combined = combineNumberColumnValueStats(attrValues);
+                            if (combined) {
+                                stats[attr] = combined;
+                            }
+                        }
+                        else {
+                            const combined = combineStringOrBooleanColumnValueStats(attrValues);
+                            if (combined) {
+                                stats[attr] = combined;
+                            }
+                        }
+                    }
+                    return stats;
+                }),
+            };
+        }
+        case "total_area": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "total_area",
+                value: values.reduce((acc, v) => acc + v, 0),
+            };
+        }
+        case "count": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "count",
+                value: combineGroupedValues(values, (value) => {
+                    const mergedIndexes = (0, uniqueIdIndex_1.mergeUniqueIdIndexes)(...value.map((v) => v.uniqueIdIndex));
+                    const count = (0, uniqueIdIndex_1.countUniqueIds)(mergedIndexes);
+                    return {
+                        count,
+                        uniqueIdIndex: mergedIndexes,
+                    };
+                }),
+            };
+        }
+        case "distance_to_shore": {
+            const values = metrics.map((m) => m.value);
+            // return the closest
+            const closest = values.reduce((acc, v) => {
+                if (v.meters < acc.meters) {
+                    return v;
+                }
+                return acc;
+            }, values[0]);
+            return {
+                type: "distance_to_shore",
+                value: closest,
+            };
+        }
+        case "presence": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "presence",
+                value: values.some((v) => v),
+            };
+        }
+        case "presence_table": {
+            const values = metrics.map((m) => m.value);
+            const exceededLimit = values.some((v) => v.exceededLimit);
+            const features = [];
+            const ids = new Set();
+            for (const value of values) {
+                for (const feature of value.values) {
+                    if (!ids.has(feature.__id)) {
+                        ids.add(feature.__id);
+                        features.push(feature);
+                    }
+                }
+            }
+            return {
+                type: "presence_table",
+                value: {
+                    values: features,
+                    exceededLimit,
+                },
+            };
+        }
+        case "overlay_area": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "overlay_area",
+                value: combineGroupedValues(values, (v) => v.reduce((acc, v) => acc + v, 0)),
+            };
+        }
+        default:
+            throw new Error(`Unsupported metric type: ${type}`);
+    }
+}
+function combineGroupedValues(values, combineFn) {
+    const result = {};
+    const keys = new Set();
+    for (const value of values) {
+        if (typeof value === "object" && value !== null) {
+            for (const key in value) {
+                if (typeof key === "string") {
+                    keys.add(key);
+                }
+            }
+        }
+        else {
+            throw new Error("Value is not a grouped object");
+        }
+    }
+    for (const key of keys) {
+        const groupValues = values
+            .map((v) => v[key])
+            .filter((v) => v !== undefined);
+        if (groupValues.length > 0) {
+            result[key] = combineFn(groupValues);
+        }
+    }
+    return result;
+}
+/**
+ * Finds the primary geography id from a list of metrics. The primary
+ * geography is the one that is in all fragments.
+ * @param metrics - The metrics to find the primary geography id from
+ * @returns The primary geography id
+ */
+function findPrimaryGeographyId(metrics) {
+    const foundGeographyIds = {};
+    const fragmentMetrics = metrics.filter((m) => subjectIsFragment(m.subject));
+    for (const metric of fragmentMetrics) {
+        const fragmentSubject = metric.subject;
+        for (const geographyId of fragmentSubject.geographies) {
+            if (geographyId in foundGeographyIds) {
+                foundGeographyIds[geographyId]++;
+            }
+            else {
+                foundGeographyIds[geographyId] = 1;
+            }
+        }
+    }
+    // find the primary geography id by determining which is in all fragments
+    let primaryGeographyId = null;
+    for (const geographyId in foundGeographyIds) {
+        if (foundGeographyIds[geographyId] === fragmentMetrics.length) {
+            if (primaryGeographyId !== null) {
+                throw new Error("Multiple primary geography ids found.");
+            }
+            primaryGeographyId = Number(geographyId);
+            break;
+        }
+    }
+    if (primaryGeographyId === null) {
+        throw new Error("No primary geography id found.");
+    }
+    return primaryGeographyId;
+}
+function extractMetricDependenciesFromReportBody(node, dependencies = []) {
+    if (typeof node !== "object" || node === null || !node.type) {
+        throw new Error("Invalid node");
+    }
+    if ((node.type === "metric" || node.type === "blockMetric") &&
+        node.attrs?.metrics) {
+        const metrics = node.attrs.metrics;
+        if (!Array.isArray(metrics)) {
+            throw new Error("Invalid metrics");
+        }
+        if (metrics.length > 0) {
+            if (typeof metrics[0] !== "object") {
+                throw new Error("Invalid metric");
+            }
+            dependencies.push(...metrics);
+        }
+    }
+    if (Array.isArray(node.content)) {
+        for (const child of node.content) {
+            extractMetricDependenciesFromReportBody(child, dependencies);
+        }
+    }
+    return dependencies;
 }
 //# sourceMappingURL=metrics.js.map

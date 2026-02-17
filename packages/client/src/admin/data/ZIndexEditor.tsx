@@ -1,5 +1,8 @@
 import React, { useContext, useEffect, useRef, useState } from "react";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import {
+  LayerTreeContext,
+  MapManagerContext,
+} from "../../dataLayers/MapContextManager";
 import "react-sortable-tree/style.css";
 import SortableTree, { TreeItem } from "react-sortable-tree";
 import {
@@ -56,7 +59,8 @@ export default function ZIndexEditor(props: ZIndexEditorProps) {
       };
     },
   });
-  const { manager, layerStatesByTocStaticId } = useContext(MapContext);
+  const { layerStatesByTocStaticId } = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   let layerLookup = useRef<{ [id: string]: DataLayerDetailsFragment }>({});
 
   const lookupRenderUnder = (item: TreeItem) => {

@@ -13,13 +13,15 @@ import Badge from "../components/Badge";
 import { useParams } from "react-router-dom";
 import {
   DataSourceTypes,
-  ReportingLayerDetailsFragment,
+  // ReportingLayerDetailsFragment,
   TableOfContentsItem,
   useAvailableReportLayersQuery,
 } from "../generated/graphql";
+import { registerCards } from "./cards/cards";
+registerCards();
 
 type LayerSelection = {
-  layer: ReportingLayerDetailsFragment;
+  layer: any; // ReportingLayerDetailsFragment;
   parameters: any;
 };
 
@@ -31,9 +33,7 @@ interface AddCardModalProps {
 }
 
 // Helper function to create a ReportingLayerDetailsFragment from a TableOfContentsItem
-function createReportLayer(
-  layer: TableOfContentsItem
-): ReportingLayerDetailsFragment {
+function createReportLayer(layer: TableOfContentsItem): any {
   return {
     __typename: "ReportCardLayer",
     tableOfContentsItemId: layer.id!,

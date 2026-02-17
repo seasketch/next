@@ -8,7 +8,7 @@ import { Trans } from "react-i18next";
 import * as Editor from "./Editors";
 import * as Slider from "@radix-ui/react-slider";
 import { useContext, useEffect, useState } from "react";
-import { MapContext } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import { LayerPropertyUpdater } from "./GUIStyleEditor";
 
 export function ZoomRangeEditor({
@@ -23,21 +23,21 @@ export function ZoomRangeEditor({
   disableRemove?: boolean;
 }) {
   const [zoom, setZoom] = useState(0);
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   useEffect(() => {
-    if (mapContext.manager?.map) {
+    if (manager?.map) {
       const onZoom = () => {
         setZoom(
-          Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10
+          Math.round((manager?.map?.getZoom() || 0) * 10) / 10
         );
       };
-      mapContext.manager.map.on("zoom", onZoom);
-      setZoom(Math.round((mapContext.manager?.map?.getZoom() || 0) * 10) / 10);
+      manager.map.on("zoom", onZoom);
+      setZoom(Math.round((manager?.map?.getZoom() || 0) * 10) / 10);
       return () => {
-        mapContext.manager?.map?.off("zoom", onZoom);
+        manager?.map?.off("zoom", onZoom);
       };
     }
-  }, [mapContext.manager?.map]);
+  }, [manager?.map]);
   if (minzoom === undefined && maxzoom === undefined) {
     return null;
   }

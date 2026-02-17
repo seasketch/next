@@ -1,19 +1,17 @@
 import { DOMSerializer, Node } from "prosemirror-model";
-import { formElements } from "../../editor/config";
+// @ts-ignore - compatibility shim path
+import { createReportCardSchema } from "./createReportCardSchema";
 
 /**
  * Converts a Prosemirror JSON document to HTML string
  * @param body - The Prosemirror JSON document
- * @param isFooter - Whether this is a footer body (uses footer schema)
  * @returns HTML string
  */
-export function prosemirrorToHtml(body: any, isFooter?: boolean): string {
+export function prosemirrorToHtml(body: any): string {
   if (!body) return "";
 
   try {
-    const schema = isFooter
-      ? formElements.reportCardFooter.schema
-      : formElements.reportCardBody.schema;
+    const schema = createReportCardSchema();
     const serializer = DOMSerializer.fromSchema(schema);
     const node = Node.fromJSON(schema, body);
     const fragment = serializer.serializeFragment(node.content);

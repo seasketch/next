@@ -1,6 +1,6 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useState } from "react";
 import Button from "../../components/Button";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { BasemapContext } from "../../dataLayers/BasemapContext";
 import {
   useGetBasemapsQuery,
   useDeleteBasemapMutation,
@@ -16,7 +16,7 @@ import useDialog from "../../components/useDialog";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 
 export default function BaseMapEditor() {
-  const mapContext = useContext(MapContext);
+  const basemapContext = useContext(BasemapContext);
   const { slug } = useParams<{ slug: string }>();
   const { data } = useGetBasemapsQuery({
     variables: {
@@ -30,11 +30,6 @@ export default function BaseMapEditor() {
   const { t } = useTranslation("admin");
   const projectData = useGetProjectBySlugQuery({ variables: { slug } });
   const client = useApolloClient();
-  useEffect(() => {
-    if (data?.projectBySlug?.basemaps && mapContext.manager) {
-      mapContext.manager.setBasemaps(data.projectBySlug.basemaps);
-    }
-  }, [data?.projectBySlug?.basemaps, mapContext.manager]);
   const onError = useGlobalErrorHandler();
 
   const { confirmDelete } = useDialog();
@@ -50,7 +45,7 @@ export default function BaseMapEditor() {
           <Button
             className="ml-2"
             small
-            disabled={!mapContext.selectedBasemap}
+            disabled={basemapContext.selectedBasemap == null}
             label={t("Edit")}
             onClick={() => setEditModalOpen(true)}
           />
@@ -58,7 +53,8 @@ export default function BaseMapEditor() {
             className="ml-2"
             small
             disabled={
-              !mapContext.selectedBasemap || deleteMutationState.loading
+              basemapContext.selectedBasemap == null ||
+              deleteMutationState.loading
             }
             label={t("Delete")}
             onClick={() => {
@@ -68,13 +64,13 @@ export default function BaseMapEditor() {
                 onDelete: async () => {
                   await deleteBasemap({
                     variables: {
-                      id: parseInt(mapContext.selectedBasemap!),
+                      id: basemapContext.selectedBasemap!,
                     },
                     onError,
                     update: (cache) => {
                       const id = cache.identify(
                         data!.projectBySlug!.basemaps!.find(
-                          (b) => b.id === parseInt(mapContext.selectedBasemap!)
+                          (b) => b.id === basemapContext.selectedBasemap!
                         )!
                       );
 
@@ -93,7 +89,7 @@ export default function BaseMapEditor() {
                               // @ts-ignore
                               (basemapRef) => {
                                 return (
-                                  mapContext.selectedBasemap !==
+                                  basemapContext.selectedBasemap !==
                                   readField("id", basemapRef)
                                 );
                               }
@@ -112,18 +108,18 @@ export default function BaseMapEditor() {
           <CreateBasemapModal
             onRequestClose={() => setAddModalOpen(false)}
             onSave={(id) => {
-              mapContext.manager?.setSelectedBasemap(id.toString());
+              basemapContext.setSelectedBasemap(id);
             }}
           />
         )}
         <div className="flex-1 overflow-y-auto">
-          <BasemapControl basemaps={data?.projectBySlug?.basemaps || []} />
+          <BasemapControl />
         </div>
       </div>
-      {editModalOpen && mapContext.selectedBasemap && (
+      {editModalOpen && basemapContext.selectedBasemap != null && (
         <BasemapEditorPanel
           onRequestClose={() => setEditModalOpen(false)}
-          basemapId={parseInt(mapContext.selectedBasemap)}
+          basemapId={basemapContext.selectedBasemap}
         />
       )}
     </>

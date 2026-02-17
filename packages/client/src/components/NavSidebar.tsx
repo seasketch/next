@@ -55,7 +55,7 @@ export default function NavSidebar(props: NavSidebarProps) {
   return (
     <nav
       aria-label={props.ariaLabel}
-      className={`flex-shrink-0 w-full lg:w-96 max-w-full max-h-screen overflow-y-auto min-h-screen bg-white border-r border-blue-gray-200 flex flex-col ${props.className}`}
+      className={`flex-shrink-0 w-full lg:w-96 max-w-full max-h-screen overflow-y-auto overscroll-contain min-h-screen bg-white border-r border-blue-gray-200 flex flex-col ${props.className}`}
     >
       {props.header && (
         <div className="hidden md:flex flex-shrink-0 h-16 px-6 border-b border-blue-gray-200 items-center">

@@ -5,7 +5,7 @@ import { ImageIcon, ValueNoneIcon } from "@radix-ui/react-icons";
 import { DataSourceTypes } from "../../generated/graphql";
 import Warning from "../../components/Warning";
 import { lazy, useMemo } from "react";
-import { Bucket, isRasterInfo } from "@seasketch/geostats-types";
+import { Bucket, isRasterInfo, RasterInfo } from "@seasketch/geostats-types";
 import Skeleton from "../../components/Skeleton";
 import { useTranslation } from "react-i18next";
 import MapLayerVisibilityControl from "../components/MapLayerVisibilityControl";
@@ -124,12 +124,12 @@ export function RasterBandStatisticsCard({
       return null;
     }
 
-    const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
-    if (!meta || !isRasterInfo(meta)) {
-      return null;
-    }
-
-    return meta;
+    // const meta = layer.tableOfContentsItem?.dataLayer?.dataSource?.geostats;
+    // if (!meta || !isRasterInfo(meta)) {
+    //   return null;
+    // }
+    return null as RasterInfo | null;
+    // return meta;
   }, [reportingLayers, sources]);
 
   const histograms: Bucket[][] = useMemo(() => {

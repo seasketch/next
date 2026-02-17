@@ -6,7 +6,7 @@ import {
   useUpdateTableOfContentsItemMutation,
 } from "../../../generated/graphql";
 import MutableAutosaveInput from "../../MutableAutosaveInput";
-import { MapContext } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import TranslatedPropControl from "../../../components/TranslatedPropControl";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
@@ -20,13 +20,14 @@ import {
 } from "../../../components/Tooltip";
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
+import Warning from "../../../components/Warning";
 
 export default function LayerSettings({
   item,
 }: {
   item: FullAdminOverlayFragment;
 }) {
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
   const { t } = useTranslation("admin:data");
   const layer = item.dataLayer;
   const source = layer!.dataSource;
@@ -40,8 +41,8 @@ export default function LayerSettings({
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation({
     onCompleted: (data) => {
       const item = data.updateTableOfContentsItem?.tableOfContentsItem;
-      if (item?.geoprocessingReferenceId && mapContext.manager) {
-        mapContext.manager.setGeoprocessingReferenceId(
+      if (item?.geoprocessingReferenceId && manager) {
+        manager.setGeoprocessingReferenceId(
           item.geoprocessingReferenceId,
           item.stableId
         );
@@ -108,7 +109,7 @@ export default function LayerSettings({
           label={t("Attribution")}
           onChange={async (value) => {
             const sourceObj = source?.id
-              ? mapContext.manager?.map?.getSource(source.id.toString())
+              ? manager?.map?.getSource(source.id.toString())
               : undefined;
             if (!sourceObj) {
               return;
@@ -116,7 +117,7 @@ export default function LayerSettings({
             // Danger Danger! Private method used here!
             // https://gis.stackexchange.com/questions/407876/how-to-update-source-property-attribution-in-mapbox-gl
             // @ts-ignore
-            const controls = mapContext.manager?.map?._controls;
+            const controls = manager?.map?._controls;
             let updateAttribution: undefined | Function;
             if (controls && Array.isArray(controls)) {
               for (const control of controls) {
@@ -135,9 +136,7 @@ export default function LayerSettings({
             }
             if (updateAttribution) {
               if (value?.trim().length === 0 && source?.id) {
-                const customSource = mapContext.manager?.getCustomGLSource(
-                  source?.id
-                );
+                const customSource = manager?.getCustomGLSource(source?.id);
                 if (!customSource) {
                   updateAttribution("");
                 } else {
@@ -160,6 +159,7 @@ export default function LayerSettings({
           }
           variables={{ id: source?.id }}
         />
+
         {/* TODO: Disabled for now because working it into MapContextManager is tricky */}
         {/* {source && (
       <TranslatedPropControl
@@ -172,6 +172,28 @@ export default function LayerSettings({
       />
     )} */}
       </div>
+      {item.relatedReportCardDetails &&
+        item.relatedReportCardDetails.length > 0 && (
+          <>
+            <Warning level="warning" className="mt-5">
+              <p>
+                <Trans ns="admin:data">
+                  This layer is referenced in analytical reports. Making changes
+                  to the data or cartography may impact report outputs.
+                </Trans>
+              </p>
+              <ul className="mt-1 text-sm text-gray-500 space-y-0.5">
+                {item.relatedReportCardDetails
+                  .filter((detail) => detail?.isDraft)
+                  .map((detail) => (
+                    <li key={detail?.sketchClassId}>
+                      {detail?.sketchClass?.name} - {detail?.title}
+                    </li>
+                  ))}
+              </ul>
+            </Warning>
+          </>
+        )}
       <div className="mt-5">
         {item.acl?.nodeId && (
           <AccessControlListEditor nodeId={item.acl?.nodeId} />

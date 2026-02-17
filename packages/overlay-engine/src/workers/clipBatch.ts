@@ -375,20 +375,20 @@ export async function createPresenceTable({
 export type ColumnValues =
   | [
       /** column value */
-      number,
+      number | string | boolean,
       /* area of overlap (in sq meters) if feature is polygonal, or length in meters if feature is linestring */
       number
     ]
   | [
       /** column value */
-      number
+      number | string | boolean
     ];
 
 export async function collectColumnValues({
   features,
   differenceMultiPolygon,
   subjectFeature,
-  property,
+  // property,
   groupBy,
 }: {
   features: {
@@ -398,10 +398,14 @@ export async function collectColumnValues({
   }[];
   differenceMultiPolygon: clipping.Geom[];
   subjectFeature: Feature<Polygon | MultiPolygon>;
-  property: string;
+  // property: string;
   groupBy?: string;
 }) {
-  const results: { [classKey: string]: ColumnValues[] } = { "*": [] };
+  const results: {
+    [classKey: string]: {
+      [attr: string]: ColumnValues[];
+    };
+  } = { "*": {} };
   for (const f of features) {
     if (
       f.feature.geometry.type === "Point" ||
@@ -450,41 +454,76 @@ export async function collectColumnValues({
         subjectFeature
       );
     }
-    const value = f.feature.properties?.[property];
+    addColumnValuesToResults(results, f.feature, groupBy);
+  }
+  return results;
+}
+
+export function addColumnValuesToResults(
+  results: {
+    [classKey: string]: {
+      [attr: string]: ColumnValues[];
+    };
+  },
+  feature: FeatureWithMetadata<Feature<Geometry>>,
+  groupBy?: string
+) {
+  for (const attr in feature.properties) {
+    if (
+      attr === "__oidx" ||
+      attr === "__byteLength" ||
+      attr === "__area" ||
+      attr === "__offset"
+    ) {
+      continue;
+    }
+    const value = feature.properties[attr];
     const columnValue: ColumnValues = [value];
     if (
-      f.feature.geometry.type === "Polygon" ||
-      f.feature.geometry.type === "MultiPolygon"
+      feature.geometry.type === "Polygon" ||
+      feature.geometry.type === "MultiPolygon"
     ) {
-      const sqKm = calcArea(f.feature) * 1e-6;
+      const sqKm = calcArea(feature) * 1e-6;
       if (isNaN(sqKm) || sqKm === 0) {
         continue;
       }
       columnValue.push(sqKm);
     } else if (
-      f.feature.geometry.type === "LineString" ||
-      f.feature.geometry.type === "MultiLineString"
+      feature.geometry.type === "LineString" ||
+      feature.geometry.type === "MultiLineString"
     ) {
-      const length = turfLength(f.feature);
+      const length = turfLength(feature);
       if (isNaN(length) || length === 0) {
         continue;
       }
       columnValue.push(length);
     }
-    if (typeof value === "number") {
-      results["*"].push(columnValue);
+    if (
+      typeof value === "number" ||
+      typeof value === "string" ||
+      typeof value === "boolean"
+    ) {
+      if (!(attr in results["*"]) || !Array.isArray(results["*"][attr])) {
+        results["*"][attr] = [];
+      }
+      results["*"][attr].push(columnValue);
       if (groupBy) {
-        const classKey = f.feature.properties?.[groupBy];
+        const classKey = feature.properties?.[groupBy];
         if (classKey) {
           if (!(classKey in results)) {
-            results[classKey] = [];
+            results[classKey] = {} as { [attr: string]: ColumnValues[] };
           }
-          results[classKey].push(columnValue);
+          if (
+            !(attr in results[classKey]) ||
+            !Array.isArray(results[classKey][attr])
+          ) {
+            results[classKey][attr] = [];
+          }
+          results[classKey][attr].push(columnValue);
         }
       }
     }
   }
-  return results;
 }
 
 parentPort?.on(
@@ -544,14 +583,14 @@ parentPort?.on(
           includedProperties: job.includedProperties,
         });
       } else if (operation === "column_values") {
-        if (!job.property) {
-          throw new Error("property is required for column_values operation");
-        }
+        // if (!job.property) {
+        //   throw new Error("property is required for column_values operation");
+        // }
         result = await collectColumnValues({
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
-          property: job.property,
+          // property: job.property,
           groupBy: job.groupBy,
         });
       } else {

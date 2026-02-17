@@ -1,11 +1,16 @@
 import { describe, it, expect } from "vitest";
 import {
-  ColumnValueStats,
-  combineColumnValueStats,
+  NumberColumnValueStats,
+  combineNumberColumnValueStats,
+  StringOrBooleanColumnValueStats,
+  combineStringOrBooleanColumnValueStats,
 } from "../src/metrics/metrics";
 
-function makeStats(partial: Partial<ColumnValueStats>): ColumnValueStats {
+function makeNumberStats(
+  partial: Partial<NumberColumnValueStats>
+): NumberColumnValueStats {
   return {
+    type: "number",
     count: 0,
     min: NaN,
     max: NaN,
@@ -18,14 +23,19 @@ function makeStats(partial: Partial<ColumnValueStats>): ColumnValueStats {
   };
 }
 
-describe("combineColumnValueStats", () => {
-  it("returns undefined for empty array", () => {
-    const result = combineColumnValueStats([]);
-    expect(result).toBeUndefined();
-  });
+function makeStringStats(
+  partial: Partial<StringOrBooleanColumnValueStats>
+): StringOrBooleanColumnValueStats {
+  return {
+    type: "string",
+    distinctValues: [],
+    ...partial,
+  };
+}
 
+describe("combineNumberColumnValueStats", () => {
   it("returns the single stats object unchanged when only one is provided", () => {
-    const stats = makeStats({
+    const stats = makeNumberStats({
       count: 10,
       min: 1,
       max: 5,
@@ -41,12 +51,12 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 4,
     });
 
-    const result = combineColumnValueStats([stats]);
+    const result = combineNumberColumnValueStats([stats]);
     expect(result).toBe(stats);
   });
 
   it("combines two fragments without totalAreaSqKm using count-weighted mean and sum", () => {
-    const a = makeStats({
+    const a = makeNumberStats({
       count: 100,
       min: 0,
       max: 10,
@@ -58,7 +68,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: undefined,
     });
 
-    const b = makeStats({
+    const b = makeNumberStats({
       count: 50,
       min: 5,
       max: 15,
@@ -70,7 +80,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: undefined,
     });
 
-    const result = combineColumnValueStats([a, b])!;
+    const result = combineNumberColumnValueStats([a, b])!;
 
     expect(result.count).toBe(150);
     expect(result.sum).toBe(700);
@@ -90,7 +100,7 @@ describe("combineColumnValueStats", () => {
   });
 
   it("uses totalAreaSqKm as weight when available to combine means and stdDev", () => {
-    const a = makeStats({
+    const a = makeNumberStats({
       count: 100,
       min: 0,
       max: 10,
@@ -102,7 +112,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 5,
     });
 
-    const b = makeStats({
+    const b = makeNumberStats({
       count: 50,
       min: 0,
       max: 10,
@@ -114,7 +124,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 1,
     });
 
-    const result = combineColumnValueStats([a, b])!;
+    const result = combineNumberColumnValueStats([a, b])!;
 
     // weights are 5 and 1
     const expectedMean = (2 * 5 + 8 * 1) / (5 + 1);
@@ -134,7 +144,7 @@ describe("combineColumnValueStats", () => {
   });
 
   it("falls back to count weighting when all totalAreaSqKm are zero or undefined", () => {
-    const a = makeStats({
+    const a = makeNumberStats({
       count: 5,
       min: 1,
       max: 1,
@@ -146,7 +156,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 0,
     });
 
-    const b = makeStats({
+    const b = makeNumberStats({
       count: 5,
       min: 3,
       max: 3,
@@ -158,7 +168,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 0,
     });
 
-    const result = combineColumnValueStats([a, b])!;
+    const result = combineNumberColumnValueStats([a, b])!;
 
     expect(result.count).toBe(10);
     expect(result.sum).toBe(20);
@@ -171,7 +181,7 @@ describe("combineColumnValueStats", () => {
   });
 
   it("handles mix of fragments with and without totalAreaSqKm (area-weight where possible)", () => {
-    const a = makeStats({
+    const a = makeNumberStats({
       count: 10,
       min: 0,
       max: 10,
@@ -183,7 +193,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 2,
     });
 
-    const b = makeStats({
+    const b = makeNumberStats({
       count: 30,
       min: 0,
       max: 10,
@@ -196,7 +206,7 @@ describe("combineColumnValueStats", () => {
     });
 
     // useAreaWeight = true, so weights are 2 (area) and 30 (count)
-    const result = combineColumnValueStats([a, b])!;
+    const result = combineNumberColumnValueStats([a, b])!;
 
     const expectedMean = (4 * 2 + 6 * 30) / (2 + 30);
     expect(result.mean).toBeCloseTo(expectedMean, 6);
@@ -209,7 +219,7 @@ describe("combineColumnValueStats", () => {
   });
 
   it("merges overlapping histogram bins and updates countDistinct", () => {
-    const a = makeStats({
+    const a = makeNumberStats({
       count: 10,
       min: 1,
       max: 2,
@@ -224,7 +234,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 1,
     });
 
-    const b = makeStats({
+    const b = makeNumberStats({
       count: 5,
       min: 1,
       max: 2,
@@ -239,7 +249,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 1,
     });
 
-    const result = combineColumnValueStats([a, b])!;
+    const result = combineNumberColumnValueStats([a, b])!;
 
     expect(result.histogram).toEqual([
       [1, 5],
@@ -254,7 +264,7 @@ describe("combineColumnValueStats", () => {
       manyBins.push([i, 1]);
     }
 
-    const stats = makeStats({
+    const stats = makeNumberStats({
       count: 250,
       min: 0,
       max: 249,
@@ -266,18 +276,18 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 1,
     });
 
-    const result = combineColumnValueStats([stats])!;
+    const result = combineNumberColumnValueStats([stats])!;
 
     // Original stats should be returned unchanged for single element,
     // but when we pass more than one, the truncation logic applies.
-    const result2 = combineColumnValueStats([stats, stats])!;
+    const result2 = combineNumberColumnValueStats([stats, stats])!;
 
     expect(result2.histogram.length).toBeLessThanOrEqual(200);
 
     // Should still cover the full input range (0 to 249) after downsampling
     const values = result2.histogram.map(([value]) => value);
-    const minValue = Math.min(...values);
-    const maxValue = Math.max(...values);
+    const minValue = Math.min(...values.filter((v) => typeof v === "number"));
+    const maxValue = Math.max(...values.filter((v) => typeof v === "number"));
     expect(minValue).toBeGreaterThanOrEqual(0);
     expect(maxValue).toBeLessThanOrEqual(249);
 
@@ -286,14 +296,18 @@ describe("combineColumnValueStats", () => {
     const span = maxValue - minValue;
     const lowerThreshold = minValue + span * 0.25;
     const upperThreshold = minValue + span * 0.75;
-    const hasLower = values.some((v) => v <= lowerThreshold);
-    const hasUpper = values.some((v) => v >= upperThreshold);
+    const hasLower = values.some(
+      (v) => typeof v === "number" && v <= lowerThreshold
+    );
+    const hasUpper = values.some(
+      (v) => typeof v === "number" && v >= upperThreshold
+    );
     expect(hasLower).toBe(true);
     expect(hasUpper).toBe(true);
   });
 
   it("ignores NaN means/stdDevs in some fragments for weighting", () => {
-    const bad = makeStats({
+    const bad = makeNumberStats({
       count: 10,
       min: 0,
       max: 0,
@@ -305,7 +319,7 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 1,
     });
 
-    const good = makeStats({
+    const good = makeNumberStats({
       count: 10,
       min: 2,
       max: 2,
@@ -317,12 +331,76 @@ describe("combineColumnValueStats", () => {
       totalAreaSqKm: 1,
     });
 
-    const result = combineColumnValueStats([bad, good])!;
+    const result = combineNumberColumnValueStats([bad, good])!;
 
     // Mean should be driven by the good fragment, not NaN
     expect(result.mean).toBeCloseTo(2, 6);
     expect(result.count).toBe(20);
     expect(result.sum).toBe(20);
     expect(result.totalAreaSqKm).toBeCloseTo(2, 6);
+  });
+});
+
+describe("combineStringOrBooleanColumnValueStats", () => {
+  it("returns undefined for empty input", () => {
+    expect(combineStringOrBooleanColumnValueStats([])).toBeUndefined();
+  });
+
+  it("returns the single stats object unchanged when only one is provided", () => {
+    const stats = makeStringStats({
+      distinctValues: [
+        ["a", 2],
+        ["b", 3],
+      ],
+    });
+    const result = combineStringOrBooleanColumnValueStats([stats]);
+    expect(result).toBe(stats);
+  });
+
+  it("combines distinct value counts across fragments", () => {
+    const a = makeStringStats({
+      distinctValues: [
+        ["apple", 2],
+        ["banana", 1],
+      ],
+    });
+    const b = makeStringStats({
+      distinctValues: [
+        ["banana", 3],
+        ["cherry", 4],
+      ],
+    });
+
+    const result = combineStringOrBooleanColumnValueStats([a, b])!;
+    expect(result.type).toBe("string");
+    expect(result.distinctValues).toEqual([
+      ["apple", 2],
+      ["banana", 4],
+      ["cherry", 4],
+    ]);
+  });
+
+  it("preserves boolean type when combining boolean stats", () => {
+    const a: StringOrBooleanColumnValueStats = {
+      type: "boolean",
+      distinctValues: [
+        [true, 2],
+        [false, 1],
+      ],
+    };
+    const b: StringOrBooleanColumnValueStats = {
+      type: "boolean",
+      distinctValues: [
+        [true, 1],
+        [false, 4],
+      ],
+    };
+
+    const result = combineStringOrBooleanColumnValueStats([a, b])!;
+    expect(result.type).toBe("boolean");
+    expect(result.distinctValues).toEqual([
+      [true, 3],
+      [false, 5],
+    ]);
   });
 });

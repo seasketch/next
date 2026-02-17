@@ -148,7 +148,7 @@ export async function geostatsForVectorLayers(
     lyr.features.forEach((feature) => {
       if (assignGeometryTypeManually && layer.geometry === "Unknown") {
         const { geometryType, hasZ } = parseGeomType(
-          feature.getGeometry().wkbType
+          feature.getGeometry()!.wkbType
         );
         layer.geometry = geometryType;
         layer.hasZ = hasZ;

@@ -5,7 +5,6 @@ import { useContext } from "react";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { useCardLocalizedStringAdmin } from "./cards";
 import Switch from "../../components/Switch";
-import CollapsibleFooterAdmin from "../components/CollapsibleFooterAdmin";
 import MapLayerVisibilityControlsAdmin from "../components/MapLayerVisibilityControlsAdmin";
 
 type AdminConfig = ReportCardConfiguration<{
@@ -136,7 +135,6 @@ export default function RasterBandStatisticsCardAdmin({
 
       <MapLayerVisibilityControlsAdmin config={config} onUpdate={onUpdate} />
 
-      <CollapsibleFooterAdmin config={config} onUpdate={onUpdate} />
     </div>
   );
 }

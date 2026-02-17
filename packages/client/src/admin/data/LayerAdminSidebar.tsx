@@ -3,8 +3,9 @@ import useSegmentState from "../../components/useSegmentState";
 import BackgroundJobList from "./BackgroundJobList";
 import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
+import { memo } from "react";
 
-export default function LayerAdminSidebar() {
+export default memo(function LayerAdminSidebar() {
   const [selectedTab, setSelectedTab, segments] = useSegmentState({
     segments: ["Maps", "Overlay Layers"],
     defaultValue: "Maps",
@@ -41,4 +42,4 @@ export default function LayerAdminSidebar() {
       />
     </div>
   );
-}
+});

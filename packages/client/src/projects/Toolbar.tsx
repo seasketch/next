@@ -123,7 +123,7 @@ export default function Toolbar({
           ? "text-gray-300 bg-gradient-to-r from-cool-gray-800 via-cool-gray-800 to-cool-gray-800 filter backdrop-blur-sm"
           : "text-gray-400 bg-gradient-to-r from-cool-gray-900 to-cool-gray-800 via-cool-gray-800"
       } text-gray-700"
-      }  z-20 p-0 flex flex-col`}
+      }  z-20 p-0 flex flex-col overscroll-contain`}
       variants={{
         expanded: { width: isSmall ? "100vw" : 384 },
         collapsed: { width: 64 },
@@ -198,7 +198,7 @@ export default function Toolbar({
         <div
           className={`pt-0.5 flex flex-col w-full flex-1 ${
             expanded
-              ? "justify-start overflow-y-auto overflow-x-hidden -mt-4 -ml-[4px] space-y-[6px]"
+              ? "justify-start overflow-y-auto overscroll-contain overflow-x-hidden -mt-4 -ml-[4px] space-y-[6px]"
               : "space-y-3.5 ml-[12px] mt-1"
           }`}
         >

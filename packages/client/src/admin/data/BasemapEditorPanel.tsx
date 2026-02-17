@@ -23,7 +23,7 @@ import CreateOptionalLayerModal from "./CreateOptionalLayerModal";
 import OptionalBasemapLayerEditor from "../../dataLayers/OptionalBasemapLayerEditor";
 import useDebounce from "../../useDebounce";
 import InteractivitySettings from "./InteractivitySettings";
-import BasemapEditorPanelMap from "./BasemapEditorMap";
+// import BasemapEditorPanelMap from "./BasemapEditorMap";
 import { useMediaQuery } from "beautiful-react-hooks";
 import { Link } from "react-router-dom";
 import { ArrowLeftIcon } from "@heroicons/react/outline";
@@ -83,8 +83,7 @@ export default function BasemapEditorPanel({
     if (
       basemap &&
       debouncedExaggeration &&
-      parseFloat(basemap.terrainExaggeration) !==
-        parseFloat(debouncedExaggeration)
+      parseFloat(basemap.terrainExaggeration) !== debouncedExaggeration
     ) {
       client.writeFragment({
         id: `Basemap:${basemap.id}`,
@@ -171,7 +170,6 @@ export default function BasemapEditorPanel({
             }
       }
     >
-      {/* <MapContext.Provider value={essentials.mapContext}> */}
       <div
         className="flex-0 p-4 shadow-sm bg-gray-700 text-primary-300 flex items-center"
         style={{ gridArea: "header" }}
@@ -475,14 +473,14 @@ export default function BasemapEditorPanel({
           )}
         </div>
       )}
-      {showMap && basemap && (
+      {/* {showMap && basemap && (
         <div className="flex-1 bg-gray-50" style={{ gridArea: "map" }}>
           <BasemapEditorPanelMap
             basemap={basemap}
             cameraOptions={cameraOptions}
           />
         </div>
-      )}
+      )} */}
       {createOptionOpen && (
         <CreateOptionalLayerModal
           onRequestClose={() => setCreateOptionOpen(false)}

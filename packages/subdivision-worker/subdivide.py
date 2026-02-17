@@ -116,6 +116,32 @@ def antimeridian_split_to_non_crossing(geom_geojson):
     """Return a GeoJSON geometry with no parts crossing the antimeridian.
     Input is assumed to be EPSG:4326.
     """
+    def normalize_lon(x):
+        while x > 180:
+            x -= 360
+        while x < -180:
+            x += 360
+        return x
+
+    def normalize_geojson_longitudes(g):
+        gtype = g.get('type')
+        if gtype == 'Polygon':
+            coords = []
+            for ring in g.get('coordinates', []):
+                coords.append([(normalize_lon(pt[0]), pt[1]) for pt in ring])
+            return {'type': 'Polygon', 'coordinates': coords}
+        elif gtype == 'MultiPolygon':
+            polys = []
+            for poly in g.get('coordinates', []):
+                coords = []
+                for ring in poly:
+                    coords.append([(normalize_lon(pt[0]), pt[1]) for pt in ring])
+                polys.append(coords)
+            return {'type': 'MultiPolygon', 'coordinates': polys}
+        return g
+
+    geom_geojson = normalize_geojson_longitudes(geom_geojson)
+
     # Fast path: no Shapely if not crossing
     if not geojson_crosses_antimeridian(geom_geojson):
         return geom_geojson
@@ -125,13 +151,6 @@ def antimeridian_split_to_non_crossing(geom_geojson):
 
     if not crosses_antimeridian(g):
         return geom_geojson
-
-    def normalize_lon(x):
-        while x > 180:
-            x -= 360
-        while x < -180:
-            x += 360
-        return x
 
     def unwrap_polygon(poly: Polygon) -> Polygon:
         ext = _unwrap_ring_longitudes(list(poly.exterior.coords)) if poly.exterior else []
@@ -173,7 +192,10 @@ def antimeridian_split_to_non_crossing(geom_geojson):
     if not parts:
         return geom_geojson
     result = MultiPolygon(parts) if len(parts) > 1 else parts[0]
-    return mapping(result)
+    result_geojson = mapping(result)
+    # Final normalize to guard against split/shift edge cases near 180/-180.
+    result_geojson = normalize_geojson_longitudes(result_geojson)
+    return result_geojson
 
 def process_file(input_file, output_file, max_nodes, progress_callback=None):
     """Process the input file and write the subdivided output as FlatGeobuf.
@@ -389,6 +411,19 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
           print(f"Total features in input dataset: {total_features}")
           print(f"Total small features in input dataset: {total_features - len(big_poly_indexes.keys())}")
           print(f"Total big features in input dataset: {len(big_poly_indexes.keys())}")
+
+    # Validate final output bounds using dataset metadata/index.
+    with fiona.open(output_file, "r") as out_src:
+        bounds = out_src.bounds
+        if bounds is None:
+            raise ValueError("Output FlatGeobuf has no bounds metadata.")
+        minx, miny, maxx, maxy = bounds
+        # Allow a bit of drift beyond exact bounds.
+        EPS = 1e-2
+        if minx < -180 - EPS or maxx > 180 + EPS or miny < -90 - EPS or maxy > 90 + EPS:
+            raise ValueError(
+                f"Output FlatGeobuf bounds out of range: {bounds}"
+            )
 
         
 

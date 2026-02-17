@@ -1,4 +1,5 @@
 import { MetricTypeMap, ClippingLayerOption, MetricSubjectFragment, MetricSubjectGeography, SourceType } from "overlay-engine";
+import { MetricDependencyParameters } from "overlay-engine/src/metrics/metrics";
 export type OverlayWorkerMessageType = "result" | "error" | "progress" | "begin";
 export type OverlayEngineWorkerBaseMessage = {
     type: OverlayWorkerMessageType;
@@ -70,12 +71,7 @@ type BaseOverlayWorkerPayload = {
         epsg?: number;
     } : never : never;
 }[keyof MetricTypeMap];
-export type OverlayWorkerPayload = BaseOverlayWorkerPayload & {
-    bufferDistanceKm?: number;
-    resultsLimit?: number;
-    includedProperties?: string[];
-    valueColumn?: string;
-};
+export type OverlayWorkerPayload = BaseOverlayWorkerPayload & MetricDependencyParameters;
 export type OverlayWorkerResponse = {
     /**
      * Identifier for the job. Referenced in OverlayWorkerMessage notifications

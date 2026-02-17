@@ -3,13 +3,12 @@
  * This file must be manually made up-to-date with the contents of the client
  * schema.
  */
-import { Schema, Node, NodeSpec } from "prosemirror-model";
+import { Schema, Node } from "prosemirror-model";
 import { schema as baseSchema } from "./basicSchema";
 import { exampleSetup } from "prosemirror-example-setup";
 import { addListNodes } from "prosemirror-schema-list";
 import QuestionPlaceholderPlugin from "./QuestionPlaceholderPlugin";
 import ReportTitlePlaceholderPlugin from "./ReportTitlePlaceholderPlugin";
-import FooterTitlePlaceholderPlugin from "./FooterTitlePlaceholderPlugin";
 import { tableNodes } from "prosemirror-tables";
 import {
   defaultSettings,
@@ -20,7 +19,7 @@ import {
 import { ApolloClient } from "@apollo/client";
 import { CreateFileUploadForAboutPageDocument } from "../generated/graphql";
 import axios from "axios";
-import PresenceAbsenceBlockPlaceholderPlugin from "./PresenceAbsenceBlockPlaceholderPlugin";
+import { reportBodySchema } from "../reports/widgets/prosemirror/reportBodySchema";
 
 let spec = baseSchema.spec;
 
@@ -41,6 +40,8 @@ const baseMarks = baseSchema.spec.marks.update("link", {
     return ["a", { href, title, target: "_blank" }, 0];
   },
 });
+
+export { baseSchema };
 
 const questionSchema: Schema = new Schema({
   nodes: spec.nodes
@@ -68,89 +69,6 @@ const questionSchema: Schema = new Schema({
     })
     .update("doc", {
       content: "question block*",
-    })
-    .remove("heading"),
-  // @ts-ignore
-  marks: baseMarks,
-});
-
-const reportCardBodySchema: Schema = new Schema({
-  nodes: spec.nodes
-    .append({
-      reportTitle: {
-        content: "text*",
-        group: "block",
-        defining: true,
-        marks: "em",
-        parseDOM: [{ tag: "h1[data-report-title]" }],
-        toDOM: function (node: any) {
-          return ["h1", { "data-report-title": "yes" }, 0];
-        },
-      },
-      h2: {
-        content: "inline*",
-        group: "block",
-        defining: true,
-        parseDOM: [{ tag: "h2" }],
-        // @ts-ignore
-        toDOM(node: Node) {
-          return ["h2", 0];
-        },
-      },
-      presenceBlock: {
-        // Require at least one block (e.g. a paragraph), but allow users to add more
-        content: "block+",
-        // group: "block",
-        defining: true,
-        parseDOM: [{ tag: "div[data-presence-block]" }],
-        toDOM: function (node: any) {
-          return ["div", { "data-presence-block": "yes" }, 0];
-        },
-      },
-      absenceBlock: {
-        content: "block+",
-        group: "block",
-        defining: true,
-        parseDOM: [{ tag: "div[data-absence-block]" }],
-        toDOM: function (node: any) {
-          return ["div", { "data-absence-block": "yes" }, 0];
-        },
-      },
-    })
-    .update("doc", {
-      content: "reportTitle block* presenceBlock absenceBlock",
-    })
-    .remove("heading"),
-  // @ts-ignore
-  marks: baseMarks,
-});
-
-const reportCardFooterSchema: Schema = new Schema({
-  nodes: spec.nodes
-    .append({
-      footerTitle: {
-        content: "text*",
-        group: "block",
-        defining: true,
-        marks: "em",
-        parseDOM: [{ tag: "h2[data-footer-title]" }],
-        toDOM: function (node: any) {
-          return ["h2", { "data-footer-title": "yes" }, 0];
-        },
-      },
-      h2: {
-        content: "inline*",
-        group: "block",
-        defining: true,
-        parseDOM: [{ tag: "h2" }],
-        // @ts-ignore
-        toDOM(node: Node) {
-          return ["h2", 0];
-        },
-      },
-    })
-    .update("doc", {
-      content: "footerTitle block*",
     })
     .remove("heading"),
   // @ts-ignore
@@ -453,18 +371,10 @@ export const formElements = {
     plugins: exampleSetup({ schema: contentSchema, menuBar: false }),
   },
   reportCardBody: {
-    schema: reportCardBodySchema,
+    schema: reportBodySchema,
     plugins: [
-      ...exampleSetup({ schema: reportCardBodySchema, menuBar: false }),
+      ...exampleSetup({ schema: reportBodySchema, menuBar: false }),
       ReportTitlePlaceholderPlugin(),
-      PresenceAbsenceBlockPlaceholderPlugin(),
-    ],
-  },
-  reportCardFooter: {
-    schema: reportCardFooterSchema,
-    plugins: [
-      ...exampleSetup({ schema: reportCardFooterSchema, menuBar: false }),
-      FooterTitlePlaceholderPlugin(),
     ],
   },
 };

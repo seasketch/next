@@ -118,14 +118,7 @@ const workerPool = createClippingWorkerPool(
   process.env.PISCINA_WORKER_PATH || "worker.js"
 );
 
-export default async function handler(
-  payload: OverlayWorkerPayload & {
-    includedProperties?: string[];
-    resultsLimit?: number;
-    valueColumn?: string;
-    bufferDistanceKm?: number;
-  }
-) {
+export default async function handler(payload: OverlayWorkerPayload) {
   console.log("Overlay worker (v2) received payload", payload);
   const startTime = Date.now();
   const progressNotifier = new ProgressNotifier(
@@ -246,10 +239,16 @@ export default async function handler(
         // Extract valueColumn from parameters for column_values
         const columnValuesProperty =
           payload.type === "column_values" ? payload.valueColumn : undefined;
+
+        const bufferedIntersectionFeature = applySubjectBuffer(
+          intersectionFeature,
+          payload.bufferDistanceKm
+        );
+
         const processor = new OverlayEngineBatchProcessor(
           payload.type,
           1024 * 1024 * 1, // 5MB
-          simplify(intersectionFeature, {
+          simplify(bufferedIntersectionFeature, {
             tolerance: SIMPLIFICATION_TOLERANCE,
           }),
           source,
@@ -257,8 +256,8 @@ export default async function handler(
           helpers,
           payload.groupBy,
           workerPool,
-          payload.includedProperties,
-          payload.resultsLimit,
+          payload.includedColumns,
+          payload.maxResults,
           columnValuesProperty
         );
         const result = await processor.calculate();

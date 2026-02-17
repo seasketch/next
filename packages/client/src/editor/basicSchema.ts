@@ -200,6 +200,19 @@ export const marks = {
       return codeDOM;
     },
   },
+
+  // :: MarkSpec Underline mark. Rendered as `<u>` and parses common underline
+  // styles/tags.
+  underline: {
+    parseDOM: [
+      { tag: "u" },
+      { style: "text-decoration=underline" },
+      { style: "text-decoration-line=underline" },
+    ],
+    toDOM() {
+      return ["u", 0];
+    },
+  },
 };
 
 // :: Schema

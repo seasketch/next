@@ -22,7 +22,7 @@ import {
   validVisualizationTypesForGeostats,
 } from "./visualizationTypes";
 import { FillLayer, Layer } from "mapbox-gl";
-import { MapContext, idForLayer } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext, idForLayer } from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 import * as Editors from "./Editors";
 import EditorForVisualizationType from "./EditorForVisualizationType";
@@ -58,7 +58,7 @@ export default function GUIStyleEditor({
     return validVisualizationTypesForGeostats(geostats);
   }, [geostats]);
 
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   const [styleJSON, setStyleJSON] = useState(JSON.parse(style) as Layer[]);
 
@@ -150,10 +150,10 @@ export default function GUIStyleEditor({
         }
       });
 
-      if (mapContext.manager?.map && layerId) {
+      if (manager?.map && layerId) {
         for (const { type, property } of properties) {
           try {
-            const map = mapContext.manager.map;
+            const map = manager.map;
             const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
             const layer = map.getLayer(id);
             if (layer) {
@@ -187,7 +187,7 @@ export default function GUIStyleEditor({
       setStyleJSON([...styleJSON]);
       updateEditor(JSON.stringify(styleJSON));
     },
-    [editorRef, styleJSON, mapContext.manager?.map, layerId]
+    [editorRef, styleJSON, manager?.map, layerId]
   );
 
   const updateLayerProperty = useCallback(
@@ -239,9 +239,9 @@ export default function GUIStyleEditor({
         // if (errors.length > 0) {
         //   throw new Error(errors.join("\n"));
         // }
-        if (mapContext.manager?.map && layerId) {
+        if (manager?.map && layerId) {
           try {
-            const map = mapContext.manager.map;
+            const map = manager.map;
             const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
             const layer = map.getLayer(id);
             if (layer) {
@@ -276,8 +276,8 @@ export default function GUIStyleEditor({
         } else {
           layer.filter = value;
         }
-        if (mapContext.manager?.map && layerId) {
-          const map = mapContext.manager.map;
+        if (manager?.map && layerId) {
+          const map = manager.map;
           const id = idForLayer({ id: layerId, dataSourceId: 0 }, layerIndex);
           const layer = map.getLayer(id);
           if (layer) {
@@ -306,7 +306,7 @@ export default function GUIStyleEditor({
       const style = JSON.stringify(styleJSON);
       updateEditor(style);
     },
-    [styleJSON, updateEditor, setStyleJSON, layerId, mapContext.manager?.map]
+    [styleJSON, updateEditor, setStyleJSON, layerId, manager?.map]
   );
 
   const addLayer = useCallback(

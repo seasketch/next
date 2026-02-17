@@ -57,23 +57,30 @@ export async function calculateRasterStats(
   sourceUrl: string,
   feature: Feature<Polygon | MultiPolygon>
 ): Promise<{ bands: RasterBandStats[] }> {
+  const geoblaze = getGeoblaze();
   try {
-    const geoblaze = getGeoblaze();
-
     const raster = await geoblaze.parse(sourceUrl);
-    const stats = await geoblaze.stats(raster, feature, {
-      stats: [
-        "count",
-        "min",
-        "max",
-        "mean",
-        "median",
-        "range",
-        "histogram",
-        "invalid",
-        "sum",
-      ],
-    });
+    const stats = await geoblaze.stats(
+      raster,
+      feature,
+      {
+        stats: [
+          "count",
+          "min",
+          "max",
+          "mean",
+          "median",
+          "range",
+          "histogram",
+          "invalid",
+          "sum",
+        ],
+      },
+      undefined,
+      {
+        vrm: "minimal",
+      }
+    );
     return {
       bands: stats.map((stat: any) => {
         const rawHistogram: HistogramEntry[] = Array.isArray(stat.histogram)
@@ -99,9 +106,24 @@ export async function calculateRasterStats(
     };
   } catch (e) {
     console.error("Error calculating raster stats", e);
+    console.log(sourceUrl);
+    console.log(feature);
+    console.log(feature.geometry.coordinates);
     if (typeof e === "string" && e.includes("No Values")) {
       return {
-        bands: [],
+        bands: [
+          {
+            count: 0,
+            min: NaN,
+            max: NaN,
+            mean: NaN,
+            median: NaN,
+            range: NaN,
+            histogram: [],
+            invalid: 0,
+            sum: 0,
+          } as RasterBandStats,
+        ],
       };
     } else {
       throw e;

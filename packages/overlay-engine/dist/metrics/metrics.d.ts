@@ -66,7 +66,16 @@ export type PresenceTableMetric = OverlayMetricBase & {
         exceededLimit: boolean;
     };
 };
-export type ColumnValueStats = {
+export type StringOrBooleanColumnValueStats = {
+    type: "string" | "boolean";
+    /**
+     * Distinct value ([0]) and count [1]
+     */
+    distinctValues: [string | boolean, number][];
+    countDistinct: number;
+};
+export type NumberColumnValueStats = {
+    type: "number";
     count: number;
     min: number;
     max: number;
@@ -82,10 +91,14 @@ export type ColumnValueStats = {
      */
     totalAreaSqKm?: number;
 };
+export declare function isNumberColumnValueStats(stats: NumberColumnValueStats | StringOrBooleanColumnValueStats): stats is NumberColumnValueStats;
+export type ValuesForColumns = {
+    [attr: string]: StringOrBooleanColumnValueStats | NumberColumnValueStats;
+};
 export type ColumnValuesMetric = OverlayMetricBase & {
     type: "column_values";
     value: {
-        [groupBy: string]: ColumnValueStats;
+        [groupBy: string]: ValuesForColumns;
     };
 };
 export type RasterBandStats = {
@@ -151,12 +164,58 @@ export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
  * @param statsArray - Array of RasterBandStats from different fragments
  * @returns Combined RasterBandStats, or undefined if the array is empty
  */
-export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats | undefined;
+export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats;
 /**
  * Combines ColumnValueStats from multiple fragments into a single ColumnValueStats.
  * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
  * Otherwise, they are weighted by count.
  */
-export declare function combineColumnValueStats(statsArray: ColumnValueStats[]): ColumnValueStats | undefined;
+export declare function combineNumberColumnValueStats(statsArray: NumberColumnValueStats[]): NumberColumnValueStats | undefined;
+export declare function combineStringOrBooleanColumnValueStats(statsArray: StringOrBooleanColumnValueStats[]): StringOrBooleanColumnValueStats | undefined;
+export type MetricDependencySubjectType = "fragments" | "geographies";
+export type MetricDependency = {
+    type: MetricType;
+    subjectType: MetricDependencySubjectType;
+    stableId?: string;
+    parameters?: MetricDependencyParameters;
+};
+export type MetricDependencyParameters = {
+    groupBy?: string;
+    includedColumns?: string[];
+    valueColumn?: string;
+    bufferDistanceKm?: number;
+    maxResults?: number;
+    maxDistanceKm?: number;
+};
+/**
+ * Creates a unique id for a given metric dependency. Any difference in
+ * MetricDependency properties, or parameters within MetricDependencyParameters
+ * will result in a different hash.
+ *
+ * This hash is set on CompatibleSpatialMetric objects in the GraphQL API so
+ * that clients can quickly determine which metrics are relevant to a given
+ * report card widget.
+ *
+ * @param dependency The dependency to hash
+ * @param overlaySourceUrls A map of table of contents item stable ids to overlay source urls. The hash will be based on the overlay source url, rather than the stable id. This way, updates to the underlying source will trigger a cache miss and trigger recalculation of the metric.
+ * @returns A unique id for the dependency
+ */
+export declare function hashMetricDependency(dependency: MetricDependency, overlaySourceUrls: {
+    [stableId: string]: string;
+}): string;
+export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
+/**
+ * Finds the primary geography id from a list of metrics. The primary
+ * geography is the one that is in all fragments.
+ * @param metrics - The metrics to find the primary geography id from
+ * @returns The primary geography id
+ */
+export declare function findPrimaryGeographyId(metrics: Pick<Metric, "type" | "value" | "subject">[]): number;
+type ProsemirrorNode = {
+    type: string;
+    attrs?: Record<string, any>;
+    content?: ProsemirrorNode[];
+};
+export declare function extractMetricDependenciesFromReportBody(node: ProsemirrorNode, dependencies?: MetricDependency[]): MetricDependency[];
 export {};
 //# sourceMappingURL=metrics.d.ts.map

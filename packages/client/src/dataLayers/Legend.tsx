@@ -84,19 +84,7 @@ export type LegendItem =
 
 const PANEL_WIDTH = 180;
 
-export default function Legend({
-  className,
-  items,
-  loading,
-  hiddenItems,
-  onHiddenItemsChange,
-  map,
-  maxHeight,
-  backdropBlur: blur,
-  persistedStateKey,
-  editable,
-  defaultToHidden = true,
-}: {
+export type LegendProps = {
   backdropBlur?: boolean;
   items: LegendItem[];
   zOrder: { [id: string]: number };
@@ -111,7 +99,21 @@ export default function Legend({
   editable?: boolean;
   /** Default visibility state of the legend. Only used if no persisted state exists. Defaults to true (hidden) */
   defaultToHidden?: boolean;
-}) {
+};
+
+export default function Legend({
+  className,
+  items,
+  loading,
+  hiddenItems,
+  onHiddenItemsChange,
+  map,
+  maxHeight,
+  backdropBlur: blur,
+  persistedStateKey,
+  editable,
+  defaultToHidden = true,
+}: LegendProps) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
   const [hidden, setHidden] = useLocalForage<boolean>(

@@ -4,7 +4,10 @@ import * as MenuBar from "@radix-ui/react-menubar";
 import React, { Suspense, useContext, useEffect, useState } from "react";
 import { TableOfContentsItem } from "../../generated/graphql";
 import { Trans } from "react-i18next";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import {
+  LayerTreeContext,
+  MapManagerContext,
+} from "../../dataLayers/MapContextManager";
 import {
   MenuBarContentClasses,
   MenuBarItemClasses,
@@ -51,7 +54,8 @@ export const TableOfContentsItemMenu = React.forwardRef<
     forwardedRef
   ) => {
     const MenuType = type;
-    const mapContext = useContext(MapContext);
+    const mapContext = useContext(LayerTreeContext);
+    const { manager, ready } = useContext(MapManagerContext);
     const dataDownloadModalContext = useContext(DataDownloadModalContext);
 
     const [opacity, setOpacity] = useState(
@@ -75,7 +79,6 @@ export const TableOfContentsItemMenu = React.forwardRef<
     // TODO: adjust this value as context menu grows in size
     const intersectsBottom = (transform?.y || 0) > window.innerHeight - 260;
     const metadataContext = useContext(TableOfContentsMetadataModalContext);
-    const manager = mapContext.manager;
     return (
       <MenuType.Content
         // avoidCollisions={false}
@@ -111,19 +114,19 @@ export const TableOfContentsItemMenu = React.forwardRef<
             document.body
           )}
         {!manager ||
-          (!mapContext.ready && (
+          (!ready && (
             <MenuType.Label>
               <Trans ns="admin">MapContext is not ready</Trans>
             </MenuType.Label>
           ))}
-        {manager && mapContext.ready && items.length > 1 && (
+        {manager && ready && items.length > 1 && (
           <MenuType.Label>
             <Trans ns="admin">
               Menus for multiple-selections not yet supported
             </Trans>
           </MenuType.Label>
         )}
-        {items.length === 1 && manager && mapContext.ready && (
+        {items.length === 1 && manager && ready && (
           <Suspense
             fallback={
               <>
@@ -177,7 +180,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     disabled={top}
                     className={MenuBarItemClasses}
                     onSelect={() => {
-                      mapContext?.manager?.moveLayerToTop(firstItem.stableId);
+                      manager?.moveLayerToTop(firstItem.stableId);
                     }}
                   >
                     <span>
@@ -189,7 +192,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     disabled={bottom}
                     className={MenuBarItemClasses}
                     onSelect={() => {
-                      mapContext?.manager?.moveLayerToBottom(
+                      manager?.moveLayerToBottom(
                         firstItem.stableId
                       );
                     }}
@@ -219,7 +222,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
                           setOpacity(val);
-                          mapContext.manager?.setLayerOpacity(
+                          manager?.setLayerOpacity(
                             firstItem.stableId,
                             val
                           );

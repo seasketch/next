@@ -10,11 +10,9 @@ import {
   idForLayer,
   isSeaSketchLayerId,
   layerIdFromStyleLayerId,
-  MapContextInterface,
   Tooltip,
 } from "./MapContextManager";
 import Mustache from "mustache";
-import { Dispatch, SetStateAction } from "react";
 import {
   BasemapDetailsFragment,
   DataLayerDetailsFragment,
@@ -35,6 +33,14 @@ const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
+export type InteractivityUIUpdate = Partial<{
+  bannerMessages: string[];
+  tooltip: Tooltip | undefined;
+  fixedBlocks: string[];
+  sidebarPopupContent: string | undefined;
+  sidebarPopupTitle: string | undefined;
+}>;
+
 /**
  * LayerInteractivityManager works in tandem with the MapContextManager to react
  * to user interaction which clicks, hovers, or otherwise interacts with map content
@@ -44,8 +50,8 @@ const PopupNumberFormatter = Intl.NumberFormat(undefined, {
  */
 export default class LayerInteractivityManager extends EventEmitter {
   private map: Map;
-  private _setState: Dispatch<SetStateAction<MapContextInterface>>;
-  private previousState?: MapContextInterface;
+  private _onUIUpdate: (update: InteractivityUIUpdate) => void;
+  private _previousUIState: InteractivityUIUpdate = {};
 
   /** List of interactive layers that are currently shown on the map. Update with setVisibleLayers() */
   private layers: { [layerId: string]: DataLayerDetailsFragment } = {};
@@ -76,17 +82,13 @@ export default class LayerInteractivityManager extends EventEmitter {
   /**
    *
    * @param map Map that should support user interaction. Use #setMap to update
-   * @param setState The state of banner and tooltip messages is held in the
-   * MapContext. Use this function to set it.
+   * @param onUIUpdate Callback when UI state (tooltip, banner, popup) changes.
    */
-  constructor(
-    map: Map,
-    setState: Dispatch<SetStateAction<MapContextInterface>>
-  ) {
+  constructor(map: Map, onUIUpdate: (update: InteractivityUIUpdate) => void) {
     super();
     this.map = map;
     this.registerEventListeners(map);
-    this._setState = setState;
+    this._onUIUpdate = onUIUpdate;
   }
 
   /**
@@ -276,49 +278,30 @@ export default class LayerInteractivityManager extends EventEmitter {
   private moving = false;
   private lastMouseEvent: MapMouseEvent | undefined = undefined;
 
-  private setState(action: SetStateAction<MapContextInterface>) {
-    let newState: MapContextInterface;
-    if (this.previousState && typeof action === "function") {
-      newState = action(this.previousState);
-      if (this.statesDiffer(this.previousState, newState)) {
-        this.previousState = newState;
-        this._setState(action);
-      }
-    } else if (this.previousState && typeof action !== "function") {
-      if (this.statesDiffer(this.previousState, action)) {
-        this.previousState = action;
-        this._setState(action);
-      }
-    } else {
-      if (typeof action === "function") {
-        this.previousState = action({} as unknown as MapContextInterface);
-      } else {
-        this.previousState = action;
-      }
-      this._setState(action);
-    }
-  }
-
-  private statesDiffer(prev: MapContextInterface, next: MapContextInterface) {
-    return (
+  private updateUI(update: InteractivityUIUpdate) {
+    const next = { ...this._previousUIState, ...update };
+    const prev = this._previousUIState;
+    if (
       prev.bannerMessages?.join("") !== next.bannerMessages?.join("") ||
       prev.fixedBlocks?.join("") !== next.fixedBlocks?.join("") ||
       prev.tooltip !== next.tooltip ||
       prev.sidebarPopupContent !== next.sidebarPopupContent ||
       prev.sidebarPopupTitle !== next.sidebarPopupTitle
-    );
+    ) {
+      this._previousUIState = next;
+      this._onUIUpdate(update);
+    }
   }
 
   private onMoveStart = () => {
     if (this.paused) {
       return;
     }
-    this.setState((prev) => ({
-      ...prev,
+    this.updateUI({
       bannerMessages: [],
       fixedBlocks: [],
       tooltip: undefined,
-    }));
+    });
     delete this.previousInteractionTarget;
     this.moving = true;
   };
@@ -350,12 +333,11 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
     setTimeout(() => {
       delete this.previousInteractionTarget;
-      this.setState((prev) => ({
-        ...prev,
+      this.updateUI({
         tooltip: undefined,
         bannerMessages: [],
         fixedBlocks: [],
-      }));
+      });
     }, 7);
   };
 
@@ -441,11 +423,10 @@ export default class LayerInteractivityManager extends EventEmitter {
           }
         );
         if (interactivitySetting.type === InteractivityType.Popup) {
-          this.setState((prev) => ({
-            ...prev,
+          this.updateUI({
             sidebarPopupContent: undefined,
             sidebarPopupTitle: undefined,
-          }));
+          });
           new Popup({ closeOnClick: true, closeButton: true })
             .setLngLat([e.lngLat.lng, e.lngLat.lat])
             .setHTML(content)
@@ -458,22 +439,20 @@ export default class LayerInteractivityManager extends EventEmitter {
               ...top.properties,
             }
           );
-          this.setState((prev) => ({
-            ...prev,
+          this.updateUI({
             sidebarPopupContent: content,
             sidebarPopupTitle: titleContent,
-          }));
+          });
           this.setSelectedFeature(top);
         }
       } else if (
         interactivitySetting &&
         interactivitySetting.type === InteractivityType.AllPropertiesPopup
       ) {
-        this.setState((prev) => ({
-          ...prev,
+        this.updateUI({
           sidebarPopupContent: undefined,
           sidebarPopupTitle: undefined,
-        }));
+        });
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
         const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
@@ -519,11 +498,10 @@ export default class LayerInteractivityManager extends EventEmitter {
         vectorPopupOpened = true;
       }
     } else {
-      this.setState((prev) => ({
-        ...prev,
+      this.updateUI({
         sidebarPopupContent: undefined,
         sidebarPopupTitle: undefined,
-      }));
+      });
       this.setSelectedFeature(undefined);
     }
     let popupOpened = vectorPopupOpened;
@@ -613,11 +591,10 @@ export default class LayerInteractivityManager extends EventEmitter {
   }
 
   clearSidebarPopup = () => {
-    this.setState((prev) => ({
-      ...prev,
+    this.updateUI({
       sidebarPopupContent: undefined,
       sidebarPopupTitle: undefined,
-    }));
+    });
     this.setSelectedFeature(undefined);
   };
 
@@ -787,12 +764,11 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
     const clear = () => {
       this.map!.getCanvas().style.cursor = "";
-      this.setState((prev) => ({
-        ...prev,
+      this.updateUI({
         bannerMessages: [],
         tooltip: undefined,
         fixedBlocks: [],
-      }));
+      });
       delete this.previousInteractionTarget;
     };
     const inatHit = await this.getTopInaturalistHit(e);
@@ -898,13 +874,10 @@ export default class LayerInteractivityManager extends EventEmitter {
           // Don't waste cycles on a state update
         } else {
           this.previousInteractionTarget = currentInteractionTarget;
-          this.setState((prev) => {
-            return {
-              ...prev,
-              bannerMessages,
-              tooltip,
-              fixedBlocks,
-            };
+          this.updateUI({
+            bannerMessages,
+            tooltip,
+            fixedBlocks,
           });
         }
       } else {

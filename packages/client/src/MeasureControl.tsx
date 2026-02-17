@@ -7,11 +7,12 @@ import MapContextManager, {
   DigitizingLockState,
   DigitizingLockStateChangeEventPayload,
   DigitizingLockStateChangeEventType,
-  MapContext,
+  MapManagerContext,
 } from "./dataLayers/MapContextManager";
 import {
   ReactNode,
   createContext,
+  memo,
   useContext,
   useEffect,
   useState,
@@ -746,12 +747,12 @@ export const MeasureControlContext =
   createContext<MeasureControlContextValue>(defaultValue);
 
 export function MeasureControlContextProvider(props: { children: ReactNode }) {
-  // get MapContextManager from context
-  const mapContext = useContext(MapContext);
+  // get MapContextManager from the stable manager context
+  const { manager } = useContext(MapManagerContext);
   const [value, setValue] = useState(defaultValue);
   useEffect(() => {
-    if (mapContext.manager?.map) {
-      const measureControl = new MeasureControl(mapContext.manager);
+    if (manager?.map) {
+      const measureControl = new MeasureControl(manager);
       setValue({
         length: 0,
         state: "disabled",
@@ -773,7 +774,7 @@ export function MeasureControlContextProvider(props: { children: ReactNode }) {
         measureControl.destroy();
       };
     }
-  }, [mapContext.manager, mapContext.manager?.map]);
+  }, [manager, manager?.map]);
 
   return (
     <MeasureControlContext.Provider value={value}>
@@ -786,7 +787,7 @@ const formatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
 
-export function MeasurementToolsOverlay({
+export const MeasurementToolsOverlay = memo(function ({
   placement,
 }: {
   placement:
@@ -796,7 +797,6 @@ export function MeasurementToolsOverlay({
     | "bottom-left"
     | "top-right-homepage";
 }) {
-  const mapContext = useContext(MapContext);
   const measureContext = useContext(MeasureControlContext);
   const { t } = useTranslation("homepage");
 
@@ -946,6 +946,6 @@ export function MeasurementToolsOverlay({
       )}
     </AnimatePresence>
   );
-}
+});
 
 const buttonClass = "border text-sm px-1 py-0.5 rounded bg-white";

@@ -1,5 +1,5 @@
 import { useContext, useMemo } from "react";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { LayerTreeContext, LegendsContext, MapManagerContext, SketchLayerContext } from "../dataLayers/MapContextManager";
 import Legend from "../dataLayers/Legend";
 import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
 import { useMediaQuery } from "beautiful-react-hooks";
@@ -13,20 +13,27 @@ export default function ProjectMapLegend({
   toolbarExpanded?: boolean;
   sidebarOpen?: boolean;
 }) {
-  const mapContext = useContext(MapContext);
+  const layerTree = useContext(LayerTreeContext);
+  const legendsCtx = useContext(LegendsContext);
+  const { manager } = useContext(MapManagerContext);
+  const { sketchClassLayerStates } = useContext(SketchLayerContext);
   const loading = useMemo(() => {
-    for (const key in mapContext.layerStatesByTocStaticId) {
+    for (const key in layerTree.layerStatesByTocStaticId) {
       if (
-        mapContext.layerStatesByTocStaticId[key].loading &&
-        mapContext.layerStatesByTocStaticId[key].visible
+        layerTree.layerStatesByTocStaticId[key].loading &&
+        layerTree.layerStatesByTocStaticId[key].visible
       ) {
         return true;
       }
     }
     return false;
-  }, [mapContext.layerStatesByTocStaticId]);
+  }, [layerTree.layerStatesByTocStaticId]);
 
-  const legendProps = useCommonLegendProps(mapContext);
+  const legendProps = useCommonLegendProps(
+    { layerStatesByTocStaticId: layerTree.layerStatesByTocStaticId, legends: legendsCtx.legends },
+    manager,
+    sketchClassLayerStates
+  );
 
   const isSmall = useMediaQuery("(max-width: 1535px)");
 
@@ -38,7 +45,7 @@ export default function ProjectMapLegend({
         maxHeight={500}
         opacity={{}}
         zOrder={{}}
-        map={mapContext.manager?.map}
+        map={manager?.map}
         loading={loading}
         persistedStateKey="project-map-legend"
         {...legendProps}

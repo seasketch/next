@@ -8,7 +8,9 @@ import React, {
   ReactNode,
   useMemo,
 } from "react";
-import { MapContext } from "../dataLayers/MapContextManager";
+import { MapManagerContext } from "../dataLayers/MapContextManager";
+import { BasemapContext } from "../dataLayers/BasemapContext";
+import { MapUIStateContext } from "../dataLayers/MapUIContext";
 import { motion, AnimatePresence } from "framer-motion";
 import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
@@ -47,7 +49,9 @@ mapboxgl.prewarm();
 export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const [map, setMap] = useState<Map>();
   const mapContainer = useRef<HTMLDivElement>(null);
-  const mapContext = useContext(MapContext);
+  const uiState = useContext(MapUIStateContext);
+  const basemapState = useContext(BasemapContext);
+  const { manager, ready, styleError } = useContext(MapManagerContext);
   const [showSpinner, setShowSpinner] = useState(true);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
@@ -60,14 +64,24 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
     props.interactive === undefined ? true : props.interactive;
 
   const sidebar = currentSidebarState();
+  // const sidebar = {
+  //   open: false,
+  //   width: 0,
+  //   height: 0,
+  //   position: "left",
+  //   toggle: () => {},
+  //   expand: () => {},
+  //   collapse: () => {},
+  //   close: () => {},
+  // };
   const visibleInatCtas = useMemo(() => {
-    if (!mapContext.inaturalistCallToActions) {
+    if (!uiState.inaturalistCallToActions) {
       return [];
     }
-    return mapContext.inaturalistCallToActions.filter(
+    return uiState.inaturalistCallToActions.filter(
       (cta) => !hiddenInatCtas.has(cta.projectId)
     );
-  }, [mapContext.inaturalistCallToActions, hiddenInatCtas]);
+  }, [uiState.inaturalistCallToActions, hiddenInatCtas]);
 
   useEffect(() => {
     if (mapContainer.current) {
@@ -86,25 +100,33 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           }
         }
       };
-      mapContainer.current.addEventListener("click", clickHandler);
+      const container = mapContainer.current;
+      container.addEventListener("click", clickHandler);
       return () => {
-        mapContainer.current?.removeEventListener("click", clickHandler);
+        container.removeEventListener("click", clickHandler);
       };
     }
-  }, [mapContainer.current]);
+  }, [mapContainer]);
 
   useEffect(() => {
+    const selectedBasemap = basemapState.getSelectedBasemap();
     if (
       !map &&
       mapContainer.current &&
-      mapContext.manager &&
-      mapContext.ready &&
+      manager &&
+      ready &&
+      selectedBasemap?.url &&
       (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
     ) {
       let cancelled = false;
       const container = mapContainer.current;
-      mapContext.manager
-        .createMap(mapContainer.current, props.bounds, props.initOptions)
+      manager
+        .createMap(
+          mapContainer.current,
+          props.bounds,
+          props.initOptions,
+          basemapState
+        )
         .then((map) => {
           if (!cancelled && map) {
             setMap(map);
@@ -135,10 +157,14 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         }
       };
     }
-  }, [map, mapContext.manager, mapContext.selectedBasemap, mapContainer.current, mapContext.ready, props.lazyLoadReady]);
+  }, [map, manager, basemapState.selectedBasemap, mapContainer.current, ready, props.lazyLoadReady]);
 
-  let measurementToolsPlacement: string =
-    props.navigationControlsLocation || "top-right";
+  let measurementToolsPlacement:
+    | "top-right"
+    | "top-left"
+    | "bottom-right"
+    | "bottom-left"
+    | "top-right-homepage" = props.navigationControlsLocation || "top-right";
   if (
     !/surveys/.test(window.location.pathname) &&
     measurementToolsPlacement === "top-right"
@@ -156,44 +182,13 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       {createPortal(
         <SidebarPopup
           onClose={() => {
-            if (mapContext?.manager?.interactivityManager) {
-              mapContext.manager.interactivityManager.clearSidebarPopup();
-            }
+            uiState.interactivityManager?.clearSidebarPopup();
           }}
-          content={mapContext.sidebarPopupContent}
-          title={mapContext.sidebarPopupTitle}
+          content={uiState.sidebarPopupContent}
+          title={uiState.sidebarPopupTitle}
         />,
         document.body
       )}
-      {/* {props.mapSettingsPopupActions && (
-        <button
-          ref={mapSettingsPopupAnchor}
-          style={{ zIndex: 1, padding: 5 }}
-          onClick={() => {
-            if (props.onRequestSidebarClose) {
-              props.onRequestSidebarClose();
-            }
-            setMapSettingsPopupOpen(true);
-          }}
-          className={clsx(
-            "absolute bg-white ring-2 ring-black/10 rounded top-28",
-            props.navigationControlsLocation === "top-right"
-              ? "right-2.5"
-              : "left-2.5"
-          )}
-        >
-          <CogIcon className="w-5 h-5" />
-        </button>
-      )} */}
-      {/* {props.mapSettingsPopupActions && (
-        <MapSettingsPopup
-          open={mapSettingsPopupOpen}
-          onRequestClose={() => setMapSettingsPopupOpen(false)}
-          anchor={mapSettingsPopupAnchor.current || undefined}
-        >
-          {props.mapSettingsPopupActions}
-        </MapSettingsPopup>
-      )} */}
 
       {props.mapSettingsPopupActions && (
         <Popover.Root>
@@ -230,28 +225,27 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           </Popover.Portal>
         </Popover.Root>
       )}
-      <MeasurementToolsOverlay
-        // @ts-ignore
-        placement={measurementToolsPlacement}
-      />
+      <MeasurementToolsOverlay placement={measurementToolsPlacement} />
 
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
-          mapContext.showLoadingOverlay ? "opacity-100" : "opacity-0"
+          uiState.showLoadingOverlay ? "opacity-100" : "opacity-0"
         }`}
         style={{ backdropFilter: "blur(12px)" }}
       >
-        <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
-          <span>{mapContext.loadingOverlay}</span>
-          <Spinner color="white" className="ml-2" />
-        </div>
+        {!ready && (
+          <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
+            <span>{uiState.loadingOverlay}</span>
+            <Spinner color="white" className="ml-2" />
+          </div>
+        )}
       </div>
       {showSpinner && (
         <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
       )}
       <div className="w-full absolute top-0 z-10 items-center justify-center">
         <AnimatePresence>
-          {mapContext.offlineTileSimulatorActive ? (
+          {uiState.offlineTileSimulatorActive ? (
             <motion.div
               initial={{ opacity: 0, translateY: -40 }}
               animate={{ opacity: 1, translateY: 0 }}
@@ -309,7 +303,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       </div>
       <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
         <AnimatePresence>
-          {mapContext.bannerMessages?.length ? (
+          {uiState.bannerMessages?.length ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -322,7 +316,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 //   "linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.5), rgba(255,255,255,0))",
               }}
               dangerouslySetInnerHTML={{
-                __html: mapContext.bannerMessages.join(","),
+                __html: uiState.bannerMessages.join(","),
               }}
             />
           ) : null}
@@ -339,7 +333,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         }
       >
         <AnimatePresence>
-          {mapContext.displayedMapBookmark ? (
+          {uiState.displayedMapBookmark ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -350,27 +344,24 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 backgroundColor: "rgba(255,255,255,0.5)",
               }}
               onMouseEnter={() => {
-                mapContext?.manager?.cancelBookmarkBannerHiding();
+                manager?.cancelBookmarkBannerHiding();
               }}
               onMouseLeave={() => {
-                mapContext?.manager?.hideBookmarkBanner(1000);
+                manager?.hideBookmarkBanner(1000);
               }}
             >
-              {mapContext.displayedMapBookmark.errors.missingBasemap ||
-              mapContext.displayedMapBookmark.errors.missingLayers.length > 0 ||
-              mapContext.displayedMapBookmark.errors.missingSketches.length >
-                0 ? (
+              {uiState.displayedMapBookmark.errors.missingBasemap ||
+              uiState.displayedMapBookmark.errors.missingLayers.length > 0 ||
+              uiState.displayedMapBookmark.errors.missingSketches.length > 0 ? (
                 <Trans
                   ns="map"
                   i18nKey="missingLayerCount"
                   count={
-                    (mapContext.displayedMapBookmark.errors.missingBasemap
+                    (uiState.displayedMapBookmark.errors.missingBasemap
                       ? 1
                       : 0) +
-                    mapContext.displayedMapBookmark.errors.missingLayers
-                      .length +
-                    mapContext.displayedMapBookmark.errors.missingSketches
-                      .length
+                    uiState.displayedMapBookmark.errors.missingLayers.length +
+                    uiState.displayedMapBookmark.errors.missingSketches.length
                   }
                 />
               ) : (
@@ -379,7 +370,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
               <button
                 className="px-1 bg-gray-100 rounded-sm shadow ml-1"
                 onClick={() => {
-                  mapContext.manager?.undoMapBookmark();
+                  manager?.undoMapBookmark();
                 }}
               >
                 <Trans ns="map">undo</Trans>
@@ -388,7 +379,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 className="px-1 bg-gray-100 rounded-sm shadow ml-1 -mr-1.5"
                 onClick={() =>
                   setShowBookmarkOverlayId(
-                    mapContext.displayedMapBookmark?.id || null
+                    uiState.displayedMapBookmark?.id || null
                   )
                 }
               >
@@ -404,27 +395,27 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           onRequestClose={() => setShowBookmarkOverlayId(null)}
         />
       )}
-      {mapContext.basemapError && (
+      {styleError && (
         <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
           <div className=" bg-red-900 text-white p-1 text-sm">
             {
               //eslint-disable-next-line
             }
-            Basemap Error: {mapContext.basemapError.message}
+            Basemap Error: {styleError.message}
           </div>
         </div>
       )}
 
       <AnimatePresence>
         <Tooltip
-          visible={!!mapContext.tooltip}
-          x={mapContext.tooltip?.x}
-          y={mapContext.tooltip?.y}
+          visible={!!uiState.tooltip}
+          x={uiState.tooltip?.x}
+          y={uiState.tooltip?.y}
           content={
-            mapContext.tooltip ? (
+            uiState.tooltip ? (
               <div
                 dangerouslySetInnerHTML={{
-                  __html: mapContext.tooltip?.messages.join(",") || "",
+                  __html: uiState.tooltip?.messages.join(",") || "",
                 }}
               ></div>
             ) : undefined

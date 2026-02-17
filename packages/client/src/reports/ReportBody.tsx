@@ -1,9 +1,18 @@
 import { Trans } from "react-i18next";
-import { useReportContext } from "./ReportContext";
-import { ReportCardFactory } from "./ReportCard";
+import { useContext, useMemo } from "react";
+import { useBaseReportContext } from "./context/BaseReportContext";
+import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import { ReportCardWithToolbarContext } from "./SortableReportContent";
 
 export function ReportBody() {
-  const { report, selectedTabId, getDependencies } = useReportContext();
+  const { report } = useBaseReportContext();
+  const uiState = useContext(ReportUIStateContext);
+  const selectedTabId = uiState.selectedTabId;
+
+  const hasMultipleTabs = useMemo(
+    () => (report.tabs || []).length > 1,
+    [report.tabs]
+  );
 
   if (!report?.tabs || report.tabs.length === 0) {
     return null;
@@ -29,20 +38,16 @@ export function ReportBody() {
                 </p>
               </div>
             )}
-            {tab.cards?.map((card) => {
-              const { metrics, loading, errors, overlaySources } =
-                getDependencies(card.id);
-              return (
-                <ReportCardFactory
-                  key={card.id}
-                  config={card}
-                  metrics={metrics}
-                  sources={overlaySources}
-                  loading={loading}
-                  errors={errors}
-                />
-              );
-            })}
+            {tab.cards?.map((card) => (
+              <ReportCardWithToolbarContext
+                key={card.id}
+                card={card}
+                hasMultipleTabs={hasMultipleTabs}
+                onShowCalculationDetails={uiState.setShowCalcDetails}
+                setEditing={uiState.setEditing}
+                adminMode={false}
+              />
+            ))}
           </div>
         );
       })}

@@ -1,5 +1,10 @@
 import { useCallback, useMemo } from "react";
-import { MapContextInterface } from "./MapContextManager";
+import MapContextManager, {
+  LayerTreeContextState,
+  LegendsContextState,
+  MapContextInterface,
+  SketchClassLayerState,
+} from "./MapContextManager";
 import { LegendItem } from "./Legend";
 
 /**
@@ -11,21 +16,26 @@ import { LegendItem } from "./Legend";
  * project homepage and layer admin ToC we use this hook to provide the
  * handlers.
  */
-export default function useCommonLegendProps(mapContext: MapContextInterface) {
+export default function useCommonLegendProps(
+  mapContext: Pick<MapContextInterface, "layerStatesByTocStaticId" | "legends">,
+  manager: MapContextManager | undefined,
+  sketchClassLayerStates: { [sketchClassId: string]: SketchClassLayerState }
+) {
+
   const onHiddenItemsChange = useCallback(
     (id: string, hidden: boolean) => {
       if (/sketch-class/.test(id)) {
         const sketchClassId = parseInt(id.split("sketch-class-")[1]);
-        mapContext.manager?.setSketchClassHidden(sketchClassId, hidden);
+        manager?.setSketchClassHidden(sketchClassId, hidden);
       } else {
         if (hidden) {
-          mapContext.manager?.hideLayer(id);
+          manager?.hideLayer(id);
         } else {
-          mapContext.manager?.showHiddenLayer(id);
+          manager?.showHiddenLayer(id);
         }
       }
     },
-    [mapContext.manager]
+    [manager]
   );
 
   const hiddenItems = useMemo(() => {
@@ -35,25 +45,19 @@ export default function useCommonLegendProps(mapContext: MapContextInterface) {
         hiddenItems.push(id);
       }
     }
-    for (const id in mapContext.sketchClassLayerStates) {
-      if (mapContext.sketchClassLayerStates[id].hidden) {
+    for (const id in sketchClassLayerStates) {
+      if (sketchClassLayerStates[id].hidden) {
         // eslint-disable-next-line i18next/no-literal-string
         hiddenItems.push(`sketch-class-${id}`);
       }
     }
     return hiddenItems;
-  }, [mapContext.layerStatesByTocStaticId, mapContext.sketchClassLayerStates]);
+  }, [mapContext.layerStatesByTocStaticId, sketchClassLayerStates]);
 
   const items = useMemo<LegendItem[]>(() => {
     if (mapContext.legends) {
       const visibleLegends: LegendItem[] = [];
-      // for (const layerId in mapContext.legends) {
-      //   const legend = mapContext.legends[layerId];
-      //   if (legend && /sketch-class/.test(legend?.id || "")) {
-      //     visibleLegends.push(legend);
-      //   }
-      // }
-      for (const layer of mapContext.manager?.getVisibleLayersByZIndex() ||
+      for (const layer of manager?.getVisibleLayersByZIndex() ||
         []) {
         if (layer.sketchClassLayerState) {
           visibleLegends.push(layer.sketchClassLayerState.legendItem);

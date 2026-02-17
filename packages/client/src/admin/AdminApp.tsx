@@ -326,7 +326,7 @@ export default function AdminApp() {
               {/* Header (mobile-only) */}
               <main
                 key="main"
-                className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto"
+                className="flex-1 relative overflow-x-hidden focus:outline-none max-h-full overflow-y-auto overscroll-contain"
                 tabIndex={0}
               >
                 <AdminRouter />
@@ -497,7 +497,7 @@ function StaticSidebar({
   return (
     <div className="hidden md:flex md:flex-shrink-0 min-h-screen">
       <div className="flex flex-col w-56">
-        <div className="flex flex-col flex-grow bg-gray-800 pt-5 pb-4 overflow-y-auto text-white">
+        <div className="flex flex-col flex-grow bg-gray-800 pt-5 pb-4 overflow-y-auto overscroll-contain text-white">
           <SidebarContents
             sections={sections}
             slug={slug}

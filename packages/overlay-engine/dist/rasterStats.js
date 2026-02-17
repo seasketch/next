@@ -44,8 +44,8 @@ function getGeoblaze() {
     return _geoblaze;
 }
 async function calculateRasterStats(sourceUrl, feature) {
+    const geoblaze = getGeoblaze();
     try {
-        const geoblaze = getGeoblaze();
         const raster = await geoblaze.parse(sourceUrl);
         const stats = await geoblaze.stats(raster, feature, {
             stats: [
@@ -59,6 +59,8 @@ async function calculateRasterStats(sourceUrl, feature) {
                 "invalid",
                 "sum",
             ],
+        }, undefined, {
+            vrm: "minimal",
         });
         return {
             bands: stats.map((stat) => {
@@ -82,9 +84,24 @@ async function calculateRasterStats(sourceUrl, feature) {
     }
     catch (e) {
         console.error("Error calculating raster stats", e);
+        console.log(sourceUrl);
+        console.log(feature);
+        console.log(feature.geometry.coordinates);
         if (typeof e === "string" && e.includes("No Values")) {
             return {
-                bands: [],
+                bands: [
+                    {
+                        count: 0,
+                        min: NaN,
+                        max: NaN,
+                        mean: NaN,
+                        median: NaN,
+                        range: NaN,
+                        histogram: [],
+                        invalid: 0,
+                        sum: 0,
+                    },
+                ],
             };
         }
         else {

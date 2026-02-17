@@ -841,10 +841,15 @@ export async function createOrUpdateSketch({
     sketchId
   );
 
-  startMetricCalculationsForSketch(
-    pgClient as unknown as Pool,
-    sketchId!,
-    false
+  // startMetricCalculationsForSketch(
+  //   pgClient as unknown as Pool,
+  //   sketchId!,
+  //   false
+  // );
+  await pgClient.query(
+    `
+    select enqueue_metric_calculations_for_sketch($1)`,
+    [sketchId!]
   );
 
   return sketchId!;

@@ -1,77 +1,46 @@
 import { Trans, useTranslation } from "react-i18next";
-import { useReportContext } from "./ReportContext";
-import { useMemo } from "react";
-import {
-  CompatibleSpatialMetric,
-  Geography,
-  OverlaySourceDetailsFragment,
-  SpatialMetricState,
-} from "../generated/graphql";
-import {
-  MetricSubjectFragment,
-  MetricSubjectGeography,
-  subjectIsFragment,
-  subjectIsGeography,
-} from "overlay-engine";
+import { useContext, useMemo } from "react";
+import { Geography, SpatialMetricState } from "../generated/graphql";
+import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { ReportCardConfiguration } from "./cards/cards";
+import { DraftReportContext } from "./DraftReportContext";
+import { useCardDependenciesContext } from "./context/CardDependenciesContext";
+import { useBaseReportContext } from "./context/BaseReportContext";
 
 export default function ReportMetricsProgressDetails({
-  metricIds,
-  skeleton,
   config,
   isAdmin,
 }: {
-  metricIds: number[];
-  skeleton: React.ReactNode;
   config: ReportCardConfiguration<any>;
   isAdmin?: boolean;
 }) {
   const { t } = useTranslation("sketching");
-  const reportContext = useReportContext();
+  const context = useCardDependenciesContext();
+  const draftReportContext = useContext(DraftReportContext);
+  const baseReportContext = useBaseReportContext();
 
   const state = useMemo(() => {
-    const geographyMetrics: CompatibleSpatialMetric[] = [];
-    const fragmentMetrics: CompatibleSpatialMetric[] = [];
-    const relatedOverlaySources = new Set<OverlaySourceDetailsFragment>();
     const failedMetrics = [] as number[];
-
-    for (const metric of reportContext.metrics) {
-      if (metricIds.includes(metric.id)) {
-        if (
-          subjectIsGeography(
-            metric.subject as MetricSubjectFragment | MetricSubjectGeography
-          )
-        ) {
-          geographyMetrics.push(metric);
-        } else {
-          fragmentMetrics.push(metric);
-        }
-        if (metric.sourceUrl || metric.sourceProcessingJobDependency) {
-          const relatedOverlaySource = reportContext.overlaySources.find(
-            (s) =>
-              s.sourceProcessingJob?.jobKey ===
-                metric.sourceProcessingJobDependency ||
-              (s.sourceUrl && s.sourceUrl === metric.sourceUrl)
-          );
-          if (relatedOverlaySource) {
-            relatedOverlaySources.add(relatedOverlaySource);
-          }
-        }
-        if (metric.state === SpatialMetricState.Error) {
-          failedMetrics.push(metric.id);
-        }
-      }
-    }
+    const metrics = [...draftReportContext.draftMetrics, ...context.metrics];
+    const overlaySources = [
+      ...draftReportContext.draftOverlaySources,
+      ...context.sources,
+    ];
 
     return {
-      geographyMetrics,
-      fragmentMetrics,
-      relatedOverlaySources: Array.from(relatedOverlaySources),
+      geographyMetrics: metrics.filter((m) => !subjectIsFragment(m.subject)),
+      fragmentMetrics: metrics.filter((m) => subjectIsFragment(m.subject)),
+      relatedOverlaySources: Array.from(overlaySources),
       failedMetrics,
     };
-  }, [metricIds, reportContext.metrics, reportContext.overlaySources]);
+  }, [
+    draftReportContext.draftMetrics,
+    draftReportContext.draftOverlaySources,
+    context.metrics,
+    context.sources,
+  ]);
 
   return (
     <Tooltip.Provider>
@@ -95,7 +64,7 @@ export default function ReportMetricsProgressDetails({
                     SpatialMetricState.Complete || Boolean(layer.output);
                 return (
                   <ReportTaskLineItem
-                    key={layer.tableOfContentsItemId}
+                    key={"rtli-layer-" + layer.tableOfContentsItemId}
                     title={layer.tableOfContentsItem?.title || "Untitled"}
                     state={
                       isComplete
@@ -148,10 +117,13 @@ export default function ReportMetricsProgressDetails({
             <ul className="space-y-1 py-2">
               {state.geographyMetrics.map((metric) => (
                 <ReportTaskLineItem
-                  key={metric.id}
+                  key={"rtli-" + metric.id}
                   title={nameForGeography(
-                    metric.subject as { type: "geography"; id: number },
-                    reportContext.geographies
+                    metric.subject as unknown as {
+                      type: "geography";
+                      id: number;
+                    },
+                    baseReportContext.geographies
                   )}
                   state={metric.state}
                   progress={metric.progress || null}
@@ -187,7 +159,9 @@ export default function ReportMetricsProgressDetails({
             <ul className="space-y-1 py-2">
               {state.fragmentMetrics.map((metric) => (
                 <ReportTaskLineItem
-                  key={metric.id}
+                  key={"rmtli-" + metric.id}
+                  metricType={metric.type}
+                  parameters={metric.parameters}
                   title={
                     <span className="truncate">
                       <span

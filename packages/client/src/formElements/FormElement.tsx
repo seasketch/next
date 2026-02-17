@@ -31,8 +31,8 @@ import { FetchResult, MutationResult } from "@apollo/client";
 import { formElements as editorConfig } from "../editor/config";
 import Spinner from "../components/Spinner";
 import {
-  MapContext,
-  MapContextInterface,
+  MapManagerContext,
+  SketchLayerContext,
 } from "../dataLayers/MapContextManager";
 import { BBox, Feature, FeatureCollection } from "geojson";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
@@ -153,6 +153,7 @@ export function FormElementBody({
   const schema = isInput
     ? editorConfig.questions.schema
     : editorConfig.content.schema;
+
   const target = useRef<HTMLDivElement>(null);
   const serializer = useRef(DOMSerializer.fromSchema(schema));
   const langContext = useContext(FormLanguageContext);
@@ -256,17 +257,19 @@ export class FormElementEditorPortal extends Component<{
   }
 }
 
-export const SurveyMapPortal: FunctionComponent<{
-  mapContext: MapContextInterface;
-}> = (props) => {
+export const SurveyMapPortal: FunctionComponent = (props) => {
   const portalContext = useContext(FormElementLayoutContext).mapPortal;
+  const managerState = useContext(MapManagerContext);
+  const sketchLayerState = useContext(SketchLayerContext);
   if (portalContext) {
     return createPortal(
-      <MapContext.Provider value={props.mapContext}>
-        <MeasureControlContextProvider>
-          {props.children}
-        </MeasureControlContextProvider>
-      </MapContext.Provider>,
+      <MapManagerContext.Provider value={managerState}>
+        <SketchLayerContext.Provider value={sketchLayerState}>
+          <MeasureControlContextProvider>
+            {props.children}
+          </MeasureControlContextProvider>
+        </SketchLayerContext.Provider>
+      </MapManagerContext.Provider>,
       portalContext
     );
   } else {

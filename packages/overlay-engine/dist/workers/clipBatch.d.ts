@@ -56,13 +56,13 @@ export declare function createPresenceTable({ features, differenceMultiPolygon, 
 }>;
 export type ColumnValues = [
     /** column value */
-    number,
+    number | string | boolean,
     number
 ] | [
     /** column value */
-    number
+    number | string | boolean
 ];
-export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }: {
+export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;
         requiresIntersection: boolean;
@@ -70,10 +70,16 @@ export declare function collectColumnValues({ features, differenceMultiPolygon, 
     }[];
     differenceMultiPolygon: clipping.Geom[];
     subjectFeature: Feature<Polygon | MultiPolygon>;
-    property: string;
     groupBy?: string;
 }): Promise<{
-    [classKey: string]: ColumnValues[];
+    [classKey: string]: {
+        [attr: string]: ColumnValues[];
+    };
 }>;
+export declare function addColumnValuesToResults(results: {
+    [classKey: string]: {
+        [attr: string]: ColumnValues[];
+    };
+}, feature: FeatureWithMetadata<Feature<Geometry>>, groupBy?: string): void;
 export declare function pick(object: any, keys?: string[]): any;
 //# sourceMappingURL=clipBatch.d.ts.map

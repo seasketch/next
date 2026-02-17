@@ -362,7 +362,12 @@ function FooterButton(props: FooterButtonProps) {
     >
       {props.variant === "trash" && <TrashIcon className="w-4 h-4 mr-2" />}
       {props.label}
-      {props.loading && <Spinner className="ml-2" color="white" />}
+      {props.loading && (
+        <Spinner
+          className="ml-2"
+          color={props.variant === "secondary" ? "grey" : "white"}
+        />
+      )}
     </button>
   );
 }

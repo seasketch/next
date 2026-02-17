@@ -13,7 +13,7 @@ import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import GLStyleEditor from "./GLStyleEditor/GLStyleEditor";
 import Tabs, { NonLinkTabItem } from "../../components/Tabs";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import { CaretRightIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import Skeleton from "../../components/Skeleton";
 import FolderIcon from "../../components/FolderIcon";
@@ -85,7 +85,9 @@ export default function LayerTableOfContentsItemEditor(
     fetchPolicy: "cache-and-network",
   });
 
-  const mapContext = useContext(MapContext);
+  console.log(data?.tableOfContentsItem);
+
+  const { manager } = useContext(MapManagerContext);
 
   const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
   const [updateGLStyleMutation, updateGLStyleMutationState] =
@@ -344,7 +346,7 @@ export default function LayerTableOfContentsItemEditor(
                       },
                     });
                     setStyle(newStyle);
-                    mapContext.manager?.updateLegends(true);
+                    manager?.updateLegends(true);
                   }}
                   bounds={
                     item.bounds

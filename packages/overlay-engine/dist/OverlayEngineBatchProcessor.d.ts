@@ -114,6 +114,6 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     private mergePresenceTableBatchResults;
     addDifferenceFeatureReferencesToBatch(layerId: string, refs: FeatureReference[]): void;
     addFeatureToBatch(feature: FeatureWithMetadata<Feature<Geometry>>, requiresIntersection: boolean, requiresDifference: boolean): void;
-    weightForFeature(feature: FeatureWithMetadata<Feature<Geometry>>): number;
+    weightForFeature(feature: FeatureWithMetadata<Feature<Geometry>>): any;
 }
 //# sourceMappingURL=OverlayEngineBatchProcessor.d.ts.map

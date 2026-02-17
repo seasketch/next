@@ -1,9 +1,15 @@
-export default function Skeleton({ className }: { className?: string }) {
+export default function Skeleton({
+  className,
+  strong,
+}: {
+  className?: string;
+  strong?: boolean;
+}) {
   return (
     <div
-      className={`inline-block seasketch-skeleton rounded-sm ${
-        className ? className : "h-4 mt-1 mb-1 w-full"
-      }`}
+      className={`inline-block ${
+        strong ? " seasketch-skeleton-strong" : "seasketch-skeleton"
+      } rounded-sm ${className ? className : "h-4 mt-1 mb-1 w-full"}`}
     ></div>
   );
 }

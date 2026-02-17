@@ -42,6 +42,7 @@ exports.countFeatures = countFeatures;
 exports.testForPresenceInSubject = testForPresenceInSubject;
 exports.createPresenceTable = createPresenceTable;
 exports.collectColumnValues = collectColumnValues;
+exports.addColumnValuesToResults = addColumnValuesToResults;
 exports.pick = pick;
 const clipping = __importStar(require("polyclip-ts"));
 const area_1 = __importDefault(require("@turf/area"));
@@ -285,8 +286,10 @@ async function createPresenceTable({ features, differenceMultiPolygon, subjectFe
     }
     return results;
 }
-async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, property, groupBy, }) {
-    const results = { "*": [] };
+async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, 
+// property,
+groupBy, }) {
+    const results = { "*": {} };
     for (const f of features) {
         if (f.feature.geometry.type === "Point" ||
             f.feature.geometry.type === "MultiPoint") {
@@ -321,38 +324,58 @@ async function collectColumnValues({ features, differenceMultiPolygon, subjectFe
             f.feature.geometry.type === "MultiLineString") {
             f.feature = performOperationsOnFeature(f.feature, f.requiresIntersection, f.requiresDifference, differenceMultiPolygon, subjectFeature);
         }
-        const value = f.feature.properties?.[property];
+        addColumnValuesToResults(results, f.feature, groupBy);
+    }
+    return results;
+}
+function addColumnValuesToResults(results, feature, groupBy) {
+    for (const attr in feature.properties) {
+        if (attr === "__oidx" ||
+            attr === "__byteLength" ||
+            attr === "__area" ||
+            attr === "__offset") {
+            continue;
+        }
+        const value = feature.properties[attr];
         const columnValue = [value];
-        if (f.feature.geometry.type === "Polygon" ||
-            f.feature.geometry.type === "MultiPolygon") {
-            const sqKm = (0, area_1.default)(f.feature) * 1e-6;
+        if (feature.geometry.type === "Polygon" ||
+            feature.geometry.type === "MultiPolygon") {
+            const sqKm = (0, area_1.default)(feature) * 1e-6;
             if (isNaN(sqKm) || sqKm === 0) {
                 continue;
             }
             columnValue.push(sqKm);
         }
-        else if (f.feature.geometry.type === "LineString" ||
-            f.feature.geometry.type === "MultiLineString") {
-            const length = (0, length_1.default)(f.feature);
+        else if (feature.geometry.type === "LineString" ||
+            feature.geometry.type === "MultiLineString") {
+            const length = (0, length_1.default)(feature);
             if (isNaN(length) || length === 0) {
                 continue;
             }
             columnValue.push(length);
         }
-        if (typeof value === "number") {
-            results["*"].push(columnValue);
+        if (typeof value === "number" ||
+            typeof value === "string" ||
+            typeof value === "boolean") {
+            if (!(attr in results["*"]) || !Array.isArray(results["*"][attr])) {
+                results["*"][attr] = [];
+            }
+            results["*"][attr].push(columnValue);
             if (groupBy) {
-                const classKey = f.feature.properties?.[groupBy];
+                const classKey = feature.properties?.[groupBy];
                 if (classKey) {
                     if (!(classKey in results)) {
-                        results[classKey] = [];
+                        results[classKey] = {};
                     }
-                    results[classKey].push(columnValue);
+                    if (!(attr in results[classKey]) ||
+                        !Array.isArray(results[classKey][attr])) {
+                        results[classKey][attr] = [];
+                    }
+                    results[classKey][attr].push(columnValue);
                 }
             }
         }
     }
-    return results;
 }
 node_worker_threads_1.parentPort?.on("message", async (job) => {
     try {
@@ -391,14 +414,14 @@ node_worker_threads_1.parentPort?.on("message", async (job) => {
             });
         }
         else if (operation === "column_values") {
-            if (!job.property) {
-                throw new Error("property is required for column_values operation");
-            }
+            // if (!job.property) {
+            //   throw new Error("property is required for column_values operation");
+            // }
             result = await collectColumnValues({
                 features: job.features,
                 differenceMultiPolygon: job.differenceMultiPolygon,
                 subjectFeature: job.subjectFeature,
-                property: job.property,
+                // property: job.property,
                 groupBy: job.groupBy,
             });
         }

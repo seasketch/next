@@ -175,17 +175,16 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBody h1[data-report-title="yes"],
 .ReportCardBodyEditor h1[data-report-title="yes"] {
-  @apply text-base font-medium max-w-[95%] truncate py-2 pb-0;
+  @apply text-base font-medium  py-2 pb-0;
 }
 
-.loading .ReportCardBody h1[data-report-title="yes"],
-.loading .ReportCardBodyEditor h1[data-report-title="yes"] {
-  @apply max-w-[calc(100%-120px)] truncate;
+.ReportCardBodyEditor h1[data-report-title="yes"] {
+  @apply truncate;
 }
 
-.ReportCardBody h1[data-report-title="yes"] {
+/* .ReportCardBody h1[data-report-title="yes"] {
   @apply pointer-events-none;
-}
+} */
 
 .ReportCardBodyEditor h1[data-report-title="yes"] {
   /* @apply; */
@@ -226,6 +225,14 @@ div[attachments="forumAttachments"] {
 
 .ProseMirror h2.empty-footer-title-node::before {
   content: "Learn More...";
+}
+
+.ReportCardBody .ProseMirror h2 {
+  @apply text-base font-medium my-2;
+}
+
+.ReportCardBody .ProseMirror h3 {
+  @apply text-sm font-semibold my-2;
 }
 
 .ReportCardBody h2[data-footer-title="yes"],
@@ -287,4 +294,153 @@ div[attachments="forumAttachments"] {
 
 .Presence.ReportCard.isAbsent [data-absence-block="yes"] {
   @apply block;
+}
+
+/* Metric node selection styling */
+.ProseMirror span.metric.ProseMirror-selectednode {
+  @apply bg-blue-100;
+}
+
+.ProseMirror span.metric {
+  @apply inline-block;
+  user-select: all; /* Make the entire node selectable */
+}
+
+.ReportCardBodyViewer .ProseMirror .ProseMirror-selectednode {
+  /* Hide selection styling in view-only mode */
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+}
+
+.ReportCard.loadingSkeleton [contenteditable="false"] {
+  p,
+  details {
+    @apply text-transparent bg-black/5 rounded border-none shadow-none;
+    background: linear-gradient(
+      -100deg,
+      transparent,
+      rgba(0, 0, 0, 0.02),
+      rgba(20, 0, 180, 0.04)
+    );
+    background-size: 400% 400%;
+    animation: pulse 1.3s ease-in-out infinite;
+
+    @keyframes pulse {
+      0% {
+        background-position: 0% 0%;
+      }
+      100% {
+        background-position: -155% 0%;
+      }
+    }
+
+    .ProseMirror__reactComponent {
+      display: none;
+    }
+  }
+
+  a {
+    @apply text-transparent;
+  }
+
+  summary {
+    @apply text-transparent;
+  }
+
+  li {
+    list-style: none;
+  }
+
+  .ProseMirror__reactComponent.reportTitle span {
+    @apply opacity-50;
+  }
+
+  .ProseMirror__reactComponent:not(.reportTitle) {
+    @apply text-transparent bg-black/10 rounded;
+
+    > * {
+      opacity: 0;
+    }
+
+    background: linear-gradient(
+      -100deg,
+      transparent,
+      rgba(0, 0, 0, 0.02),
+      rgba(20, 0, 180, 0.04)
+    );
+    background-size: 400% 400%;
+    animation: pulse 1.3s ease-in-out infinite;
+
+    @keyframes pulse {
+      0% {
+        background-position: 0% 0%;
+      }
+      100% {
+        background-position: -255% 0%;
+      }
+    }
+  }
+}
+
+.ReportCardBody > .ProseMirror p:last-child {
+  @apply mb-0;
+}
+
+.ReportCardBodyEditor .ProseMirror p.has-placeholder {
+  position: relative;
+}
+
+.ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder {
+  @apply text-gray-400;
+  pointer-events: none;
+  user-select: none;
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+}
+
+.ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder kbd {
+  @apply text-gray-500 bg-gray-100 border border-gray-300 rounded;
+  font-family: inherit;
+  font-size: 0.75em;
+  padding: 1px 5px;
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.08);
+  padding-bottom: 1px;
+}
+
+.ReportCardBody details {
+  /* @apply pl-2; */
+  @apply my-4 border rounded p-2;
+}
+
+.ReportCard details > summary,
+.ReportCardBody details > summary {
+  @apply cursor-pointer font-semibold text-gray-800;
+}
+
+.ReportCardBody details > *:not(summary) {
+  @apply ml-4;
+}
+
+.ReportCardBody .results-paragraph {
+  @apply bg-gray-100 rounded p-3 shadow text-[14px] font-medium border border-black/10;
+
+  .metric {
+    @apply font-bold;
+  }
+}
+
+.ReportCardBody [contenteditable="false"] details {
+  user-select: none;
+  p {
+    user-select: text;
+  }
+}
+
+.ReportCardBody:not(.ReportCardBodyEditor) h1[data-report-title="yes"] {
+  > .ProseMirror__contentDOM {
+    display: none;
+  }
 }

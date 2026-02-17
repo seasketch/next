@@ -2,7 +2,7 @@ import { ZoomInIcon } from "@radix-ui/react-icons";
 import { FullAdminSourceFragment } from "../../../generated/graphql";
 import { SettingsDLListItem } from "../../SettingsDefinitionList";
 import { useTranslation } from "react-i18next";
-import { MapContext } from "../../../dataLayers/MapContextManager";
+import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import { useContext } from "react";
 import { map } from "d3";
 
@@ -27,7 +27,7 @@ export default function RemoteVectorLayerInfo({
   readonly?: boolean;
 }) {
   const { t } = useTranslation("admin:data");
-  const mapContext = useContext(MapContext);
+  const { manager } = useContext(MapManagerContext);
 
   return (
     <>
@@ -63,8 +63,8 @@ export default function RemoteVectorLayerInfo({
               </span>
               <button
                 onClick={() => {
-                  if (mapContext.manager?.map) {
-                    mapContext.manager.map.fitBounds(source.bounds as any);
+                  if (manager?.map) {
+                    manager.map.fitBounds(source.bounds as any);
                   }
                 }}
               >

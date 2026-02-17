@@ -28,6 +28,8 @@ interface ReportTaskLineItemProps {
   progressPercent?: number | null;
   sourcesReady?: boolean;
   value?: any;
+  metricType?: string;
+  parameters?: any;
 }
 
 export default function ReportTaskLineItem({
@@ -46,6 +48,8 @@ export default function ReportTaskLineItem({
   progressPercent,
   sourcesReady,
   value,
+  metricType,
+  parameters,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
   const hasTooltipInfo =
@@ -67,6 +71,18 @@ export default function ReportTaskLineItem({
 
   const infoTooltip = (
     <div className="space-y-2 text-sm">
+      {metricType && (
+        <div>
+          <div className="font-semibold text-white">{t("Operation")}</div>
+          <div className="text-gray-300">{metricType}</div>
+        </div>
+      )}
+      {parameters && hasParameters(parameters) && (
+        <div>
+          <div className="font-semibold text-white mb-1">{t("Parameters")}</div>
+          <JSONPreview value={formatParameters(parameters)} />
+        </div>
+      )}
       {state === SpatialMetricState.Error && errorMessage && (
         <div>
           <div className="font-semibold text-red-400 mb-1">{t("Error")}</div>
@@ -508,4 +524,31 @@ function StateIcon({
     case SpatialMetricState.DependencyNotReady:
       return <ClockIcon className="text-green-700" />;
   }
+}
+
+function hasParameters(params: any) {
+  for (const key in params) {
+    if (key === "__typename") {
+      continue;
+    }
+    if (params[key] === null || params[key] === undefined) {
+      continue;
+    }
+    return true;
+  }
+  return false;
+}
+
+function formatParameters(params: any) {
+  let newParams = {} as Record<string, string>;
+  for (const key in params) {
+    if (
+      key !== "__typename" &&
+      params[key] !== null &&
+      params[key] !== undefined
+    ) {
+      newParams[key] = params[key];
+    }
+  }
+  return newParams;
 }

@@ -330,6 +330,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   eta
   startedAt
   durationSeconds
+  dependencyHash
 }
 
 fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
@@ -339,27 +340,6 @@ fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
   value
   errorMessage
   progress
-}
-
-subscription GeographyMetricSubscription($projectId: Int!) {
-  geographyMetrics(projectId: $projectId) {
-    metricId
-    geographyId
-    projectId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-
-subscription SketchMetricSubscription($sketchId: Int!) {
-  sketchMetrics(sketchId: $sketchId) {
-    metricId
-    sketchId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
 }
 
 mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {

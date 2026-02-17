@@ -9,7 +9,7 @@ import {
 import CircularProgressIndicator from "./CircularProgressIndicator";
 import ETACountdown from "./ETACountdown";
 import { useTranslation } from "react-i18next";
-const LOADING_INDICATOR_DELAY_MS = 2000;
+const LOADING_INDICATOR_DELAY_MS = 200;
 
 type MinimalJob = {
   progress: number; // 0-100
@@ -17,7 +17,7 @@ type MinimalJob = {
   state: SpatialMetricState;
 };
 
-function toMinimalJobsFromSources(
+export function toMinimalJobsFromSources(
   jobs: Pick<SourceProcessingJob, "state" | "progressPercentage" | "eta">[]
 ): MinimalJob[] {
   return jobs.map((j) => ({
@@ -33,7 +33,7 @@ function toMinimalJobsFromSources(
   }));
 }
 
-function toMinimalJobsFromMetrics(
+export function toMinimalJobsFromMetrics(
   metrics: Pick<CompatibleSpatialMetric, "state" | "progress" | "eta">[]
 ): MinimalJob[] {
   return metrics.map((m) => ({
@@ -46,7 +46,7 @@ function toMinimalJobsFromMetrics(
   }));
 }
 
-function computeCombinedProgress(items: MinimalJob[]): {
+export function computeCombinedProgress(items: MinimalJob[]): {
   progressPercent: number | null; // null => indeterminate
   farthestEta: Date | null;
   thresholdMet: boolean;
@@ -58,7 +58,7 @@ function computeCombinedProgress(items: MinimalJob[]): {
       progressPercent: null,
       farthestEta: null,
       thresholdMet: false,
-      allComplete: false,
+      allComplete: true,
     };
   }
 
@@ -162,10 +162,9 @@ export default function ReportCardLoadingIndicator({
   className?: string;
 }) {
   const { t } = useTranslation("sketching");
-  const sourceJobs = useMemo(
-    () => toMinimalJobsFromSources(sourceProcessingJobs || []),
-    [sourceProcessingJobs]
-  );
+  const sourceJobs = useMemo(() => {
+    return toMinimalJobsFromSources(sourceProcessingJobs || []);
+  }, [sourceProcessingJobs]);
   const metricJobs = useMemo(
     () => toMinimalJobsFromMetrics(metrics as any),
     [metrics]
@@ -252,13 +251,13 @@ export default function ReportCardLoadingIndicator({
     } else {
       setReadyToShow(false);
     }
-  }, [display, isComplete]);
+  }, [display, isComplete, farthestEta]);
 
   if (!display || (!isComplete && !readyToShow)) return null;
 
   return (
     <motion.div
-      className={`inline-flex items-center space-x-2 ${className || ""}`}
+      className={`inline-flex items-center ${className || ""}`}
       role="progressbar"
       aria-valuemin={0}
       aria-valuemax={100}
@@ -302,6 +301,8 @@ export default function ReportCardLoadingIndicator({
         size={40}
         strokeWidth={4}
         className="w-4 h-4"
+        trackColor="rgba(0,0,0,0.05)"
+        progressColor="rgba(0,0,0,0.15)"
       />
     </motion.div>
   );

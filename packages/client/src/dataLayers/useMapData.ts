@@ -8,17 +8,24 @@ import {
   useGetBasemapsQuery,
   useLayersAndSourcesForItemsQuery,
   usePublishedTableOfContentsQuery,
+  useDraftTableOfContentsQuery,
 } from "../generated/graphql";
-import { MapContextInterface } from "./MapContextManager";
+
+export interface UseMapDataOptions {
+  /** When true, use draft table of contents (for admin preview). Default: false (published). */
+  draft?: boolean;
+}
 
 /**
- * Retrieves published table of contents items, basemaps,
- * data sources and data layers. Also updates the given
- * map context with these values.
+ * Pure data-fetching hook. Returns basemaps, table of contents items,
+ * data layers, and data sources for the current project.
  */
-export default function useMapData(mapContext: MapContextInterface) {
+export default function useMapData(options?: UseMapDataOptions) {
+  const { draft = false } = options ?? {};
   const { slug } = useParams<{ slug: string }>();
-  const [basemaps, setBasemaps] = useState<BasemapDetailsFragment[]>([]);
+  const [basemaps, setBasemaps] = useState<
+    BasemapDetailsFragment[] | undefined
+  >(undefined);
   const [tableOfContentsItems, setTableOfContentsItems] = useState<
     OverlayFragment[]
   >([]);
@@ -27,64 +34,58 @@ export default function useMapData(mapContext: MapContextInterface) {
     []
   );
 
-  const tocQuery = usePublishedTableOfContentsQuery({
-    variables: {
-      slug,
-    },
+  const publishedTocQuery = usePublishedTableOfContentsQuery({
+    variables: { slug },
+    skip: draft,
   });
+  const draftTocQuery = useDraftTableOfContentsQuery({
+    variables: { slug },
+    skip: !draft,
+  });
+  const tocItems = draft
+    ? draftTocQuery.data?.projectBySlug?.draftTableOfContentsItems
+    : publishedTocQuery.data?.projectBySlug?.tableOfContentsItems;
+
   const layersAndSourcesQuery = useLayersAndSourcesForItemsQuery({
     variables: {
       slug,
-      tableOfContentsItemIds:
-        tocQuery.data?.projectBySlug?.tableOfContentsItems?.map((t) => t.id) ||
-        [],
+      tableOfContentsItemIds: tocItems?.map((t: { id: number }) => t.id) ?? [],
     },
+    skip: !tocItems,
   });
   const basemapsQuery = useGetBasemapsQuery({
     variables: {
       slug,
     },
   });
-  useEffect(() => {
-    if (basemapsQuery.data?.projectBySlug?.basemaps) {
-      const basemaps = basemapsQuery.data.projectBySlug
-        .basemaps as BasemapDetailsFragment[];
-      if (mapContext.manager) {
-        mapContext.manager.setBasemaps(basemaps);
-      }
-      setBasemaps(basemaps);
-    }
-  }, [mapContext.manager, basemapsQuery.data]);
 
   useEffect(() => {
-    if (tocQuery.data?.projectBySlug?.tableOfContentsItems) {
-      setTableOfContentsItems(tocQuery.data.projectBySlug.tableOfContentsItems);
+    if (basemapsQuery.data?.projectBySlug?.basemaps) {
+      setBasemaps(
+        basemapsQuery.data.projectBySlug.basemaps as BasemapDetailsFragment[]
+      );
     }
-  }, [tocQuery.data]);
+  }, [basemapsQuery.data]);
+
+  useEffect(() => {
+    if (tocItems) {
+      setTableOfContentsItems(tocItems);
+    }
+  }, [tocItems]);
 
   useEffect(() => {
     if (
       layersAndSourcesQuery.data?.projectBySlug?.dataLayersForItems &&
       layersAndSourcesQuery.data?.projectBySlug?.dataSourcesForItems
     ) {
-      const layers =
-        layersAndSourcesQuery.data.projectBySlug.dataLayersForItems;
-      const sources =
-        layersAndSourcesQuery.data.projectBySlug.dataSourcesForItems;
-      if (mapContext.manager) {
-        mapContext.manager.reset(
-          sources,
-          layers,
-          tocQuery.data?.projectBySlug?.tableOfContentsItems || []
-        );
-        setDataLayers(layers);
-        setDataSources(sources);
-      }
+      setDataLayers(
+        layersAndSourcesQuery.data.projectBySlug.dataLayersForItems
+      );
+      setDataSources(
+        layersAndSourcesQuery.data.projectBySlug.dataSourcesForItems
+      );
     }
-  }, [
-    layersAndSourcesQuery.data,
-    mapContext.manager,
-    tocQuery.data?.projectBySlug?.tableOfContentsItems,
-  ]);
+  }, [layersAndSourcesQuery.data]);
+
   return { basemaps, tableOfContentsItems, dataSources, dataLayers };
 }

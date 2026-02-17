@@ -149,7 +149,6 @@ export type AddReportCardInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
-  layers?: Maybe<Array<Maybe<ReportLayerInputRecordInput>>>;
   reportTabId?: Maybe<Scalars['Int']>;
 };
 
@@ -835,7 +834,7 @@ export type CardDependencyLists = {
   __typename?: 'CardDependencyLists';
   cardId: Scalars['Int'];
   metrics: Array<Scalars['BigInt']>;
-  overlaySources: Array<Scalars['Int']>;
+  overlaySources: Array<Scalars['String']>;
 };
 
 /** All input for the `clearFormElementStyle` mutation. */
@@ -923,6 +922,7 @@ export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
   completedAt?: Maybe<Scalars['Datetime']>;
   createdAt: Scalars['Datetime'];
+  dependencyHash: Scalars['String'];
   durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
@@ -2029,41 +2029,6 @@ export type CreateRemoteMvtSourcePayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
-};
-
-/** All input for the create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `ReportCardLayer` to be created by this mutation. */
-  reportCardLayer: ReportCardLayerInput;
-};
-
-/** The output of our create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerPayload = {
-  __typename?: 'CreateReportCardLayerPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `ReportCardLayer` that was created by this mutation. */
-  reportCardLayer?: Maybe<ReportCardLayer>;
-  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
-  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
-  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-};
-
-
-/** The output of our create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerPayloadReportCardLayerEdgeArgs = {
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 /** All input for the create `Report` mutation. */
@@ -4982,6 +4947,19 @@ export type DownloadOption = {
   url?: Maybe<Scalars['String']>;
 };
 
+export type DraftDependenciesInput = {
+  nodeDependencies: Array<NodeDependency>;
+  sketchId?: Maybe<Scalars['Int']>;
+};
+
+export type DraftReportDependenciesResults = {
+  __typename?: 'DraftReportDependenciesResults';
+  metrics: Array<CompatibleSpatialMetric>;
+  overlaySources: Array<ReportOverlaySource>;
+  ready: Scalars['Boolean'];
+  sketchId: Scalars['Int'];
+};
+
 /** All input for the `duplicateTableOfContentsItem` mutation. */
 export type DuplicateTableOfContentsItemInput = {
   /**
@@ -6416,14 +6394,6 @@ export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   srid: Scalars['Int'];
 };
 
-export type GeographyMetricSubscriptionPayload = {
-  __typename?: 'GeographyMetricSubscriptionPayload';
-  geographyId: Scalars['Int'];
-  metric?: Maybe<CompatibleSpatialMetric>;
-  metricId: Scalars['BigInt'];
-  projectId: Scalars['Int'];
-};
-
 /** Represents an update to a `Geography`. Fields that are set will be updated. */
 export type GeographyPatch = {
   clientTemplate?: Maybe<Scalars['String']>;
@@ -7654,8 +7624,6 @@ export type Mutation = {
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
   createReport?: Maybe<CreateReportPayload>;
-  /** Creates a single `ReportCardLayer`. */
-  createReportCardLayer?: Maybe<CreateReportCardLayerPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7885,6 +7853,7 @@ export type Mutation = {
   mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   moveCardToTab?: Maybe<MoveCardToTabPayload>;
+  preprocessSource?: Maybe<PreprocessSourcePayload>;
   publishReport?: Maybe<PublishReportPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
@@ -8090,6 +8059,7 @@ export type Mutation = {
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
   updateReportCard?: Maybe<UpdateReportCardPayload>;
+  updateReportCardBody?: Maybe<UpdateReportCardBodyPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -8489,12 +8459,6 @@ export type MutationCreateRemoteMvtSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateReportArgs = {
   input: CreateReportInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateReportCardLayerArgs = {
-  input: CreateReportCardLayerInput;
 };
 
 
@@ -9155,6 +9119,12 @@ export type MutationMoveCardToTabArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationPreprocessSourceArgs = {
+  input: PreprocessSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationPublishReportArgs = {
   input: PublishReportInput;
 };
@@ -9739,6 +9709,12 @@ export type MutationUpdateReportCardArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardBodyArgs = {
+  input: UpdateReportCardBodyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchArgs = {
   id: Scalars['Int'];
   name: Scalars['String'];
@@ -9930,6 +9906,15 @@ export type MutationUploadStyleArgs = {
 export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+};
+
+export type NodeDependency = {
+  geographies?: Maybe<Array<Scalars['Int']>>;
+  hash: Scalars['String'];
+  parameters?: Maybe<Scalars['JSON']>;
+  stableId?: Maybe<Scalars['String']>;
+  subjectType: Scalars['String'];
+  type: Scalars['String'];
 };
 
 export type OfflineSourceDetails = {
@@ -10336,6 +10321,40 @@ export enum PostsOrderBy {
   TopicIdDesc = 'TOPIC_ID_DESC'
 }
 
+/** All input for the `preprocessSource` mutation. */
+export type PreprocessSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+  sourceId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `preprocessSource` mutation. */
+export type PreprocessSourcePayload = {
+  __typename?: 'PreprocessSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `preprocessSource` mutation. */
+export type PreprocessSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 export type PresignedUrl = {
   __typename?: 'PresignedUrl';
   key: Scalars['String'];
@@ -10559,6 +10578,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
+  reportingLayers: Array<ReportOverlaySource>;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
    * this to determine whether `project.communityGuidelines` should be shown to the
@@ -11752,12 +11772,15 @@ export type Query = Node & {
   dataUploadTaskByNodeId?: Maybe<DataUploadTask>;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
+  draftReportDependencies: DraftReportDependenciesResults;
   eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extensionToSourceType?: Maybe<Scalars['String']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  extractStableIdsFromBody?: Maybe<Array<Maybe<Scalars['String']>>>;
+  extractTableOfContentsItemIdsFromBody?: Maybe<Array<Maybe<Scalars['Int']>>>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
   fileUploadByNodeId?: Maybe<FileUpload>;
@@ -11803,6 +11826,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
+  getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
@@ -11884,8 +11908,6 @@ export type Query = Node & {
   report?: Maybe<Report>;
   /** Reads a single `Report` using its globally unique `ID`. */
   reportByNodeId?: Maybe<Report>;
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayersConnection?: Maybe<ReportCardLayersConnection>;
   /** Reads and enables pagination through a set of `Report`. */
   reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
@@ -12212,6 +12234,12 @@ export type QueryDataUploadTasksConnectionArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryDraftReportDependenciesArgs = {
+  input?: Maybe<DraftDependenciesInput>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferenceByUserIdArgs = {
   userId: Scalars['Int'];
 };
@@ -12238,6 +12266,18 @@ export type QueryExtensionToSourceTypeArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtractStableIdsFromBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtractTableOfContentsItemIdsFromBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -12440,6 +12480,12 @@ export type QueryGetFirstBandOffsetArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryGetFirstBandScaleArgs = {
   geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetReferencedStableIdsForReportArgs = {
+  _reportId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12774,18 +12820,6 @@ export type QueryReportArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryReportByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryReportCardLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -13210,6 +13244,15 @@ export type RecalculateSpatialMetricsPayload = {
   query?: Maybe<Query>;
 };
 
+export type RelatedReportCard = {
+  __typename?: 'RelatedReportCard';
+  isDraft?: Maybe<Scalars['Boolean']>;
+  reportCardId?: Maybe<Scalars['Int']>;
+  sketchClass: SketchClass;
+  sketchClassId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -13412,8 +13455,6 @@ export type ReportCard = Node & {
   __typename?: 'ReportCard';
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
-  collapsibleFooterBody: Scalars['JSON'];
-  collapsibleFooterEnabled: Scalars['Boolean'];
   componentSettings: Scalars['JSON'];
   displayMapLayerVisibilityControls: Scalars['Boolean'];
   icon?: Maybe<Scalars['String']>;
@@ -13422,88 +13463,12 @@ export type ReportCard = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayers: Array<ReportCardLayer>;
-  /** Reads and enables pagination through a set of `ReportingLayer`. */
-  reportingLayers?: Maybe<Array<ReportingLayer>>;
   reportTabId: Scalars['Int'];
+  tab?: Maybe<ReportTab>;
   tint?: Maybe<Scalars['String']>;
   type: Scalars['String'];
   updatedAt: Scalars['Datetime'];
 };
-
-
-export type ReportCardReportCardLayersArgs = {
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
-};
-
-
-export type ReportCardReportingLayersArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-};
-
-export type ReportCardLayer = {
-  __typename?: 'ReportCardLayer';
-  layerParameters: Scalars['JSON'];
-  processedOutput?: Maybe<DataUploadOutput>;
-  reportCardId: Scalars['Int'];
-  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  tableOfContentsItemId: Scalars['Int'];
-};
-
-/**
- * A condition to be used against `ReportCardLayer` object types. All fields are
- * tested for equality and combined with a logical ‘and.’
- */
-export type ReportCardLayerCondition = {
-  /** Checks for equality with the object’s `reportCardId` field. */
-  reportCardId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `tableOfContentsItemId` field. */
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `ReportCardLayer` */
-export type ReportCardLayerInput = {
-  layerParameters?: Maybe<Scalars['JSON']>;
-  reportCardId: Scalars['Int'];
-  tableOfContentsItemId: Scalars['Int'];
-};
-
-/** A connection to a list of `ReportCardLayer` values. */
-export type ReportCardLayersConnection = {
-  __typename?: 'ReportCardLayersConnection';
-  /** A list of edges which contains the `ReportCardLayer` and cursor to aid in pagination. */
-  edges: Array<ReportCardLayersEdge>;
-  /** A list of `ReportCardLayer` objects. */
-  nodes: Array<ReportCardLayer>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `ReportCardLayer` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `ReportCardLayer` edge in the connection. */
-export type ReportCardLayersEdge = {
-  __typename?: 'ReportCardLayersEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `ReportCardLayer` at the end of the edge. */
-  node: ReportCardLayer;
-};
-
-/** Methods to use when ordering `ReportCardLayer`. */
-export enum ReportCardLayersOrderBy {
-  Natural = 'NATURAL',
-  ReportCardIdAsc = 'REPORT_CARD_ID_ASC',
-  ReportCardIdDesc = 'REPORT_CARD_ID_DESC',
-  TableOfContentsItemIdAsc = 'TABLE_OF_CONTENTS_ITEM_ID_ASC',
-  TableOfContentsItemIdDesc = 'TABLE_OF_CONTENTS_ITEM_ID_DESC'
-}
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ReportCondition = {
@@ -13520,13 +13485,6 @@ export type ReportInput = {
   sketchClassId: Scalars['Int'];
 };
 
-/** An input for mutations affecting `ReportLayerInputRecord` */
-export type ReportLayerInputRecordInput = {
-  layerParameters?: Maybe<Scalars['JSON']>;
-  reportCardId?: Maybe<Scalars['Int']>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-};
-
 export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
   cardDependencyLists: Array<CardDependencyLists>;
@@ -13541,19 +13499,12 @@ export type ReportOverlaySource = {
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
-  sourceProcessingJob?: Maybe<SourceProcessingJob>;
-  sourceProcessingJobId?: Maybe<Scalars['String']>;
+  sourceProcessingJob: SourceProcessingJob;
+  sourceProcessingJobId: Scalars['String'];
   sourceUrl?: Maybe<Scalars['String']>;
+  stableId: Scalars['String'];
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
-};
-
-export type ReportOverlaySourcesSubscriptionPayload = {
-  __typename?: 'ReportOverlaySourcesSubscriptionPayload';
-  dataSourceId: Scalars['Int'];
-  jobKey: Scalars['String'];
-  projectId: Scalars['Int'];
-  source: ReportOverlaySource;
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -13583,18 +13534,6 @@ export type ReportTab = Node & {
 export type ReportTabCardsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-export type ReportingLayer = {
-  __typename?: 'ReportingLayer';
-  groupBy?: Maybe<Scalars['String']>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  meta?: Maybe<Scalars['JSON']>;
-  processingJobId?: Maybe<Scalars['String']>;
-  sourceProcessingJob?: Maybe<SourceProcessingJob>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-  title?: Maybe<Scalars['String']>;
-  type?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `Report` values. */
@@ -14495,13 +14434,6 @@ export enum SketchGeometryType {
   Polygon = 'POLYGON'
 }
 
-export type SketchMetricSubscriptionPayload = {
-  __typename?: 'SketchMetricSubscriptionPayload';
-  metric?: Maybe<CompatibleSpatialMetric>;
-  metricId: Scalars['BigInt'];
-  sketchId: Scalars['Int'];
-};
-
 /** The return type of our `relatedFragmentsConnection` query. */
 export type SketchesRelatedFragmentsRecord = {
   __typename?: 'SketchesRelatedFragmentsRecord';
@@ -14739,15 +14671,12 @@ export type Subscription = {
   backgroundJobs?: Maybe<ProjectBackgroundJobSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
-  geographyMetrics?: Maybe<GeographyMetricSubscriptionPayload>;
   /**
    * Triggered when the status of a project invite changes, generally because
    * of a change in the delivery status of a related InviteEmail. Uses
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
-  reportOverlaySources?: Maybe<ReportOverlaySourcesSubscriptionPayload>;
-  sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
@@ -14764,24 +14693,6 @@ export type SubscriptionBackgroundJobsArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
   slug: Scalars['String'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionGeographyMetricsArgs = {
-  projectId: Scalars['Int'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionReportOverlaySourcesArgs = {
-  projectId: Scalars['Int'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionSketchMetricsArgs = {
-  sketchId: Scalars['Int'];
 };
 
 
@@ -15354,8 +15265,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayers: Array<ReportCardLayer>;
+  relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
+  reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
   /** Position in the layer list */
@@ -15438,24 +15349,6 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
 export type TableOfContentsItemQuotaUsedArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-
-/**
- * TableOfContentsItems represent a tree-view of folders and operational layers
- * that can be added to the map. Both layers and folders may be nested into other
- * folders for organization, and each folder has its own access control list.
- *
- * Items that represent data layers have a `DataLayer` relation, which in turn has
- * a reference to a `DataSource`. Usually these relations should be fetched in
- * batch only once the layer is turned on, using the
- * `dataLayersAndSourcesByLayerId` query.
- */
-export type TableOfContentsItemReportCardLayersArgs = {
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -17282,6 +17175,30 @@ export type UpdateReportByNodeIdInput = {
   patch: ReportPatch;
 };
 
+/** All input for the `updateReportCardBody` mutation. */
+export type UpdateReportCardBodyInput = {
+  body?: Maybe<Scalars['JSON']>;
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateReportCardBody` mutation. */
+export type UpdateReportCardBodyPayload = {
+  __typename?: 'UpdateReportCardBodyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** All input for the `updateReportCard` mutation. */
 export type UpdateReportCardInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -17293,8 +17210,6 @@ export type UpdateReportCardInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
-  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   componentSettings?: Maybe<Scalars['JSON']>;
   displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
   icon?: Maybe<Scalars['String']>;
@@ -19889,7 +19804,14 @@ export type FullAdminOverlayFragment = (
   )>>, dataLayer?: Maybe<(
     { __typename?: 'DataLayer' }
     & FullAdminDataLayerFragment
-  )> }
+  )>, relatedReportCardDetails?: Maybe<Array<Maybe<(
+    { __typename?: 'RelatedReportCard' }
+    & Pick<RelatedReportCard, 'isDraft' | 'title' | 'sketchClassId'>
+    & { sketchClass: (
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'name'>
+    ) }
+  )>>> }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -22539,37 +22461,9 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
-export type ReportingLayerDetailsFragment = (
-  { __typename?: 'ReportCardLayer' }
-  & Pick<ReportCardLayer, 'tableOfContentsItemId' | 'layerParameters'>
-  & { processedOutput?: Maybe<(
-    { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'url' | 'size' | 'type'>
-  )>, tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'title' | 'dataSourceType' | 'stableId'>
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
-      & { dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'geostats' | 'type'>
-        & { sourceProcessingJob?: Maybe<(
-          { __typename?: 'SourceProcessingJob' }
-          & SourceProcessingJobDetailsFragment
-        )> }
-      )> }
-    )> }
-  )> }
-);
-
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody' | 'displayMapLayerVisibilityControls'>
-  & { reportingLayers: Array<(
-    { __typename?: 'ReportCardLayer' }
-    & ReportingLayerDetailsFragment
-  )> }
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'displayMapLayerVisibilityControls'>
 );
 
 export type ReportTabDetailsFragment = (
@@ -22720,7 +22614,6 @@ export type AddReportCardMutationVariables = Exact<{
   componentSettings: Scalars['JSON'];
   cardType: Scalars['String'];
   body: Scalars['JSON'];
-  layers: Array<ReportLayerInputRecordInput> | ReportLayerInputRecordInput;
 }>;
 
 
@@ -22731,6 +22624,10 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & ReportTabDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -22760,8 +22657,6 @@ export type UpdateReportCardMutationVariables = Exact<{
   tint?: Maybe<Scalars['String']>;
   icon?: Maybe<Scalars['String']>;
   cardType?: Maybe<Scalars['String']>;
-  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
-  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
   displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
@@ -22770,6 +22665,23 @@ export type UpdateReportCardMutation = (
   { __typename?: 'Mutation' }
   & { updateReportCard?: Maybe<(
     { __typename?: 'UpdateReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & ReportCardDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateReportCardBodyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type UpdateReportCardBodyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReportCardBody?: Maybe<(
+    { __typename?: 'UpdateReportCardBodyPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & ReportCardDetailsFragment
@@ -22869,23 +22781,6 @@ export type SourceProcessingJobsQuery = (
   )> }
 );
 
-export type ReportOverlaySourcesSubscriptionSubscriptionVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type ReportOverlaySourcesSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { reportOverlaySources?: Maybe<(
-    { __typename?: 'ReportOverlaySourcesSubscriptionPayload' }
-    & Pick<ReportOverlaySourcesSubscriptionPayload, 'jobKey'>
-    & { source: (
-      { __typename?: 'ReportOverlaySource' }
-      & OverlaySourceDetailsFragment
-    ) }
-  )> }
-);
-
 export type RecalculateSpatialMetricsMutationVariables = Exact<{
   metricIds: Array<Scalars['BigInt']> | Scalars['BigInt'];
   preprocessSources: Scalars['Boolean'];
@@ -22902,14 +22797,14 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
-  ), sourceProcessingJob?: Maybe<(
+  ), sourceProcessingJob: (
     { __typename?: 'SourceProcessingJob' }
     & SourceProcessingJobDetailsFragment
-  )>, output?: Maybe<(
+  ), output?: Maybe<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt'>
   )> }
@@ -22956,6 +22851,93 @@ export type ReportContextQuery = (
   )> }
 );
 
+export type ReportDependenciesQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportDependenciesQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { overlaySources: Array<(
+        { __typename?: 'ReportOverlaySource' }
+        & OverlaySourceDetailsFragment
+      )>, metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricDetailsFragment
+      )>, cardDependencyLists: Array<(
+        { __typename?: 'CardDependencyLists' }
+        & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )> }
+    ) }
+  )> }
+);
+
+export type BaseReportDetailsFragment = (
+  { __typename?: 'Report' }
+  & Pick<Report, 'id'>
+  & { tabs?: Maybe<Array<(
+    { __typename?: 'ReportTab' }
+    & ReportTabDetailsFragment
+  )>> }
+);
+
+export type BaseReportContextQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type BaseReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & BaseReportDetailsFragment
+    )> }
+    & ReportContextSketchClassDetailsFragment
+  )> }
+);
+
+export type BaseDraftReportContextQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type BaseDraftReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & BaseReportDetailsFragment
+    )> }
+    & ReportContextSketchClassDetailsFragment
+  )> }
+);
+
+export type SubjectReportContextQueryVariables = Exact<{
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type SubjectReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & ReportContextSketchClassDetailsFragment
+    )> }
+    & ReportContextSketchDetailsFragment
+  )> }
+);
+
 export type LegacyReportContextQueryVariables = Exact<{
   sketchId: Scalars['Int'];
 }>;
@@ -22971,6 +22953,152 @@ export type LegacyReportContextQuery = (
       & ReportContextSketchClassDetailsFragment
     )> }
     & ReportContextSketchDetailsFragment
+  )> }
+);
+
+export type DraftReportDependenciesQueryVariables = Exact<{
+  input?: Maybe<DraftDependenciesInput>;
+}>;
+
+
+export type DraftReportDependenciesQuery = (
+  { __typename?: 'Query' }
+  & { draftReportDependencies: (
+    { __typename?: 'DraftReportDependenciesResults' }
+    & Pick<DraftReportDependenciesResults, 'ready' | 'sketchId'>
+    & { overlaySources: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )>, metrics: Array<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
+  ) }
+);
+
+export type ProjectReportingLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectReportingLayersQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { reportingLayers: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )>, draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'copiedFromDataLibraryTemplateId'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'type'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
+export type OverlaySourceProcessingStatusQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlaySourceProcessingStatusQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id'>
+        & { sourceProcessingJob?: Maybe<(
+          { __typename?: 'SourceProcessingJob' }
+          & SourceProcessingJobDetailsFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlayLayerAuthorInfoQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlayLayerAuthorInfoQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'version'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'attribution' | 'id' | 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & AuthorProfileFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type PreprocessSourceMutationVariables = Exact<{
+  slug: Scalars['String'];
+  sourceId: Scalars['Int'];
+}>;
+
+
+export type PreprocessSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { preprocessSource?: Maybe<(
+    { __typename?: 'PreprocessSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id'>
+          & { sourceProcessingJob?: Maybe<(
+            { __typename?: 'SourceProcessingJob' }
+            & SourceProcessingJobDetailsFragment
+          )> }
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlaysForReportLayerTogglesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OverlaysForReportLayerTogglesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId'>
+      & { reportingOutput?: Maybe<(
+        { __typename?: 'DataUploadOutput' }
+        & Pick<DataUploadOutput, 'id'>
+      )> }
+    )>> }
   )> }
 );
 
@@ -23311,7 +23439,7 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds' | 'dependencyHash'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
@@ -23327,40 +23455,6 @@ export type CompatibleSpatialMetricDetailsFragment = (
 export type MinimalSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
   & Pick<CompatibleSpatialMetric, 'id' | 'updatedAt' | 'state' | 'value' | 'errorMessage' | 'progress'>
-);
-
-export type GeographyMetricSubscriptionSubscriptionVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type GeographyMetricSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { geographyMetrics?: Maybe<(
-    { __typename?: 'GeographyMetricSubscriptionPayload' }
-    & Pick<GeographyMetricSubscriptionPayload, 'metricId' | 'geographyId' | 'projectId'>
-    & { metric?: Maybe<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  )> }
-);
-
-export type SketchMetricSubscriptionSubscriptionVariables = Exact<{
-  sketchId: Scalars['Int'];
-}>;
-
-
-export type SketchMetricSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { sketchMetrics?: Maybe<(
-    { __typename?: 'SketchMetricSubscriptionPayload' }
-    & Pick<SketchMetricSubscriptionPayload, 'metricId' | 'sketchId'>
-    & { metric?: Maybe<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  )> }
 );
 
 export type RetryFailedSpatialMetricsMutationVariables = Exact<{
@@ -25658,6 +25752,14 @@ export const FullAdminOverlayFragmentDoc = gql`
   dataLayer {
     ...FullAdminDataLayer
   }
+  relatedReportCardDetails {
+    isDraft
+    title
+    sketchClassId
+    sketchClass {
+      name
+    }
+  }
 }
     ${FullAdminDataLayerFragmentDoc}`;
 export const MetadataXmlFileFragmentDoc = gql`
@@ -26329,48 +26431,6 @@ export const LogicRuleEditorFormDetailsFragmentDoc = gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
-export const SourceProcessingJobDetailsFragmentDoc = gql`
-    fragment SourceProcessingJobDetails on SourceProcessingJob {
-  jobKey
-  state
-  progressPercentage
-  progressMessage
-  createdAt
-  errorMessage
-  startedAt
-  durationSeconds
-  eta
-}
-    `;
-export const ReportingLayerDetailsFragmentDoc = gql`
-    fragment ReportingLayerDetails on ReportCardLayer {
-  tableOfContentsItemId
-  layerParameters
-  processedOutput {
-    url
-    size
-    type
-  }
-  tableOfContentsItem {
-    id
-    title
-    dataSourceType
-    stableId
-    dataLayer {
-      id
-      mapboxGlStyles
-      dataSource {
-        id
-        geostats
-        type
-        sourceProcessingJob {
-          ...SourceProcessingJobDetails
-        }
-      }
-    }
-  }
-}
-    ${SourceProcessingJobDetailsFragmentDoc}`;
 export const ReportCardDetailsFragmentDoc = gql`
     fragment ReportCardDetails on ReportCard {
   id
@@ -26381,14 +26441,9 @@ export const ReportCardDetailsFragmentDoc = gql`
   tint
   icon
   body
-  reportingLayers: reportCardLayers {
-    ...ReportingLayerDetails
-  }
-  collapsibleFooterEnabled
-  collapsibleFooterBody
   displayMapLayerVisibilityControls
 }
-    ${ReportingLayerDetailsFragmentDoc}`;
+    `;
 export const ReportTabDetailsFragmentDoc = gql`
     fragment ReportTabDetails on ReportTab {
   id
@@ -26410,9 +26465,23 @@ export const ReportDetailsFragmentDoc = gql`
   }
 }
     ${ReportTabDetailsFragmentDoc}`;
+export const SourceProcessingJobDetailsFragmentDoc = gql`
+    fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+  errorMessage
+  startedAt
+  durationSeconds
+  eta
+}
+    `;
 export const OverlaySourceDetailsFragmentDoc = gql`
     fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
+  stableId
   tableOfContentsItem {
     title
     stableId
@@ -26430,6 +26499,14 @@ export const OverlaySourceDetailsFragmentDoc = gql`
   }
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
+export const BaseReportDetailsFragmentDoc = gql`
+    fragment BaseReportDetails on Report {
+  id
+  tabs {
+    ...ReportTabDetails
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -26610,6 +26687,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = gql`
   eta
   startedAt
   durationSeconds
+  dependencyHash
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
@@ -35264,16 +35342,19 @@ export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderRe
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
 export const AddReportCardDocument = gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!, $layers: [ReportLayerInputRecordInput!]!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body, layers: $layers}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
   ) {
     reportCard {
       id
+      tab {
+        ...ReportTabDetails
+      }
     }
   }
 }
-    `;
+    ${ReportTabDetailsFragmentDoc}`;
 export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutation, AddReportCardMutationVariables>;
 
 /**
@@ -35293,7 +35374,6 @@ export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutat
  *      componentSettings: // value for 'componentSettings'
  *      cardType: // value for 'cardType'
  *      body: // value for 'body'
- *      layers: // value for 'layers'
  *   },
  * });
  */
@@ -35342,9 +35422,9 @@ export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReord
 export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
 export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
 export const UpdateReportCardDocument = gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON, $displayMapLayerVisibilityControls: Boolean) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $displayMapLayerVisibilityControls: Boolean) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
   ) {
     reportCard {
       ...ReportCardDetails
@@ -35374,8 +35454,6 @@ export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCar
  *      tint: // value for 'tint'
  *      icon: // value for 'icon'
  *      cardType: // value for 'cardType'
- *      collapsibleFooterEnabled: // value for 'collapsibleFooterEnabled'
- *      collapsibleFooterBody: // value for 'collapsibleFooterBody'
  *      displayMapLayerVisibilityControls: // value for 'displayMapLayerVisibilityControls'
  *   },
  * });
@@ -35387,6 +35465,42 @@ export function useUpdateReportCardMutation(baseOptions?: Apollo.MutationHookOpt
 export type UpdateReportCardMutationHookResult = ReturnType<typeof useUpdateReportCardMutation>;
 export type UpdateReportCardMutationResult = Apollo.MutationResult<UpdateReportCardMutation>;
 export type UpdateReportCardMutationOptions = Apollo.BaseMutationOptions<UpdateReportCardMutation, UpdateReportCardMutationVariables>;
+export const UpdateReportCardBodyDocument = gql`
+    mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
+  updateReportCardBody(input: {cardId: $id, body: $body}) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export type UpdateReportCardBodyMutationFn = Apollo.MutationFunction<UpdateReportCardBodyMutation, UpdateReportCardBodyMutationVariables>;
+
+/**
+ * __useUpdateReportCardBodyMutation__
+ *
+ * To run a mutation, you first call `useUpdateReportCardBodyMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateReportCardBodyMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateReportCardBodyMutation, { data, loading, error }] = useUpdateReportCardBodyMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      body: // value for 'body'
+ *   },
+ * });
+ */
+export function useUpdateReportCardBodyMutation(baseOptions?: Apollo.MutationHookOptions<UpdateReportCardBodyMutation, UpdateReportCardBodyMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateReportCardBodyMutation, UpdateReportCardBodyMutationVariables>(UpdateReportCardBodyDocument, options);
+      }
+export type UpdateReportCardBodyMutationHookResult = ReturnType<typeof useUpdateReportCardBodyMutation>;
+export type UpdateReportCardBodyMutationResult = Apollo.MutationResult<UpdateReportCardBodyMutation>;
+export type UpdateReportCardBodyMutationOptions = Apollo.BaseMutationOptions<UpdateReportCardBodyMutation, UpdateReportCardBodyMutationVariables>;
 export const DeleteReportCardDocument = gql`
     mutation DeleteReportCard($id: Int!) {
   deleteReportCard(input: {cardId: $id}) {
@@ -35577,39 +35691,6 @@ export function useSourceProcessingJobsLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourceProcessingJobsQuery>;
 export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
 export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
-export const ReportOverlaySourcesSubscriptionDocument = gql`
-    subscription ReportOverlaySourcesSubscription($projectId: Int!) {
-  reportOverlaySources(projectId: $projectId) {
-    jobKey
-    source {
-      ...OverlaySourceDetails
-    }
-  }
-}
-    ${OverlaySourceDetailsFragmentDoc}`;
-
-/**
- * __useReportOverlaySourcesSubscriptionSubscription__
- *
- * To run a query within a React component, call `useReportOverlaySourcesSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useReportOverlaySourcesSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useReportOverlaySourcesSubscriptionSubscription({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
-export function useReportOverlaySourcesSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<ReportOverlaySourcesSubscriptionSubscription, ReportOverlaySourcesSubscriptionSubscriptionVariables>(ReportOverlaySourcesSubscriptionDocument, options);
-      }
-export type ReportOverlaySourcesSubscriptionSubscriptionHookResult = ReturnType<typeof useReportOverlaySourcesSubscriptionSubscription>;
-export type ReportOverlaySourcesSubscriptionSubscriptionResult = Apollo.SubscriptionResult<ReportOverlaySourcesSubscriptionSubscription>;
 export const RecalculateSpatialMetricsDocument = gql`
     mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!) {
   recalculateSpatialMetrics(
@@ -35717,6 +35798,173 @@ export function useReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOpti
 export type ReportContextQueryHookResult = ReturnType<typeof useReportContextQuery>;
 export type ReportContextLazyQueryHookResult = ReturnType<typeof useReportContextLazyQuery>;
 export type ReportContextQueryResult = Apollo.QueryResult<ReportContextQuery, ReportContextQueryVariables>;
+export const ReportDependenciesDocument = gql`
+    query ReportDependencies($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useReportDependenciesQuery__
+ *
+ * To run a query within a React component, call `useReportDependenciesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReportDependenciesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportDependenciesQuery({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useReportDependenciesQuery(baseOptions: Apollo.QueryHookOptions<ReportDependenciesQuery, ReportDependenciesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReportDependenciesQuery, ReportDependenciesQueryVariables>(ReportDependenciesDocument, options);
+      }
+export function useReportDependenciesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportDependenciesQuery, ReportDependenciesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReportDependenciesQuery, ReportDependenciesQueryVariables>(ReportDependenciesDocument, options);
+        }
+export type ReportDependenciesQueryHookResult = ReturnType<typeof useReportDependenciesQuery>;
+export type ReportDependenciesLazyQueryHookResult = ReturnType<typeof useReportDependenciesLazyQuery>;
+export type ReportDependenciesQueryResult = Apollo.QueryResult<ReportDependenciesQuery, ReportDependenciesQueryVariables>;
+export const BaseReportContextDocument = gql`
+    query BaseReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report {
+      ...BaseReportDetails
+    }
+  }
+}
+    ${ReportContextSketchClassDetailsFragmentDoc}
+${BaseReportDetailsFragmentDoc}`;
+
+/**
+ * __useBaseReportContextQuery__
+ *
+ * To run a query within a React component, call `useBaseReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useBaseReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBaseReportContextQuery({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useBaseReportContextQuery(baseOptions: Apollo.QueryHookOptions<BaseReportContextQuery, BaseReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<BaseReportContextQuery, BaseReportContextQueryVariables>(BaseReportContextDocument, options);
+      }
+export function useBaseReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<BaseReportContextQuery, BaseReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<BaseReportContextQuery, BaseReportContextQueryVariables>(BaseReportContextDocument, options);
+        }
+export type BaseReportContextQueryHookResult = ReturnType<typeof useBaseReportContextQuery>;
+export type BaseReportContextLazyQueryHookResult = ReturnType<typeof useBaseReportContextLazyQuery>;
+export type BaseReportContextQueryResult = Apollo.QueryResult<BaseReportContextQuery, BaseReportContextQueryVariables>;
+export const BaseDraftReportContextDocument = gql`
+    query BaseDraftReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report: draftReport {
+      ...BaseReportDetails
+    }
+  }
+}
+    ${ReportContextSketchClassDetailsFragmentDoc}
+${BaseReportDetailsFragmentDoc}`;
+
+/**
+ * __useBaseDraftReportContextQuery__
+ *
+ * To run a query within a React component, call `useBaseDraftReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useBaseDraftReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useBaseDraftReportContextQuery({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useBaseDraftReportContextQuery(baseOptions: Apollo.QueryHookOptions<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>(BaseDraftReportContextDocument, options);
+      }
+export function useBaseDraftReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>(BaseDraftReportContextDocument, options);
+        }
+export type BaseDraftReportContextQueryHookResult = ReturnType<typeof useBaseDraftReportContextQuery>;
+export type BaseDraftReportContextLazyQueryHookResult = ReturnType<typeof useBaseDraftReportContextLazyQuery>;
+export type BaseDraftReportContextQueryResult = Apollo.QueryResult<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>;
+export const SubjectReportContextDocument = gql`
+    query SubjectReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+    }
+  }
+}
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}`;
+
+/**
+ * __useSubjectReportContextQuery__
+ *
+ * To run a query within a React component, call `useSubjectReportContextQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSubjectReportContextQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSubjectReportContextQuery({
+ *   variables: {
+ *      sketchId: // value for 'sketchId'
+ *   },
+ * });
+ */
+export function useSubjectReportContextQuery(baseOptions: Apollo.QueryHookOptions<SubjectReportContextQuery, SubjectReportContextQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SubjectReportContextQuery, SubjectReportContextQueryVariables>(SubjectReportContextDocument, options);
+      }
+export function useSubjectReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SubjectReportContextQuery, SubjectReportContextQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SubjectReportContextQuery, SubjectReportContextQueryVariables>(SubjectReportContextDocument, options);
+        }
+export type SubjectReportContextQueryHookResult = ReturnType<typeof useSubjectReportContextQuery>;
+export type SubjectReportContextLazyQueryHookResult = ReturnType<typeof useSubjectReportContextLazyQuery>;
+export type SubjectReportContextQueryResult = Apollo.QueryResult<SubjectReportContextQuery, SubjectReportContextQueryVariables>;
 export const LegacyReportContextDocument = gql`
     query LegacyReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
@@ -35760,6 +36008,276 @@ export function useLegacyReportContextLazyQuery(baseOptions?: Apollo.LazyQueryHo
 export type LegacyReportContextQueryHookResult = ReturnType<typeof useLegacyReportContextQuery>;
 export type LegacyReportContextLazyQueryHookResult = ReturnType<typeof useLegacyReportContextLazyQuery>;
 export type LegacyReportContextQueryResult = Apollo.QueryResult<LegacyReportContextQuery, LegacyReportContextQueryVariables>;
+export const DraftReportDependenciesDocument = gql`
+    query DraftReportDependencies($input: DraftDependenciesInput) {
+  draftReportDependencies(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+    metrics {
+      ...CompatibleSpatialMetricDetails
+    }
+    sketchId
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+
+/**
+ * __useDraftReportDependenciesQuery__
+ *
+ * To run a query within a React component, call `useDraftReportDependenciesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDraftReportDependenciesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftReportDependenciesQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useDraftReportDependenciesQuery(baseOptions?: Apollo.QueryHookOptions<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>(DraftReportDependenciesDocument, options);
+      }
+export function useDraftReportDependenciesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>(DraftReportDependenciesDocument, options);
+        }
+export type DraftReportDependenciesQueryHookResult = ReturnType<typeof useDraftReportDependenciesQuery>;
+export type DraftReportDependenciesLazyQueryHookResult = ReturnType<typeof useDraftReportDependenciesLazyQuery>;
+export type DraftReportDependenciesQueryResult = Apollo.QueryResult<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>;
+export const ProjectReportingLayersDocument = gql`
+    query ProjectReportingLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    reportingLayers {
+      ...OverlaySourceDetails
+    }
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      copiedFromDataLibraryTemplateId
+      dataLayer {
+        dataSource {
+          id
+          type
+        }
+      }
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
+
+/**
+ * __useProjectReportingLayersQuery__
+ *
+ * To run a query within a React component, call `useProjectReportingLayersQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectReportingLayersQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectReportingLayersQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectReportingLayersQuery(baseOptions: Apollo.QueryHookOptions<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>(ProjectReportingLayersDocument, options);
+      }
+export function useProjectReportingLayersLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>(ProjectReportingLayersDocument, options);
+        }
+export type ProjectReportingLayersQueryHookResult = ReturnType<typeof useProjectReportingLayersQuery>;
+export type ProjectReportingLayersLazyQueryHookResult = ReturnType<typeof useProjectReportingLayersLazyQuery>;
+export type ProjectReportingLayersQueryResult = Apollo.QueryResult<ProjectReportingLayersQuery, ProjectReportingLayersQueryVariables>;
+export const OverlaySourceProcessingStatusDocument = gql`
+    query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      dataSource {
+        id
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+
+/**
+ * __useOverlaySourceProcessingStatusQuery__
+ *
+ * To run a query within a React component, call `useOverlaySourceProcessingStatusQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlaySourceProcessingStatusQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlaySourceProcessingStatusQuery({
+ *   variables: {
+ *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
+ *   },
+ * });
+ */
+export function useOverlaySourceProcessingStatusQuery(baseOptions: Apollo.QueryHookOptions<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>(OverlaySourceProcessingStatusDocument, options);
+      }
+export function useOverlaySourceProcessingStatusLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>(OverlaySourceProcessingStatusDocument, options);
+        }
+export type OverlaySourceProcessingStatusQueryHookResult = ReturnType<typeof useOverlaySourceProcessingStatusQuery>;
+export type OverlaySourceProcessingStatusLazyQueryHookResult = ReturnType<typeof useOverlaySourceProcessingStatusLazyQuery>;
+export type OverlaySourceProcessingStatusQueryResult = Apollo.QueryResult<OverlaySourceProcessingStatusQuery, OverlaySourceProcessingStatusQueryVariables>;
+export const OverlayLayerAuthorInfoDocument = gql`
+    query OverlayLayerAuthorInfo($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      version
+      dataSource {
+        attribution
+        id
+        createdAt
+        authorProfile {
+          ...AuthorProfile
+        }
+      }
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}`;
+
+/**
+ * __useOverlayLayerAuthorInfoQuery__
+ *
+ * To run a query within a React component, call `useOverlayLayerAuthorInfoQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlayLayerAuthorInfoQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlayLayerAuthorInfoQuery({
+ *   variables: {
+ *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
+ *   },
+ * });
+ */
+export function useOverlayLayerAuthorInfoQuery(baseOptions: Apollo.QueryHookOptions<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>(OverlayLayerAuthorInfoDocument, options);
+      }
+export function useOverlayLayerAuthorInfoLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>(OverlayLayerAuthorInfoDocument, options);
+        }
+export type OverlayLayerAuthorInfoQueryHookResult = ReturnType<typeof useOverlayLayerAuthorInfoQuery>;
+export type OverlayLayerAuthorInfoLazyQueryHookResult = ReturnType<typeof useOverlayLayerAuthorInfoLazyQuery>;
+export type OverlayLayerAuthorInfoQueryResult = Apollo.QueryResult<OverlayLayerAuthorInfoQuery, OverlayLayerAuthorInfoQueryVariables>;
+export const PreprocessSourceDocument = gql`
+    mutation PreprocessSource($slug: String!, $sourceId: Int!) {
+  preprocessSource(input: {slug: $slug, sourceId: $sourceId}) {
+    tableOfContentsItem {
+      id
+      dataLayer {
+        id
+        dataSource {
+          id
+          sourceProcessingJob {
+            ...SourceProcessingJobDetails
+          }
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+export type PreprocessSourceMutationFn = Apollo.MutationFunction<PreprocessSourceMutation, PreprocessSourceMutationVariables>;
+
+/**
+ * __usePreprocessSourceMutation__
+ *
+ * To run a mutation, you first call `usePreprocessSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `usePreprocessSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [preprocessSourceMutation, { data, loading, error }] = usePreprocessSourceMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      sourceId: // value for 'sourceId'
+ *   },
+ * });
+ */
+export function usePreprocessSourceMutation(baseOptions?: Apollo.MutationHookOptions<PreprocessSourceMutation, PreprocessSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<PreprocessSourceMutation, PreprocessSourceMutationVariables>(PreprocessSourceDocument, options);
+      }
+export type PreprocessSourceMutationHookResult = ReturnType<typeof usePreprocessSourceMutation>;
+export type PreprocessSourceMutationResult = Apollo.MutationResult<PreprocessSourceMutation>;
+export type PreprocessSourceMutationOptions = Apollo.BaseMutationOptions<PreprocessSourceMutation, PreprocessSourceMutationVariables>;
+export const OverlaysForReportLayerTogglesDocument = gql`
+    query OverlaysForReportLayerToggles($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      reportingOutput {
+        id
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useOverlaysForReportLayerTogglesQuery__
+ *
+ * To run a query within a React component, call `useOverlaysForReportLayerTogglesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlaysForReportLayerTogglesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlaysForReportLayerTogglesQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useOverlaysForReportLayerTogglesQuery(baseOptions: Apollo.QueryHookOptions<OverlaysForReportLayerTogglesQuery, OverlaysForReportLayerTogglesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlaysForReportLayerTogglesQuery, OverlaysForReportLayerTogglesQueryVariables>(OverlaysForReportLayerTogglesDocument, options);
+      }
+export function useOverlaysForReportLayerTogglesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlaysForReportLayerTogglesQuery, OverlaysForReportLayerTogglesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlaysForReportLayerTogglesQuery, OverlaysForReportLayerTogglesQueryVariables>(OverlaysForReportLayerTogglesDocument, options);
+        }
+export type OverlaysForReportLayerTogglesQueryHookResult = ReturnType<typeof useOverlaysForReportLayerTogglesQuery>;
+export type OverlaysForReportLayerTogglesLazyQueryHookResult = ReturnType<typeof useOverlaysForReportLayerTogglesLazyQuery>;
+export type OverlaysForReportLayerTogglesQueryResult = Apollo.QueryResult<OverlaysForReportLayerTogglesQuery, OverlaysForReportLayerTogglesQueryVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -36190,75 +36708,6 @@ export function useCopyTocItemMutation(baseOptions?: Apollo.MutationHookOptions<
 export type CopyTocItemMutationHookResult = ReturnType<typeof useCopyTocItemMutation>;
 export type CopyTocItemMutationResult = Apollo.MutationResult<CopyTocItemMutation>;
 export type CopyTocItemMutationOptions = Apollo.BaseMutationOptions<CopyTocItemMutation, CopyTocItemMutationVariables>;
-export const GeographyMetricSubscriptionDocument = gql`
-    subscription GeographyMetricSubscription($projectId: Int!) {
-  geographyMetrics(projectId: $projectId) {
-    metricId
-    geographyId
-    projectId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-
-/**
- * __useGeographyMetricSubscriptionSubscription__
- *
- * To run a query within a React component, call `useGeographyMetricSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useGeographyMetricSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useGeographyMetricSubscriptionSubscription({
- *   variables: {
- *      projectId: // value for 'projectId'
- *   },
- * });
- */
-export function useGeographyMetricSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<GeographyMetricSubscriptionSubscription, GeographyMetricSubscriptionSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<GeographyMetricSubscriptionSubscription, GeographyMetricSubscriptionSubscriptionVariables>(GeographyMetricSubscriptionDocument, options);
-      }
-export type GeographyMetricSubscriptionSubscriptionHookResult = ReturnType<typeof useGeographyMetricSubscriptionSubscription>;
-export type GeographyMetricSubscriptionSubscriptionResult = Apollo.SubscriptionResult<GeographyMetricSubscriptionSubscription>;
-export const SketchMetricSubscriptionDocument = gql`
-    subscription SketchMetricSubscription($sketchId: Int!) {
-  sketchMetrics(sketchId: $sketchId) {
-    metricId
-    sketchId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-
-/**
- * __useSketchMetricSubscriptionSubscription__
- *
- * To run a query within a React component, call `useSketchMetricSubscriptionSubscription` and pass it any options that fit your needs.
- * When your component renders, `useSketchMetricSubscriptionSubscription` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the subscription, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useSketchMetricSubscriptionSubscription({
- *   variables: {
- *      sketchId: // value for 'sketchId'
- *   },
- * });
- */
-export function useSketchMetricSubscriptionSubscription(baseOptions: Apollo.SubscriptionHookOptions<SketchMetricSubscriptionSubscription, SketchMetricSubscriptionSubscriptionVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useSubscription<SketchMetricSubscriptionSubscription, SketchMetricSubscriptionSubscriptionVariables>(SketchMetricSubscriptionDocument, options);
-      }
-export type SketchMetricSubscriptionSubscriptionHookResult = ReturnType<typeof useSketchMetricSubscriptionSubscription>;
-export type SketchMetricSubscriptionSubscriptionResult = Apollo.SubscriptionResult<SketchMetricSubscriptionSubscription>;
 export const RetryFailedSpatialMetricsDocument = gql`
     mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {
   retryFailedSpatialMetrics(input: {metricIds: $metricIds}) {
@@ -39495,7 +39944,16 @@ export const namedOperations = {
     AvailableReportLayers: 'AvailableReportLayers',
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
+    ReportDependencies: 'ReportDependencies',
+    BaseReportContext: 'BaseReportContext',
+    BaseDraftReportContext: 'BaseDraftReportContext',
+    SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
+    DraftReportDependencies: 'DraftReportDependencies',
+    ProjectReportingLayers: 'ProjectReportingLayers',
+    OverlaySourceProcessingStatus: 'OverlaySourceProcessingStatus',
+    OverlayLayerAuthorInfo: 'OverlayLayerAuthorInfo',
+    OverlaysForReportLayerToggles: 'OverlaysForReportLayerToggles',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -39646,10 +40104,12 @@ export const namedOperations = {
     AddReportCard: 'AddReportCard',
     ReorderReportTabCards: 'ReorderReportTabCards',
     UpdateReportCard: 'UpdateReportCard',
+    UpdateReportCardBody: 'UpdateReportCardBody',
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
     PublishReport: 'PublishReport',
     RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
+    PreprocessSource: 'PreprocessSource',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -39716,9 +40176,6 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
-    ReportOverlaySourcesSubscription: 'ReportOverlaySourcesSubscription',
-    GeographyMetricSubscription: 'GeographyMetricSubscription',
-    SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {
@@ -39796,12 +40253,12 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
-    ReportingLayerDetails: 'ReportingLayerDetails',
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
     SourceProcessingJobDetails: 'SourceProcessingJobDetails',
     OverlaySourceDetails: 'OverlaySourceDetails',
+    BaseReportDetails: 'BaseReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

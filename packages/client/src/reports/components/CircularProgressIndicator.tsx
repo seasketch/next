@@ -69,7 +69,7 @@ export default function CircularProgressIndicator({
       width={size}
       height={size}
       viewBox={`0 0 ${size} ${size}`}
-      className={`-rotate-90 ${className}`}
+      className={`-rotate-90 ${className} z-40`}
       initial={{ opacity: 1 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.2 }}
@@ -102,27 +102,27 @@ export default function CircularProgressIndicator({
         animate={
           isIndeterminate
             ? {
-                rotate: 360,
-                strokeDashoffset: circumference * 0.75,
-              }
+              rotate: 360,
+              strokeDashoffset: circumference * 0.75,
+            }
             : {
-                strokeDashoffset: isRestarting ? circumference : dashOffset,
-                rotate: 0,
-              }
+              strokeDashoffset: isRestarting ? circumference : dashOffset,
+              rotate: 0,
+            }
         }
         transition={
           isIndeterminate
             ? {
-                rotate: {
-                  duration: 1.5,
-                  ease: "linear",
-                  repeat: Infinity,
-                },
-                strokeDashoffset: { duration: 0.3 },
-              }
+              rotate: {
+                duration: 1.5,
+                ease: "linear",
+                repeat: Infinity,
+              },
+              strokeDashoffset: { duration: 0.3 },
+            }
             : isRestarting
-            ? { duration: 0 }
-            : { duration: 0.4, ease: "easeInOut" }
+              ? { duration: 0 }
+              : { duration: 0.4, ease: "easeInOut" }
         }
         style={{ originX: "50%", originY: "50%" }}
       />
@@ -138,9 +138,9 @@ export default function CircularProgressIndicator({
           isComplete || isIndeterminate
             ? { opacity: 0, r: radius * 0.35 }
             : {
-                opacity: [0.5, 0.3, 0.5],
-                r: [radius * 0.6, radius * 0.15, radius * 0.6],
-              }
+              opacity: [0.5, 0.3, 0.5],
+              r: [radius * 0.6, radius * 0.15, radius * 0.6],
+            }
         }
         transition={
           isComplete || isIndeterminate

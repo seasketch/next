@@ -23,7 +23,7 @@ export default function useBasemapsBySurvey(
   const context = useContext(DownloadManagerContext);
   const slug = getSlug();
 
-  const { data, loading, refetch } = useOfflineSurveyMapsQuery({
+  const { data, loading, refetch, error } = useOfflineSurveyMapsQuery({
     variables: {
       slug,
     },

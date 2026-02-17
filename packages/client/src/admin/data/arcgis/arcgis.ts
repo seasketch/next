@@ -1,6 +1,6 @@
 /* eslint-disable */
 import { Layer } from "mapbox-gl";
-import { useContext, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Symbol } from "arcgis-rest-api";
 import {
   ArcGISRESTServiceRequestManager,
@@ -36,7 +36,6 @@ import {
 // import nanoid from "nanoid";
 import { customAlphabet } from "nanoid";
 import { default as axios } from "axios";
-import { MapContext } from "../../../dataLayers/MapContextManager";
 import { MutationFunctionOptions } from "@apollo/client";
 // import { ArcGISVectorSourceCacheEvent } from "../../../dataLayers/ArcGISVectorSourceCache";
 const alphabet =
@@ -845,7 +844,6 @@ export function useImportArcGISService(
     useUpdateInteractivitySettingsMutation();
   const [createSprite, createSpriteState] = useGetOrCreateSpriteMutation();
   const [addImageToSprite] = useAddImageToSpriteMutation();
-  const mapContext = useContext(MapContext);
   // importService: (
   //   layerInfo: LayerInfo[],
   //   mapServerInfo: MapServerCatalogInfo,

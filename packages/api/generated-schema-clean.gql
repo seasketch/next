@@ -112,7 +112,6 @@ input AddReportCardInput {
   """
   clientMutationId: String
   componentSettings: JSON
-  layers: [ReportLayerInputRecordInput]
   reportTabId: Int
 }
 
@@ -964,7 +963,7 @@ type CancelBackgroundJobPayload {
 type CardDependencyLists {
   cardId: Int!
   metrics: [BigInt!]!
-  overlaySources: [Int!]!
+  overlaySources: [String!]!
 }
 
 """All input for the `clearFormElementStyle` mutation."""
@@ -1071,6 +1070,7 @@ input CommunityGuidelinePatch {
 type CompatibleSpatialMetric {
   completedAt: Datetime
   createdAt: Datetime!
+  dependencyHash: String!
   durationSeconds: Float
   errorMessage: String
   eta: Datetime
@@ -2293,46 +2293,6 @@ type CreateRemoteMvtSourcePayload {
   """
   query: Query
   tableOfContentsItems: [TableOfContentsItem!]
-}
-
-"""All input for the create `ReportCardLayer` mutation."""
-input CreateReportCardLayerInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `ReportCardLayer` to be created by this mutation."""
-  reportCardLayer: ReportCardLayerInput!
-}
-
-"""The output of our create `ReportCardLayer` mutation."""
-type CreateReportCardLayerPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """The `ReportCardLayer` that was created by this mutation."""
-  reportCardLayer: ReportCardLayer
-
-  """An edge for our `ReportCardLayer`. May be used by Relay 1."""
-  reportCardLayerEdge(
-    """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [NATURAL]
-  ): ReportCardLayersEdge
-
-  """
-  Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`.
-  """
-  tableOfContentsItem: TableOfContentsItem
 }
 
 """All input for the create `Report` mutation."""
@@ -5774,6 +5734,18 @@ type DownloadOption {
   url: String
 }
 
+input DraftDependenciesInput {
+  nodeDependencies: [NodeDependency!]!
+  sketchId: Int
+}
+
+type DraftReportDependenciesResults {
+  metrics: [CompatibleSpatialMetric!]!
+  overlaySources: [ReportOverlaySource!]!
+  ready: Boolean!
+  sketchId: Int!
+}
+
 """All input for the `duplicateTableOfContentsItem` mutation."""
 input DuplicateTableOfContentsItemInput {
   """
@@ -7483,13 +7455,6 @@ type GeographyLineString implements GeographyGeometry & GeographyInterface {
   srid: Int!
 }
 
-type GeographyMetricSubscriptionPayload {
-  geographyId: Int!
-  metric: CompatibleSpatialMetric
-  metricId: BigInt!
-  projectId: Int!
-}
-
 """
 Represents an update to a `Geography`. Fields that are set will be updated.
 """
@@ -9104,14 +9069,6 @@ type Mutation {
     input: CreateReportInput!
   ): CreateReportPayload
 
-  """Creates a single `ReportCardLayer`."""
-  createReportCardLayer(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateReportCardLayerInput!
-  ): CreateReportCardLayerPayload
-
   """
   Create a new sketch in the user's account. If preprocessing is enabled,
   the sketch's final geometry will be set by running the proprocessing
@@ -9958,6 +9915,12 @@ type Mutation {
     """
     input: MoveCardToTabInput!
   ): MoveCardToTabPayload
+  preprocessSource(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: PreprocessSourceInput!
+  ): PreprocessSourcePayload
   publishReport(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10746,6 +10709,12 @@ type Mutation {
     """
     input: UpdateReportCardInput!
   ): UpdateReportCardPayload
+  updateReportCardBody(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateReportCardBodyInput!
+  ): UpdateReportCardBodyPayload
 
   """
   If preprocessing is enabled,
@@ -11007,6 +10976,15 @@ interface Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+}
+
+input NodeDependency {
+  geographies: [Int!]
+  hash: String!
+  parameters: JSON
+  stableId: String
+  subjectType: String!
+  type: String!
 }
 
 type OfflineSourceDetails {
@@ -11484,6 +11462,43 @@ enum PostsOrderBy {
   PRIMARY_KEY_DESC
   TOPIC_ID_ASC
   TOPIC_ID_DESC
+}
+
+"""All input for the `preprocessSource` mutation."""
+input PreprocessSourceInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  slug: String
+  sourceId: Int
+}
+
+"""The output of our `preprocessSource` mutation."""
+type PreprocessSourcePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `DataLayer` that is related to this `TableOfContentsItem`.
+  """
+  dataLayer: DataLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItem: TableOfContentsItem
+
+  """An edge for our `TableOfContentsItem`. May be used by Relay 1."""
+  tableOfContentsItemEdge(
+    """The method to use when ordering `TableOfContentsItem`."""
+    orderBy: [TableOfContentsItemsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): TableOfContentsItemsEdge
 }
 
 type PresignedUrl {
@@ -12063,6 +12078,7 @@ type Project implements Node {
     orderBy: [ProjectBackgroundJobsOrderBy!]
   ): [ProjectBackgroundJob!]!
   region: GeometryPolygon!
+  reportingLayers: [ReportOverlaySource!]!
 
   """
   Whether the current user has any discussion forum posts in this project. Use
@@ -13219,6 +13235,7 @@ type Query implements Node {
     """The method to use when ordering `DataUploadTask`."""
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection
+  draftReportDependencies(input: DraftDependenciesInput): DraftReportDependenciesResults!
   eezlayer: TableOfContentsItem
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
@@ -13254,6 +13271,7 @@ type Query implements Node {
   ): EmailNotificationPreferencesConnection
   extensionToSourceType(url: String): String
   extractSpriteIds(t: String): [Int]
+  extractStableIdsFromBody(body: JSON): [String]
   fileUpload(id: UUID!): FileUpload
 
   """Reads a single `FileUpload` using its globally unique `ID`."""
@@ -13442,6 +13460,7 @@ type Query implements Node {
   getDefaultDataSourcesBucket: String
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
+  getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
 
@@ -13810,35 +13829,6 @@ type Query implements Node {
     """The globally unique `ID` to be used in selecting a single `Report`."""
     nodeId: ID!
   ): Report
-
-  """Reads and enables pagination through a set of `ReportCardLayer`."""
-  reportCardLayersConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ReportCardLayerCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!] = [NATURAL]
-  ): ReportCardLayersConnection
 
   """Reads and enables pagination through a set of `Report`."""
   reportsConnection(
@@ -14288,6 +14278,14 @@ type RecalculateSpatialMetricsPayload {
   query: Query
 }
 
+type RelatedReportCard {
+  isDraft: Boolean
+  reportCardId: Int
+  sketchClass: SketchClass!
+  sketchClassId: Int
+  title: String
+}
+
 """All input for the `removeGroupFromAcl` mutation."""
 input RemoveGroupFromAclInput {
   aclId: Int
@@ -14509,8 +14507,6 @@ type Report implements Node {
 type ReportCard implements Node {
   alternateLanguageSettings: JSON!
   body: JSON!
-  collapsibleFooterBody: JSON!
-  collapsibleFooterEnabled: Boolean!
   componentSettings: JSON!
   displayMapLayerVisibilityControls: Boolean!
   icon: String
@@ -14522,104 +14518,11 @@ type ReportCard implements Node {
   """
   nodeId: ID!
   position: Int!
-
-  """Reads and enables pagination through a set of `ReportCardLayer`."""
-  reportCardLayers(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ReportCardLayerCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!]
-  ): [ReportCardLayer!]!
-
-  """Reads and enables pagination through a set of `ReportingLayer`."""
-  reportingLayers(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-  ): [ReportingLayer!]
   reportTabId: Int!
+  tab: ReportTab
   tint: String
   type: String!
   updatedAt: Datetime!
-}
-
-type ReportCardLayer {
-  layerParameters: JSON!
-  processedOutput: DataUploadOutput
-  reportCardId: Int!
-
-  """
-  Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`.
-  """
-  tableOfContentsItem: TableOfContentsItem
-  tableOfContentsItemId: Int!
-}
-
-"""
-A condition to be used against `ReportCardLayer` object types. All fields are
-tested for equality and combined with a logical ‘and.’
-"""
-input ReportCardLayerCondition {
-  """Checks for equality with the object’s `reportCardId` field."""
-  reportCardId: Int
-
-  """Checks for equality with the object’s `tableOfContentsItemId` field."""
-  tableOfContentsItemId: Int
-}
-
-"""An input for mutations affecting `ReportCardLayer`"""
-input ReportCardLayerInput {
-  layerParameters: JSON
-  reportCardId: Int!
-  tableOfContentsItemId: Int!
-}
-
-"""A connection to a list of `ReportCardLayer` values."""
-type ReportCardLayersConnection {
-  """
-  A list of edges which contains the `ReportCardLayer` and cursor to aid in pagination.
-  """
-  edges: [ReportCardLayersEdge!]!
-
-  """A list of `ReportCardLayer` objects."""
-  nodes: [ReportCardLayer!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """
-  The count of *all* `ReportCardLayer` you could get from the connection.
-  """
-  totalCount: Int!
-}
-
-"""A `ReportCardLayer` edge in the connection."""
-type ReportCardLayersEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `ReportCardLayer` at the end of the edge."""
-  node: ReportCardLayer!
-}
-
-"""Methods to use when ordering `ReportCardLayer`."""
-enum ReportCardLayersOrderBy {
-  NATURAL
-  REPORT_CARD_ID_ASC
-  REPORT_CARD_ID_DESC
-  TABLE_OF_CONTENTS_ITEM_ID_ASC
-  TABLE_OF_CONTENTS_ITEM_ID_DESC
 }
 
 """
@@ -14633,29 +14536,11 @@ input ReportCondition {
   sketchClassId: Int
 }
 
-type ReportingLayer {
-  groupBy: String
-  mapboxGlStyles: JSON
-  meta: JSON
-  processingJobId: String
-  sourceProcessingJob: SourceProcessingJob
-  tableOfContentsItemId: Int
-  title: String
-  type: String
-}
-
 """An input for mutations affecting `Report`"""
 input ReportInput {
   createdAt: Datetime
   projectId: Int!
   sketchClassId: Int!
-}
-
-"""An input for mutations affecting `ReportLayerInputRecord`"""
-input ReportLayerInputRecordInput {
-  layerParameters: JSON
-  reportCardId: Int
-  tableOfContentsItemId: Int
 }
 
 type ReportOverlayDependencies {
@@ -14670,18 +14555,12 @@ type ReportOverlaySource {
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
-  sourceProcessingJob: SourceProcessingJob
-  sourceProcessingJobId: String
+  sourceProcessingJob: SourceProcessingJob!
+  sourceProcessingJobId: String!
   sourceUrl: String
+  stableId: String!
   tableOfContentsItem: TableOfContentsItem!
   tableOfContentsItemId: Int!
-}
-
-type ReportOverlaySourcesSubscriptionPayload {
-  dataSourceId: Int!
-  jobKey: String!
-  projectId: Int!
-  source: ReportOverlaySource!
 }
 
 """
@@ -15749,12 +15628,6 @@ enum SketchGeometryType {
   POLYGON
 }
 
-type SketchMetricSubscriptionPayload {
-  metric: CompatibleSpatialMetric
-  metricId: BigInt!
-  sketchId: Int!
-}
-
 """All input for the `softDeleteSprite` mutation."""
 input SoftDeleteSpriteInput {
   """
@@ -16024,7 +15897,6 @@ type Subscription {
 
   """Triggered when a new post is created in the subscribed topic"""
   forumActivity(slug: String!): ForumActivityPayload
-  geographyMetrics(projectId: Int!): GeographyMetricSubscriptionPayload
 
   """
   Triggered when the status of a project invite changes, generally because
@@ -16032,8 +15904,6 @@ type Subscription {
   x-ss-slug to determine appropriate project.
   """
   projectInviteStateUpdated: ProjectInviteStateSubscriptionPayload
-  reportOverlaySources(projectId: Int!): ReportOverlaySourcesSubscriptionPayload
-  sketchMetrics(sketchId: Int!): SketchMetricSubscriptionPayload
 
   """Triggered when a project's draft table of contents status changes"""
   updatedDraftTableOfContentsStatus(slug: String!): ProjectDraftTableOfContentsStatusPayload
@@ -16788,23 +16658,8 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
-
-  """Reads and enables pagination through a set of `ReportCardLayer`."""
-  reportCardLayers(
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ReportCardLayerCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-
-    """The method to use when ordering `ReportCardLayer`."""
-    orderBy: [ReportCardLayersOrderBy!]
-  ): [ReportCardLayer!]!
+  relatedReportCardDetails: [RelatedReportCard]
+  reportingOutput: DataUploadOutput
 
   """
   If set, children of this folder will appear as radio options so that only one may be toggle at a time
@@ -19062,6 +18917,33 @@ input UpdateReportByNodeIdInput {
   patch: ReportPatch!
 }
 
+"""All input for the `updateReportCardBody` mutation."""
+input UpdateReportCardBodyInput {
+  body: JSON
+  cardId: Int
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `updateReportCardBody` mutation."""
+type UpdateReportCardBodyPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportCard: ReportCard
+}
+
 """All input for the `updateReportCard` mutation."""
 input UpdateReportCardInput {
   alternateLanguageSettings: JSON
@@ -19074,8 +18956,6 @@ input UpdateReportCardInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  collapsibleFooterBody: JSON
-  collapsibleFooterEnabled: Boolean
   componentSettings: JSON
   displayMapLayerVisibilityControls: Boolean
   icon: String

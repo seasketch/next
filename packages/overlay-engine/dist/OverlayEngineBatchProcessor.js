@@ -146,9 +146,11 @@ class OverlayEngineBatchProcessor {
         }
         if (this.operation === "column_values") {
             this.columnValuesProperty = columnValuesProperty;
-            if (!this.columnValuesProperty) {
-                throw new Error("columnValuesProperty is required for column_values operation");
-            }
+            // if (!this.columnValuesProperty) {
+            //   throw new Error(
+            //     "columnValuesProperty is required for column_values operation"
+            //   );
+            // }
         }
     }
     resetBatchData() {
@@ -176,6 +178,22 @@ class OverlayEngineBatchProcessor {
                 // how many bytes of features are estimated to be returned, determine the
                 // batch size to use when clipping.
                 const envelopes = (0, bboxUtils_1.splitBBoxAntimeridian)((0, bbox_1.default)(this.subjectFeature.geometry)).map(bboxUtils_1.bboxToEnvelope);
+                // check to ensure source fgb index bounds are within [-180, 180, -90, 90]
+                const sourceBounds = this.intersectionSource.bounds;
+                if (sourceBounds.minX < -180.0001 ||
+                    sourceBounds.maxX > 180.0001 ||
+                    sourceBounds.minY < -90.0001 ||
+                    sourceBounds.maxY > 90.0001) {
+                    throw new Error("Source fgb index bounds are out of range. Expected maximum of [-180, 180, -90, 90], but got [" +
+                        sourceBounds.minX +
+                        ", " +
+                        sourceBounds.maxX +
+                        ", " +
+                        sourceBounds.minY +
+                        ", " +
+                        sourceBounds.maxY +
+                        "]");
+                }
                 const queryPlan = this.intersectionSource.createPlan(envelopes);
                 const concurrency = this.pool?.size || 1;
                 // The default max batch size is helpful when working with very large
@@ -384,7 +402,7 @@ class OverlayEngineBatchProcessor {
             differenceMultiPolygon: differenceMultiPolygon,
             subjectFeature: this.subjectFeature,
             groupBy: this.groupBy,
-            property: this.columnValuesProperty,
+            // property: this.columnValuesProperty!,
         }).catch((error) => {
             console.error(`Error collecting column values: ${error.message}`);
             throw error;
@@ -457,14 +475,23 @@ class OverlayEngineBatchProcessor {
         for (const batchData of batchResults) {
             for (const classKey in batchData) {
                 if (!(classKey in results)) {
-                    results[classKey] = [];
+                    results[classKey] = {};
                 }
-                results[classKey].push(...batchData[classKey]);
+                for (const attr in batchData[classKey]) {
+                    if (!(attr in results[classKey]) ||
+                        !Array.isArray(results[classKey][attr])) {
+                        results[classKey][attr] = [];
+                    }
+                    results[classKey][attr].push(...batchData[classKey][attr]);
+                }
             }
         }
-        // calculate statistics for each class
+        // calculate statistics for each class and attribute
         for (const classKey in results) {
-            columnStats[classKey] = calculateColumnValueStats(results[classKey]);
+            columnStats[classKey] = {};
+            for (const attr in results[classKey]) {
+                columnStats[classKey][attr] = calculateColumnValueStats(results[classKey][attr]);
+            }
         }
         this.results = columnStats;
     }
@@ -532,31 +559,8 @@ class OverlayEngineBatchProcessor {
         }
     }
     addColumnValuesFeatureToResults(feature) {
-        const value = feature.properties?.[this.columnValuesProperty];
         const results = this.getColumnValuesResults();
-        if (typeof value === "number") {
-            const columnValue = [value];
-            if (feature.geometry.type === "Polygon" ||
-                feature.geometry.type === "MultiPolygon") {
-                const sqKm = feature.properties?.__area
-                    ? feature.properties.__area
-                    : (0, area_1.default)(feature) * 1e-6;
-                if (isNaN(sqKm) || sqKm === 0) {
-                    return;
-                }
-                columnValue.push(sqKm);
-            }
-            results["*"].push(columnValue);
-            if (this.groupBy) {
-                const classKey = feature.properties?.[this.groupBy];
-                if (classKey) {
-                    if (!(classKey in results)) {
-                        results[classKey] = [];
-                    }
-                    results[classKey].push(columnValue);
-                }
-            }
-        }
+        (0, clipBatch_1.addColumnValuesToResults)(results, feature, this.groupBy);
     }
     addOverlayFeatureToTotals(feature) {
         // get area in square kilometers
@@ -687,6 +691,7 @@ function calculateColumnValueStats(values) {
     const count = values.length;
     if (count === 0) {
         return {
+            type: "number",
             count: 0,
             min: NaN,
             max: NaN,
@@ -697,21 +702,44 @@ function calculateColumnValueStats(values) {
             sum: 0,
         };
     }
+    const firstValue = values[0][0];
+    if (typeof firstValue === "string" || typeof firstValue === "boolean") {
+        const distinctMap = new Map();
+        for (const entry of values) {
+            const value = entry[0];
+            const current = distinctMap.get(value) ?? 0;
+            distinctMap.set(value, current + 1);
+        }
+        const outputType = typeof firstValue === "boolean" ? "boolean" : "string";
+        return {
+            type: outputType,
+            distinctValues: Array.from(distinctMap.entries()),
+            countDistinct: distinctMap.size,
+        };
+    }
     let min = Infinity;
     let max = -Infinity;
     let sum = 0;
     let weightedSum = 0;
     let totalWeight = 0;
     const histogramMap = new Map();
+    const distinctValues = new Set();
     for (const entry of values) {
         const value = entry[0];
+        if (typeof value !== "number") {
+            continue;
+        }
+        distinctValues.add(value);
         const weight = entry.length > 1 ? entry[1] : undefined;
         if (value < min)
             min = value;
         if (value > max)
             max = value;
         sum += value;
-        if (typeof weight === "number" && isFinite(weight) && weight > 0) {
+        if (typeof weight === "number" &&
+            isFinite(weight) &&
+            weight > 0 &&
+            isFinite(value)) {
             weightedSum += value * weight;
             totalWeight += weight;
         }
@@ -719,8 +747,8 @@ function calculateColumnValueStats(values) {
         histogramMap.set(value, (histogramMap.get(value) || 0) + histogramContribution);
     }
     const mean = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
-    // Standard deviation - weighted if we have weights, otherwise unweighted
     let varianceNumerator = 0;
+    // Standard deviation - weighted if we have weights, otherwise unweighted
     if (totalWeight > 0) {
         for (const entry of values) {
             const value = entry[0];
@@ -742,13 +770,26 @@ function calculateColumnValueStats(values) {
         varianceNumerator = varianceNumerator / count;
     }
     const stdDev = Math.sqrt(varianceNumerator);
-    let histogram = Array.from(histogramMap.entries()).sort((a, b) => a[0] - b[0]);
+    let histogram = Array.from(histogramMap.entries()).sort((a, b) => {
+        if (typeof a[0] === "number" && typeof b[0] === "number") {
+            return a[0] - b[0];
+        }
+        else {
+            return 0;
+        }
+    });
     const MAX_HISTOGRAM_ENTRIES = 200;
     if (histogram.length > MAX_HISTOGRAM_ENTRIES) {
-        histogram = (0, rasterStats_1.downsampleHistogram)(histogram, MAX_HISTOGRAM_ENTRIES);
+        if (typeof histogram[0][0] === "number") {
+            histogram = (0, rasterStats_1.downsampleHistogram)(histogram, MAX_HISTOGRAM_ENTRIES);
+        }
+        else {
+            histogram = histogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+        }
     }
-    const countDistinct = histogramMap.size;
+    const countDistinct = distinctValues.size;
     return {
+        type: "number",
         count,
         min,
         max,

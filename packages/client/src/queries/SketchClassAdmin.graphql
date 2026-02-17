@@ -376,34 +376,6 @@ query SketchClassGeographyEditorDetails($slug: String!) {
   }
 }
 
-fragment ReportingLayerDetails on ReportCardLayer {
-  tableOfContentsItemId
-  layerParameters
-  processedOutput {
-    url
-    size
-    type
-  }
-  tableOfContentsItem {
-    id
-    title
-    dataSourceType
-    stableId
-    dataLayer {
-      id
-      mapboxGlStyles
-      dataSource {
-        id
-        geostats
-        type
-        sourceProcessingJob {
-          ...SourceProcessingJobDetails
-        }
-      }
-    }
-  }
-}
-
 fragment ReportCardDetails on ReportCard {
   id
   position
@@ -413,11 +385,6 @@ fragment ReportCardDetails on ReportCard {
   tint
   icon
   body
-  reportingLayers: reportCardLayers {
-    ...ReportingLayerDetails
-  }
-  collapsibleFooterEnabled
-  collapsibleFooterBody
   displayMapLayerVisibilityControls
 }
 
@@ -527,7 +494,6 @@ mutation AddReportCard(
   $componentSettings: JSON!
   $cardType: String!
   $body: JSON!
-  $layers: [ReportLayerInputRecordInput!]!
 ) {
   addReportCard(
     input: {
@@ -535,11 +501,13 @@ mutation AddReportCard(
       componentSettings: $componentSettings
       cardType: $cardType
       body: $body
-      layers: $layers
     }
   ) {
     reportCard {
       id
+      tab {
+        ...ReportTabDetails
+      }
     }
   }
 }
@@ -563,8 +531,6 @@ mutation UpdateReportCard(
   $tint: String
   $icon: String
   $cardType: String
-  $collapsibleFooterEnabled: Boolean
-  $collapsibleFooterBody: JSON
   $displayMapLayerVisibilityControls: Boolean
 ) {
   updateReportCard(
@@ -576,11 +542,17 @@ mutation UpdateReportCard(
       tint: $tint
       icon: $icon
       cardType: $cardType
-      collapsibleFooterEnabled: $collapsibleFooterEnabled
-      collapsibleFooterBody: $collapsibleFooterBody
       displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls
     }
   ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+
+mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
+  updateReportCardBody(input: { cardId: $id, body: $body }) {
     reportCard {
       ...ReportCardDetails
     }
@@ -649,15 +621,6 @@ query SourceProcessingJobs($projectId: Int!) {
   }
 }
 
-subscription ReportOverlaySourcesSubscription($projectId: Int!) {
-  reportOverlaySources(projectId: $projectId) {
-    jobKey
-    source {
-      ...OverlaySourceDetails
-    }
-  }
-}
-
 mutation RecalculateSpatialMetrics(
   $metricIds: [BigInt!]!
   $preprocessSources: Boolean!
@@ -671,6 +634,7 @@ mutation RecalculateSpatialMetrics(
 
 fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
+  stableId
   tableOfContentsItem {
     title
     stableId
@@ -725,6 +689,59 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
   }
 }
 
+query ReportDependencies($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+
+fragment BaseReportDetails on Report {
+  id
+  tabs {
+    ...ReportTabDetails
+  }
+}
+
+query BaseReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report {
+      ...BaseReportDetails
+    }
+  }
+}
+
+query BaseDraftReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report: draftReport {
+      ...BaseReportDetails
+    }
+  }
+}
+
+query SubjectReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+    }
+  }
+}
+
 query LegacyReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
     ...ReportContextSketchDetails
@@ -734,6 +751,102 @@ query LegacyReportContext($sketchId: Int!) {
       geoprocessingClientUrl
       geoprocessingProjectUrl
       isGeographyClippingEnabled
+    }
+  }
+}
+
+query DraftReportDependencies($input: DraftDependenciesInput) {
+  draftReportDependencies(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+    metrics {
+      ...CompatibleSpatialMetricDetails
+    }
+    sketchId
+  }
+}
+
+query ProjectReportingLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    reportingLayers {
+      ...OverlaySourceDetails
+    }
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      copiedFromDataLibraryTemplateId
+      dataLayer {
+        dataSource {
+          id
+          type
+        }
+      }
+    }
+  }
+}
+
+query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      dataSource {
+        id
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+
+query OverlayLayerAuthorInfo($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      version
+      dataSource {
+        attribution
+        id
+        createdAt
+        authorProfile {
+          ...AuthorProfile
+        }
+      }
+    }
+  }
+}
+
+mutation PreprocessSource($slug: String!, $sourceId: Int!) {
+  preprocessSource(input: { slug: $slug, sourceId: $sourceId }) {
+    tableOfContentsItem {
+      id
+      dataLayer {
+        id
+        dataSource {
+          id
+          sourceProcessingJob {
+            ...SourceProcessingJobDetails
+          }
+        }
+      }
+    }
+  }
+}
+
+query OverlaysForReportLayerToggles($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      reportingOutput {
+        id
+      }
     }
   }
 }

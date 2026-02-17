@@ -16,14 +16,8 @@ import mapboxgl, {
   VectorSource,
   LineLayer,
 } from "mapbox-gl";
-import {
-  createContext,
-  Dispatch,
-  useEffect,
-  useState,
-  SetStateAction,
-} from "react";
-import { BBox, Feature, Polygon } from "geojson";
+import { createContext, Dispatch, SetStateAction } from "react";
+import { Feature, Polygon } from "geojson";
 import {
   ArcgisFeatureLayerFetchStrategy,
   ArchivedSourceFragment,
@@ -34,22 +28,18 @@ import {
   DataSourceTypes,
   InteractivityType,
   MapBookmarkDetailsFragment,
-  OptionalBasemapLayer,
   OptionalBasemapLayersGroupType,
   OverlayFragment,
   SketchPresentFragmentDoc,
   SpriteDetailsFragment,
-  useProjectRegionQuery,
 } from "../generated/graphql";
 import { fetchGlStyle } from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import bytes from "bytes";
 import bbox from "@turf/bbox";
-import { useParams } from "react-router";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
-import useAccessToken from "../useAccessToken";
 import LRU from "lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
@@ -57,7 +47,6 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import { LegendItem } from "./Legend";
 import { EventEmitter } from "eventemitter3";
-import { MeasureControlState } from "../MeasureControl";
 import cloneDeep from "lodash.clonedeep";
 import {
   ArcGISDynamicMapService,
@@ -73,11 +62,15 @@ import { addInteractivityExpressions } from "../admin/data/glStyleUtils";
 import { createBoundsRecursive } from "../projects/OverlayLayers";
 import { TocMenuItemType } from "../admin/data/TableOfContentsItemMenu";
 import { isExpression } from "./legends/utils";
-import CoordinatesControl from "./CoordinatesControl";
 import {
   buildInaturalistSourcesAndLayers,
   normalizeInaturalistParams,
 } from "./inaturalist";
+import type {
+  BasemapContextState,
+  OptionalBasemapLayerValue,
+} from "./BasemapContext";
+import { LayerStateManager } from "./LayerStateManager";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -177,9 +170,15 @@ export interface SketchLayerState extends LayerState {
   sketchClassId?: number;
   filterMvtUrl?: string;
 }
+/**
+ * Internal state type that combines MapContextInterface with
+ * SketchLayerContextState. The manager tracks all state internally
+ * but pushes to separate React contexts.
+ */
+type FullInternalState = MapContextInterface & SketchLayerContextState;
+
 class MapContextManager extends EventEmitter {
   map?: Map;
-  interactivityManager?: LayerInteractivityManager;
   private preferencesKey?: string;
   private clientDataSources: {
     [dataSourceId: string]: DataSourceDetailsFragment;
@@ -189,21 +188,31 @@ class MapContextManager extends EventEmitter {
       tocId: string;
     } & DataLayerDetailsFragment;
   } = {};
-  // TODO: it probably makes sense to "garbage collect" visibleLayers at some
-  // point since it is stored in localstorage. If there's a lot of churn in
-  // layers there will be stale entries, and eventually there could even be a
-  // problem with really long layer lists if the user toggles all the layers
-  private visibleLayers: { [id: string]: LayerState } = {};
+  /** Manages overlay layer state (keyed by stableId). */
+  private overlayStates: LayerStateManager<LayerState>;
+  /** Manages per-sketch layer state (keyed by string sketch id). */
+  private sketchStates: LayerStateManager<SketchLayerState>;
   private basemaps: { [id: string]: BasemapDetailsFragment } = {};
-  private _setState: Dispatch<SetStateAction<MapContextInterface>>;
-  private updateStateDebouncerReference?: any;
+  private _setManagerState?: Dispatch<SetStateAction<MapManagerState>>;
+  private _setSketchLayerState?: Dispatch<
+    SetStateAction<SketchLayerContextState>
+  >;
+  private _setMapOverlayState?: Dispatch<
+    SetStateAction<MapOverlayContextState>
+  >;
+  private _setLegendsState?: Dispatch<SetStateAction<LegendsContextState>>;
+  /** Basemap state from BasemapContext, set via updateBasemapState by MapManagerContextProvider */
+  private basemapState: BasemapContextState | null = null;
+  private _ready = false;
+
+  /** Cached result of computeInatCtas for referential stability. */
+  private _lastInatCtas: { projectId: string; label?: string }[] = [];
+
   private initialCameraOptions?: CameraOptions;
   private initialBounds?: LngLatBoundsLike;
-  private internalState: MapContextInterface;
+  private internalState: FullInternalState;
   private mapIsLoaded = false;
   private mapContainer?: HTMLDivElement;
-  private scaleControl = new mapboxgl.ScaleControl({ maxWidth: 250 });
-  private coordinatesControl = new CoordinatesControl();
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
   private editableSketchId?: number;
@@ -243,7 +252,11 @@ class MapContextManager extends EventEmitter {
 
   constructor(
     initialState: MapContextInterface,
-    setState: Dispatch<SetStateAction<MapContextInterface>>,
+    initialSketchState: SketchLayerContextState,
+    setManagerState: Dispatch<SetStateAction<MapManagerState>>,
+    setSketchLayerState: Dispatch<SetStateAction<SketchLayerContextState>>,
+    setMapOverlayState: Dispatch<SetStateAction<MapOverlayContextState>>,
+    setLegendsState: Dispatch<SetStateAction<LegendsContextState>>,
     initialCameraOptions?: CameraOptions,
     preferencesKey?: string,
     cacheSize?: number,
@@ -251,32 +264,132 @@ class MapContextManager extends EventEmitter {
   ) {
     super();
     cacheSize = cacheSize || bytes("50mb");
-    this._setState = setState;
+    this._setManagerState = setManagerState;
+    this._setSketchLayerState = setSketchLayerState;
+    this._setMapOverlayState = setMapOverlayState;
+    this._setLegendsState = setLegendsState;
     // @ts-ignore
     window.mapContext = this;
     this.preferencesKey = preferencesKey;
-    this.internalState = initialState;
+    this.internalState = { ...initialState, ...initialSketchState };
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
-    this.visibleLayers = { ...initialState.layerStatesByTocStaticId };
-    this.internalState.inaturalistCallToActions =
-      initialState.inaturalistCallToActions || [];
+    this.overlayStates = new LayerStateManager<LayerState>(
+      initialState.layerStatesByTocStaticId
+    );
+    this.sketchStates = new LayerStateManager<SketchLayerState>(
+      // Convert numeric-keyed initial state to string keys
+      Object.fromEntries(
+        Object.entries(initialSketchState.sketchLayerStates).map(([k, v]) => [
+          k.toString(),
+          v,
+        ])
+      )
+    );
+
+    // When effective state changes, push to the relevant React context(s).
+    // Overlay and sketch managers have separate handlers so that overlay
+    // loading events don't needlessly churn the SketchLayerContext (and
+    // vice-versa).
+    this.overlayStates.on("stateChanged", this.onOverlayStateChanged);
+    this.sketchStates.on("stateChanged", this.onSketchStateChanged);
   }
 
   getCustomGLSource(sourceId: number) {
     return this.customSources[sourceId]?.customSource;
   }
 
-  private setState = (action: SetStateAction<MapContextInterface>) => {
-    if (typeof action === "function") {
-      this.internalState = action(this.internalState);
-    } else {
-      this.internalState = action;
+  /**
+   * Update basemap state from BasemapContext. Called by MapManagerContextProvider.
+   */
+  updateBasemapState(state: BasemapContextState) {
+    this.basemapState = state;
+    // Sync the basemaps lookup for bookmark/style code
+    this.basemaps = {};
+    for (const b of state.basemaps) {
+      this.basemaps[b.id.toString()] = b;
     }
-    this._setState((prev) => ({
-      ...prev,
-      ...this.internalState,
-    }));
+    // Mark ready when basemaps are set
+    if (state.ready && state.basemaps.length > 0 && !this.basemapsWereSet) {
+      this.basemapsWereSet = true;
+      this._ready =
+        !!(this.initialCameraOptions || this.initialBounds) &&
+        this.basemapsWereSet;
+      this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
+    }
+  }
+
+  private setState = (action: SetStateAction<MapContextInterface>) => {
+    // Build sketchLayerStates from sketchStates manager (convert string→number keys)
+    const sketchLayerStates: { [id: number]: SketchLayerState } = {};
+    for (const key of this.sketchStates.keys()) {
+      const raw = this.sketchStates.getRaw(key);
+      if (raw) sketchLayerStates[parseInt(key)] = raw;
+    }
+    const sketchState = {
+      sketchLayerStates,
+      sketchClassLayerStates: this.internalState.sketchClassLayerStates,
+    };
+    if (typeof action === "function") {
+      this.internalState = { ...action(this.internalState), ...sketchState };
+    } else {
+      this.internalState = { ...action, ...sketchState };
+    }
+    this.pushSubContexts();
+  };
+
+  /**
+   * Pushes the current internal state to all focused sub-contexts.
+   * Each setter uses a functional update that returns the previous reference
+   * when nothing has changed, so React will skip re-renders for stable slices.
+   */
+  private pushSubContexts = () => {
+    this._setMapOverlayState?.((prev) => {
+      if (
+        prev.layerStatesByTocStaticId ===
+          this.internalState.layerStatesByTocStaticId &&
+        prev.styleHash === this.internalState.styleHash
+      ) {
+        return prev;
+      }
+      return {
+        ...prev,
+        layerStatesByTocStaticId: this.internalState.layerStatesByTocStaticId,
+        styleHash: this.internalState.styleHash,
+      };
+    });
+
+    this._setLegendsState?.((prev) => {
+      if (prev.legends === this.internalState.legends) {
+        return prev;
+      }
+      return {
+        legends: this.internalState.legends,
+      };
+    });
+  };
+
+  /**
+   * Pushes the current sketch layer state to the SketchLayerContext.
+   * Call this after updating sketchStates or sketchClassLayerStates.
+   *
+   * NOTE: Now that overlay state changes and sketch state changes have
+   * separate handlers, this is only called when sketch-related state
+   * actually changes (from onSketchStateChanged or explicit calls).
+   */
+  private pushSketchState = () => {
+    // Convert string-keyed sketchStates back to number-keyed for context
+    const sketchState = this.sketchStates.getState();
+    const sketchLayerStates: { [id: number]: SketchLayerState } = {};
+    for (const key of Object.keys(sketchState)) {
+      sketchLayerStates[parseInt(key)] = sketchState[key];
+    }
+    this._setSketchLayerState?.({
+      sketchLayerStates,
+      sketchClassLayerStates: {
+        ...this.internalState.sketchClassLayerStates,
+      },
+    });
   };
 
   setToken(token: string | null | undefined) {
@@ -301,8 +414,9 @@ class MapContextManager extends EventEmitter {
    * a layer if available, or fall back to the TableOfContents.stableId.
    */
   getVisibleLayerReferenceIds() {
-    return Object.keys(this.visibleLayers)
-      .filter((id) => this.visibleLayers[id].visible)
+    return this.overlayStates
+      .keys()
+      .filter((id) => this.overlayStates.getRaw(id)?.visible)
       .map((id) => {
         const reference = this.geoprocessingReferenceIds[id];
         if (reference) {
@@ -314,20 +428,10 @@ class MapContextManager extends EventEmitter {
   }
 
   setLoadingOverlay(loadingOverlay: string | null) {
-    this.setState((prev) => {
-      if (loadingOverlay !== null) {
-        return {
-          ...prev,
-          loadingOverlay,
-          showLoadingOverlay: true,
-        };
-      } else {
-        return {
-          ...prev,
-          showLoadingOverlay: false,
-        };
-      }
-    });
+    this.emit("uiUpdate", {
+      loadingOverlay: loadingOverlay ?? undefined,
+      showLoadingOverlay: loadingOverlay !== null,
+    } as Partial<MapUIStateContextState>);
   }
 
   /**
@@ -363,6 +467,8 @@ class MapContextManager extends EventEmitter {
    * Call whenever the context will be replaced or no longer used
    */
   destroy() {
+    this.overlayStates.destroy();
+    this.sketchStates.destroy();
     for (const key in this.customSources) {
       this.customSources[key].customSource.destroy();
       delete this.customSources[key];
@@ -378,7 +484,8 @@ class MapContextManager extends EventEmitter {
   async createMap(
     container: HTMLDivElement,
     bounds?: [number, number, number, number],
-    options?: Partial<MapboxOptions>
+    options?: Partial<MapboxOptions>,
+    basemapStateOverride?: BasemapContextState
   ) {
     if (this.mapContainer === container) {
       console.warn("Already initializing map");
@@ -387,24 +494,27 @@ class MapContextManager extends EventEmitter {
     if (this.map) {
       // throw new Error("Map already created in this context");
       console.warn("Map already created in this context");
-      if (this.interactivityManager) {
-        this.interactivityManager.destroy();
-        delete this.interactivityManager;
-        this.map.off("error", this.onMapError);
-        this.map.off("data", this.onMapDataEvent);
-        this.map.off("dataloading", this.onMapDataEvent);
-        this.map.off("moveend", this.onMapMove);
-        this.map.remove();
-      }
-      for (const key in this.customSources) {
-        this.customSources[key].customSource.destroy();
-        delete this.customSources[key];
-      }
+      this.map.off("error", this.onMapError);
+      this.map.off("data", this.onMapDataEvent);
+      this.map.off("dataloading", this.onMapDataEvent);
+      this.map.off("moveend", this.onMapMove);
+      this.map.remove();
     }
-    if (!this.internalState.ready) {
+    for (const key in this.customSources) {
+      this.customSources[key].customSource.destroy();
+      delete this.customSources[key];
+    }
+    if (!this._ready) {
       throw new Error(
         "Wait to call createMap until after MapContext.ready = true"
       );
+    }
+    const effectiveBasemapState = basemapStateOverride ?? this.basemapState;
+    if (!effectiveBasemapState?.getSelectedBasemap()?.url) {
+      return;
+    }
+    if (basemapStateOverride) {
+      this.basemapState = basemapStateOverride;
     }
     const { style, sprites } = await this.getComputedStyle();
     const styleHash = md5(JSON.stringify(style));
@@ -421,6 +531,7 @@ class MapContextManager extends EventEmitter {
       logoPosition: "bottom-right",
       transformRequest: this.requestTransformer,
     };
+    const effectiveBounds = bounds ?? this.initialBounds;
     if (this.initialCameraOptions) {
       mapOptions = {
         ...mapOptions,
@@ -430,10 +541,10 @@ class MapContextManager extends EventEmitter {
         bearing: this.initialCameraOptions.bearing,
         ...options,
       };
-    } else if (this.initialBounds) {
+    } else if (effectiveBounds) {
       mapOptions = {
         ...mapOptions,
-        bounds: this.initialBounds,
+        bounds: effectiveBounds,
         ...options,
       };
     } else {
@@ -442,28 +553,6 @@ class MapContextManager extends EventEmitter {
     this.map = new Map(mapOptions);
 
     this.addSprites(sprites, this.map);
-
-    this.interactivityManager = new LayerInteractivityManager(
-      this.map,
-      this.setState
-    );
-
-    this.interactivityManager.setVisibleLayers(
-      Object.keys(this.visibleLayers)
-        .filter((id) => this.visibleLayers[id]?.visible && this.layers[id])
-        .map((id) => this.layers[id]),
-      this.clientDataSources,
-      this.getSelectedBasemap()!,
-      this.tocItems
-    );
-
-    if (this.internalState.showScale) {
-      this.map.addControl(this.scaleControl, "bottom-right");
-    }
-
-    if (this.internalState.showCoordinates) {
-      this.map.addControl(this.coordinatesControl, "bottom-right");
-    }
 
     this.map.on("error", this.onMapError);
     this.map.on("data", this.onMapDataEvent);
@@ -585,85 +674,6 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  /**
-   * @deprecated
-   */
-  toggleTerrain() {
-    let on = true;
-    if (this.internalState.terrainEnabled) {
-      on = false;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      terrainEnabled: on,
-      prefersTerrainEnabled: on,
-    }));
-    this.debouncedUpdateStyle();
-    if (!on) {
-      this.force2dView();
-    }
-  }
-
-  toggleScale(show: boolean) {
-    this.setState((prev) => ({
-      ...prev,
-      showScale: show,
-    }));
-
-    if (this.map) {
-      if (show) {
-        if (!this.map.hasControl(this.scaleControl)) {
-          this.map.hasControl(this.scaleControl);
-          this.map.addControl(this.scaleControl, "bottom-right");
-        }
-      } else {
-        if (this.map.hasControl(this.scaleControl)) {
-          this.map.removeControl(this.scaleControl);
-        }
-      }
-    }
-    this.debouncedUpdatePreferences();
-  }
-
-  toggleCoordinates(show: boolean) {
-    this.setState((prev) => ({
-      ...prev,
-      showCoordinates: show,
-    }));
-    if (this.map) {
-      if (this.internalState.showCoordinates) {
-        if (!this.map.hasControl(this.coordinatesControl)) {
-          this.map.addControl(this.coordinatesControl, "bottom-right");
-        }
-      } else {
-        if (this.map.hasControl(this.coordinatesControl)) {
-          this.map.removeControl(this.coordinatesControl);
-        }
-      }
-    }
-    this.debouncedUpdatePreferences();
-  }
-
-  get scaleVisible() {
-    return !!this.internalState.showScale;
-  }
-
-  get coordinatesVisible() {
-    return !!this.internalState.showCoordinates;
-  }
-
-  /**
-   * @deprecated
-   */
-  private force2dView() {
-    if (this.map && this.map.getPitch() > 0) {
-      this.map.easeTo({
-        pitch: 0,
-        bearing: 0,
-      });
-    }
-  }
-
   onMapMoveDebouncerReference: any | undefined;
 
   onMapMove = (event: MouseEvent) => {
@@ -679,90 +689,27 @@ class MapContextManager extends EventEmitter {
   setViewport(center: [number, number], zoom: number) {}
 
   /**
-   * A component somewhere in the MapContext will need to set the list of basemaps
-   * before a MapboxMap will be initialized. It can be re-set whenever the list is
-   * updated.
-   * @param basemaps List of Basemap objects
-   */
-  setBasemaps(basemaps: BasemapDetailsFragment[]) {
-    this.basemapsWereSet = true;
-    this.basemaps = {};
-    for (const basemap of basemaps) {
-      if (basemap) {
-        this.basemaps[basemap.id.toString()] = basemap;
-      }
-    }
-    if (
-      !this.internalState.selectedBasemap ||
-      !this.basemaps[this.internalState.selectedBasemap]
-    ) {
-      if (basemaps.length && basemaps[0]) {
-        this.setSelectedBasemap(basemaps[0].id.toString());
-      }
-    }
-    this.setState((prev) => ({
-      ...prev,
-      ready:
-        !!(this.initialCameraOptions || this.initialBounds) &&
-        this.basemapsWereSet,
-      terrainEnabled: this.shouldEnableTerrain(),
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        this.internalState.selectedBasemap
-          ? this.basemaps[this.internalState.selectedBasemap] || basemaps[0]
-          : basemaps[0],
-        this.internalState.basemapOptionalLayerStatePreferences
-      ),
-    }));
-    this.debouncedUpdateStyle();
-    this.updateInteractivitySettings();
-  }
-
-  /**
    * Map will not be rended (state.ready=false) until set.
    * @param feature Rectangulare box will be created from input polygon
    */
   setProjectBounds(feature: Feature<Polygon>) {
     const box = bbox(feature);
     this.initialBounds = box.slice(0, 4) as [number, number, number, number];
-    this.setState((prev) => ({
-      ...prev,
-      ready:
-        !!(this.initialCameraOptions || this.initialBounds) &&
-        this.basemapsWereSet,
-    }));
+    this._ready =
+      !!(this.initialCameraOptions || this.initialBounds) &&
+      this.basemapsWereSet;
+    this._setManagerState?.((prev) => ({ ...prev, ready: this._ready }));
   }
 
-  private computeBasemapOptionalLayerStates(
-    basemap: BasemapDetailsFragment | null,
-    preferences?: { [layerName: string]: any }
-  ) {
-    const states: { [layerName: string]: any } = {};
-    if (basemap) {
-      for (const layer of basemap.optionalBasemapLayers) {
-        const preference =
-          preferences && layer.name in preferences
-            ? preferences[layer.name]
-            : undefined;
-        if (layer.groupType === OptionalBasemapLayersGroupType.None) {
-          states[layer.id] = preference ?? layer.defaultVisibility;
-        } else if (layer.groupType === OptionalBasemapLayersGroupType.Select) {
-          states[layer.id] = preference ?? (layer.options || [])[0]?.name;
-        } else {
-          states[layer.id] = preference ?? (layer.options || [])[0]?.name;
-        }
-      }
-    }
-    return states;
-  }
+  // computeBasemapOptionalLayerStates has been moved to BasemapProvider
 
   private applyOptionalBasemapLayerStates(
     baseStyle: Style,
     basemap: BasemapDetailsFragment | undefined
   ) {
-    const optionalBasemapLayerStates = this.computeBasemapOptionalLayerStates(
-      this.getSelectedBasemap(),
-      this.internalState.basemapOptionalLayerStatePreferences
-    );
+    if (!this.basemapState) return;
+    const optionalBasemapLayerStates =
+      this.basemapState.basemapOptionalLayerStates;
 
     // If set to true, display the optional layer, else filter out
     const optionalLayersToggleState: { [layerId: string]: boolean } = {};
@@ -772,7 +719,7 @@ class MapContextManager extends EventEmitter {
           if (id) {
             optionalLayersToggleState[id] =
               optionalLayersToggleState[id] ||
-              optionalBasemapLayerStates[layer.id];
+              !!optionalBasemapLayerStates[layer.id];
           }
         }
       } else {
@@ -817,77 +764,6 @@ class MapContextManager extends EventEmitter {
     });
   }
 
-  /**
-   * Set the basemap that should be displayed on the map. Updates
-   * MapContext.selectedBasemap
-   * @param id String ID for the basemap to select
-   */
-  setSelectedBasemap(id: string) {
-    const previousBasemap =
-      this.internalState.selectedBasemap &&
-      this.basemaps[this.internalState.selectedBasemap];
-    this.internalState.selectedBasemap = id;
-    const terrainEnabled = this.shouldEnableTerrain();
-    const basemap = this.basemaps[id];
-    this.setState((prev) => ({
-      ...prev,
-      selectedBasemap: this.internalState.selectedBasemap,
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        basemap,
-        this.internalState.basemapOptionalLayerStatePreferences
-      ),
-      terrainEnabled,
-    }));
-    this.debouncedUpdatePreferences();
-    // this.updateState();
-    this.debouncedUpdateStyle();
-    if (previousBasemap && basemap) {
-      if (!this.internalState.terrainEnabled) {
-        this.force2dView();
-      }
-    }
-    this.updateInteractivitySettings();
-  }
-
-  clearTerrainSettings() {
-    const selectedBasemap = this.getSelectedBasemap();
-    this.setState((prev) => ({
-      ...prev,
-      prefersTerrainEnabled: undefined,
-      terrainEnabled:
-        !!selectedBasemap?.terrainUrl &&
-        (!selectedBasemap?.terrainOptional ||
-          selectedBasemap?.terrainVisibilityDefault === true),
-    }));
-    this.debouncedUpdatePreferences();
-  }
-
-  /**
-   * @deprecated
-   */
-  private shouldEnableTerrain() {
-    const state = this.internalState;
-    if (this.basemaps && state.selectedBasemap) {
-      const basemap = this.basemaps[state.selectedBasemap];
-      if (basemap && basemap.terrainUrl) {
-        if (basemap.terrainOptional) {
-          if (this.internalState.prefersTerrainEnabled === true) {
-            return true;
-          } else if (this.internalState.prefersTerrainEnabled === false) {
-            return false;
-          } else {
-            return basemap.terrainVisibilityDefault || false;
-          }
-        } else {
-          return true;
-        }
-      } else {
-        return false;
-      }
-    }
-    return false;
-  }
-
   private updatePreferences() {
     const sketchClassLayerStates = cloneDeep(
       this.internalState.sketchClassLayerStates || {}
@@ -916,8 +792,7 @@ class MapContextManager extends EventEmitter {
     }
     if (this.preferencesKey) {
       const prefs = {
-        basemap: this.internalState.selectedBasemap,
-        layers: this.visibleLayers,
+        layers: this.overlayStates.getState(),
         ...(this.map
           ? {
               cameraOptions: {
@@ -928,12 +803,7 @@ class MapContextManager extends EventEmitter {
               },
             }
           : {}),
-        prefersTerrainEnabled: this.internalState.prefersTerrainEnabled,
-        basemapOptionalLayerStatePreferences:
-          this.internalState.basemapOptionalLayerStatePreferences,
         sketchClassLayerStates: sketchClassLayerStates,
-        showScale: this.internalState.showScale,
-        showCoordinates: this.internalState.showCoordinates,
       };
       window.localStorage.setItem(this.preferencesKey, JSON.stringify(prefs));
     }
@@ -944,9 +814,9 @@ class MapContextManager extends EventEmitter {
   }, 200);
 
   resetLayers() {
-    const visibleLayerIds = Object.keys(this.visibleLayers);
+    const visibleLayerIds = this.overlayStates.keys();
     this.hideTocItems(visibleLayerIds);
-    this.visibleLayers = {};
+    this.overlayStates.retainOnly([]);
     this.debouncedUpdatePreferences();
   }
 
@@ -972,10 +842,9 @@ class MapContextManager extends EventEmitter {
         ...this.clientDataSources[key],
         queryParameters: params,
       } as any;
-      this.setState((prev) => ({
-        ...prev,
+      this.emit("uiUpdate", {
         inaturalistCallToActions: this.computeInatCtas(),
-      }));
+      } as Partial<MapUIStateContextState>);
       this.debouncedUpdateStyle();
     }
   }
@@ -983,8 +852,8 @@ class MapContextManager extends EventEmitter {
   private computeInatCtas() {
     const ctas: { projectId: string; label?: string }[] = [];
     const seen = new Set<string>();
-    for (const stableId in this.visibleLayers) {
-      const state = this.visibleLayers[stableId];
+    for (const stableId of this.overlayStates.keys()) {
+      const state = this.overlayStates.getRaw(stableId);
       if (!state?.visible) continue;
       const layer = this.layers[stableId];
       if (!layer) continue;
@@ -1012,16 +881,23 @@ class MapContextManager extends EventEmitter {
   }
 
   async updateStyle() {
-    if (this.map && this.internalState.ready) {
+    if (!this.basemapState?.getSelectedBasemap()?.url) {
+      this.debouncedUpdateStyle();
+      return;
+    }
+    if (this.map && this._ready) {
       this.updateStyleInfiniteLoopDetector++;
       this.updateStyleInfiniteLoopDetector = 0;
       if (this.updateStyleInfiniteLoopDetector > 10) {
         this.updateStyleInfiniteLoopDetector = 0;
         throw new Error("Infinite loop");
       }
-      const { style, sprites } = await this.getComputedStyle(() => {
-        this.debouncedUpdateStyle();
-      });
+      const { style, sprites, sketchLayerIds } = await this.getComputedStyle(
+        () => {
+          this.debouncedUpdateStyle();
+        }
+      );
+      this.emit("sketchLayerIdsChanged", sketchLayerIds);
       const styleHash = md5(JSON.stringify(style));
       this.addSprites(sprites, this.map);
       const update = () => {
@@ -1075,7 +951,7 @@ class MapContextManager extends EventEmitter {
             sources[id] = customSource;
           }
         }
-        this.interactivityManager?.setCustomSources(sources);
+        this.emit("customSourcesChanged", sources);
         this.setState((prev) => ({ ...prev, styleHash }));
       };
       if (!this.mapIsLoaded) {
@@ -1090,6 +966,22 @@ class MapContextManager extends EventEmitter {
       } else {
         this.debouncedUpdateStyle();
       }
+    }
+  }
+
+  /**
+   * Emits the current sketch layer IDs for late-joining listeners (e.g. when
+   * MapUIProvider's interactivityManager is created after the style was loaded).
+   */
+  emitCurrentSketchLayerIds() {
+    if (
+      this.map &&
+      this._ready &&
+      this.basemapState?.getSelectedBasemap()?.url
+    ) {
+      this.getComputedStyle().then(({ sketchLayerIds }) => {
+        this.emit("sketchLayerIdsChanged", sketchLayerIds);
+      });
     }
   }
 
@@ -1138,17 +1030,16 @@ class MapContextManager extends EventEmitter {
         : id
     );
 
-    for (const id in this.visibleLayers) {
+    for (const id of this.overlayStates.keys()) {
       if (stableIds.indexOf(id) === -1) {
         this.hideTocItem(id);
       }
     }
     for (const id of stableIds) {
-      if (!this.visibleLayers[id]) {
+      if (!this.overlayStates.has(id)) {
         this.showTocItem(id);
       }
     }
-    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
     this.updateLegends();
   }
@@ -1162,15 +1053,15 @@ class MapContextManager extends EventEmitter {
       id in this.geoprocessingReferenceIds
         ? this.geoprocessingReferenceIds[id]
         : id;
-    const state = this.visibleLayers[stableId];
+    const state = this.overlayStates.getRaw(stableId);
     if (state?.visible) {
       if (
         (state.opacity !== undefined && state.opacity !== 1) ||
         state.zOrderOverride !== undefined
       ) {
-        this.visibleLayers[stableId].visible = false;
+        this.overlayStates.setVisible(stableId, false);
       } else {
-        delete this.visibleLayers[stableId];
+        this.overlayStates.removeLayer(stableId);
       }
     }
     this.updateLegends();
@@ -1185,19 +1076,19 @@ class MapContextManager extends EventEmitter {
       id in this.geoprocessingReferenceIds
         ? this.geoprocessingReferenceIds[id]
         : id;
-    if (this.visibleLayers[stableId]) {
-      const state = this.visibleLayers[stableId];
+    if (this.overlayStates.has(stableId)) {
+      const state = this.overlayStates.getRaw(stableId)!;
       if (state.error) {
         // do nothing
       } else {
         if (!state.visible) {
-          state.visible = true;
-          state.loading = true;
-          state.hidden = false;
+          this.overlayStates.setVisible(stableId, true);
+          this.overlayStates.setLoading(stableId, true);
+          this.overlayStates.setHidden(stableId, false);
         }
       }
     } else {
-      this.visibleLayers[stableId] = {
+      this.overlayStates.addLayer(stableId, {
         loading: true,
         visible: true,
         opacity:
@@ -1205,7 +1096,15 @@ class MapContextManager extends EventEmitter {
         hidden: false,
         zOrderOverride:
           this.internalState.layerStatesByTocStaticId[stableId]?.zOrderOverride,
-      };
+      });
+      // Register source mapping for event triage
+      const layer = this.layers[stableId];
+      if (layer) {
+        this.overlayStates.setSourceForKey(
+          stableId,
+          layer.dataSourceId.toString()
+        );
+      }
     }
     this.updateLegends();
   }
@@ -1222,34 +1121,31 @@ class MapContextManager extends EventEmitter {
       filterMvtUrl?: string;
     }[]
   ) {
-    const sketchIds = sketches.map(({ id }) => id);
-    // remove missing ids from internal state
-    for (const id in this.internalState.sketchLayerStates) {
-      if (sketchIds.indexOf(parseInt(id)) === -1) {
-        delete this.internalState.sketchLayerStates[parseInt(id)];
-      }
-    }
-    // add new sketches to internal state
+    const sketchIdStrings = new Set(sketches.map(({ id }) => id.toString()));
+    // remove missing ids
+    this.sketchStates.retainOnly(sketchIdStrings);
+    // add new sketches
     for (const sketch of sketches) {
-      if (!this.internalState.sketchLayerStates[sketch.id]?.visible) {
-        this.internalState.sketchLayerStates[sketch.id] = {
+      const key = sketch.id.toString();
+      const existing = this.sketchStates.getRaw(key);
+      if (!existing?.visible) {
+        this.sketchStates.addLayer(key, {
           loading: true,
           visible: true,
           sketchClassId: sketch.sketchClassId,
           filterMvtUrl: sketch.filterMvtUrl,
-        };
+        });
+        // Register source mapping for event triage
+        // eslint-disable-next-line i18next/no-literal-string
+        this.sketchStates.setSourceForKey(key, `sketch-${sketch.id}`);
       } else {
-        this.internalState.sketchLayerStates[sketch.id] = {
-          ...this.internalState.sketchLayerStates[sketch.id],
+        this.sketchStates.patch(key, {
           filterMvtUrl: sketch.filterMvtUrl,
-        };
+        } as Partial<SketchLayerState>);
       }
     }
     // update public state
-    this.setState((prev) => ({
-      ...prev,
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-    }));
+    this.pushSketchState();
     for (const sketch of sketches) {
       if (sketch.timestamp) {
         this.sketchTimestamps.set(sketch.id, sketch.timestamp);
@@ -1261,10 +1157,9 @@ class MapContextManager extends EventEmitter {
     for (const id in this.internalState.sketchClassLayerStates) {
       this.internalState.sketchClassLayerStates[id].visible = false;
       // see if any sketches are visible for this sketch class
-      for (const sketchState of Object.values(
-        this.internalState.sketchLayerStates
-      )) {
-        if (sketchState.sketchClassId === parseInt(id) && sketchState.visible) {
+      for (const skKey of this.sketchStates.keys()) {
+        const skState = this.sketchStates.getRaw(skKey);
+        if (skState?.sketchClassId === parseInt(id) && skState.visible) {
           this.internalState.sketchClassLayerStates[id].visible = true;
           break;
         }
@@ -1306,7 +1201,8 @@ class MapContextManager extends EventEmitter {
         sketchClassId: parseInt(key),
       };
     }
-    this.debouncedUpdateLayerState();
+    this.pushSketchState();
+    this.debouncedUpdatePreferences();
     this.debouncedUpdateStyle();
     this.updateLegends();
   }
@@ -1319,14 +1215,14 @@ class MapContextManager extends EventEmitter {
 
   markSketchAsEditable(sketchId: number) {
     this.editableSketchId = sketchId;
-    this.interactivityManager?.setFocusedSketchId(sketchId);
+    this.emit("focusedSketchIdChanged", sketchId);
     // request a redraw
     this.debouncedUpdateStyle();
   }
 
   unmarkSketchAsEditable() {
     delete this.editableSketchId;
-    this.interactivityManager?.setFocusedSketchId(null);
+    this.emit("focusedSketchIdChanged", null);
     // request a redraw
     this.debouncedUpdateStyle();
   }
@@ -1351,10 +1247,16 @@ class MapContextManager extends EventEmitter {
   }
 
   async getComputedBaseStyle() {
-    const basemap = this.basemaps[this.internalState.selectedBasemap || ""] as
-      | BasemapDetailsFragment
-      | undefined;
+    if (!this.basemapState) {
+      throw new Error(
+        "Basemap state not set; ensure MapManagerContextProvider is nested under BasemapProvider"
+      );
+    }
+    const basemap = this.basemapState.getSelectedBasemap();
     const labelsID = basemap?.labelsLayerId;
+    // if (!basemap?.url) {
+    //   throw new Error("No basemap URL set");
+    // }
     const url =
       basemap?.url ||
       "mapbox://styles/underbluewaters/cklb3vusx2dvs17pay6jp5q7e";
@@ -1401,16 +1303,15 @@ class MapContextManager extends EventEmitter {
     } else {
       try {
         baseStyle = await fetchGlStyle(url);
-        if (this.internalState.basemapError) {
-          this.setState((prev) => ({
-            ...prev,
-            basemapError: undefined,
-          }));
-        }
+        // Clear any previous style error
+        this._setManagerState?.((prev) =>
+          prev.styleError ? { ...prev, styleError: undefined } : prev
+        );
       } catch (e) {
-        this.setState((prev) => ({
+        // Set styleError on MapManagerState
+        this._setManagerState?.((prev) => ({
           ...prev,
-          basemapError: e,
+          styleError: e instanceof Error ? e : new Error(String(e)),
         }));
         console.warn(e);
         baseStyle = await fetchGlStyle(
@@ -1425,7 +1326,7 @@ class MapContextManager extends EventEmitter {
       // @ts-ignore
       terrain: undefined,
     };
-    if (this.internalState.terrainEnabled && basemap) {
+    if (this.basemapState?.terrainEnabled && basemap) {
       const newSource = {
         type: "raster-dem",
         url: basemap.terrainUrl,
@@ -1521,6 +1422,7 @@ class MapContextManager extends EventEmitter {
   async getComputedStyle(unfinishedCustomSourceCallback?: () => void): Promise<{
     style: Style;
     sprites: SpriteDetailsFragment[];
+    sketchLayerIds: string[];
   }> {
     this.inaturalistSourceIdMap = {};
     // this.resetLayersByZIndex();
@@ -1631,7 +1533,7 @@ class MapContextManager extends EventEmitter {
       if (layerId === "LABELS") {
         isUnderLabels = false;
       } else {
-        if (this.visibleLayers[layerId]?.visible) {
+        if (this.overlayStates.getRaw(layerId)?.visible) {
           const layer = this.layers[layerId];
           // If layer or source are not set yet, they will be ignored
           if (layer) {
@@ -1713,8 +1615,9 @@ class MapContextManager extends EventEmitter {
                           layerIdBase: layer.tocId || source.id.toString(),
                           attribution: source.attribution || "",
                           opacity:
-                            this.visibleLayers[layerId]?.opacity !== undefined
-                              ? this.visibleLayers[layerId].opacity
+                            this.overlayStates.getRaw(layerId)?.opacity !==
+                            undefined
+                              ? this.overlayStates.getRaw(layerId)!.opacity
                               : 1,
                         }
                       );
@@ -1775,21 +1678,22 @@ class MapContextManager extends EventEmitter {
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
                         if (
-                          !this.visibleLayers[layerId]?.hidden ||
+                          !this.overlayStates.getRaw(layerId)?.hidden ||
                           source.type === DataSourceTypes.ArcgisDynamicMapserver
                         ) {
                           let layersToAdd = styleData.layers;
+                          const _overlayState =
+                            this.overlayStates.getRaw(layerId);
                           if (
                             source.type !==
                               DataSourceTypes.ArcgisDynamicMapserver &&
-                            this.visibleLayers[layerId] &&
-                            "opacity" in this.visibleLayers[layerId] &&
-                            typeof this.visibleLayers[layerId].opacity ===
-                              "number"
+                            _overlayState &&
+                            "opacity" in _overlayState &&
+                            typeof _overlayState.opacity === "number"
                           ) {
                             layersToAdd = adjustLayerOpacities(
                               layersToAdd as mapboxgl.AnyLayer[],
-                              this.visibleLayers[layerId].opacity!
+                              _overlayState.opacity!
                             );
                           }
                           if (
@@ -1865,18 +1769,19 @@ class MapContextManager extends EventEmitter {
                       : {}),
                   } as AnyLayer;
                 });
+                const _staticOverlay = this.overlayStates.getRaw(layerId);
                 if (
-                  this.visibleLayers[layerId] &&
-                  "opacity" in this.visibleLayers[layerId] &&
-                  typeof this.visibleLayers[layerId].opacity === "number"
+                  _staticOverlay &&
+                  "opacity" in _staticOverlay &&
+                  typeof _staticOverlay.opacity === "number"
                 ) {
                   glLayers = adjustLayerOpacities(
                     glLayers,
-                    this.visibleLayers[layerId].opacity!
+                    _staticOverlay.opacity!
                   );
                 }
                 const layers = isUnderLabels ? underLabels : overLabels;
-                if (!this.visibleLayers[layerId]?.hidden) {
+                if (!_staticOverlay?.hidden) {
                   if (
                     layer.interactivitySettings?.type ===
                     InteractivityType.SidebarOverlay
@@ -1887,7 +1792,7 @@ class MapContextManager extends EventEmitter {
                 }
               } else if (source.type === DataSourceTypes.Inaturalist) {
                 const inatLayers = inaturalistGeneratedLayers[layerId];
-                if (inatLayers && !this.visibleLayers[layerId]?.hidden) {
+                if (inatLayers && !this.overlayStates.getRaw(layerId)?.hidden) {
                   const targetLayers = isUnderLabels ? underLabels : overLabels;
                   targetLayers.push(...inatLayers);
                 }
@@ -1902,7 +1807,7 @@ class MapContextManager extends EventEmitter {
                 if (!Array.isArray(this.customSources[source.id].sublayers)) {
                   this.customSources[source.id].sublayers = [];
                 }
-                const settings = this.visibleLayers[layerId];
+                const settings = this.overlayStates.getRaw(layerId);
                 if (!settings) {
                   throw new Error("Visible layer settings missing");
                 }
@@ -1912,7 +1817,7 @@ class MapContextManager extends EventEmitter {
                   this.archivedSource.sublayer
                     ? this.archivedSource.sublayer
                     : layer.sublayer;
-                if (!this.visibleLayers[layerId]?.hidden) {
+                if (!settings?.hidden) {
                   this.customSources[source.id].sublayers!.unshift({
                     id: sublayer!,
                     opacity:
@@ -1979,11 +1884,7 @@ class MapContextManager extends EventEmitter {
     //   this.interactivityManager.setSketchLayerIds(sketchLayerIds);
     // }
 
-    if (this.interactivityManager) {
-      this.interactivityManager.setSketchLayerIds(sketchLayerIds);
-    }
-
-    return { style: baseStyle, sprites };
+    return { style: baseStyle, sprites, sketchLayerIds };
   }
 
   resetToProjectBounds = () => {
@@ -2000,10 +1901,9 @@ class MapContextManager extends EventEmitter {
     const sketchClassLayers: {
       [id: number]: { layers: string[]; sources: string[] };
     } = {};
-    for (const stringId of Object.keys(this.internalState.sketchLayerStates)) {
+    for (const stringId of this.sketchStates.keys()) {
       const id = parseInt(stringId);
-      const sketchClassId =
-        this.internalState.sketchLayerStates[id].sketchClassId;
+      const sketchClassId = this.sketchStates.getRaw(stringId)?.sketchClassId;
       if (!sketchClassId) {
         throw new Error(
           `Sketch ${id} has no sketchClassId. This is required for sketch layers`
@@ -2036,11 +1936,11 @@ class MapContextManager extends EventEmitter {
         if (
           layers.length > 0 &&
           "metadata" in layers[0] &&
-          this.internalState.sketchLayerStates[id].filterMvtUrl
+          this.sketchStates.getRaw(stringId)?.filterMvtUrl
         ) {
           sources[`sketch-${id}`] = {
             type: "vector",
-            tiles: [this.internalState.sketchLayerStates[id].filterMvtUrl],
+            tiles: [this.sketchStates.getRaw(stringId)!.filterMvtUrl!],
             maxzoom: 14,
           };
           allLayers.push(...layers);
@@ -2215,102 +2115,64 @@ class MapContextManager extends EventEmitter {
     return layers;
   }
 
-  getSelectedBasemap() {
-    if (this.basemaps && this.internalState.selectedBasemap) {
-      return this.basemaps[this.internalState.selectedBasemap];
-    } else {
-      return null;
-    }
-  }
-
   private onMapDataEvent = (
     event: MapDataEvent & { source: Source; sourceId: string }
   ) => {
-    // let anyChanges = false;
     if (event.sourceId === "composite") {
-      // ignore
       return;
     }
-
-    // Filter out events that are related to styles, or about turning geojson
-    // or image data into tiles. We don't care about stuff that isn't related to
-    // network activity
+    if (event.dataType !== "source") {
+      return;
+    }
+    // Event triage: only process events relevant to tracked layers
     if (
-      event.dataType === "source"
-      // this filtering might not be necessary, since we are debouncing updates
-      // anyways. It looked to be skipping important events related to sketch
-      // geojson loading
-      //  &&
-      // ((event.source.type !== "geojson" && event.source.type !== "image") ||
-      //   !event.tile)
+      this.overlayStates.hasRelevanceToSource(event.sourceId) ||
+      this.sketchStates.hasRelevanceToSource(event.sourceId)
     ) {
-      this.debouncedUpdateSourceStates();
+      // Update source states immediately (no debounce) so that
+      // LayerStateManager receives loading updates ASAP for correct
+      // loadingAt timing behavior.
+      this.updateSourceStates();
     }
   };
 
   private onMapError = (event: ErrorEvent & { sourceId?: string }) => {
     if (event.sourceId && event.sourceId !== "composite") {
-      let anySet = false;
       // Questionable behavior from mapbox-gl-js here
       // https://github.com/mapbox/mapbox-gl-js/issues/9304
       if (/source image could not be decoded/.test(event.error.message)) {
         return;
       }
       if (/sketch-\d+$/.test(event.sourceId)) {
-        const id = parseInt(event.sourceId.split("-")[1]);
-        const state = this.internalState.sketchLayerStates[id];
-        if (state) {
-          anySet = true;
-          state.error = event.error;
-          state.loading = false;
+        const key = event.sourceId.split("-")[1];
+        if (this.sketchStates.has(key)) {
+          this.sketchStates.setError(key, event.error);
+          this.sketchStates.setLoading(key, false);
         }
       } else {
-        for (const staticId of Object.keys(this.visibleLayers)) {
+        for (const staticId of this.overlayStates.keys()) {
           const sourceId = this.layers[staticId]?.dataSourceId.toString();
           if (event.sourceId === sourceId) {
-            this.visibleLayers[staticId].error = event.error;
-            this.visibleLayers[staticId].loading = false;
-            anySet = true;
+            this.overlayStates.setError(staticId, event.error);
+            this.overlayStates.setLoading(staticId, false);
           }
         }
       }
-      if (anySet) {
-        this.debouncedUpdateLayerState();
-      }
+      // LayerStateManager auto-notifies on setError/setLoading mutations
     }
   };
-
-  async updateInteractivitySettings() {
-    if (this.interactivityManager) {
-      const visibleLayers: DataLayerDetailsFragment[] = [];
-      for (const id in this.visibleLayers) {
-        const state = this.visibleLayers[id];
-        if (state.visible && !state.hidden) {
-          visibleLayers.push(this.layers[id]);
-        }
-      }
-      this.interactivityManager.setVisibleLayers(
-        visibleLayers,
-        this.clientDataSources,
-        this.getSelectedBasemap()!,
-        this.tocItems
-      );
-    }
-  }
 
   _updateSourceStatesLoopDetector = 0;
 
   private updateSourceStates() {
-    let anyChanges = false;
     let anyLoading = false;
     if (!this.map) {
       throw new Error("MapContextManager.map not set");
     }
 
-    // For each layer/tocItem, check it's source
-
+    // For each overlay layer, check its source
     let sources: { [sourceId: string]: string[] } = {};
-    for (const id of Object.keys(this.visibleLayers)) {
+    for (const id of this.overlayStates.keys()) {
       const layer = this.layers[id];
       if (layer) {
         if (!sources[layer.dataSourceId]) {
@@ -2338,44 +2200,36 @@ class MapContextManager extends EventEmitter {
         anyLoading = true;
       }
       for (const stableId of sources[sourceId]) {
-        if (this.visibleLayers[stableId]?.loading !== loading) {
-          this.visibleLayers[stableId].loading = loading;
-          anyChanges = true;
-        }
-        if (this.visibleLayers[stableId]?.error && loading) {
-          delete this.visibleLayers[stableId].error;
-          anyChanges = true;
+        // Update LayerStateManager immediately (no debounce)
+        this.overlayStates.setLoading(stableId, loading);
+        if (this.overlayStates.getRaw(stableId)?.error && loading) {
+          this.overlayStates.setError(stableId, undefined);
         }
       }
     }
     // update states of sketch layers
-    for (const id in this.internalState.sketchLayerStates) {
-      const state = this.internalState.sketchLayerStates[id];
-      if (state.visible) {
+    for (const id of this.sketchStates.keys()) {
+      const state = this.sketchStates.getRaw(id);
+      if (state?.visible) {
         // eslint-disable-next-line i18next/no-literal-string
         const loading = !this.map!.isSourceLoaded(`sketch-${id}`);
         if (loading) {
           anyLoading = true;
         }
-        if (state.loading !== loading) {
-          this.internalState.sketchLayerStates[id].loading = loading;
-          anyChanges = true;
-        }
+        this.sketchStates.setLoading(id, loading);
         if (state.error && loading) {
-          delete this.internalState.sketchLayerStates[id].error;
-          anyChanges = true;
+          this.sketchStates.setError(id, undefined);
         }
       }
     }
-    if (anyChanges) {
-      this.debouncedUpdateLayerState();
-    }
-    // This is needed for geojson sources
+    // LayerStateManager auto-notifies when effective state changes
+    // (loading mutations use 10ms debounce internally).
+    // Re-poll when any source is still loading (needed for geojson sources)
     if (anyLoading) {
       this._updateSourceStatesLoopDetector++;
       setTimeout(
         () => {
-          this.debouncedUpdateSourceStates();
+          this.updateSourceStates();
         },
         this._updateSourceStatesLoopDetector > 100 ? 1000 : 100
       );
@@ -2383,12 +2237,6 @@ class MapContextManager extends EventEmitter {
       this._updateSourceStatesLoopDetector = 0;
     }
   }
-
-  private debouncedUpdateSourceStates = debounce(this.updateSourceStates, 10, {
-    leading: true,
-    trailing: true,
-    maxWait: 100,
-  });
 
   private tocItems: {
     [stableId: string]: {
@@ -2459,16 +2307,22 @@ class MapContextManager extends EventEmitter {
       }
     }
     if (Object.keys(layers).length) {
-      // Cleanup entries in visibleLayers that no longer exist
-      for (const key in this.visibleLayers) {
-        if (!tocItems.find((i) => i.stableId === key)) {
-          delete this.visibleLayers[key];
+      // Cleanup entries in overlayStates that no longer exist
+      const validKeys = new Set(tocItems.map((i) => i.stableId));
+      this.overlayStates.retainOnly(validKeys);
+      // Register source mappings for event triage
+      for (const stableId of this.overlayStates.keys()) {
+        const layer = this.layers[stableId];
+        if (layer) {
+          this.overlayStates.setSourceForKey(
+            stableId,
+            layer.dataSourceId.toString()
+          );
         }
       }
       this.debouncedUpdatePreferences();
     }
     this.debouncedUpdateStyle();
-    this.updateInteractivitySettings();
     this.updateLegends();
     return;
   }
@@ -2477,7 +2331,6 @@ class MapContextManager extends EventEmitter {
     for (const id of stableIds) {
       this.hideTocItem(id);
     }
-    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -2485,7 +2338,6 @@ class MapContextManager extends EventEmitter {
     for (const id of stableIds) {
       this.showTocItem(id);
     }
-    this.debouncedUpdateLayerState();
     this.debouncedUpdateStyle();
   }
 
@@ -2575,9 +2427,9 @@ class MapContextManager extends EventEmitter {
       digitizingLockedBy: id || undefined,
     });
     if (state === DigitizingLockState.CursorActive) {
-      this.interactivityManager?.pause();
+      this.emit("pauseInteractivity");
     } else {
-      this.interactivityManager?.resume();
+      this.emit("resumeInteractivity");
     }
   }
 
@@ -2692,12 +2544,7 @@ class MapContextManager extends EventEmitter {
     //     pixelRatio: spriteImage.pixelRatio,
     //   });
     // } else if (spriteImage.url) {
-    const image = await loadImage(
-      spriteImage.width,
-      spriteImage.height,
-      spriteImage.url,
-      map
-    );
+    const image = await loadImage(spriteImage.url, map);
     map.addImage(spriteId, image, {
       pixelRatio: spriteImage.pixelRatio,
     });
@@ -2716,80 +2563,48 @@ class MapContextManager extends EventEmitter {
     }
   };
 
-  private updateLayerState = () => {
-    delete this.updateStateDebouncerReference;
+  /**
+   * Called when `overlayStates` emits `"stateChanged"`.
+   * Pushes overlay state (and iNaturalist CTAs) to React contexts.
+   * Does NOT push sketch state — overlay loading churn should not cause
+   * SketchLayerContext consumers to re-render.
+   */
+  private onOverlayStateChanged = () => {
     this.setState((oldState) => ({
       ...oldState,
-      layerStatesByTocStaticId: { ...this.visibleLayers },
-      sketchLayerStates: { ...this.internalState.sketchLayerStates },
-      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
-      inaturalistCallToActions: this.computeInatCtas(),
+      layerStatesByTocStaticId: this.overlayStates.getState(),
     }));
+    // Only emit uiUpdate when the iNaturalist CTAs actually changed.
+    const nextCtas = this.computeInatCtas();
+    if (!this.inatCtasEqual(this._lastInatCtas, nextCtas)) {
+      this._lastInatCtas = nextCtas;
+      this.emit("uiUpdate", {
+        inaturalistCallToActions: nextCtas,
+      } as Partial<MapUIStateContextState>);
+    }
     this.debouncedUpdatePreferences();
-    this.updateInteractivitySettings();
   };
 
-  private debouncedUpdateLayerState = debounce(this.updateLayerState, 5, {
-    maxWait: 100,
-    trailing: true,
-  });
-
-  updateOptionalBasemapSettings(settings: { [layerName: string]: any }) {
-    this.setState((prev) => {
-      const newState = {
-        ...prev,
-        basemapOptionalLayerStatePreferences: {
-          ...prev.basemapOptionalLayerStatePreferences,
-          ...settings,
-        },
-        basemapOptionalLayerStates: {
-          ...this.computeBasemapOptionalLayerStates(this.getSelectedBasemap(), {
-            ...this.internalState.basemapOptionalLayerStatePreferences,
-          }),
-          ...settings,
-        },
-      };
-      return newState;
-    });
-
+  /**
+   * Called when `sketchStates` emits `"stateChanged"`.
+   * Pushes sketch state to its React context.
+   */
+  private onSketchStateChanged = () => {
+    this.pushSketchState();
     this.debouncedUpdatePreferences();
-    this.debouncedUpdateStyle();
-  }
+  };
 
-  updateOptionalBasemapSetting(
-    layer: Pick<OptionalBasemapLayer, "id" | "options" | "groupType" | "name">,
-    value: any
-  ) {
-    const key = layer.name;
-    this.setState((prev) => ({
-      ...prev,
-      basemapOptionalLayerStatePreferences: {
-        ...prev.basemapOptionalLayerStatePreferences,
-        [key]: value,
-      },
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        this.getSelectedBasemap(),
-        {
-          ...this.internalState.basemapOptionalLayerStatePreferences,
-          [key]: value,
-        }
-      ),
-    }));
-    this.debouncedUpdatePreferences();
-    this.debouncedUpdateStyle();
-  }
-
-  clearOptionalBasemapSettings() {
-    this.setState((prev) => ({
-      ...prev,
-      basemapOptionalLayerStatePreferences: undefined,
-      basemapOptionalLayerStates: this.computeBasemapOptionalLayerStates(
-        this.getSelectedBasemap(),
-        {}
-      ),
-    }));
-    this.debouncedUpdatePreferences();
-    this.debouncedUpdateStyle();
+  /** Shallow-compare two iNaturalist CTA arrays by projectId + label. */
+  private inatCtasEqual(
+    a: { projectId: string; label?: string }[],
+    b: { projectId: string; label?: string }[]
+  ): boolean {
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i++) {
+      if (a[i].projectId !== b[i].projectId || a[i].label !== b[i].label)
+        return false;
+    }
+    return true;
   }
 
   setCamera(camera: CameraOptions) {
@@ -2859,10 +2674,10 @@ class MapContextManager extends EventEmitter {
     if (!enabled) {
       throw new Error("Invalid response from service worker");
     }
-    this.setState((prev) => ({
-      ...prev,
+    this.setState((prev) => ({ ...prev, offlineTileSimulatorActive: true }));
+    this.emit("uiUpdate", {
       offlineTileSimulatorActive: true,
-    }));
+    } as Partial<MapUIStateContextState>);
     this.updateStyle();
     // Using a bunch of undocumented private apis here to reset tile caches.
     // See:
@@ -2893,10 +2708,10 @@ class MapContextManager extends EventEmitter {
     if (enabled) {
       throw new Error("Invalid response from service worker");
     }
-    this.setState((prev) => ({
-      ...prev,
+    this.setState((prev) => ({ ...prev, offlineTileSimulatorActive: false }));
+    this.emit("uiUpdate", {
       offlineTileSimulatorActive: false,
-    }));
+    } as Partial<MapUIStateContextState>);
     this.updateStyle();
   }
 
@@ -2905,14 +2720,17 @@ class MapContextManager extends EventEmitter {
       throw new Error("Map not ready to create bookmark data");
     }
     const visibleDataLayers: string[] = [];
-    for (const stableId in this.visibleLayers) {
-      if (this.visibleLayers[stableId]?.visible && this.layers[stableId]) {
+    for (const stableId of this.overlayStates.keys()) {
+      if (
+        this.overlayStates.getRaw(stableId)?.visible &&
+        this.layers[stableId]
+      ) {
         visibleDataLayers.push(stableId);
       }
     }
     const visibleSketches: number[] = [];
-    for (const key in this.internalState.sketchLayerStates) {
-      if (this.internalState.sketchLayerStates[key].visible) {
+    for (const key of this.sketchStates.keys()) {
+      if (this.sketchStates.getRaw(key)?.visible) {
         visibleSketches.push(parseInt(key));
       }
     }
@@ -2923,6 +2741,7 @@ class MapContextManager extends EventEmitter {
     const clientGeneratedThumbnail = skipThumbnail
       ? undefined
       : await this.getMapThumbnail(sidebarState);
+    const selectedId = this.basemapState?.selectedBasemap;
     return {
       cameraOptions: {
         center: this.map.getCenter().toArray(),
@@ -2931,14 +2750,14 @@ class MapContextManager extends EventEmitter {
         pitch: this.map.getPitch(),
       },
       basemapOptionalLayerStates:
-        this.internalState.basemapOptionalLayerStates || {},
+        this.basemapState?.basemapOptionalLayerStates || {},
       visibleDataLayers,
-      selectedBasemap: parseInt(this.internalState.selectedBasemap!),
+      selectedBasemap: selectedId ?? 0,
       style,
       mapDimensions: [canvas.clientWidth, canvas.clientHeight],
       sidebarState,
       visibleSketches,
-      basemapName: this.basemaps[this.internalState.selectedBasemap!].name,
+      basemapName: selectedId ? this.basemaps[selectedId]?.name || "" : "",
       clientGeneratedThumbnail,
     };
   }
@@ -3039,9 +2858,25 @@ class MapContextManager extends EventEmitter {
     if (!this.map) {
       throw new Error("Map not ready to show bookmark");
     }
-    this.setSelectedBasemap(bookmark.selectedBasemap.toString());
+    if (!this.basemapState) {
+      throw new Error("BasemapContext not available when showing bookmark");
+    }
+    this.basemapState.setSelectedBasemap(bookmark.selectedBasemap);
     if (bookmark.basemapOptionalLayerStates) {
-      this.updateOptionalBasemapSettings(bookmark.basemapOptionalLayerStates);
+      const basemap = this.basemaps[bookmark.selectedBasemap];
+      for (const [key, value] of Object.entries(
+        bookmark.basemapOptionalLayerStates
+      )) {
+        const layer = basemap?.optionalBasemapLayers.find(
+          (l) => l.name === key
+        );
+        if (layer) {
+          this.basemapState.updateOptionalBasemapSetting(
+            layer,
+            value as OptionalBasemapLayerValue
+          );
+        }
+      }
     }
     this.setVisibleTocItems((bookmark.visibleDataLayers || []) as string[]);
     this.map.flyTo({
@@ -3049,14 +2884,13 @@ class MapContextManager extends EventEmitter {
       animate: true,
     });
     if (savePreviousState && bookmark.id) {
-      this.setState((prev) => ({
-        ...prev,
+      this.emit("uiUpdate", {
         displayedMapBookmark: {
           id: bookmark.id!,
           errors: this.getErrorsForBookmark(bookmark, client),
           supportsUndo: true,
         },
-      }));
+      } as Partial<MapUIStateContextState>);
       this.hideBookmarkBanner(6000);
     }
   }
@@ -3111,17 +2945,15 @@ class MapContextManager extends EventEmitter {
     }
     if (delay) {
       this.bookmarkBannerHideTimeout = setTimeout(() => {
-        this.setState((prev) => ({
-          ...prev,
+        this.emit("uiUpdate", {
           displayedMapBookmark: undefined,
-        }));
+        } as Partial<MapUIStateContextState>);
         this.bookmarkBannerHideTimeout = undefined;
       }, delay);
     } else {
-      this.setState((prev) => ({
-        ...prev,
+      this.emit("uiUpdate", {
         displayedMapBookmark: undefined,
-      }));
+      } as Partial<MapUIStateContextState>);
     }
   }
 
@@ -3171,7 +3003,7 @@ class MapContextManager extends EventEmitter {
         }
       } else if (
         layer.dataLayer?.tocId &&
-        this.visibleLayers[layer.dataLayer.tocId]?.visible
+        this.overlayStates.getRaw(layer.dataLayer.tocId)?.visible
       ) {
         const id = layer.dataLayer.tocId;
         if (clearCache === true && id in this.internalState.legends) {
@@ -3369,40 +3201,12 @@ class MapContextManager extends EventEmitter {
   });
 
   hideLayer(stableId: string) {
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.hidden = true;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      layerStatesByTocStaticId: {
-        ...prev.layerStatesByTocStaticId,
-        [stableId]: {
-          ...prev.layerStatesByTocStaticId[stableId],
-          hidden: true,
-        },
-      },
-    }));
-    this.debouncedUpdateLayerState();
+    this.overlayStates.setHidden(stableId, true);
     this.updateStyle();
   }
 
   showHiddenLayer(stableId: string) {
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.hidden = false;
-    }
-    this.setState((prev) => ({
-      ...prev,
-      layerStatesByTocStaticId: {
-        ...prev.layerStatesByTocStaticId,
-        [stableId]: {
-          ...prev.layerStatesByTocStaticId[stableId],
-          hidden: false,
-        },
-      },
-    }));
-    this.debouncedUpdateLayerState();
+    this.overlayStates.setHidden(stableId, false);
     this.updateStyle();
   }
 
@@ -3415,41 +3219,19 @@ class MapContextManager extends EventEmitter {
       const id = parseInt(stableId.replace("sketch-class-", ""));
       const state = this.internalState.sketchClassLayerStates[id];
       if (state) {
-        this.setState((prev) => ({
-          ...prev,
-          sketchClassLayerStates: {
-            ...prev.sketchClassLayerStates,
-            [id]: {
-              ...prev.sketchClassLayerStates[id],
-              zOrderOverride: zOrder,
-            },
-          },
-        }));
+        state.zOrderOverride = zOrder;
+        this.pushSketchState();
       }
     } else {
-      const state = this.visibleLayers[stableId];
-      if (state) {
-        state.zOrderOverride = zOrder;
-      }
-      this.setState((prev) => ({
-        ...prev,
-        layerStatesByTocStaticId: {
-          ...prev.layerStatesByTocStaticId,
-          [stableId]: {
-            ...prev.layerStatesByTocStaticId[stableId],
-            zOrderOverride: zOrder,
-          },
-        },
-      }));
+      this.overlayStates.setZOrderOverride(stableId, zOrder);
     }
     // this.resetLayersByZIndex();
-    this.debouncedUpdateLayerState();
     this.updateStyle();
   }
 
   getVisibleLayersByZIndex() {
     const visibleLayers = Object.values(this.layers).filter(
-      (l) => this.visibleLayers[l.tocId]?.visible === true
+      (l) => this.overlayStates.getRaw(l.tocId)?.visible === true
     );
     const visibleSketchClassLayers = Object.values(
       this.internalState.sketchClassLayerStates
@@ -3464,8 +3246,9 @@ class MapContextManager extends EventEmitter {
       if (layer.sublayer !== undefined && layer.sublayer !== null) {
         const dataSourceId = layer.dataSourceId;
         const zIndex =
-          typeof this.visibleLayers[layer.tocId]?.zOrderOverride === "number"
-            ? this.visibleLayers[layer.tocId].zOrderOverride!
+          typeof this.overlayStates.getRaw(layer.tocId)?.zOrderOverride ===
+          "number"
+            ? this.overlayStates.getRaw(layer.tocId)!.zOrderOverride!
             : layer.zIndex;
         if (
           !(dataSourceId in sublayerZIndexLookup) ||
@@ -3482,7 +3265,9 @@ class MapContextManager extends EventEmitter {
       if (isSketchClassLayerState(layer)) {
         return layer.zOrderOverride || undefined;
       } else {
-        return this.visibleLayers[layer.tocId]?.zOrderOverride || undefined;
+        return (
+          this.overlayStates.getRaw(layer.tocId)?.zOrderOverride || undefined
+        );
       }
     };
 
@@ -3613,24 +3398,7 @@ class MapContextManager extends EventEmitter {
     if (opacity > 1 || opacity < 0) {
       throw new Error("Opacity should be between 0 and 1");
     }
-    const state = this.visibleLayers[stableId];
-    if (state) {
-      state.opacity = opacity;
-    }
-    this.setState((prev) => {
-      const newState = {
-        ...prev,
-        layerStatesByTocStaticId: {
-          ...prev.layerStatesByTocStaticId,
-          [stableId]: {
-            ...prev.layerStatesByTocStaticId[stableId],
-            opacity,
-          },
-        },
-      };
-      return newState;
-    });
-    this.debouncedUpdateLayerState();
+    this.overlayStates.setOpacity(stableId, opacity);
     const layer = this.layers[stableId];
     const source = this.clientDataSources[layer.dataSourceId];
     // TODO: consider customsource layer types
@@ -3670,8 +3438,9 @@ class MapContextManager extends EventEmitter {
     }
 
     // see if you can do an update of layers in place
-    for (const sketchId in this.internalState.sketchLayerStates) {
-      const sketchLayerState = this.internalState.sketchLayerStates[sketchId];
+    for (const sketchId of this.sketchStates.keys()) {
+      const sketchLayerState = this.sketchStates.getRaw(sketchId);
+      if (!sketchLayerState) continue;
       const layers = this.map?.getStyle().layers;
       if (layers?.length) {
         if (
@@ -3690,7 +3459,8 @@ class MapContextManager extends EventEmitter {
       }
     }
 
-    this.debouncedUpdateLayerState();
+    this.pushSketchState();
+    this.debouncedUpdatePreferences();
 
     // this.debouncedUpdateStyle();
   }
@@ -3703,10 +3473,7 @@ class MapContextManager extends EventEmitter {
       this.internalState.sketchClassLayerStates[classId].hidden = hidden;
     }
 
-    this.setState((prev) => ({
-      ...prev,
-      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
-    }));
+    this.pushSketchState();
 
     this.debouncedUpdateStyle();
   }
@@ -3720,10 +3487,7 @@ class MapContextManager extends EventEmitter {
         zOrder;
     }
 
-    this.setState((prev) => ({
-      ...prev,
-      sketchClassLayerStates: { ...this.internalState.sketchClassLayerStates },
-    }));
+    this.pushSketchState();
 
     this.debouncedUpdateStyle();
   }
@@ -3839,35 +3603,40 @@ export interface Tooltip {
   messages: string[];
 }
 
-export interface MapContextInterface {
-  layerStatesByTocStaticId: { [id: string]: LayerState };
+/**
+ * Stable context for the MapContextManager instance, ready state, and
+ * container portal. These values are set once (or very rarely) and almost
+ * never change after initialisation, making this context safe to consume
+ * without worrying about re-renders from map interaction.
+ */
+export interface MapManagerState {
+  manager?: MapContextManager;
+  /** Indicates the map state is ready to render a map */
+  ready: boolean;
+  containerPortal: HTMLDivElement | null;
+  /** Populated when a basemap style fails to load */
+  styleError?: Error;
+}
+
+export interface SketchLayerContextState {
   sketchLayerStates: { [id: number]: SketchLayerState };
   sketchClassLayerStates: { [sketchClassId: string]: SketchClassLayerState };
-  manager?: MapContextManager;
+}
+
+/** @deprecated Import from ./BasemapContext instead */
+export type {
+  BasemapContextState,
+  OptionalBasemapLayerValue,
+} from "./BasemapContext";
+export { BasemapContext } from "./BasemapContext";
+
+/** UI-driven state: tooltips, banners, popups, digitizing locks, etc. */
+export interface MapUIStateContextState {
   bannerMessages: string[];
   tooltip?: Tooltip;
   fixedBlocks: string[];
   sidebarPopupContent?: string;
   sidebarPopupTitle?: string;
-  selectedBasemap?: string;
-  cameraOptions?: CameraOptions;
-  /* Indicates the map state is ready to render a map */
-  ready: boolean;
-  terrainEnabled: boolean;
-  prefersTerrainEnabled?: boolean;
-  basemapError?: Error;
-  basemapOptionalLayerStates: { [layerName: string]: any };
-  basemapOptionalLayerStatePreferences?: { [layerName: string]: any };
-  showScale?: boolean;
-  offlineTileSimulatorActive?: boolean;
-  styleHash: string;
-  containerPortal: HTMLDivElement | null;
-  loadingOverlay?: string | null;
-  showLoadingOverlay?: boolean;
-  inaturalistCallToActions?: {
-    projectId: string;
-    label?: string;
-  }[];
   displayedMapBookmark?: {
     id: string;
     errors: {
@@ -3877,184 +3646,92 @@ export interface MapContextInterface {
     };
     supportsUndo: boolean;
   };
+  loadingOverlay?: string | null;
+  showLoadingOverlay?: boolean;
+  offlineTileSimulatorActive?: boolean;
+  digitizingLockState: DigitizingLockState;
+  digitizingLockedBy?: string;
+  showScale?: boolean;
+  showCoordinates?: boolean;
+  toggleScale: (show: boolean) => void;
+  toggleCoordinates: (show: boolean) => void;
+  inaturalistCallToActions?: {
+    projectId: string;
+    label?: string;
+  }[];
   languageCode?: string;
+  /** Exposed for SketchUIStateContextProvider, SketchEditorModal, MapboxMap */
+  interactivityManager?: LayerInteractivityManager;
+}
+
+/** Legend entries derived from visible layers. */
+export interface LegendsContextState {
+  legends: { [layerId: string]: LegendItem | null };
+}
+
+/** Layer visibility/loading state and style hash – the hot-path context. */
+export interface MapOverlayContextState {
+  layerStatesByTocStaticId: { [id: string]: LayerState };
+  styleHash: string;
+  /** Overlay data from useMapData - exposed for component consumption */
+  dataLayers?: DataLayerDetailsFragment[];
+  dataSources?: DataSourceDetailsFragment[];
+  tableOfContentsItems?: OverlayFragment[];
+}
+
+/** @deprecated Use MapOverlayContextState */
+export type LayerTreeContextState = MapOverlayContextState;
+
+export interface MapContextInterface {
+  layerStatesByTocStaticId: { [id: string]: LayerState };
+  cameraOptions?: CameraOptions;
+  offlineTileSimulatorActive?: boolean;
+  styleHash: string;
   legends: {
     [layerId: string]: LegendItem | null;
   };
-  measureControlState?: MeasureControlState;
   digitizingLockState: DigitizingLockState;
   digitizingLockedBy?: string;
   showCoordinates?: boolean;
 }
-interface MapContextOptions {
-  /** If provided, map state will be restored upon return to the map by storing state in localStorage */
-  preferencesKey?: string;
-  /** For arcgis vector sources. defaults to 50mb */
-  cacheSize?: number;
-  /** Starting bounds of map. If camera option is set, it will take priority */
-  bounds?: BBox;
-  /** Starting camera of map. Will override bounds if both are provided */
-  camera?: CameraOptions;
-  containerPortal?: HTMLDivElement | null;
-  /** Default visibility of the scale bar. Only used if no user preferences are available. Defaults to false */
-  defaultShowScale?: boolean;
-}
+// useMapContext has been removed. Use MapManagerContextProvider + BasemapProvider instead.
 
 /**
- * Returns a MapContextManager instance that can be used to store state used by
- * instances of Mapbox GL, Layer lists, Basemap selectors, and layer interactivity
- * indicators.
- *
- * @param preferencesKey If provided, map state will be restored upon return to the map by storing state in localStorage
- * @param ignoreLayerVisibilityState Don't store layer visibility state in localStorage
+ * Context for sketch layer visibility and loading state.
+ * Changes when sketches are toggled or loading status changes.
  */
-export function useMapContext(options?: MapContextOptions) {
-  const {
-    preferencesKey,
-    cacheSize,
-    bounds,
-    camera,
-    containerPortal,
-    defaultShowScale = false,
-  } = options || {};
-  let initialState: MapContextInterface = {
-    sketchLayerStates: {},
-    layerStatesByTocStaticId: {},
-    bannerMessages: [],
-    fixedBlocks: [],
-    ready: false,
-    terrainEnabled: false,
-    basemapOptionalLayerStates: {},
-    styleHash: "",
-    containerPortal: containerPortal || null,
-    legends: {},
-    digitizingLockState: DigitizingLockState.Free,
-    sketchClassLayerStates: {},
-    showScale: defaultShowScale,
-    inaturalistCallToActions: [],
-  };
-  const token = useAccessToken();
-  let initialCameraOptions: CameraOptions | undefined = camera;
-  const { slug } = useParams<{ slug: string }>();
-  if (preferencesKey) {
-    const preferencesString = window.localStorage.getItem(
-      `${slug}-${preferencesKey}`
-    );
-    if (preferencesString) {
-      const prefs = JSON.parse(preferencesString);
-      if (prefs.basemap) {
-        initialState.selectedBasemap = prefs.basemap as string;
-      }
-      if (prefs.layers) {
-        initialState.layerStatesByTocStaticId = prefs.layers;
-      }
-      if (prefs.cameraOptions) {
-        initialCameraOptions = prefs.cameraOptions;
-      }
-      if (prefs.basemapOptionalLayerStatePreferences) {
-        initialState.basemapOptionalLayerStatePreferences = {
-          ...prefs.basemapOptionalLayerStatePreferences,
-        };
-        initialState.basemapOptionalLayerStates = {
-          ...prefs.basemapOptionalLayerStates,
-        };
-      }
-      if (prefs.sketchClassLayerStates) {
-        initialState.sketchClassLayerStates = {
-          ...prefs.sketchClassLayerStates,
-        };
-      }
-      if ("prefersTerrainEnabled" in prefs) {
-        initialState.prefersTerrainEnabled = prefs.prefersTerrainEnabled;
-      }
-      if ("showScale" in prefs) {
-        initialState.showScale = Boolean(prefs.showScale);
-      }
-      if ("showCoordinates" in prefs) {
-        initialState.showCoordinates = Boolean(prefs.showCoordinates);
-      }
-    }
-  }
-  const [state, setState] = useState<MapContextInterface>(initialState);
-  const { data, error } = useProjectRegionQuery({
-    variables: {
-      slug,
-    },
-  });
-  useEffect(() => {
-    const manager = new MapContextManager(
-      initialState,
-      setState,
-      initialCameraOptions,
-      preferencesKey ? `${slug}-${preferencesKey}` : undefined,
-      cacheSize,
-      bounds as LngLatBoundsLike
-    );
-    const newState = {
-      ...state,
-      manager,
-    };
-    setState(newState);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    state.manager?.setToken(token);
-  }, [token, state.manager]);
-
-  useEffect(() => {
-    if (error) {
-      console.error(error);
-      return;
-    }
-    if (data?.projectBySlug?.region.geojson && state.manager) {
-      state.manager.setProjectBounds(data.projectBySlug.region.geojson);
-    }
-  }, [data?.projectBySlug, error, state.manager]);
-
-  return state;
-}
-
-export const MapContext = createContext<MapContextInterface>({
-  layerStatesByTocStaticId: {},
+export const SketchLayerContext = createContext<SketchLayerContextState>({
   sketchLayerStates: {},
   sketchClassLayerStates: {},
-  styleHash: "",
-  manager: new MapContextManager(
-    {
-      layerStatesByTocStaticId: {},
-      sketchLayerStates: {},
-      sketchClassLayerStates: {},
-      bannerMessages: [],
-      fixedBlocks: [],
-      ready: false,
-      terrainEnabled: false,
-      basemapOptionalLayerStates: {},
-      styleHash: "",
-      containerPortal: null,
-      legends: {},
-      digitizingLockState: DigitizingLockState.Free,
-      inaturalistCallToActions: [],
-    },
-    (state) => {}
-  ),
-  bannerMessages: [],
-  fixedBlocks: [],
-  ready: false,
-  terrainEnabled: false,
-  basemapOptionalLayerStates: {},
-  containerPortal: null,
-  legends: {},
-  digitizingLockState: DigitizingLockState.Free,
-  inaturalistCallToActions: [],
 });
 
-async function loadImage(
-  width: number,
-  height: number,
-  url: string,
-  map: mapboxgl.Map
-): Promise<any> {
+/**
+ * A lightweight context that provides only the stable manager reference,
+ * ready flag, and container portal. Consumers that only need to call
+ * methods on the manager (and don't need reactive layer/UI state) should
+ * prefer this context to avoid unnecessary re-renders.
+ */
+export const MapManagerContext = createContext<MapManagerState>({
+  manager: undefined,
+  ready: false,
+  containerPortal: null,
+});
+
+/** Legend entries for visible layers. */
+export const LegendsContext = createContext<LegendsContextState>({
+  legends: {},
+});
+
+/** Layer visibility/loading and style hash – the hot-path context that changes on zoom/pan. */
+export const MapOverlayContext = createContext<MapOverlayContextState>({
+  layerStatesByTocStaticId: {},
+  styleHash: "",
+});
+
+/** @deprecated Use MapOverlayContext */
+export const LayerTreeContext = MapOverlayContext;
+
+async function loadImage(url: string, map: mapboxgl.Map): Promise<any> {
   return new Promise((resolve, reject) => {
     map.loadImage(url, (error: Error | undefined, image: any) => {
       if (error) {

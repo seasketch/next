@@ -9,6 +9,7 @@ import {
 } from "overlay-engine";
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
+import colors from "yoctocolors-cjs";
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -48,7 +49,7 @@ export default async function calculateSpatialMetric(
           metric.subject.id,
           helpers
         );
-        await callOverlayWorker({
+        callOverlayWorker({
           type: "total_area",
           jobKey: metric.jobKey,
           queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
@@ -58,7 +59,21 @@ export default async function calculateSpatialMetric(
             clippingLayers,
           },
           ...metric.parameters,
-        } as OverlayWorkerPayload);
+        } as OverlayWorkerPayload)
+          .catch(async (e) => {
+            helpers.logger.error("Error calling overlay worker", {
+              error: e instanceof Error ? e.message : String(e),
+            });
+            await helpers.withPgClient(async (client) => {
+              await client.query(
+                `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where id = $2`,
+                [e instanceof Error ? e.message : "Unknown error", metric.id]
+              );
+            });
+          })
+          .finally(() => {
+            clearTimeout(timeout);
+          });
       }
     } else if (
       metric.type === "overlay_area" ||
@@ -112,7 +127,7 @@ export default async function calculateSpatialMetric(
             metric.subject.id,
             helpers
           );
-          await callOverlayWorker({
+          callOverlayWorker({
             type: metric.type,
             jobKey: metric.jobKey,
             subject: {
@@ -125,7 +140,21 @@ export default async function calculateSpatialMetric(
             queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
             epsg,
             ...metric.parameters,
-          });
+          })
+            .catch(async (e) => {
+              helpers.logger.error("Error calling overlay worker", {
+                error: e instanceof Error ? e.message : String(e),
+              });
+              await helpers.withPgClient(async (client) => {
+                await client.query(
+                  `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where id = $2`,
+                  [e instanceof Error ? e.message : "Unknown error", metric.id]
+                );
+              });
+            })
+            .finally(() => {
+              clearTimeout(timeout);
+            });
         }
       }
     } else {
@@ -158,6 +187,7 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
 }
 
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
+  console.log(colors.bgMagenta(`[${payload.jobKey}] Calling overlay worker`));
   if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
     const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
       method: "POST",
@@ -232,6 +262,7 @@ function getSpatialMetric(metricId: number, helpers: Helpers) {
       sourceUrl: string;
       sourceType: SourceType;
       parameters: any;
+      dependencyHash: string;
     };
   });
 }

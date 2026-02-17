@@ -1,6 +1,6 @@
 import { CSSProperties, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { DataLayerDetailsFragment, DataSourceDetailsFragment, OverlayFragment, RenderUnderType, useUpdateRenderUnderTypeMutation, useUpdateZIndexesMutation } from "../../generated/graphql";
-import { LayerState, MapContext } from "../../dataLayers/MapContextManager";
+import { LayerState, LayerTreeContext, MapManagerContext } from "../../dataLayers/MapContextManager";
 import { Trans } from "react-i18next";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
 import { FontSizeIcon, HamburgerMenuIcon } from "@radix-ui/react-icons";
@@ -181,7 +181,8 @@ export function ZIndexEditableList(props: {
     });
   }, [setSortedItems]);
 
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   const layerStates = mapContext.layerStatesByTocStaticId;
 
 
@@ -200,14 +201,14 @@ export function ZIndexEditableList(props: {
         index={index}
         toggleItemVisibility={(makeVisible, id) => {
           if (makeVisible) {
-            mapContext.manager?.showTocItems([stableId]);
+            manager?.showTocItems([stableId]);
           } else {
-            mapContext.manager?.hideTocItems([stableId]);
+            manager?.hideTocItems([stableId]);
           }
         }}
       />
     </div>
-  }, [move, layerStates, onDrop, mapContext.manager])
+  }, [move, layerStates, onDrop, manager])
 
   if (sortedItems.length < 2) {
     return null;

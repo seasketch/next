@@ -147,7 +147,6 @@ export type AddReportCardInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
-  layers?: Maybe<Array<Maybe<ReportLayerInputRecordInput>>>;
   reportTabId?: Maybe<Scalars['Int']>;
 };
 
@@ -833,7 +832,7 @@ export type CardDependencyLists = {
   __typename?: 'CardDependencyLists';
   cardId: Scalars['Int'];
   metrics: Array<Scalars['BigInt']>;
-  overlaySources: Array<Scalars['Int']>;
+  overlaySources: Array<Scalars['String']>;
 };
 
 /** All input for the `clearFormElementStyle` mutation. */
@@ -921,6 +920,7 @@ export type CompatibleSpatialMetric = {
   __typename?: 'CompatibleSpatialMetric';
   completedAt?: Maybe<Scalars['Datetime']>;
   createdAt: Scalars['Datetime'];
+  dependencyHash: Scalars['String'];
   durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
@@ -2027,41 +2027,6 @@ export type CreateRemoteMvtSourcePayload = {
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
-};
-
-/** All input for the create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `ReportCardLayer` to be created by this mutation. */
-  reportCardLayer: ReportCardLayerInput;
-};
-
-/** The output of our create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerPayload = {
-  __typename?: 'CreateReportCardLayerPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  /** The `ReportCardLayer` that was created by this mutation. */
-  reportCardLayer?: Maybe<ReportCardLayer>;
-  /** An edge for our `ReportCardLayer`. May be used by Relay 1. */
-  reportCardLayerEdge?: Maybe<ReportCardLayersEdge>;
-  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-};
-
-
-/** The output of our create `ReportCardLayer` mutation. */
-export type CreateReportCardLayerPayloadReportCardLayerEdgeArgs = {
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 /** All input for the create `Report` mutation. */
@@ -4980,6 +4945,19 @@ export type DownloadOption = {
   url?: Maybe<Scalars['String']>;
 };
 
+export type DraftDependenciesInput = {
+  nodeDependencies: Array<NodeDependency>;
+  sketchId?: Maybe<Scalars['Int']>;
+};
+
+export type DraftReportDependenciesResults = {
+  __typename?: 'DraftReportDependenciesResults';
+  metrics: Array<CompatibleSpatialMetric>;
+  overlaySources: Array<ReportOverlaySource>;
+  ready: Scalars['Boolean'];
+  sketchId: Scalars['Int'];
+};
+
 /** All input for the `duplicateTableOfContentsItem` mutation. */
 export type DuplicateTableOfContentsItemInput = {
   /**
@@ -6414,14 +6392,6 @@ export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   srid: Scalars['Int'];
 };
 
-export type GeographyMetricSubscriptionPayload = {
-  __typename?: 'GeographyMetricSubscriptionPayload';
-  geographyId: Scalars['Int'];
-  metric?: Maybe<CompatibleSpatialMetric>;
-  metricId: Scalars['BigInt'];
-  projectId: Scalars['Int'];
-};
-
 /** Represents an update to a `Geography`. Fields that are set will be updated. */
 export type GeographyPatch = {
   clientTemplate?: Maybe<Scalars['String']>;
@@ -7652,8 +7622,6 @@ export type Mutation = {
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
   createReport?: Maybe<CreateReportPayload>;
-  /** Creates a single `ReportCardLayer`. */
-  createReportCardLayer?: Maybe<CreateReportCardLayerPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -7883,6 +7851,7 @@ export type Mutation = {
   mergeTranslatedProps?: Maybe<MergeTranslatedPropsPayload>;
   modifySurveyAnswers?: Maybe<ModifySurveyAnswersPayload>;
   moveCardToTab?: Maybe<MoveCardToTabPayload>;
+  preprocessSource?: Maybe<PreprocessSourcePayload>;
   publishReport?: Maybe<PublishReportPayload>;
   /**
    * Copies all table of contents items, related layers, sources, and access
@@ -8088,6 +8057,7 @@ export type Mutation = {
   /** Updates a single `Report` using its globally unique id and a patch. */
   updateReportByNodeId?: Maybe<UpdateReportPayload>;
   updateReportCard?: Maybe<UpdateReportCardPayload>;
+  updateReportCardBody?: Maybe<UpdateReportCardBodyPayload>;
   /**
    * If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -8487,12 +8457,6 @@ export type MutationCreateRemoteMvtSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateReportArgs = {
   input: CreateReportInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateReportCardLayerArgs = {
-  input: CreateReportCardLayerInput;
 };
 
 
@@ -9153,6 +9117,12 @@ export type MutationMoveCardToTabArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationPreprocessSourceArgs = {
+  input: PreprocessSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationPublishReportArgs = {
   input: PublishReportInput;
 };
@@ -9737,6 +9707,12 @@ export type MutationUpdateReportCardArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateReportCardBodyArgs = {
+  input: UpdateReportCardBodyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateSketchArgs = {
   id: Scalars['Int'];
   name: Scalars['String'];
@@ -9928,6 +9904,15 @@ export type MutationUploadStyleArgs = {
 export type Node = {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+};
+
+export type NodeDependency = {
+  geographies?: Maybe<Array<Scalars['Int']>>;
+  hash: Scalars['String'];
+  parameters?: Maybe<Scalars['JSON']>;
+  stableId?: Maybe<Scalars['String']>;
+  subjectType: Scalars['String'];
+  type: Scalars['String'];
 };
 
 export type OfflineSourceDetails = {
@@ -10334,6 +10319,40 @@ export enum PostsOrderBy {
   TopicIdDesc = 'TOPIC_ID_DESC'
 }
 
+/** All input for the `preprocessSource` mutation. */
+export type PreprocessSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  slug?: Maybe<Scalars['String']>;
+  sourceId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `preprocessSource` mutation. */
+export type PreprocessSourcePayload = {
+  __typename?: 'PreprocessSourcePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `DataLayer` that is related to this `TableOfContentsItem`. */
+  dataLayer?: Maybe<DataLayer>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  /** An edge for our `TableOfContentsItem`. May be used by Relay 1. */
+  tableOfContentsItemEdge?: Maybe<TableOfContentsItemsEdge>;
+};
+
+
+/** The output of our `preprocessSource` mutation. */
+export type PreprocessSourcePayloadTableOfContentsItemEdgeArgs = {
+  orderBy?: Maybe<Array<TableOfContentsItemsOrderBy>>;
+};
+
 export type PresignedUrl = {
   __typename?: 'PresignedUrl';
   key: Scalars['String'];
@@ -10557,6 +10576,7 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
+  reportingLayers: Array<ReportOverlaySource>;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
    * this to determine whether `project.communityGuidelines` should be shown to the
@@ -11750,12 +11770,15 @@ export type Query = Node & {
   dataUploadTaskByNodeId?: Maybe<DataUploadTask>;
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
+  draftReportDependencies: DraftReportDependenciesResults;
   eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extensionToSourceType?: Maybe<Scalars['String']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  extractStableIdsFromBody?: Maybe<Array<Maybe<Scalars['String']>>>;
+  extractTableOfContentsItemIdsFromBody?: Maybe<Array<Maybe<Scalars['Int']>>>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
   fileUploadByNodeId?: Maybe<FileUpload>;
@@ -11801,6 +11824,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
+  getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
@@ -11882,8 +11906,6 @@ export type Query = Node & {
   report?: Maybe<Report>;
   /** Reads a single `Report` using its globally unique `ID`. */
   reportByNodeId?: Maybe<Report>;
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayersConnection?: Maybe<ReportCardLayersConnection>;
   /** Reads and enables pagination through a set of `Report`. */
   reportsConnection?: Maybe<ReportsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
@@ -12210,6 +12232,12 @@ export type QueryDataUploadTasksConnectionArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryDraftReportDependenciesArgs = {
+  input?: Maybe<DraftDependenciesInput>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryEmailNotificationPreferenceByUserIdArgs = {
   userId: Scalars['Int'];
 };
@@ -12236,6 +12264,18 @@ export type QueryExtensionToSourceTypeArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtractStableIdsFromBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtractTableOfContentsItemIdsFromBodyArgs = {
+  body?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -12438,6 +12478,12 @@ export type QueryGetFirstBandOffsetArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryGetFirstBandScaleArgs = {
   geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetReferencedStableIdsForReportArgs = {
+  _reportId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12772,18 +12818,6 @@ export type QueryReportArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryReportByNodeIdArgs = {
   nodeId: Scalars['ID'];
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryReportCardLayersConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -13208,6 +13242,15 @@ export type RecalculateSpatialMetricsPayload = {
   query?: Maybe<Query>;
 };
 
+export type RelatedReportCard = {
+  __typename?: 'RelatedReportCard';
+  isDraft?: Maybe<Scalars['Boolean']>;
+  reportCardId?: Maybe<Scalars['Int']>;
+  sketchClass: SketchClass;
+  sketchClassId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
 /** All input for the `removeGroupFromAcl` mutation. */
 export type RemoveGroupFromAclInput = {
   aclId?: Maybe<Scalars['Int']>;
@@ -13410,8 +13453,6 @@ export type ReportCard = Node & {
   __typename?: 'ReportCard';
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
-  collapsibleFooterBody: Scalars['JSON'];
-  collapsibleFooterEnabled: Scalars['Boolean'];
   componentSettings: Scalars['JSON'];
   displayMapLayerVisibilityControls: Scalars['Boolean'];
   icon?: Maybe<Scalars['String']>;
@@ -13420,88 +13461,12 @@ export type ReportCard = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   position: Scalars['Int'];
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayers: Array<ReportCardLayer>;
-  /** Reads and enables pagination through a set of `ReportingLayer`. */
-  reportingLayers?: Maybe<Array<ReportingLayer>>;
   reportTabId: Scalars['Int'];
+  tab?: Maybe<ReportTab>;
   tint?: Maybe<Scalars['String']>;
   type: Scalars['String'];
   updatedAt: Scalars['Datetime'];
 };
-
-
-export type ReportCardReportCardLayersArgs = {
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
-};
-
-
-export type ReportCardReportingLayersArgs = {
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-};
-
-export type ReportCardLayer = {
-  __typename?: 'ReportCardLayer';
-  layerParameters: Scalars['JSON'];
-  processedOutput?: Maybe<DataUploadOutput>;
-  reportCardId: Scalars['Int'];
-  /** Reads a single `TableOfContentsItem` that is related to this `ReportCardLayer`. */
-  tableOfContentsItem?: Maybe<TableOfContentsItem>;
-  tableOfContentsItemId: Scalars['Int'];
-};
-
-/**
- * A condition to be used against `ReportCardLayer` object types. All fields are
- * tested for equality and combined with a logical ‘and.’
- */
-export type ReportCardLayerCondition = {
-  /** Checks for equality with the object’s `reportCardId` field. */
-  reportCardId?: Maybe<Scalars['Int']>;
-  /** Checks for equality with the object’s `tableOfContentsItemId` field. */
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-};
-
-/** An input for mutations affecting `ReportCardLayer` */
-export type ReportCardLayerInput = {
-  layerParameters?: Maybe<Scalars['JSON']>;
-  reportCardId: Scalars['Int'];
-  tableOfContentsItemId: Scalars['Int'];
-};
-
-/** A connection to a list of `ReportCardLayer` values. */
-export type ReportCardLayersConnection = {
-  __typename?: 'ReportCardLayersConnection';
-  /** A list of edges which contains the `ReportCardLayer` and cursor to aid in pagination. */
-  edges: Array<ReportCardLayersEdge>;
-  /** A list of `ReportCardLayer` objects. */
-  nodes: Array<ReportCardLayer>;
-  /** Information to aid in pagination. */
-  pageInfo: PageInfo;
-  /** The count of *all* `ReportCardLayer` you could get from the connection. */
-  totalCount: Scalars['Int'];
-};
-
-/** A `ReportCardLayer` edge in the connection. */
-export type ReportCardLayersEdge = {
-  __typename?: 'ReportCardLayersEdge';
-  /** A cursor for use in pagination. */
-  cursor?: Maybe<Scalars['Cursor']>;
-  /** The `ReportCardLayer` at the end of the edge. */
-  node: ReportCardLayer;
-};
-
-/** Methods to use when ordering `ReportCardLayer`. */
-export enum ReportCardLayersOrderBy {
-  Natural = 'NATURAL',
-  ReportCardIdAsc = 'REPORT_CARD_ID_ASC',
-  ReportCardIdDesc = 'REPORT_CARD_ID_DESC',
-  TableOfContentsItemIdAsc = 'TABLE_OF_CONTENTS_ITEM_ID_ASC',
-  TableOfContentsItemIdDesc = 'TABLE_OF_CONTENTS_ITEM_ID_DESC'
-}
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ReportCondition = {
@@ -13518,13 +13483,6 @@ export type ReportInput = {
   sketchClassId: Scalars['Int'];
 };
 
-/** An input for mutations affecting `ReportLayerInputRecord` */
-export type ReportLayerInputRecordInput = {
-  layerParameters?: Maybe<Scalars['JSON']>;
-  reportCardId?: Maybe<Scalars['Int']>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-};
-
 export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
   cardDependencyLists: Array<CardDependencyLists>;
@@ -13539,19 +13497,12 @@ export type ReportOverlaySource = {
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
-  sourceProcessingJob?: Maybe<SourceProcessingJob>;
-  sourceProcessingJobId?: Maybe<Scalars['String']>;
+  sourceProcessingJob: SourceProcessingJob;
+  sourceProcessingJobId: Scalars['String'];
   sourceUrl?: Maybe<Scalars['String']>;
+  stableId: Scalars['String'];
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
-};
-
-export type ReportOverlaySourcesSubscriptionPayload = {
-  __typename?: 'ReportOverlaySourcesSubscriptionPayload';
-  dataSourceId: Scalars['Int'];
-  jobKey: Scalars['String'];
-  projectId: Scalars['Int'];
-  source: ReportOverlaySource;
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -13581,18 +13532,6 @@ export type ReportTab = Node & {
 export type ReportTabCardsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-export type ReportingLayer = {
-  __typename?: 'ReportingLayer';
-  groupBy?: Maybe<Scalars['String']>;
-  mapboxGlStyles?: Maybe<Scalars['JSON']>;
-  meta?: Maybe<Scalars['JSON']>;
-  processingJobId?: Maybe<Scalars['String']>;
-  sourceProcessingJob?: Maybe<SourceProcessingJob>;
-  tableOfContentsItemId?: Maybe<Scalars['Int']>;
-  title?: Maybe<Scalars['String']>;
-  type?: Maybe<Scalars['String']>;
 };
 
 /** A connection to a list of `Report` values. */
@@ -14493,13 +14432,6 @@ export enum SketchGeometryType {
   Polygon = 'POLYGON'
 }
 
-export type SketchMetricSubscriptionPayload = {
-  __typename?: 'SketchMetricSubscriptionPayload';
-  metric?: Maybe<CompatibleSpatialMetric>;
-  metricId: Scalars['BigInt'];
-  sketchId: Scalars['Int'];
-};
-
 /** The return type of our `relatedFragmentsConnection` query. */
 export type SketchesRelatedFragmentsRecord = {
   __typename?: 'SketchesRelatedFragmentsRecord';
@@ -14737,15 +14669,12 @@ export type Subscription = {
   backgroundJobs?: Maybe<ProjectBackgroundJobSubscriptionPayload>;
   /** Triggered when a new post is created in the subscribed topic */
   forumActivity?: Maybe<ForumActivityPayload>;
-  geographyMetrics?: Maybe<GeographyMetricSubscriptionPayload>;
   /**
    * Triggered when the status of a project invite changes, generally because
    * of a change in the delivery status of a related InviteEmail. Uses
    * x-ss-slug to determine appropriate project.
    */
   projectInviteStateUpdated?: Maybe<ProjectInviteStateSubscriptionPayload>;
-  reportOverlaySources?: Maybe<ReportOverlaySourcesSubscriptionPayload>;
-  sketchMetrics?: Maybe<SketchMetricSubscriptionPayload>;
   /** Triggered when a project's draft table of contents status changes */
   updatedDraftTableOfContentsStatus?: Maybe<ProjectDraftTableOfContentsStatusPayload>;
   /** Triggered when a map bookmark is updated */
@@ -14762,24 +14691,6 @@ export type SubscriptionBackgroundJobsArgs = {
 /** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
 export type SubscriptionForumActivityArgs = {
   slug: Scalars['String'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionGeographyMetricsArgs = {
-  projectId: Scalars['Int'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionReportOverlaySourcesArgs = {
-  projectId: Scalars['Int'];
-};
-
-
-/** The root subscription type: contains realtime events you can subscribe to with the `subscription` operation. */
-export type SubscriptionSketchMetricsArgs = {
-  sketchId: Scalars['Int'];
 };
 
 
@@ -15352,8 +15263,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
-  /** Reads and enables pagination through a set of `ReportCardLayer`. */
-  reportCardLayers: Array<ReportCardLayer>;
+  relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
+  reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
   /** Position in the layer list */
@@ -15436,24 +15347,6 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
 export type TableOfContentsItemQuotaUsedArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-
-/**
- * TableOfContentsItems represent a tree-view of folders and operational layers
- * that can be added to the map. Both layers and folders may be nested into other
- * folders for organization, and each folder has its own access control list.
- *
- * Items that represent data layers have a `DataLayer` relation, which in turn has
- * a reference to a `DataSource`. Usually these relations should be fetched in
- * batch only once the layer is turned on, using the
- * `dataLayersAndSourcesByLayerId` query.
- */
-export type TableOfContentsItemReportCardLayersArgs = {
-  condition?: Maybe<ReportCardLayerCondition>;
-  first?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportCardLayersOrderBy>>;
 };
 
 
@@ -17280,6 +17173,30 @@ export type UpdateReportByNodeIdInput = {
   patch: ReportPatch;
 };
 
+/** All input for the `updateReportCardBody` mutation. */
+export type UpdateReportCardBodyInput = {
+  body?: Maybe<Scalars['JSON']>;
+  cardId?: Maybe<Scalars['Int']>;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `updateReportCardBody` mutation. */
+export type UpdateReportCardBodyPayload = {
+  __typename?: 'UpdateReportCardBodyPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  reportCard?: Maybe<ReportCard>;
+};
+
 /** All input for the `updateReportCard` mutation. */
 export type UpdateReportCardInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -17291,8 +17208,6 @@ export type UpdateReportCardInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
-  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
   componentSettings?: Maybe<Scalars['JSON']>;
   displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
   icon?: Maybe<Scalars['String']>;
@@ -19887,7 +19802,14 @@ export type FullAdminOverlayFragment = (
   )>>, dataLayer?: Maybe<(
     { __typename?: 'DataLayer' }
     & FullAdminDataLayerFragment
-  )> }
+  )>, relatedReportCardDetails?: Maybe<Array<Maybe<(
+    { __typename?: 'RelatedReportCard' }
+    & Pick<RelatedReportCard, 'isDraft' | 'title' | 'sketchClassId'>
+    & { sketchClass: (
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'name'>
+    ) }
+  )>>> }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -22537,37 +22459,9 @@ export type SketchClassGeographyEditorDetailsQuery = (
   )> }
 );
 
-export type ReportingLayerDetailsFragment = (
-  { __typename?: 'ReportCardLayer' }
-  & Pick<ReportCardLayer, 'tableOfContentsItemId' | 'layerParameters'>
-  & { processedOutput?: Maybe<(
-    { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'url' | 'size' | 'type'>
-  )>, tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'title' | 'dataSourceType' | 'stableId'>
-    & { dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
-      & { dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'id' | 'geostats' | 'type'>
-        & { sourceProcessingJob?: Maybe<(
-          { __typename?: 'SourceProcessingJob' }
-          & SourceProcessingJobDetailsFragment
-        )> }
-      )> }
-    )> }
-  )> }
-);
-
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'collapsibleFooterEnabled' | 'collapsibleFooterBody' | 'displayMapLayerVisibilityControls'>
-  & { reportingLayers: Array<(
-    { __typename?: 'ReportCardLayer' }
-    & ReportingLayerDetailsFragment
-  )> }
+  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'displayMapLayerVisibilityControls'>
 );
 
 export type ReportTabDetailsFragment = (
@@ -22718,7 +22612,6 @@ export type AddReportCardMutationVariables = Exact<{
   componentSettings: Scalars['JSON'];
   cardType: Scalars['String'];
   body: Scalars['JSON'];
-  layers: Array<ReportLayerInputRecordInput> | ReportLayerInputRecordInput;
 }>;
 
 
@@ -22729,6 +22622,10 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & ReportTabDetailsFragment
+      )> }
     )> }
   )> }
 );
@@ -22758,8 +22655,6 @@ export type UpdateReportCardMutationVariables = Exact<{
   tint?: Maybe<Scalars['String']>;
   icon?: Maybe<Scalars['String']>;
   cardType?: Maybe<Scalars['String']>;
-  collapsibleFooterEnabled?: Maybe<Scalars['Boolean']>;
-  collapsibleFooterBody?: Maybe<Scalars['JSON']>;
   displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
@@ -22768,6 +22663,23 @@ export type UpdateReportCardMutation = (
   { __typename?: 'Mutation' }
   & { updateReportCard?: Maybe<(
     { __typename?: 'UpdateReportCardPayload' }
+    & { reportCard?: Maybe<(
+      { __typename?: 'ReportCard' }
+      & ReportCardDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateReportCardBodyMutationVariables = Exact<{
+  id: Scalars['Int'];
+  body: Scalars['JSON'];
+}>;
+
+
+export type UpdateReportCardBodyMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReportCardBody?: Maybe<(
+    { __typename?: 'UpdateReportCardBodyPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & ReportCardDetailsFragment
@@ -22867,23 +22779,6 @@ export type SourceProcessingJobsQuery = (
   )> }
 );
 
-export type ReportOverlaySourcesSubscriptionSubscriptionVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type ReportOverlaySourcesSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { reportOverlaySources?: Maybe<(
-    { __typename?: 'ReportOverlaySourcesSubscriptionPayload' }
-    & Pick<ReportOverlaySourcesSubscriptionPayload, 'jobKey'>
-    & { source: (
-      { __typename?: 'ReportOverlaySource' }
-      & OverlaySourceDetailsFragment
-    ) }
-  )> }
-);
-
 export type RecalculateSpatialMetricsMutationVariables = Exact<{
   metricIds: Array<Scalars['BigInt']> | Scalars['BigInt'];
   preprocessSources: Scalars['Boolean'];
@@ -22900,14 +22795,14 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
-  ), sourceProcessingJob?: Maybe<(
+  ), sourceProcessingJob: (
     { __typename?: 'SourceProcessingJob' }
     & SourceProcessingJobDetailsFragment
-  )>, output?: Maybe<(
+  ), output?: Maybe<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt'>
   )> }
@@ -22954,6 +22849,93 @@ export type ReportContextQuery = (
   )> }
 );
 
+export type ReportDependenciesQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportDependenciesQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { overlaySources: Array<(
+        { __typename?: 'ReportOverlaySource' }
+        & OverlaySourceDetailsFragment
+      )>, metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricDetailsFragment
+      )>, cardDependencyLists: Array<(
+        { __typename?: 'CardDependencyLists' }
+        & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )> }
+    ) }
+  )> }
+);
+
+export type BaseReportDetailsFragment = (
+  { __typename?: 'Report' }
+  & Pick<Report, 'id'>
+  & { tabs?: Maybe<Array<(
+    { __typename?: 'ReportTab' }
+    & ReportTabDetailsFragment
+  )>> }
+);
+
+export type BaseReportContextQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type BaseReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & BaseReportDetailsFragment
+    )> }
+    & ReportContextSketchClassDetailsFragment
+  )> }
+);
+
+export type BaseDraftReportContextQueryVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type BaseDraftReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketchClass?: Maybe<(
+    { __typename?: 'SketchClass' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & BaseReportDetailsFragment
+    )> }
+    & ReportContextSketchClassDetailsFragment
+  )> }
+);
+
+export type SubjectReportContextQueryVariables = Exact<{
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type SubjectReportContextQuery = (
+  { __typename?: 'Query' }
+  & { sketch?: Maybe<(
+    { __typename?: 'Sketch' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & ReportContextSketchClassDetailsFragment
+    )> }
+    & ReportContextSketchDetailsFragment
+  )> }
+);
+
 export type LegacyReportContextQueryVariables = Exact<{
   sketchId: Scalars['Int'];
 }>;
@@ -22969,6 +22951,152 @@ export type LegacyReportContextQuery = (
       & ReportContextSketchClassDetailsFragment
     )> }
     & ReportContextSketchDetailsFragment
+  )> }
+);
+
+export type DraftReportDependenciesQueryVariables = Exact<{
+  input?: Maybe<DraftDependenciesInput>;
+}>;
+
+
+export type DraftReportDependenciesQuery = (
+  { __typename?: 'Query' }
+  & { draftReportDependencies: (
+    { __typename?: 'DraftReportDependenciesResults' }
+    & Pick<DraftReportDependenciesResults, 'ready' | 'sketchId'>
+    & { overlaySources: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )>, metrics: Array<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
+  ) }
+);
+
+export type ProjectReportingLayersQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectReportingLayersQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { reportingLayers: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )>, draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'copiedFromDataLibraryTemplateId'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id' | 'type'>
+        )> }
+      )> }
+    )>> }
+  )> }
+);
+
+export type OverlaySourceProcessingStatusQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlaySourceProcessingStatusQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id'>
+        & { sourceProcessingJob?: Maybe<(
+          { __typename?: 'SourceProcessingJob' }
+          & SourceProcessingJobDetailsFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlayLayerAuthorInfoQueryVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+}>;
+
+
+export type OverlayLayerAuthorInfoQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'version'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'attribution' | 'id' | 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & AuthorProfileFragment
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type PreprocessSourceMutationVariables = Exact<{
+  slug: Scalars['String'];
+  sourceId: Scalars['Int'];
+}>;
+
+
+export type PreprocessSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { preprocessSource?: Maybe<(
+    { __typename?: 'PreprocessSourcePayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'id'>
+          & { sourceProcessingJob?: Maybe<(
+            { __typename?: 'SourceProcessingJob' }
+            & SourceProcessingJobDetailsFragment
+          )> }
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
+export type OverlaysForReportLayerTogglesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type OverlaysForReportLayerTogglesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId'>
+      & { reportingOutput?: Maybe<(
+        { __typename?: 'DataUploadOutput' }
+        & Pick<DataUploadOutput, 'id'>
+      )> }
+    )>> }
   )> }
 );
 
@@ -23309,7 +23437,7 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds'>
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds' | 'dependencyHash'>
   & { subject: (
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
@@ -23325,40 +23453,6 @@ export type CompatibleSpatialMetricDetailsFragment = (
 export type MinimalSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
   & Pick<CompatibleSpatialMetric, 'id' | 'updatedAt' | 'state' | 'value' | 'errorMessage' | 'progress'>
-);
-
-export type GeographyMetricSubscriptionSubscriptionVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type GeographyMetricSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { geographyMetrics?: Maybe<(
-    { __typename?: 'GeographyMetricSubscriptionPayload' }
-    & Pick<GeographyMetricSubscriptionPayload, 'metricId' | 'geographyId' | 'projectId'>
-    & { metric?: Maybe<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  )> }
-);
-
-export type SketchMetricSubscriptionSubscriptionVariables = Exact<{
-  sketchId: Scalars['Int'];
-}>;
-
-
-export type SketchMetricSubscriptionSubscription = (
-  { __typename?: 'Subscription' }
-  & { sketchMetrics?: Maybe<(
-    { __typename?: 'SketchMetricSubscriptionPayload' }
-    & Pick<SketchMetricSubscriptionPayload, 'metricId' | 'sketchId'>
-    & { metric?: Maybe<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
-    )> }
-  )> }
 );
 
 export type RetryFailedSpatialMetricsMutationVariables = Exact<{
@@ -25656,6 +25750,14 @@ export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
   dataLayer {
     ...FullAdminDataLayer
   }
+  relatedReportCardDetails {
+    isDraft
+    title
+    sketchClassId
+    sketchClass {
+      name
+    }
+  }
 }
     ${FullAdminDataLayerFragmentDoc}`;
 export const MetadataXmlFileFragmentDoc = /*#__PURE__*/ gql`
@@ -26327,48 +26429,6 @@ export const LogicRuleEditorFormDetailsFragmentDoc = /*#__PURE__*/ gql`
 }
     ${LogicRuleEditorFormElementDetailsFragmentDoc}
 ${LogicRuleDetailsFragmentDoc}`;
-export const SourceProcessingJobDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment SourceProcessingJobDetails on SourceProcessingJob {
-  jobKey
-  state
-  progressPercentage
-  progressMessage
-  createdAt
-  errorMessage
-  startedAt
-  durationSeconds
-  eta
-}
-    `;
-export const ReportingLayerDetailsFragmentDoc = /*#__PURE__*/ gql`
-    fragment ReportingLayerDetails on ReportCardLayer {
-  tableOfContentsItemId
-  layerParameters
-  processedOutput {
-    url
-    size
-    type
-  }
-  tableOfContentsItem {
-    id
-    title
-    dataSourceType
-    stableId
-    dataLayer {
-      id
-      mapboxGlStyles
-      dataSource {
-        id
-        geostats
-        type
-        sourceProcessingJob {
-          ...SourceProcessingJobDetails
-        }
-      }
-    }
-  }
-}
-    ${SourceProcessingJobDetailsFragmentDoc}`;
 export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportCardDetails on ReportCard {
   id
@@ -26379,14 +26439,9 @@ export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`
   tint
   icon
   body
-  reportingLayers: reportCardLayers {
-    ...ReportingLayerDetails
-  }
-  collapsibleFooterEnabled
-  collapsibleFooterBody
   displayMapLayerVisibilityControls
 }
-    ${ReportingLayerDetailsFragmentDoc}`;
+    `;
 export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportTabDetails on ReportTab {
   id
@@ -26408,9 +26463,23 @@ export const ReportDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${ReportTabDetailsFragmentDoc}`;
+export const SourceProcessingJobDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment SourceProcessingJobDetails on SourceProcessingJob {
+  jobKey
+  state
+  progressPercentage
+  progressMessage
+  createdAt
+  errorMessage
+  startedAt
+  durationSeconds
+  eta
+}
+    `;
 export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
+  stableId
   tableOfContentsItem {
     title
     stableId
@@ -26428,6 +26497,14 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
+export const BaseReportDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment BaseReportDetails on Report {
+  id
+  tabs {
+    ...ReportTabDetails
+  }
+}
+    ${ReportTabDetailsFragmentDoc}`;
 export const SketchFolderDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment SketchFolderDetails on SketchFolder {
   collectionId
@@ -26608,6 +26685,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
   eta
   startedAt
   durationSeconds
+  dependencyHash
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
@@ -29698,16 +29776,19 @@ export const ReorderReportTabsDocument = /*#__PURE__*/ gql`
 }
     ${ReportTabDetailsFragmentDoc}`;
 export const AddReportCardDocument = /*#__PURE__*/ gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!, $layers: [ReportLayerInputRecordInput!]!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body, layers: $layers}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
   ) {
     reportCard {
       id
+      tab {
+        ...ReportTabDetails
+      }
     }
   }
 }
-    `;
+    ${ReportTabDetailsFragmentDoc}`;
 export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
     mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
   reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
@@ -29719,10 +29800,19 @@ export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateReportCardDocument = /*#__PURE__*/ gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $collapsibleFooterEnabled: Boolean, $collapsibleFooterBody: JSON, $displayMapLayerVisibilityControls: Boolean) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $displayMapLayerVisibilityControls: Boolean) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, collapsibleFooterEnabled: $collapsibleFooterEnabled, collapsibleFooterBody: $collapsibleFooterBody, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
   ) {
+    reportCard {
+      ...ReportCardDetails
+    }
+  }
+}
+    ${ReportCardDetailsFragmentDoc}`;
+export const UpdateReportCardBodyDocument = /*#__PURE__*/ gql`
+    mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
+  updateReportCardBody(input: {cardId: $id, body: $body}) {
     reportCard {
       ...ReportCardDetails
     }
@@ -29784,16 +29874,6 @@ export const SourceProcessingJobsDocument = /*#__PURE__*/ gql`
   }
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
-export const ReportOverlaySourcesSubscriptionDocument = /*#__PURE__*/ gql`
-    subscription ReportOverlaySourcesSubscription($projectId: Int!) {
-  reportOverlaySources(projectId: $projectId) {
-    jobKey
-    source {
-      ...OverlaySourceDetails
-    }
-  }
-}
-    ${OverlaySourceDetailsFragmentDoc}`;
 export const RecalculateSpatialMetricsDocument = /*#__PURE__*/ gql`
     mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!) {
   recalculateSpatialMetrics(
@@ -29845,6 +29925,60 @@ ${ReportContextSketchClassDetailsFragmentDoc}
 ${ReportTabDetailsFragmentDoc}
 ${OverlaySourceDetailsFragmentDoc}
 ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const ReportDependenciesDocument = /*#__PURE__*/ gql`
+    query ReportDependencies($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      overlaySources {
+        ...OverlaySourceDetails
+      }
+      metrics {
+        ...CompatibleSpatialMetricDetails
+      }
+      cardDependencyLists {
+        cardId
+        metrics
+        overlaySources
+      }
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const BaseReportContextDocument = /*#__PURE__*/ gql`
+    query BaseReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report {
+      ...BaseReportDetails
+    }
+  }
+}
+    ${ReportContextSketchClassDetailsFragmentDoc}
+${BaseReportDetailsFragmentDoc}`;
+export const BaseDraftReportContextDocument = /*#__PURE__*/ gql`
+    query BaseDraftReportContext($sketchClassId: Int!) {
+  sketchClass(id: $sketchClassId) {
+    ...ReportContextSketchClassDetails
+    report: draftReport {
+      ...BaseReportDetails
+    }
+  }
+}
+    ${ReportContextSketchClassDetailsFragmentDoc}
+${BaseReportDetailsFragmentDoc}`;
+export const SubjectReportContextDocument = /*#__PURE__*/ gql`
+    query SubjectReportContext($sketchId: Int!) {
+  sketch(id: $sketchId) {
+    ...ReportContextSketchDetails
+    sketchClass {
+      ...ReportContextSketchClassDetails
+    }
+  }
+}
+    ${ReportContextSketchDetailsFragmentDoc}
+${ReportContextSketchClassDetailsFragmentDoc}`;
 export const LegacyReportContextDocument = /*#__PURE__*/ gql`
     query LegacyReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
@@ -29860,6 +29994,109 @@ export const LegacyReportContextDocument = /*#__PURE__*/ gql`
 }
     ${ReportContextSketchDetailsFragmentDoc}
 ${ReportContextSketchClassDetailsFragmentDoc}`;
+export const DraftReportDependenciesDocument = /*#__PURE__*/ gql`
+    query DraftReportDependencies($input: DraftDependenciesInput) {
+  draftReportDependencies(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+    metrics {
+      ...CompatibleSpatialMetricDetails
+    }
+    sketchId
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}
+${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
+    query ProjectReportingLayers($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    reportingLayers {
+      ...OverlaySourceDetails
+    }
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      copiedFromDataLibraryTemplateId
+      dataLayer {
+        dataSource {
+          id
+          type
+        }
+      }
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
+export const OverlaySourceProcessingStatusDocument = /*#__PURE__*/ gql`
+    query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      dataSource {
+        id
+        sourceProcessingJob {
+          ...SourceProcessingJobDetails
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+export const OverlayLayerAuthorInfoDocument = /*#__PURE__*/ gql`
+    query OverlayLayerAuthorInfo($tableOfContentsItemId: Int!) {
+  tableOfContentsItem(id: $tableOfContentsItemId) {
+    id
+    dataLayer {
+      version
+      dataSource {
+        attribution
+        id
+        createdAt
+        authorProfile {
+          ...AuthorProfile
+        }
+      }
+    }
+  }
+}
+    ${AuthorProfileFragmentDoc}`;
+export const PreprocessSourceDocument = /*#__PURE__*/ gql`
+    mutation PreprocessSource($slug: String!, $sourceId: Int!) {
+  preprocessSource(input: {slug: $slug, sourceId: $sourceId}) {
+    tableOfContentsItem {
+      id
+      dataLayer {
+        id
+        dataSource {
+          id
+          sourceProcessingJob {
+            ...SourceProcessingJobDetails
+          }
+        }
+      }
+    }
+  }
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
+export const OverlaysForReportLayerTogglesDocument = /*#__PURE__*/ gql`
+    query OverlaysForReportLayerToggles($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      stableId
+      reportingOutput {
+        id
+      }
+    }
+  }
+}
+    `;
 export const SketchingDocument = /*#__PURE__*/ gql`
     query Sketching($slug: String!) {
   me {
@@ -30008,29 +30245,6 @@ export const CopyTocItemDocument = /*#__PURE__*/ gql`
 }
     ${SketchFolderDetailsFragmentDoc}
 ${SketchTocDetailsFragmentDoc}`;
-export const GeographyMetricSubscriptionDocument = /*#__PURE__*/ gql`
-    subscription GeographyMetricSubscription($projectId: Int!) {
-  geographyMetrics(projectId: $projectId) {
-    metricId
-    geographyId
-    projectId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
-export const SketchMetricSubscriptionDocument = /*#__PURE__*/ gql`
-    subscription SketchMetricSubscription($sketchId: Int!) {
-  sketchMetrics(sketchId: $sketchId) {
-    metricId
-    sketchId
-    metric {
-      ...CompatibleSpatialMetricDetails
-    }
-  }
-}
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
 export const RetryFailedSpatialMetricsDocument = /*#__PURE__*/ gql`
     mutation RetryFailedSpatialMetrics($metricIds: [BigInt!]!) {
   retryFailedSpatialMetrics(input: {metricIds: $metricIds}) {
@@ -31185,7 +31399,16 @@ export const namedOperations = {
     AvailableReportLayers: 'AvailableReportLayers',
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
+    ReportDependencies: 'ReportDependencies',
+    BaseReportContext: 'BaseReportContext',
+    BaseDraftReportContext: 'BaseDraftReportContext',
+    SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
+    DraftReportDependencies: 'DraftReportDependencies',
+    ProjectReportingLayers: 'ProjectReportingLayers',
+    OverlaySourceProcessingStatus: 'OverlaySourceProcessingStatus',
+    OverlayLayerAuthorInfo: 'OverlayLayerAuthorInfo',
+    OverlaysForReportLayerToggles: 'OverlaysForReportLayerToggles',
     Sketching: 'Sketching',
     GetSketchForEditing: 'GetSketchForEditing',
     SketchReportingDetails: 'SketchReportingDetails',
@@ -31336,10 +31559,12 @@ export const namedOperations = {
     AddReportCard: 'AddReportCard',
     ReorderReportTabCards: 'ReorderReportTabCards',
     UpdateReportCard: 'UpdateReportCard',
+    UpdateReportCardBody: 'UpdateReportCardBody',
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
     PublishReport: 'PublishReport',
     RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
+    PreprocessSource: 'PreprocessSource',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
@@ -31406,9 +31631,6 @@ export const namedOperations = {
     DraftStatus: 'DraftStatus',
     NewPosts: 'NewPosts',
     MapBookmark: 'MapBookmark',
-    ReportOverlaySourcesSubscription: 'ReportOverlaySourcesSubscription',
-    GeographyMetricSubscription: 'GeographyMetricSubscription',
-    SketchMetricSubscription: 'SketchMetricSubscription',
     ProjectInviteEmailStatusSubscription: 'ProjectInviteEmailStatusSubscription'
   },
   Fragment: {
@@ -31486,12 +31708,12 @@ export const namedOperations = {
     TemplateSketchClass: 'TemplateSketchClass',
     LogicRuleEditorFormElementDetails: 'LogicRuleEditorFormElementDetails',
     LogicRuleEditorFormDetails: 'LogicRuleEditorFormDetails',
-    ReportingLayerDetails: 'ReportingLayerDetails',
     ReportCardDetails: 'ReportCardDetails',
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
     SourceProcessingJobDetails: 'SourceProcessingJobDetails',
     OverlaySourceDetails: 'OverlaySourceDetails',
+    BaseReportDetails: 'BaseReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',
     SketchCRUDResponse: 'SketchCRUDResponse',

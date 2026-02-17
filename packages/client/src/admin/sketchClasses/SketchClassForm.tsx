@@ -336,23 +336,24 @@ export default function SketchClassForm({
               <InputBlock
                 input={
                   <Switch
-                    isToggled={showLegacySystem}
-                    onClick={(enabled) => handleLegacyReportingToggle(enabled)}
+                    isToggled={!showLegacySystem}
+                    onClick={(enabled) => handleLegacyReportingToggle(!enabled)}
                   />
                 }
-                title={t("Enable Legacy Reporting System")}
+                title={t("Enable New Reporting System")}
                 description={
                   <>
                     <Trans ns="admin:sketching">
-                      When enabled, uses preprocessing and{" "}
+                      When enabled, uses the new graphical report builder
+                      instead of{" "}
                       <a
                         target="_blank"
                         href="https://github.com/seasketch/geoprocessing"
                         className="text-primary-500 hover:underline"
                       >
                         geoprocessing services
-                      </a>{" "}
-                      for reporting instead of the new geography-based system.
+                      </a>
+                      .
                     </Trans>
                   </>
                 }

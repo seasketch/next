@@ -754,6 +754,7 @@ var require_rbush = __commonJS({
 // src/workers/clipBatch.ts
 var clipBatch_exports = {};
 __export(clipBatch_exports, {
+  addColumnValuesToResults: () => addColumnValuesToResults,
   calculatedClippedOverlapSize: () => calculatedClippedOverlapSize,
   clipBatch: () => clipBatch,
   collectColumnValues: () => collectColumnValues,
@@ -5890,10 +5891,10 @@ async function collectColumnValues({
   features,
   differenceMultiPolygon,
   subjectFeature,
-  property,
+  // property,
   groupBy
 }) {
-  const results = { "*": [] };
+  const results = { "*": {} };
   for (const f of features) {
     if (f.feature.geometry.type === "Point" || f.feature.geometry.type === "MultiPoint") {
       if (f.requiresIntersection) {
@@ -5928,35 +5929,49 @@ async function collectColumnValues({
         subjectFeature
       );
     }
-    const value = f.feature.properties?.[property];
+    addColumnValuesToResults(results, f.feature, groupBy);
+  }
+  return results;
+}
+function addColumnValuesToResults(results, feature2, groupBy) {
+  for (const attr in feature2.properties) {
+    if (attr === "__oidx" || attr === "__byteLength" || attr === "__area" || attr === "__offset") {
+      continue;
+    }
+    const value = feature2.properties[attr];
     const columnValue = [value];
-    if (f.feature.geometry.type === "Polygon" || f.feature.geometry.type === "MultiPolygon") {
-      const sqKm = turf_area_default(f.feature) * 1e-6;
+    if (feature2.geometry.type === "Polygon" || feature2.geometry.type === "MultiPolygon") {
+      const sqKm = turf_area_default(feature2) * 1e-6;
       if (isNaN(sqKm) || sqKm === 0) {
         continue;
       }
       columnValue.push(sqKm);
-    } else if (f.feature.geometry.type === "LineString" || f.feature.geometry.type === "MultiLineString") {
-      const length3 = index_default2(f.feature);
+    } else if (feature2.geometry.type === "LineString" || feature2.geometry.type === "MultiLineString") {
+      const length3 = index_default2(feature2);
       if (isNaN(length3) || length3 === 0) {
         continue;
       }
       columnValue.push(length3);
     }
-    if (typeof value === "number") {
-      results["*"].push(columnValue);
+    if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
+      if (!(attr in results["*"]) || !Array.isArray(results["*"][attr])) {
+        results["*"][attr] = [];
+      }
+      results["*"][attr].push(columnValue);
       if (groupBy) {
-        const classKey = f.feature.properties?.[groupBy];
+        const classKey = feature2.properties?.[groupBy];
         if (classKey) {
           if (!(classKey in results)) {
-            results[classKey] = [];
+            results[classKey] = {};
           }
-          results[classKey].push(columnValue);
+          if (!(attr in results[classKey]) || !Array.isArray(results[classKey][attr])) {
+            results[classKey][attr] = [];
+          }
+          results[classKey][attr].push(columnValue);
         }
       }
     }
   }
-  return results;
 }
 import_node_worker_threads.parentPort?.on(
   "message",
@@ -5993,14 +6008,11 @@ import_node_worker_threads.parentPort?.on(
           includedProperties: job.includedProperties
         });
       } else if (operation2 === "column_values") {
-        if (!job.property) {
-          throw new Error("property is required for column_values operation");
-        }
         result = await collectColumnValues({
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
-          property: job.property,
+          // property: job.property,
           groupBy: job.groupBy
         });
       } else {
@@ -6193,6 +6205,7 @@ function geomToMultiPolygonCoordinates(geom) {
 }
 // Annotate the CommonJS export names for ESM import in node:
 0 && (module.exports = {
+  addColumnValuesToResults,
   calculatedClippedOverlapSize,
   clipBatch,
   collectColumnValues,

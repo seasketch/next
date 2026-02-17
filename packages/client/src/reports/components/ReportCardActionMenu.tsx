@@ -1,6 +1,9 @@
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import React from "react";
+import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
+import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+import { SourceProcessingJobDetailsFragment } from "../../generated/graphql";
 
 export type ReportCardActionMenuProps = {
   open?: boolean;
@@ -9,6 +12,7 @@ export type ReportCardActionMenuProps = {
   className?: string;
   triggerClassName?: string;
   children: React.ReactNode;
+  loading: boolean;
 };
 
 export type ReportCardActionMenuItemProps = {
@@ -34,7 +38,10 @@ export function ReportCardActionMenu(
     className,
     triggerClassName,
     children,
+    loading,
   } = props;
+
+  const context = useCardDependenciesContext();
 
   return (
     <DropdownMenu.Root open={open} onOpenChange={onOpenChange}>
@@ -44,23 +51,42 @@ export function ReportCardActionMenu(
             e.stopPropagation();
           }}
           className={classNames(
-            "p-1 rounded-full",
+            "p-1 rounded-full flex items-center justify-center",
             open
-              ? "text-gray-600 bg-gray-50"
-              : " text-gray-400 hover:text-gray-600 hover:bg-gray-50",
+              ? loading || context.loading
+                ? "text-gray-600 "
+                : "text-gray-600 bg-black/5"
+              : loading || context.loading
+              ? " text-gray-500 "
+              : " text-gray-500 hover:text-gray-600 hover:bg-black/5",
             triggerClassName
           )}
           aria-label={label}
           title={label}
         >
-          <DotsHorizontalIcon className="w-4 h-4" />
+          {context.loading ? (
+            <ReportCardLoadingIndicator
+              display={true}
+              metrics={context.metrics}
+              sourceProcessingJobs={
+                context.sources
+                  .map((s) => s.sourceProcessingJob)
+                  .filter(
+                    (j) => j !== undefined && j !== null
+                  ) as SourceProcessingJobDetailsFragment[]
+              }
+            />
+          ) : (
+            <DotsHorizontalIcon className="w-4 h-4" />
+          )}
         </button>
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           side="bottom"
           align="end"
-          sideOffset={4}
+          sideOffset={8}
+          alignOffset={-12}
           className={classNames(
             "z-50 min-w-[160px] rounded-md border border-black/5 bg-white p-1 shadow-lg",
             className

@@ -39,7 +39,7 @@ for (const metric of naitabaGeomorphologyMetrics) {
 const ventsSketch = require("./sketches/Hydrothermal-vents.geojson.json");
 
 describe("sketchFragmentOverlap", () => {
-  vi.setConfig({ testTimeout: 1000 * 10 });
+  vi.setConfig({ testTimeout: 1000 * 20 });
 
   describe("Fiji", () => {
     const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(

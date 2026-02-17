@@ -1,5 +1,5 @@
-import { useContext, useMemo } from "react";
-import { MapContext } from "../../dataLayers/MapContextManager";
+import { useContext, useMemo, useCallback } from "react";
+import { LayerTreeContext, MapManagerContext } from "../../dataLayers/MapContextManager";
 import { useTranslation } from "react-i18next";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
 import { LayersIcon } from "@radix-ui/react-icons";
@@ -11,7 +11,8 @@ interface MapLayerVisibilityControlProps {
 export default function MapLayerVisibilityControl({
   stableId,
 }: MapLayerVisibilityControlProps) {
-  const mapContext = useContext(MapContext);
+  const mapContext = useContext(LayerTreeContext);
+  const { manager } = useContext(MapManagerContext);
   const { t } = useTranslation("reports");
 
   // Get layer state and compute visibility, loading, and error
@@ -37,20 +38,19 @@ export default function MapLayerVisibilityControl({
     return { isVisible: visible, isLoading: loading, error: errorString };
   }, [stableId, mapContext?.layerStatesByTocStaticId]);
 
+  const handleToggle = useCallback(() => {
+    if (!manager || !stableId) return;
+    if (isVisible) {
+      manager.hideTocItems([stableId]);
+    } else {
+      manager.showTocItems([stableId]);
+    }
+  }, [manager, stableId, isVisible]);
+
   // Don't render if MapContext is not available or stableId is missing
-  if (!mapContext?.manager || !stableId) {
+  if (!manager || !stableId) {
     return null;
   }
-
-  const handleToggle = () => {
-    if (mapContext.manager) {
-      if (isVisible) {
-        mapContext.manager.hideTocItems([stableId]);
-      } else {
-        mapContext.manager.showTocItems([stableId]);
-      }
-    }
-  };
 
   return (
     <div className="flex items-center space-x-2 px-4 py-2 mt-2 -mx-4">
