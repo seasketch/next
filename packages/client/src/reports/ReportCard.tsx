@@ -16,6 +16,7 @@ import { useCardDependencies } from "./context/useCardDependencies";
 import { CardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { CalculationDetailsModal } from "./components/CalculationDetailsModal";
+require("../formElements/prosemirror-body.css");
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
