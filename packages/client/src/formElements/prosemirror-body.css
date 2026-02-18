@@ -313,6 +313,12 @@ div[attachments="forumAttachments"] {
   background: transparent;
 }
 
+@keyframes loadingSkeleton {
+  50% {
+    opacity: 0.4;
+  }
+}
+
 .ReportCard.loadingSkeleton [contenteditable="false"] {
   p,
   details {
@@ -325,7 +331,7 @@ div[attachments="forumAttachments"] {
       rgba(0, 0, 0, 0.02)
     );
     background-size: 400% 400%;
-    animation: pulse 2s ease-in-out infinite;
+    animation: loadingSkeleton 2s ease-in-out infinite;
 
     .ProseMirror__reactComponent {
       display: none;
@@ -362,7 +368,7 @@ div[attachments="forumAttachments"] {
       rgba(20, 0, 180, 0.04)
     );
     background-size: 400% 400%;
-    animation: pulse 2.6s ease-in-out infinite;
+    animation: loadingSkeleton 2s ease-in-out infinite;
   }
 }
 
