@@ -945,6 +945,7 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
+    'column_stats',
     'column_values',
     'raster_stats',
     'distance_to_shore'
@@ -2189,8 +2190,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    enable_report_builder boolean DEFAULT false,
     custom_doc_link text,
+    enable_report_builder boolean DEFAULT false,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     feature_flags jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -6084,106 +6085,6 @@ CREATE FUNCTION public.copy_data_library_template_item(template_id text, project
       else
         raise exception 'You do not have permission to copy this item';
       end if;
-    end;
-  $$;
-
-
---
--- Name: copy_report_output_to_published_table_of_contents_item(integer, integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.copy_report_output_to_published_table_of_contents_item(draft_toc_item_id integer, published_toc_item_id integer) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare
-      draft_output_url text;
-      published_output_url text;
-      draft_is_draft boolean;
-      published_is_draft boolean;
-      published_data_source_id int;
-    begin
-      -- Check draft item exists and is actually a draft
-      select t.is_draft into draft_is_draft from table_of_contents_items t where t.id = draft_toc_item_id;
-      if draft_is_draft is null then
-        raise exception 'The table of contents item with id % does not exist', draft_toc_item_id;
-      end if;
-      if draft_is_draft != true then
-        raise exception 'The table of contents item with id % is not a draft item', draft_toc_item_id;
-      end if;
-      
-      -- Check published item exists and is actually published
-      select t.is_draft into published_is_draft from table_of_contents_items t where t.id = published_toc_item_id;
-      if published_is_draft is null then
-        raise exception 'The table of contents item with id % does not exist', published_toc_item_id;
-      end if;
-      if published_is_draft != false then
-        raise exception 'The table of contents item with id % is not a published item', published_toc_item_id;
-      end if;
-      
-      -- Get the output URLs directly via SQL
-      -- select duo.url into draft_output_url
-      -- from data_upload_outputs duo
-      -- join data_layers dl on dl.data_source_id = duo.data_source_id
-      -- join table_of_contents_items toc on toc.data_layer_id = dl.id
-      -- where toc.id = draft_toc_item_id and is_reporting_type(duo.type)
-      -- limit 1;
-      
-      delete from data_upload_outputs where data_source_id = (
-        select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = published_toc_item_id) limit 1
-      ) and is_reporting_type(type);
-
-      
-      -- select duo.url into published_output_url
-      -- from data_upload_outputs duo
-      -- join data_layers dl on dl.data_source_id = duo.data_source_id
-      -- join table_of_contents_items toc on toc.data_layer_id = dl.id
-      -- where toc.id = published_toc_item_id and is_reporting_type(duo.type)
-      -- limit 1;
-      
-      -- -- Check if both outputs exist and are the same
-      -- if draft_output_url is not null and published_output_url is not null and draft_output_url = published_output_url then
-      --   raise notice 'The draft(%) and published(%) table of contents items have the same output. Skipping copy.', draft_toc_item_id, published_toc_item_id;
-      --   return;
-      -- end if;
-      
-      select data_source_id into published_data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = published_toc_item_id) limit 1;
-      if published_data_source_id is null then
-        raise exception 'The published table of contents item with id % does not have a data source', published_toc_item_id;
-      end if;
-      insert into data_upload_outputs (
-        data_source_id,
-        project_id,
-        type,
-        created_at,
-        url,
-        remote,
-        is_original,
-        size,
-        filename,
-        original_filename,
-        is_custom_upload,
-        fgb_header_size,
-        source_processing_job_key,
-        epsg
-      ) select
-        published_data_source_id,
-        project_id,
-        type,
-        created_at,
-        url,
-        remote,
-        is_original,
-        size,
-        filename,
-        original_filename,
-        is_custom_upload,
-        fgb_header_size,
-        source_processing_job_key,
-        epsg
-      from data_upload_outputs where data_source_id = (
-        select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where id = draft_toc_item_id) limit 1
-      ) and is_reporting_type(type) order by created_at desc limit 1;
-      raise notice 'Copied report output from draft table of contents item % to published table of contents item %', draft_toc_item_id, published_toc_item_id;
     end;
   $$;
 
@@ -10527,55 +10428,6 @@ CREATE FUNCTION public.extract_stable_ids_from_body(body jsonb) RETURNS text[]
 
 
 --
--- Name: extract_table_of_contents_item_ids_from_body(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.extract_table_of_contents_item_ids_from_body(body jsonb) RETURNS integer[]
-    LANGUAGE plpgsql IMMUTABLE
-    AS $$
-    declare
-      result integer[] := ARRAY[]::integer[];
-      node jsonb;
-      metrics jsonb;
-      metric jsonb;
-      toc_id integer;
-    begin
-      -- Handle null or invalid input
-      if body is null or jsonb_typeof(body) = 'null' then
-        return result;
-      end if;
-      
-      -- Check if this is a node with type "metric" or "blockMetric" that has attrs.metrics
-      if (body->>'type') in ('metric', 'blockMetric') and body->'attrs'->'metrics' is not null then
-        metrics := body->'attrs'->'metrics';
-        if jsonb_typeof(metrics) = 'array' then
-          -- Extract tableOfContentsItemId from each metric
-          for metric in select * from jsonb_array_elements(metrics)
-          loop
-            if metric->>'tableOfContentsItemId' is not null then
-              toc_id := (metric->>'tableOfContentsItemId')::integer;
-              if toc_id is not null then
-                result := array_append(result, toc_id);
-              end if;
-            end if;
-          end loop;
-        end if;
-      end if;
-      
-      -- Recursively process content array if it exists
-      if body->'content' is not null and jsonb_typeof(body->'content') = 'array' then
-        for node in select * from jsonb_array_elements(body->'content')
-        loop
-          result := result || extract_table_of_contents_item_ids_from_body(node);
-        end loop;
-      end if;
-      
-      return result;
-    end;
-  $$;
-
-
---
 -- Name: extract_title(text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11921,6 +11773,57 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
+
+
+--
+-- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  draft_tab_id integer;
+  draft_tab_position integer;
+  draft_card_position integer;
+  sketch_class_id integer;
+  published_report_id integer;
+  published_tab_id integer;
+  published_card_id integer;
+BEGIN
+  -- Gather draft card/tab positions and sketch_class
+  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
+  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
+  FROM public.report_cards rc
+  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
+  JOIN public.reports r ON r.id = rt.report_id
+  WHERE rc.id = draft_report_card_id;
+
+  -- Determine the published report id
+  SELECT sc.report_id
+  INTO published_report_id
+  FROM public.sketch_classes sc
+  WHERE sc.id = sketch_class_id;
+
+  IF published_report_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Match the tab by position in the published report
+  SELECT id
+  INTO published_tab_id
+  FROM public.report_tabs
+  WHERE report_id = published_report_id AND position = draft_tab_position;
+
+  -- Match the card by position within the matched tab
+  SELECT id
+  INTO published_card_id
+  FROM public.report_cards
+  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
+
+  RETURN published_card_id;
+END
+$$;
 
 
 --
@@ -20439,6 +20342,23 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
+-- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = stableId
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$;
+
+
+--
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22947,6 +22867,15 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
+-- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.original_source_id (
+    data_source_id integer
+);
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -23138,6 +23067,24 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
+);
+
+
+--
+-- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.published_toc_item_id (
+    id integer
+);
+
+
+--
+-- Name: referenced_stable_ids; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.referenced_stable_ids (
+    extract_stable_ids_from_body text[]
 );
 
 
@@ -25582,6 +25529,13 @@ CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR 
 
 
 --
+-- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
+
+
+--
 -- Name: invite_emails before_invite_emails_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -27804,12 +27758,6 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
--- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -29587,17 +29535,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -31101,13 +31049,6 @@ GRANT ALL ON FUNCTION public.copy_data_library_template_item(template_id text, p
 
 
 --
--- Name: FUNCTION copy_report_output_to_published_table_of_contents_item(draft_toc_item_id integer, published_toc_item_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.copy_report_output_to_published_table_of_contents_item(draft_toc_item_id integer, published_toc_item_id integer) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION create_bbox(geom public.geometry, sketch_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32417,14 +32358,6 @@ GRANT ALL ON FUNCTION public.extract_stable_ids_from_body(body jsonb) TO anon;
 
 
 --
--- Name: FUNCTION extract_table_of_contents_item_ids_from_body(body jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.extract_table_of_contents_item_ids_from_body(body jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.extract_table_of_contents_item_ids_from_body(body jsonb) TO anon;
-
-
---
 -- Name: FUNCTION extract_title(lang text, doc jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32674,7 +32607,6 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -33599,6 +33531,14 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
+
+
+--
+-- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -39574,6 +39514,13 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
 
 
 --
