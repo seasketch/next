@@ -122,6 +122,7 @@ export default function Dashboard() {
             <option value={ActivityStatsPeriod["24Hrs"]}>Last 24 hours</option>
             <option value={ActivityStatsPeriod["7Days"]}>Last 7 days</option>
             <option value={ActivityStatsPeriod["30Days"]}>Last 30 days</option>
+            <option value={ActivityStatsPeriod["1Year"]}>Last 365 days</option>
           </select>
         </span>
       </h2>
@@ -174,6 +175,8 @@ export default function Dashboard() {
             ? "24 hours"
             : period === ActivityStatsPeriod["7Days"]
             ? "7 days"
+            : period === ActivityStatsPeriod["1Year"]
+            ? "365 days"
             : "30 days"}
           .
         </span>
@@ -453,6 +456,10 @@ export function VisitorLineChart({
                 ? d3.utcHour.every(2)
                 : period === ActivityStatsPeriod["7Days"]
                 ? d3.utcDay.every(1)
+                :               period === ActivityStatsPeriod["1Year"] ||
+                  period === ActivityStatsPeriod["6Months"] ||
+                  period === ActivityStatsPeriod.AllTime
+                ? d3.utcMonth.every(1)
                 : d3.utcDay.every(3)
             )
           )
@@ -467,6 +474,13 @@ export function VisitorLineChart({
                   month: "short",
                   weekday: "short",
                   day: "numeric",
+                })
+              : period === ActivityStatsPeriod["1Year"] ||
+                period === ActivityStatsPeriod["6Months"] ||
+                period === ActivityStatsPeriod.AllTime
+              ? new Date(d as number).toLocaleDateString("en-US", {
+                  month: "short",
+                  year: "numeric",
                 })
               : new Date(d as number).toLocaleDateString("en-US", {
                   month: "short",

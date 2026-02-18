@@ -122,6 +122,9 @@ export default function ActivityDashboard() {
             <option value={ActivityStatsPeriod["30Days"]}>
               {t("Last 30 days")}
             </option>
+            <option value={ActivityStatsPeriod["1Year"]}>
+              {t("Last 365 days")}
+            </option>
           </select>
         </span>
       </h2>
