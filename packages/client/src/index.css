@@ -1204,19 +1204,11 @@ div[attachments="forumAttachments"] {
       -100deg,
       transparent,
       rgba(0, 0, 0, 0.02),
-      rgba(20, 0, 180, 0.04)
+      rgba(20, 0, 180, 0.04),
+      rgba(0, 0, 0, 0.02)
     );
     background-size: 400% 400%;
-    animation: pulse 1.3s ease-in-out infinite;
-    @keyframes pulse {
-      0% {
-        background-position: 0% 0%;
-      }
-
-      100% {
-        background-position: -155% 0%;
-      }
-    }
+    animation: pulse 2s ease-in-out infinite;
     .ProseMirror__reactComponent {
       display: none;
     }
@@ -1253,16 +1245,7 @@ div[attachments="forumAttachments"] {
       rgba(20, 0, 180, 0.04)
     );
     background-size: 400% 400%;
-    animation: pulse 1.3s ease-in-out infinite;
-    @keyframes pulse {
-      0% {
-        background-position: 0% 0%;
-      }
-
-      100% {
-        background-position: -255% 0%;
-      }
-    }
+    animation: pulse 2.6s ease-in-out infinite;
   }
 }
 
