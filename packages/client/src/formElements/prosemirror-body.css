@@ -314,8 +314,14 @@ div[attachments="forumAttachments"] {
 }
 
 @keyframes loadingSkeleton {
+  0% {
+    opacity: 1;
+  }
   50% {
     opacity: 0.4;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
@@ -324,10 +330,10 @@ div[attachments="forumAttachments"] {
   details {
     @apply text-transparent bg-black/5 rounded border-none shadow-none;
     background: linear-gradient(
-      -100deg,
+      -20deg,
       transparent,
       rgba(0, 0, 0, 0.02),
-      rgba(20, 0, 180, 0.04),
+      rgba(20, 0, 180, 0.05),
       rgba(0, 0, 0, 0.02)
     );
     background-size: 400% 400%;
@@ -362,10 +368,11 @@ div[attachments="forumAttachments"] {
     }
 
     background: linear-gradient(
-      -100deg,
+      -80deg,
       transparent,
       rgba(0, 0, 0, 0.02),
-      rgba(20, 0, 180, 0.04)
+      rgba(20, 0, 180, 0.05),
+      rgba(0, 0, 0, 0.02)
     );
     background-size: 400% 400%;
     animation: loadingSkeleton 2s ease-in-out infinite;
