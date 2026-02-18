@@ -122,7 +122,7 @@ export default function Dashboard() {
             <option value={ActivityStatsPeriod["24Hrs"]}>Last 24 hours</option>
             <option value={ActivityStatsPeriod["7Days"]}>Last 7 days</option>
             <option value={ActivityStatsPeriod["30Days"]}>Last 30 days</option>
-            <option value={ActivityStatsPeriod["1Year"]}>Last 365 days</option>
+            {/* <option value={ActivityStatsPeriod["1Year"]}>Last 365 days</option> */}
           </select>
         </span>
       </h2>
@@ -456,7 +456,7 @@ export function VisitorLineChart({
                 ? d3.utcHour.every(2)
                 : period === ActivityStatsPeriod["7Days"]
                 ? d3.utcDay.every(1)
-                :               period === ActivityStatsPeriod["1Year"] ||
+                : period === ActivityStatsPeriod["1Year"] ||
                   period === ActivityStatsPeriod["6Months"] ||
                   period === ActivityStatsPeriod.AllTime
                 ? d3.utcMonth.every(1)
