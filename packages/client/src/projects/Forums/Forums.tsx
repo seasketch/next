@@ -152,9 +152,9 @@ export default function Forums({
     },
   });
 
-  if (!data && loading) {
+  if (!data && loading && !hidden) {
     return (
-      <div className="pt-2 space-y-3">
+      <div className="p-8 space-y-3">
         <Skeleton className="w-1/2 h-5" />
         <Skeleton className="w-3/4 h-5" />
         <Skeleton className="w-1/2 h-5" />

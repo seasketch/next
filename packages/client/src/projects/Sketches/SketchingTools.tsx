@@ -305,7 +305,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
       >
         <div>
           {!data && loading && (
-            <div className="pt-2 space-y-2">
+            <div className="p-2 space-y-2">
               <Skeleton className="w-1/2 h-5" />
               <Skeleton className="w-2/3 h-5" />
               <Skeleton className="w-1/2 h-5" />
