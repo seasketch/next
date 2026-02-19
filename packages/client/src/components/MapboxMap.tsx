@@ -23,6 +23,8 @@ import clsx from "clsx";
 import * as Popover from "@radix-ui/react-popover";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import INaturalistProjectCallToAction from "../admin/data/INaturalistProjectCallToAction";
+import useDialog from "./useDialog";
+import { useGlobalErrorHandler } from "./GlobalErrorHandler";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -59,6 +61,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const [hiddenInatCtas, setHiddenInatCtas] = useState<Set<string>>(
     () => new Set()
   );
+  const onError = useGlobalErrorHandler();
+  const { alert } = useDialog();
 
   const interactive =
     props.interactive === undefined ? true : props.interactive;
@@ -149,6 +153,30 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             });
           } else {
             console.warn("cancelled map load");
+          }
+        })
+        .catch((e) => {
+          if (e.message.includes("Failed to initialize WebGL")) {
+            alert("Failed to initialize WebGL", {
+              description: (
+                // eslint-disable-next-line i18next/no-literal-string
+                <span>
+                  <Trans ns="map">
+                    Your browser reported that it is unable to initialize WebGL.
+                    Please visit the following link to troubleshoot the issue.{" "}
+                    <a
+                      className="text-primary-500 underline"
+                      href="https://webglreport.com/"
+                      target="_blank"
+                    >
+                      https://webglreport.com/
+                    </a>
+                  </Trans>
+                </span>
+              ),
+            });
+          } else {
+            onError(e);
           }
         });
       return () => {
