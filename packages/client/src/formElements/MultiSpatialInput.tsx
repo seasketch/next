@@ -692,7 +692,13 @@ function MultiSpatialInputInner(
                         }
                       }}
                     >
-                      {nameElementId ? feature.properties[nameElementId] : ""}
+                      {nameElementId
+                        ? feature.properties[nameElementId]
+                        : // eslint-disable-next-line i18next/no-literal-string
+                          `Feature ${
+                            props.value!.collection!.features.indexOf(feature) +
+                            1
+                          }`}
                     </button>
                   ))}
                 </div>
