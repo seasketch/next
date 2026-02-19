@@ -43,8 +43,11 @@ const MAX_CHUNK_MS = 90 * 24 * 60 * 60 * 1000;
  * Splits a time range into chunks of ≤90 days to stay within
  * Cloudflare's ~93-day max query duration.
  */
-export function getTimeChunks(period: UserActivityPeriod): { start: Date; end: Date }[] {
-  const { start, end } = getTimeRange(period);
+export function getTimeChunks(
+  period: UserActivityPeriod,
+  range?: { start: Date; end: Date }
+): { start: Date; end: Date }[] {
+  const { start, end } = range ?? getTimeRange(period);
   const totalMs = end.getTime() - start.getTime();
   if (totalMs <= MAX_CHUNK_MS) {
     return [{ start, end }];
@@ -79,13 +82,16 @@ export function getIntervalMs(period: UserActivityPeriod): number {
 /**
  * Fills gaps in a time series so every expected interval has an entry.
  * Cloudflare omits intervals with zero activity.
+ * Accepts an explicit time range to stay consistent with the range used
+ * for the Cloudflare query (avoids drift from calling getTimeRange twice).
  */
 export function fillTimeSeriesGaps<T>(
   points: { timestamp: string; [key: string]: any }[],
   period: UserActivityPeriod,
-  makeZero: (isoTimestamp: string) => T
+  makeZero: (isoTimestamp: string) => T,
+  range?: { start: Date; end: Date }
 ): T[] {
-  const { start, end } = getTimeRange(period);
+  const { start, end } = range ?? getTimeRange(period);
   const intervalMs = getIntervalMs(period);
   const isDaily = intervalMs === ONE_DAY_MS;
 

@@ -3,6 +3,7 @@ import {
   buildRumFilter,
   fillTimeSeriesGaps,
   getTimeChunks,
+  getTimeRange,
   gql,
   UserActivityPeriod,
 } from "./client";
@@ -92,7 +93,8 @@ function queryForPeriod(period: UserActivityPeriod) {
 }
 
 export async function fetchVisitors(period: UserActivityPeriod, slug?: string) {
-  const chunks = getTimeChunks(period);
+  const range = getTimeRange(period);
+  const chunks = getTimeChunks(period, range);
   const query = queryForPeriod(period);
 
   const responses = await Promise.all(
@@ -116,5 +118,5 @@ export async function fetchVisitors(period: UserActivityPeriod, slug?: string) {
   return fillTimeSeriesGaps(sparse, period, (ts) => ({
     timestamp: ts,
     count: 0,
-  }));
+  }), range);
 }

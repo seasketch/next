@@ -2,6 +2,7 @@ import {
   cloudflareClient,
   buildRumFilter,
   getTimeChunks,
+  getTimeRange,
   gql,
   UserActivityPeriod,
 } from "./client";
@@ -136,7 +137,8 @@ export async function fetchVisitorMetrics(
   period: UserActivityPeriod,
   slug?: string
 ) {
-  const chunks = getTimeChunks(period);
+  const range = getTimeRange(period);
+  const chunks = getTimeChunks(period, range);
 
   const responses = await Promise.all(
     chunks.map((chunk) =>

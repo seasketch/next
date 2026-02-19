@@ -68,10 +68,10 @@ export async function fetchMapDataRequests(
     return [];
   }
 
-  const { start, end } = getTimeRange(period);
+  const range = getTimeRange(period);
   const query = period === "H24" ? MAP_REQUESTS_15M : MAP_REQUESTS_HOURLY;
 
-  const filter = buildMapDataFilter(start, end, slug);
+  const filter = buildMapDataFilter(range.start, range.end, slug);
   const response = await cloudflareClient.request<HttpRequestsResponse>(
     query,
     {
@@ -111,5 +111,5 @@ export async function fetchMapDataRequests(
     timestamp: ts,
     count: 0,
     cacheHitRatio: 0,
-  }));
+  }), range);
 }
