@@ -1,31 +1,10 @@
-query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
+query ProjectDashboard(
+  $slug: String!
+  $period: ActivityStatsPeriod = _7_DAYS
+  $activityPeriod: UserActivityPeriod = D7
+) {
   projectBySlug(slug: $slug) {
     id
-    activity(period: $period) {
-      dataSources
-      sketches
-      surveyResponses
-      uploadedLayers
-      uploadsStorageUsed
-      forumPosts
-      registeredUsers
-    }
-    visitors(period: $period) {
-      count
-      timestamp
-    }
-    visitorMetrics(period: $period) {
-      topOperatingSystems
-      topReferrers
-      topBrowsers
-      topCountries
-      topDeviceTypes
-    }
-    mapDataRequests(period: $period) {
-      count
-      timestamp
-      cacheHitRatio
-    }
     mostUsedLayers(period: $period) {
       id
       title
@@ -33,6 +12,39 @@ query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
       dataLayer {
         id
         dataSourceId
+      }
+    }
+  }
+  userActivityStats(period: $activityPeriod, slug: $slug) {
+    visitors {
+      timestamp
+      count
+    }
+    mapDataRequests {
+      timestamp
+      count
+      cacheHitRatio
+    }
+    visitorMetrics {
+      topReferrers {
+        label
+        count
+      }
+      topCountries {
+        label
+        count
+      }
+      topBrowsers {
+        label
+        count
+      }
+      topOperatingSystems {
+        label
+        count
+      }
+      topDeviceTypes {
+        label
+        count
       }
     }
   }

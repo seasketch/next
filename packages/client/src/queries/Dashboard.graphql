@@ -1,15 +1,7 @@
-query DashboardStats($period: ActivityStatsPeriod) {
-  dashboardStats {
-    dataSources
-    forumPosts
-    uploads
-    uploadedBytes
-    projects
-    users
-    sketches
-    forumPosts
-    surveyResponses
-  }
+query DashboardStats(
+  $period: ActivityStatsPeriod
+  $activityPeriod: UserActivityPeriod!
+) {
   activeProjects(limit: 20, period: $period) {
     id
     name
@@ -33,20 +25,37 @@ query DashboardStats($period: ActivityStatsPeriod) {
       newUploadedLayers
     }
   }
-  visitorMetrics(period: $period) {
-    topOperatingSystems
-    topReferrers
-    topBrowsers
-    topCountries
-    topDeviceTypes
-  }
-  visitors(period: $period) {
-    count
-    timestamp
-  }
-  mapDataRequests(period: $period) {
-    count
-    timestamp
-    cacheHitRatio
+  userActivityStats(period: $activityPeriod) {
+    visitors {
+      timestamp
+      count
+    }
+    mapDataRequests {
+      timestamp
+      count
+      cacheHitRatio
+    }
+    visitorMetrics {
+      topReferrers {
+        label
+        count
+      }
+      topCountries {
+        label
+        count
+      }
+      topBrowsers {
+        label
+        count
+      }
+      topOperatingSystems {
+        label
+        count
+      }
+      topDeviceTypes {
+        label
+        count
+      }
+    }
   }
 }

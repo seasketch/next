@@ -1,0 +1,13 @@
+query ProjectDashboardBannerStats($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    activity {
+      registeredUsers
+      sketches
+      forumPosts
+      surveyResponses
+      uploadedLayers
+      uploadsStorageUsed
+    }
+  }
+}

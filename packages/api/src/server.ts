@@ -62,7 +62,7 @@ if (process.env.SENTRY_DSN) {
   app.use(
     Sentry.Handlers.requestHandler({
       user: false,
-    }) as express.RequestHandler
+    }) as express.RequestHandler,
   );
 
   // TracingHandler creates a trace for every incoming request
@@ -90,7 +90,7 @@ app.use(
     ],
     exposedHeaders: ["ETag"],
     maxAge: 600,
-  })
+  }),
 );
 
 // for accurate setting of req.ip
@@ -108,7 +108,7 @@ app.get("/auth_config.json", (req, res) => {
       domain: process.env.AUTH0_DOMAIN,
       clientId: process.env.AUTH0_CLIENT_ID,
       audience: process.env.JWT_AUD,
-    })
+    }),
   );
 });
 
@@ -146,7 +146,7 @@ app.use(
     err: Error,
     req: express.Request,
     res: express.Response,
-    next: (err: Error | null) => void
+    next: (err: Error | null) => void,
   ) {
     console.error(err);
     // Needed to allow requests to proceed with invalid (e.g. expired) tokens.
@@ -154,7 +154,7 @@ app.use(
     // @ts-ignore
     if (err.code === "invalid_token") return next();
     return next(err);
-  }
+  },
 );
 
 app.use(function (req: SSNRequest, res, next) {
@@ -183,7 +183,7 @@ app.use(
   graphqlUploadExpress({
     maxFiles: 2,
     maxFileSize: bytes("5GB"),
-  })
+  }),
 );
 
 app.use(function (req, res, next) {
@@ -218,10 +218,10 @@ const jobStatusPropsToUpdate: JobStatusUpdateConfig[] = [
 async function updateMatchingTables(
   job: Job,
   status: "queued" | "started" | "finished" | "error" | "failed",
-  pool: Pool
+  pool: Pool,
 ) {
   const configs = jobStatusPropsToUpdate.filter(
-    (c) => c.task_identifier === job.task_identifier
+    (c) => c.task_identifier === job.task_identifier,
   );
   if (job.payload && "id" in (job.payload as any)) {
     for (const { table, column } of configs) {
@@ -230,7 +230,7 @@ async function updateMatchingTables(
       // related error events don't clobber that status.
       await pool.query(
         `update ${table} set ${column} = $2 where id = $1 and (${column} != 'failed'::worker_job_status or $2 != 'error'::worker_job_status)`,
-        [(job.payload as any).id, status]
+        [(job.payload as any).id, status],
       );
     }
   }
@@ -251,11 +251,6 @@ run({
   * * * * * cleanupProjectBackgroundJobs
   * * * * * cleanupDeletedOverlayRecords
   * * * * * collectActivityStats
-  */2 * * * * collectVisitorStats
-  */3 * * * * identifyVisitedProjects
-  */2 * * * * collectMapDataRequestCounts
-  */3 * * * * identifyProjectsWithDataRequests
-  */5 * * * * rollupDataSourceRequests
   * * * * * deleteExpiredArchivedDataSources
   0 */6 * * * updateCRWTemplate
   * 1 * * * refreshGmapsApiSession
@@ -368,7 +363,7 @@ app.use(
     } finally {
       client.release();
     }
-  }
+  },
 );
 
 app.use(
@@ -419,7 +414,7 @@ app.use(
         `
           SELECT sketch_or_collection_as_geojson($1)
           `,
-        [id]
+        [id],
       );
       const geojson = rows[0].sketch_or_collection_as_geojson || null;
       if (geojson === null) {
@@ -428,7 +423,7 @@ app.use(
           .send(
             `Sketch with id ${id} not found. It either does not exists or is not shared with "${
               claims?.canonicalEmail || `anon`
-            }"`
+            }"`,
           );
         return;
       }
@@ -436,7 +431,7 @@ app.use(
       const name = geojson?.properties?.name || `Sketch-${id}`;
       res.setHeader(
         "Content-Disposition",
-        `attachment; filename=${slugify(name)}.geojson.json`
+        `attachment; filename=${slugify(name)}.geojson.json`,
       );
       if (
         (req.query && req.query.timestamp) ||
@@ -458,7 +453,7 @@ app.use(
       client.query("COMMIT");
       client.release();
     }
-  }
+  },
 );
 
 app.use(
@@ -505,14 +500,14 @@ app.use(
         `
         SELECT bookmark_data($1) as bookmark
           `,
-        [id]
+        [id],
       );
       const bookmark = rows[0].bookmark || null;
       const { rows: spriteRows } = await client.query(
         `
         SELECT get_sprite_data_for_screenshot(map_bookmarks.*) as sprite_images from map_bookmarks where id = $1
           `,
-        [id]
+        [id],
       );
       const spriteImages = spriteRows[0].sprite_images;
       await client.query("COMMIT");
@@ -529,7 +524,7 @@ app.use(
       res.status(500).send(`Problem generating bookmark.\n${e.toString()}`);
       return;
     }
-  }
+  },
 );
 
 app.use(
@@ -541,7 +536,7 @@ app.use(
     let { id, element_id, format } = req.params;
     if (!id || !element_id || !format) {
       throw new Error(
-        "Invalid request. id, element_id and format parameters required"
+        "Invalid request. id, element_id and format parameters required",
       );
     }
     try {
@@ -550,7 +545,7 @@ app.use(
       const collection = await getFeatureCollection(
         parseInt(req.params.id),
         parseInt(req.params.element_id),
-        pool
+        pool,
       );
       await pool.query("COMMIT");
 
@@ -564,14 +559,14 @@ app.use(
         res.send(JSON.stringify(collection));
       } else {
         throw new Error(
-          `Format was ${format}. Only GeoJSON is currently supported`
+          `Format was ${format}. Only GeoJSON is currently supported`,
         );
       }
     } catch (e: any) {
       res.status(500);
       res.send(e.toString());
     }
-  }
+  },
 );
 
 app.use("/projects.geojson.json", async function (req, res, next) {
@@ -621,7 +616,7 @@ app.use("/sitemap.xml", async function (req, res, next) {
           is_draft = false
       )
       ORDER BY name
-    `
+    `,
     );
     const projects = rows;
     res.header("Content-Type", "text/xml");
@@ -649,14 +644,14 @@ app.use("/sitemap.xml", async function (req, res, next) {
             (project: { slug: string; about_page_enabled: boolean }) => `
             <url>
               <loc>https://${process.env.CLIENT_DOMAIN}/${project.slug}/app${
-              project.about_page_enabled ? "/about" : ""
-            }</loc>
+                project.about_page_enabled ? "/about" : ""
+              }</loc>
             </url>
-          `
+          `,
           )
           .join("\n")}
       </urlset>
-    `
+    `,
     );
     client.release();
     res.end();
@@ -685,7 +680,7 @@ app.use(
         adminPool: loadersPool,
       };
     },
-  }) as express.RequestHandler
+  }) as express.RequestHandler,
 );
 
 // The error handler must be before any other error middleware and after all controllers
@@ -698,13 +693,13 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
         key: fs.readFileSync(process.env.SSL_KEY_FILE),
         cert: fs.readFileSync(process.env.SSL_CRT_FILE),
       },
-      app
+      app,
     )
     .listen(3857, function () {
       console.log(
         `SeaSketch server running on https://0.0.0.0:${
           process.env.PORT || 3857
-        }/graphiql`
+        }/graphiql`,
       );
     });
 } else {
@@ -712,7 +707,7 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
     console.log(
       `SeaSketch server running on http://localhost:${
         process.env.PORT || 3857
-      }/graphiql`
+      }/graphiql`,
     );
   });
 }
@@ -723,22 +718,21 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
   // Start the overlay engine worker message consumer if the SQS queue URL is configured
   if (process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL) {
     try {
-      const { startOverlayEngineWorkerMessageConsumer } = await import(
-        "./overlayEngine/messageQueueConsumer"
-      );
+      const { startOverlayEngineWorkerMessageConsumer } =
+        await import("./overlayEngine/messageQueueConsumer");
       startOverlayEngineWorkerMessageConsumer(loadersPool);
       console.log(
-        "Overlay engine worker message consumer started successfully"
+        "Overlay engine worker message consumer started successfully",
       );
     } catch (error) {
       console.error(
         "Failed to start overlay engine worker message consumer:",
-        error
+        error,
       );
     }
   } else {
     console.log(
-      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL not set, skipping message consumer startup"
+      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL not set, skipping message consumer startup",
     );
   }
 })();

@@ -1,51 +1,50 @@
 import { Trans, useTranslation } from "react-i18next";
 import {
-  ActivityStatsPeriod,
+  useProjectDashboardBannerStatsQuery,
   useProjectDashboardQuery,
 } from "../../generated/graphql";
-import { useMemo } from "react";
 import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import bgBlur from "../../bg-blur.jpg";
-import { StatItem, VisitorLineChart, VisitorMetrics } from "../../Dashboard";
+import {
+  DashboardPeriod,
+  StatItem,
+  UserActivitySection,
+  toActivityStatsPeriod,
+  toUserActivityPeriod,
+} from "../../Dashboard";
 import bytes from "bytes";
 import { useLocalStorage } from "beautiful-react-hooks";
-import Badge from "../../components/Badge";
 import useIsSuperuser from "../../useIsSuperuser";
 
 export default function ActivityDashboard() {
   const { t } = useTranslation("admin:activity");
-  const [period, setPeriod] = useLocalStorage<ActivityStatsPeriod>(
-    `activityStatsPeriod-${getSlug()}`,
-    ActivityStatsPeriod["7Days"]
+  const slug = getSlug();
+  const [period, setPeriod] = useLocalStorage<DashboardPeriod>(
+    `activityStatsPeriod-${slug}`,
+    "7d"
   );
   const onError = useGlobalErrorHandler();
+  const periodValue: DashboardPeriod = (period ?? "7d") as DashboardPeriod;
   const { data, loading, error } = useProjectDashboardQuery({
     variables: {
-      period,
-      slug: getSlug(),
+      slug,
+      period: toActivityStatsPeriod(periodValue),
+      activityPeriod: toUserActivityPeriod(periodValue),
     },
     onError,
+    skip: !slug,
+  });
+  const { data: bannerData } = useProjectDashboardBannerStatsQuery({
+    variables: { slug },
+    skip: !slug,
   });
   const isSuperUser = useIsSuperuser();
 
-  const totalVisitors = useMemo(() => {
-    return data?.projectBySlug?.visitors?.reduce((acc, v) => acc + v.count, 0);
-  }, [data?.projectBySlug?.visitors]);
-  const totalMapDataRequests = useMemo(() => {
-    return data?.projectBySlug?.mapDataRequests?.reduce(
-      (acc, v) => acc + v.count,
-      0
-    );
-  }, [data?.projectBySlug?.mapDataRequests]);
+  const activity = bannerData?.projectBySlug?.activity;
 
   if (error) {
     return <div>Error: {error.message}</div>;
-  }
-
-  const activity = data?.projectBySlug?.activity;
-  if (!activity) {
-    return null;
   }
 
   const mostUsedLayers = [...(data?.projectBySlug?.mostUsedLayers || [])];
@@ -71,9 +70,7 @@ export default function ActivityDashboard() {
         <StatItem
           className="md:rounded-none md:rounded-l "
           label={t("Participants")}
-          value={(
-            data?.projectBySlug?.activity?.registeredUsers || 0
-          ).toLocaleString()}
+          value={(activity?.registeredUsers || 0).toLocaleString()}
         />
         <StatItem
           label={t("Sketches")}
@@ -85,92 +82,27 @@ export default function ActivityDashboard() {
         />
         <StatItem
           label={t("Survey Responses")}
-          value={(activity.surveyResponses || 0).toLocaleString()}
+          value={(activity?.surveyResponses || 0).toLocaleString()}
         />
         <StatItem
           label={t("Data Uploads")}
-          value={(activity.uploadedLayers || 0).toLocaleString()}
+          value={(activity?.uploadedLayers || 0).toLocaleString()}
         />
         <StatItem
           className="md:rounded-r md:border-r"
           label={t("Layers Stored")}
-          value={bytes(parseInt(activity.uploadsStorageUsed || "0"))}
+          value={bytes(parseInt(activity?.uploadsStorageUsed || "0"))}
         />
       </div>
-      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
-        <span className="">
-          {totalVisitors?.toLocaleString()} {t("Total Visitors")}
-        </span>
-        <span className="">
-          {totalMapDataRequests?.toLocaleString()} {t("Hosted Layer Requests")}
-        </span>
-        <span className="text-gray-500 italic hidden md:visible">
-          {t("Updated every 5 minutes.")}
-        </span>
-        <span className="flex-1 text-right">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
-            className="ml-auto py-1 text-sm rounded"
-          >
-            <option value={ActivityStatsPeriod["24Hrs"]}>
-              {t("Last 24 hours")}
-            </option>
-            <option value={ActivityStatsPeriod["7Days"]}>
-              {t("Last 7 days")}
-            </option>
-            <option value={ActivityStatsPeriod["30Days"]}>
-              {t("Last 30 days")}
-            </option>
-            {/* <option value={ActivityStatsPeriod["1Year"]}>
-              {t("Last 365 days")}
-            </option> */}
-          </select>
-        </span>
-      </h2>
-      {data?.projectBySlug?.visitors && (
-        <VisitorLineChart
-          period={period}
-          data={data?.projectBySlug?.visitors.map((d) => ({
-            timestamp: new Date(d.timestamp),
-            count: d.count,
-          }))}
-          mapDataRequests={(data?.projectBySlug?.mapDataRequests || []).map(
-            (d) => ({
-              timestamp: new Date(d.timestamp),
-              count: d.count,
-              cacheRatio: d.cacheHitRatio,
-            })
-          )}
-        />
-      )}
-      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
-        <span className="flex-1">{t("Visitor Metrics")}</span>
-      </h2>
-      <div className="md:flex w-full">
-        <VisitorMetrics
-          label={t("Countries")}
-          data={data?.projectBySlug?.visitorMetrics?.[0]?.topCountries}
-        />
-        <VisitorMetrics
-          label={t("Referrers")}
-          data={data?.projectBySlug?.visitorMetrics?.[0]?.topReferrers}
-        />
-        <VisitorMetrics
-          label={t("Browsers")}
-          data={data?.projectBySlug?.visitorMetrics?.[0]?.topBrowsers}
-        />
-      </div>
-      <div className="md:flex">
-        <VisitorMetrics
-          label={t("Operating Systems")}
-          data={data?.projectBySlug?.visitorMetrics?.[0]?.topOperatingSystems}
-        />
-        <VisitorMetrics
-          label={t("Device Types")}
-          data={data?.projectBySlug?.visitorMetrics?.[0]?.topDeviceTypes}
-        />
-      </div>
+      <UserActivitySection
+        period={periodValue}
+        onPeriodChange={setPeriod}
+        loading={loading}
+        visitors={data?.userActivityStats?.visitors as any}
+        mapDataRequests={data?.userActivityStats?.mapDataRequests as any}
+        visitorMetrics={data?.userActivityStats?.visitorMetrics as any}
+        slug={slug}
+      />
       {isSuperUser === true && (
         <>
           <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">

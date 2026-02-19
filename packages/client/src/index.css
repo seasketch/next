@@ -10626,6 +10626,11 @@ select{
   padding-bottom:3px
 }
 
+.px-12{
+  padding-left:3rem;
+  padding-right:3rem
+}
+
 .\!pl-0{
   padding-left:0px !important
 }
@@ -13593,6 +13598,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:opacity-50:disabled{
   opacity:0.5
+}
+
+.disabled\:opacity-40:disabled{
+  opacity:0.4
 }
 
 .group:hover .group-hover\:block{

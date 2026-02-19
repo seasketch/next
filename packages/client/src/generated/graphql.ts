@@ -7198,6 +7198,12 @@ export type JoinProjectPayload = {
   query?: Maybe<Query>;
 };
 
+export type LabelCount = {
+  __typename?: 'LabelCount';
+  count: Scalars['Int'];
+  label: Scalars['String'];
+};
+
 /** All input for the `labelForFormElementValue` mutation. */
 export type LabelForFormElementValueInput = {
   attrValue?: Maybe<Scalars['JSON']>;
@@ -7480,6 +7486,13 @@ export type MapDataRequest = Node & {
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   timestamp: Scalars['Datetime'];
+};
+
+export type MapDataRequestDataPoint = {
+  __typename?: 'MapDataRequestDataPoint';
+  cacheHitRatio: Scalars['Float'];
+  count: Scalars['Int'];
+  timestamp: Scalars['String'];
 };
 
 /** All input for the `markTopicAsRead` mutation. */
@@ -12165,6 +12178,7 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `Topic`. */
   topicsConnection?: Maybe<TopicsConnection>;
   user?: Maybe<User>;
+  userActivityStats: UserActivityStats;
   /** Reads a single `User` using its globally unique `ID`. */
   userByNodeId?: Maybe<User>;
   /**
@@ -13356,6 +13370,13 @@ export type QueryTopicsConnectionArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryUserArgs = {
   id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryUserActivityStatsArgs = {
+  period: UserActivityPeriod;
+  slug?: Maybe<Scalars['String']>;
 };
 
 
@@ -18215,6 +18236,30 @@ export type UserParticipationStatusArgs = {
   projectId?: Maybe<Scalars['Int']>;
 };
 
+export enum UserActivityPeriod {
+  D180 = 'D180',
+  D30 = 'D30',
+  D7 = 'D7',
+  D90 = 'D90',
+  H24 = 'H24'
+}
+
+export type UserActivityStats = {
+  __typename?: 'UserActivityStats';
+  mapDataRequests: Array<MapDataRequestDataPoint>;
+  visitorMetrics: UserActivityVisitorMetrics;
+  visitors: Array<VisitorDataPoint>;
+};
+
+export type UserActivityVisitorMetrics = {
+  __typename?: 'UserActivityVisitorMetrics';
+  topBrowsers: Array<LabelCount>;
+  topCountries: Array<LabelCount>;
+  topDeviceTypes: Array<LabelCount>;
+  topOperatingSystems: Array<LabelCount>;
+  topReferrers: Array<LabelCount>;
+};
+
 /** A connection to a list of `User` values. */
 export type UsersConnection = {
   __typename?: 'UsersConnection';
@@ -18257,6 +18302,12 @@ export type Visitor = {
 export type VisitorCondition = {
   /** Checks for equality with the object’s `interval` field. */
   interval?: Maybe<IntervalInput>;
+};
+
+export type VisitorDataPoint = {
+  __typename?: 'VisitorDataPoint';
+  count: Scalars['Int'];
+  timestamp: Scalars['String'];
 };
 
 export type VisitorMetric = Node & {
@@ -19442,31 +19493,58 @@ export type VerifyEmailMutation = (
 
 export type DashboardStatsQueryVariables = Exact<{
   period?: Maybe<ActivityStatsPeriod>;
+  activityPeriod: UserActivityPeriod;
 }>;
 
 
 export type DashboardStatsQuery = (
   { __typename?: 'Query' }
-  & { dashboardStats?: Maybe<(
-    { __typename?: 'DashboardStat' }
-    & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches' | 'surveyResponses'>
-  )>, activeProjects?: Maybe<Array<(
+  & { activeProjects?: Maybe<Array<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'name' | 'url' | 'logoUrl' | 'isAdmin'>
     & { activity?: Maybe<(
       { __typename?: 'ProjectActivityStat' }
       & Pick<ProjectActivityStat, 'registeredUsers' | 'sketches' | 'forumPosts' | 'dataSources' | 'uploadedLayers' | 'surveyResponses' | 'uploadsStorageUsed' | 'newUsers' | 'newSketches' | 'newForumPosts' | 'newDataSources' | 'newUploadedBytes' | 'newSurveyResponses' | 'newUploadedLayers'>
     )> }
-  )>>, visitorMetrics?: Maybe<Array<(
-    { __typename?: 'VisitorMetric' }
-    & Pick<VisitorMetric, 'topOperatingSystems' | 'topReferrers' | 'topBrowsers' | 'topCountries' | 'topDeviceTypes'>
-  )>>, visitors?: Maybe<Array<(
-    { __typename?: 'Visitor' }
-    & Pick<Visitor, 'count' | 'timestamp'>
-  )>>, mapDataRequests?: Maybe<Array<(
-    { __typename?: 'MapDataRequest' }
-    & Pick<MapDataRequest, 'count' | 'timestamp' | 'cacheHitRatio'>
-  )>> }
+  )>>, userActivityStats: (
+    { __typename?: 'UserActivityStats' }
+    & { visitors: Array<(
+      { __typename?: 'VisitorDataPoint' }
+      & Pick<VisitorDataPoint, 'timestamp' | 'count'>
+    )>, mapDataRequests: Array<(
+      { __typename?: 'MapDataRequestDataPoint' }
+      & Pick<MapDataRequestDataPoint, 'timestamp' | 'count' | 'cacheHitRatio'>
+    )>, visitorMetrics: (
+      { __typename?: 'UserActivityVisitorMetrics' }
+      & { topReferrers: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topCountries: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topBrowsers: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topOperatingSystems: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topDeviceTypes: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )> }
+    ) }
+  ) }
+);
+
+export type DashboardBannerStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DashboardBannerStatsQuery = (
+  { __typename?: 'Query' }
+  & { dashboardStats?: Maybe<(
+    { __typename?: 'DashboardStat' }
+    & Pick<DashboardStat, 'dataSources' | 'forumPosts' | 'uploads' | 'uploadedBytes' | 'projects' | 'users' | 'sketches' | 'surveyResponses'>
+  )> }
 );
 
 export type DataUploadDetailsFragment = (
@@ -21949,7 +22027,8 @@ export type UpdateEnableReportBuilderMutation = (
 
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
-  period: ActivityStatsPeriod;
+  period?: Maybe<ActivityStatsPeriod>;
+  activityPeriod?: Maybe<UserActivityPeriod>;
 }>;
 
 
@@ -21958,19 +22037,7 @@ export type ProjectDashboardQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { activity?: Maybe<(
-      { __typename?: 'ProjectActivityStat' }
-      & Pick<ProjectActivityStat, 'dataSources' | 'sketches' | 'surveyResponses' | 'uploadedLayers' | 'uploadsStorageUsed' | 'forumPosts' | 'registeredUsers'>
-    )>, visitors?: Maybe<Array<(
-      { __typename?: 'Visitor' }
-      & Pick<Visitor, 'count' | 'timestamp'>
-    )>>, visitorMetrics?: Maybe<Array<(
-      { __typename?: 'ProjectVisitorMetric' }
-      & Pick<ProjectVisitorMetric, 'topOperatingSystems' | 'topReferrers' | 'topBrowsers' | 'topCountries' | 'topDeviceTypes'>
-    )>>, mapDataRequests?: Maybe<Array<(
-      { __typename?: 'ProjectMapDataRequest' }
-      & Pick<ProjectMapDataRequest, 'count' | 'timestamp' | 'cacheHitRatio'>
-    )>>, mostUsedLayers?: Maybe<Array<(
+    & { mostUsedLayers?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'totalRequests'>
       & { dataLayer?: Maybe<(
@@ -21978,6 +22045,50 @@ export type ProjectDashboardQuery = (
         & Pick<DataLayer, 'id' | 'dataSourceId'>
       )> }
     )>> }
+  )>, userActivityStats: (
+    { __typename?: 'UserActivityStats' }
+    & { visitors: Array<(
+      { __typename?: 'VisitorDataPoint' }
+      & Pick<VisitorDataPoint, 'timestamp' | 'count'>
+    )>, mapDataRequests: Array<(
+      { __typename?: 'MapDataRequestDataPoint' }
+      & Pick<MapDataRequestDataPoint, 'timestamp' | 'count' | 'cacheHitRatio'>
+    )>, visitorMetrics: (
+      { __typename?: 'UserActivityVisitorMetrics' }
+      & { topReferrers: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topCountries: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topBrowsers: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topOperatingSystems: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )>, topDeviceTypes: Array<(
+        { __typename?: 'LabelCount' }
+        & Pick<LabelCount, 'label' | 'count'>
+      )> }
+    ) }
+  ) }
+);
+
+export type ProjectDashboardBannerStatsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectDashboardBannerStatsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { activity?: Maybe<(
+      { __typename?: 'ProjectActivityStat' }
+      & Pick<ProjectActivityStat, 'registeredUsers' | 'sketches' | 'forumPosts' | 'surveyResponses' | 'uploadedLayers' | 'uploadsStorageUsed'>
+    )> }
   )> }
 );
 
@@ -29296,18 +29407,7 @@ export type VerifyEmailMutationHookResult = ReturnType<typeof useVerifyEmailMuta
 export type VerifyEmailMutationResult = Apollo.MutationResult<VerifyEmailMutation>;
 export type VerifyEmailMutationOptions = Apollo.BaseMutationOptions<VerifyEmailMutation, VerifyEmailMutationVariables>;
 export const DashboardStatsDocument = gql`
-    query DashboardStats($period: ActivityStatsPeriod) {
-  dashboardStats {
-    dataSources
-    forumPosts
-    uploads
-    uploadedBytes
-    projects
-    users
-    sketches
-    forumPosts
-    surveyResponses
-  }
+    query DashboardStats($period: ActivityStatsPeriod, $activityPeriod: UserActivityPeriod!) {
   activeProjects(limit: 20, period: $period) {
     id
     name
@@ -29331,21 +29431,38 @@ export const DashboardStatsDocument = gql`
       newUploadedLayers
     }
   }
-  visitorMetrics(period: $period) {
-    topOperatingSystems
-    topReferrers
-    topBrowsers
-    topCountries
-    topDeviceTypes
-  }
-  visitors(period: $period) {
-    count
-    timestamp
-  }
-  mapDataRequests(period: $period) {
-    count
-    timestamp
-    cacheHitRatio
+  userActivityStats(period: $activityPeriod) {
+    visitors {
+      timestamp
+      count
+    }
+    mapDataRequests {
+      timestamp
+      count
+      cacheHitRatio
+    }
+    visitorMetrics {
+      topReferrers {
+        label
+        count
+      }
+      topCountries {
+        label
+        count
+      }
+      topBrowsers {
+        label
+        count
+      }
+      topOperatingSystems {
+        label
+        count
+      }
+      topDeviceTypes {
+        label
+        count
+      }
+    }
   }
 }
     `;
@@ -29363,10 +29480,11 @@ export const DashboardStatsDocument = gql`
  * const { data, loading, error } = useDashboardStatsQuery({
  *   variables: {
  *      period: // value for 'period'
+ *      activityPeriod: // value for 'activityPeriod'
  *   },
  * });
  */
-export function useDashboardStatsQuery(baseOptions?: Apollo.QueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
+export function useDashboardStatsQuery(baseOptions: Apollo.QueryHookOptions<DashboardStatsQuery, DashboardStatsQueryVariables>) {
         const options = {...defaultOptions, ...baseOptions}
         return Apollo.useQuery<DashboardStatsQuery, DashboardStatsQueryVariables>(DashboardStatsDocument, options);
       }
@@ -29377,6 +29495,47 @@ export function useDashboardStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type DashboardStatsQueryHookResult = ReturnType<typeof useDashboardStatsQuery>;
 export type DashboardStatsLazyQueryHookResult = ReturnType<typeof useDashboardStatsLazyQuery>;
 export type DashboardStatsQueryResult = Apollo.QueryResult<DashboardStatsQuery, DashboardStatsQueryVariables>;
+export const DashboardBannerStatsDocument = gql`
+    query DashboardBannerStats {
+  dashboardStats {
+    dataSources
+    forumPosts
+    uploads
+    uploadedBytes
+    projects
+    users
+    sketches
+    surveyResponses
+  }
+}
+    `;
+
+/**
+ * __useDashboardBannerStatsQuery__
+ *
+ * To run a query within a React component, call `useDashboardBannerStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDashboardBannerStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDashboardBannerStatsQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDashboardBannerStatsQuery(baseOptions?: Apollo.QueryHookOptions<DashboardBannerStatsQuery, DashboardBannerStatsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DashboardBannerStatsQuery, DashboardBannerStatsQueryVariables>(DashboardBannerStatsDocument, options);
+      }
+export function useDashboardBannerStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DashboardBannerStatsQuery, DashboardBannerStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DashboardBannerStatsQuery, DashboardBannerStatsQueryVariables>(DashboardBannerStatsDocument, options);
+        }
+export type DashboardBannerStatsQueryHookResult = ReturnType<typeof useDashboardBannerStatsQuery>;
+export type DashboardBannerStatsLazyQueryHookResult = ReturnType<typeof useDashboardBannerStatsLazyQuery>;
+export type DashboardBannerStatsQueryResult = Apollo.QueryResult<DashboardBannerStatsQuery, DashboardBannerStatsQueryVariables>;
 export const CreateDataUploadDocument = gql`
     mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!, $replaceTableOfContentsItemId: Int) {
   createDataUpload(
@@ -33988,34 +34147,9 @@ export type UpdateEnableReportBuilderMutationHookResult = ReturnType<typeof useU
 export type UpdateEnableReportBuilderMutationResult = Apollo.MutationResult<UpdateEnableReportBuilderMutation>;
 export type UpdateEnableReportBuilderMutationOptions = Apollo.BaseMutationOptions<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>;
 export const ProjectDashboardDocument = gql`
-    query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod!) {
+    query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
     id
-    activity(period: $period) {
-      dataSources
-      sketches
-      surveyResponses
-      uploadedLayers
-      uploadsStorageUsed
-      forumPosts
-      registeredUsers
-    }
-    visitors(period: $period) {
-      count
-      timestamp
-    }
-    visitorMetrics(period: $period) {
-      topOperatingSystems
-      topReferrers
-      topBrowsers
-      topCountries
-      topDeviceTypes
-    }
-    mapDataRequests(period: $period) {
-      count
-      timestamp
-      cacheHitRatio
-    }
     mostUsedLayers(period: $period) {
       id
       title
@@ -34023,6 +34157,39 @@ export const ProjectDashboardDocument = gql`
       dataLayer {
         id
         dataSourceId
+      }
+    }
+  }
+  userActivityStats(period: $activityPeriod, slug: $slug) {
+    visitors {
+      timestamp
+      count
+    }
+    mapDataRequests {
+      timestamp
+      count
+      cacheHitRatio
+    }
+    visitorMetrics {
+      topReferrers {
+        label
+        count
+      }
+      topCountries {
+        label
+        count
+      }
+      topBrowsers {
+        label
+        count
+      }
+      topOperatingSystems {
+        label
+        count
+      }
+      topDeviceTypes {
+        label
+        count
       }
     }
   }
@@ -34043,6 +34210,7 @@ export const ProjectDashboardDocument = gql`
  *   variables: {
  *      slug: // value for 'slug'
  *      period: // value for 'period'
+ *      activityPeriod: // value for 'activityPeriod'
  *   },
  * });
  */
@@ -34057,6 +34225,49 @@ export function useProjectDashboardLazyQuery(baseOptions?: Apollo.LazyQueryHookO
 export type ProjectDashboardQueryHookResult = ReturnType<typeof useProjectDashboardQuery>;
 export type ProjectDashboardLazyQueryHookResult = ReturnType<typeof useProjectDashboardLazyQuery>;
 export type ProjectDashboardQueryResult = Apollo.QueryResult<ProjectDashboardQuery, ProjectDashboardQueryVariables>;
+export const ProjectDashboardBannerStatsDocument = gql`
+    query ProjectDashboardBannerStats($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    activity {
+      registeredUsers
+      sketches
+      forumPosts
+      surveyResponses
+      uploadedLayers
+      uploadsStorageUsed
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectDashboardBannerStatsQuery__
+ *
+ * To run a query within a React component, call `useProjectDashboardBannerStatsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectDashboardBannerStatsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectDashboardBannerStatsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectDashboardBannerStatsQuery(baseOptions: Apollo.QueryHookOptions<ProjectDashboardBannerStatsQuery, ProjectDashboardBannerStatsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectDashboardBannerStatsQuery, ProjectDashboardBannerStatsQueryVariables>(ProjectDashboardBannerStatsDocument, options);
+      }
+export function useProjectDashboardBannerStatsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectDashboardBannerStatsQuery, ProjectDashboardBannerStatsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectDashboardBannerStatsQuery, ProjectDashboardBannerStatsQueryVariables>(ProjectDashboardBannerStatsDocument, options);
+        }
+export type ProjectDashboardBannerStatsQueryHookResult = ReturnType<typeof useProjectDashboardBannerStatsQuery>;
+export type ProjectDashboardBannerStatsLazyQueryHookResult = ReturnType<typeof useProjectDashboardBannerStatsLazyQuery>;
+export type ProjectDashboardBannerStatsQueryResult = Apollo.QueryResult<ProjectDashboardBannerStatsQuery, ProjectDashboardBannerStatsQueryVariables>;
 export const ProjectMetadataDocument = gql`
     query ProjectMetadata($slug: String!) {
   project: projectBySlug(slug: $slug) {
@@ -40087,6 +40298,7 @@ export const namedOperations = {
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
     DashboardStats: 'DashboardStats',
+    DashboardBannerStats: 'DashboardBannerStats',
     DataUploadTasks: 'DataUploadTasks',
     ProjectBackgroundJobs: 'ProjectBackgroundJobs',
     ProjectDataQuotaRemaining: 'ProjectDataQuotaRemaining',
@@ -40129,6 +40341,7 @@ export const namedOperations = {
     getTilePackage: 'getTilePackage',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectDashboard: 'ProjectDashboard',
+    ProjectDashboardBannerStats: 'ProjectDashboardBannerStats',
     ProjectMetadata: 'ProjectMetadata',
     Me: 'Me',
     WhereWeWork: 'WhereWeWork',

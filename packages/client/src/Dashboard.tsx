@@ -1,6 +1,8 @@
 /* eslint-disable i18next/no-literal-string */
 import {
   ActivityStatsPeriod,
+  UserActivityPeriod,
+  useDashboardBannerStatsQuery,
   useDashboardStatsQuery,
   useUserIsSuperuserQuery,
 } from "./generated/graphql";
@@ -14,30 +16,56 @@ import {
   PersonIcon,
   TransformIcon,
 } from "@radix-ui/react-icons";
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useCallback, useState } from "react";
 import { ChatIcon } from "@heroicons/react/outline";
 import { useRef, useEffect } from "react";
 import * as d3 from "d3";
 import Warning from "./components/Warning";
 
+export type DashboardPeriod = "24h" | "7d" | "30d" | "90d" | "180d";
+
+export function toActivityStatsPeriod(p: DashboardPeriod): ActivityStatsPeriod {
+  switch (p) {
+    case "24h":
+      return ActivityStatsPeriod["24Hrs"];
+    case "7d":
+      return ActivityStatsPeriod["7Days"];
+    case "30d":
+      return ActivityStatsPeriod["30Days"];
+    case "90d":
+    case "180d":
+      return ActivityStatsPeriod["30Days"];
+  }
+}
+
+export function toUserActivityPeriod(p: DashboardPeriod): UserActivityPeriod {
+  switch (p) {
+    case "24h":
+      return UserActivityPeriod.H24;
+    case "7d":
+      return UserActivityPeriod.D7;
+    case "30d":
+      return UserActivityPeriod.D30;
+    case "90d":
+      return UserActivityPeriod.D90;
+    case "180d":
+      return UserActivityPeriod.D180;
+  }
+}
+
 export default function Dashboard() {
-  const [period, setPeriod] = useState<ActivityStatsPeriod>(
-    ActivityStatsPeriod["24Hrs"]
-  );
+  const [period, setPeriod] = useState<DashboardPeriod>("24h");
   const isSuperUserQuery = useUserIsSuperuserQuery();
+  const { data: bannerData } = useDashboardBannerStatsQuery({
+    pollInterval: 60000,
+  });
   const { data, loading, error } = useDashboardStatsQuery({
     variables: {
-      period,
+      period: toActivityStatsPeriod(period),
+      activityPeriod: toUserActivityPeriod(period),
     },
     pollInterval: 60000,
   });
-  const totalVisitors = useMemo(() => {
-    return data?.visitors?.reduce((acc, v) => acc + v.count, 0);
-  }, [data?.visitors]);
-
-  const totalMapDataRequests = useMemo(() => {
-    return data?.mapDataRequests?.reduce((acc, v) => acc + v.count, 0);
-  }, [data?.mapDataRequests]);
   if (isSuperUserQuery.loading) {
     return null;
   } else if (isSuperUserQuery.data?.currentUserIsSuperuser === false) {
@@ -74,169 +102,125 @@ export default function Dashboard() {
         <StatItem
           className="md:rounded-none md:rounded-l "
           label="Projects"
-          value={(data?.dashboardStats?.projects || 0).toLocaleString()}
+          value={(bannerData?.dashboardStats?.projects || 0).toLocaleString()}
         />
         <StatItem
           label="User Accounts"
-          value={(data?.dashboardStats?.users || 0).toLocaleString()}
+          value={(bannerData?.dashboardStats?.users || 0).toLocaleString()}
         />
         <StatItem
           className="sm:hidden md:visible"
           label="Data Uploads"
-          value={(data?.dashboardStats?.uploads || 0).toLocaleString()}
+          value={(bannerData?.dashboardStats?.uploads || 0).toLocaleString()}
         />
         <StatItem
           label="Layers Stored"
-          value={bytes(parseInt(data?.dashboardStats?.uploadedBytes || "0"))}
+          value={bytes(
+            parseInt(bannerData?.dashboardStats?.uploadedBytes || "0")
+          )}
         />
         <StatItem
           label="Survey Responses"
-          value={(data?.dashboardStats?.surveyResponses || 0).toLocaleString()}
+          value={(
+            bannerData?.dashboardStats?.surveyResponses || 0
+          ).toLocaleString()}
         />
         <StatItem
           label="Sketches"
-          value={(data?.dashboardStats?.sketches || 0).toLocaleString()}
+          value={(bannerData?.dashboardStats?.sketches || 0).toLocaleString()}
         />
         <StatItem
           className="md:rounded-r md:border-r"
           label="Forum Posts"
-          value={(data?.dashboardStats?.forumPosts || 0).toLocaleString()}
+          value={(bannerData?.dashboardStats?.forumPosts || 0).toLocaleString()}
         />
       </div>
-      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
-        <span className="">
-          {totalVisitors?.toLocaleString()} Total Visitors
-        </span>
-        <span className="">
-          {totalMapDataRequests?.toLocaleString()} Hosted Layer Requests
-        </span>
-        <span className="text-gray-500 italic hidden md:visible">
-          Updated every 5 minutes.
-        </span>
-        <span className="flex-1 text-right">
-          <select
-            value={period}
-            onChange={(e) => setPeriod(e.target.value as ActivityStatsPeriod)}
-            className="ml-auto py-1 text-sm rounded"
-          >
-            <option value={ActivityStatsPeriod["24Hrs"]}>Last 24 hours</option>
-            <option value={ActivityStatsPeriod["7Days"]}>Last 7 days</option>
-            <option value={ActivityStatsPeriod["30Days"]}>Last 30 days</option>
-            {/* <option value={ActivityStatsPeriod["1Year"]}>Last 365 days</option> */}
-          </select>
-        </span>
-      </h2>
-      {data?.visitors && (
-        <VisitorLineChart
-          period={period}
-          data={data?.visitors.map((d) => ({
-            timestamp: new Date(d.timestamp),
-            count: d.count,
-          }))}
-          mapDataRequests={(data?.mapDataRequests || []).map((d) => ({
-            timestamp: new Date(d.timestamp),
-            count: d.count,
-            cacheRatio: d.cacheHitRatio,
-          }))}
-        />
-      )}
-      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
-        <span className="flex-1">Visitor Metrics</span>
-      </h2>
-      <div className="md:flex w-full">
-        <VisitorMetrics
-          label="Countries"
-          data={data?.visitorMetrics?.[0]?.topCountries}
-        />
-        <VisitorMetrics
-          label="Referrers"
-          data={data?.visitorMetrics?.[0]?.topReferrers}
-        />
-        <VisitorMetrics
-          label="Browsers"
-          data={data?.visitorMetrics?.[0]?.topBrowsers}
-        />
-      </div>
-      <div className="md:flex">
-        <VisitorMetrics
-          label="Operating Systems"
-          data={data?.visitorMetrics?.[0]?.topOperatingSystems}
-        />
-        <VisitorMetrics
-          label="Device Types"
-          data={data?.visitorMetrics?.[0]?.topDeviceTypes}
-        />
-      </div>
+      <UserActivitySection
+        period={period}
+        onPeriodChange={setPeriod}
+        loading={loading}
+        visitors={data?.userActivityStats?.visitors as any}
+        mapDataRequests={data?.userActivityStats?.mapDataRequests as any}
+        visitorMetrics={data?.userActivityStats?.visitorMetrics as any}
+      />
 
-      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
-        <span className="flex-1">
-          Active Projects in the previous{" "}
-          {period === ActivityStatsPeriod["24Hrs"]
-            ? "24 hours"
-            : period === ActivityStatsPeriod["7Days"]
-            ? "7 days"
-            : period === ActivityStatsPeriod["1Year"]
-            ? "365 days"
-            : "30 days"}
-          .
-        </span>
-      </h2>
-      <ul>
-        {data?.activeProjects?.length === 0 && (
-          <div className="w-72 text-center p-2 text-gray-500 mt-8 mb-8 mx-auto">
-            No active projects
-          </div>
-        )}
-        {data?.activeProjects?.map((project) => (
-          <li key={project.id} className="p-2 border-t flex space-x-2">
-            <div className="flex-1 lg:flex-none text-base truncate lg:w-72">
-              <a className="hover:text-underline" href={project.url!}>
-                {project.name}
-              </a>
-            </div>
-            <div className="flex-1 space-x-4  flex items-center justify-end">
-              <IncreaseSymbol
-                title="New Users"
-                value={project.activity?.newUsers}
-              >
-                <PersonIcon />
-              </IncreaseSymbol>
-              <IncreaseSymbol
-                title="Uploaded data"
-                value={
-                  project.activity?.newUploadedBytes !== "0"
-                    ? project.activity?.newUploadedBytes
-                      ? bytes(
-                          parseInt(project.activity.newUploadedBytes || "0")
-                        )
-                      : null
-                    : null
-                }
-              >
-                <LayersIcon className="transform scale-110" />
-              </IncreaseSymbol>
-              <IncreaseSymbol
-                title="Sketches drawn"
-                value={project.activity?.newSketches}
-              >
-                <TransformIcon />
-              </IncreaseSymbol>
-              <IncreaseSymbol
-                title="Forum posts"
-                value={project.activity?.newForumPosts}
-              >
-                <ChatIcon className="w-5 h-5" />
-              </IncreaseSymbol>
-              <IncreaseSymbol
-                title="Survey responses"
-                value={project.activity?.newSurveyResponses}
-              >
-                <ClipboardIcon className="w-4 h-4" />
-              </IncreaseSymbol>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {(period === "24h" || period === "7d" || period === "30d") && (
+        <>
+          <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
+            <span className="flex-1">
+              Active Projects in the previous{" "}
+              {period === "24h"
+                ? "24 hours"
+                : period === "7d"
+                ? "7 days"
+                : "30 days"}
+              .
+            </span>
+          </h2>
+          {loading && !data?.activeProjects ? (
+            <SkeletonProjectList />
+          ) : (
+            <ul>
+              {data?.activeProjects?.length === 0 && (
+                <div className="w-72 text-center p-2 text-gray-500 mt-8 mb-8 mx-auto">
+                  No active projects
+                </div>
+              )}
+              {data?.activeProjects?.map((project) => (
+                <li key={project.id} className="p-2 border-t flex space-x-2">
+                  <div className="flex-1 lg:flex-none text-base truncate lg:w-72">
+                    <a className="hover:text-underline" href={project.url!}>
+                      {project.name}
+                    </a>
+                  </div>
+                  <div className="flex-1 space-x-4  flex items-center justify-end">
+                    <IncreaseSymbol
+                      title="New Users"
+                      value={project.activity?.newUsers}
+                    >
+                      <PersonIcon />
+                    </IncreaseSymbol>
+                    <IncreaseSymbol
+                      title="Uploaded data"
+                      value={
+                        project.activity?.newUploadedBytes !== "0"
+                          ? project.activity?.newUploadedBytes
+                            ? bytes(
+                                parseInt(
+                                  project.activity.newUploadedBytes || "0"
+                                )
+                              )
+                            : null
+                          : null
+                      }
+                    >
+                      <LayersIcon className="transform scale-110" />
+                    </IncreaseSymbol>
+                    <IncreaseSymbol
+                      title="Sketches drawn"
+                      value={project.activity?.newSketches}
+                    >
+                      <TransformIcon />
+                    </IncreaseSymbol>
+                    <IncreaseSymbol
+                      title="Forum posts"
+                      value={project.activity?.newForumPosts}
+                    >
+                      <ChatIcon className="w-5 h-5" />
+                    </IncreaseSymbol>
+                    <IncreaseSymbol
+                      title="Survey responses"
+                      value={project.activity?.newSurveyResponses}
+                    >
+                      <ClipboardIcon className="w-4 h-4" />
+                    </IncreaseSymbol>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -307,9 +291,11 @@ export function StatItem({
 export function VisitorMetrics({
   label,
   data,
+  linkify,
 }: {
   label: string;
   data?: { label: string; count: number }[];
+  linkify?: boolean;
 }) {
   if (!data) {
     return null;
@@ -322,7 +308,18 @@ export function VisitorMetrics({
         {data.length === 0 && <li>None</li>}
         {data.map((item) => (
           <li key={item.label} className="flex items-center space-x-1">
-            <span className="w-36 truncate flex-none">{item.label}</span>
+            {linkify && item.label ? (
+              <a
+                href={`https://${item.label}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-36 truncate flex-none text-blue-600 hover:underline"
+              >
+                {item.label}
+              </a>
+            ) : (
+              <span className="w-36 truncate flex-none">{item.label}</span>
+            )}
             <div className="flex-none w-8 text-xs text-gray-500">
               {item.count}
             </div>
@@ -353,8 +350,9 @@ export function VisitorLineChart({
 }: {
   data: { timestamp: Date; count: number }[];
   mapDataRequests: { timestamp: Date; count: number; cacheRatio: number }[];
-  period: ActivityStatsPeriod;
+  period: string;
 }) {
+  const hasMapData = mapDataRequests.length > 0;
   const chartRef = useRef<SVGSVGElement | null>(null);
   const [width, setWidth] = useState(document.body.clientWidth);
   // Update width on resize
@@ -421,14 +419,16 @@ export function VisitorLineChart({
       .on("pointerleave", pointerleft)
       .on("touchstart", (event) => event.preventDefault());
 
-    svg
-      .append("path")
-      .datum(mapDataRequests)
-      .attr("fill", "none")
-      .attr("stroke", "rgba(16,124,17,0.4)")
-      .attr("stroke-width", 1.5)
-      .attr("stroke-dasharray", "5,2")
-      .attr("d", mapDataRequestsLine);
+    if (hasMapData) {
+      svg
+        .append("path")
+        .datum(mapDataRequests)
+        .attr("fill", "none")
+        .attr("stroke", "rgba(16,124,17,0.4)")
+        .attr("stroke-width", 1.5)
+        .attr("stroke-dasharray", "5,2")
+        .attr("d", mapDataRequestsLine);
+    }
 
     svg
       .append("path")
@@ -452,35 +452,33 @@ export function VisitorLineChart({
           .tickValues(
             xAxisScale.ticks(
               // @ts-ignore
-              period === ActivityStatsPeriod["24Hrs"]
+              period === "24h"
                 ? d3.utcHour.every(2)
-                : period === ActivityStatsPeriod["7Days"]
+                : period === "7d"
                 ? d3.utcDay.every(1)
-                : period === ActivityStatsPeriod["1Year"] ||
-                  period === ActivityStatsPeriod["6Months"] ||
-                  period === ActivityStatsPeriod.AllTime
-                ? d3.utcMonth.every(1)
+                : period === "180d"
+                ? d3.utcWeek.every(2)
+                : period === "90d"
+                ? d3.utcWeek.every(1)
                 : d3.utcDay.every(3)
             )
           )
           .tickFormat((d) =>
-            period === ActivityStatsPeriod["24Hrs"]
+            period === "24h"
               ? new Date(d as number).toLocaleTimeString("en-US", {
                   timeStyle: "short",
                   timeZone: "PST",
                 })
-              : period === ActivityStatsPeriod["7Days"]
+              : period === "7d"
               ? new Date(d as number).toLocaleDateString("en-US", {
                   month: "short",
                   weekday: "short",
                   day: "numeric",
                 })
-              : period === ActivityStatsPeriod["1Year"] ||
-                period === ActivityStatsPeriod["6Months"] ||
-                period === ActivityStatsPeriod.AllTime
+              : period === "90d" || period === "180d"
               ? new Date(d as number).toLocaleDateString("en-US", {
                   month: "short",
-                  year: "numeric",
+                  day: "numeric",
                 })
               : new Date(d as number).toLocaleDateString("en-US", {
                   month: "short",
@@ -535,20 +533,6 @@ export function VisitorLineChart({
       .attr("d", area)
       .style("fill", "url(#mygrad)"); // assigning to defined id
 
-    // Add a legend to the bottom, identifying the symbols for the two lines.
-    const legend = svg
-      .append("g")
-      .attr("font-family", "sans-serif")
-      .attr("font-size", 10)
-      .attr("text-anchor", "end")
-      .selectAll("g")
-      .data([
-        { label: "Visitors", color: "steelblue" },
-        { label: "Hosted Layer Requests", color: "rgba(16,124,17, 1)" },
-      ])
-      .join("g")
-      .attr("transform", (d, i) => `translate(${width - 100},${i * 20})`);
-
     const legendContainer = svg
       .append("g")
       .attr(
@@ -556,16 +540,20 @@ export function VisitorLineChart({
         `translate(${width / 2 - 125},${height - margin.bottom + 40})`
       );
 
+    const legendItems = [
+      { label: "Visitors", color: "steelblue", strokeDasharray: "0" },
+    ];
+    if (hasMapData) {
+      legendItems.push({
+        label: "Hosted Layer Requests",
+        color: "rgba(16,124,17,0.5)",
+        strokeDasharray: "5,2",
+      });
+    }
+
     const legendEntry = legendContainer
       .selectAll("g")
-      .data([
-        { label: "Visitors", color: "steelblue", strokeDasharray: "0" },
-        {
-          label: "Hosted Layer Requests",
-          color: "rgba(16,124,17,0.5)",
-          strokeDasharray: "5,2",
-        },
-      ])
+      .data(legendItems)
       .join("g")
       .attr("transform", (d, i) => `translate(${i * 100}, 0)`);
 
@@ -633,30 +621,26 @@ export function VisitorLineChart({
           text
             .selectAll("tspan")
             .data(
-              period === ActivityStatsPeriod["30Days"]
-                ? [
-                    formatDate(data[i].timestamp),
-                    data[i].count === 1
-                      ? "1 visitor"
-                      : `${data[i].count.toLocaleString()} visitors`,
-                    mapDataRequests[i].count === 1
+              (() => {
+                const isDaily =
+                  period === "30d" || period === "90d" || period === "180d";
+                const lines: string[] = [formatDate(data[i].timestamp)];
+                if (!isDaily) lines.push(formatTime(data[i].timestamp));
+                lines.push(
+                  data[i].count === 1
+                    ? "1 visitor"
+                    : `${data[i].count.toLocaleString()} visitors`
+                );
+                if (hasMapData) {
+                  const count = mapDataRequests[i]?.count || 0;
+                  lines.push(
+                    count === 1
                       ? "1 map request"
-                      : `${mapDataRequests[
-                          i
-                        ].count.toLocaleString()} map requests`,
-                  ]
-                : [
-                    formatDate(data[i].timestamp),
-                    formatTime(data[i].timestamp),
-                    data[i].count === 1
-                      ? "1 visitor"
-                      : `${data[i].count.toLocaleString()} visitors`,
-                    mapDataRequests[i].count === 1
-                      ? "1 map request"
-                      : `${mapDataRequests[
-                          i
-                        ].count.toLocaleString()} map requests`,
-                  ]
+                      : `${count.toLocaleString()} map requests`
+                  );
+                }
+                return lines;
+              })()
             )
             .join("tspan")
             .attr("x", 0)
@@ -692,7 +676,254 @@ export function VisitorLineChart({
       path.attr("d", `M${-w / 2 - 10},5H${w / 2 + 10}v${h + 10}h-${w + 20}z`);
       path.attr("transform", `translate(0,${baseY})`);
     }
-  }, [data, mapDataRequests, period, width]);
+  }, [data, mapDataRequests, period, width, hasMapData]);
 
   return <svg className="w-full" ref={chartRef}></svg>;
+}
+
+export function UserActivitySection({
+  period,
+  onPeriodChange,
+  loading,
+  visitors,
+  mapDataRequests,
+  visitorMetrics,
+  periodOptions,
+  slug,
+}: {
+  period: DashboardPeriod;
+  onPeriodChange: (period: DashboardPeriod) => void;
+  loading: boolean;
+  visitors?: { timestamp: string; count: number }[];
+  mapDataRequests?: {
+    timestamp: string;
+    count: number;
+    cacheHitRatio: number;
+  }[];
+  visitorMetrics?: {
+    topReferrers: { label: string; count: number }[];
+    topCountries: { label: string; count: number }[];
+    topBrowsers: { label: string; count: number }[];
+    topOperatingSystems: { label: string; count: number }[];
+    topDeviceTypes: { label: string; count: number }[];
+  };
+  periodOptions?: { value: DashboardPeriod; label: string }[];
+  slug?: string;
+}) {
+  const totalVisitors = visitors?.reduce((acc, v) => acc + v.count, 0);
+  const hasMapData = (mapDataRequests?.length ?? 0) > 0;
+  const totalMapDataRequests = hasMapData
+    ? mapDataRequests!.reduce((acc, v) => acc + v.count, 0)
+    : 0;
+
+  const defaultOptions: { value: DashboardPeriod; label: string }[] = [
+    { value: "24h", label: "Last 24 hours" },
+    { value: "7d", label: "Last 7 days" },
+    { value: "30d", label: "Last 30 days" },
+    { value: "90d", label: "Last 90 days" },
+    { value: "180d", label: "Last 6 months" },
+  ];
+
+  const options = periodOptions ?? defaultOptions;
+
+  const exportCsv = useCallback(() => {
+    if (!visitors?.length) return;
+
+    const header = hasMapData
+      ? "timestamp,visitors,map_requests,cache_hit_ratio"
+      : "timestamp,visitors";
+    const rows = visitors.map((v) => {
+      if (!hasMapData) return `${v.timestamp},${v.count}`;
+      const mr = mapDataRequests?.find((m) => m.timestamp === v.timestamp);
+      return `${v.timestamp},${v.count},${mr?.count ?? 0},${
+        mr?.cacheHitRatio?.toFixed(4) ?? ""
+      }`;
+    });
+
+    const csv = header + "\n" + rows.join("\n") + "\n";
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const prefix = slug ? `${slug}-` : "";
+    a.download = `${prefix}visitor-stats-${period}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [visitors, mapDataRequests, hasMapData, period, slug]);
+
+  return (
+    <>
+      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
+        {loading && !visitors ? (
+          <>
+            <span className="h-4 w-32 bg-gray-300 rounded animate-pulse" />
+            <span className="h-4 w-44 bg-gray-300 rounded animate-pulse" />
+          </>
+        ) : (
+          <>
+            <span>{totalVisitors?.toLocaleString()} Total Visitors</span>
+            {hasMapData && (
+              <span>
+                {totalMapDataRequests.toLocaleString()} Hosted Layer Requests
+              </span>
+            )}
+          </>
+        )}
+        <span className="text-gray-500 italic hidden md:visible">
+          Live from Cloudflare Analytics.
+        </span>
+        <span className="flex-1 text-right space-x-2">
+          <button
+            onClick={exportCsv}
+            disabled={!visitors}
+            className="py-1 px-2 text-sm rounded border border-gray-300 bg-white hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Export as CSV"
+          >
+            Export CSV
+          </button>
+          <select
+            value={period}
+            onChange={(e) => onPeriodChange(e.target.value as DashboardPeriod)}
+            className="py-1 text-sm rounded"
+          >
+            {options.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </span>
+      </h2>
+      {visitors ? (
+        <VisitorLineChart
+          period={period}
+          data={visitors.map((d) => ({
+            timestamp: new Date(d.timestamp),
+            count: d.count,
+          }))}
+          mapDataRequests={(mapDataRequests || []).map((d) => ({
+            timestamp: new Date(d.timestamp),
+            count: d.count,
+            cacheRatio: d.cacheHitRatio,
+          }))}
+        />
+      ) : (
+        <SkeletonChart />
+      )}
+      <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
+        <span className="flex-1">Visitor Metrics</span>
+      </h2>
+      {visitorMetrics ? (
+        <>
+          <div className="md:flex w-full">
+            <VisitorMetrics
+              label="Countries"
+              data={visitorMetrics.topCountries}
+            />
+            <VisitorMetrics
+              label="Referrers"
+              data={visitorMetrics.topReferrers}
+              linkify
+            />
+            <VisitorMetrics
+              label="Browsers"
+              data={visitorMetrics.topBrowsers}
+            />
+          </div>
+          <div className="md:flex">
+            <VisitorMetrics
+              label="Operating Systems"
+              data={visitorMetrics.topOperatingSystems}
+            />
+            <VisitorMetrics
+              label="Device Types"
+              data={visitorMetrics.topDeviceTypes}
+            />
+          </div>
+        </>
+      ) : (
+        <SkeletonMetrics />
+      )}
+    </>
+  );
+}
+
+export function SkeletonChart() {
+  return (
+    <div className="w-full px-12 py-6" style={{ height: 300 }}>
+      <div className="w-full h-full flex items-end space-x-1">
+        {Array.from({ length: 40 }).map((_, i) => (
+          <div
+            key={i}
+            className="flex-1 bg-gray-200 rounded-t animate-pulse"
+            style={{
+              height: `${20 + Math.sin(i * 0.4) * 30 + Math.random() * 20}%`,
+              animationDelay: `${i * 30}ms`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function SkeletonMetrics() {
+  return (
+    <>
+      <div className="md:flex w-full">
+        {[0, 1, 2].map((col) => (
+          <div key={col} className="p-2 md:p-4 flex-1 max-w-sm">
+            <div className="h-5 w-24 bg-gray-200 rounded animate-pulse mb-2" />
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex items-center space-x-1 mb-1">
+                <div
+                  className="h-4 bg-gray-200 rounded animate-pulse"
+                  style={{
+                    width: `${90 - i * 15}%`,
+                    animationDelay: `${(col * 5 + i) * 40}ms`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+      <div className="md:flex">
+        {[0, 1].map((col) => (
+          <div key={col} className="p-2 md:p-4 flex-1 max-w-sm">
+            <div className="h-5 w-32 bg-gray-200 rounded animate-pulse mb-2" />
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="flex items-center space-x-1 mb-1">
+                <div
+                  className="h-4 bg-gray-200 rounded animate-pulse"
+                  style={{
+                    width: `${85 - i * 18}%`,
+                    animationDelay: `${(col * 4 + i) * 40}ms`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+function SkeletonProjectList() {
+  return (
+    <ul>
+      {Array.from({ length: 5 }).map((_, i) => (
+        <li key={i} className="p-2 border-t flex space-x-2">
+          <div
+            className="h-5 bg-gray-200 rounded animate-pulse lg:w-72"
+            style={{
+              width: `${50 + Math.random() * 30}%`,
+              animationDelay: `${i * 60}ms`,
+            }}
+          />
+        </li>
+      ))}
+    </ul>
+  );
 }
