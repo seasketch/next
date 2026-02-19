@@ -904,7 +904,6 @@ class MapContextManager extends EventEmitter {
         if (!this.map) {
           return;
         }
-        // add any custom sources event listeners
         this.map.setStyle(style);
         for (const id in this.customSources) {
           const { visible, listenersAdded, customSource } =
@@ -2211,6 +2210,10 @@ class MapContextManager extends EventEmitter {
     for (const id of this.sketchStates.keys()) {
       const state = this.sketchStates.getRaw(id);
       if (state?.visible) {
+        if (this.hideEditableSketchId === parseInt(id)) {
+          this.sketchStates.setLoading(id, false);
+          continue;
+        }
         // eslint-disable-next-line i18next/no-literal-string
         const loading = !this.map!.isSourceLoaded(`sketch-${id}`);
         if (loading) {
@@ -3821,8 +3824,13 @@ function reducePaintPropOpacity(
   fraction: number
 ) {
   if ("paint" in layer) {
-    if (layer.paint[propName]) {
-      layer.paint[propName] = layer.paint[propName] * fraction;
+    const current = layer.paint[propName];
+    if (typeof current === "number") {
+      layer.paint[propName] = current * fraction;
+    } else if (isExpression(current)) {
+      layer.paint[propName] = hasZoomExpression(current)
+        ? fraction
+        : ["*", fraction, current];
     } else {
       layer.paint[propName] = fraction;
     }
