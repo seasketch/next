@@ -11,7 +11,14 @@ import {
   Polygon,
 } from "geojson";
 import { LngLatBoundsLike, Map, MapboxOptions, Style } from "mapbox-gl";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Trans, useTranslation } from "react-i18next";
 import BasemapMultiSelectInput from "../admin/surveys/BasemapMultiSelectInput";
 import BoundsInput from "../admin/surveys/BoundsInput";
@@ -319,15 +326,25 @@ function MultiSpatialInputInner(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.stage, manager?.map]);
 
+  const hasValidationErrors = state.hasValidationErrors;
+
   useEffect(() => {
     if (state.featureId && selection?.id === state.featureId) {
       return;
     }
     if (
       state.featureId &&
-      state.hasValidationErrors &&
+      hasValidationErrors &&
       (!selection || selection.id !== state.featureId)
     ) {
+      const relatedFeature = props.value?.collection
+        ? props.value!.collection.features.find((f) => f.id === state.featureId)
+        : undefined;
+      if (!relatedFeature) {
+        // probably cancelling a new feature
+        props.onRequestStageChange(STAGES.LIST_SHAPES);
+        return;
+      }
       alert(t("Please fill in required fields", { ns: "surveys" }));
       actions.selectFeature(state.featureId);
       return;
@@ -359,7 +376,7 @@ function MultiSpatialInputInner(
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection, alert]);
+  }, [selection, alert, hasValidationErrors]);
 
   useEffect(() => {
     if (manager && basemaps && styleHash.length > 0) {
@@ -803,6 +820,11 @@ function MultiSpatialInputInner(
                             })
                           ))
                         ) {
+                          setState((prev) => ({
+                            ...prev,
+                            featureId: undefined,
+                            hasValidationErrors: false,
+                          }));
                           if (geometryEditingState.feature) {
                             const collection = removeFeatureFromValue(
                               geometryEditingState.feature.id!
