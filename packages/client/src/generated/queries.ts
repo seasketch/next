@@ -11791,7 +11791,6 @@ export type Query = Node & {
   extensionToSourceType?: Maybe<Scalars['String']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   extractStableIdsFromBody?: Maybe<Array<Maybe<Scalars['String']>>>;
-  extractTableOfContentsItemIdsFromBody?: Maybe<Array<Maybe<Scalars['Int']>>>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
   fileUploadByNodeId?: Maybe<FileUpload>;
@@ -12283,12 +12282,6 @@ export type QueryExtractSpriteIdsArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractStableIdsFromBodyArgs = {
-  body?: Maybe<Scalars['JSON']>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryExtractTableOfContentsItemIdsFromBodyArgs = {
   body?: Maybe<Scalars['JSON']>;
 };
 

@@ -13283,7 +13283,6 @@ type Query implements Node {
   extensionToSourceType(url: String): String
   extractSpriteIds(t: String): [Int]
   extractStableIdsFromBody(body: JSON): [String]
-  extractTableOfContentsItemIdsFromBody(body: JSON): [Int]
   fileUpload(id: UUID!): FileUpload
 
   """Reads a single `FileUpload` using its globally unique `ID`."""
