@@ -13,6 +13,7 @@ interface RumTimeseriesResponse {
     accounts: {
       series: {
         sum: { visits: number };
+        avg: { sampleInterval: number };
         dimensions: { ts: string };
       }[];
     }[];
@@ -29,6 +30,9 @@ const VISITORS_15M = gql`
         series: rumPageloadEventsAdaptiveGroups(limit: 5000, filter: $filter) {
           sum {
             visits
+          }
+          avg {
+            sampleInterval
           }
           dimensions {
             ts: datetimeFifteenMinutes
@@ -50,6 +54,9 @@ const VISITORS_HOURLY = gql`
           sum {
             visits
           }
+          avg {
+            sampleInterval
+          }
           dimensions {
             ts: datetimeHour
           }
@@ -69,6 +76,9 @@ const VISITORS_DAILY = gql`
         series: rumPageloadEventsAdaptiveGroups(limit: 5000, filter: $filter) {
           sum {
             visits
+          }
+          avg {
+            sampleInterval
           }
           dimensions {
             ts: date
@@ -110,13 +120,20 @@ export async function fetchVisitors(period: UserActivityPeriod, slug?: string) {
     (r) => r.viewer?.accounts[0]?.series ?? []
   );
 
+  const maxSampleInterval = allPoints.reduce(
+    (max, item) => Math.max(max, item.avg?.sampleInterval ?? 1),
+    1
+  );
+
   const sparse = allPoints.map((item) => ({
     timestamp: new Date(item.dimensions.ts).toISOString(),
     count: item.sum.visits,
   }));
 
-  return fillTimeSeriesGaps(sparse, period, (ts) => ({
+  const visitors = fillTimeSeriesGaps(sparse, period, (ts) => ({
     timestamp: ts,
     count: 0,
   }), range);
+
+  return { visitors, sampleInterval: maxSampleInterval };
 }

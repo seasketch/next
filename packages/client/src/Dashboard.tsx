@@ -14,6 +14,7 @@ import {
   ClipboardIcon,
   LayersIcon,
   PersonIcon,
+  ReloadIcon,
   TransformIcon,
 } from "@radix-ui/react-icons";
 import { ReactNode, useCallback, useState } from "react";
@@ -59,7 +60,7 @@ export default function Dashboard() {
   const { data: bannerData } = useDashboardBannerStatsQuery({
     pollInterval: 60000,
   });
-  const { data, loading, error } = useDashboardStatsQuery({
+  const { data, loading, error, refetch } = useDashboardStatsQuery({
     variables: {
       period: toActivityStatsPeriod(period),
       activityPeriod: toUserActivityPeriod(period),
@@ -142,8 +143,9 @@ export default function Dashboard() {
         visitors={data?.userActivityStats?.visitors as any}
         mapDataRequests={data?.userActivityStats?.mapDataRequests as any}
         visitorMetrics={data?.userActivityStats?.visitorMetrics as any}
+        sampleInterval={(data?.userActivityStats as any)?.sampleInterval}
+        onRefresh={() => refetch()}
       />
-
       {(period === "24h" || period === "7d" || period === "30d") && (
         <>
           <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
@@ -690,6 +692,8 @@ export function UserActivitySection({
   visitorMetrics,
   periodOptions,
   slug,
+  sampleInterval,
+  onRefresh,
 }: {
   period: DashboardPeriod;
   onPeriodChange: (period: DashboardPeriod) => void;
@@ -709,7 +713,21 @@ export function UserActivitySection({
   };
   periodOptions?: { value: DashboardPeriod; label: string }[];
   slug?: string;
+  sampleInterval?: number;
+  onRefresh?: () => Promise<any>;
 }) {
+  const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = useCallback(async () => {
+    if (!onRefresh) return;
+    setRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, [onRefresh]);
+
+  const isLoading = loading || refreshing;
   const totalVisitors = visitors?.reduce((acc, v) => acc + v.count, 0);
   const hasMapData = (mapDataRequests?.length ?? 0) > 0;
   const totalMapDataRequests = hasMapData
@@ -754,7 +772,7 @@ export function UserActivitySection({
   return (
     <>
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex items-center space-x-4">
-        {loading && !visitors ? (
+        {isLoading && !visitors ? (
           <>
             <span className="h-4 w-32 bg-gray-300 rounded animate-pulse" />
             <span className="h-4 w-44 bg-gray-300 rounded animate-pulse" />
@@ -773,6 +791,20 @@ export function UserActivitySection({
           Live from Cloudflare Analytics.
         </span>
         <span className="flex-1 text-right space-x-2">
+          {onRefresh && (
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="text-gray-400 hover:text-gray-600 align-middle disabled:opacity-40"
+              title="Refresh"
+            >
+              <ReloadIcon
+                className={`-mt-0.5 mr-2 w-3.5 h-3.5 inline${
+                  refreshing ? " animate-spin" : ""
+                }`}
+              />
+            </button>
+          )}
           <button
             onClick={exportCsv}
             disabled={!visitors}
@@ -794,7 +826,7 @@ export function UserActivitySection({
           </select>
         </span>
       </h2>
-      {visitors ? (
+      {!isLoading && visitors ? (
         <VisitorLineChart
           period={period}
           data={visitors.map((d) => ({
@@ -809,6 +841,22 @@ export function UserActivitySection({
         />
       ) : (
         <SkeletonChart />
+      )}
+      {!isLoading && sampleInterval != null && sampleInterval >= 40 && (
+        <div className="flex items-center gap-2 px-3 py-1.5 text-xs text-amber-700 bg-amber-50 border-b border-amber-100">
+          <span>
+            Data is approximate due to Cloudflare sampling (interval{" "}
+            {Math.round(sampleInterval)}x).
+          </span>
+          {onRefresh && (
+            <button
+              onClick={handleRefresh}
+              className="underline hover:text-amber-900"
+            >
+              Refresh for more accurate results
+            </button>
+          )}
+        </div>
       )}
       <h2 className="bg-gray-100 leading-6 text-base p-2 font-semibold flex">
         <span className="flex-1">Visitor Metrics</span>

@@ -2,6 +2,7 @@ import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { resolveVisitors } from "./resolvers/visitors";
 import { resolveMapDataRequests } from "./resolvers/mapDataRequests";
 import { resolveVisitorMetrics } from "./resolvers/visitorMetrics";
+import { fetchVisitors } from "./cloudflare/visitors";
 
 const UserActivityPlugin = makeExtendSchemaPlugin((_build) => {
   return {
@@ -42,6 +43,12 @@ const UserActivityPlugin = makeExtendSchemaPlugin((_build) => {
         visitors: [VisitorDataPoint!]!
         mapDataRequests: [MapDataRequestDataPoint!]!
         visitorMetrics: UserActivityVisitorMetrics!
+        """
+        Maximum Cloudflare adaptive sampling interval across all visitor
+        data points. 1 means every event was counted; higher values indicate
+        sampled (less accurate) data. Populated after visitors are resolved.
+        """
+        sampleInterval: Float!
       }
 
       extend type Query {
@@ -94,6 +101,13 @@ const UserActivityPlugin = makeExtendSchemaPlugin((_build) => {
         visitors: resolveVisitors,
         mapDataRequests: resolveMapDataRequests,
         visitorMetrics: resolveVisitorMetrics,
+        sampleInterval: async (parent: any) => {
+          if (!parent._visitorsPromise) {
+            parent._visitorsPromise = fetchVisitors(parent.period, parent.slug);
+          }
+          const { sampleInterval } = await parent._visitorsPromise;
+          return sampleInterval;
+        },
       },
     },
   };

@@ -16,6 +16,7 @@ query ProjectDashboard(
     }
   }
   userActivityStats(period: $activityPeriod, slug: $slug) {
+    sampleInterval
     visitors {
       timestamp
       count

@@ -26,7 +26,7 @@ export default function ActivityDashboard() {
   );
   const onError = useGlobalErrorHandler();
   const periodValue: DashboardPeriod = (period ?? "7d") as DashboardPeriod;
-  const { data, loading, error } = useProjectDashboardQuery({
+  const { data, loading, error, refetch } = useProjectDashboardQuery({
     variables: {
       slug,
       period: toActivityStatsPeriod(periodValue),
@@ -101,7 +101,9 @@ export default function ActivityDashboard() {
         visitors={data?.userActivityStats?.visitors as any}
         mapDataRequests={data?.userActivityStats?.mapDataRequests as any}
         visitorMetrics={data?.userActivityStats?.visitorMetrics as any}
+        sampleInterval={(data?.userActivityStats as any)?.sampleInterval}
         slug={slug}
+        onRefresh={() => refetch()}
       />
       {isSuperUser === true && (
         <>
