@@ -510,9 +510,7 @@ export default function GeographyAdmin() {
       setDrawFeature(feature);
     },
     undefined,
-    // "https://overlay.seasketch.org/geographies/clip",
     "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip",
-    // "https://h13gfvr460.execute-api.us-west-2.amazonaws.com/prod/eraseLand",
     (geom, performance) => {
       // console.log("geom", geom, performance);
     },

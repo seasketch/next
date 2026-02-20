@@ -13,25 +13,133 @@ import {
   clipSketchToPolygons,
   clipToGeographies,
 } from "overlay-engine";
-import { Pool, PoolClient } from "pg";
+import { PoolClient } from "pg";
 import bbox from "@turf/bbox";
 import { PendingFragmentResult } from "overlay-engine/dist/fragments";
-import { startMetricCalculationsForSketch } from "./plugins/reportsPlugin";
 import { makeNodeFetchRangeFn } from "./nodeFetchRangeFn";
+import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 
-// Initialize source cache for clipping operations
+// Source cache used for local clipping in test mode
 const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
   fetchRangeFn: makeNodeFetchRangeFn(`https://uploads.seasketch.org/`)
     .fetchRangeFn,
 });
 
-// Lazy load clipping worker manager
-let clippingWorkerManager: any;
+let lambdaClient: LambdaClient | null = null;
+function getLambdaClient() {
+  if (!lambdaClient) {
+    lambdaClient = new LambdaClient({
+      region: process.env.AWS_REGION || "us-west-2",
+    });
+  }
+  return lambdaClient;
+}
+
+type CreateFragmentsResult = {
+  success: boolean;
+  clipped?: Feature<MultiPolygon> | null;
+  fragments?: FragmentResult[];
+  error?: string;
+};
+
+/**
+ * Delegates clipToGeographies work to the fragment-worker AWS Lambda.
+ */
+async function callFragmentWorkerLambda(
+  userGeom: Feature<any>,
+  geographies: GeographySettings[],
+  geographiesForClipping: number[],
+  existingOverlappingFragments: SketchFragment[],
+  existingSketchId: number | null,
+): Promise<{
+  clipped: Feature<MultiPolygon> | null;
+  fragments: FragmentResult[];
+}> {
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
+  }
+
+  const payload = {
+    feature: userGeom,
+    geographies,
+    geographiesForClipping,
+    existingOverlappingFragments,
+    existingSketchId,
+  };
+
+  const client = getLambdaClient();
+  console.time("invoke lambda");
+  const command = new InvokeCommand({
+    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+    InvocationType: "RequestResponse",
+    Payload: Buffer.from(JSON.stringify(payload)),
+  });
+  const response = await client.send(command);
+  console.timeEnd("invoke lambda");
+
+  if (response.FunctionError) {
+    const errorPayload = response.Payload
+      ? JSON.parse(Buffer.from(response.Payload).toString())
+      : null;
+    throw new Error(
+      `Fragment worker Lambda error: ${
+        errorPayload?.errorMessage || response.FunctionError
+      }`,
+    );
+  }
+
+  if (!response.Payload) {
+    throw new Error("Fragment worker Lambda returned no payload");
+  }
+
+  const result: CreateFragmentsResult = JSON.parse(
+    Buffer.from(response.Payload).toString(),
+  );
+
+  if (!result.success) {
+    throw new Error(
+      `Fragment worker Lambda error: ${result.error || "Unknown error"}`,
+    );
+  }
+
+  return {
+    clipped: result.clipped ?? null,
+    fragments: result.fragments ?? [],
+  };
+}
+
+/**
+ * Fire-and-forget invocation of the fragment-worker Lambda to warm its FGB
+ * source caches for the given sketch bounding box. Returns immediately; the
+ * Lambda runs asynchronously.
+ */
+export async function warmFragmentWorkerCache(
+  userGeom: Feature<any>,
+  geographies: GeographySettings[],
+): Promise<void> {
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    return;
+  }
+
+  const client = getLambdaClient();
+  const command = new InvokeCommand({
+    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+    InvocationType: "Event",
+    Payload: Buffer.from(
+      JSON.stringify({
+        operation: "warm-cache",
+        feature: userGeom,
+        geographies,
+      }),
+    ),
+  });
+  await client.send(command);
+}
 
 export async function getFeatureCollection(
   surveyId: number,
   formElementId: number,
-  client: DBClient
+  client: DBClient,
 ) {
   const results = await client.query(`select export_spatial_responses($1)`, [
     formElementId,
@@ -60,14 +168,14 @@ export async function getFeatureCollection(
         )
       );
   `,
-    [formElementId]
+    [formElementId],
   );
   const formElements = rows;
   for (const element of formElements) {
     element.exportId = createExportId(
       element.id,
       element.body,
-      element.exportId
+      element.exportId,
     );
   }
   if (!collection || !collection.features || !collection.features.length) {
@@ -84,7 +192,7 @@ export async function copySketchTocItem(
   id: number,
   type: "sketch" | "sketch_folder",
   forForum: boolean,
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<{
   copyId: number;
   sketchIds: number[];
@@ -100,7 +208,7 @@ export async function copySketchTocItem(
       `select user_id from ${
         type === "sketch" ? "sketches" : "sketch_folders"
       } where id = $1`,
-      [id]
+      [id],
     );
     if (rows.length === 0) {
       throw new Error(`${type} not found or permission denied`);
@@ -112,7 +220,7 @@ export async function copySketchTocItem(
     forForum
       ? `select copy_sketch_toc_item_recursive_for_forum($1, $2, false)`
       : `select copy_sketch_toc_item_recursive($1, $2, true)`,
-    [id, type]
+    [id, type],
   );
   const copyId: number = forForum
     ? row.copy_sketch_toc_item_recursive_for_forum
@@ -127,7 +235,7 @@ export async function copySketchTocItem(
     rows: [{ get_child_sketches_and_collections_recursive: sketchIds }],
   } = await pgClient.query(
     `select get_child_sketches_and_collections_recursive($1, $2)`,
-    [copyId, type]
+    [copyId, type],
   );
   if (type === "sketch") {
     sketchIds.push(copyId);
@@ -154,7 +262,7 @@ export async function updateSketchTocItemParent(
   folderId: number | null,
   collectionId: number | null,
   tocItems: { type: "sketch" | "sketch_folder"; id: number }[],
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<{
   sketchIds: number[];
   folderIds: number[];
@@ -165,7 +273,7 @@ export async function updateSketchTocItemParent(
     select distinct(
       get_parent_collection_id(type, id)
     ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-    [JSON.stringify(tocItems)]
+    [JSON.stringify(tocItems)],
   );
   const previousCollectionIds = rows.map((r: any) => r.collection_id);
   // to implement fragment reconciliation, we need to know for each sketch which
@@ -181,7 +289,7 @@ export async function updateSketchTocItemParent(
       rows: [folder],
     } = await pgClient.query(
       `select get_parent_collection_id('sketch_folder', $1)`,
-      [folderId]
+      [folderId],
     );
     targetCollectionId = folder.get_parent_collection_id;
   }
@@ -193,7 +301,7 @@ export async function updateSketchTocItemParent(
         rows: [sketch],
       } = await pgClient.query(
         `select get_parent_collection_id('sketch', $1)`,
-        [item.id]
+        [item.id],
       );
       const currentCollectionId = sketch.get_parent_collection_id;
       if (currentCollectionId === targetCollectionId) {
@@ -210,7 +318,7 @@ export async function updateSketchTocItemParent(
         rows: [folder],
       } = await pgClient.query(
         `select get_parent_collection_id('sketch_folder', $1)`,
-        [item.id]
+        [item.id],
       );
       const currentCollectionId = folder.get_parent_collection_id;
       if (currentCollectionId !== targetCollectionId) {
@@ -219,7 +327,7 @@ export async function updateSketchTocItemParent(
           rows: [folderSketches],
         } = await pgClient.query(
           `select get_child_sketches_recursive($1, 'sketch_folder')`,
-          [item.id]
+          [item.id],
         );
         for (const id of folderSketches.get_child_sketches_recursive) {
           sketchFragmentChanges[id] = {
@@ -240,12 +348,12 @@ export async function updateSketchTocItemParent(
   // update collection_id and folder_id on related sketches
   await pgClient.query(
     `update sketches set collection_id = $1, folder_id = $2 where id = any($3)`,
-    [collectionId, folderId, sketches]
+    [collectionId, folderId, sketches],
   );
   // update collection_id and folder_id on related folders
   await pgClient.query(
     `update sketch_folders set collection_id = $1, folder_id = $2 where id = any($3)`,
-    [collectionId, folderId, folders]
+    [collectionId, folderId, folders],
   );
 
   const siblingSketchIds = targetCollectionId
@@ -268,7 +376,7 @@ export async function updateSketchTocItemParent(
         let fragments = await getFragmentsForSketch(
           parseInt(sketchId),
           pgClient,
-          { removeOverlap: true }
+          { removeOverlap: true },
         );
         if (fragments.length === 0) {
           // no fragments to reconcile, nothing to do
@@ -276,7 +384,7 @@ export async function updateSketchTocItemParent(
           continue;
         }
         fragmentDeletionScope.push(
-          ...fragments.map((f) => f.properties.__hash as string)
+          ...fragments.map((f) => f.properties.__hash as string),
         );
         if (change.addedTo) {
           const overlappingFragments = await overlappingFragmentsInCollection(
@@ -291,10 +399,10 @@ export async function updateSketchTocItemParent(
                 maxY: box[3],
               };
             }),
-            pgClient
+            pgClient,
           );
           fragmentDeletionScope.push(
-            ...overlappingFragments.map((f) => f.properties.__hash as string)
+            ...overlappingFragments.map((f) => f.properties.__hash as string),
           );
           // Need to run the whole fragment reconciliation process with
           // overlapping sketches in the collection
@@ -305,7 +413,7 @@ export async function updateSketchTocItemParent(
             fragments,
             [...new Set(fragmentDeletionScope)],
             pgClient,
-            parseInt(sketchId)
+            parseInt(sketchId),
           );
         } else {
           // just need to update_sketch_fragments with the merged fragments
@@ -331,7 +439,7 @@ export async function deleteSketchTocItems(
     type: "sketch" | "sketch_folder";
     id: number;
   }[],
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<{ deletedItems: string[]; previousCollectionIds: number[] }> {
   // Get IDs of collections these items belong to to be included in
   // updatedCollections
@@ -340,7 +448,7 @@ export async function deleteSketchTocItems(
             select distinct(
               get_parent_collection_id(type, id)
             ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-    [JSON.stringify(items)]
+    [JSON.stringify(items)],
   );
   const previousCollectionIds = rows.map((r: any) => r.collection_id);
   // Get IDs of all items to be deleted (including their children) to
@@ -350,13 +458,13 @@ export async function deleteSketchTocItems(
             select distinct(
               get_all_sketch_toc_children(id, type)
             ) as children from json_to_recordset($1) as (type sketch_child_type, id int)`,
-    [JSON.stringify(items)]
+    [JSON.stringify(items)],
   );
 
   const deletedItems: string[] = [
     ...items.map(
       (item: any) =>
-        `${/folder/i.test(item.type) ? "SketchFolder" : "Sketch"}:${item.id}`
+        `${/folder/i.test(item.type) ? "SketchFolder" : "Sketch"}:${item.id}`,
     ),
   ];
   for (const row of childrenResult.rows) {
@@ -388,7 +496,7 @@ export async function deleteSketchTocItems(
       deletedItems
         .filter((i: any) => i.startsWith("Sketch:"))
         .map((i: any) => parseInt(i.split(":")[1])),
-    ]
+    ],
   );
   const hashes = fragmentHashes.map((f: any) => f.hash);
 
@@ -430,12 +538,12 @@ export async function overlappingFragmentsInCollection(
   collectionId: number,
   sketchId: number | null,
   envelopes: { minX: number; minY: number; maxX: number; maxY: number }[],
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<SketchFragment[]> {
   const geometryArray = envelopes
     .map(
       (e: any) =>
-        `ST_MakeEnvelope(${e.minX}, ${e.minY}, ${e.maxX}, ${e.maxY}, 4326)`
+        `ST_MakeEnvelope(${e.minX}, ${e.minY}, ${e.maxX}, ${e.maxY}, 4326)`,
     )
     .join(",");
 
@@ -455,7 +563,7 @@ export async function overlappingFragmentsInCollection(
       ARRAY[${geometryArray}],
       $2::int
     )`,
-    [collectionId, sketchId]
+    [collectionId, sketchId],
   );
 
   const sketchIds = new Set<number>();
@@ -498,13 +606,13 @@ export async function getFragmentsForSketch(
   pgClient: PoolClient,
   options?: {
     removeOverlap?: boolean;
-  }
+  },
 ): Promise<SketchFragment[]> {
   const { rows } = await pgClient.query(
     `
     select * from get_fragments_for_sketch($1)
     `,
-    [sketchId]
+    [sketchId],
   );
   let fragments: SketchFragment[] = rows.map((r: any) => ({
     type: "Feature",
@@ -528,7 +636,7 @@ export async function getFragmentsForSketch(
     // previous collection
     fragments = mergeTouchingFragments(
       convertToPendingFragmentResult(fragments),
-      ["__geographyIds", "__sketchIds"]
+      ["__geographyIds", "__sketchIds"],
     ) as unknown as SketchFragment[];
   }
   return fragments;
@@ -537,7 +645,7 @@ export async function getFragmentsForSketch(
 let idCounter = 0;
 
 function convertToPendingFragmentResult(
-  fragments: SketchFragment[]
+  fragments: SketchFragment[],
 ): PendingFragmentResult[] {
   if (idCounter > 1_000_000) {
     console.warn("resetting idCounter");
@@ -568,7 +676,7 @@ export async function updateSketchFragments(
   sketchId: number,
   fragments: FragmentResult[],
   pgClient: PoolClient,
-  deletionScope?: string[]
+  deletionScope?: string[],
 ): Promise<void> {
   const fragmentInputs = fragments
     .map((f) => {
@@ -625,7 +733,7 @@ export async function createOrUpdateSketch({
     // Do a permission check
     const { rows } = await pgClient.query(
       `select * from sketches where id = $1 and user_id = $2`,
-      [sketchId, userId]
+      [sketchId, userId],
     );
     if (rows.length === 0) {
       throw new Error("Sketch not found");
@@ -643,14 +751,14 @@ export async function createOrUpdateSketch({
     `
     select * from clipping_layers_for_sketch_class($1, $2)
     `,
-    [projectId, sketchClassId]
+    [projectId, sketchClassId],
   );
 
   // group by geography_id
   const geographies = clippingLayers.reduce(
     (acc: GeographySettings[], l: any) => {
       let geography: GeographySettings | undefined = acc.find(
-        (g) => g.id === l.geography_id
+        (g) => g.id === l.geography_id,
       );
       if (!geography) {
         geography = {
@@ -661,7 +769,7 @@ export async function createOrUpdateSketch({
       }
       if (l.object_key === null) {
         throw new Error(
-          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`
+          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`,
         );
       }
       geography.clippingLayers.push({
@@ -671,7 +779,7 @@ export async function createOrUpdateSketch({
       });
       return acc;
     },
-    [] as GeographySettings[]
+    [] as GeographySettings[],
   );
 
   // Filter out layers that are not used for clipping this sketch class.
@@ -679,8 +787,8 @@ export async function createOrUpdateSketch({
     new Set(
       clippingLayers
         .filter((l: any) => l.for_clipping)
-        .map((l: any) => l.geography_id)
-    )
+        .map((l: any) => l.geography_id),
+    ),
   );
 
   if (sketchId) {
@@ -699,7 +807,7 @@ export async function createOrUpdateSketch({
       rows: [folder],
     } = await pgClient.query(
       `SELECT get_parent_collection_id('sketch_folder', $1)`,
-      [folderId]
+      [folderId],
     );
     folderCollectionId = folder.get_parent_collection_id;
   }
@@ -710,65 +818,62 @@ export async function createOrUpdateSketch({
           collectionId || folderCollectionId!,
           sketchId || null,
           preparedSketch.envelopes,
-          pgClient
+          pgClient,
         )
       : [];
 
   const fragmentDeletionScope = existingOverlappingFragments.map(
-    (f) => f.properties.__hash
+    (f) => f.properties.__hash,
   );
 
   // check that clippingGeographyLayers contains distinct values
   const distinctGeographyIds = new Set(
-    clippingGeographyLayers.map((l: any) => l.geography_id)
+    clippingGeographyLayers.map((l: any) => l.geography_id),
   );
   if (distinctGeographyIds.size !== clippingGeographyLayers.length) {
     throw new Error("Clipping geography layers contains duplicate values");
   }
 
   // Clip the sketch to the geographies.
-  const { clipped, fragments } = await clipToGeographies(
-    preparedSketch,
-    geographies,
-    clippingGeographyLayers,
-    existingOverlappingFragments,
-    sketchId || null,
-    async (feature, objectKey, op, cql2Query) => {
-      // ClippingFn is provided to clipToGeography to handle the actual
-      // clipping. This is done to accomadate different architectures. For
-      // example, on this API server we don't want to block the event-loop, so
-      // we use a worker (via clippingWorkerManager) to handle the clipping.
-      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
-        objectKey
-      );
-      if (process.env.NODE_ENV === "test") {
+  let clipped: Feature<MultiPolygon> | null;
+  let fragments: FragmentResult[];
+
+  if (process.env.NODE_ENV === "test") {
+    // In test mode, run clipping locally to avoid external service dependency
+    const result = await clipToGeographies(
+      preparedSketch,
+      geographies,
+      clippingGeographyLayers,
+      existingOverlappingFragments,
+      sketchId || null,
+      async (feature, objectKey, op, cql2Query) => {
+        const source =
+          await sourceCache.get<Feature<Polygon | MultiPolygon>>(objectKey);
         let count = 0;
         for await (const f of source.getFeaturesAsync(feature.envelopes)) {
           count++;
         }
-
         return clipSketchToPolygons(
           feature,
           op,
           cql2Query,
-          source.getFeaturesAsync(feature.envelopes)
+          source.getFeaturesAsync(feature.envelopes),
         );
-      } else {
-        if (!clippingWorkerManager) {
-          const manager = await import(
-            "./workers/clipping/clippingWorkerManager"
-          );
-          clippingWorkerManager = manager.clippingWorkerManager;
-        }
-        return clippingWorkerManager.clipSketchToPolygonsWithWorker(
-          feature,
-          op,
-          cql2Query,
-          source.getFeaturesAsync(feature.envelopes)
-        );
-      }
-    }
-  );
+      },
+    );
+    clipped = result.clipped;
+    fragments = result.fragments;
+  } else {
+    const workerResult = await callFragmentWorkerLambda(
+      userGeom,
+      geographies,
+      clippingGeographyLayers,
+      existingOverlappingFragments,
+      sketchId || null,
+    );
+    clipped = workerResult.clipped;
+    fragments = workerResult.fragments;
+  }
 
   if (!clipped) {
     throw new Error("Clipping failed. No geometry returned.");
@@ -792,7 +897,7 @@ export async function createOrUpdateSketch({
         JSON.stringify(clipped?.geometry),
         properties,
         sketchId,
-      ]
+      ],
     );
   } else {
     const {
@@ -822,7 +927,7 @@ export async function createOrUpdateSketch({
         JSON.stringify(clipped?.geometry),
         folderId,
         properties,
-      ]
+      ],
     );
     sketchId = sketch.id;
   }
@@ -832,24 +937,19 @@ export async function createOrUpdateSketch({
       ? await getChildSketchIds(
           "sketch",
           collectionId || folderCollectionId!,
-          pgClient
+          pgClient,
         )
       : [],
     fragments,
     fragmentDeletionScope,
     pgClient,
-    sketchId
+    sketchId,
   );
 
-  // startMetricCalculationsForSketch(
-  //   pgClient as unknown as Pool,
-  //   sketchId!,
-  //   false
-  // );
   await pgClient.query(
     `
     select enqueue_metric_calculations_for_sketch($1)`,
-    [sketchId!]
+    [sketchId!],
   );
 
   return sketchId!;
@@ -880,24 +980,21 @@ async function reconcileFragments(
   fragments: FragmentResult[],
   fragmentDeletionScope: string[],
   pgClient: PoolClient,
-  sketchId?: number
+  sketchId?: number,
 ) {
   const fragmentGroups = groupFragmentsBySketchId(fragments, sketchId);
-  // const fragmentDeletionScope = [
-  //   ...new Set(...fragments.map((f) => f.properties.__hash as string)),
-  // ];
   const ids = [...new Set([...(sketchId ? [sketchId] : []), ...siblingIds])];
   await updateGroupedSketchFragments(
     fragmentGroups,
     pgClient,
     ids,
-    fragmentDeletionScope
+    fragmentDeletionScope,
   );
 }
 
 function groupFragmentsBySketchId(
   fragments: FragmentResult[],
-  defaultSketchId?: number
+  defaultSketchId?: number,
 ) {
   const fragmentGroups: { [sketchId: number]: FragmentResult[] } = {};
   for (const fragment of fragments) {
@@ -918,7 +1015,7 @@ async function updateGroupedSketchFragments(
   fragmentGroups: { [sketchId: number]: FragmentResult[] },
   pgClient: PoolClient,
   filterToSketchIds: number[],
-  fragmentDeletionScope?: string[]
+  fragmentDeletionScope?: string[],
 ) {
   for (const [idForSketch, fragments] of Object.entries(fragmentGroups)) {
     if (filterToSketchIds.indexOf(parseInt(idForSketch)) === -1) {
@@ -929,7 +1026,7 @@ async function updateGroupedSketchFragments(
       parseInt(idForSketch),
       fragments,
       pgClient,
-      fragmentDeletionScope
+      fragmentDeletionScope,
     );
   }
 }
@@ -937,11 +1034,11 @@ async function updateGroupedSketchFragments(
 async function getChildSketchIds(
   type: "sketch" | "sketch_folder",
   id: number,
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<number[]> {
   const { rows } = await pgClient.query(
     `SELECT get_child_sketches_recursive($1, $2)`,
-    [id, type]
+    [id, type],
   );
   if (rows.length === 0) {
     return [];
@@ -954,12 +1051,12 @@ async function getChildSketchIds(
 
 async function getSiblingSketchIds(
   sketchId: number,
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<number[]> {
   // first, get the parent collection id
   const { rows } = await pgClient.query(
     `SELECT get_parent_collection_id('sketch', $1)`,
-    [sketchId]
+    [sketchId],
   );
   if (rows.length === 0) {
     return [];

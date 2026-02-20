@@ -112,7 +112,11 @@ export default function useMapboxGLDraw(
     performance?: SpanJSONOutput
   ) => void,
   extraRequestParams?: { [key: string]: any },
-  onPolygonProgress?: (polygon: Feature<Polygon>) => void
+  onPolygonProgress?: (polygon: Feature<Polygon>) => void,
+  warmFragmentCacheConfig?: {
+    endpoint: string;
+    sketchClassId: number;
+  }
 ) {
   const { manager: contextManager } = useContext(MapManagerContext);
   const uiState = useContext(MapUIStateContext);
@@ -162,8 +166,23 @@ export default function useMapboxGLDraw(
       if (onPreprocessedGeometry) {
         onPreprocessedGeometry(geom, performance);
       }
+      if (warmFragmentCacheConfig) {
+        const features = handlerState.current.draw?.getAll()?.features;
+        if (features?.length) {
+          fetch(warmFragmentCacheConfig.endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              feature: features[0],
+              sketchClassId: warmFragmentCacheConfig.sketchClassId,
+            }),
+          }).catch((err) => {
+            console.error("Failed to warm fragment cache:", err);
+          });
+        }
+      }
     },
-    [onPreprocessedGeometry, setPerformance]
+    [onPreprocessedGeometry, setPerformance, warmFragmentCacheConfig]
   );
 
   const [preprocessingResults] = useState<{

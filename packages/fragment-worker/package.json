@@ -1,0 +1,32 @@
+{
+  "name": "fragment-worker",
+  "version": "1.0.0",
+  "description": "Creates sketch fragments using overlay-engine on Lambda",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next#readme",
+  "license": "BSD-3-Clause",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "fgb-source": "^1.0.0",
+    "lru-cache": "^11.2.2",
+    "overlay-engine": "^1.0.0",
+    "undici": "^7.16.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.119",
+    "@types/geojson": "^7946.0.16",
+    "typescript": "^5.5.2"
+  }
+}

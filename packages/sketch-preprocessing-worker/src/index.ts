@@ -5,8 +5,11 @@ import { GeoJSONFeatureSchema } from "zod-geojson";
 import {
   prepareSketch,
   clipToGeography,
+  clipToGeographies,
   unionAtAntimeridian,
   clipSketchToPolygons,
+  GeographySettings,
+  SketchFragment,
 } from "overlay-engine";
 import { SourceCache } from "fgb-source";
 import turfArea from "@turf/area";
@@ -46,6 +49,72 @@ const clipReqSchema = z.object({
     })
   ),
 });
+
+const clippingLayerSchema = z.object({
+  op: z.enum(["INTERSECT", "DIFFERENCE"]),
+  source: z.string(),
+  cql2Query: z.any().optional(),
+});
+
+const geographySettingsSchema = z.object({
+  id: z.number(),
+  clippingLayers: z.array(clippingLayerSchema),
+});
+
+const sketchFragmentSchema = z.object({
+  type: z.literal("Feature"),
+  properties: z.object({
+    __hash: z.string(),
+    __geographyIds: z.array(z.number()),
+    __sketchIds: z.array(z.number()),
+  }),
+  geometry: z.any(),
+});
+
+const createFragmentsReqSchema = z.object({
+  feature: GeoJSONFeatureSchema,
+  geographies: z.array(geographySettingsSchema),
+  geographiesForClipping: z.array(z.number()),
+  existingOverlappingFragments: z.array(sketchFragmentSchema),
+  existingSketchId: z.number().nullable(),
+});
+
+app.post(
+  "/create-fragments",
+  zValidator("json", createFragmentsReqSchema),
+  async (c) => {
+    const params = c.req.valid("json");
+    try {
+      const preparedSketch = prepareSketch(params.feature);
+
+      const geographies = params.geographies as GeographySettings[];
+      const existingFragments =
+        params.existingOverlappingFragments as SketchFragment[];
+
+      const { clipped, fragments } = await clipToGeographies(
+        preparedSketch,
+        geographies,
+        params.geographiesForClipping,
+        existingFragments,
+        params.existingSketchId,
+        async (feature, objectKey, op, cql2Query) => {
+          const source = await getSource(c, objectKey);
+          return clipSketchToPolygons(
+            feature,
+            op,
+            cql2Query,
+            source.getFeaturesAsync(feature.envelopes)
+          );
+        }
+      );
+
+      return c.json({ success: true, clipped, fragments });
+    } catch (e: any) {
+      console.error(e);
+      return c.json({ success: false, error: e.toString() });
+    }
+  }
+);
 
 app.post("/clip", zValidator("json", clipReqSchema), async (c) => {
   const params = c.req.valid("json");

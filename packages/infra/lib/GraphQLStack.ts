@@ -39,6 +39,7 @@ export class GraphQLStack extends cdk.Stack {
       overlayWorkerArn: string;
       uploadHandler: lambda.DockerImageFunction;
       subdivisionWorkerLambdaArn: string;
+      fragmentWorkerLambdaArn: string;
       overlayEngineWorkerSqsQueue: Queue;
     }
   ) {
@@ -175,6 +176,7 @@ export class GraphQLStack extends cdk.Stack {
             GOOGLE_MAPS_2D_TILE_API_KEY:
               process.env.GOOGLE_MAPS_2D_TILE_API_KEY,
             SUBDIVISION_WORKER_LAMBDA_ARN: props.subdivisionWorkerLambdaArn,
+            FRAGMENT_WORKER_LAMBDA_ARN: props.fragmentWorkerLambdaArn,
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
               props.overlayEngineWorkerSqsQueue.queueUrl,
           },
@@ -257,7 +259,11 @@ export class GraphQLStack extends cdk.Stack {
       new PolicyStatement({
         actions: ["lambda:InvokeFunction"],
         effect: iam.Effect.ALLOW,
-        resources: [props.overlayWorkerArn, props.subdivisionWorkerLambdaArn],
+        resources: [
+          props.overlayWorkerArn,
+          props.subdivisionWorkerLambdaArn,
+          props.fragmentWorkerLambdaArn,
+        ],
       })
     );
 

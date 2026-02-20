@@ -18,6 +18,8 @@ import https from "https";
 import fs from "fs";
 import graphileOptions from "./graphileOptions";
 import { getFeatureCollection, getMVT } from "./exportSurvey";
+import { warmFragmentWorkerCache } from "./sketches";
+import { GeographySettings } from "overlay-engine";
 import * as Sentry from "@sentry/node";
 import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
@@ -317,6 +319,60 @@ run({
 const tilesetPool = createPool();
 const geoPool = createPool();
 const bookmarksPool = createPool();
+const warmCachePool = createPool();
+
+app.post(
+  "/api/warm-fragment-cache",
+  express.json({ limit: "5mb" }) as any,
+  async function (req: SSNRequest, res) {
+    const { feature, sketchClassId } = req.body || {};
+    if (!feature || !sketchClassId) {
+      return res
+        .status(400)
+        .json({ error: "feature and sketchClassId are required" });
+    }
+    if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+      return res.json({ success: true, skipped: true });
+    }
+    const client = await warmCachePool.connect();
+    try {
+      const { rows: clippingLayers } = await client.query(
+        `select * from clipping_layers_for_sketch_class(
+          (select project_id from sketch_classes where id = $1),
+          $1
+        )`,
+        [sketchClassId],
+      );
+      const geographies = clippingLayers.reduce(
+        (acc: GeographySettings[], l: any) => {
+          let geography = acc.find((g) => g.id === l.geography_id);
+          if (!geography) {
+            geography = { id: l.geography_id, clippingLayers: [] };
+            acc.push(geography);
+          }
+          if (l.object_key) {
+            geography.clippingLayers.push({
+              op: l.operation_type.toUpperCase(),
+              source: l.object_key,
+              cql2Query: l.cql2_query,
+            });
+          }
+          return acc;
+        },
+        [] as GeographySettings[],
+      );
+      warmFragmentWorkerCache(feature, geographies).catch((e) => {
+        console.error("Failed to invoke warm-fragment-cache Lambda:", e);
+      });
+      return res.json({ success: true });
+    } catch (e: any) {
+      console.error("warm-fragment-cache error:", e);
+      return res.status(500).json({ error: e.message });
+    } finally {
+      client.release();
+    }
+  },
+);
 
 app.use("/verify-email", async function (req, res, next) {
   // get token from query string
