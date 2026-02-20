@@ -1,0 +1,1 @@
+export { lambdaHandler } from "./lambda";

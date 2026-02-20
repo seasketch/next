@@ -249,7 +249,7 @@ function SketchEditorModal({
     },
     undefined,
     sketchClass.isGeographyClippingEnabled
-      ? "https://overlay.seasketch.org/geographies/clip"
+      ? "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip"
       : sketchClass.preprocessingEndpoint || undefined,
     setPreprocessedGeometry,
     extraRequestParams,
@@ -258,16 +258,19 @@ function SketchEditorModal({
         feature.geometry.coordinates[0].length > 3 &&
         sketchClass.isGeographyClippingEnabled
       ) {
-        fetch("https://overlay.seasketch.org/geographies/warm-cache", {
-          method: "POST",
-          body: JSON.stringify({
-            ...extraRequestParams,
-            feature,
-          }),
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }).catch((err) => {
+        fetch(
+          "https://sketch-preprocessing-worker.underbluewaters.workers.dev/warm-cache",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              ...extraRequestParams,
+              feature,
+            }),
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        ).catch((err) => {
           console.error("err", err);
         });
       }
@@ -327,11 +330,7 @@ function SketchEditorModal({
 
   useEffect(() => {
     const interactivityManager = uiState.interactivityManager;
-    if (
-      manager &&
-      sketch &&
-      interactivityManager
-    ) {
+    if (manager && sketch && interactivityManager) {
       const focusedSketchClickHandler = (
         focusedFeature: Feature<any>,
         originalEvent: MapMouseEvent
@@ -369,11 +368,7 @@ function SketchEditorModal({
       manager?.clearSketchEditingState();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    manager,
-    uiState.interactivityManager,
-    sketch?.id,
-  ]);
+  }, [manager, uiState.interactivityManager, sketch?.id]);
 
   useEffect(() => {
     if (sketch) {
@@ -541,9 +536,7 @@ function SketchEditorModal({
       manager.clearSketchEditingState();
       onComplete(data);
     } else {
-      throw new Error(
-        "No response from mutation or manager is unset"
-      );
+      throw new Error("No response from mutation or manager is unset");
     }
   }, [
     draw,
