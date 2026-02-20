@@ -240,6 +240,18 @@ function SketchEditorModal({
     return undefined;
   }, [sketchClass.isGeographyClippingEnabled, sketchClass.clippingGeographies]);
 
+  const warmFragmentCacheConfig = useMemo(() => {
+    if (sketchClass.isGeographyClippingEnabled) {
+      const endpoint =
+        process.env.REACT_APP_GRAPHQL_ENDPOINT?.replace(
+          /\/graphql$/,
+          "/api/warm-fragment-cache"
+        ) || "/api/warm-fragment-cache";
+      return { endpoint, sketchClassId: sketchClass.id };
+    }
+    return undefined;
+  }, [sketchClass.isGeographyClippingEnabled, sketchClass.id]);
+
   const draw = useMapboxGLDraw(
     uiState,
     sketchClass.geometryType,
@@ -274,7 +286,8 @@ function SketchEditorModal({
           console.error("err", err);
         });
       }
-    }
+    },
+    warmFragmentCacheConfig
   );
 
   useEffect(() => {

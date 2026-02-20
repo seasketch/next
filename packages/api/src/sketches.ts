@@ -13,29 +13,17 @@ import {
   clipSketchToPolygons,
   clipToGeographies,
 } from "overlay-engine";
-import { Pool, PoolClient } from "pg";
+import { PoolClient } from "pg";
 import bbox from "@turf/bbox";
 import { PendingFragmentResult } from "overlay-engine/dist/fragments";
-import { startMetricCalculationsForSketch } from "./plugins/reportsPlugin";
 import { makeNodeFetchRangeFn } from "./nodeFetchRangeFn";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
 
-// Initialize source cache for clipping operations
+// Source cache used for local clipping in test mode
 const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
   fetchRangeFn: makeNodeFetchRangeFn(`https://uploads.seasketch.org/`)
     .fetchRangeFn,
 });
-
-// Lazy load clipping worker manager (kept for reference, no longer used in production)
-let clippingWorkerManager: any;
-
-// Toggle between Lambda and Cloudflare Worker for fragment creation.
-// Set to false to fall back to the Cloudflare Worker endpoint.
-const USE_LAMBDA_FOR_FRAGMENTS = true;
-
-const PREPROCESSING_WORKER_URL =
-  process.env.SKETCH_PREPROCESSING_WORKER_URL ||
-  "https://sketch-preprocessing-worker.underbluewaters.workers.dev";
 
 let lambdaClient: LambdaClient | null = null;
 function getLambdaClient() {
@@ -55,11 +43,9 @@ type CreateFragmentsResult = {
 };
 
 /**
- * Delegates the clipToGeographies work to either an AWS Lambda or the
- * Cloudflare sketch-preprocessing-worker, controlled by
- * USE_LAMBDA_FOR_FRAGMENTS.
+ * Delegates clipToGeographies work to the fragment-worker AWS Lambda.
  */
-async function callPreprocessingWorker(
+async function callFragmentWorkerLambda(
   userGeom: Feature<any>,
   geographies: GeographySettings[],
   geographiesForClipping: number[],
@@ -69,6 +55,10 @@ async function callPreprocessingWorker(
   clipped: Feature<MultiPolygon> | null;
   fragments: FragmentResult[];
 }> {
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
+  }
+
   const payload = {
     feature: userGeom,
     geographies,
@@ -77,61 +67,38 @@ async function callPreprocessingWorker(
     existingSketchId,
   };
 
-  let result: CreateFragmentsResult;
+  const client = getLambdaClient();
+  console.time("invoke lambda");
+  const command = new InvokeCommand({
+    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+    InvocationType: "RequestResponse",
+    Payload: Buffer.from(JSON.stringify(payload)),
+  });
+  const response = await client.send(command);
+  console.timeEnd("invoke lambda");
 
-  if (USE_LAMBDA_FOR_FRAGMENTS && process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
-    console.log(
-      "Using fragment worker Lambda",
-      process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+  if (response.FunctionError) {
+    const errorPayload = response.Payload
+      ? JSON.parse(Buffer.from(response.Payload).toString())
+      : null;
+    throw new Error(
+      `Fragment worker Lambda error: ${
+        errorPayload?.errorMessage || response.FunctionError
+      }`,
     );
-    const client = getLambdaClient();
-    console.time("invoke lambda");
-    const command = new InvokeCommand({
-      FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
-      InvocationType: "RequestResponse",
-      Payload: Buffer.from(JSON.stringify(payload)),
-    });
-    const response = await client.send(command);
-    console.timeEnd("invoke lambda");
-    if (response.FunctionError) {
-      const errorPayload = response.Payload
-        ? JSON.parse(Buffer.from(response.Payload).toString())
-        : null;
-      throw new Error(
-        `Fragment worker Lambda error: ${
-          errorPayload?.errorMessage || response.FunctionError
-        }`,
-      );
-    }
-
-    if (!response.Payload) {
-      throw new Error("Fragment worker Lambda returned no payload");
-    }
-
-    result = JSON.parse(Buffer.from(response.Payload).toString());
-  } else {
-    console.log("Using preprocessing worker", PREPROCESSING_WORKER_URL);
-    const response = await fetch(
-      `${PREPROCESSING_WORKER_URL}/create-fragments`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      },
-    );
-
-    if (!response.ok) {
-      throw new Error(
-        `Preprocessing worker returned ${response.status}: ${await response.text()}`,
-      );
-    }
-
-    result = (await response.json()) as CreateFragmentsResult;
   }
+
+  if (!response.Payload) {
+    throw new Error("Fragment worker Lambda returned no payload");
+  }
+
+  const result: CreateFragmentsResult = JSON.parse(
+    Buffer.from(response.Payload).toString(),
+  );
 
   if (!result.success) {
     throw new Error(
-      `Preprocessing worker error: ${result.error || "Unknown error"}`,
+      `Fragment worker Lambda error: ${result.error || "Unknown error"}`,
     );
   }
 
@@ -139,6 +106,34 @@ async function callPreprocessingWorker(
     clipped: result.clipped ?? null,
     fragments: result.fragments ?? [],
   };
+}
+
+/**
+ * Fire-and-forget invocation of the fragment-worker Lambda to warm its FGB
+ * source caches for the given sketch bounding box. Returns immediately; the
+ * Lambda runs asynchronously.
+ */
+export async function warmFragmentWorkerCache(
+  userGeom: Feature<any>,
+  geographies: GeographySettings[],
+): Promise<void> {
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    return;
+  }
+
+  const client = getLambdaClient();
+  const command = new InvokeCommand({
+    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+    InvocationType: "Event",
+    Payload: Buffer.from(
+      JSON.stringify({
+        operation: "warm-cache",
+        feature: userGeom,
+        geographies,
+      }),
+    ),
+  });
+  await client.send(command);
 }
 
 export async function getFeatureCollection(
@@ -869,8 +864,7 @@ export async function createOrUpdateSketch({
     clipped = result.clipped;
     fragments = result.fragments;
   } else {
-    // Delegate clipping to the Cloudflare sketch-preprocessing-worker
-    const workerResult = await callPreprocessingWorker(
+    const workerResult = await callFragmentWorkerLambda(
       userGeom,
       geographies,
       clippingGeographyLayers,
@@ -880,45 +874,6 @@ export async function createOrUpdateSketch({
     clipped = workerResult.clipped;
     fragments = workerResult.fragments;
   }
-
-  // --- Previous local clipping implementation (kept for reference) ---
-  // const { clipped, fragments } = await clipToGeographies(
-  //   preparedSketch,
-  //   geographies,
-  //   clippingGeographyLayers,
-  //   existingOverlappingFragments,
-  //   sketchId || null,
-  //   async (feature, objectKey, op, cql2Query) => {
-  //     const source =
-  //       await sourceCache.get<Feature<Polygon | MultiPolygon>>(objectKey);
-  //     if (process.env.NODE_ENV === "test") {
-  //       let count = 0;
-  //       for await (const f of source.getFeaturesAsync(feature.envelopes)) {
-  //         count++;
-  //       }
-  //       return clipSketchToPolygons(
-  //         feature,
-  //         op,
-  //         cql2Query,
-  //         source.getFeaturesAsync(feature.envelopes),
-  //       );
-  //     } else {
-  //       if (!clippingWorkerManager) {
-  //         console.time("create clipping worker manager");
-  //         const manager =
-  //           await import("./workers/clipping/clippingWorkerManager");
-  //         clippingWorkerManager = manager.clippingWorkerManager;
-  //         console.timeEnd("create clipping worker manager");
-  //       }
-  //       return clippingWorkerManager.clipSketchToPolygonsWithWorker(
-  //         feature,
-  //         op,
-  //         cql2Query,
-  //         source.getFeaturesAsync(feature.envelopes),
-  //       );
-  //     }
-  //   },
-  // );
 
   if (!clipped) {
     throw new Error("Clipping failed. No geometry returned.");
@@ -991,11 +946,6 @@ export async function createOrUpdateSketch({
     sketchId,
   );
 
-  // startMetricCalculationsForSketch(
-  //   pgClient as unknown as Pool,
-  //   sketchId!,
-  //   false
-  // );
   await pgClient.query(
     `
     select enqueue_metric_calculations_for_sketch($1)`,
@@ -1033,9 +983,6 @@ async function reconcileFragments(
   sketchId?: number,
 ) {
   const fragmentGroups = groupFragmentsBySketchId(fragments, sketchId);
-  // const fragmentDeletionScope = [
-  //   ...new Set(...fragments.map((f) => f.properties.__hash as string)),
-  // ];
   const ids = [...new Set([...(sketchId ? [sketchId] : []), ...siblingIds])];
   await updateGroupedSketchFragments(
     fragmentGroups,

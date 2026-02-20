@@ -28,15 +28,18 @@ const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
 const sourceCache = new SourceCache("1GB", {
   fetchRangeFn: (
     url: string,
-    range: [number, number | null]
+    range: [number, number | null],
   ): Promise<ArrayBuffer> => {
     const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
     const cached = cache.get(cacheKey);
     if (cached) {
+      console.log("cache hit", cacheKey);
       return Promise.resolve(cached);
     } else if (inFlightRequests.has(cacheKey)) {
+      console.log("in-flight request hit", cacheKey);
       return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
     } else {
+      console.log("cache miss", cacheKey);
       const request = pool
         .request({
           path: "/" + url.replace("https://uploads.seasketch.org/", ""),
@@ -59,7 +62,7 @@ const sourceCache = new SourceCache("1GB", {
           throw new Error(
             `${e.message}. ${url} range=${range[0]}-${
               range[1] ? range[1] : ""
-            }: ${e.message}`
+            }: ${e.message}`,
           );
         });
       inFlightRequests.set(cacheKey, request);
@@ -68,6 +71,12 @@ const sourceCache = new SourceCache("1GB", {
   },
   maxCacheSize: "256MB",
 });
+
+export interface WarmCachePayload {
+  operation: "warm-cache";
+  feature: Feature<any>;
+  geographies: GeographySettings[];
+}
 
 export interface CreateFragmentsPayload {
   feature: Feature<any>;
@@ -84,11 +93,35 @@ export interface CreateFragmentsResult {
   error?: string;
 }
 
+export async function handleWarmCache(
+  payload: WarmCachePayload,
+): Promise<{ success: boolean }> {
+  const preparedSketch = prepareSketch(payload.feature);
+  const uniqueSources = new Set<string>();
+  for (const geography of payload.geographies) {
+    for (const layer of geography.clippingLayers) {
+      uniqueSources.add(layer.source);
+    }
+  }
+  console.time("warm cache");
+  await Promise.all(
+    Array.from(uniqueSources).map(async (sourceKey) => {
+      const source =
+        await sourceCache.get<Feature<Polygon | MultiPolygon>>(sourceKey);
+      return source.getFeaturesAsync(preparedSketch.envelopes, {
+        warmCache: true,
+      });
+    }),
+  );
+  console.timeEnd("warm cache");
+  return { success: true };
+}
+
 export async function handleCreateFragments(
-  payload: CreateFragmentsPayload
+  payload: CreateFragmentsPayload,
 ): Promise<CreateFragmentsResult> {
   const preparedSketch = prepareSketch(payload.feature);
-
+  console.time("clip to geographies");
   const { clipped, fragments } = await clipToGeographies(
     preparedSketch,
     payload.geographies,
@@ -99,19 +132,18 @@ export async function handleCreateFragments(
       feature: PreparedSketch,
       objectKey: string,
       op: ClippingOperation,
-      cql2Query?: Cql2Query
+      cql2Query?: Cql2Query,
     ) => {
-      const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
-        objectKey
-      );
+      const source =
+        await sourceCache.get<Feature<Polygon | MultiPolygon>>(objectKey);
       return clipSketchToPolygons(
         feature,
         op,
         cql2Query,
-        source.getFeaturesAsync(feature.envelopes)
+        source.getFeaturesAsync(feature.envelopes),
       );
-    }
+    },
   );
-
+  console.timeEnd("clip to geographies");
   return { success: true, clipped, fragments };
 }

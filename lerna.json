@@ -16,7 +16,8 @@
     "packages/fgb-source",
     "packages/overlay-engine",
     "packages/sketch-preprocessing-worker",
-    "packages/overlay-worker"
+    "packages/overlay-worker",
+    "packages/fragment-worker"
   ],
   "version": "independent"
 }
