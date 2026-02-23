@@ -284,7 +284,7 @@ export default function ReportCardLoadingIndicator({
       )}
       {stage === "sources" && (
         <>
-          <span className="text-xs text-gray-400 whitespace-nowrap italic">
+          <span className="text-xs text-gray-400 whitespace-nowrap italic mr-2">
             {t("optimizing sources")}
           </span>
           {etaForCountdown && (
