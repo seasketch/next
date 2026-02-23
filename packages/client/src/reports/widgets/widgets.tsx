@@ -1028,6 +1028,7 @@ export function buildReportCommandGroups({
         const stableId = source.tableOfContentsItem?.stableId;
         let children: CommandPaletteItem[] = [];
         let childGroups: CommandPaletteGroup[] | undefined;
+        let unsupportedMessage: string | undefined;
         if ("bands" in source.geostats && source.geostats.bands.length === 1) {
           const inlineGroup: CommandPaletteGroup = {
             // eslint-disable-next-line i18next/no-literal-string
@@ -1123,6 +1124,12 @@ export function buildReportCommandGroups({
             },
           });
           childGroups = [inlineGroup, blockGroup];
+        } else if (
+          "bands" in source.geostats &&
+          source.geostats.bands.length > 1
+        ) {
+          unsupportedMessage =
+            "Only single-band rasters are supported in the reporting tools.";
         } else if (
           "layers" in source.geostats &&
           isGeostatsLayer(source.geostats.layers[0])
@@ -1444,6 +1451,10 @@ export function buildReportCommandGroups({
           popoverStatus: (
             <OverlayProcessingStatus tableOfContentsItemId={tocId} />
           ),
+          ...(unsupportedMessage && {
+            muted: true,
+            description: unsupportedMessage,
+          }),
         };
         if (overlayAugmenter) {
           item = overlayAugmenter({ source, item });
