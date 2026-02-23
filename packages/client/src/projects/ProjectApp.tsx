@@ -151,7 +151,7 @@ export default function ProjectApp() {
                 defaultShowScale={data?.project?.showScalebarByDefault || false}
               >
                 <MeasureControlContextProvider>
-                  <SketchUIStateContextProvider>
+                  <SketchUIStateContextProvider preferencesKey={`${slug}-homepage-sketches`}>
                     <DataDownloadModalProvider>
                       <TableOfContentsMetadataModalProvider>
                         <Toolbar

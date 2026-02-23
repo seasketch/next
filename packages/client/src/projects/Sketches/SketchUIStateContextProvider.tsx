@@ -213,8 +213,15 @@ export const SketchUIStateContext =
 
 export default function SketchUIStateContextProvider({
   children,
+  preferencesKey,
 }: {
   children: ReactNode;
+  /**
+   * localStorage key prefix for persisting sketch visibility and expansion
+   * state. Must be unique per page/context to avoid cross-page overwrites
+   * (e.g. `${slug}-homepage`).
+   */
+  preferencesKey: string;
 }) {
   const { t } = useTranslation("sketching");
   const { manager, ready } = useContext(MapManagerContext);
@@ -236,7 +243,7 @@ export default function SketchUIStateContextProvider({
 
   // # Table of Contents Item Expansion State
   const [expandedIds, setExpandedIds] = useLocalStorage<string[]>(
-    `expanded-sketches-${slug}`,
+    `${preferencesKey}-expanded-sketches`,
     []
   );
 
@@ -355,7 +362,7 @@ export default function SketchUIStateContextProvider({
 
   // # Sketch Visibility
   const [visibleSketches, setVisibleSketches] = useLocalStorage<string[]>(
-    `sketch-visibility-${getSlug()}`,
+    `${preferencesKey}-sketch-visibility`,
     []
   );
 
