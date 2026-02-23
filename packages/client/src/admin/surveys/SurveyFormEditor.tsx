@@ -394,6 +394,7 @@ export default function SurveyFormEditor({
           </Link>
         </div>
         <Button
+          target="_blank"
           href={`/${slug}/surveys/${surveyId}/0/practice`}
           label={
             <>

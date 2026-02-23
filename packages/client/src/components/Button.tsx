@@ -45,6 +45,7 @@ export interface ButtonProps {
   onSegmentClick?: (index: number) => void;
   "data-cy"?: string;
   buttonProps?: ButtonHTMLAttributes<HTMLButtonElement>;
+  target?: string;
 }
 
 export default function Button(props: ButtonProps) {
@@ -170,6 +171,7 @@ export default function Button(props: ButtonProps) {
       }`}
       onClick={props.disabled ? undefined : onClick}
       id={props.id}
+      {...(props.target ? { target: props.target } : {})}
     >
       {props.labelFor ? (
         <label
