@@ -230,7 +230,9 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 cql2_query,
                 template_id,
               );
-              bounds.push(bbox);
+              if (bbox) {
+                bounds.push(bbox);
+              }
             }),
           );
           if (bounds.length === 0) {
@@ -813,6 +815,8 @@ function cql2ToFilterExpression(filter: any): any {
 export default GeographyPlugin;
 
 function combineBBoxes(bboxes: number[][]) {
+  // guard against null or undefined bboxes
+  bboxes = bboxes.filter(Boolean);
   if (bboxes.length === 0) {
     return undefined;
   }
