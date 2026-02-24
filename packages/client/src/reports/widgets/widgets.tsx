@@ -1400,6 +1400,34 @@ export function buildReportCommandGroups({
                   });
                 },
               });
+              if (
+                clippingGeography ||
+                (geographies?.length && geographies.length > 1)
+              ) {
+                inlineGroup.items.push({
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id: `overlay-layer-${tocId}-geography-overlap-area`,
+                  label: "Total Area in Geography",
+                  description:
+                    "Displays the sum area of polygons for this layer found within a specified geography.",
+                  screenshotSrc: "/slashCommands/geography-sum-area.png",
+                  run: (state, dispatch, view) => {
+                    return insertInlineMetric(view, state.selection.ranges[0], {
+                      type: "InlineMetric",
+                      metrics: [
+                        {
+                          type: "overlay_area",
+                          subjectType: "geographies",
+                          stableId,
+                        },
+                      ],
+                      componentSettings: {
+                        presentation: "geography_overlay_area",
+                      },
+                    });
+                  },
+                });
+              }
               blockGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-overlap-table`,

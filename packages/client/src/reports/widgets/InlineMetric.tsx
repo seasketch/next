@@ -18,6 +18,7 @@ import {
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
   ReportWidgetTooltipControls,
+  TooltipInfoIcon,
   TooltipMorePopover,
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
@@ -36,6 +37,8 @@ import {
   ReportWidgetProps,
   TooltipBooleanConfigurationOption,
 } from "./widgets";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { useClippingGeography } from "../hooks/useClippingGeography";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { SketchGeometryType } from "../../generated/graphql";
@@ -303,6 +306,7 @@ export type InlineMetricComponentSettings = {
     | "percent_area"
     | "distance_to_shore"
     | "overlay_area"
+    | "geography_overlay_area"
     | "count"
     | "column_values"
     | "raster_stats";
@@ -312,6 +316,8 @@ export type InlineMetricComponentSettings = {
   pluralizedCountLabels?: PluralizedMessagesByLang;
   pluralizedDistinctValueLabels?: PluralizedMessagesByLang;
   column?: string;
+  /** For geography_overlay_area: geography id to report on. undefined/"auto" = primary clipping geography. */
+  geographyId?: number | "auto";
 };
 
 const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
@@ -326,6 +332,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   sketchClass,
   lang,
 }) => {
+  const clippingGeography = useClippingGeography(sketchClass, geographies);
   const {
     pluralRules,
     countDefaultMessages,
@@ -447,6 +454,32 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
 
         return formatters.area(combined.value["*"]);
       }
+      case "geography_overlay_area": {
+        const geographyId =
+          componentSettings.geographyId === "auto" ||
+          componentSettings.geographyId === undefined
+            ? clippingGeography?.id
+            : componentSettings.geographyId;
+        if (geographyId === undefined) {
+          throw new Error("Primary geography not found.");
+        }
+        const geographyOverlayMetric = metrics.find(
+          (m) =>
+            m.type === "overlay_area" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === geographyId
+        ) as OverlayAreaMetric | undefined;
+        if (!geographyOverlayMetric) {
+          throw new Error("Geography overlay area not found in metrics.");
+        }
+        const totalArea =
+          geographyOverlayMetric.value["*"] ??
+          Object.values(geographyOverlayMetric.value).reduce(
+            (sum, v) => sum + v,
+            0
+          );
+        return formatters.area(totalArea);
+      }
       case "count": {
         const combined = combineMetricsForFragments(
           metrics as Pick<Metric, "type" | "value">[]
@@ -536,6 +569,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     distinctCustomMessages,
     distinctDefaultMessages,
     componentSettings?.column,
+    clippingGeography?.id,
+    componentSettings?.geographyId,
   ]);
 
   if (loading) {
@@ -624,6 +659,90 @@ function inlineMetricPropsEqual(
 
 export const InlineMetric = memo(_InlineMetric, inlineMetricPropsEqual);
 
+function GeographySelector({
+  geographies,
+  clippingGeography,
+  value,
+  onChange,
+  t,
+}: {
+  geographies: Pick<{ id: number; name: string }, "id" | "name">[];
+  clippingGeography:
+    | Pick<{ id: number; name: string }, "id" | "name">
+    | undefined;
+  value: number | "auto" | undefined;
+  onChange: (geographyId: number | "auto" | undefined) => void;
+  t: (key: string) => string;
+}) {
+  const autoLabelWithTooltip = useMemo(
+    () => (
+      <div className="flex items-center justify-between w-full -ml-2 pl-2">
+        <span className="flex-1">{t("auto")}</span>
+        <TooltipInfoIcon
+          side="right"
+          content={
+            <div className="space-y-1.5">
+              <div>
+                {t(
+                  "When 'auto' is specified, the geography used to clip the sketch will be used."
+                )}
+              </div>
+              {clippingGeography && (
+                <div className="font-semibold pt-1">
+                  {t("Current:")} {clippingGeography.name}
+                </div>
+              )}
+            </div>
+          }
+          className="-mr-1"
+        />
+      </div>
+    ),
+    [t, clippingGeography]
+  );
+
+  const options = useMemo(
+    () => [
+      {
+        value: "auto" as const,
+        label: autoLabelWithTooltip,
+      },
+      ...geographies.map((g) => ({
+        value: String(g.id),
+        label: g.name,
+      })),
+    ],
+    [geographies, autoLabelWithTooltip]
+  );
+
+  const dropdownValue =
+    value === undefined || value === "auto" ? "auto" : String(value);
+
+  return (
+    <LabeledDropdown
+      label={t("Geography")}
+      value={dropdownValue}
+      // title={t("Geography")}
+      options={options}
+      getDisplayLabel={(selected) => {
+        if (selected?.value === "auto") {
+          return t("auto");
+        }
+        return selected?.label;
+      }}
+      onChange={(next) => {
+        if (next === "auto") {
+          onChange(undefined);
+        } else {
+          const parsed = Number(next);
+          onChange(Number.isNaN(parsed) ? undefined : parsed);
+        }
+      }}
+      ariaLabel={t("Geography")}
+    />
+  );
+}
+
 export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   node,
   onUpdate,
@@ -669,6 +788,13 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   const { filteredSources: sources } = useOverlaySources(dependencies);
   const relatedOverlay = useRelatedOverlay(dependencies);
+
+  const { geographies, sketchClass: tooltipSketchClass } =
+    useBaseReportContext();
+  const clippingGeography = useClippingGeography(
+    tooltipSketchClass,
+    geographies
+  );
 
   const { valueColumnOptions, valueColumnAttributesByName } = useMemo(() => {
     const options: Array<{ value: string; label: ReactNode }> = [];
@@ -843,7 +969,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   return (
     <>
-      {["total_area", "overlay_area"].includes(presentation) && (
+      {["total_area", "overlay_area", "geography_overlay_area"].includes(
+        presentation
+      ) && (
         <UnitSelector
           unitType="area"
           value={unit as AreaUnit}
@@ -906,6 +1034,19 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               componentSettings: { ...componentSettings, unitDisplay: display },
             })
           }
+        />
+      )}
+      {presentation === "geography_overlay_area" && (
+        <GeographySelector
+          geographies={geographies}
+          clippingGeography={clippingGeography}
+          value={componentSettings.geographyId}
+          onChange={(geographyId) =>
+            onUpdate({
+              componentSettings: { ...componentSettings, geographyId },
+            })
+          }
+          t={t}
         />
       )}
       {presentation === "column_values" && valueColumnOptions.length > 0 && (
@@ -1079,7 +1220,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
                 {t("Layer")}
               </span>
-              <span className="text-sm font-light  whitespace-nowrap px-1 flex-1 text-right  max-w-32 truncate">
+              <span className="text-sm font-light whitespace-nowrap px-1 flex-1 text-right">
                 {relatedOverlay.tableOfContentsItem?.title || "Unknown"}
               </span>
             </div>
@@ -1100,6 +1241,8 @@ function formatPresentationLabel(presentation: string) {
       return "Distance to Shore";
     case "overlay_area":
       return "Overlay Area";
+    case "geography_overlay_area":
+      return "Geography Overlap Area";
     default:
       return presentation;
   }
