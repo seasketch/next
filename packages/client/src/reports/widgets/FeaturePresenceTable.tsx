@@ -32,6 +32,7 @@ import {
   getClassTableRows,
 } from "./FeatureCountTable";
 import { useOverlaySources } from "../hooks/useOverlaySources";
+import { useClippingGeography } from "../hooks/useClippingGeography";
 
 export type FeaturePresenceTableSettings = {
   rowsPerPage?: number;
@@ -53,6 +54,7 @@ export const FeaturePresenceTable: ReportWidget<
   sources,
   loading,
   sketchClass,
+  geographies,
   dependencies,
 }) => {
   const { t } = useTranslation("reports");
@@ -60,7 +62,7 @@ export const FeaturePresenceTable: ReportWidget<
   const nameLabel = componentSettings.nameLabel || t("Name");
   const presenceLabel = componentSettings.presenceLabel || t("Presence");
 
-  const primaryGeographyId = sketchClass?.clippingGeographies?.[0]?.id ?? 0;
+  const primaryGeographyId = useClippingGeography(sketchClass, geographies)?.id ?? 0;
 
   const rows = useMemo<FeaturePresenceRow[]>(() => {
     const classRows = getClassTableRows({

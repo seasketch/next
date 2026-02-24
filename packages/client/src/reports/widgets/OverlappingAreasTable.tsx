@@ -32,6 +32,7 @@ import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
+import { useClippingGeography } from "../hooks/useClippingGeography";
 
 // Accept both area and length style units; default to km (area).
 type OverlapUnit = "km" | "mi" | "acres" | "ha";
@@ -76,9 +77,11 @@ export const OverlappingAreasTable: ReportWidget<
   sources,
   loading,
   dependencies,
+  sketchClass,
   geographies,
 }) => {
-  const primaryGeographyId = geographies[0]?.id;
+  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const primaryGeographyId = clippingGeography?.id;
   const { t } = useTranslation("reports");
 
   const unit: OverlapUnit = componentSettings.unit || "km";
@@ -120,6 +123,10 @@ export const OverlappingAreasTable: ReportWidget<
         overlap: NaN,
         geographyTotal: NaN,
       }));
+    }
+
+    if (!primaryGeographyId) {
+      throw new Error("Primary geography not found.");
     }
 
     const combinedMetrics = combineMetricsBySource<OverlayAreaMetric>(
