@@ -20,3 +20,11 @@ In short, Report Widgets have the following qualities and requirements:
   - Widgets can, and usually should, implement a `ReportWidgetTooltipControls` component in order to customize options stored in the componentSettings prop. These controls should use reusable components like `TooltipDropdown` exported by `src/editor/TooltipMenu.tsx` where possible. To enable these controls, updated the switch statement in `ReportWidgetTooltipControlsRouter` for the given Report Widget `type`.
 
 For an example of how this all comes together, see the implementation of `src/reports/widgets/GeographySizeTable.tsx`.
+
+## Admin Tooltip Controls Interface
+
+Widgets are primarily configured using a tooltip menu. It is important to maintain consistency among these administrative tools as the number of widgets grows.
+
+- Use common input controls defined in src/reports/widgets such as UnitSelector.tsx when you can. Don't reimplement the wheel all the time.
+- Inputs should be organized into a set of inline controls on the tooltip when possible, but when there are too many and inputs form distinct groups, they may be broken out into popovers. Again, use reusable components such as those in src/editor/TooltipMenu.tsx rather than inventing your own.
+- Each component's tooltip should have a TooltipMorePopover. These may contain extra settings that aren't often used, but most importantly each should indicate the component type (see FeaturePresenceTable for an example).
