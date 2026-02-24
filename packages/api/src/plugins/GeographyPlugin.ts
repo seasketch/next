@@ -171,30 +171,12 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const dataSourceUrl = dataLayerRows[0].url;
           const objectKey = dataLayerRows[0].object_key;
           const { cql2Query, templateId } = clippingLayer;
-          // Don't return a bounding box for the whole planet
-          if (templateId === "DAYLIGHT_COASTLINE") {
-            return null;
-          }
-          console.time("getBoundsForClippingLayer");
-          if (/tiles.seasketch.org/.test(dataSourceUrl)) {
-            const bounds = await getBoundsForClippingLayer(
-              dataSourceUrl,
-              objectKey,
-              cql2Query,
-              clippingLayer.templateId,
-            );
-            console.timeEnd("getBoundsForClippingLayer");
-            return bounds;
-          } else {
-            try {
-              // try to get bounds from the flatgeobuf source
-              const source = await createSource(dataSourceUrl);
-              const bounds = source.bounds;
-              return bounds;
-            } catch (error) {
-              return null;
-            }
-          }
+          return getBoundsForClippingLayerUrl(
+            dataSourceUrl,
+            objectKey,
+            cql2Query,
+            clippingLayer.templateId,
+          );
         },
       },
 
@@ -242,7 +224,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 // don't return a bounding box for the whole planet
                 return;
               }
-              const bbox = await getBoundsForClippingLayer(
+              const bbox = await getBoundsForClippingLayerUrl(
                 url,
                 object_key,
                 cql2_query,
@@ -1000,4 +982,34 @@ async function getBoundsForClippingLayer(
   }
 
   return bounds;
+}
+
+async function getBoundsForClippingLayerUrl(
+  url: string,
+  object_key: string,
+  cql2_query?: any,
+  template_id?: string,
+  skipCache?: boolean,
+) {
+  // Don't return a bounding box for the whole planet
+  if (template_id && template_id === "DAYLIGHT_COASTLINE") {
+    return null;
+  }
+  if (/tiles.seasketch.org/.test(url)) {
+    return getBoundsForClippingLayer(
+      url,
+      object_key,
+      cql2_query,
+      template_id,
+      skipCache,
+    );
+  } else {
+    try {
+      const source = await createSource(url);
+      return source.bounds;
+    } catch (error) {
+      return null;
+    }
+  }
+  return null;
 }
