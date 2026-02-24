@@ -1,6 +1,7 @@
 import { gql, makeExtendSchemaPlugin } from "graphile-utils";
 import { PoolClient } from "pg";
 import * as cache from "../cache";
+import { createSource } from "fgb-source";
 
 /**
  * Plugin that implements the CreateGeography mutation
@@ -124,10 +125,10 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  context.createdGeographyIds
-                )})`
+                  context.createdGeographyIds,
+                )})`,
               );
-            }
+            },
           );
         },
       },
@@ -138,10 +139,10 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = ${sql.value(
-                  context.geographyId
-                )}`
+                  context.geographyId,
+                )}`,
               );
-            }
+            },
           );
           return rows[0];
         },
@@ -162,7 +163,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             //   data_sources ON data_layers.data_source_id = data_sources.id
             // WHERE
             //   geography_clipping_layers.id = $1`,
-            [clippingLayer.id]
+            [clippingLayer.id],
           );
           if (dataLayerRows.length === 0) {
             return null;
@@ -175,14 +176,25 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             return null;
           }
           console.time("getBoundsForClippingLayer");
-          const bounds = await getBoundsForClippingLayer(
-            dataSourceUrl,
-            objectKey,
-            cql2Query,
-            clippingLayer.templateId
-          );
-          console.timeEnd("getBoundsForClippingLayer");
-          return bounds;
+          if (/tiles.seasketch.org/.test(dataSourceUrl)) {
+            const bounds = await getBoundsForClippingLayer(
+              dataSourceUrl,
+              objectKey,
+              cql2Query,
+              clippingLayer.templateId,
+            );
+            console.timeEnd("getBoundsForClippingLayer");
+            return bounds;
+          } else {
+            try {
+              // try to get bounds from the flatgeobuf source
+              const source = await createSource(dataSourceUrl);
+              const bounds = source.bounds;
+              return bounds;
+            } catch (error) {
+              return null;
+            }
+          }
         },
       },
 
@@ -211,7 +223,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             // where
             //   geography_clipping_layers.project_geography_id = $1
             // `,
-            [geographyId]
+            [geographyId],
           );
           await Promise.all(
             (
@@ -234,10 +246,10 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 url,
                 object_key,
                 cql2_query,
-                template_id
+                template_id,
               );
               bounds.push(bbox);
-            })
+            }),
           );
           if (bounds.length === 0) {
             return null;
@@ -255,12 +267,12 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const isAdmin = await sessionIsAdmin(id, pgClient);
           if (!isAdmin) {
             throw new Error(
-              "You do not have permission to update this geography"
+              "You do not have permission to update this geography",
             );
           }
           const { rows: geographyRows } = await pgClient.query(
             "SELECT * FROM project_geography WHERE id = $1",
-            [id]
+            [id],
           );
           if (geographyRows.length === 0) {
             throw new Error(`Geography with ID ${id} does not exist`);
@@ -276,16 +288,16 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             updateFields.push(
               `translated_props = $${
                 updateFields.length > 0 ? updateFields.length + 1 : 2
-              }`
+              }`,
             );
             updateValues.push(JSON.stringify(translatedProps));
           }
           if (updateFields.length > 0) {
             await pgClient.query(
               `UPDATE project_geography SET ${updateFields.join(
-                ", "
+                ", ",
               )} WHERE id = $1`,
-              [id, ...updateValues]
+              [id, ...updateValues],
             );
           }
           if (Array.isArray(clippingLayers)) {
@@ -313,7 +325,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 geography_clipping_layers 
               WHERE project_geography_id = $1
             `,
-              [id]
+              [id],
             );
             // determine which clipping layers to delete, update, or create
             const existingLayerMap: Record<number, any> = {};
@@ -327,7 +339,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               const { dataLayerId, operationType, cql2Query } = layerInput;
               if (!dataLayerId) {
                 throw new Error(
-                  "dataLayerId is required for each clipping layer"
+                  "dataLayerId is required for each clipping layer",
                 );
               }
               if (dataLayerId in existingLayerMap) {
@@ -361,7 +373,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               if (
                 !clippingLayers.some(
                   (layer: { dataLayerId: number }) =>
-                    layer.dataLayerId === existingLayer.data_layer_id
+                    layer.dataLayerId === existingLayer.data_layer_id,
                 )
               ) {
                 // This clipping layer is not in the input, so delete it
@@ -370,13 +382,13 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             }
             // First update any layers to intersect operation
             const intersectUpdates = clippingLayersToUpdate.filter(
-              (layer) => layer.operationType === "intersect"
+              (layer) => layer.operationType === "intersect",
             );
             for (const layer of intersectUpdates) {
               const { id, operationType, cql2Query } = layer;
               await pgClient.query(
                 `UPDATE geography_clipping_layers SET operation_type = $1, cql2_query = $2 WHERE id = $3`,
-                [operationType, cql2Query, id]
+                [operationType, cql2Query, id],
               );
             }
 
@@ -392,19 +404,19 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   operationType,
                   cql2Query ? JSON.stringify(cql2Query) : null,
                   templateId || null,
-                ]
+                ],
               );
             }
 
             // Then update any layers to difference operation
             const differenceUpdates = clippingLayersToUpdate.filter(
-              (layer) => layer.operationType === "difference"
+              (layer) => layer.operationType === "difference",
             );
             for (const layer of differenceUpdates) {
               const { id, operationType, cql2Query } = layer;
               await pgClient.query(
                 `UPDATE geography_clipping_layers SET operation_type = $1, cql2_query = $2 WHERE id = $3`,
-                [operationType, cql2Query, id]
+                [operationType, cql2Query, id],
               );
             }
 
@@ -412,7 +424,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             if (clippingLayerIdsToDelete.length > 0) {
               await pgClient.query(
                 `DELETE FROM geography_clipping_layers WHERE id = ANY($1)`,
-                [clippingLayerIdsToDelete]
+                [clippingLayerIdsToDelete],
               );
             }
           }
@@ -423,7 +435,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           _query,
           args,
           context,
-          resolveInfo
+          resolveInfo,
         ) => {
           const { pgClient } = context;
           const { id, deleteRelatedTableOfContentsItems } = args;
@@ -432,7 +444,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const isAdmin = await sessionIsAdmin(id, pgClient);
           if (!isAdmin) {
             throw new Error(
-              "You do not have permission to delete this geography"
+              "You do not have permission to delete this geography",
             );
           }
 
@@ -454,12 +466,12 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                     ) = 0
                 )
               `,
-              [id]
+              [id],
             );
           }
           const { rows } = await pgClient.query(
             "DELETE FROM project_geography WHERE id = $1 returning *",
-            [id]
+            [id],
           );
 
           return rows[0];
@@ -479,14 +491,14 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             const { slug, name, clippingLayers, clientTemplate } = input;
             if (!slug || !name || clippingLayers.length === 0) {
               throw new Error(
-                "slug, name, and at least one clipping layer are required"
+                "slug, name, and at least one clipping layer are required",
               );
             }
             // Check if user has admin access to the project
             const isAdmin = await sessionIsAdmin(slug, pgClient);
             if (!isAdmin) {
               throw new Error(
-                "You do not have permission to create a geography"
+                "You do not have permission to create a geography",
               );
             }
 
@@ -502,7 +514,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   ? JSON.stringify(input.translatedProps)
                   : null,
                 clientTemplate || null,
-              ]
+              ],
             );
             const geography = geographyRows[0];
             if (!geography) {
@@ -518,7 +530,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
 
               if (!templateId && !dataLayerId) {
                 throw new Error(
-                  "Either templateId or dataLayerId must be provided for each clipping layer"
+                  "Either templateId or dataLayerId must be provided for each clipping layer",
                 );
               }
 
@@ -530,17 +542,17 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   templateId,
                   slug,
                   cql2Query,
-                  templateId !== "DAYLIGHT_COASTLINE" ? name : "Land"
+                  templateId !== "DAYLIGHT_COASTLINE" ? name : "Land",
                 );
               } else {
                 // ensure layer exists in project
                 const { rows: dataLayerRows } = await pgClient.query(
                   "select id from data_layers where id = $1 and project_id = $2",
-                  [dataLayerId, projectId]
+                  [dataLayerId, projectId],
                 );
                 if (dataLayerRows.length === 0) {
                   throw new Error(
-                    `Data layer with ID ${dataLayerId} does not exist in project ${slug}`
+                    `Data layer with ID ${dataLayerId} does not exist in project ${slug}`,
                   );
                 }
                 // Use the provided dataLayerId directly
@@ -556,7 +568,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                   operationType,
                   cql2Query ? cql2Query : null,
                   templateId || null,
-                ]
+                ],
               );
               clippingLayerIds.push(layerRows[0].id);
             }
@@ -577,7 +589,7 @@ async function getOrCloneTemplateLayer(
   templateId: string,
   slug: string,
   cql2Query: string | null,
-  label: string | null = null
+  label: string | null = null,
 ): Promise<number> {
   const filterExpression = cql2ToFilterExpression(cql2Query);
   // First, check if a data layer exists in the project with the same template
@@ -594,7 +606,7 @@ async function getOrCloneTemplateLayer(
           SELECT id FROM data_sources WHERE data_library_template_id = $2
         )
     `,
-    [slug, templateId]
+    [slug, templateId],
   );
   const matches = existingRows.filter((row) => {
     for (const layer of row.mapbox_gl_styles || []) {
@@ -617,7 +629,7 @@ async function getOrCloneTemplateLayer(
       where
         data_layer_id = any($1) and is_draft = true
     `,
-      [matches.map((match) => match.id)]
+      [matches.map((match) => match.id)],
     );
     if (tocRows.length) {
       return tocRows[0].data_layer_id;
@@ -626,7 +638,7 @@ async function getOrCloneTemplateLayer(
   // Call the stored procedure to clone the template item
   const { rows: clonedRows } = await pgClient.query(
     "SELECT * FROM copy_data_library_template_item($1, $2)",
-    [templateId, slug]
+    [templateId, slug],
   );
 
   if (clonedRows.length === 0) {
@@ -640,7 +652,7 @@ async function getOrCloneTemplateLayer(
     // first, get the mapbox_gl_styles for the cloned layer
     const { rows: clonedLayerRows } = await pgClient.query(
       "SELECT mapbox_gl_styles FROM data_layers WHERE id = $1",
-      [data_layer_id]
+      [data_layer_id],
     );
     const clonedLayer = clonedLayerRows[0];
     if (!clonedLayer) {
@@ -649,7 +661,7 @@ async function getOrCloneTemplateLayer(
     const mapboxGlStyles = clonedLayer.mapbox_gl_styles;
     if (!mapboxGlStyles) {
       throw new Error(
-        `Failed to find mapbox_gl_styles for cloned layer with ID ${data_layer_id}`
+        `Failed to find mapbox_gl_styles for cloned layer with ID ${data_layer_id}`,
       );
     }
     // Update the filter expression for each layer
@@ -662,7 +674,7 @@ async function getOrCloneTemplateLayer(
     // Update the data layer with the new filter expression
     await pgClient.query(
       "UPDATE data_layers SET mapbox_gl_styles = $1::jsonb WHERE id = $2",
-      [JSON.stringify(updatedStyles), data_layer_id]
+      [JSON.stringify(updatedStyles), data_layer_id],
     );
   }
 
@@ -671,7 +683,7 @@ async function getOrCloneTemplateLayer(
     // first get the mapbox_gl_styles for the cloned layer
     const { rows: clonedLayerRows } = await pgClient.query(
       "SELECT mapbox_gl_styles FROM data_layers WHERE id = $1",
-      [data_layer_id]
+      [data_layer_id],
     );
     const clonedLayer = clonedLayerRows[0];
     if (!clonedLayer) {
@@ -680,7 +692,7 @@ async function getOrCloneTemplateLayer(
     const mapboxGlStyles = clonedLayer.mapbox_gl_styles;
     if (!mapboxGlStyles) {
       throw new Error(
-        `Failed to find mapbox_gl_styles for cloned layer with ID ${data_layer_id}`
+        `Failed to find mapbox_gl_styles for cloned layer with ID ${data_layer_id}`,
       );
     }
     // Update the label for each layer
@@ -696,12 +708,12 @@ async function getOrCloneTemplateLayer(
     // Update the data layer with the new label
     await pgClient.query(
       "UPDATE data_layers SET mapbox_gl_styles = $1::jsonb WHERE id = $2",
-      [JSON.stringify(updatedStyles), data_layer_id]
+      [JSON.stringify(updatedStyles), data_layer_id],
     );
     // update the table of contents item with the label
     await pgClient.query(
       "UPDATE table_of_contents_items SET title = $1 WHERE data_layer_id = $2 and is_draft = true",
-      [label, data_layer_id]
+      [label, data_layer_id],
     );
   }
 
@@ -710,30 +722,30 @@ async function getOrCloneTemplateLayer(
 
 export async function sessionIsAdmin(
   projectIdOrSlug: string | number,
-  pgClient: PoolClient
+  pgClient: PoolClient,
 ): Promise<boolean> {
   if (typeof projectIdOrSlug === "string") {
     const { rows } = await pgClient.query(
       "SELECT session_is_admin((SELECT id FROM projects WHERE slug = $1)) AS is_admin",
-      [projectIdOrSlug]
+      [projectIdOrSlug],
     );
     return Boolean(rows[0].is_admin);
   } else if (typeof projectIdOrSlug === "number") {
     const { rows } = await pgClient.query(
       "SELECT session_is_admin($1) AS is_admin",
-      [projectIdOrSlug]
+      [projectIdOrSlug],
     );
     return Boolean(rows[0].is_admin);
   } else {
     throw new Error(
-      "projectIdOrSlug must be a string (slug) or a number (project ID)"
+      "projectIdOrSlug must be a string (slug) or a number (project ID)",
     );
   }
 }
 
 export async function idForSlug(
   slug: string,
-  pool: PoolClient
+  pool: PoolClient,
 ): Promise<number> {
   const { rows } = await pool.query("SELECT id FROM projects WHERE slug = $1", [
     slug,
@@ -910,7 +922,7 @@ async function getBoundsForClippingLayer(
   object_key: string,
   cql2_query?: any,
   template_id?: string,
-  skipCache?: boolean
+  skipCache?: boolean,
 ) {
   // get the data source url for this clipping layer
   if (template_id === "DAYLIGHT_COASTLINE") {
@@ -918,13 +930,13 @@ async function getBoundsForClippingLayer(
   }
   if (!/tiles.seasketch.org/.test(url)) {
     throw new Error(
-      `Data source URL ${url} is not supported for clipping layers`
+      `Data source URL ${url} is not supported for clipping layers`,
     );
   }
 
   // Create a cache key based on all function arguments
   const cacheKey = `clipping-layer-bounds:${url}:${object_key}:${JSON.stringify(
-    cql2_query
+    cql2_query,
   )}:${template_id}`;
 
   // Try to get from cache first, unless skipCache is true
@@ -941,7 +953,7 @@ async function getBoundsForClippingLayer(
     const response = await fetch(`${url}.json`);
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch tilejson from ${url}: ${response.statusText}`
+        `Failed to fetch tilejson from ${url}: ${response.statusText}`,
       );
     }
     const tilejson = await response.json();
@@ -961,13 +973,13 @@ async function getBoundsForClippingLayer(
     const response = await fetch(overlayUrl);
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch properties from overlay service: ${response.statusText}`
+        `Failed to fetch properties from overlay service: ${response.statusText}`,
       );
     }
     const features = await response.json();
     if (!features.length) {
       throw new Error(
-        `No features found for CQL2 query ${JSON.stringify(cql2_query)}`
+        `No features found for CQL2 query ${JSON.stringify(cql2_query)}`,
       );
     }
     if (features.length > 1) {
@@ -983,7 +995,7 @@ async function getBoundsForClippingLayer(
     await cache.setWithTTL(
       cacheKey,
       JSON.stringify(bounds),
-      365 * 24 * 60 * 60 * 1000
+      365 * 24 * 60 * 60 * 1000,
     );
   }
 
