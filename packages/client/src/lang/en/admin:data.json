@@ -17,6 +17,7 @@
   "Analyzing data fetching performance": "Analyzing data fetching performance",
   "Any public service which conforms to the <2>Mapbox Vector Tile specification</2> (mvt) can be added to SeaSketch using a url template. Enter the url of the vector tile service below, with placeholders for {z}, {x}, and {y}. Cartography can be customized after import.": "Any public service which conforms to the <2>Mapbox Vector Tile specification</2> (mvt) can be added to SeaSketch using a url template. Enter the url of the vector tile service below, with placeholders for {z}, {x}, and {y}. Cartography can be customized after import.",
   "Appearance": "Appearance",
+  "Change Log": "Change Log",
   "ArcGIS Feature Layer Performance Details": "ArcGIS Feature Layer Performance Details",
   "ArcGIS sources always rollback to dynamic style from source server.": "ArcGIS sources always rollback to dynamic style from source server.",
   "Archived Data Layer Retention Policy": "Archived Data Layer Retention Policy",

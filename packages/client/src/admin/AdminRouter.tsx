@@ -54,6 +54,13 @@ const LazyGeographyAdmin = React.lazy(
     )
 );
 
+const LazyProjectChangeLog = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "AdminChangeLog" */ "./ProjectChangeLog"
+    )
+);
+
 export default function AdminRouter() {
   let { path } = useRouteMatch();
   const { t } = useTranslation("admin");
@@ -139,6 +146,11 @@ export default function AdminRouter() {
       <Route path={`${path}/geography`}>
         <React.Suspense fallback={<Spinner />}>
           <LazyGeographyAdmin />
+        </React.Suspense>
+      </Route>
+      <Route exact path={`${path}/changelog`}>
+        <React.Suspense fallback={<Spinner />}>
+          <LazyProjectChangeLog />
         </React.Suspense>
       </Route>
     </Switch>

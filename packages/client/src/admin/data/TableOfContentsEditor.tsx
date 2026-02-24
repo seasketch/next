@@ -16,7 +16,8 @@ import {
 import EditFolderModal from "./EditFolderModal";
 import LayerTableOfContentsItemEditor from "./LayerTableOfContentsItemEditor";
 import TableOfContentsMetadataEditor from "./TableOfContentsMetadataEditor";
-import PublishTableOfContentsModal from "./PublishTableOfContentsModal";
+import PublishReviewModal from "./PublishReviewModal";
+import ChangeLogView from "./ChangeLogView";
 import FolderEditor from "./FolderEditor";
 import TreeView, { TreeItem } from "../../components/TreeView";
 import { useOverlayState } from "../../components/TreeView";
@@ -94,6 +95,9 @@ export default function TableOfContentsEditor() {
       } else if (view === "quota") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/quota`);
+      } else if (view === "changelog") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/changelog`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -106,6 +110,8 @@ export default function TableOfContentsEditor() {
     ? "order"
     : /quota/.test(history.location.pathname)
     ? "quota"
+    : /changelog/.test(history.location.pathname)
+    ? "changelog"
     : "tree";
   const { manager } = useContext(MapManagerContext);
 
@@ -362,10 +368,9 @@ export default function TableOfContentsEditor() {
         />
       )}
       {publishOpen && (
-        <PublishTableOfContentsModal
+        <PublishReviewModal
           onRequestClose={() => {
             setPublishOpen(false);
-            // Hack so that tooltip doesn't reappear after publishing
             document.getElementById("publish-button")?.blur();
             setTimeout(() => {
               document.getElementById("publish-button")?.blur();
@@ -469,8 +474,7 @@ export default function TableOfContentsEditor() {
                     tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
                       (item) => item.stableId === treeItemId
                     );
-                  let sorted =
-                    manager?.getVisibleLayersByZIndex() || [];
+                  let sorted = manager?.getVisibleLayersByZIndex() || [];
                   sorted.filter(
                     (l) => !l.sketchClassLayerState && l.dataLayer?.tocId
                   );
@@ -521,6 +525,9 @@ export default function TableOfContentsEditor() {
               layersAndSources.data?.projectBySlug?.dataSourcesForItems
             }
           />
+        </Route>
+        <Route path={`/${slug}/admin/data/changelog`}>
+          <ChangeLogView />
         </Route>
         <Route path={`/${slug}/admin/data/quota`}>
           <QuotaUsageDetails // @ts-ignore
@@ -652,6 +659,9 @@ function Header({
                 </MenubarRadioItem>
                 <MenubarRadioItem value="quota">
                   <Trans ns="admin:data">Data Hosting Quota</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="changelog">
+                  <Trans ns="admin:data">Change Log</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />
@@ -810,13 +820,15 @@ function Header({
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
-        <div className="ml-2">
-          <OverlaySearchInput
-            search={search}
-            onChange={onSearchChange}
-            loading={searchLoading}
-          />
-        </div>
+        {selectedView !== "changelog" && (
+          <div className="ml-2">
+            <OverlaySearchInput
+              search={search}
+              onChange={onSearchChange}
+              loading={searchLoading}
+            />
+          </div>
+        )}
         <div className="flex-1 text-right">
           <Tooltip.Provider>
             <Tooltip.Root delayDuration={200}>

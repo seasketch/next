@@ -1,4 +1,5 @@
-import { useCallback, useContext, useState } from "react";
+/* eslint-disable i18next/no-literal-string */
+import { useCallback, useContext, useMemo, useState } from "react";
 import {
   DataSourceTypes,
   FullAdminOverlayFragment,
@@ -20,6 +21,14 @@ import {
 } from "../../../components/Tooltip";
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
+import {
+  type AuditEvent,
+  type AuditEventType,
+  MOCK_PROFILES,
+  daysAgo,
+  EventTimeline,
+  CompareButton,
+} from "../AuditEventTimeline";
 import Warning from "../../../components/Warning";
 
 export default function LayerSettings({
@@ -214,45 +223,149 @@ export default function LayerSettings({
         <INaturalistLayerSettingsForm item={item} />
       )}
 
-      {item && (
-        <div className="md:max-w-sm mt-5 relative">
-          <div className="md:max-w-sm">
-            <MutableAutosaveInput
-              propName="geoprocessingReferenceId"
-              mutation={mutateItem}
-              mutationStatus={mutateItemState}
-              value={item.geoprocessingReferenceId || ""}
-              label={t("Geoprocessing Reference ID")}
-              description={
-                <span>
-                  {t(
-                    "Overlays can be assigned a stable id for reference by geoprocessing clients. You can also refer to this overlay using the following ID."
-                  )}
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <button
-                        onClick={copyReference}
-                        className="mx-1 px-1 bg-blue-50 border-blue-300 rounded border font-mono select-text"
-                      >
-                        {item.stableId}
-                        <ClipboardCopyIcon className="w-4 h-4 ml-1 inline -mt-0.5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      {referenceCopied ? (
-                        <Trans ns="homepage">Copied!</Trans>
-                      ) : (
-                        <Trans ns="homepage">Copy Reference</Trans>
-                      )}
-                    </TooltipContent>
-                  </Tooltip>
+      <LayerHistory title={item.title || "Untitled Layer"} />
+    </div>
+  );
+}
+
+function titleToFilename(title: string): string {
+  return (
+    title
+      .replace(/\s+/g, "_")
+      .replace(/[()]/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "") + ".zip"
+  );
+}
+
+function titleToOldTitle(title: string): string {
+  return title
+    .replace(/\s+/g, "_")
+    .replace(/[()]/g, "")
+    .replace(/[^a-zA-Z0-9_-]/g, "");
+}
+
+function LayerHistory({ title }: { title: string }) {
+  const oldTitle = titleToOldTitle(title);
+  const filename = titleToFilename(title);
+
+  const events: AuditEvent[] = useMemo(
+    () => [
+      {
+        id: "1",
+        type: "title_change" as AuditEventType,
+        actor: MOCK_PROFILES.chad,
+        date: daysAgo(3),
+        description: (
+          <span>
+            changed <span className="font-medium text-gray-900">title</span>{" "}
+            from{" "}
+            <code className="text-sm bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded line-through">
+              {oldTitle}
+            </code>{" "}
+            to{" "}
+            <code className="text-sm bg-gray-100 text-gray-800 px-1.5 py-0.5 rounded">
+              {title}
+            </code>
+          </span>
+        ),
+      },
+      {
+        id: "2",
+        type: "acl_change" as AuditEventType,
+        actor: MOCK_PROFILES.chad,
+        date: daysAgo(3),
+        description: (
+          <span>
+            changed <span className="font-medium text-gray-900">access</span>{" "}
+            from <span className="font-medium">public</span> to{" "}
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="font-medium text-blue-600 underline decoration-dotted cursor-help">
+                  group-only
                 </span>
-              }
-              variables={{ id: item.id }}
-            />
-          </div>
-        </div>
-      )}
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs max-w-xs">
+                  <p className="font-medium mb-1">Restricted to:</p>
+                  <ul className="list-disc ml-3 space-y-0.5">
+                    <li>Project Admins</li>
+                    <li>Marine Biologists Working Group</li>
+                  </ul>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </span>
+        ),
+      },
+      {
+        id: "3",
+        type: "cartography_update" as AuditEventType,
+        actor: MOCK_PROFILES.nick,
+        date: daysAgo(8),
+        description: (
+          <span>
+            updated{" "}
+            <span className="font-medium text-gray-900">cartography</span>{" "}
+            <CompareButton />
+          </span>
+        ),
+      },
+      {
+        id: "4",
+        type: "publish" as AuditEventType,
+        actor: MOCK_PROFILES.nick,
+        date: daysAgo(12),
+        description: (
+          <span>
+            published <span className="font-medium">data layers list</span>
+          </span>
+        ),
+      },
+      {
+        id: "5",
+        type: "metadata_update" as AuditEventType,
+        actor: MOCK_PROFILES.sammi,
+        date: daysAgo(18),
+        description: (
+          <span>
+            updated <span className="font-medium text-gray-900">metadata</span>{" "}
+            <CompareButton />
+          </span>
+        ),
+      },
+      {
+        id: "6",
+        type: "layer_created" as AuditEventType,
+        actor: MOCK_PROFILES.sammi,
+        date: daysAgo(24),
+        description: (
+          <span>
+            uploaded{" "}
+            <Tooltip>
+              <TooltipTrigger>
+                <code className="text-sm bg-gray-100 text-gray-700 px-1.5 py-0.5 rounded cursor-help">
+                  {filename}
+                </code>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs">12.4 MB &middot; ESRI Shapefile</div>
+              </TooltipContent>
+            </Tooltip>
+          </span>
+        ),
+      },
+    ],
+    [title, oldTitle, filename]
+  );
+
+  return (
+    <div className="mt-8 mb-4">
+      <div className="border-t border-gray-200 pt-5 mb-5">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+          History
+        </h3>
+      </div>
+      <EventTimeline events={events} />
     </div>
   );
 }
