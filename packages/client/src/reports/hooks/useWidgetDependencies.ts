@@ -21,7 +21,7 @@ export type WidgetDependenciesResult = {
   sources: OverlaySourceDetailsFragment[];
   loading: boolean;
   errors: string[];
-  geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
+  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
   sketchClass: SketchClassForWidgets;
 };
 
@@ -250,8 +250,8 @@ function useStableArray(arr: string[]): string[] {
  * Returns stable reference for geographies array
  */
 function useStableGeographies(
-  geographies: Pick<Geography, "id" | "name" | "translatedProps">[]
-): Pick<Geography, "id" | "name" | "translatedProps">[] {
+  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[]
+): Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[] {
   const ref = useRef(geographies);
   const prevKey = useRef<string>("");
 

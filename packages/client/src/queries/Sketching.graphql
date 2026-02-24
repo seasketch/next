@@ -247,6 +247,7 @@ fragment ReportContextSketchClassDetails on SketchClass {
       id
       name
       translatedProps
+      stableIds
     }
   }
   clippingGeographies {

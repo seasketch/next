@@ -16,7 +16,7 @@ import {
 import {
   CompatibleSpatialMetricDetailsFragment,
   DataSourceTypes,
-  GeographyDetailsFragment,
+  Geography,
   OverlaySourceDetailsFragment,
   ReportContextSketchClassDetailsFragment,
   SketchGeometryType,
@@ -629,7 +629,7 @@ export type BuildReportCommandGroupsArgs = {
       } | null;
     } | null;
   }>;
-  geographies?: Pick<GeographyDetailsFragment, "id" | "name">[];
+  geographies?: Pick<Geography, "id" | "name" | "stableIds">[];
   clippingGeography?: number;
   sketchClassGeometryType?: SketchGeometryType;
   overlayFooterItem?: CommandPaletteItem;
@@ -1644,7 +1644,7 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   sources: OverlaySourceDetailsFragment[];
   loading: boolean;
   errors: string[];
-  geographies: Pick<GeographyDetailsFragment, "id" | "name">[];
+  geographies: Pick<Geography, "id" | "name" | "stableIds">[];
   componentSettings: T;
   marks?: Mark[];
   node?: Node;

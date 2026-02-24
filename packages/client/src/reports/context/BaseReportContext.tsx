@@ -16,7 +16,7 @@ type BaseReportContextValue = {
     "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
   >;
   report: ReportConfiguration;
-  geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
+  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
 };
 
 export const BaseReportContext = createContext<{

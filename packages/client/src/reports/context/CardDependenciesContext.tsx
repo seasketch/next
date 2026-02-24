@@ -10,7 +10,7 @@ export type CardDependenciesValue = {
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
   loading: boolean;
-  geographies: Pick<Geography, "id" | "name" | "translatedProps">[];
+  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
   sketchClass: Pick<
     ReportContextSketchClassDetailsFragment,
     "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"

@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { CaretDownIcon } from "@radix-ui/react-icons";
+import { CaretDownIcon, LayersIcon } from "@radix-ui/react-icons";
 import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
 import { ReportWidget, TableHeadingsEditor } from "./widgets";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
@@ -11,24 +11,24 @@ import { UnitSelector } from "./UnitSelector";
 import { AreaUnit } from "../utils/units";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { useBaseReportContext } from "../context/BaseReportContext";
+import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
+import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
+import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
 
-export const GeographySizeTable: ReportWidget<{
-  /**
-   * Unit of measurement to display the area in.
-   * @default "kilometer"
-   */
+type GeographySizeTableSettings = {
   unit?: "hectare" | "acre" | "mile" | "kilometer";
-  /**
-   * Minimum fraction digits to display when formatting numbers.
-   */
   minimumFractionDigits?: number;
   geographyNameLabel?: string;
   areaLabel?: string;
   percentLabel?: string;
   unitDisplay?: "long" | "short";
-  /** Geography IDs to exclude from the table. */
   excludeGeographies?: number[];
-}> = ({
+  enableLayerToggles?: boolean;
+  /** Per-geography stableId overrides. Keys are geography IDs (as strings). */
+  geographyStableIds?: Record<string, string | null>;
+};
+
+export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
   metrics,
   componentSettings,
   geographies,
@@ -39,6 +39,7 @@ export const GeographySizeTable: ReportWidget<{
 
   const widgetUnit = componentSettings?.unit ?? "kilometer";
   const minimumFractionDigits = componentSettings?.minimumFractionDigits;
+  const enableLayerToggles = componentSettings?.enableLayerToggles ?? false;
 
   const formatters = useNumberFormatters({
     minimumFractionDigits,
@@ -71,20 +72,52 @@ export const GeographySizeTable: ReportWidget<{
         const areaSqKm = metric?.value ?? 0;
         const fractionOfTotal = totalArea > 0 ? totalArea / areaSqKm : 0;
 
+        const geoKey = String(geography.id);
+        const geoOverrides = componentSettings?.geographyStableIds;
+        const hasOverride = geoOverrides && geoKey in geoOverrides;
+        const ids = geography.stableIds as (string | null)[] | null | undefined;
+        const defaultStableId = ids?.[0] ?? undefined;
+        const stableId = hasOverride
+          ? geoOverrides[geoKey] ?? undefined
+          : defaultStableId;
+
         return {
           geographyId: geography.id,
           geographyName: geography.name,
           areaSqKm,
           fractionOfTotal,
+          stableId: enableLayerToggles ? stableId : undefined,
         };
       });
-  }, [metrics, geographies, excludeSet]);
+  }, [
+    metrics,
+    geographies,
+    excludeSet,
+    enableLayerToggles,
+    componentSettings?.geographyStableIds,
+  ]);
+
+  const hasVisibilityColumn = useMemo(
+    () => enableLayerToggles && rows.some((r) => r.stableId),
+    [rows, enableLayerToggles]
+  );
 
   return (
     <div className="mt-3.5 overflow-hidden rounded-md border border-gray-200">
       <table className="min-w-full divide-y divide-gray-200">
         <thead className="bg-gray-50">
           <tr>
+            {hasVisibilityColumn && (
+              <th
+                scope="col"
+                className="w-8 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600"
+              >
+                <LayersIcon
+                  className="w-4 h-4 text-gray-500 inline-block"
+                  aria-hidden
+                />
+              </th>
+            )}
             <th
               scope="col"
               className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
@@ -111,6 +144,13 @@ export const GeographySizeTable: ReportWidget<{
               key={row.geographyId}
               className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
             >
+              {hasVisibilityColumn && (
+                <td className="w-8 px-2 py-2 text-center">
+                  {row.stableId ? (
+                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
+                  ) : null}
+                </td>
+              )}
               <td className="px-3 py-2 text-sm text-gray-800">
                 {row.geographyName}
               </td>
@@ -141,6 +181,7 @@ type GeographySizeTableRow = {
   geographyName: string;
   areaSqKm: number;
   fractionOfTotal: number;
+  stableId?: string;
 };
 
 function GeographiesPopover({
@@ -281,6 +322,12 @@ export const GeographySizeTableTooltipControls: ReportWidgetTooltipControls = ({
             })
           }
         />
+        <LayerToggleSettingsPopover
+          geographies={geographies}
+          componentSettings={componentSettings}
+          onUpdate={onUpdate}
+          t={t}
+        />
         <TableHeadingsEditor
           labelKeys={["geographyNameLabel", "areaLabel", "percentLabel"]}
           labelDisplayNames={["Geography", "Area", "Percent"]}
@@ -292,3 +339,157 @@ export const GeographySizeTableTooltipControls: ReportWidgetTooltipControls = ({
   }
   return null;
 };
+
+function LayerToggleSettingsPopover({
+  geographies,
+  componentSettings,
+  onUpdate,
+  t,
+}: {
+  geographies: Pick<
+    { id: number; name: string; stableIds?: (string | null)[] | null },
+    "id" | "name" | "stableIds"
+  >[];
+  componentSettings: Record<string, any>;
+  onUpdate: (attrs: Record<string, any>) => void;
+  t: (key: string) => string;
+}) {
+  const [open, setOpen] = useState(false);
+  const enableLayerToggles = componentSettings?.enableLayerToggles ?? false;
+  const geographyStableIds: Record<string, string | null> =
+    componentSettings?.geographyStableIds ?? {};
+  const overlayOptions = useOverlayOptionsForLayerToggle(t);
+
+  const resolveLayerTitle = (stableId: string | undefined) => {
+    if (!stableId) return t("None");
+    return (
+      overlayOptions.find((o) => o.value === stableId)?.label ||
+      t("Unknown layer")
+    );
+  };
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
+        >
+          <LayersIcon className="w-3 h-3" />
+          <span>
+            {t("layers")}
+            {/* eslint-disable-next-line i18next/no-literal-string */}
+            {enableLayerToggles ? ": on" : ": off"}
+          </span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Content
+        side="top"
+        align="center"
+        sideOffset={6}
+        className="bg-white rounded-lg shadow-lg border border-gray-200 p-0 w-[420px] max-h-96 flex flex-col z-50"
+      >
+        <div className="px-3 py-2.5 border-b border-gray-200 flex items-center justify-between">
+          <span className="text-sm font-semibold text-gray-700">
+            {t("Layer Toggles")}
+          </span>
+          <label className="flex items-center gap-2 cursor-pointer">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={enableLayerToggles}
+              onClick={() => {
+                onUpdate({
+                  componentSettings: {
+                    ...componentSettings,
+                    enableLayerToggles: !enableLayerToggles,
+                  },
+                });
+              }}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none ${
+                enableLayerToggles ? "bg-blue-600" : "bg-gray-300"
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                  enableLayerToggles ? "translate-x-[18px]" : "translate-x-1"
+                }`}
+              />
+            </button>
+          </label>
+        </div>
+        <div
+          className={`divide-y divide-gray-100 overflow-y-auto flex-1 ${
+            enableLayerToggles ? "" : "opacity-50 pointer-events-none"
+          }`}
+        >
+          <div className="px-3 py-1.5 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-wide text-gray-500 font-semibold bg-gray-50">
+            <div>{t("Geography")}</div>
+            <div>{t("Map Layer")}</div>
+          </div>
+          {geographies.map((geography) => {
+            const geoKey = String(geography.id);
+            const hasOverride = geoKey in geographyStableIds;
+            const defaultStableId =
+              geography.stableIds?.[0] ?? undefined;
+            const effectiveStableId = hasOverride
+              ? geographyStableIds[geoKey] ?? undefined
+              : defaultStableId;
+
+            return (
+              <div
+                key={geography.id}
+                className="px-3 py-2 grid grid-cols-2 gap-2 items-center"
+              >
+                <span className="text-sm text-gray-800 truncate">
+                  {geography.name}
+                </span>
+                <LayerPickerDropdown
+                  value={effectiveStableId}
+                  suggested={
+                    defaultStableId ? [defaultStableId] : undefined
+                  }
+                  onChange={(layerValue: LayerPickerValue | undefined) => {
+                    const next = { ...geographyStableIds };
+                    if (!layerValue?.stableId) {
+                      next[geoKey] = null;
+                    } else if (layerValue.stableId === defaultStableId) {
+                      delete next[geoKey];
+                    } else {
+                      next[geoKey] = layerValue.stableId;
+                    }
+                    onUpdate({
+                      componentSettings: {
+                        ...componentSettings,
+                        geographyStableIds: next,
+                      },
+                    });
+                  }}
+                  required={false}
+                  onlyReportingLayers={false}
+                  hideSearch={false}
+                  title={t("Choose a layer")}
+                  description={t(
+                    "This layer will be toggled when the user clicks the visibility checkbox for this geography."
+                  )}
+                >
+                  <button
+                    type="button"
+                    className="h-7 w-full rounded border border-transparent hover:border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <span className="truncate flex-1 min-w-0">
+                      {effectiveStableId
+                        ? resolveLayerTitle(effectiveStableId)
+                        : t("None")}
+                    </span>
+                    <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                  </button>
+                </LayerPickerDropdown>
+              </div>
+            );
+          })}
+        </div>
+      </Popover.Content>
+    </Popover.Root>
+  );
+}

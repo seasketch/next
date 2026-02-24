@@ -13885,6 +13885,23 @@ COMMENT ON FUNCTION public.project_geography_clipping_layers(geography public.pr
 
 
 --
+-- Name: project_geography_stable_ids(public.project_geography); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_geography_stable_ids(geography public.project_geography) RETURNS text[]
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select 
+    array(
+      select stable_id from table_of_contents_items where data_layer_id in (
+        select data_layer_id from geography_clipping_layers where project_geography_id = geography.id
+      )
+      order by (copied_from_data_library_template_id = 'DAYLIGHT_COASTLINE')::int, stable_id
+  );
+$$;
+
+
+--
 -- Name: project_groups_member_count(public.project_groups); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15608,19 +15625,68 @@ CREATE TABLE public.project_visitor_metrics (
 --
 
 CREATE FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) RETURNS SETOF public.project_visitor_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select * from project_visitor_metrics where session_is_admin(p.id) and
-    project_id = p.id and
-    interval = (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        else '1 day'::interval
-      end
-    ) order by timestamp desc limit 1;
-  $$;
+DECLARE
+  lookback interval;
+BEGIN
+  IF NOT session_is_admin(p.id) THEN
+    RETURN;
+  END IF;
+
+  IF period IN ('6-months', '1-year') THEN
+    lookback := CASE period
+      WHEN '6-months' THEN '6 months'::interval
+      ELSE '1 year'::interval
+    END;
+
+    RETURN QUERY SELECT
+      p.id,
+      '30 days'::interval,
+      now()::timestamptz,
+      date_part('month', timezone('UTC', now()))::int,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_referrers) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_operating_systems) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_browsers) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_device_types) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_countries) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
+  ELSE
+    RETURN QUERY
+    SELECT * FROM project_visitor_metrics
+    WHERE session_is_admin(p.id)
+      AND project_id = p.id
+      AND interval = (
+        CASE period
+          WHEN '24hrs' THEN '24 hours'::interval
+          WHEN '7-days' THEN '7 days'::interval
+          WHEN '30-days' THEN '30 days'::interval
+          ELSE '1 day'::interval
+        END
+      )
+    ORDER BY timestamp DESC LIMIT 1;
+  END IF;
+END;
+$$;
 
 
 --
@@ -22079,18 +22145,66 @@ CREATE TABLE public.visitor_metrics (
 --
 
 CREATE FUNCTION public.visitor_metrics(period public.activity_stats_period) RETURNS SETOF public.visitor_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select * from visitor_metrics where session_is_superuser() and
-    interval = (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        else '1 day'::interval
-      end
-    ) order by timestamp desc limit 1;
-  $$;
+DECLARE
+  lookback interval;
+BEGIN
+  IF NOT session_is_superuser() THEN
+    RETURN;
+  END IF;
+
+  IF period IN ('6-months', '1-year') THEN
+    lookback := CASE period
+      WHEN '6-months' THEN '6 months'::interval
+      ELSE '1 year'::interval
+    END;
+
+    RETURN QUERY SELECT
+      '30 days'::interval,
+      now()::timestamptz,
+      date_part('month', timezone('UTC', now()))::int,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_referrers) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_operating_systems) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_browsers) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_device_types) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_countries) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
+  ELSE
+    RETURN QUERY
+    SELECT * FROM public.visitor_metrics
+    WHERE session_is_superuser()
+      AND interval = (
+        CASE period
+          WHEN '24hrs' THEN '24 hours'::interval
+          WHEN '7-days' THEN '7 days'::interval
+          WHEN '30-days' THEN '30 days'::interval
+          ELSE '1 day'::interval
+        END
+      )
+    ORDER BY timestamp DESC LIMIT 1;
+  END IF;
+END;
+$$;
 
 
 --
@@ -35097,6 +35211,14 @@ GRANT INSERT,DELETE,UPDATE ON TABLE public.project_geography TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) TO anon;
+
+
+--
+-- Name: FUNCTION project_geography_stable_ids(geography public.project_geography); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_geography_stable_ids(geography public.project_geography) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_geography_stable_ids(geography public.project_geography) TO anon;
 
 
 --

@@ -7298,6 +7298,7 @@ type Geography implements Node {
   """Reads a single `Project` that is related to this `Geography`."""
   project: Project
   projectId: Int!
+  stableIds: [String]
   translatedProps: JSON
 }
 
@@ -8252,6 +8253,11 @@ The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://
 """
 scalar JSON
 
+type LabelCount {
+  count: Int!
+  label: String!
+}
+
 """All input for the `labelForFormElementValue` mutation."""
 input LabelForFormElementValueInput {
   attrValue: JSON
@@ -8558,6 +8564,12 @@ type MapDataRequest implements Node {
   """
   nodeId: ID!
   timestamp: Datetime!
+}
+
+type MapDataRequestDataPoint {
+  cacheHitRatio: Float!
+  count: Int!
+  timestamp: String!
 }
 
 """All input for the `markTopicAsRead` mutation."""
@@ -14155,6 +14167,7 @@ type Query implements Node {
     orderBy: [TopicsOrderBy!] = [PRIMARY_KEY_ASC]
   ): TopicsConnection
   user(id: Int!): User
+  userActivityStats(period: UserActivityPeriod!, slug: String): UserActivityStats!
 
   """Reads a single `User` using its globally unique `ID`."""
   userByNodeId(
@@ -19820,6 +19833,35 @@ type User implements Node {
   profile: Profile
 }
 
+enum UserActivityPeriod {
+  D180
+  D30
+  D7
+  D90
+  H24
+}
+
+type UserActivityStats {
+  mapDataRequests: [MapDataRequestDataPoint!]!
+
+  """
+  Maximum Cloudflare adaptive sampling interval across all visitor
+  data points. 1 means every event was counted; higher values indicate
+  sampled (less accurate) data. Populated after visitors are resolved.
+  """
+  sampleInterval: Float!
+  visitorMetrics: UserActivityVisitorMetrics!
+  visitors: [VisitorDataPoint!]!
+}
+
+type UserActivityVisitorMetrics {
+  topBrowsers: [LabelCount!]!
+  topCountries: [LabelCount!]!
+  topDeviceTypes: [LabelCount!]!
+  topOperatingSystems: [LabelCount!]!
+  topReferrers: [LabelCount!]!
+}
+
 """A connection to a list of `User` values."""
 type UsersConnection {
   """
@@ -19872,6 +19914,11 @@ A condition to be used against `Visitor` object types. All fields are tested for
 input VisitorCondition {
   """Checks for equality with the object’s `interval` field."""
   interval: IntervalInput
+}
+
+type VisitorDataPoint {
+  count: Int!
+  timestamp: String!
 }
 
 type VisitorMetric implements Node {
