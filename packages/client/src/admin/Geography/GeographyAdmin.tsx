@@ -320,7 +320,10 @@ export default function GeographyAdmin() {
                   type: "vector",
                   url: layer.dataSource.url! + JSON_EXTENSION,
                 };
-              } else if (layer.dataSource.type === DataSourceTypes.Geojson) {
+              } else if (
+                layer.dataSource.type === DataSourceTypes.Geojson ||
+                layer.dataSource.type === DataSourceTypes.SeasketchVector
+              ) {
                 sources[sourceId] = {
                   type: "geojson",
                   data: layer.dataSource.url!,
