@@ -26,7 +26,6 @@ import {
 } from "../../generated/graphql";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
-import { EditorState } from "prosemirror-state";
 import { MetricDependency } from "overlay-engine";
 import { SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
@@ -58,7 +57,6 @@ import {
   BlockLayerToggle,
   BlockLayerToggleTooltipControls,
 } from "./BlockLayerToggle";
-import { OverlayTogglePicker } from "./OverlayTogglePicker";
 import {
   InlineLayerToggle,
   InlineLayerToggleTooltipControls,
@@ -640,58 +638,44 @@ export type BuildReportCommandGroupsArgs = {
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
 };
 
-function UnprocessedLayerPopover({
-  title,
+function ProcessForReportingFooter({
   onProcess,
-  closePopover,
-  focusPalette,
 }: {
-  title: string;
   onProcess: () => Promise<boolean>;
-  closePopover: () => void;
-  focusPalette: () => void;
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="w-64 rounded-md border border-gray-200 bg-white shadow-xl">
-      <div className="px-3 py-2 border-b border-gray-100">
-        <div className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-          {title}
-        </div>
-      </div>
-      <div className="p-2">
-        {error && <p className="text-xs text-red-600 mb-2 px-1">{error}</p>}
-        <button
-          className="w-full px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-wait transition-colors flex items-center justify-center gap-2"
-          disabled={isProcessing}
-          onClick={async (e) => {
-            e.preventDefault();
-            setIsProcessing(true);
-            setError(null);
-            try {
-              const success = await onProcess();
-              if (success) {
-                closePopover();
-                focusPalette();
-              }
-            } catch (err) {
-              setError(
-                err instanceof Error
-                  ? err.message
-                  : "Unable to start processing"
-              );
-            } finally {
-              setIsProcessing(false);
-            }
-          }}
-        >
-          {isProcessing && <Spinner mini color="white" />}
-          {/* eslint-disable-next-line i18next/no-literal-string */}
-          {isProcessing ? "Processing\u2026" : "Process for Reporting"}
-        </button>
-      </div>
+    <div className="border-t border-gray-100 p-2">
+      {/* eslint-disable-next-line i18next/no-literal-string */}
+      <p className="text-xs text-gray-500 mb-2 px-1">
+        To see more options for content related to overlay analysis, prepare it
+        for reporting.
+      </p>
+      {error && <p className="text-xs text-red-600 mb-2 px-1">{error}</p>}
+      <button
+        className="w-full px-3 py-1.5 text-sm font-medium text-white bg-blue-600 rounded hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-wait transition-colors flex items-center justify-center gap-2"
+        disabled={isProcessing}
+        onClick={async (e) => {
+          e.preventDefault();
+          setIsProcessing(true);
+          setError(null);
+          try {
+            await onProcess();
+          } catch (err) {
+            setError(
+              err instanceof Error ? err.message : "Unable to start processing"
+            );
+          } finally {
+            setIsProcessing(false);
+          }
+        }}
+      >
+        {isProcessing && <Spinner mini color="white" />}
+        {/* eslint-disable-next-line i18next/no-literal-string */}
+        {isProcessing ? "Processing\u2026" : "Process for Reporting"}
+      </button>
     </div>
   );
 }
@@ -961,64 +945,6 @@ export function buildReportCommandGroups({
   commandGroups.push(sketchBlockWidgetsGroup);
 
   if (sources) {
-    commandGroups.push({
-      id: "overlay-toggles",
-      label: "Overlay Toggles",
-      items: [
-        {
-          id: "block-layer-toggle",
-          label: "Block Layer Toggle",
-          description: "Toggle an overlay layer on the map",
-          screenshotSrc: "/slashCommands/layer-toggle-block.png",
-          run: () => false,
-          customPopoverContent: ({ closePopover, apply, focusPalette }) => (
-            <OverlayTogglePicker
-              onSelect={(stableId, label, helpers) => {
-                const item = {
-                  id: `block-layer-toggle-${stableId}`,
-                  label,
-                  run: (state: EditorState, dispatch: any, view: EditorView) =>
-                    insertBlockMetric(view, state.selection.ranges[0], {
-                      type: "BlockLayerToggle",
-                      metrics: [],
-                      componentSettings: { stableId, label },
-                    }),
-                };
-                (helpers?.apply || apply)(item);
-                closePopover();
-              }}
-              helpers={{ apply, closePopover, focusPalette }}
-            />
-          ),
-        },
-        {
-          id: "inline-layer-toggle",
-          label: "Inline Layer Toggle",
-          description: "Place layer toggle inputs inline with any text.",
-          screenshotSrc: "/slashCommands/layer-toggle-inline.png",
-          run: () => false,
-          customPopoverContent: ({ closePopover, apply }) => (
-            <OverlayTogglePicker
-              onSelect={(stableId, label) => {
-                const item = {
-                  id: `inline-layer-toggle-${stableId}`,
-                  label,
-                  run: (state: EditorState, dispatch: any, view: EditorView) =>
-                    insertInlineMetric(view, state.selection.ranges[0], {
-                      type: "InlineLayerToggle",
-                      metrics: [],
-                      componentSettings: { stableId, label },
-                    }),
-                };
-                apply(item);
-                closePopover();
-              }}
-            />
-          ),
-        },
-      ],
-    });
-
     const overlayItems: CommandPaletteItem[] = sources
       .filter((source) => source.tableOfContentsItemId)
       .map((source) => {
@@ -1026,7 +952,6 @@ export function buildReportCommandGroups({
           source.tableOfContentsItem?.title || "Layer Overlay Analysis";
         const tocId = source.tableOfContentsItemId!;
         const stableId = source.tableOfContentsItem?.stableId;
-        let children: CommandPaletteItem[] = [];
         let childGroups: CommandPaletteGroup[] | undefined;
         let unsupportedMessage: string | undefined;
         if ("bands" in source.geostats && source.geostats.bands.length === 1) {
@@ -1467,12 +1392,41 @@ export function buildReportCommandGroups({
           }
           childGroups = [inlineGroup, blockGroup];
         }
+        const layerToggleChildren: CommandPaletteItem[] = [
+          {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-block-toggle`,
+            label: "Layer toggle",
+            description: "Toggle this layer on the map from a report card",
+            screenshotSrc: "/slashCommands/layer-toggle-block.png",
+            run: (state, dispatch, view) =>
+              insertBlockMetric(view, state.selection.ranges[0], {
+                type: "BlockLayerToggle",
+                metrics: [],
+                componentSettings: { stableId, label: title },
+              }),
+          },
+          {
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-toggle`,
+            label: "Inline layer toggle",
+            description: "Place layer toggles inline with any text.",
+            screenshotSrc: "/slashCommands/layer-toggle-inline.png",
+            run: (state, dispatch, view) =>
+              insertInlineMetric(view, state.selection.ranges[0], {
+                type: "InlineLayerToggle",
+                metrics: [],
+                componentSettings: { stableId, label: title },
+              }),
+          },
+        ];
+
         let item: CommandPaletteItem = {
           // eslint-disable-next-line i18next/no-literal-string
           id: `overlay-layer-${tocId}`,
           label: title,
           run: () => false,
-          children: childGroups ? undefined : children,
+          children: layerToggleChildren,
           childGroups,
           activateOnHover: true,
           popoverHeader: <OverlayLayerInfo tableOfContentsItemId={tocId} />,
@@ -1480,7 +1434,6 @@ export function buildReportCommandGroups({
             <OverlayProcessingStatus tableOfContentsItemId={tocId} />
           ),
           ...(unsupportedMessage && {
-            muted: true,
             description: unsupportedMessage,
           }),
         };
@@ -1519,6 +1472,40 @@ export function buildReportCommandGroups({
           !processedTocIds.has(tocItem.id)
         ) {
           const capturedSourceId = sourceId;
+          const toggleItems: CommandPaletteItem[] = [
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocItem.id}-block-toggle`,
+              label: "Layer toggle",
+              description: "Toggle this layer on the map from a report card.",
+              screenshotSrc: "/slashCommands/layer-toggle-block.png",
+              run: (state, dispatch, view) =>
+                insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "BlockLayerToggle",
+                  metrics: [],
+                  componentSettings: {
+                    stableId: tocItem.stableId,
+                    label: tocItem.title,
+                  },
+                }),
+            },
+            {
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocItem.id}-inline-toggle`,
+              label: "Inline layer toggle",
+              description: "Place layer toggles inline with any text.",
+              screenshotSrc: "/slashCommands/layer-toggle-inline.png",
+              run: (state, dispatch, view) =>
+                insertInlineMetric(view, state.selection.ranges[0], {
+                  type: "InlineLayerToggle",
+                  metrics: [],
+                  componentSettings: {
+                    stableId: tocItem.stableId,
+                    label: tocItem.title,
+                  },
+                }),
+            },
+          ];
           overlayItems.push({
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocItem.id}`,
@@ -1526,18 +1513,15 @@ export function buildReportCommandGroups({
             muted: true,
             activateOnHover: true,
             run: () => false,
-            customPopoverContent: onProcessLayer
-              ? ({ closePopover, focusPalette }) => (
-                  <UnprocessedLayerPopover
-                    title={tocItem.title}
-                    onProcess={() =>
-                      onProcessLayer(tocItem.id, capturedSourceId)
-                    }
-                    closePopover={closePopover}
-                    focusPalette={focusPalette}
-                  />
-                )
-              : undefined,
+            children: toggleItems,
+            popoverHeader: (
+              <OverlayLayerInfo tableOfContentsItemId={tocItem.id} />
+            ),
+            popoverFooter: onProcessLayer ? (
+              <ProcessForReportingFooter
+                onProcess={() => onProcessLayer(tocItem.id, capturedSourceId)}
+              />
+            ) : undefined,
           });
         }
       }
@@ -1552,7 +1536,7 @@ export function buildReportCommandGroups({
       }
       commandGroups.push({
         id: "layer-overlay-analysis",
-        label: "Layer Overlay Analysis",
+        label: "Overlay Layer Widgets",
         items: sortedItems,
       });
     }

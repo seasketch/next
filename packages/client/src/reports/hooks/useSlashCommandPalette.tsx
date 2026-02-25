@@ -27,6 +27,7 @@ type CommandPalettePreviewItem = CommandPaletteItem & {
   activateOnHover?: boolean;
   popoverHeader?: React.ReactNode;
   popoverStatus?: React.ReactNode;
+  popoverFooter?: React.ReactNode;
   children?: CommandPalettePreviewItem[];
   childGroups?: {
     id: string;
@@ -948,29 +949,9 @@ export function useSlashCommandPalette({
                                         </div>
                                       ) : null}
                                     </div>
-                                    {previewItem.childGroups ? (
-                                      previewItem.childGroups.map((grp) => (
-                                        <div key={grp.id}>
-                                          <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-gray-400 tracking-wide uppercase">
-                                            {grp.label}
-                                          </div>
-                                          <div className="pb-1">
-                                            {grp.items.map((child) => (
-                                              <ChildItemWithPreview
-                                                key={child.id}
-                                                child={child}
-                                                onApply={() => {
-                                                  applyCommand(child);
-                                                  setPreviewKey(null);
-                                                }}
-                                              />
-                                            ))}
-                                          </div>
-                                        </div>
-                                      ))
-                                    ) : (
+                                    {previewItem.children?.length ? (
                                       <div className="py-1">
-                                        {previewItem.children?.map((child) => (
+                                        {previewItem.children.map((child) => (
                                           <ChildItemWithPreview
                                             key={child.id}
                                             child={child}
@@ -981,7 +962,29 @@ export function useSlashCommandPalette({
                                           />
                                         ))}
                                       </div>
-                                    )}
+                                    ) : null}
+                                    {previewItem.childGroups
+                                      ? previewItem.childGroups.map((grp) => (
+                                          <div key={grp.id}>
+                                            <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-gray-400 tracking-wide uppercase">
+                                              {grp.label}
+                                            </div>
+                                            <div className="pb-1">
+                                              {grp.items.map((child) => (
+                                                <ChildItemWithPreview
+                                                  key={child.id}
+                                                  child={child}
+                                                  onApply={() => {
+                                                    applyCommand(child);
+                                                    setPreviewKey(null);
+                                                  }}
+                                                />
+                                              ))}
+                                            </div>
+                                          </div>
+                                        ))
+                                      : null}
+                                    {previewItem.popoverFooter}
                                   </div>
                                 );
                               }
