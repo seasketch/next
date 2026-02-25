@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards/cards";
-import { useContext, useMemo, useRef, memo } from "react";
+import { useContext, useMemo, useRef, memo, useCallback } from "react";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import ReportCardBodyViewer from "./components/ReportCardBodyViewer";
 import {
@@ -123,11 +123,17 @@ export const InnerReportCard = memo(function InnerReportCard({
 
   const footerContainerRef = useRef<HTMLDivElement>(null);
 
-  const errorBoundaryFallback = useMemo(() => {
-    return (
-      <ErrorBoundaryFallback title={t("Failed to render report card body")} />
-    );
-  }, [t]);
+  const errorBoundaryFallback = useCallback(
+    (props: any) => {
+      return (
+        <ErrorBoundaryFallback
+          title={t("Failed to render report card body")}
+          error={props.error}
+        />
+      );
+    },
+    [t]
+  );
 
   const content = (
     <div
