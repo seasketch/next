@@ -18,7 +18,7 @@ export declare function calculatedClippedOverlapSize(features: {
     feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon | LineString | MultiLineString>>;
     requiresIntersection: boolean;
     requiresDifference: boolean;
-}[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>): number;
+}[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>, subdivisions?: number): number;
 export declare function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;
@@ -55,8 +55,9 @@ export declare function createPresenceTable({ features, differenceMultiPolygon, 
     values: PresenceTableValue[];
 }>;
 export type ColumnValues = [
+    (
     /** column value */
-    number | string | boolean,
+    number | string | boolean),
     number
 ] | [
     /** column value */

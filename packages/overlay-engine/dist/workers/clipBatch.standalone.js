@@ -5684,7 +5684,47 @@ function calcSize(feature2) {
   }
   return 0;
 }
-function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature) {
+var SUBDIVISION_LIMIT = 3;
+function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature, subdivisions = 0) {
+  try {
+    return calculatedClippedOverlapSizeUnsafe(
+      features,
+      differenceGeoms,
+      subjectFeature
+    );
+  } catch (e) {
+    subdivisions++;
+    if (subdivisions > SUBDIVISION_LIMIT) {
+      console.warn(
+        `polyclip-ts error on batch of ${features.length} features, reached subdivision limit: ${e.message}`
+      );
+      return 0;
+    }
+    if (features.length <= 1) {
+      console.warn(
+        `polyclip-ts error for single feature, reporting size as 0: ${e.message}`
+      );
+      return 0;
+    }
+    console.warn(
+      `polyclip-ts error on batch of ${features.length} features, subdividing to isolate bad geometries: ${e.message}`
+    );
+    const bucketCount = Math.min(5, features.length);
+    const bucketSize = Math.ceil(features.length / bucketCount);
+    let total = 0;
+    for (let i = 0; i < features.length; i += bucketSize) {
+      const bucket = features.slice(i, i + bucketSize);
+      total += calculatedClippedOverlapSize(
+        bucket,
+        differenceGeoms,
+        subjectFeature,
+        subdivisions
+      );
+    }
+    return total;
+  }
+}
+function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature) {
   if (features[0].feature.geometry.type === "Polygon" || features[0].feature.geometry.type === "MultiPolygon") {
     let product = [];
     let forClipping = [];

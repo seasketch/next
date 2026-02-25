@@ -55,7 +55,7 @@ export async function clipBatch({
       const size = calculatedClippedOverlapSize(
         features.filter((f) => f.feature.properties?.[groupBy!] === classKey),
         differenceMultiPolygon,
-        subjectFeature
+        subjectFeature,
       );
       results[classKey] += size;
       results["*"] += size;
@@ -64,7 +64,7 @@ export async function clipBatch({
     const size = calculatedClippedOverlapSize(
       features,
       differenceMultiPolygon,
-      subjectFeature
+      subjectFeature,
     );
     results["*"] += size;
   }
@@ -72,7 +72,7 @@ export async function clipBatch({
 }
 
 function calcSize(
-  feature: Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+  feature: Feature<Polygon | MultiPolygon | LineString | MultiLineString>,
 ) {
   if (
     feature.geometry.type === "Polygon" ||
@@ -88,6 +88,8 @@ function calcSize(
   return 0;
 }
 
+const SUBDIVISION_LIMIT = 3;
+
 export function calculatedClippedOverlapSize(
   features: {
     feature: FeatureWithMetadata<
@@ -97,7 +99,69 @@ export function calculatedClippedOverlapSize(
     requiresDifference: boolean;
   }[],
   differenceGeoms: clipping.Geom[],
-  subjectFeature: Feature<Polygon | MultiPolygon>
+  subjectFeature: Feature<Polygon | MultiPolygon>,
+  subdivisions = 0,
+): number {
+  try {
+    return calculatedClippedOverlapSizeUnsafe(
+      features,
+      differenceGeoms,
+      subjectFeature,
+    );
+  } catch (e) {
+    // If a batch fails, we'll subdivide the batch into smaller buckets
+    // recursively to try and calculate overlap with as many features as
+    // possible. We'll limit the number of subdivisions to avoid clipping
+    // features individually in the worst case, if they are all invalid
+    //  geometries.
+    subdivisions++;
+    if (subdivisions > SUBDIVISION_LIMIT) {
+      console.warn(
+        `polyclip-ts error on batch of ${features.length} features, reached subdivision limit: ${
+          (e as Error).message
+        }`,
+      );
+      return 0;
+    }
+    if (features.length <= 1) {
+      console.warn(
+        `polyclip-ts error for single feature, reporting size as 0: ${
+          (e as Error).message
+        }`,
+      );
+      return 0;
+    }
+    console.warn(
+      `polyclip-ts error on batch of ${features.length} features, subdividing to isolate bad geometries: ${
+        (e as Error).message
+      }`,
+    );
+    const bucketCount = Math.min(5, features.length);
+    const bucketSize = Math.ceil(features.length / bucketCount);
+    let total = 0;
+    for (let i = 0; i < features.length; i += bucketSize) {
+      const bucket = features.slice(i, i + bucketSize);
+      total += calculatedClippedOverlapSize(
+        bucket,
+        differenceGeoms,
+        subjectFeature,
+        subdivisions,
+      );
+    }
+    return total;
+  }
+}
+
+function calculatedClippedOverlapSizeUnsafe(
+  features: {
+    feature: FeatureWithMetadata<
+      Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    >;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[],
+  differenceGeoms: clipping.Geom[],
+  subjectFeature: Feature<Polygon | MultiPolygon>,
 ): number {
   if (
     features[0].feature.geometry.type === "Polygon" ||
@@ -120,7 +184,7 @@ export function calculatedClippedOverlapSize(
     if (forClipping.length > 0) {
       const result = clipping.intersection(
         forClipping,
-        subjectFeature.geometry.coordinates as clipping.Geom
+        subjectFeature.geometry.coordinates as clipping.Geom,
       );
       if (result.length > 0) {
         // @ts-ignore
@@ -149,14 +213,14 @@ export function calculatedClippedOverlapSize(
         f.requiresIntersection,
         f.requiresDifference,
         differenceGeoms,
-        subjectFeature
+        subjectFeature,
       );
       if (
         processed.geometry.type === "LineString" ||
         processed.geometry.type === "MultiLineString"
       ) {
         totalLength += calcSize(
-          processed as Feature<LineString | MultiLineString>
+          processed as Feature<LineString | MultiLineString>,
         );
       }
     }
@@ -184,7 +248,7 @@ export async function countFeatures({
   for (const f of features) {
     if (f.requiresIntersection) {
       throw new Error(
-        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature.",
       );
     }
     if (f.requiresDifference) {
@@ -241,7 +305,7 @@ export async function countFeatures({
     results["*"].add(f.feature.properties.__oidx);
   }
   return Object.fromEntries(
-    Object.entries(results).map(([key, value]) => [key, Array.from(value)])
+    Object.entries(results).map(([key, value]) => [key, Array.from(value)]),
   );
 }
 
@@ -314,7 +378,7 @@ export async function createPresenceTable({
     }
     if (f.requiresIntersection) {
       throw new Error(
-        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature."
+        "Not implemented. If just counting features, they should never be added to the batch if unsure if they lie within the subject feature.",
       );
     }
     if (f.requiresDifference) {
@@ -374,14 +438,16 @@ export async function createPresenceTable({
 
 export type ColumnValues =
   | [
-      /** column value */
-      number | string | boolean,
+      (
+        /** column value */
+        number | string | boolean
+      ),
       /* area of overlap (in sq meters) if feature is polygonal, or length in meters if feature is linestring */
-      number
+      number,
     ]
   | [
       /** column value */
-      number | string | boolean
+      number | string | boolean,
     ];
 
 export async function collectColumnValues({
@@ -413,7 +479,7 @@ export async function collectColumnValues({
     ) {
       if (f.requiresIntersection) {
         throw new Error(
-          "Not implemented. If just collecting column values for points. They should never be added to the batch if unsure if they lie within the subject feature."
+          "Not implemented. If just collecting column values for points. They should never be added to the batch if unsure if they lie within the subject feature.",
         );
       }
       if (f.requiresDifference) {
@@ -451,7 +517,7 @@ export async function collectColumnValues({
         f.requiresIntersection,
         f.requiresDifference,
         differenceMultiPolygon,
-        subjectFeature
+        subjectFeature,
       );
     }
     addColumnValuesToResults(results, f.feature, groupBy);
@@ -466,7 +532,7 @@ export function addColumnValuesToResults(
     };
   },
   feature: FeatureWithMetadata<Feature<Geometry>>,
-  groupBy?: string
+  groupBy?: string,
 ) {
   for (const attr in feature.properties) {
     if (
@@ -603,7 +669,7 @@ parentPort?.on(
         error: { message: (err as Error).message, stack: (err as Error).stack },
       });
     }
-  }
+  },
 );
 
 export function pick(object: any, keys?: string[]) {
@@ -613,7 +679,7 @@ export function pick(object: any, keys?: string[]) {
       key !== "__oidx" &&
       key !== "__byteLength" &&
       key !== "__area" &&
-      key !== "__offset"
+      key !== "__offset",
   );
   return keys.reduce((acc, key) => {
     acc[key] = object[key];
@@ -626,7 +692,7 @@ function performOperationsOnFeature(
   requiresIntersection: boolean,
   requiresDifference: boolean,
   differenceMultiPolygon: clipping.Geom[],
-  subjectFeature: Feature<Polygon | MultiPolygon>
+  subjectFeature: Feature<Polygon | MultiPolygon>,
 ) {
   // Clone the feature to avoid modifying the original
   let result = JSON.parse(JSON.stringify(feature)) as typeof feature;
@@ -641,7 +707,7 @@ function performOperationsOnFeature(
     if (requiresIntersection) {
       geom = clipping.intersection(
         geom,
-        subjectFeature.geometry.coordinates as clipping.Geom
+        subjectFeature.geometry.coordinates as clipping.Geom,
       );
     }
     if (requiresDifference) {
@@ -671,7 +737,7 @@ function performOperationsOnFeature(
         multiLine = clipLinesWithPolygon(
           multiLine,
           differenceFeature,
-          "difference"
+          "difference",
         );
       }
     }
@@ -681,7 +747,7 @@ function performOperationsOnFeature(
     };
   } else {
     throw new Error(
-      `Unsupported geometry type: ${(feature.geometry as any).type}`
+      `Unsupported geometry type: ${(feature.geometry as any).type}`,
     );
   }
   return result as typeof feature;
@@ -691,7 +757,7 @@ type MultiLineCoordinates = Position[][];
 type LineClipMode = "intersect" | "difference";
 
 function toMultiLineCoordinates(
-  geometry: LineString | MultiLineString
+  geometry: LineString | MultiLineString,
 ): MultiLineCoordinates {
   if (geometry.type === "LineString") {
     return [cloneLineCoordinates(geometry.coordinates)];
@@ -702,7 +768,7 @@ function toMultiLineCoordinates(
 function clipLinesWithPolygon(
   lines: MultiLineCoordinates,
   polygon: Feature<Polygon | MultiPolygon>,
-  mode: LineClipMode
+  mode: LineClipMode,
 ): MultiLineCoordinates {
   if (lines.length === 0) {
     return [];
@@ -713,7 +779,7 @@ function clipLinesWithPolygon(
     const filtered = filterLineStringAgainstPolygon(
       coords,
       polygon,
-      keepInside
+      keepInside,
     );
     if (filtered.length > 0) {
       result.push(...filtered);
@@ -725,7 +791,7 @@ function clipLinesWithPolygon(
 function filterLineStringAgainstPolygon(
   coords: Position[],
   polygon: Feature<Polygon | MultiPolygon>,
-  keepInside: boolean
+  keepInside: boolean,
 ): MultiLineCoordinates {
   if (coords.length < 2) {
     return [];
@@ -784,7 +850,7 @@ function cloneLineCoordinates(coords: Position[]): Position[] {
 
 function samplePointOnSegment(
   segment: Feature<LineString>,
-  segmentLengthKm: number
+  segmentLengthKm: number,
 ): Feature<Point> | null {
   const distanceKm = Math.max(segmentLengthKm / 2, 1e-6);
   try {
@@ -816,7 +882,7 @@ function samplePointOnSegment(
 }
 
 function geomToMultiPolygonFeature(
-  geom: clipping.Geom
+  geom: clipping.Geom,
 ): Feature<Polygon | MultiPolygon> {
   return {
     type: "Feature",
