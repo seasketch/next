@@ -3863,6 +3863,9 @@ type DataUploadOutput implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  numFeatures: Int
+  numInvalidFeatures: Int
+  numRepairedFeatures: Int
   originalFilename: String
   projectId: Int
   remote: String!
@@ -3870,6 +3873,7 @@ type DataUploadOutput implements Node {
   sourceProcessingJobKey: String
   type: DataUploadOutputType!
   url: String!
+  wasRepaired: Boolean
 }
 
 enum DataUploadOutputType {
@@ -10023,6 +10027,12 @@ type Mutation {
   current user session
   """
   resendVerificationEmail: SendVerificationEmailResults!
+  retryFailedSourceProcessingJob(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RetryFailedSourceProcessingJobInput!
+  ): RetryFailedSourceProcessingJobPayload
   retryFailedSpatialMetrics(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -14282,6 +14292,7 @@ input RecalculateSpatialMetricsInput {
   clientMutationId: String
   metricIds: [BigInt]
   preprocessSources: Boolean
+  repairInvalid: Boolean
 }
 
 """The output of our `recalculateSpatialMetrics` mutation."""
@@ -14660,6 +14671,33 @@ type ReportTab implements Node {
 type RetentionChangeEstimate {
   bytes: BigInt
   numSources: Int
+}
+
+"""All input for the `retryFailedSourceProcessingJob` mutation."""
+input RetryFailedSourceProcessingJobInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  jobkey: String
+  repairInvalid: Boolean
+}
+
+"""The output of our `retryFailedSourceProcessingJob` mutation."""
+type RetryFailedSourceProcessingJobPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `retryFailedSpatialMetrics` mutation."""

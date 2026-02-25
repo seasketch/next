@@ -1,6 +1,12 @@
 import { Trans, useTranslation } from "react-i18next";
-import { useContext, useMemo } from "react";
-import { Geography, SpatialMetricState } from "../generated/graphql";
+import { useCallback, useContext, useMemo } from "react";
+import {
+  DraftReportDependenciesDocument,
+  Geography,
+  ReportDependenciesDocument,
+  SpatialMetricState,
+  useRecalculateSpatialMetricsMutation,
+} from "../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -8,6 +14,7 @@ import { ReportCardConfiguration } from "./cards/cards";
 import { DraftReportContext } from "./DraftReportContext";
 import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 
 export default function ReportMetricsProgressDetails({
   config,
@@ -20,6 +27,37 @@ export default function ReportMetricsProgressDetails({
   const context = useCardDependenciesContext();
   const draftReportContext = useContext(DraftReportContext);
   const baseReportContext = useBaseReportContext();
+  const onError = useGlobalErrorHandler();
+
+  const [recalculate, recalculateState] =
+    useRecalculateSpatialMetricsMutation({ onError });
+
+  const allMetrics = useMemo(
+    () => [...draftReportContext.draftMetrics, ...context.metrics],
+    [draftReportContext.draftMetrics, context.metrics]
+  );
+
+  const handleRepairSource = useCallback(
+    async (jobKey: string) => {
+      const metricIds = allMetrics
+        .filter((m) => m.sourceProcessingJobDependency === jobKey)
+        .map((m) => m.id);
+      if (metricIds.length === 0) return;
+      await recalculate({
+        variables: {
+          metricIds,
+          preprocessSources: true,
+          repairInvalid: true,
+        },
+        refetchQueries: [
+          ReportDependenciesDocument,
+          DraftReportDependenciesDocument,
+        ],
+        awaitRefetchQueries: true,
+      });
+    },
+    [allMetrics, recalculate]
+  );
 
   const state = useMemo(() => {
     const failedMetrics = [] as number[];
@@ -98,6 +136,19 @@ export default function ReportMetricsProgressDetails({
                     }
                     isAdmin={isAdmin}
                     estimatedCompletionTime={layer.sourceProcessingJob?.eta}
+                    numInvalidFeatures={layer.output?.numInvalidFeatures}
+                    numFeatures={layer.output?.numFeatures}
+                    numRepairedFeatures={layer.output?.numRepairedFeatures}
+                    wasRepaired={layer.output?.wasRepaired}
+                    onRepairClick={
+                      isAdmin && layer.sourceProcessingJob?.jobKey
+                        ? () =>
+                            handleRepairSource(
+                              layer.sourceProcessingJob!.jobKey
+                            )
+                        : undefined
+                    }
+                    repairLoading={recalculateState.loading}
                   />
                 );
               })}

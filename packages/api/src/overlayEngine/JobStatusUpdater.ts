@@ -195,6 +195,10 @@ export class JobStatusUpdater {
               filename?: string;
               epsg?: number;
             };
+            numInvalidFeatures?: number;
+            numFeatures?: number;
+            numRepairedFeatures?: number;
+            wasRepaired?: boolean;
           };
           const jobQ = await this.pgPool.query(
             `select data_source_id, project_id from source_processing_jobs where job_key = $1`,
@@ -226,9 +230,15 @@ export class JobStatusUpdater {
             const filename =
               result.object.filename || result.object.key || "output.fgb";
             const epsg = result.object.epsg || null;
+            const numInvalidFeatures =
+              result.numInvalidFeatures ?? null;
+            const numFeatures = result.numFeatures ?? null;
+            const numRepairedFeatures =
+              result.numRepairedFeatures ?? null;
+            const wasRepaired = result.wasRepaired ?? null;
             await this.pgPool.query(
-              `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key, epsg)
-               values ($1, $9, $2, $3, $4, $5, false, $6, $4, $7, $8)
+              `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key, epsg, num_invalid_features, num_features, num_repaired_features, was_repaired)
+               values ($1, $9, $2, $3, $4, $5, false, $6, $4, $7, $8, $10, $11, $12, $13)
               `,
               [
                 data_source_id,
@@ -242,6 +252,10 @@ export class JobStatusUpdater {
                 (result.object.key || "").endsWith(".fgb")
                   ? "ReportingFlatgeobufV1"
                   : "ReportingCOG",
+                numInvalidFeatures,
+                numFeatures,
+                numRepairedFeatures,
+                wasRepaired,
               ]
             );
             await this.pgPool.query(

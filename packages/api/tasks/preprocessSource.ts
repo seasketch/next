@@ -10,10 +10,10 @@ const lambda = new AWS.Lambda({
 });
 
 export default async function preprocessSource(
-  payload: { jobKey: string },
+  payload: { jobKey: string; repairInvalid?: boolean },
   helpers: Helpers
 ) {
-  const { jobKey } = payload;
+  const { jobKey, repairInvalid } = payload;
 
   if (!process.env.SUBDIVISION_WORKER_LAMBDA_ARN) {
     throw new Error("SUBDIVISION_WORKER_LAMBDA_ARN is not set");
@@ -101,6 +101,7 @@ export default async function preprocessSource(
       jobKey,
       key: objectKey,
       queueUrl: process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL,
+      repair_invalid: repairInvalid || false,
     };
 
     // Invoke subdivision worker lambda asynchronously

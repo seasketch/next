@@ -624,9 +624,14 @@ query SourceProcessingJobs($projectId: Int!) {
 mutation RecalculateSpatialMetrics(
   $metricIds: [BigInt!]!
   $preprocessSources: Boolean!
+  $repairInvalid: Boolean
 ) {
   recalculateSpatialMetrics(
-    input: { metricIds: $metricIds, preprocessSources: $preprocessSources }
+    input: {
+      metricIds: $metricIds
+      preprocessSources: $preprocessSources
+      repairInvalid: $repairInvalid
+    }
   ) {
     boolean
   }
@@ -649,6 +654,10 @@ fragment OverlaySourceDetails on ReportOverlaySource {
     size
     url
     createdAt
+    numInvalidFeatures
+    numFeatures
+    numRepairedFeatures
+    wasRepaired
   }
 }
 

@@ -2,7 +2,8 @@ import argparse
 import math
 from shapely.geometry import shape, mapping, LineString, GeometryCollection, MultiLineString, Polygon, MultiPolygon
 from shapely.ops import split, transform
-from shapely import get_num_coordinates, prepare
+from shapely import get_num_coordinates, prepare, is_valid
+from shapely.validation import make_valid
 import fiona
 from tqdm import tqdm
 import os
@@ -197,7 +198,7 @@ def antimeridian_split_to_non_crossing(geom_geojson):
     result_geojson = normalize_geojson_longitudes(result_geojson)
     return result_geojson
 
-def process_file(input_file, output_file, max_nodes, progress_callback=None):
+def process_file(input_file, output_file, max_nodes, progress_callback=None, repair_invalid=False):
     """Process the input file and write the subdivided output as FlatGeobuf.
     
     Args:
@@ -205,16 +206,28 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
         output_file: Path to output FlatGeobuf file
         max_nodes: Maximum number of nodes per geometry
         progress_callback: Optional callback function(phase, current, total) for progress updates
+        repair_invalid: If True, attempt shapely make_valid() on invalid geometries.
+            Only features that cannot be repaired are counted as invalid.
+    
+    Returns:
+        dict with keys:
+            num_features: total features in the output FlatGeobuf (post-subdivision)
+            num_invalid_features: how many output features have invalid geometry
+            num_repaired_features: how many invalid originals were successfully repaired
+                via make_valid() (only present when repair_invalid=True)
     """
-    # First, count the number of nodes in all features of the file
     total_nodes = 0
     total_features = 0
     batch = []
+    invalid_original_indices = set()
+    output_feature_count = 0
+    invalid_output_feature_count = 0
+    repaired_count = 0
     
     # Geodesic calculator (input is always EPSG:4326)
     geod = Geod(ellps="WGS84")
     
-    # First pass: get schema and count nodes
+    # First pass: get schema, count nodes, and detect invalid geometries
     with fiona.open(input_file, "r") as src:
         schema = src.schema.copy()
         schema['geometry'] = 'Polygon'
@@ -232,14 +245,27 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
             progress_callback('scanning', 0, total_features)
           except Exception:
             pass
+        scan_idx = 0
         for feature in src:
           total_nodes_in_dataset += count_nodes(feature['geometry'])
+          try:
+            geom = shape(feature['geometry'])
+            if not is_valid(geom):
+              invalid_original_indices.add(scan_idx)
+          except Exception:
+            invalid_original_indices.add(scan_idx)
+          scan_idx += 1
           scanned_features += 1
           if progress_callback is not None:
             try:
               progress_callback('scanning', scanned_features, total_features)
             except Exception:
               pass
+
+    if len(invalid_original_indices) > 0:
+        print(f"Detected {len(invalid_original_indices)} invalid original features out of {total_features} total")
+
+    unfixable_count = 0
 
     big_poly_indexes = {}
     i = 0
@@ -303,6 +329,8 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
             BATCH_SIZE = 10000
 
           def write(feature, is_split=False):
+            nonlocal output_feature_count
+            nonlocal invalid_output_feature_count
             # Compute area and add to properties before batching
             geom_geojson = feature['geometry']
             props = dict(feature['properties'])
@@ -310,6 +338,14 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
               area_val = geodesic_area_sqkm(geom_geojson)
               props['__area'] = area_val
             batch.append({'geometry': geom_geojson, 'properties': props})
+            output_feature_count += 1
+            oidx = props.get('__oidx')
+            if oidx is not None and oidx in invalid_original_indices:
+              try:
+                if not is_valid(shape(geom_geojson)):
+                  invalid_output_feature_count += 1
+              except Exception:
+                invalid_output_feature_count += 1
             nonlocal cumulative_processed_nodes
             cumulative_processed_nodes += count_nodes(feature['geometry'])
             if is_split:
@@ -326,6 +362,36 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
           # Process features (file is opened fresh in second pass)
           for feature in src:
             adjusted_geom = antimeridian_split_to_non_crossing(feature['geometry'])
+
+            # Optionally repair invalid geometries
+            if repair_invalid:
+              try:
+                geom_check = shape(adjusted_geom)
+                if not is_valid(geom_check):
+                  repaired = make_valid(geom_check)
+                  if repaired.is_empty:
+                    unfixable_count += 1
+                    i += 1
+                    continue
+                  # make_valid can return GeometryCollection; extract polygons
+                  if repaired.geom_type == 'GeometryCollection':
+                    polys = [g for g in repaired.geoms if g.geom_type in ('Polygon', 'MultiPolygon')]
+                    if not polys:
+                      unfixable_count += 1
+                      i += 1
+                      continue
+                    repaired = MultiPolygon(polys) if len(polys) > 1 else polys[0]
+                  if repaired.geom_type not in ('Polygon', 'MultiPolygon'):
+                    unfixable_count += 1
+                    i += 1
+                    continue
+                  adjusted_geom = mapping(repaired)
+                  repaired_count += 1
+              except Exception as e:
+                print(f"Failed to repair feature {i}: {e}")
+                unfixable_count += 1
+                i += 1
+                continue
 
             # Common props for all outputs from this input feature
             base_props = dict(feature['properties'])
@@ -411,6 +477,12 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
           print(f"Total features in input dataset: {total_features}")
           print(f"Total small features in input dataset: {total_features - len(big_poly_indexes.keys())}")
           print(f"Total big features in input dataset: {len(big_poly_indexes.keys())}")
+          print(f"Total output features: {output_feature_count}")
+          print(f"Invalid original features: {len(invalid_original_indices)}")
+          print(f"Invalid output features: {invalid_output_feature_count}")
+          if repair_invalid:
+            print(f"Repaired features: {repaired_count}")
+            print(f"Unfixable features (skipped): {unfixable_count}")
 
     # Validate final output bounds using dataset metadata/index.
     with fiona.open(output_file, "r") as out_src:
@@ -425,7 +497,14 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None):
                 f"Output FlatGeobuf bounds out of range: {bounds}"
             )
 
-        
+    result = {
+        "num_features": output_feature_count,
+        "num_invalid_features": invalid_output_feature_count,
+    }
+    if repair_invalid:
+        result["num_repaired_features"] = repaired_count
+        result["was_repaired"] = True
+    return result
 
 def multipart_to_singlepart(geometry):
     """

@@ -10,7 +10,7 @@ import {
   XCircleIcon,
 } from "@heroicons/react/solid";
 import bytes from "bytes";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 
 interface ReportTaskLineItemProps {
   title: React.ReactNode;
@@ -30,6 +30,12 @@ interface ReportTaskLineItemProps {
   value?: any;
   metricType?: string;
   parameters?: any;
+  numInvalidFeatures?: number | null;
+  numFeatures?: number | null;
+  numRepairedFeatures?: number | null;
+  wasRepaired?: boolean | null;
+  onRepairClick?: () => void;
+  repairLoading?: boolean;
 }
 
 export default function ReportTaskLineItem({
@@ -50,12 +56,27 @@ export default function ReportTaskLineItem({
   value,
   metricType,
   parameters,
+  numInvalidFeatures,
+  numFeatures,
+  numRepairedFeatures,
+  wasRepaired,
+  onRepairClick,
+  repairLoading,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
+  const hasTopologyIssues =
+    state === SpatialMetricState.Complete &&
+    numInvalidFeatures != null &&
+    numInvalidFeatures > 0;
   const hasTooltipInfo =
     (state === SpatialMetricState.Complete ||
       state === SpatialMetricState.Error) &&
-    (completedAt || durationSeconds || errorMessage || outputSize || value);
+    (completedAt ||
+      durationSeconds ||
+      errorMessage ||
+      outputSize ||
+      value ||
+      hasTopologyIssues);
 
   // Precompute tooltip content
   const queuedTooltip = (
@@ -132,6 +153,79 @@ export default function ReportTaskLineItem({
           </div>
         </div>
       )}
+      {isAdmin &&
+        state === SpatialMetricState.Complete &&
+        (hasTopologyIssues || wasRepaired) &&
+        numFeatures != null && (
+          <div>
+            <div className="font-semibold text-white">
+              {t("Topology Quality")}
+            </div>
+            {hasTopologyIssues && (
+              <>
+                <div className="text-yellow-400">
+                  {numInvalidFeatures.toLocaleString()} /{" "}
+                  {numFeatures.toLocaleString()} {t("features invalid")}
+                </div>
+                <div className="text-gray-400 text-xs mt-1">
+                  <Trans ns="admin:sketching">
+                    One or more features have geometry topology problems. These
+                    can slow calculations and result in less accurate results.
+                    Consider running validation checks in desktop GIS or
+                    reprocessing data using the repair option, which will use
+                    the{" "}
+                    <a
+                      className="text-blue-400 hover:text-blue-300 underline"
+                      href="https://shapely.readthedocs.io/en/latest/reference/shapely.make_valid.html"
+                      target="_blank"
+                    >
+                      shapely make_valid
+                    </a>{" "}
+                    function to repair topology.
+                  </Trans>
+                </div>
+              </>
+            )}
+            {wasRepaired && numRepairedFeatures != null && (
+              <>
+                <div className="text-gray-300">
+                  {numRepairedFeatures}{" "}
+                  {numRepairedFeatures === 1
+                    ? t("feature repaired")
+                    : t("features repaired")}
+                </div>
+                <div className="text-gray-400 text-xs mt-1">
+                  <Trans ns="admin:sketching">
+                    Data source was processed using{" "}
+                    <a
+                      className="text-blue-400 hover:text-blue-300 underline"
+                      href="https://shapely.readthedocs.io/en/latest/reference/shapely.make_valid.html"
+                      target="_blank"
+                    >
+                      shapely's make_valid function
+                    </a>{" "}
+                    to repair topology problems. You may wish to download and
+                    verify the output in desktop GIS.
+                  </Trans>
+                </div>
+              </>
+            )}
+            {onRepairClick && !wasRepaired && (
+              <button
+                className="mt-2 inline-flex items-center px-2.5 py-1 text-xs font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRepairClick();
+                }}
+                disabled={repairLoading}
+              >
+                {repairLoading
+                  ? t("Reprocessing...")
+                  : t("Reprocess with repair")}
+              </button>
+            )}
+          </div>
+        )}
       {state === SpatialMetricState.Complete &&
         value !== null &&
         value !== undefined && (
@@ -166,14 +260,23 @@ export default function ReportTaskLineItem({
       {tooltipContent ? (
         <Tooltip.Root delayDuration={100}>
           <Tooltip.Trigger asChild>
-            <div className="text-sm text-gray-600 flex items-center justify-center w-5 h-5 cursor-help focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded">
-              <StateIcon
-                state={state}
-                progress={progress}
-                progressPercent={progressPercent}
-                t={t}
-              />
-            </div>
+            {hasTopologyIssues ? (
+              <div className="ml-1 flex items-center gap-1 px-1.5 py-0.5 pl-2 rounded-full bg-yellow-50 border border-yellow-300 cursor-help focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1">
+                <span className="text-xs font-medium text-yellow-700 whitespace-nowrap">
+                  {t("Topology problems")}
+                </span>
+                <CheckCircleIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" />
+              </div>
+            ) : (
+              <div className="text-sm text-gray-600 flex items-center justify-center w-5 h-5 cursor-help focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded">
+                <StateIcon
+                  state={state}
+                  progress={progress}
+                  progressPercent={progressPercent}
+                  t={t}
+                />
+              </div>
+            )}
           </Tooltip.Trigger>
           <Tooltip.Portal>
             <Tooltip.Content

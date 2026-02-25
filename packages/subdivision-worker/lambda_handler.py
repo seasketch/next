@@ -341,6 +341,7 @@ def _parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
             "max_nodes": event.get("max_nodes"),
             "jobKey": event.get("jobKey"),
             "queueUrl": event.get("queueUrl"),
+            "repair_invalid": bool(event.get("repair_invalid", False)),
         }
 
     # API Gateway / Lambda Function URL
@@ -357,11 +358,12 @@ def _parse_event(event: Dict[str, Any]) -> Dict[str, Any]:
     max_nodes = q.get("max_nodes") or body_obj.get("max_nodes")
     job_key = q.get("jobKey") or body_obj.get("jobKey")
     queue_url = q.get("queueUrl") or body_obj.get("queueUrl")
+    repair_invalid = q.get("repair_invalid") or body_obj.get("repair_invalid")
     try:
         max_nodes = int(max_nodes) if max_nodes is not None else None
     except Exception:
         max_nodes = None
-    return {"url": url, "key": key, "max_nodes": max_nodes, "jobKey": job_key, "queueUrl": queue_url}
+    return {"url": url, "key": key, "max_nodes": max_nodes, "jobKey": job_key, "queueUrl": queue_url, "repair_invalid": bool(repair_invalid)}
 
 
 def handler(event, context):
@@ -380,6 +382,7 @@ def handler(event, context):
     object_key = provided_key if provided_key else None
     job_key = params.get("jobKey")
     queue_url = params.get("queueUrl")
+    repair_invalid = params.get("repair_invalid", False)
 
     notifier: Optional[ProgressNotifier] = None
     if job_key and queue_url:
@@ -453,6 +456,7 @@ def handler(event, context):
         last_value = pct
 
     upload_result = None
+    processing_stats = None
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
             if is_raster:
@@ -503,7 +507,7 @@ def handler(event, context):
                     process_points(input_path, output_path, progress_callback=_overall_progress)
                 elif geom_type in ('Polygon', 'MultiPolygon'):
                     print(f"Detected geometry type: {geom_type}, routing to subdivision processor")
-                    process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress)
+                    processing_stats = process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress, repair_invalid=repair_invalid)
                 elif geom_type in ('LineString', 'MultiLineString'):
                     print(f"Detected geometry type: {geom_type}, routing to line subdivision processor")
                     process_lines(input_path, output_path, max_nodes, progress_callback=_overall_progress)
@@ -523,7 +527,21 @@ def handler(event, context):
                     if is_raster:
                         upload_result["epsg"] = 6933
 
-                    notifier.result({"object": upload_result})
+                    result_payload: Dict[str, Any] = {"object": upload_result}
+                    if processing_stats:
+                        num_invalid = processing_stats.get("num_invalid_features")
+                        num_features = processing_stats.get("num_features")
+                        num_repaired = processing_stats.get("num_repaired_features")
+                        was_repaired = processing_stats.get("was_repaired")
+                        if num_invalid is not None and num_invalid > 0:
+                            result_payload["numInvalidFeatures"] = num_invalid
+                        if num_features is not None:
+                            result_payload["numFeatures"] = num_features
+                        if num_repaired is not None:
+                            result_payload["numRepairedFeatures"] = num_repaired
+                        if was_repaired:
+                            result_payload["wasRepaired"] = True
+                    notifier.result(result_payload)
                 except Exception:
                     pass
     except Exception as e:

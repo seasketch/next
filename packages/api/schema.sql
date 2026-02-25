@@ -6705,7 +6705,12 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
           is_original,
           size,
           filename,
-          original_filename
+          original_filename,
+          epsg,
+          num_features,
+          num_invalid_features,
+          num_repaired_features,
+          was_repaired
         ) select 
             ds_id,
             "projectId",
@@ -6716,7 +6721,12 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
             is_original,
             size,
             filename,
-            original_filename
+            original_filename,
+            epsg,
+            num_features,
+            num_invalid_features,
+            num_repaired_features,
+            was_repaired
           from 
             data_upload_outputs 
           where 
@@ -7528,7 +7538,11 @@ CREATE TABLE public.data_upload_outputs (
     is_custom_upload boolean DEFAULT false,
     fgb_header_size integer,
     source_processing_job_key text,
-    epsg integer
+    epsg integer,
+    num_invalid_features integer,
+    num_features integer,
+    num_repaired_features integer,
+    was_repaired boolean
 );
 
 
@@ -15973,7 +15987,11 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
             is_custom_upload,
             fgb_header_size,
             source_processing_job_key,
-            epsg
+            epsg,
+            num_features,
+            num_invalid_features,
+            num_repaired_features,
+            was_repaired
           ) select
             (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where stable_id = sid and is_draft = false)),
             data_upload_outputs.project_id,
@@ -15987,7 +16005,11 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
             is_custom_upload,
             fgb_header_size,
             source_processing_job_key,
-            epsg
+            epsg,
+            num_features,
+            num_invalid_features,
+            num_repaired_features,
+            was_repaired
           from data_upload_outputs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where stable_id = sid and is_draft = true)) and is_reporting_type(type) order by created_at desc limit 1;
           raise notice 'Copied data_upload_output for stable id: %', sid;
         end loop;
@@ -16381,7 +16403,11 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           filename,
           original_filename,
           source_processing_job_key,
-          epsg
+          epsg,
+          num_features,
+          num_invalid_features,
+          num_repaired_features,
+          was_repaired
         ) select 
             copied_source_id,
             project_id,
@@ -16394,7 +16420,11 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             filename,
             original_filename,
             source_processing_job_key,
-            epsg
+            epsg,
+            num_features,
+            num_invalid_features,
+            num_repaired_features,
+            was_repaired
           from 
             data_upload_outputs 
           where 
@@ -16456,10 +16486,10 @@ CREATE FUNCTION public.queue_calculate_spatial_metric_task() RETURNS trigger
 
 
 --
--- Name: recalculate_spatial_metrics(bigint[], boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: recalculate_spatial_metrics(bigint[], boolean, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean) RETURNS boolean
+CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean, repair_invalid boolean DEFAULT false) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   declare
@@ -16482,14 +16512,13 @@ CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preproce
       delete from spatial_metrics where id = metric_id and (subject_fragment_id is not null or session_is_admin((select project_id from project_geography where id = spatial_metrics.subject_geography_id limit 1)));
     end loop;
     if array_length(source_preprocessing_jobs, 1) > 0 then
-      -- loop through the source preprocessing jobs, and retry them
       foreach source_job_key in array source_preprocessing_jobs loop
         select data_source_id into source_id from source_processing_jobs where job_key = source_job_key;
         if source_id is not null then
           delete from data_upload_outputs where data_source_id = source_id and is_reporting_type(type);
         end if;
         delete from spatial_metrics where source_processing_job_dependency = source_job_key;
-        perform retry_failed_source_processing_job(source_job_key);
+        perform retry_failed_source_processing_job(source_job_key, repair_invalid);
       end loop;
     end if;
     return true;
@@ -17201,10 +17230,10 @@ CREATE FUNCTION public.reports_updated_at(r public.reports) RETURNS timestamp wi
 
 
 --
--- Name: retry_failed_source_processing_job(text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: retry_failed_source_processing_job(text, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.retry_failed_source_processing_job(jobkey text) RETURNS boolean
+CREATE FUNCTION public.retry_failed_source_processing_job(jobkey text, repair_invalid boolean DEFAULT false) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
   declare
@@ -17222,7 +17251,7 @@ CREATE FUNCTION public.retry_failed_source_processing_job(jobkey text) RETURNS b
       update spatial_metrics set source_processing_job_dependency = updated_job_key where source_processing_job_dependency = jobkey;
       perform graphile_worker.add_job(
         'preprocessSource',
-        json_build_object('jobKey', updated_job_key),
+        json_build_object('jobKey', updated_job_key, 'repairInvalid', repair_invalid),
         max_attempts := 1
       );
     end if;
@@ -35731,11 +35760,11 @@ REVOKE ALL ON FUNCTION public.queue_calculate_spatial_metric_task() FROM PUBLIC;
 
 
 --
--- Name: FUNCTION recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean, repair_invalid boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean, repair_invalid boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preprocess_sources boolean, repair_invalid boolean) TO seasketch_user;
 
 
 --
@@ -35962,10 +35991,11 @@ GRANT ALL ON FUNCTION public.reports_updated_at(r public.reports) TO anon;
 
 
 --
--- Name: FUNCTION retry_failed_source_processing_job(jobkey text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION retry_failed_source_processing_job(jobkey text, repair_invalid boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.retry_failed_source_processing_job(jobkey text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.retry_failed_source_processing_job(jobkey text, repair_invalid boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.retry_failed_source_processing_job(jobkey text, repair_invalid boolean) TO seasketch_user;
 
 
 --

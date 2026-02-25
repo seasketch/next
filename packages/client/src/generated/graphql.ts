@@ -3366,6 +3366,9 @@ export type DataUploadOutput = Node & {
   isOriginal: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  numFeatures?: Maybe<Scalars['Int']>;
+  numInvalidFeatures?: Maybe<Scalars['Int']>;
+  numRepairedFeatures?: Maybe<Scalars['Int']>;
   originalFilename?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
   remote: Scalars['String'];
@@ -3373,6 +3376,7 @@ export type DataUploadOutput = Node & {
   sourceProcessingJobKey?: Maybe<Scalars['String']>;
   type: DataUploadOutputType;
   url: Scalars['String'];
+  wasRepaired?: Maybe<Scalars['Boolean']>;
 };
 
 export enum DataUploadOutputType {
@@ -7993,6 +7997,7 @@ export type Mutation = {
    * current user session
    */
   resendVerificationEmail: SendVerificationEmailResults;
+  retryFailedSourceProcessingJob?: Maybe<RetryFailedSourceProcessingJobPayload>;
   retryFailedSpatialMetrics?: Maybe<RetryFailedSpatialMetricsPayload>;
   /** Remove participant admin privileges. */
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
@@ -9316,6 +9321,12 @@ export type MutationReorderReportTabsArgs = {
 export type MutationReplacePmTilesArgs = {
   dataSourceId: Scalars['Int'];
   pmtilesKey: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRetryFailedSourceProcessingJobArgs = {
+  input: RetryFailedSourceProcessingJobInput;
 };
 
 
@@ -13464,6 +13475,7 @@ export type RecalculateSpatialMetricsInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   metricIds?: Maybe<Array<Maybe<Scalars['BigInt']>>>;
   preprocessSources?: Maybe<Scalars['Boolean']>;
+  repairInvalid?: Maybe<Scalars['Boolean']>;
 };
 
 /** The output of our `recalculateSpatialMetrics` mutation. */
@@ -13808,6 +13820,30 @@ export type RetentionChangeEstimate = {
   __typename?: 'RetentionChangeEstimate';
   bytes?: Maybe<Scalars['BigInt']>;
   numSources?: Maybe<Scalars['Int']>;
+};
+
+/** All input for the `retryFailedSourceProcessingJob` mutation. */
+export type RetryFailedSourceProcessingJobInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  jobkey?: Maybe<Scalars['String']>;
+  repairInvalid?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `retryFailedSourceProcessingJob` mutation. */
+export type RetryFailedSourceProcessingJobPayload = {
+  __typename?: 'RetryFailedSourceProcessingJobPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `retryFailedSpatialMetrics` mutation. */
@@ -23117,6 +23153,7 @@ export type SourceProcessingJobsQuery = (
 export type RecalculateSpatialMetricsMutationVariables = Exact<{
   metricIds: Array<Scalars['BigInt']> | Scalars['BigInt'];
   preprocessSources: Scalars['Boolean'];
+  repairInvalid?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -23139,7 +23176,7 @@ export type OverlaySourceDetailsFragment = (
     & SourceProcessingJobDetailsFragment
   ), output?: Maybe<(
     { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt'>
+    & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt' | 'numInvalidFeatures' | 'numFeatures' | 'numRepairedFeatures' | 'wasRepaired'>
   )> }
 );
 
@@ -26829,6 +26866,10 @@ export const OverlaySourceDetailsFragmentDoc = gql`
     size
     url
     createdAt
+    numInvalidFeatures
+    numFeatures
+    numRepairedFeatures
+    wasRepaired
   }
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
@@ -36129,9 +36170,9 @@ export type SourceProcessingJobsQueryHookResult = ReturnType<typeof useSourcePro
 export type SourceProcessingJobsLazyQueryHookResult = ReturnType<typeof useSourceProcessingJobsLazyQuery>;
 export type SourceProcessingJobsQueryResult = Apollo.QueryResult<SourceProcessingJobsQuery, SourceProcessingJobsQueryVariables>;
 export const RecalculateSpatialMetricsDocument = gql`
-    mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!) {
+    mutation RecalculateSpatialMetrics($metricIds: [BigInt!]!, $preprocessSources: Boolean!, $repairInvalid: Boolean) {
   recalculateSpatialMetrics(
-    input: {metricIds: $metricIds, preprocessSources: $preprocessSources}
+    input: {metricIds: $metricIds, preprocessSources: $preprocessSources, repairInvalid: $repairInvalid}
   ) {
     boolean
   }
@@ -36154,6 +36195,7 @@ export type RecalculateSpatialMetricsMutationFn = Apollo.MutationFunction<Recalc
  *   variables: {
  *      metricIds: // value for 'metricIds'
  *      preprocessSources: // value for 'preprocessSources'
+ *      repairInvalid: // value for 'repairInvalid'
  *   },
  * });
  */
