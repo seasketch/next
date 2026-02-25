@@ -26862,7 +26862,7 @@ ALTER TABLE ONLY public.sketch_class_geographies
 --
 
 ALTER TABLE ONLY public.sketch_class_geographies
-    ADD CONSTRAINT sketch_class_geographies_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id);
+    ADD CONSTRAINT sketch_class_geographies_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id) ON DELETE CASCADE;
 
 
 --
