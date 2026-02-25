@@ -19,6 +19,10 @@ import {
   CommandPaletteItem,
 } from "../commandPalette/types";
 import Spinner from "../../components/Spinner";
+import {
+  uploadImageWithPlaceholder,
+  insertBlockImage,
+} from "../widgets/prosemirror/imageDropPlugin";
 
 type CommandPalettePreviewItem = CommandPaletteItem & {
   screenshotSrc?: string;
@@ -124,11 +128,89 @@ type UseSlashCommandPaletteOptions = {
   state?: EditorState;
   schema: Schema;
   groups?: CommandPaletteGroup[];
+  /** When provided, "Upload Image" and "Image by URL" commands are added to the Basic Blocks group. */
+  imageUploadFile?: (file: File) => Promise<string>;
   requestedPreviewKey?: string | null;
   onPreviewKeyApplied?: () => void;
 };
 
-function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
+function ImageByUrlPopover({
+  onInsert,
+  onCancel,
+}: {
+  onInsert: (src: string) => void;
+  onCancel: () => void;
+}) {
+  const [url, setUrl] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = () => {
+    const trimmed = url.trim();
+    if (!trimmed) return;
+    if (!/^https?:\/\//i.test(trimmed)) {
+      setError("URL must start with http:// or https://");
+      return;
+    }
+    setError(null);
+    onInsert(trimmed);
+  };
+
+  return (
+    <div className="w-72 rounded-md border border-gray-200 bg-white shadow-xl p-3">
+      <div className="text-sm font-semibold text-gray-800 mb-2">
+        Image by URL
+      </div>
+      <input
+        ref={inputRef}
+        type="url"
+        value={url}
+        onChange={(e) => {
+          setUrl(e.target.value);
+          setError(null);
+        }}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSubmit();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            onCancel();
+          }
+        }}
+        className="w-full rounded border border-gray-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+        placeholder="https://example.com/image.png"
+      />
+      {error && <div className="text-xs text-red-600 mt-1">{error}</div>}
+      <div className="flex justify-end gap-2 mt-2">
+        <button
+          type="button"
+          className="text-sm px-2 py-1 rounded text-gray-600 hover:bg-gray-100"
+          onClick={onCancel}
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          className="text-sm px-3 py-1 rounded bg-blue-600 text-white hover:bg-blue-700"
+          onClick={handleSubmit}
+        >
+          Insert
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function buildBaseGroups(
+  schema: Schema,
+  imageUploadFile?: (file: File) => Promise<string>,
+  viewRef?: RefObject<EditorView | undefined>
+): CommandPaletteGroup[] {
   const formatting: CommandPalettePreviewItem[] = [];
   const blocks: CommandPalettePreviewItem[] = [];
 
@@ -303,6 +385,53 @@ function buildBaseGroups(schema: Schema): CommandPaletteGroup[] {
   //   });
   // }
 
+  if (schema.nodes.image && imageUploadFile && viewRef) {
+    blocks.push({
+      id: "upload-image",
+      label: "Upload Image",
+      screenshotSrc: "/slashCommands/image.png",
+      description: "Upload an image from your computer",
+      keywords: ["image", "picture", "photo", "img", "upload"],
+      run: (_state, _dispatch, view) => {
+        if (!view) return;
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = "image/*";
+        input.onchange = () => {
+          const file = input.files?.[0];
+          if (!file || !view) return;
+          uploadImageWithPlaceholder(view, file, imageUploadFile, schema);
+        };
+        input.click();
+      },
+    });
+    blocks.push({
+      id: "image-by-url",
+      label: "Image by URL",
+      screenshotSrc: "/slashCommands/image.png",
+      description: "Embed an image from a URL",
+      keywords: ["image", "picture", "photo", "img", "url", "link", "embed"],
+      customPopoverContent: ({ closePopover, apply }) => {
+        return (
+          <ImageByUrlPopover
+            onInsert={(src) => {
+              apply({
+                id: "image-by-url-insert",
+                label: "Image by URL",
+                run: (_state, _dispatch, view) => {
+                  if (!view) return;
+                  insertBlockImage(view, { src }, schema);
+                },
+              });
+              closePopover();
+            }}
+            onCancel={closePopover}
+          />
+        );
+      },
+    });
+  }
+
   const groups: CommandPaletteGroup[] = [];
 
   if (formatting.length) {
@@ -329,10 +458,14 @@ export function useSlashCommandPalette({
   state,
   schema,
   groups = [],
+  imageUploadFile,
   requestedPreviewKey,
   onPreviewKeyApplied,
 }: UseSlashCommandPaletteOptions) {
-  const baseGroups = useMemo(() => buildBaseGroups(schema), [schema]);
+  const baseGroups = useMemo(
+    () => buildBaseGroups(schema, imageUploadFile, viewRef),
+    [schema, imageUploadFile, viewRef]
+  );
   const combinedGroups = useMemo(
     () => [...baseGroups, ...groups],
     [baseGroups, groups]

@@ -25,7 +25,11 @@ import ReportTitlePlaceholderPlugin from "../../editor/ReportTitlePlaceholderPlu
 import {
   reportBodySchema,
   setCollapsibleBlocksClosed,
+  migrateInlineImagesToBlock,
 } from "../widgets/prosemirror/reportBodySchema";
+import { createImageDropPlugin } from "../widgets/prosemirror/imageDropPlugin";
+import { createReportImageUploader } from "../utils/uploadReportImage";
+import { useApolloClient } from "@apollo/client";
 import { useReactNodeViewPortals } from "../ReactNodeView/PortalProvider";
 import { createReactNodeView } from "../ReactNodeView";
 import {
@@ -110,6 +114,13 @@ function ReportCardBodyEditorInner({
     JSON.parse(JSON.stringify(body))
   );
   const onError = useGlobalErrorHandler();
+  const apolloClient = useApolloClient();
+  const projectId = sketchClass.projectId;
+
+  const uploadFile = useMemo(
+    () => createReportImageUploader(apolloClient, projectId, onError),
+    [apolloClient, projectId, onError]
+  );
 
   const sourceUrlMap = useMemo(() => {
     return sources.reduce((acc, s) => {
@@ -242,8 +253,10 @@ function ReportCardBodyEditorInner({
       ReportTitlePlaceholderPlugin(),
       createBlurSelectionPlugin(),
       ActiveParagraphPlaceholderPlugin(),
+      createImageDropPlugin(schema, uploadFile),
     ];
     return { schema, plugins };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const langContext = useContext(FormLanguageContext);
@@ -371,12 +384,15 @@ function ReportCardBodyEditorInner({
     state,
     schema,
     groups: contextualGroups,
+    imageUploadFile: uploadFile,
     requestedPreviewKey: pendingOverlayKey,
     onPreviewKeyApplied: () => setPendingOverlayKey(null),
   });
 
   useEffect(() => {
-    const initialBody = initialBodyRef.current;
+    const initialBody = initialBodyRef.current
+      ? migrateInlineImagesToBlock(initialBodyRef.current)
+      : undefined;
     const doc = initialBody ? Node.fromJSON(schema, initialBody) : undefined;
     const view = new EditorView(root.current!, {
       state: EditorState.create({
@@ -487,7 +503,7 @@ function ReportCardBodyEditorInner({
 
       // Always update when language changes to show the correct language's content
       if (langChanged) {
-        const doc = Node.fromJSON(schema, body);
+        const doc = Node.fromJSON(schema, migrateInlineImagesToBlock(body));
         const newState = EditorState.create({
           schema,
           plugins,
@@ -516,7 +532,12 @@ function ReportCardBodyEditorInner({
           BLUR_SELECTION_STYLES
         }
       </style>
-      <TooltipMenu view={viewRef.current} state={state} schema={schema} />
+      <TooltipMenu
+        view={viewRef.current}
+        state={state}
+        schema={schema}
+        imageUploadFile={uploadFile}
+      />
       {commandPalette}
       <div
         className={`ProseMirrorBody ReportCardBodyEditor ReportCardBody`}

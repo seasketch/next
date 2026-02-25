@@ -2,7 +2,10 @@ import { useEffect, useMemo, useRef, memo } from "react";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
-import { reportBodySchema } from "../widgets/prosemirror/reportBodySchema";
+import {
+  reportBodySchema,
+  migrateInlineImagesToBlock,
+} from "../widgets/prosemirror/reportBodySchema";
 import { createReactNodeView } from "../ReactNodeView";
 import ReactNodeViewPortalsProvider, {
   useReactNodeViewPortals,
@@ -94,7 +97,9 @@ function ReportCardBodyViewerInner({
 
     const initialState = EditorState.create({
       schema,
-      doc: body ? Node.fromJSON(schema, body) : undefined,
+      doc: body
+        ? Node.fromJSON(schema, migrateInlineImagesToBlock(body))
+        : undefined,
     });
 
     const view = new EditorView(rootRef.current, {

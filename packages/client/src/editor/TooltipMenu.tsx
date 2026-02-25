@@ -3,7 +3,12 @@ import { AnimatePresence, motion } from "framer-motion";
 import { lift, setBlockType, toggleMark, wrapIn } from "prosemirror-commands";
 import { wrapInList } from "prosemirror-schema-list";
 import { Mark, Node, Schema } from "prosemirror-model";
-import { EditorState, Transaction, TextSelection } from "prosemirror-state";
+import {
+  EditorState,
+  Transaction,
+  TextSelection,
+  NodeSelection,
+} from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import {
   FC,
@@ -20,6 +25,7 @@ import { createPortal } from "react-dom";
 import { TFunction, useTranslation } from "react-i18next";
 import { getActiveMarks } from "./EditorMenuBar";
 import { ReportWidgetTooltipControlsRouter } from "../reports/widgets/widgets";
+import ImageTooltipControls from "../reports/widgets/ImageTooltipControls";
 import { formElements } from "./config";
 import {
   CaretDownIcon,
@@ -167,6 +173,20 @@ function getSelectedMetricNode(
   return null;
 }
 
+function getSelectedImageNode(
+  state: EditorState,
+  schema: Schema
+): { node: Node; pos: number } | null {
+  const imageType = schema.nodes.image;
+  if (!imageType) return null;
+  if (state.selection instanceof NodeSelection) {
+    if (state.selection.node.type === imageType) {
+      return { node: state.selection.node, pos: state.selection.from };
+    }
+  }
+  return null;
+}
+
 function getActiveNodeTypeId(state: EditorState, schema: Schema): string {
   const { nodes } = schema;
   const $from = state.selection.$from;
@@ -298,10 +318,13 @@ export default function TooltipMenu({
   state,
   schema,
   view,
+  imageUploadFile,
 }: {
   schema: Schema;
   view?: EditorView;
   state?: EditorState;
+  /** When provided, enables image-specific tooltip controls */
+  imageUploadFile?: (file: File) => Promise<string>;
 }) {
   const { t } = useTranslation("admin:reports");
   const [position, setPosition] = useState<{
@@ -339,6 +362,11 @@ export default function TooltipMenu({
     [state, schema]
   );
 
+  const selectedImage = useMemo(
+    () => (state ? getSelectedImageNode(state, schema) : null),
+    [state, schema]
+  );
+
   const isSurveyQuestionSchema = schema === formElements.questions.schema;
   // Calculate position function
   const calculatePosition = useCallback(() => {
@@ -353,8 +381,8 @@ export default function TooltipMenu({
       return;
     }
 
-    // Only show when there is a non-empty selection, or a metric node is selected
-    if (state.selection.empty && !isOnlyMetricNode) {
+    // Only show when there is a non-empty selection, a metric node, or image node
+    if (state.selection.empty && !isOnlyMetricNode && !selectedImage) {
       setPosition(null);
       setCommands([]);
       return;
@@ -397,8 +425,26 @@ export default function TooltipMenu({
       return !command.isDisabled(schema, state);
     });
 
-    if (filteredCommands.length || isOnlyMetricNode) {
+    if (filteredCommands.length || isOnlyMetricNode || selectedImage) {
       let { from, to } = state.selection;
+
+      // For image nodes, position relative to the image DOM
+      if (selectedImage) {
+        const dom = view.nodeDOM(selectedImage.pos) as HTMLElement | null;
+        if (dom) {
+          const rect = dom.getBoundingClientRect();
+          setPosition({
+            // eslint-disable-next-line i18next/no-literal-string
+            left: `${rect.left + rect.width / 2}px`,
+            // eslint-disable-next-line i18next/no-literal-string
+            bottom: `${window.innerHeight - rect.top + 5}px`,
+          });
+          setCommands([]);
+          return;
+        }
+        from = selectedImage.pos;
+        to = selectedImage.pos + selectedImage.node.nodeSize;
+      }
 
       // For metric nodes, position relative to the node DOM to better handle
       // block metrics that span the full width.
@@ -456,7 +502,7 @@ export default function TooltipMenu({
       setPosition(null);
       setCommands([]);
     }
-  }, [view, state, schema, isOnlyMetricNode, selectedMetric]);
+  }, [view, state, schema, isOnlyMetricNode, selectedMetric, selectedImage]);
 
   // If tooltip hides, also clear any lingering link popover state.
   useEffect(() => {
@@ -475,6 +521,7 @@ export default function TooltipMenu({
     state?.selection.to,
     isOnlyMetricNode,
     selectedMetric?.pos,
+    selectedImage?.pos,
   ]);
 
   // Clear suppression after a real selection change so tooltip can show again.
@@ -1052,7 +1099,7 @@ export default function TooltipMenu({
   const isQuestionsSchema = schema === formElements.questions.schema;
 
   const tooltipContent =
-    commands.length > 0 || isOnlyMetricNode ? (
+    commands.length > 0 || isOnlyMetricNode || selectedImage ? (
       <AnimatePresence>
         {position && (
           <motion.div
@@ -1080,12 +1127,22 @@ export default function TooltipMenu({
               boxShadow: "0 6px 20px rgba(0,0,0,0.15)",
             }}
             onMouseDown={(e) => {
-              // Prevent editor from handling mouse events when interacting with tooltip
-              if (isOnlyMetricNode) {
+              if (isOnlyMetricNode || selectedImage) {
                 e.stopPropagation();
               }
             }}
           >
+            {selectedImage && view && imageUploadFile && (
+              <div className="flex overflow-hidden items-center space-x-1">
+                <ImageTooltipControls
+                  node={selectedImage.node}
+                  pos={selectedImage.pos}
+                  view={view}
+                  schema={schema}
+                  uploadFile={imageUploadFile}
+                />
+              </div>
+            )}
             {(commands.length > 0 || (isOnlyMetricNode && selectedMetric)) && (
               <div className="flex overflow-hidden items-center space-x-1">
                 {!isQuestionsSchema &&
@@ -1272,7 +1329,10 @@ export default function TooltipMenu({
 
   // Render in portal to avoid overflow clipping
   return typeof document !== "undefined" &&
-    (markCommands.length > 0 || commands.length > 0 || isOnlyMetricNode) &&
+    (markCommands.length > 0 ||
+      commands.length > 0 ||
+      isOnlyMetricNode ||
+      selectedImage) &&
     !isOnlyReportTitle
     ? createPortal(tooltipContent, document.body)
     : null;

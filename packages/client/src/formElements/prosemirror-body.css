@@ -385,6 +385,7 @@ div[attachments="forumAttachments"] {
 
 .ReportCardBodyEditor .ProseMirror p.has-placeholder {
   position: relative;
+  overflow: hidden;
 }
 
 .ReportCardBodyEditor .ProseMirror .active-paragraph-placeholder {
@@ -433,6 +434,33 @@ div[attachments="forumAttachments"] {
   p {
     user-select: text;
   }
+}
+
+/* Report card images */
+.ReportCardBody [data-report-image],
+.ReportCardBodyEditor [data-report-image] {
+  @apply my-3;
+}
+
+.ReportCardBody [data-report-image] img,
+.ReportCardBodyEditor [data-report-image] img {
+  @apply rounded;
+}
+
+.ReportCardBodyEditor [data-report-image] {
+  @apply cursor-pointer;
+}
+
+.ReportCardBodyEditor [data-report-image].ProseMirror-selectednode {
+  @apply outline outline-2 outline-blue-500 outline-offset-2 rounded;
+}
+
+/* Contain floated images within the card body */
+.ReportCardBody .ProseMirror::after,
+.ReportCardBodyEditor .ProseMirror::after {
+  content: "";
+  display: table;
+  clear: both;
 }
 
 .ReportCardBody:not(.ReportCardBodyEditor) h1[data-report-title="yes"] {
