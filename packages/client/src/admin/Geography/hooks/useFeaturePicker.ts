@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import mapboxgl from "mapbox-gl";
 import useFeatureChoices from "./useFeatureChoices";
 
@@ -225,17 +225,20 @@ export default function useFeaturePicker(options: FeaturePickerOptions) {
     options.idProperty,
   ]);
 
-  const startPicking = () => {
+  const startPicking = useCallback(() => {
     setState((prev) => ({ ...prev, active: true }));
-  };
+  }, [setState]);
 
-  const stopPicking = () => {
+  const stopPicking = useCallback(() => {
     setState((prev) => ({ ...prev, active: false }));
-  };
+  }, [setState]);
 
-  const updateSelection = (selectedIds: number[]) => {
-    setState((prev) => ({ ...prev, selection: selectedIds }));
-  };
+  const updateSelection = useCallback(
+    (selectedIds: number[]) => {
+      setState((prev) => ({ ...prev, selection: selectedIds }));
+    },
+    [setState]
+  );
 
   const getSelectedFeatures = () => {
     return state.selection.map((id) => {

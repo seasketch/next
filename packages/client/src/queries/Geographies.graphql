@@ -62,9 +62,6 @@ query GeographyClippingSettings($slug: String!) {
       ...GeographyDetails
     }
   }
-  geographies {
-    ...GeographyDetails
-  }
 }
 
 query EEZLayer {

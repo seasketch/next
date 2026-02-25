@@ -1008,12 +1008,16 @@ async function getBoundsForClippingLayerUrl(
       skipCache,
     );
   } else {
-    try {
-      const source = await createSource(url);
-      return source.bounds;
-    } catch (error) {
-      return null;
-    }
+    let bounds: {
+      minX: number;
+      minY: number;
+      maxX: number;
+      maxY: number;
+    } | null = null;
+    // This is a geojson layer, so we can't hit the tiles.seasketch.org endpoint, so we need to construct a url to the fgb file indicated by object_key
+    const fgbUrl = `https://uploads.seasketch.org/${object_key}`;
+    const source = await createSource(fgbUrl);
+    bounds = source.bounds;
+    return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
   }
-  return null;
 }

@@ -14,10 +14,9 @@ import {
 } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import getSlug from "../../getSlug";
 import mapboxgl from "mapbox-gl";
-import useEEZChoices from "./useEEZChoices";
 import Button from "../../components/Button";
 import useMapboxGLDraw, {
   DigitizingState,
@@ -32,7 +31,7 @@ import deepEqual from "fast-deep-equal";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
-const HIGH_SEAS = "MARINE_REGIONS_HIGH_SEAS";
+// const HIGH_SEAS = "MARINE_REGIONS_HIGH_SEAS";
 const TERRITORIAL_SEA = "MARINE_REGIONS_TERRITORIAL_SEA";
 
 const SOURCE_ID_PREFIX = "source-";
@@ -161,15 +160,14 @@ export default function GeographyAdmin() {
     });
   };
 
-  const handleToggleSidebar = (show: boolean) => {
+  const handleToggleSidebar = useCallback((show: boolean) => {
     setState((prev) => {
-      // Only update if the value is actually changing
       if (prev.sidebarVisible === show) {
         return prev;
       }
       return { ...prev, sidebarVisible: show };
     });
-  };
+  }, []);
 
   // Handle map resize when sidebar visibility changes
   useEffect(() => {
@@ -184,7 +182,7 @@ export default function GeographyAdmin() {
   // Handle sidebar visibility based on layer choice state
   useEffect(() => {
     handleToggleSidebar(!state.showLayerChoice);
-  }, [state.showLayerChoice]);
+  }, [state.showLayerChoice, handleToggleSidebar]);
 
   useEffect(() => {
     if (
@@ -207,6 +205,7 @@ export default function GeographyAdmin() {
         container: mapRef.current,
         style: {
           version: 8,
+          glyphs: "mapbox://fonts/mapbox/{fontstack}/{range}.pbf",
           sources: {
             satellite: {
               type: "raster",
@@ -263,12 +262,14 @@ export default function GeographyAdmin() {
     coastline?.dataSource?.url,
     territorialSea?.dataSource?.url,
     setState,
+    map,
+    data?.projectBySlug?.geographies,
   ]);
 
   useEffect(() => {
     if (
       state.mapLoaded &&
-      data?.geographies &&
+      data?.projectBySlug?.geographies &&
       state.map &&
       !state.wizardActive
     ) {
@@ -357,7 +358,9 @@ export default function GeographyAdmin() {
                     layers.push({
                       ...glLayer,
                       source: sourceId,
-                      "source-layer": layer.dataLayer.sourceLayer,
+                      ...(layer.dataLayer.sourceLayer
+                        ? { "source-layer": layer.dataLayer.sourceLayer }
+                        : {}),
                       id: layerId,
                       metadata: {
                         layerId: layer.dataLayer.id,
@@ -419,7 +422,9 @@ export default function GeographyAdmin() {
               map.addLayer({
                 ...glLayer,
                 source: sourceId,
-                "source-layer": layer.dataLayer.sourceLayer,
+                ...(layer.dataLayer.sourceLayer
+                  ? { "source-layer": layer.dataLayer.sourceLayer }
+                  : {}),
                 id: layerId,
                 ...(filter ? { filter } : {}),
                 layout: {
@@ -599,7 +604,10 @@ export default function GeographyAdmin() {
             </Trans>
           </p>
           <p className="text-sm p-4">
-            <a href="" className="flex items-center space-x-1 text-primary-500">
+            <a
+              href="https://docs.seasketch.org/seasketch-documentation/users-guide/geographies"
+              className="flex items-center space-x-1 text-primary-500"
+            >
               <FileTextIcon />
               <span>
                 <Trans ns="admin:geography">

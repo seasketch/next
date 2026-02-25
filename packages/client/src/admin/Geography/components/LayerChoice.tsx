@@ -65,8 +65,8 @@ function scoreAttributes(
 
   // Attributes to exclude from consideration
   const excludePatterns = [
-    /shape[_\-]?length/i,
-    /shape[_\-]?area/i,
+    /shape[_-]?length/i,
+    /shape[_-]?area/i,
     /area/i,
     /length/i,
     /perimeter/i,
@@ -162,6 +162,7 @@ export default function LayerChoice({
     variables: { slug: getSlug() },
     onError,
   });
+
   const [saving, setSaving] = useState(false);
   const [selectedLayer, setSelectedLayer] = useState<
     LayerChoiceGroup | undefined
@@ -184,6 +185,13 @@ export default function LayerChoice({
               item.dataLayer?.vectorGeometryType?.toUpperCase() ===
                 "MULTIPOLYGON") &&
             Boolean(item.dataLayer?.dataSource?.geostats)
+        )
+        .filter((item: OverlayForGeographyFragment) =>
+          Boolean(
+            (item.dataLayer?.dataSource?.outputs || []).some(
+              (output) => output.type === DataUploadOutputType.FlatGeobuf
+            )
+          )
         )
         .sort(
           (a: OverlayForGeographyFragment, b: OverlayForGeographyFragment) =>
@@ -243,7 +251,10 @@ export default function LayerChoice({
 
     // Add the new source
     const source: AnySourceData =
-      selectedLayer.data.dataLayer.dataSource?.type === DataSourceTypes.Geojson
+      selectedLayer.data.dataLayer.dataSource?.type ===
+        DataSourceTypes.Geojson ||
+      selectedLayer.data.dataLayer.dataSource?.type ===
+        DataSourceTypes.SeasketchVector
         ? {
             type: "geojson",
             data: selectedLayer.data.dataLayer.dataSource?.url || "",
@@ -279,7 +290,7 @@ export default function LayerChoice({
     return () => {
       cleanupLayersAndSources();
     };
-  }, []);
+  }, [cleanupLayersAndSources]);
 
   const handleLayerChange = (value?: Group) => {
     if (!value) {

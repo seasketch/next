@@ -1,7 +1,7 @@
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
-import { ReactNode, useEffect, useState, useRef } from "react";
-import { CircleIcon, Pencil1Icon } from "@radix-ui/react-icons";
+import { ReactNode, useEffect, useState } from "react";
+import { CircleIcon } from "@radix-ui/react-icons";
 import { CheckCircleIcon } from "@heroicons/react/solid";
 import Button from "../../components/Button";
 import RadioGroup from "../../components/RadioGroup";
@@ -172,6 +172,7 @@ function HighSeasConfig({
               target="_blank"
               className="text-primary-500 underline"
               href="https://marineregions.org"
+              rel="noopener noreferrer"
             >
               MarineRegions.org
             </a>
@@ -238,7 +239,7 @@ export default function CreateGeographyWizard({
     return () => {
       onRequestToggleSidebar(true);
     };
-  }, [state.step]); // Only depend on state.step
+  }, [state.step, onRequestToggleSidebar]); // Only depend on state.step
 
   const [mutation, mutationState] = useCreateGeographiesMutation({
     onError,
@@ -279,7 +280,8 @@ export default function CreateGeographyWizard({
     } else {
       featurePicker.stopPicking();
     }
-  }, [state.step]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.step, featurePicker.startPicking, featurePicker.stopPicking]);
 
   if (!active) return null;
 

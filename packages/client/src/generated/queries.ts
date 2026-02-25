@@ -21416,10 +21416,7 @@ export type GeographyClippingSettingsQuery = (
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
     )> }
-  )>, geographies?: Maybe<Array<(
-    { __typename?: 'Geography' }
-    & GeographyDetailsFragment
-  )>> }
+  )> }
 );
 
 export type EezLayerQueryVariables = Exact<{ [key: string]: never; }>;
@@ -29226,9 +29223,6 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
     geographies {
       ...GeographyDetails
     }
-  }
-  geographies {
-    ...GeographyDetails
   }
 }
     ${ClippingLayerDetailsFragmentDoc}
