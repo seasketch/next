@@ -56,6 +56,12 @@ export type CommandPaletteItem = {
    * Takes precedence over flat `children` for rendering.
    */
   childGroups?: CommandPaletteGroup[];
+  /**
+   * Optional React element rendered at the bottom of the children popover,
+   * below children and childGroups. Useful for supplemental actions like
+   * a "process for reporting" prompt.
+   */
+  popoverFooter?: ReactNode;
   isEnabled?: (state: EditorState) => boolean;
   run?: (
     state: EditorState,
