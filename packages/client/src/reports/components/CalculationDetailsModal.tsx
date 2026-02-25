@@ -86,6 +86,8 @@ export function CalculationDetailsModal({
   const [retryFailedMetrics, retryState] = useRetryFailedSpatialMetricsMutation(
     {
       onError,
+      refetchQueries: [ReportDependenciesDocument],
+      awaitRefetchQueries: true,
     }
   );
 
