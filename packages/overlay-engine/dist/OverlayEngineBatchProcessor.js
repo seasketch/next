@@ -302,7 +302,6 @@ class OverlayEngineBatchProcessor {
                         this.batchPromises.push(this.queue.add(() => this.processBatch(batchData, differenceMultiPolygon).catch((e) => {
                             console.error(`Error processing batch: ${e.message}`);
                             reject(e);
-                            throw e;
                         })));
                         this.resetBatchData();
                     }

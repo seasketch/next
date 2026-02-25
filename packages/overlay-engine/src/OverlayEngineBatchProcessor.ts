@@ -483,7 +483,6 @@ export class OverlayEngineBatchProcessor<
                       `Error processing batch: ${(e as Error).message}`
                     );
                     reject(e);
-                    throw e;
                   }
                 )
               )
