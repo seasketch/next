@@ -6306,6 +6306,8 @@ export type Geography = Node & {
   /** Reads a single `Project` that is related to this `Geography`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `SketchClass`. */
+  sketchClasses?: Maybe<Array<SketchClass>>;
   stableIds?: Maybe<Array<Maybe<Scalars['String']>>>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
@@ -6325,6 +6327,12 @@ export type GeographyGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
+};
+
+
+export type GeographySketchClassesArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 export type GeographyClippingLayer = Node & {
@@ -21490,6 +21498,9 @@ export type GeographyByIdQuery = (
         { __typename?: 'DataSource' }
         & ClippingDataSourceDetailsFragment
       )> }
+    )>>, sketchClasses?: Maybe<Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'name'>
     )>> }
     & GeographyDetailsFragment
   )> }
@@ -33204,6 +33215,10 @@ export const GeographyByIdDocument = gql`
       dataSource {
         ...ClippingDataSourceDetails
       }
+    }
+    sketchClasses {
+      id
+      name
     }
   }
 }

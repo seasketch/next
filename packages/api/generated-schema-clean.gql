@@ -7298,6 +7298,15 @@ type Geography implements Node {
   """Reads a single `Project` that is related to this `Geography`."""
   project: Project
   projectId: Int!
+
+  """Reads and enables pagination through a set of `SketchClass`."""
+  sketchClasses(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [SketchClass!]
   stableIds: [String]
   translatedProps: JSON
 }

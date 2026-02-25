@@ -102,6 +102,8 @@ export default function EditGeographyModal({
   showLayerChoice: boolean;
   onShowLayerChoiceChange: (show: boolean) => void;
 }) {
+  const dialog = useDialog();
+
   const { data, loading, error } = useGeographyByIdQuery({
     variables: { id },
     fetchPolicy: "cache-and-network",
@@ -112,7 +114,16 @@ export default function EditGeographyModal({
   const [deleteMutation, deleteMutationState] = useDeleteGeographyMutation({
     refetchQueries: [GeographyClippingSettingsDocument],
     awaitRefetchQueries: true,
-    onError,
+    onError: (e) => {
+      if (/sketch_class_geographies_geography_id_fkey/.test(e.message)) {
+        window.alert(
+          "This geography is associated with one or more Sketch Classes and cannot be deleted until their Geography Clipping settings are updated."
+        );
+        return;
+      } else {
+        onError(e);
+      }
+    },
   });
 
   const [updateGeographyMutation, updateGeographyMutationState] =
@@ -189,8 +200,6 @@ export default function EditGeographyModal({
 
     return nameChanged;
   }, [state, data?.geography]);
-
-  const dialog = useDialog();
 
   const clippingLayers = state.clippingLayers;
   // Collect templateIds of existing clipping layers for disabling options
@@ -296,6 +305,21 @@ export default function EditGeographyModal({
                 deleteMutationState.loading ||
                 updateGeographyMutationState.loading,
               onClick: async () => {
+                const sketchClasses = await data?.geography?.sketchClasses;
+                if (sketchClasses && sketchClasses.length > 0) {
+                  let description = t(
+                    `This is relied on by "${sketchClasses[0].name}" to perform clipping. Change the configuration of this sketch class first before deleting this geography.`
+                  );
+                  if (sketchClasses.length > 1) {
+                    description = t(
+                      `This geography is relied on by multiple sketch classes to perform clipping. Change the configuration of the following sketch classes before deleting this geography: ${sketchClasses
+                        .map((sc) => sc.name)
+                        .join(", ")}`
+                    );
+                  }
+                  dialog.alert(t("Cannot delete geography"), { description });
+                  return;
+                }
                 await dialog.confirmDelete({
                   message: t("Are you sure you want to delete this geography?"),
                   description: t(

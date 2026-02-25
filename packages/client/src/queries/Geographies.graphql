@@ -118,6 +118,10 @@ query GeographyById($id: Int!) {
         ...ClippingDataSourceDetails
       }
     }
+    sketchClasses {
+      id
+      name
+    }
   }
 }
 

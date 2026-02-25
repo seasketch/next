@@ -13885,6 +13885,24 @@ COMMENT ON FUNCTION public.project_geography_clipping_layers(geography public.pr
 
 
 --
+-- Name: project_geography_sketch_classes(public.project_geography); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.project_geography_sketch_classes(geography public.project_geography) RETURNS SETOF public.sketch_classes
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select * from sketch_classes where id in (select sketch_class_id from sketch_class_geographies where geography_id = geography.id);
+$$;
+
+
+--
+-- Name: FUNCTION project_geography_sketch_classes(geography public.project_geography); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.project_geography_sketch_classes(geography public.project_geography) IS '@simpleCollections only';
+
+
+--
 -- Name: project_geography_stable_ids(public.project_geography); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -35211,6 +35229,14 @@ GRANT INSERT,DELETE,UPDATE ON TABLE public.project_geography TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.project_geography_clipping_layers(geography public.project_geography) TO anon;
+
+
+--
+-- Name: FUNCTION project_geography_sketch_classes(geography public.project_geography); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.project_geography_sketch_classes(geography public.project_geography) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.project_geography_sketch_classes(geography public.project_geography) TO anon;
 
 
 --
