@@ -123,7 +123,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
     ) {
       let cancelled = false;
-      const container = mapContainer.current;
       manager
         .createMap(
           mapContainer.current,
@@ -180,9 +179,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           }
         });
       return () => {
-        if (container !== mapContainer.current) {
-          cancelled = true;
-        }
+        cancelled = true;
       };
     }
   }, [map, manager, basemapState.selectedBasemap, mapContainer.current, ready, props.lazyLoadReady]);

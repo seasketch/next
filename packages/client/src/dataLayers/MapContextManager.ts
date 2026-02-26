@@ -491,8 +491,8 @@ class MapContextManager extends EventEmitter {
       console.warn("Already initializing map");
       return;
     }
+    this.mapContainer = container;
     if (this.map) {
-      // throw new Error("Map already created in this context");
       console.warn("Map already created in this context");
       this.map.off("error", this.onMapError);
       this.map.off("data", this.onMapDataEvent);
