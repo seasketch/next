@@ -562,8 +562,10 @@ class MapContextManager extends EventEmitter {
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", (e) => {
       this.mapIsLoaded = true;
+      // eslint-disable-next-line i18next/no-literal-string
       console.warn("[MapContextManager] map load event fired");
       this.setState((prev) => ({ ...prev }));
+      this._setManagerState?.((prev) => ({ ...prev }));
     });
     console.warn("[MapContextManager] createMap finished, map instance created");
     return this.map;
