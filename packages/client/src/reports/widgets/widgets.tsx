@@ -27,7 +27,7 @@ import {
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import { MetricDependency } from "overlay-engine";
-import { SelectionRange, TextSelection } from "prosemirror-state";
+import { NodeSelection, SelectionRange, TextSelection } from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
 import {
   GeographySizeTable,
@@ -1568,18 +1568,18 @@ function _insertMetric(
 
   let tr = state.tr.replaceRangeWith(range.$from.pos, range.$to.pos, node);
 
-  // Place cursor just after the inserted node, preferring the same inline
-  // parent so we don't jump into a following block node.
-  const mappedFrom = tr.mapping.map(range.$from.pos);
-  const posAfter = Math.min(tr.doc.content.size, mappedFrom + node.nodeSize);
-  const $posAfter = tr.doc.resolve(posAfter);
-  const selection = $posAfter.parent.inlineContent
-    ? TextSelection.create(tr.doc, posAfter)
-    : TextSelection.near(
-        $posAfter,
-        -1 /* backward to stay in previous block */
-      );
-  tr = tr.setSelection(selection);
+  // Select the newly inserted node so the user sees what they just placed.
+  // Use left bias (-1) so the mapped position lands at the start of the new
+  // content rather than after it.
+  const insertPos = tr.mapping.map(range.$from.pos, -1);
+  try {
+    tr = tr.setSelection(NodeSelection.create(tr.doc, insertPos));
+  } catch {
+    const $pos = tr.doc.resolve(
+      Math.min(insertPos + node.nodeSize, tr.doc.content.size)
+    );
+    tr = tr.setSelection(TextSelection.near($pos, -1));
+  }
 
   dispatch(tr.scrollIntoView());
   view.focus();
