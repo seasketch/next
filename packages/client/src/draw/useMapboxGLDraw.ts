@@ -198,9 +198,6 @@ export default function useMapboxGLDraw(
       !handlerState.current.draw
     ) {
       const map = manager.map;
-      const mapLoaded = map.isStyleLoaded();
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(`[gl-draw] init effect: adding draw control to map (style loaded: ${mapLoaded})`);
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -238,7 +235,6 @@ export default function useMapboxGLDraw(
       setDraw(draw);
 
       map.addControl(draw);
-      console.warn("[gl-draw] draw control added to map");
       // @ts-ignore
       window.draw = draw;
 
@@ -333,8 +329,6 @@ export default function useMapboxGLDraw(
         //   setState(DigitizingState.CREATE);
         // },
         modeChange: function (e: any) {
-          // eslint-disable-next-line i18next/no-literal-string
-          console.warn(`[gl-draw] modeChange event: ${e.mode}`);
           let newState: DigitizingState | null = null;
           switch (e.mode) {
             case "simple_select":
@@ -381,8 +375,6 @@ export default function useMapboxGLDraw(
               break;
           }
           if (newState !== null) {
-            // eslint-disable-next-line i18next/no-literal-string
-            console.warn(`[gl-draw] modeChange → setState: ${DigitizingState[newState]} (from ${DigitizingState[handlerState.current.state]})`);
             setState(newState);
           }
         },
@@ -423,12 +415,11 @@ export default function useMapboxGLDraw(
       map.on("draw.selectionchange", handlers.selectionChange);
       map.on("seasketch.polygon_progress", handlers.polygonProgress);
       return () => {
-        console.warn("[gl-draw] cleanup: removing draw control from map");
         if (map && draw) {
           try {
             map.removeControl(draw);
           } catch (e) {
-            console.warn("[gl-draw] cleanup: exception removing draw control", e);
+            // map may have been destroyed already
           }
           handlerState.current.draw = undefined;
           setDraw(null);
@@ -444,9 +435,6 @@ export default function useMapboxGLDraw(
           manager?.releaseDigitizingLock(SketchDigitizingLockId);
         }
       };
-    } else {
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(`[gl-draw] init effect skipped: map=${!!manager?.map}, geometryType=${geometryType}, disabled=${disabled}, drawAlreadyExists=${!!handlerState.current.draw}`);
     }
   }, [
     manager,
@@ -609,8 +597,6 @@ export default function useMapboxGLDraw(
   async function create(unfinished: boolean, isSketchWorkflow?: boolean) {
     if (handlerState.current.draw && manager) {
       const map = manager.map;
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(`[gl-draw] create() called: mode=${drawMode}, mapStyleLoaded=${map?.isStyleLoaded()}`);
       setState(DigitizingState.CREATE);
       let getNextMode: (
         featureId: string,
@@ -680,18 +666,12 @@ export default function useMapboxGLDraw(
           e.message.includes("Style is not done loading") &&
           map
         ) {
-          // eslint-disable-next-line i18next/no-literal-string
-          console.warn("[gl-draw] create() style not loaded, waiting for load event");
           await new Promise<void>((resolve) => {
             map.once("load", () => resolve());
           });
           if (!handlerState.current.draw) {
-            // eslint-disable-next-line i18next/no-literal-string
-            console.warn("[gl-draw] create() draw was removed while waiting for style load");
             return;
           }
-          // eslint-disable-next-line i18next/no-literal-string
-          console.warn("[gl-draw] create() retrying changeMode after style load");
           handlerState.current.draw.changeMode(
             // @ts-ignore
             ...changeModeArgs
@@ -700,11 +680,6 @@ export default function useMapboxGLDraw(
           throw e;
         }
       }
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(`[gl-draw] create() changeMode complete, current mode: ${handlerState.current.draw.getMode()}`);
-    } else {
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(`[gl-draw] create() called but cannot proceed: draw=${!!handlerState.current.draw}, manager=${!!manager}`);
     }
   }
 

@@ -488,13 +488,10 @@ class MapContextManager extends EventEmitter {
     basemapStateOverride?: BasemapContextState
   ) {
     if (this.mapContainer === container) {
-      console.warn("[MapContextManager] createMap skipped — already initializing for this container");
       return;
     }
     this.mapContainer = container;
-    console.warn("[MapContextManager] createMap starting");
     if (this.map) {
-      console.warn("[MapContextManager] createMap — destroying existing map before recreating");
       this.map.off("error", this.onMapError);
       this.map.off("data", this.onMapDataEvent);
       this.map.off("dataloading", this.onMapDataEvent);
@@ -562,12 +559,9 @@ class MapContextManager extends EventEmitter {
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", (e) => {
       this.mapIsLoaded = true;
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn("[MapContextManager] map load event fired");
       this.setState((prev) => ({ ...prev }));
       this._setManagerState?.((prev) => ({ ...prev }));
     });
-    console.warn("[MapContextManager] createMap finished, map instance created");
     return this.map;
   }
 
@@ -903,9 +897,6 @@ class MapContextManager extends EventEmitter {
       this.emit("sketchLayerIdsChanged", sketchLayerIds);
       const styleHash = md5(JSON.stringify(style));
       if (styleHash === this.internalState.styleHash) {
-        console.warn(
-          "[MapContextManager] updateStyle skipped setStyle — styleHash unchanged"
-        );
         return;
       }
       this.addSprites(sprites, this.map);
@@ -913,8 +904,6 @@ class MapContextManager extends EventEmitter {
         if (!this.map) {
           return;
         }
-        // eslint-disable-next-line i18next/no-literal-string
-        console.warn(`[MapContextManager] updateStyle calling setStyle (mapStyleLoaded: ${this.map.isStyleLoaded()}, drawSourcesOnMap: ${!!this.map.getStyle()?.sources?.["mapbox-gl-draw-cold"]})`);
         this.map.setStyle(style);
         for (const id in this.customSources) {
           const { visible, listenersAdded, customSource } =

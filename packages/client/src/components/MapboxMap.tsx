@@ -133,8 +133,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         )
         .then((map) => {
           if (!cancelled && map) {
-            // eslint-disable-next-line i18next/no-literal-string
-            console.warn("[MapboxMap] setMap — map instance received from createMap");
             setMap(map);
             if (props.showNavigationControls) {
               map.addControl(
@@ -149,14 +147,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
                 if (props.onLoad) {
                   props.onLoad(map);
                 }
-              } else {
-                console.warn("cancelled map load (on load)");
               }
             });
-          } else {
-            if (cancelled) {
-              console.warn("cancelled map load");
-            }
           }
         })
         .catch((e) => {
@@ -186,8 +178,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       return () => {
         if (container !== mapContainer.current) {
           cancelled = true;
-          // eslint-disable-next-line i18next/no-literal-string
-          console.warn("[MapboxMap] cleanup: cancelled — container element changed");
         }
       };
     }
