@@ -378,13 +378,13 @@ function SpatialAccessPriorityInner(
    */
   useEffect(() => {
     // eslint-disable-next-line i18next/no-literal-string
-    console.info(`[SAP] stage-watcher effect: stage=${props.stage}, map=${!!manager?.map}, digitizingState=${digitizingState}`);
+    console.warn(`[SAP] stage-watcher effect: stage=${props.stage}, map=${!!manager?.map}, digitizingState=${digitizingState}`);
     if (
       (props.stage === STAGES.DRAWING_INTRO ||
         props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) &&
       manager?.map
     ) {
-      console.info("[SAP] stage-watcher: calling create(true)");
+      console.warn("[SAP] stage-watcher: calling create(true)");
       manager?.map?.fitBounds(bounds as LngLatBoundsLike, {
         animate: false,
       });

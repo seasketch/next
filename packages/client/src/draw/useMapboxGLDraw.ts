@@ -200,7 +200,7 @@ export default function useMapboxGLDraw(
       const map = manager.map;
       const mapLoaded = map.isStyleLoaded();
       // eslint-disable-next-line i18next/no-literal-string
-      console.info(`[gl-draw] init effect: adding draw control to map (style loaded: ${mapLoaded})`);
+      console.warn(`[gl-draw] init effect: adding draw control to map (style loaded: ${mapLoaded})`);
       const draw = new MapboxDraw({
         keybindings: true,
         clickBuffer: 4,
@@ -238,7 +238,7 @@ export default function useMapboxGLDraw(
       setDraw(draw);
 
       map.addControl(draw);
-      console.info("[gl-draw] draw control added to map");
+      console.warn("[gl-draw] draw control added to map");
       // @ts-ignore
       window.draw = draw;
 
@@ -334,7 +334,7 @@ export default function useMapboxGLDraw(
         // },
         modeChange: function (e: any) {
           // eslint-disable-next-line i18next/no-literal-string
-          console.info(`[gl-draw] modeChange event: ${e.mode}`);
+          console.warn(`[gl-draw] modeChange event: ${e.mode}`);
           let newState: DigitizingState | null = null;
           switch (e.mode) {
             case "simple_select":
@@ -421,7 +421,7 @@ export default function useMapboxGLDraw(
       map.on("draw.selectionchange", handlers.selectionChange);
       map.on("seasketch.polygon_progress", handlers.polygonProgress);
       return () => {
-        console.info("[gl-draw] cleanup: removing draw control from map");
+        console.warn("[gl-draw] cleanup: removing draw control from map");
         if (map && draw) {
           try {
             map.removeControl(draw);
@@ -444,7 +444,7 @@ export default function useMapboxGLDraw(
       };
     } else {
       // eslint-disable-next-line i18next/no-literal-string
-      console.info(`[gl-draw] init effect skipped: map=${!!manager?.map}, geometryType=${geometryType}, disabled=${disabled}, drawAlreadyExists=${!!handlerState.current.draw}`);
+      console.warn(`[gl-draw] init effect skipped: map=${!!manager?.map}, geometryType=${geometryType}, disabled=${disabled}, drawAlreadyExists=${!!handlerState.current.draw}`);
     }
   }, [
     manager,
@@ -608,7 +608,7 @@ export default function useMapboxGLDraw(
     if (handlerState.current.draw && manager) {
       const drawSources = manager.map?.getStyle()?.sources?.["mapbox-gl-draw-cold"];
       // eslint-disable-next-line i18next/no-literal-string
-      console.info(`[gl-draw] create() called: mode=${drawMode}, drawSourcesOnMap=${!!drawSources}, mapStyleLoaded=${manager.map?.isStyleLoaded()}`);
+      console.warn(`[gl-draw] create() called: mode=${drawMode}, drawSourcesOnMap=${!!drawSources}, mapStyleLoaded=${manager.map?.isStyleLoaded()}`);
       setState(DigitizingState.CREATE);
       let getNextMode: (
         featureId: string,
@@ -668,7 +668,7 @@ export default function useMapboxGLDraw(
         }
       );
       // eslint-disable-next-line i18next/no-literal-string
-      console.info(`[gl-draw] create() changeMode complete, current mode: ${handlerState.current.draw.getMode()}`);
+      console.warn(`[gl-draw] create() changeMode complete, current mode: ${handlerState.current.draw.getMode()}`);
     } else {
       // eslint-disable-next-line i18next/no-literal-string
       console.warn(`[gl-draw] create() called but cannot proceed: draw=${!!handlerState.current.draw}, manager=${!!manager}`);
