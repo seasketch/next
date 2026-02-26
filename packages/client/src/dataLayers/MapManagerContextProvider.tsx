@@ -168,6 +168,8 @@ export default function MapManagerContextProvider({
     if (!manager || !basemapState) return;
     manager.updateBasemapState(basemapState as BasemapContextState);
     if (basemapState.getSelectedBasemap()?.url) {
+      // eslint-disable-next-line i18next/no-literal-string
+      console.info(`[MapManagerCtxProvider] bridge effect: calling updateStyle (map exists: ${!!manager.map})`);
       manager.updateStyle();
     }
   }, [basemapState]);

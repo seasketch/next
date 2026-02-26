@@ -488,12 +488,13 @@ class MapContextManager extends EventEmitter {
     basemapStateOverride?: BasemapContextState
   ) {
     if (this.mapContainer === container) {
-      console.warn("Already initializing map");
+      console.warn("[MapContextManager] createMap skipped — already initializing for this container");
       return;
     }
     this.mapContainer = container;
+    console.info("[MapContextManager] createMap starting");
     if (this.map) {
-      console.warn("Map already created in this context");
+      console.warn("[MapContextManager] createMap — destroying existing map before recreating");
       this.map.off("error", this.onMapError);
       this.map.off("data", this.onMapDataEvent);
       this.map.off("dataloading", this.onMapDataEvent);
@@ -561,10 +562,10 @@ class MapContextManager extends EventEmitter {
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", (e) => {
       this.mapIsLoaded = true;
-      // Use to trigger changes to mapContextManager.map
+      console.info("[MapContextManager] map load event fired");
       this.setState((prev) => ({ ...prev }));
     });
-
+    console.info("[MapContextManager] createMap finished, map instance created");
     return this.map;
   }
 
@@ -899,11 +900,18 @@ class MapContextManager extends EventEmitter {
       );
       this.emit("sketchLayerIdsChanged", sketchLayerIds);
       const styleHash = md5(JSON.stringify(style));
+      if (styleHash === this.internalState.styleHash) {
+        console.info(
+          "[MapContextManager] updateStyle skipped setStyle — styleHash unchanged"
+        );
+        return;
+      }
       this.addSprites(sprites, this.map);
       const update = () => {
         if (!this.map) {
           return;
         }
+        console.info("[MapContextManager] updateStyle calling setStyle");
         this.map.setStyle(style);
         for (const id in this.customSources) {
           const { visible, listenersAdded, customSource } =
