@@ -28,6 +28,7 @@ import {
   migrateInlineImagesToBlock,
 } from "../widgets/prosemirror/reportBodySchema";
 import { createImageDropPlugin } from "../widgets/prosemirror/imageDropPlugin";
+import { createFriendlyInlineAtomPlugin } from "../widgets/prosemirror/friendlyAtomPlugin";
 import { createReportImageUploader } from "../utils/uploadReportImage";
 import { useApolloClient } from "@apollo/client";
 import { useReactNodeViewPortals } from "../ReactNodeView/PortalProvider";
@@ -254,6 +255,7 @@ function ReportCardBodyEditorInner({
       createBlurSelectionPlugin(),
       ActiveParagraphPlaceholderPlugin(),
       createImageDropPlugin(schema, uploadFile),
+      createFriendlyInlineAtomPlugin(),
     ];
     return { schema, plugins };
     // eslint-disable-next-line react-hooks/exhaustive-deps
