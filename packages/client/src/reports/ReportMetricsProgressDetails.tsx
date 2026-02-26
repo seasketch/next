@@ -29,8 +29,9 @@ export default function ReportMetricsProgressDetails({
   const baseReportContext = useBaseReportContext();
   const onError = useGlobalErrorHandler();
 
-  const [recalculate, recalculateState] =
-    useRecalculateSpatialMetricsMutation({ onError });
+  const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
+    onError,
+  });
 
   const allMetrics = useMemo(
     () => [...draftReportContext.draftMetrics, ...context.metrics],

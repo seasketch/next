@@ -189,7 +189,7 @@ export default function ReportTaskLineItem({
             {wasRepaired && numRepairedFeatures != null && (
               <>
                 <div className="text-gray-300">
-                  {numRepairedFeatures}{" "}
+                  {numRepairedFeatures.toLocaleString()}{" "}
                   {numRepairedFeatures === 1
                     ? t("feature repaired")
                     : t("features repaired")}
@@ -221,7 +221,7 @@ export default function ReportTaskLineItem({
               >
                 {repairLoading
                   ? t("Reprocessing...")
-                  : t("Reprocess with repair")}
+                  : t("Reprocess and repair")}
               </button>
             )}
           </div>
