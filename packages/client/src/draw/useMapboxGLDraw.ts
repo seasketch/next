@@ -380,7 +380,9 @@ export default function useMapboxGLDraw(
             default:
               break;
           }
-          if (newState) {
+          if (newState !== null) {
+            // eslint-disable-next-line i18next/no-literal-string
+            console.warn(`[gl-draw] modeChange → setState: ${DigitizingState[newState]} (from ${DigitizingState[handlerState.current.state]})`);
             setState(newState);
           }
         },
@@ -606,9 +608,9 @@ export default function useMapboxGLDraw(
    */
   async function create(unfinished: boolean, isSketchWorkflow?: boolean) {
     if (handlerState.current.draw && manager) {
-      const drawSources = manager.map?.getStyle()?.sources?.["mapbox-gl-draw-cold"];
+      const map = manager.map;
       // eslint-disable-next-line i18next/no-literal-string
-      console.warn(`[gl-draw] create() called: mode=${drawMode}, drawSourcesOnMap=${!!drawSources}, mapStyleLoaded=${manager.map?.isStyleLoaded()}`);
+      console.warn(`[gl-draw] create() called: mode=${drawMode}, mapStyleLoaded=${map?.isStyleLoaded()}`);
       setState(DigitizingState.CREATE);
       let getNextMode: (
         featureId: string,
@@ -659,14 +661,45 @@ export default function useMapboxGLDraw(
         ];
       }
 
-      handlerState.current.draw.changeMode(
-        // @ts-ignore
+      const changeModeArgs = [
         drawMode,
         {
           getNextMode,
           ...commonModeOpts,
+        },
+      ] as const;
+
+      try {
+        handlerState.current.draw.changeMode(
+          // @ts-ignore
+          ...changeModeArgs
+        );
+      } catch (e) {
+        if (
+          e instanceof Error &&
+          e.message.includes("Style is not done loading") &&
+          map
+        ) {
+          // eslint-disable-next-line i18next/no-literal-string
+          console.warn("[gl-draw] create() style not loaded, waiting for load event");
+          await new Promise<void>((resolve) => {
+            map.once("load", () => resolve());
+          });
+          if (!handlerState.current.draw) {
+            // eslint-disable-next-line i18next/no-literal-string
+            console.warn("[gl-draw] create() draw was removed while waiting for style load");
+            return;
+          }
+          // eslint-disable-next-line i18next/no-literal-string
+          console.warn("[gl-draw] create() retrying changeMode after style load");
+          handlerState.current.draw.changeMode(
+            // @ts-ignore
+            ...changeModeArgs
+          );
+        } else {
+          throw e;
         }
-      );
+      }
       // eslint-disable-next-line i18next/no-literal-string
       console.warn(`[gl-draw] create() changeMode complete, current mode: ${handlerState.current.draw.getMode()}`);
     } else {

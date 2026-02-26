@@ -911,7 +911,8 @@ class MapContextManager extends EventEmitter {
         if (!this.map) {
           return;
         }
-        console.warn("[MapContextManager] updateStyle calling setStyle");
+        // eslint-disable-next-line i18next/no-literal-string
+        console.warn(`[MapContextManager] updateStyle calling setStyle (mapStyleLoaded: ${this.map.isStyleLoaded()}, drawSourcesOnMap: ${!!this.map.getStyle()?.sources?.["mapbox-gl-draw-cold"]})`);
         this.map.setStyle(style);
         for (const id in this.customSources) {
           const { visible, listenersAdded, customSource } =

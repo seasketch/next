@@ -123,6 +123,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
       (props.lazyLoadReady === undefined || props.lazyLoadReady === true)
     ) {
       let cancelled = false;
+      const container = mapContainer.current;
       manager
         .createMap(
           mapContainer.current,
@@ -132,6 +133,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         )
         .then((map) => {
           if (!cancelled && map) {
+            // eslint-disable-next-line i18next/no-literal-string
+            console.warn("[MapboxMap] setMap — map instance received from createMap");
             setMap(map);
             if (props.showNavigationControls) {
               map.addControl(
@@ -151,7 +154,9 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
               }
             });
           } else {
-            console.warn("cancelled map load");
+            if (cancelled) {
+              console.warn("cancelled map load");
+            }
           }
         })
         .catch((e) => {
@@ -179,7 +184,11 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           }
         });
       return () => {
-        cancelled = true;
+        if (container !== mapContainer.current) {
+          cancelled = true;
+          // eslint-disable-next-line i18next/no-literal-string
+          console.warn("[MapboxMap] cleanup: cancelled — container element changed");
+        }
       };
     }
   }, [map, manager, basemapState.selectedBasemap, mapContainer.current, ready, props.lazyLoadReady]);
