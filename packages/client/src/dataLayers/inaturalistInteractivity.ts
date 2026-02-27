@@ -18,10 +18,13 @@ type UtfgridResult = {
   layerLabel?: string;
 };
 
-const utfgridCache: Record<
-  string,
-  { grid: string[]; keys: string[]; data: Record<string, any> }
-> = {};
+type UtfgridTileData = {
+  grid: string[];
+  keys: string[];
+  data: Record<string, any>;
+};
+
+const utfgridCache: Record<string, Promise<UtfgridTileData | null>> = {};
 
 export function getInaturalistDatasetForZoom(
   params: InaturalistQueryParams,
@@ -75,22 +78,21 @@ export async function fetchInaturalistUtfgrid(
   const url = `https://api.inaturalist.org/v1/${dataset}/${zoom}/${xTile}/${yTile}.grid.json${queryString}`;
 
   try {
-    let json = utfgridCache[tileKey];
-    if (!json) {
-      const response = await fetch(url);
-      if (!response.ok) {
-        return null;
-      }
-      json = (await response.json()) as {
-        grid: string[];
-        keys: string[];
-        data: Record<string, any>;
-      };
-      if (!json.grid || !json.grid.length || !json.keys) {
-        return null;
-      }
-      utfgridCache[tileKey] = json;
+    if (!utfgridCache[tileKey]) {
+      utfgridCache[tileKey] = (async (): Promise<UtfgridTileData | null> => {
+        const response = await fetch(url);
+        if (!response.ok) return null;
+        const parsed = (await response.json()) as UtfgridTileData;
+        if (!parsed.grid || !parsed.grid.length || !parsed.keys) return null;
+        return parsed;
+      })();
+      utfgridCache[tileKey].catch(() => {
+        delete utfgridCache[tileKey];
+      });
     }
+
+    const json = await utfgridCache[tileKey];
+    if (!json) return null;
 
     const gridSize = json.grid.length;
     const resolution = 256 / gridSize;
