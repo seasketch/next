@@ -35,29 +35,20 @@ export default async function calculateSpatialMetric(
   try {
     const metric = await getSpatialMetric(payload.metricId, helpers);
     if (metric.type === "total_area") {
-      console.log("calculate total_area", metric.subject);
       if (subjectIsFragment(metric.subject)) {
         // very simple to do, just ask postgis to calculate the area
         await helpers.withPgClient(async (client) => {
-          console.log("update spatial_metrics", {
-            hash: (metric.subject as MetricSubjectFragment).hash,
-            id: metric.id,
-          });
           return client.query(
             `update spatial_metrics set value = to_json(ST_AREA((select geometry from fragments where hash = $1)::geography) / 1000000)::jsonb, state = 'complete' where id = $2`,
             [(metric.subject as MetricSubjectFragment).hash, metric.id],
           );
         });
       } else {
-        console.log("get clipping layers");
         // ask overlay worker to calculate the area
         const clippingLayers = await getClippingLayersForGeography(
           metric.subject.id,
           helpers,
         );
-        console.log("Calling overlay worker", {
-          clippingLayers,
-        });
         callOverlayWorker({
           type: "total_area",
           jobKey: metric.jobKey,
@@ -245,7 +236,6 @@ async function getClippingLayersForGeography(
   geographyId: number,
   helpers: Helpers,
 ) {
-  console.log("getClippingLayersForGeography", geographyId);
   let clippingLayers: ClippingLayerOption[] = [];
   await helpers.withPgClient(async (client) => {
     const results = await client.query(
@@ -259,12 +249,10 @@ async function getClippingLayersForGeography(
 
 function getSpatialMetric(metricId: number, helpers: Helpers) {
   return helpers.withPgClient(async (client) => {
-    console.log("calling get_spatial_metric", metricId);
     const result = await client.query(
       `select get_spatial_metric($1) as metric`,
       [metricId],
     );
-    console.log("result", result.rows);
     if (result.rows.length === 0 || !result.rows[0].metric) {
       throw new Error(`Metric not found: ${metricId}`);
     }

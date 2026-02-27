@@ -11881,9 +11881,12 @@ CREATE FUNCTION public.get_spatial_metric(metric_id bigint) RETURNS jsonb
       return null;
     end if;
     
+
+    RAISE NOTICE 'metric_row: %', metric_row;
     if current_user not in ('graphile_worker', 'postgres') then
       if metric_row.subject_geography_id is not null then
         if not session_has_project_access((select project_id from project_geography where id = metric_row.subject_geography_id limit 1)) then
+          RAISE NOTICE 'Permission denied for geography %', metric_row.subject_geography_id;
           raise exception 'Permission denied';
         end if;
       else
