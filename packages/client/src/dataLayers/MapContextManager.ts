@@ -1,8 +1,5 @@
 import mapboxgl, {
   Map,
-  MapDataEvent,
-  ErrorEvent,
-  Source,
   Style,
   CameraOptions,
   LngLatBoundsLike,
@@ -171,9 +168,10 @@ export interface SketchLayerState extends LayerState {
   filterMvtUrl?: string;
 }
 /**
- * Internal state type that combines MapContextInterface with
- * SketchLayerContextState. The manager tracks all state internally
- * but pushes to separate React contexts.
+ * Internal state type. Extends MapContextInterface with
+ * sketchClassLayerStates (managed directly on internalState) and
+ * sketchLayerStates (present from initial construction but kept
+ * current via the stateChanged event from sketchStates, not via setState).
  */
 type FullInternalState = MapContextInterface & SketchLayerContextState;
 
@@ -275,10 +273,11 @@ class MapContextManager extends EventEmitter {
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
     this.overlayStates = new LayerStateManager<LayerState>(
+      "overlay",
       initialState.layerStatesByTocStaticId
     );
     this.sketchStates = new LayerStateManager<SketchLayerState>(
-      // Convert numeric-keyed initial state to string keys
+      "sketch",
       Object.fromEntries(
         Object.entries(initialSketchState.sketchLayerStates).map(([k, v]) => [
           k.toString(),
@@ -320,30 +319,24 @@ class MapContextManager extends EventEmitter {
   }
 
   private setState = (action: SetStateAction<MapContextInterface>) => {
-    // Build sketchLayerStates from sketchStates manager (convert string→number keys)
-    const sketchLayerStates: { [id: number]: SketchLayerState } = {};
-    for (const key of this.sketchStates.keys()) {
-      const raw = this.sketchStates.getRaw(key);
-      if (raw) sketchLayerStates[parseInt(key)] = raw;
-    }
-    const sketchState = {
-      sketchLayerStates,
-      sketchClassLayerStates: this.internalState.sketchClassLayerStates,
-    };
     if (typeof action === "function") {
-      this.internalState = { ...action(this.internalState), ...sketchState };
+      this.internalState = {
+        ...this.internalState,
+        ...action(this.internalState),
+      };
     } else {
-      this.internalState = { ...action, ...sketchState };
+      this.internalState = { ...this.internalState, ...action };
     }
-    this.pushSubContexts();
+    this.pushOverlayContexts();
   };
 
   /**
-   * Pushes the current internal state to all focused sub-contexts.
-   * Each setter uses a functional update that returns the previous reference
-   * when nothing has changed, so React will skip re-renders for stable slices.
+   * Pushes overlay-related internal state to MapOverlayContext and
+   * LegendsContext. Each setter uses a functional update that returns the
+   * previous reference when nothing has changed, so React skips re-renders
+   * for stable slices.
    */
-  private pushSubContexts = () => {
+  private pushOverlayContexts = () => {
     this._setMapOverlayState?.((prev) => {
       if (
         prev.layerStatesByTocStaticId ===
@@ -371,14 +364,11 @@ class MapContextManager extends EventEmitter {
 
   /**
    * Pushes the current sketch layer state to the SketchLayerContext.
-   * Call this after updating sketchStates or sketchClassLayerStates.
-   *
-   * NOTE: Now that overlay state changes and sketch state changes have
-   * separate handlers, this is only called when sketch-related state
-   * actually changes (from onSketchStateChanged or explicit calls).
+   * Call this after explicit changes to sketchStates or
+   * sketchClassLayerStates that don't go through the stateChanged event
+   * (e.g. setVisibleSketches).
    */
   private pushSketchState = () => {
-    // Convert string-keyed sketchStates back to number-keyed for context
     const sketchState = this.sketchStates.getState();
     const sketchLayerStates: { [id: number]: SketchLayerState } = {};
     for (const key of Object.keys(sketchState)) {
@@ -444,8 +434,7 @@ class MapContextManager extends EventEmitter {
       throw new Error("Map not initialized");
     }
     const { layers } = this.computeSketchLayers();
-    const features = this.map.queryRenderedFeatures({
-      // @ts-ignore
+    const features = this.map.queryRenderedFeatures(undefined, {
       layers: layers.map((l) => l.id),
     });
     const ids: { id: number; sharedInForum: boolean }[] = [];
@@ -492,9 +481,8 @@ class MapContextManager extends EventEmitter {
     }
     this.mapContainer = container;
     if (this.map) {
-      this.map.off("error", this.onMapError);
-      this.map.off("data", this.onMapDataEvent);
-      this.map.off("dataloading", this.onMapDataEvent);
+      this.overlayStates.detachFromMap();
+      this.sketchStates.detachFromMap();
       this.map.off("moveend", this.onMapMove);
       this.map.remove();
     }
@@ -552,9 +540,8 @@ class MapContextManager extends EventEmitter {
 
     this.addSprites(sprites, this.map);
 
-    this.map.on("error", this.onMapError);
-    this.map.on("data", this.onMapDataEvent);
-    this.map.on("dataloading", this.onMapDataEvent);
+    this.overlayStates.attachToMap(this.map);
+    this.sketchStates.attachToMap(this.map);
     this.map.on("moveend", this.onMapMove);
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", (e) => {
@@ -830,7 +817,7 @@ class MapContextManager extends EventEmitter {
   }
 
   private updateStyleInfiniteLoopDetector = 0;
-  private inaturalistSourceIdMap: { [sourceId: string]: string[] } = {};
+  // iNaturalist sub-sources are tracked via overlayStates.setSourceForKey().
 
   setDataSourceQueryParameters(id: number | string, params: any) {
     const key = id.toString();
@@ -1096,12 +1083,11 @@ class MapContextManager extends EventEmitter {
         zOrderOverride:
           this.internalState.layerStatesByTocStaticId[stableId]?.zOrderOverride,
       });
-      // Register source mapping for event triage
       const layer = this.layers[stableId];
       if (layer) {
         this.overlayStates.setSourceForKey(
           stableId,
-          layer.dataSourceId.toString()
+          this.overlayStates.prefixedSourceId(layer.dataSourceId)
         );
       }
     }
@@ -1228,20 +1214,29 @@ class MapContextManager extends EventEmitter {
 
   hideEditableSketch(sketchId: number) {
     this.hideEditableSketchId = sketchId;
-    // request a redraw
+    this.sketchStates.excludeFromMonitoring(sketchId.toString());
+    this.sketchStates.setLoading(sketchId.toString(), false);
     this.debouncedUpdateStyle();
   }
 
   unhideEditableSketch() {
+    if (this.hideEditableSketchId !== undefined) {
+      this.sketchStates.includeInMonitoring(
+        this.hideEditableSketchId.toString()
+      );
+    }
     delete this.hideEditableSketchId;
-    // request a redraw
     this.debouncedUpdateStyle();
   }
 
   clearSketchEditingState() {
+    if (this.hideEditableSketchId !== undefined) {
+      this.sketchStates.includeInMonitoring(
+        this.hideEditableSketchId.toString()
+      );
+    }
     delete this.hideEditableSketchId;
     this.unmarkSketchAsEditable();
-    // request a redraw
     this.debouncedUpdateStyle();
   }
 
@@ -1423,7 +1418,6 @@ class MapContextManager extends EventEmitter {
     sprites: SpriteDetailsFragment[];
     sketchLayerIds: string[];
   }> {
-    this.inaturalistSourceIdMap = {};
     // this.resetLayersByZIndex();
     // get mapbox-gl-draw related layers and sources and make sure to include
     // them in the end. gl-draw has some magic to avoid their layers getting
@@ -1543,17 +1537,19 @@ class MapContextManager extends EventEmitter {
                 : this.clientDataSources[layer.dataSourceId];
             if (source) {
               // Add the source
-              if (!baseStyle.sources[source.id.toString()]) {
+              const overlaySourceKey = this.overlayStates.prefixedSourceId(
+                source.id
+              );
+              if (!baseStyle.sources[overlaySourceKey]) {
                 switch (source.type) {
                   case DataSourceTypes.Vector:
-                    baseStyle.sources[source.id.toString()] = {
+                    baseStyle.sources[overlaySourceKey] = {
                       type: "vector",
                       attribution: source.attribution || "",
                       tiles: source.tiles as string[],
                       ...(source.bounds
                         ? { bounds: source.bounds.map((b) => parseFloat(b)) }
                         : {}),
-                      // minzoom
                       ...(source.minzoom !== undefined
                         ? {
                             minzoom: parseInt(
@@ -1561,7 +1557,6 @@ class MapContextManager extends EventEmitter {
                             ),
                           }
                         : {}),
-                      // maxzoom
                       ...(source.maxzoom !== undefined
                         ? {
                             maxzoom: parseInt(
@@ -1576,7 +1571,7 @@ class MapContextManager extends EventEmitter {
                     if (!/\.json$/.test(url)) {
                       url += ".json";
                     }
-                    baseStyle.sources[source.id.toString()] = {
+                    baseStyle.sources[overlaySourceKey] = {
                       type: "vector",
                       url,
                       attribution: source.attribution || "",
@@ -1584,7 +1579,7 @@ class MapContextManager extends EventEmitter {
                     break;
                   case DataSourceTypes.SeasketchVector:
                   case DataSourceTypes.Geojson:
-                    baseStyle.sources[source.id.toString()] = {
+                    baseStyle.sources[overlaySourceKey] = {
                       type: "geojson",
                       data: source.url!,
                       attribution: source.attribution || "",
@@ -1596,7 +1591,7 @@ class MapContextManager extends EventEmitter {
                       if (!/\.json$/.test(url)) {
                         url += ".json";
                       }
-                      baseStyle.sources[source.id.toString()] = {
+                      baseStyle.sources[overlaySourceKey] = {
                         type: "raster",
                         url,
                         attribution: source.attribution || "",
@@ -1610,8 +1605,8 @@ class MapContextManager extends EventEmitter {
                       buildInaturalistSourcesAndLayers(
                         (source.queryParameters as any) || {},
                         {
-                          sourceIdBase: source.id.toString(),
-                          layerIdBase: layer.tocId || source.id.toString(),
+                          sourceIdBase: overlaySourceKey,
+                          layerIdBase: layer.tocId || overlaySourceKey,
                           attribution: source.attribution || "",
                           opacity:
                             this.overlayStates.getRaw(layerId)?.opacity !==
@@ -1624,8 +1619,10 @@ class MapContextManager extends EventEmitter {
                       ...baseStyle.sources,
                       ...inatSources,
                     };
-                    this.inaturalistSourceIdMap[source.id.toString()] =
-                      Object.keys(inatSources);
+                    const inatSourceIds = Object.keys(inatSources);
+                    for (const inatSrcId of inatSourceIds) {
+                      this.overlayStates.setSourceForKey(layerId, inatSrcId);
+                    }
                     inaturalistGeneratedLayers[layerId] = inatLayers;
                     break;
                   }
@@ -1647,7 +1644,8 @@ class MapContextManager extends EventEmitter {
                               lastUsedTimestamp: new Date().getTime(),
                               customSource: createCustomSource(
                                 source,
-                                this.arcgisRequestManager
+                                this.arcgisRequestManager,
+                                overlaySourceKey
                               ),
                             };
                             break;
@@ -1755,7 +1753,7 @@ class MapContextManager extends EventEmitter {
                 let glLayers = staticLayers.map((lyr, i) => {
                   return {
                     ...lyr,
-                    source: source.id.toString(),
+                    source: overlaySourceKey,
                     id: idForLayer(layer, i),
                     ...(shouldHaveSourceLayer
                       ? {
@@ -1840,13 +1838,11 @@ class MapContextManager extends EventEmitter {
       } else {
         const { customSource, sublayers } = this.customSources[id];
         if (customSource.ready) {
-          // Update sublayers first so that sources that rely on a dynamically
-          // updated raster url can be initialized with proper data.
           if (sublayers) {
             customSource.updateLayers(sublayers);
           }
           const glSource = await customSource.getGLSource(this.map!);
-          baseStyle.sources[id] = glSource;
+          baseStyle.sources[this.overlayStates.prefixedSourceId(id)] = glSource;
         }
       }
     }
@@ -2114,131 +2110,9 @@ class MapContextManager extends EventEmitter {
     return layers;
   }
 
-  private onMapDataEvent = (
-    event: MapDataEvent & { source: Source; sourceId: string }
-  ) => {
-    if (event.sourceId === "composite") {
-      return;
-    }
-    if (event.dataType !== "source") {
-      return;
-    }
-    // Event triage: only process events relevant to tracked layers
-    if (!/sketch-/.test(event.sourceId)) {
-      // TODO: re-enable sketch loading indicators. Had to disable temporarily to support the California project.
-    } else if (this.overlayStates.hasRelevanceToSource(event.sourceId)) {
-      // Update source states immediately (no debounce) so that
-      // LayerStateManager receives loading updates ASAP for correct
-      // loadingAt timing behavior.
-      this.updateSourceStates();
-    }
-  };
-
-  private onMapError = (event: ErrorEvent & { sourceId?: string }) => {
-    if (event.sourceId && event.sourceId !== "composite") {
-      // Questionable behavior from mapbox-gl-js here
-      // https://github.com/mapbox/mapbox-gl-js/issues/9304
-      if (/source image could not be decoded/.test(event.error.message)) {
-        return;
-      }
-      if (/sketch-\d+$/.test(event.sourceId)) {
-        const key = event.sourceId.split("-")[1];
-        if (this.sketchStates.has(key)) {
-          this.sketchStates.setError(key, event.error);
-          this.sketchStates.setLoading(key, false);
-        }
-      } else {
-        for (const staticId of this.overlayStates.keys()) {
-          const sourceId = this.layers[staticId]?.dataSourceId.toString();
-          if (event.sourceId === sourceId) {
-            this.overlayStates.setError(staticId, event.error);
-            this.overlayStates.setLoading(staticId, false);
-          }
-        }
-      }
-      // LayerStateManager auto-notifies on setError/setLoading mutations
-    }
-  };
-
-  _updateSourceStatesLoopDetector = 0;
-
-  private updateSourceStates() {
-    let anyLoading = false;
-    if (!this.map) {
-      throw new Error("MapContextManager.map not set");
-    }
-
-    // For each overlay layer, check its source
-    let sources: { [sourceId: string]: string[] } = {};
-    for (const id of this.overlayStates.keys()) {
-      const layer = this.layers[id];
-      if (layer) {
-        if (!sources[layer.dataSourceId]) {
-          sources[layer.dataSourceId] = [];
-        }
-        if (sources[layer.dataSourceId].indexOf(id) === -1) {
-          sources[layer.dataSourceId].push(id);
-        }
-      }
-    }
-    for (const sourceId in sources) {
-      let loading = !this.map!.isSourceLoaded(sourceId);
-      const extraInatSources = this.inaturalistSourceIdMap[sourceId];
-      if (extraInatSources && extraInatSources.length) {
-        loading = !extraInatSources.every((id) => this.map!.isSourceLoaded(id));
-      }
-      if (sourceId in this.customSources) {
-        const customSource =
-          this.customSources[parseInt(sourceId)].customSource;
-        if (customSource) {
-          loading = customSource.loading;
-        }
-      }
-      if (loading) {
-        anyLoading = true;
-      }
-      for (const stableId of sources[sourceId]) {
-        // Update LayerStateManager immediately (no debounce)
-        this.overlayStates.setLoading(stableId, loading);
-        if (this.overlayStates.getRaw(stableId)?.error && loading) {
-          this.overlayStates.setError(stableId, undefined);
-        }
-      }
-    }
-    // update states of sketch layers
-    for (const id of this.sketchStates.keys()) {
-      const state = this.sketchStates.getRaw(id);
-      if (state?.visible) {
-        if (this.hideEditableSketchId === parseInt(id)) {
-          this.sketchStates.setLoading(id, false);
-          continue;
-        }
-        // eslint-disable-next-line i18next/no-literal-string
-        const loading = !this.map!.isSourceLoaded(`sketch-${id}`);
-        if (loading) {
-          anyLoading = true;
-        }
-        this.sketchStates.setLoading(id, loading);
-        if (state.error && loading) {
-          this.sketchStates.setError(id, undefined);
-        }
-      }
-    }
-    // LayerStateManager auto-notifies when effective state changes
-    // (loading mutations use 10ms debounce internally).
-    // Re-poll when any source is still loading (needed for geojson sources)
-    if (anyLoading) {
-      this._updateSourceStatesLoopDetector++;
-      setTimeout(
-        () => {
-          this.updateSourceStates();
-        },
-        this._updateSourceStatesLoopDetector > 100 ? 1000 : 100
-      );
-    } else {
-      this._updateSourceStatesLoopDetector = 0;
-    }
-  }
+  // Source loading/error monitoring has been moved to LayerStateManager.
+  // Each instance listens for map data/error events filtered by its
+  // namespace prefix, with a fallback poll for stuck sources.
 
   private tocItems: {
     [stableId: string]: {
@@ -2312,13 +2186,12 @@ class MapContextManager extends EventEmitter {
       // Cleanup entries in overlayStates that no longer exist
       const validKeys = new Set(tocItems.map((i) => i.stableId));
       this.overlayStates.retainOnly(validKeys);
-      // Register source mappings for event triage
       for (const stableId of this.overlayStates.keys()) {
         const layer = this.layers[stableId];
         if (layer) {
           this.overlayStates.setSourceForKey(
             stableId,
-            layer.dataSourceId.toString()
+            this.overlayStates.prefixedSourceId(layer.dataSourceId)
           );
         }
       }
@@ -2589,10 +2462,22 @@ class MapContextManager extends EventEmitter {
 
   /**
    * Called when `sketchStates` emits `"stateChanged"`.
-   * Pushes sketch state to its React context.
+   * Receives the effective state directly from the event payload and pushes
+   * it to the SketchLayerContext without re-calling getState().
    */
-  private onSketchStateChanged = () => {
-    this.pushSketchState();
+  private onSketchStateChanged = (state: {
+    [key: string]: SketchLayerState;
+  }) => {
+    const sketchLayerStates: { [id: number]: SketchLayerState } = {};
+    for (const key of Object.keys(state)) {
+      sketchLayerStates[parseInt(key)] = state[key];
+    }
+    this._setSketchLayerState?.({
+      sketchLayerStates,
+      sketchClassLayerStates: {
+        ...this.internalState.sketchClassLayerStates,
+      },
+    });
     this.debouncedUpdatePreferences();
   };
 
@@ -3403,17 +3288,15 @@ class MapContextManager extends EventEmitter {
     this.overlayStates.setOpacity(stableId, opacity);
     const layer = this.layers[stableId];
     const source = this.clientDataSources[layer.dataSourceId];
-    // TODO: consider customsource layer types
     const shouldHaveSourceLayer =
       source.type === DataSourceTypes.SeasketchMvt ||
       source.type === DataSourceTypes.Vector; // ||
     // source.type === DataSourceTypes.SeasketchRaster;
     if (layer && source && this.map && layer.mapboxGlStyles?.length > 0) {
-      // Do an update in place if possible
       let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
         return {
           ...lyr,
-          source: source.id.toString(),
+          source: this.overlayStates.prefixedSourceId(source.id),
           id: idForLayer(layer, i),
           ...(shouldHaveSourceLayer
             ? { "source-layer": layer.sourceLayer }
@@ -3531,7 +3414,8 @@ class MapContextManager extends EventEmitter {
           } else {
             const customSource = createCustomSource(
               source,
-              this.arcgisRequestManager
+              this.arcgisRequestManager,
+              this.overlayStates.prefixedSourceId(source.id)
             );
             const metadata = await customSource.getComputedMetadata();
             if (metadata?.bounds) {
@@ -3868,7 +3752,8 @@ function isCustomSourceType(type: DataSourceTypes): type is CustomSourceType {
 
 function createCustomSource(
   source: DataSourceDetailsFragment,
-  requestManager: ArcGISRESTServiceRequestManager
+  requestManager: ArcGISRESTServiceRequestManager,
+  sourceId: string
 ) {
   if (!isCustomSourceType(source.type)) {
     throw new Error("Source type is not custom");
@@ -3885,7 +3770,7 @@ function createCustomSource(
         return new ArcGISFeatureLayerSource(requestManager, {
           url: source.url!,
           fetchStrategy,
-          sourceId: source.id.toString(),
+          sourceId,
           attributionOverride:
             (source.attribution || "").trim().length > 0
               ? source.attribution!
@@ -3894,7 +3779,7 @@ function createCustomSource(
       case DataSourceTypes.ArcgisRasterTiles:
         return new ArcGISTiledMapService(requestManager, {
           url: source.url!,
-          sourceId: source.id.toString(),
+          sourceId,
           attributionOverride:
             (source.attribution || "").trim().length > 0
               ? source.attribution!
@@ -3905,7 +3790,7 @@ function createCustomSource(
       case DataSourceTypes.ArcgisDynamicMapserver:
         return new ArcGISDynamicMapService(requestManager, {
           url: source.url!,
-          sourceId: source.id.toString(),
+          sourceId,
           supportHighDpiDisplays: source.useDevicePixelRatio || false,
           queryParameters: source.queryParameters || {},
           attributionOverride:

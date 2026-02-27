@@ -1,6 +1,7 @@
 import type { LayerState } from "./MapContextManager";
 import { EventEmitter } from "eventemitter3";
 import debounce from "lodash.debounce";
+import type { Map as MapboxMap } from "mapbox-gl";
 
 /**
  * Minimum time (ms) a layer must be loading before `loading` is exposed as
@@ -54,6 +55,9 @@ function layerStateEqual<T extends LayerState>(a: T, b: T): boolean {
 export class LayerStateManager<TState extends LayerState> extends EventEmitter {
   // ── internal stores ──────────────────────────────────────────────────────
 
+  /** Namespace prefix used to identify this manager's sources on the map. */
+  readonly namespace: string;
+
   /** Raw mutable state. `loading` here is the *raw* value from the map. */
   private rawState: { [key: string]: TState } = {};
 
@@ -62,6 +66,9 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
 
   /** Map from mapbox sourceId → set of tracked layer keys using that source. */
   private sourceToKeys: { [sourceId: string]: Set<string> } = {};
+
+  /** Keys excluded from automatic loading/error monitoring. */
+  private excludedFromMonitoring = new Set<string>();
 
   /**
    * Snapshot returned by the last `getState()` call. Used for referential
@@ -82,19 +89,37 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
   private _lastNotifiedRef: { [key: string]: TState } | null = null;
 
   private readonly loadingMinMs: number;
+  private readonly pollIntervalMs: number;
+
+  // ── map event monitoring ────────────────────────────────────────────────
+
+  private map: MapboxMap | null = null;
+  private pollTimerId: ReturnType<typeof setTimeout> | null = null;
+
+  private boundOnData: ((e: any) => void) | null = null;
+  private boundOnDataLoading: ((e: any) => void) | null = null;
+  private boundOnError: ((e: any) => void) | null = null;
 
   constructor(
+    namespace: string,
     initialState?: { [key: string]: TState },
-    loadingMinMs = LOADING_STATE_MIN_DURATION_MS
+    loadingMinMs = LOADING_STATE_MIN_DURATION_MS,
+    pollIntervalMs = 750
   ) {
     super();
+    this.namespace = namespace;
     this.loadingMinMs = loadingMinMs;
+    this.pollIntervalMs = pollIntervalMs;
     if (initialState) {
       for (const key of Object.keys(initialState)) {
-        // Clone so we own the objects
         this.rawState[key] = { ...initialState[key] };
       }
     }
+  }
+
+  /** Returns a Mapbox source ID prefixed with this manager's namespace. */
+  prefixedSourceId(rawId: string | number): string {
+    return `${this.namespace}-${rawId}`;
   }
 
   // ── state change notification ───────────────────────────────────────────
@@ -124,11 +149,191 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
 
   private shortDebouncedCheckAndNotify = debounce(this.checkAndNotify, 50);
 
+  // ── map attachment & source monitoring ─────────────────────────────────
+
+  /**
+   * Attach to a Mapbox GL map instance to start monitoring source
+   * loading/error state. Registers `data`, `dataloading`, and `error`
+   * listeners filtered by this manager's namespace prefix.
+   */
+  attachToMap(map: MapboxMap): void {
+    this.detachFromMap();
+    this.map = map;
+
+    this.boundOnData = (e: any) => this.onMapData(e);
+    this.boundOnDataLoading = (e: any) => this.onMapDataLoading(e);
+    this.boundOnError = (e: any) => this.onMapError(e);
+
+    map.on("data", this.boundOnData);
+    map.on("dataloading", this.boundOnDataLoading);
+    map.on("error", this.boundOnError);
+
+    // Kick the poll for any layers already in loading state (e.g. restored
+    // from saved preferences before the map was created).
+    this.startPollIfNeeded();
+  }
+
+  /**
+   * Detach from the current map, removing all event listeners and stopping
+   * any active poll timer.
+   */
+  detachFromMap(): void {
+    if (this.map) {
+      if (this.boundOnData) this.map.off("data", this.boundOnData);
+      if (this.boundOnDataLoading)
+        this.map.off("dataloading", this.boundOnDataLoading);
+      if (this.boundOnError) this.map.off("error", this.boundOnError);
+      this.boundOnData = null;
+      this.boundOnDataLoading = null;
+      this.boundOnError = null;
+    }
+    this.map = null;
+    this.stopPoll();
+  }
+
+  /** Exclude a layer key from automatic loading/error monitoring. */
+  excludeFromMonitoring(key: string): void {
+    this.excludedFromMonitoring.add(key);
+  }
+
+  /** Re-include a previously excluded key in monitoring. */
+  includeInMonitoring(key: string): void {
+    this.excludedFromMonitoring.delete(key);
+  }
+
+  // ── Tier 1: event-driven monitoring ──────────────────────────────────────
+
+  private isRelevantSource(sourceId: string): boolean {
+    if (!sourceId) return false;
+    if (!sourceId.startsWith(this.namespace + "-")) return false;
+    return this.hasRelevanceToSource(sourceId);
+  }
+
+  private keysForSource(sourceId: string): string[] {
+    const set = this.sourceToKeys[sourceId];
+    if (!set) return [];
+    return Array.from(set).filter((k) => !this.excludedFromMonitoring.has(k));
+  }
+
+  private onMapDataLoading = (event: any): void => {
+    if (event.dataType !== "source") return;
+    const sourceId: string = event.sourceId;
+    if (!this.isRelevantSource(sourceId)) return;
+
+    for (const key of this.keysForSource(sourceId)) {
+      this.setLoading(key, true);
+    }
+    this.startPollIfNeeded();
+  };
+
+  private onMapData = (event: any): void => {
+    if (event.dataType !== "source") return;
+    const sourceId: string = event.sourceId;
+    if (!this.isRelevantSource(sourceId)) return;
+    if (!this.map) return;
+
+    if (this.map.isSourceLoaded(sourceId)) {
+      for (const key of this.keysForSource(sourceId)) {
+        const allSourceIds = this.getSourceIdsForKey(key);
+        const existingSources = allSourceIds.filter((id) =>
+          this.map!.getSource(id)
+        );
+        if (existingSources.length === 0) continue;
+        const allLoaded = existingSources.every((id) =>
+          this.map!.isSourceLoaded(id)
+        );
+        if (allLoaded) {
+          this.setLoading(key, false);
+          if (this.rawState[key]?.error) {
+            this.setError(key, undefined);
+          }
+        }
+      }
+    }
+  };
+
+  private onMapError = (event: any): void => {
+    const sourceId: string | undefined = event.sourceId;
+    if (!sourceId) return;
+    if (!sourceId.startsWith(this.namespace + "-")) return;
+    if (/source image could not be decoded/.test(event.error?.message)) return;
+
+    if (this.hasRelevanceToSource(sourceId)) {
+      for (const key of this.keysForSource(sourceId)) {
+        this.setError(key, event.error);
+        this.setLoading(key, false);
+      }
+    }
+  };
+
+  // ── Tier 2: fallback polling ─────────────────────────────────────────────
+
+  private hasAnyLoading(): boolean {
+    for (const key of Object.keys(this.rawState)) {
+      if (this.excludedFromMonitoring.has(key)) continue;
+      if (this.rawState[key].loading) return true;
+    }
+    return false;
+  }
+
+  private startPollIfNeeded(): void {
+    if (this.pollTimerId !== null) return;
+    if (!this.hasAnyLoading()) return;
+    if (!this.map) return;
+    this.pollTimerId = setTimeout(
+      () => this.pollLoadingStates(),
+      this.pollIntervalMs
+    );
+  }
+
+  private stopPoll(): void {
+    if (this.pollTimerId !== null) {
+      clearTimeout(this.pollTimerId);
+      this.pollTimerId = null;
+    }
+  }
+
+  private pollLoadingStates(): void {
+    this.pollTimerId = null;
+    if (!this.map) return;
+    for (const key of Object.keys(this.rawState)) {
+      if (this.excludedFromMonitoring.has(key)) continue;
+      const raw = this.rawState[key];
+      if (!raw?.loading) continue;
+      const sourceIds = this.getSourceIdsForKey(key);
+      if (sourceIds.length === 0) continue;
+      const existingSources = sourceIds.filter((id) =>
+        this.map!.getSource(id)
+      );
+      if (existingSources.length === 0) continue;
+      const allLoaded = existingSources.every((id) =>
+        this.map!.isSourceLoaded(id)
+      );
+      if (allLoaded) {
+        this.setLoading(key, false);
+        if (raw.error) this.setError(key, undefined);
+      }
+    }
+    this.startPollIfNeeded();
+  }
+
+  /** Returns all registered Mapbox source IDs for a given layer key. */
+  private getSourceIdsForKey(key: string): string[] {
+    const ids: string[] = [];
+    for (const sourceId in this.sourceToKeys) {
+      if (this.sourceToKeys[sourceId].has(key)) {
+        ids.push(sourceId);
+      }
+    }
+    return ids;
+  }
+
   /**
    * Cancel any pending debounced notification and remove all listeners.
    * Call when this manager is no longer needed.
    */
   destroy(): void {
+    this.detachFromMap();
     this.debouncedCheckAndNotify.cancel();
     this.removeAllListeners();
   }
@@ -165,6 +370,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     this.rawState[key] = { ...state };
     if (state.loading) {
       this.loadingStartedAt[key] = Date.now();
+      this.startPollIfNeeded();
     }
     this.shortDebouncedCheckAndNotify();
   }
@@ -207,11 +413,11 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
         this.loadingStartedAt[key] = Date.now();
       }
       s.loading = true;
+      this.startPollIfNeeded();
     } else {
       delete this.loadingStartedAt[key];
       s.loading = false;
     }
-    // Loading changes use the debounced path
     this.debouncedCheckAndNotify();
   }
 
