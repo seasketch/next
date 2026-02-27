@@ -577,6 +577,7 @@ function ReportCardBodyEditorInner({
                       sourceProcessingJobs={
                         allDependencies.sourceProcessingJobs
                       }
+                      showWhenComplete={true}
                     />
                   </button>
                 </div>

@@ -152,6 +152,7 @@ export default function ReportCardLoadingIndicator({
   metrics,
   sourceProcessingJobs,
   className,
+  showWhenComplete,
 }: {
   display: boolean;
   metrics: Pick<CompatibleSpatialMetric, "id" | "state" | "progress" | "eta">[];
@@ -160,6 +161,7 @@ export default function ReportCardLoadingIndicator({
     "jobKey" | "state" | "progressPercentage" | "eta"
   >[];
   className?: string;
+  showWhenComplete?: boolean;
 }) {
   const { t } = useTranslation("sketching");
   const sourceJobs = useMemo(() => {
@@ -254,6 +256,14 @@ export default function ReportCardLoadingIndicator({
   }, [display, isComplete, farthestEta]);
 
   if (!display || (!isComplete && !readyToShow)) return null;
+
+  if (isComplete && showWhenComplete) {
+    return (
+      <span className="text-xs hover:underline text-gray-500">
+        {t("show calculations")}
+      </span>
+    );
+  }
 
   return (
     <motion.div
