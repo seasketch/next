@@ -13,7 +13,7 @@ export const LOADING_STATE_MIN_DURATION_MS = 700;
  * Debounce interval (ms) for loading-related state change notifications.
  * Non-loading mutations (visibility, opacity, etc.) are notified immediately.
  */
-const LOADING_NOTIFY_DEBOUNCE_MS = 70;
+const LOADING_NOTIFY_DEBOUNCE_MS = 100;
 
 /**
  * Compare two LayerState-like objects for equality. Every enumerable property
@@ -108,7 +108,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     const state = this.getState();
     if (state !== this._lastNotifiedRef) {
       this._lastNotifiedRef = state;
-      this.emit("stateChanged");
+      this.emit("stateChanged", state);
     }
   };
 
@@ -119,13 +119,10 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
    */
   private debouncedCheckAndNotify = debounce(
     this.checkAndNotify,
-    LOADING_NOTIFY_DEBOUNCE_MS,
-    {
-      leading: false,
-      trailing: true,
-      maxWait: 100,
-    }
+    LOADING_NOTIFY_DEBOUNCE_MS
   );
+
+  private shortDebouncedCheckAndNotify = debounce(this.checkAndNotify, 50);
 
   /**
    * Cancel any pending debounced notification and remove all listeners.
@@ -169,7 +166,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     if (state.loading) {
       this.loadingStartedAt[key] = Date.now();
     }
-    this.checkAndNotify();
+    this.shortDebouncedCheckAndNotify();
   }
 
   removeLayer(key: string): void {
@@ -182,7 +179,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
         delete this.sourceToKeys[sourceId];
       }
     }
-    this.checkAndNotify();
+    this.shortDebouncedCheckAndNotify();
   }
 
   has(key: string): boolean {
@@ -222,7 +219,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     const s = this.rawState[key];
     if (!s) return;
     s.visible = visible;
-    this.checkAndNotify();
+    this.debouncedCheckAndNotify();
   }
 
   setOpacity(key: string, opacity: number | undefined): void {
@@ -243,7 +240,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     const s = this.rawState[key];
     if (!s) return;
     s.hidden = hidden;
-    this.checkAndNotify();
+    this.debouncedCheckAndNotify();
   }
 
   setError(key: string, error: Error | undefined): void {
@@ -263,7 +260,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     for (const k of Object.keys(partial) as (keyof TState)[]) {
       (s as any)[k] = partial[k];
     }
-    this.checkAndNotify();
+    this.debouncedCheckAndNotify();
   }
 
   /**

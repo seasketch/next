@@ -1129,7 +1129,7 @@ class MapContextManager extends EventEmitter {
       const existing = this.sketchStates.getRaw(key);
       if (!existing?.visible) {
         this.sketchStates.addLayer(key, {
-          loading: true,
+          loading: false,
           visible: true,
           sketchClassId: sketch.sketchClassId,
           filterMvtUrl: sketch.filterMvtUrl,
@@ -2124,10 +2124,9 @@ class MapContextManager extends EventEmitter {
       return;
     }
     // Event triage: only process events relevant to tracked layers
-    if (
-      this.overlayStates.hasRelevanceToSource(event.sourceId) ||
-      this.sketchStates.hasRelevanceToSource(event.sourceId)
-    ) {
+    if (!/sketch-/.test(event.sourceId)) {
+      // TODO: re-enable sketch loading indicators. Had to disable temporarily to support the California project.
+    } else if (this.overlayStates.hasRelevanceToSource(event.sourceId)) {
       // Update source states immediately (no debounce) so that
       // LayerStateManager receives loading updates ASAP for correct
       // loadingAt timing behavior.
@@ -2572,10 +2571,10 @@ class MapContextManager extends EventEmitter {
    * Does NOT push sketch state — overlay loading churn should not cause
    * SketchLayerContext consumers to re-render.
    */
-  private onOverlayStateChanged = () => {
+  private onOverlayStateChanged = (state: { [key: string]: LayerState }) => {
     this.setState((oldState) => ({
       ...oldState,
-      layerStatesByTocStaticId: this.overlayStates.getState(),
+      layerStatesByTocStaticId: state,
     }));
     // Only emit uiUpdate when the iNaturalist CTAs actually changed.
     const nextCtas = this.computeInatCtas();
