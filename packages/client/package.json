@@ -18,6 +18,7 @@
     "@heroicons/react": "^1.0.1",
     "@lezer/common": "^1.0.1",
     "@mapbox/mapbox-gl-draw": "https://github.com/seasketch/mapbox-gl-draw.git",
+    "@mapbox/mapbox-gl-framerate": "https://github.com/mapbox/mapbox-gl-framerate.git",
     "@mapbox/mapbox-gl-draw-static-mode": "^1.0.1",
     "@mapbox/mapbox-gl-style-spec": "^14.3.0",
     "@mapbox/polyline": "^1.1.1",

@@ -26,6 +26,7 @@ import { SketchGeometryType } from "../generated/graphql";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import { MeasureControlContext, MeasureControlLockId } from "../MeasureControl";
 import useDialog from "../components/useDialog";
+import useIsSuperuser from "../useIsSuperuser";
 
 type PopupPosition = "top" | "bottom";
 
@@ -475,6 +476,46 @@ export function ShowCoordinates(props: MapSettingsActionItem) {
         uiState.toggleCoordinates(!show);
       }}
       title={t("Show coordinates", { ns: "homepage" })}
+    />
+  );
+}
+
+export function ShowFPSMeter(props: MapSettingsActionItem) {
+  const { t } = useTranslation("surveys");
+  const uiState = useContext(MapUIStateContext);
+  const isSuperuser = useIsSuperuser();
+  const show = !!uiState?.showFPS;
+
+  if (!isSuperuser) {
+    return null;
+  }
+
+  return (
+    <Item
+      {...props}
+      Icon={(childProps) => (
+        <Switch
+          tabIndex={-1}
+          {...childProps}
+          className="scale-75"
+          isToggled={show}
+          onClick={(value, e) => {
+            if (e) {
+              e.preventDefault();
+              e.stopPropagation();
+            }
+            uiState.toggleFPS(value);
+          }}
+        />
+      )}
+      onClick={(e) => {
+        if (e) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+        uiState.toggleFPS(!show);
+      }}
+      title={t("FPS meter")}
     />
   );
 }

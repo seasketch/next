@@ -32,6 +32,7 @@ import type {
   BasemapDetailsFragment,
 } from "../generated/graphql";
 import type { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
+const FrameRateControl = require("@mapbox/mapbox-gl-framerate/dist/mapbox-gl-framerate.js");
 
 /** Tooltip, banner, popup, digitizing-lock, and display-preference state. */
 export const MapUIStateContext = createContext<MapUIStateContextState>({
@@ -41,6 +42,7 @@ export const MapUIStateContext = createContext<MapUIStateContextState>({
   inaturalistCallToActions: [],
   toggleScale: () => {},
   toggleCoordinates: () => {},
+  toggleFPS: () => {},
 });
 
 function buildVisibleLayers(
@@ -242,6 +244,8 @@ export default function MapUIProvider({
     []
   );
   const coordinatesControl = useMemo(() => new CoordinatesControl(), []);
+  const fpsControl = useMemo(() => new FrameRateControl(), []);
+  const [showFPS, setShowFPS] = useState(false);
 
   const toggleScale = useCallback(
     (show: boolean) => {
@@ -281,6 +285,25 @@ export default function MapUIProvider({
       }
     },
     [coordinatesControl, manager?.map, updateSlice]
+  );
+
+  const toggleFPS = useCallback(
+    (show: boolean) => {
+      setShowFPS(show);
+      const map = manager?.map;
+      if (map) {
+        if (show) {
+          if (!map.hasControl(fpsControl)) {
+            map.addControl(fpsControl, "bottom-right");
+          }
+        } else {
+          if (map.hasControl(fpsControl)) {
+            map.removeControl(fpsControl);
+          }
+        }
+      }
+    },
+    [manager?.map, fpsControl]
   );
 
   useEffect(() => {
@@ -426,13 +449,25 @@ export default function MapUIProvider({
         map.removeControl(coordinatesControl);
       }
     }
+
+    if (showFPS) {
+      if (!map.hasControl(fpsControl)) {
+        map.addControl(fpsControl, "top-left");
+      }
+    } else {
+      if (map.hasControl(fpsControl)) {
+        map.removeControl(fpsControl);
+      }
+    }
   }, [
     manager?.map,
     ready,
     showScale,
     showCoordinates,
+    showFPS,
     scaleControl,
     coordinatesControl,
+    fpsControl,
   ]);
 
   const value = useMemo<MapUIStateContextState>(
@@ -450,8 +485,10 @@ export default function MapUIProvider({
       digitizingLockedBy,
       showScale,
       showCoordinates,
+      showFPS,
       toggleScale,
       toggleCoordinates,
+      toggleFPS,
       inaturalistCallToActions: inaturalistCallToActions ?? [],
       interactivityManager,
     }),
@@ -465,8 +502,10 @@ export default function MapUIProvider({
       digitizingLockedBy,
       showScale,
       showCoordinates,
+      showFPS,
       toggleScale,
       toggleCoordinates,
+      toggleFPS,
       inaturalistCallToActions,
       interactivityManager,
     ]

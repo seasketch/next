@@ -36,6 +36,7 @@ import {
   Measure,
   ResetToProjectBounds,
   ShowCoordinates,
+  ShowFPSMeter,
   ShowScaleBar,
 } from "../draw/MapSettingsPopup";
 import { MeasureControlContextProvider } from "../MeasureControl";
@@ -74,6 +75,7 @@ function MapSettingsActions() {
       <ShowScaleBar />
       <ShowCoordinates />
       <Measure />
+      <ShowFPSMeter />
     </>
   );
 }

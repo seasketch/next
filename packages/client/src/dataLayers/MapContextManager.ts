@@ -3655,8 +3655,10 @@ export interface MapUIStateContextState {
   digitizingLockedBy?: string;
   showScale?: boolean;
   showCoordinates?: boolean;
+  showFPS?: boolean;
   toggleScale: (show: boolean) => void;
   toggleCoordinates: (show: boolean) => void;
+  toggleFPS: (show: boolean) => void;
   inaturalistCallToActions?: {
     projectId: string;
     label?: string;
