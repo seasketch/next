@@ -20,14 +20,14 @@ const lambda = new AWS.Lambda({
 
 export default async function calculateSpatialMetric(
   payload: { metricId: number },
-  helpers: Helpers
+  helpers: Helpers,
 ) {
   const timeout = setTimeout(async () => {
     helpers.logger.error("Timeout", { metricId: payload.metricId });
     await helpers.withPgClient(async (client) => {
       await client.query(
         `update spatial_metrics set state = 'error', error_message = 'Timeout' where id = $1`,
-        [payload.metricId]
+        [payload.metricId],
       );
     });
   }, 10_000);
@@ -40,15 +40,18 @@ export default async function calculateSpatialMetric(
         await helpers.withPgClient(async (client) => {
           return client.query(
             `update spatial_metrics set value = to_json(ST_AREA((select geometry from fragments where hash = $1)::geography) / 1000000)::jsonb, state = 'complete' where id = $2`,
-            [(metric.subject as MetricSubjectFragment).hash, metric.id]
+            [(metric.subject as MetricSubjectFragment).hash, metric.id],
           );
         });
       } else {
         // ask overlay worker to calculate the area
         const clippingLayers = await getClippingLayersForGeography(
           metric.subject.id,
-          helpers
+          helpers,
         );
+        helpers.logger.info("Calling overlay worker", {
+          clippingLayers,
+        });
         callOverlayWorker({
           type: "total_area",
           jobKey: metric.jobKey,
@@ -67,7 +70,7 @@ export default async function calculateSpatialMetric(
             await helpers.withPgClient(async (client) => {
               await client.query(
                 `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where id = $2`,
-                [e instanceof Error ? e.message : "Unknown error", metric.id]
+                [e instanceof Error ? e.message : "Unknown error", metric.id],
               );
             });
           })
@@ -93,13 +96,13 @@ export default async function calculateSpatialMetric(
           epsg = await helpers.withPgClient(async (client) => {
             const result = await client.query(
               `select epsg from data_upload_outputs where url = $1 and is_reporting_type(type) limit 1`,
-              [metric.sourceUrl]
+              [metric.sourceUrl],
             );
             return result.rows[0]?.epsg || null;
           });
           if (!epsg) {
             throw new Error(
-              `No EPSG found for source URL: ${metric.sourceUrl}`
+              `No EPSG found for source URL: ${metric.sourceUrl}`,
             );
           }
         }
@@ -107,7 +110,7 @@ export default async function calculateSpatialMetric(
         if (subjectIsFragment(metric.subject)) {
           const geobuf = await getGeobufForFragment(
             metric.subject.hash,
-            helpers
+            helpers,
           );
           await callOverlayWorker({
             type: metric.type,
@@ -125,7 +128,7 @@ export default async function calculateSpatialMetric(
         } else {
           const clippingLayers = await getClippingLayersForGeography(
             metric.subject.id,
-            helpers
+            helpers,
           );
           callOverlayWorker({
             type: metric.type,
@@ -148,7 +151,7 @@ export default async function calculateSpatialMetric(
               await helpers.withPgClient(async (client) => {
                 await client.query(
                   `update spatial_metrics set state = 'error', error_message = $1, updated_at = now() where id = $2`,
-                  [e instanceof Error ? e.message : "Unknown error", metric.id]
+                  [e instanceof Error ? e.message : "Unknown error", metric.id],
                 );
               });
             })
@@ -165,7 +168,7 @@ export default async function calculateSpatialMetric(
       helpers.logger.error("Error calculating spatial metric");
       await client.query(
         `update spatial_metrics set state = 'error', error_message = $1 where id = $2`,
-        [e instanceof Error ? e.message : "Unknown error", payload.metricId]
+        [e instanceof Error ? e.message : "Unknown error", payload.metricId],
       );
     });
   } finally {
@@ -180,7 +183,7 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
         encode(ST_AsGeoBuf(fragments.*), 'base64') AS geobuf
       FROM fragments 
       WHERE hash = $1 limit 1`,
-      [fragmentHash]
+      [fragmentHash],
     );
     return result.rows[0].geobuf;
   });
@@ -212,7 +215,7 @@ async function callOverlayWorker(payload: OverlayWorkerPayload) {
     }
   } else {
     throw new Error(
-      "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented."
+      "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented.",
     );
   }
 }
@@ -234,13 +237,14 @@ function parseClippingLayer(clippingLayer: {
 }
 async function getClippingLayersForGeography(
   geographyId: number,
-  helpers: Helpers
+  helpers: Helpers,
 ) {
+  console.log("getClippingLayersForGeography", geographyId);
   let clippingLayers: ClippingLayerOption[] = [];
   await helpers.withPgClient(async (client) => {
     const results = await client.query(
       `select (clipping_layers_for_geography($1)).*`,
-      [geographyId]
+      [geographyId],
     );
     clippingLayers = results.rows.map((row) => parseClippingLayer(row));
   });
@@ -251,7 +255,7 @@ function getSpatialMetric(metricId: number, helpers: Helpers) {
   return helpers.withPgClient(async (client) => {
     const result = await client.query(
       `select get_spatial_metric($1) as metric`,
-      [metricId]
+      [metricId],
     );
     if (result.rows.length === 0 || !result.rows[0].metric) {
       throw new Error(`Metric not found: ${metricId}`);
