@@ -259,10 +259,12 @@ async function getClippingLayersForGeography(
 
 function getSpatialMetric(metricId: number, helpers: Helpers) {
   return helpers.withPgClient(async (client) => {
+    console.log("calling get_spatial_metric", metricId);
     const result = await client.query(
       `select get_spatial_metric($1) as metric`,
       [metricId],
     );
+    console.log("result", result.rows);
     if (result.rows.length === 0 || !result.rows[0].metric) {
       throw new Error(`Metric not found: ${metricId}`);
     }
