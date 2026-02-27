@@ -25,6 +25,8 @@ import {
   MenuBarItemClasses,
 } from "../../components/Menubar";
 
+const SHOW_VISIBILITY_CONTROLS = false;
+
 export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
   const { isSmall } = useContext(ProjectAppSidebarContext);
   const { user } = useAuth0();
@@ -46,6 +48,7 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
     errors,
     loading: loadingSketches,
     setSketchClasses,
+    setVisibleSketches,
   } = useContext(SketchUIStateContext);
 
   const getContextMenuItems = useCallback(
@@ -270,14 +273,34 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
           <DropdownButton
             small
             disabled={
-              !menuOptions ||
-              (menuOptions.update.length === 0 && menuOptions.read.length === 0)
+              !SHOW_VISIBILITY_CONTROLS &&
+              (!menuOptions ||
+                (menuOptions.update.length === 0 &&
+                  menuOptions.read.length === 0))
             }
             alignment="left"
             label={<Trans ns="sketching">Edit</Trans>}
             options={[
               ...(menuOptions?.update || []),
               ...(menuOptions?.read || []),
+              ...(SHOW_VISIBILITY_CONTROLS
+                ? [
+                    {
+                      label: <Trans ns="sketching">Display All</Trans>,
+                      onClick: () => {
+                        setVisibleSketches(treeItems.map((item) => item.id));
+                      },
+                      disabled: treeItems.length === 0,
+                    },
+                    {
+                      label: <Trans ns="sketching">Display None</Trans>,
+                      onClick: () => {
+                        setVisibleSketches([]);
+                      },
+                      disabled: visibleSketches.length === 0,
+                    },
+                  ]
+                : []),
             ]}
           />
           <Button
