@@ -39,6 +39,10 @@ export default async function calculateSpatialMetric(
       if (subjectIsFragment(metric.subject)) {
         // very simple to do, just ask postgis to calculate the area
         await helpers.withPgClient(async (client) => {
+          console.log("update spatial_metrics", {
+            hash: (metric.subject as MetricSubjectFragment).hash,
+            id: metric.id,
+          });
           return client.query(
             `update spatial_metrics set value = to_json(ST_AREA((select geometry from fragments where hash = $1)::geography) / 1000000)::jsonb, state = 'complete' where id = $2`,
             [(metric.subject as MetricSubjectFragment).hash, metric.id],
