@@ -35,6 +35,7 @@ export default async function calculateSpatialMetric(
   try {
     const metric = await getSpatialMetric(payload.metricId, helpers);
     if (metric.type === "total_area") {
+      console.log("calculate total_area", metric.subject);
       if (subjectIsFragment(metric.subject)) {
         // very simple to do, just ask postgis to calculate the area
         await helpers.withPgClient(async (client) => {
@@ -44,12 +45,13 @@ export default async function calculateSpatialMetric(
           );
         });
       } else {
+        console.log("get clipping layers");
         // ask overlay worker to calculate the area
         const clippingLayers = await getClippingLayersForGeography(
           metric.subject.id,
           helpers,
         );
-        helpers.logger.info("Calling overlay worker", {
+        console.log("Calling overlay worker", {
           clippingLayers,
         });
         callOverlayWorker({
