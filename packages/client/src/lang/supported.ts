@@ -201,6 +201,30 @@ const languages: LangDetails[] = [
       code: "bi",
       localName: "Bislama",
     },
+    {
+      name: "Urdu",
+      code: "ur",
+      localName: "اردو",
+      rtl: true,
+    },
+    {
+      name: "Punjabi",
+      code: "pa",
+      localName: "ਪੰਜਾਬੀ",
+      rtl: true,
+    },
+    {
+      name: "Pashto",
+      code: "ps",
+      localName: "پښتو",
+      rtl: true,
+    },
+    {
+      name: "Sindhi",
+      code: "sd",
+      localName: "سنڌي",
+      rtl: true,
+    },
   ].sort((a, b) => a.name.localeCompare(b.name)),
 ];
 

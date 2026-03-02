@@ -1,0 +1,17 @@
+{
+  "Cache Details": "کیشے کی تفصیلات",
+  "Cache Status": "کیشے کی حیثیت",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "مزید ڈیٹا کیش کرتا ہے اور بہتر کارکردگی کے لیے اثاثوں کو پہلے سے لوڈ کرتا ہے۔ آف لائن استعمال کی حمایت کرتا ہے۔",
+  "Data Caching": "ڈیٹا کیشنگ",
+  "Default": "طے شدہ",
+  "Improved Performance": "بہتر کارکردگی",
+  "Maximum": "زیادہ سے زیادہ",
+  "Minimum": "کم از کم",
+  "No service worker found!": "کوئی سروس ورکر نہیں ملا!",
+  "Only what's necessary to run SeaSketch": "صرف وہی جو SeaSketch چلانے کے لیے ضروری ہے۔",
+  "Query Cache": "کیشے سے استفسار کریں۔",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "بہتر اسٹارٹ اپ کارکردگی اور خراب انٹرنیٹ کنیکشن پر استعمال کرنے کے لیے حال ہی میں استعمال شدہ ایپ کا کچھ ڈیٹا محفوظ کرتا ہے۔",
+  "Service Worker": "سروس ورکر",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "اگر آپ ایک سہولت کار یا منصوبہ ساز ہیں جو SeaSketch کو باقاعدگی سے استعمال کرتے ہیں تو اس ترتیب کو استعمال کریں۔ آف لائن استعمال کی حمایت کرتا ہے۔",
+  "Using  of your browser's storage quota": "اپنے براؤزر کے اسٹوریج کوٹہ کا استعمال"
+}

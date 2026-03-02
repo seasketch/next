@@ -1,0 +1,11 @@
+{
+  "Create a Project": "ਇੱਕ ਪ੍ਰੋਜੈਕਟ ਬਣਾਓ",
+  "Create your own<1></1><2> SeaSketch Project</2>": "ਆਪਣਾ ਖੁਦ ਦਾ <1></1><2> ਸੀਸਕੇਚ ਪ੍ਰੋਜੈਕਟ</2> ਬਣਾਓ",
+  "Create your project": "ਆਪਣਾ ਪ੍ਰੋਜੈਕਟ ਬਣਾਓ",
+  "Developer API": "ਡਿਵੈਲਪਰ API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "ਤੁਹਾਡੇ ਯੋਜਨਾਬੰਦੀ ਯਤਨਾਂ ਦਾ ਸਮਰਥਨ ਕਰਨ ਲਈ ਸੀਸਕੇਚ ਦੀ ਵਰਤੋਂ ਕਿਵੇਂ ਕੀਤੀ ਜਾ ਸਕਦੀ ਹੈ, ਇਸ ਬਾਰੇ ਚਰਚਾ ਦਾ ਪ੍ਰਬੰਧ ਕਰਨ ਲਈ ਕਿਰਪਾ ਕਰਕੇ ਸਾਡੇ ਨਾਲ <2>support@seasketch.org</2> 'ਤੇ ਸੰਪਰਕ ਕਰੋ।",
+  "Project name": "ਪ੍ਰੋਜੈਕਟ ਦਾ ਨਾਮ",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "ਸੀਸਕੇਚ ਪ੍ਰੋਜੈਕਟਾਂ ਨੂੰ ਸਾਡੇ ਓਪਨ-ਸੋਰਸ <2>ਜੀਓਪ੍ਰੋਸੈਸਿੰਗ ਫਰੇਮਵਰਕ</2> ਦੀ ਵਰਤੋਂ ਕਰਕੇ ਅਨੁਕੂਲਿਤ ਕੀਤਾ ਜਾ ਸਕਦਾ ਹੈ। ਪ੍ਰੋਜੈਕਟ ਟਾਈਪਸਕ੍ਰਿਪਟ, ਰੀਐਕਟ, ਅਤੇ AWS ਲੈਂਬਡਾ ਦੀ ਵਰਤੋਂ ਕਰਕੇ ਸੰਭਾਵੀ ਜ਼ੋਨਾਂ ਦੇ ਪ੍ਰਭਾਵ ਦੀ ਕਲਪਨਾ ਕਰਨ ਵਾਲੀਆਂ ਰਿਪੋਰਟਾਂ ਨੂੰ ਪਰਿਭਾਸ਼ਿਤ ਕਰ ਸਕਦੇ ਹਨ।",
+  "Trusted by": "ਭਰੋਸੇਯੋਗ",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "ਆਪਣੇ ਖੇਤਰ ਵਿੱਚ ਸਮੁੰਦਰੀ ਸਥਾਨਿਕ ਯੋਜਨਾਬੰਦੀ ਲਈ ਸਾਡੇ ਸਹਿਯੋਗੀ ਭੂ-ਡਿਜ਼ਾਈਨ ਅਤੇ ਸਰਵੇਖਣ ਸਾਧਨਾਂ ਦੀ ਵਰਤੋਂ ਕਰੋ। ਤੁਹਾਡੇ ਪ੍ਰੋਜੈਕਟ ਵਿੱਚ ਨਕਸ਼ਿਆਂ ਦੀ ਕਲਪਨਾ ਕਰਨ, ਚਰਚਾ ਫੋਰਮ ਬਣਾਉਣ, ਯੋਜਨਾਵਾਂ ਨੂੰ ਸਕੈਚ ਕਰਨ ਅਤੇ ਸਰਵੇਖਣਾਂ ਦੀ ਵਰਤੋਂ ਕਰਕੇ ਡੇਟਾ ਇਕੱਠਾ ਕਰਨ ਲਈ ਸਾਧਨ ਸ਼ਾਮਲ ਹੋਣਗੇ - <i>ਮੁਫ਼ਤ ਵਿੱਚ!</i> ਵਿਸ਼ਲੇਸ਼ਣਾਤਮਕ ਰਿਪੋਰਟਾਂ ਸਾਡੇ <5>ਜੀਓਪ੍ਰੋਸੈਸਿੰਗ ਫਰੇਮਵਰਕ</5> ਦੀ ਵਰਤੋਂ ਕਰਕੇ ਵਿਕਸਤ ਅਤੇ ਅਨੁਕੂਲਿਤ ਕੀਤੀਆਂ ਜਾ ਸਕਦੀਆਂ ਹਨ।"
+}

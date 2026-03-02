@@ -1,0 +1,11 @@
+{
+  "Create a Project": "ایک پروجیکٹ بنائیں",
+  "Create your own<1></1><2> SeaSketch Project</2>": "اپنا <1></1><2> SeaSketch پروجیکٹ</2> بنائیں",
+  "Create your project": "اپنا پروجیکٹ بنائیں",
+  "Developer API": "ڈویلپر API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "براہ کرم ہم سے <2>support@seasketch.org</2> پر رابطہ کریں تاکہ آپ اس بات کے بارے میں بات چیت کا اہتمام کریں کہ آپ کی منصوبہ بندی کی کوششوں میں مدد کے لیے SeaSketch کو کس طرح استعمال کیا جا سکتا ہے۔",
+  "Project name": "پروجیکٹ کا نام",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "SeaSketch منصوبوں کو ہمارے اوپن سورس <2>جیو پروسیسنگ فریم ورک</2> کا استعمال کرتے ہوئے اپنی مرضی کے مطابق بنایا جا سکتا ہے۔ پروجیکٹس ایسی رپورٹس کی وضاحت کر سکتے ہیں جو ٹائپ اسکرپٹ، ری ایکٹ، اور AWS Lambda کا استعمال کرتے ہوئے ممکنہ زونز کے اثرات کا تصور کرتی ہیں۔",
+  "Trusted by": "کی طرف سے قابل اعتماد",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "اپنے علاقے میں سمندری مقامی منصوبہ بندی کے لیے ہمارے مشترکہ جیوڈیزائن اور سروے ٹولز کا استعمال کریں۔ آپ کے پروجیکٹ میں نقشوں کو دیکھنے، بحث کے فورمز بنانے، خاکے بنانے، اور سروے کا استعمال کرتے ہوئے ڈیٹا اکٹھا کرنے کے ٹولز شامل ہوں گے - <i>مفت!"
+}

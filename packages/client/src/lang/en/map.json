@@ -1,5 +1,6 @@
 {
   "Map bookmark shown": "Map bookmark shown",
+  "Your browser reported that it is unable to initialize WebGL. Please visit the following link to troubleshoot the issue. <2>https://webglreport.com/</2>": "Your browser reported that it is unable to initialize WebGL. Please visit the following link to troubleshoot the issue. <2>https://webglreport.com/</2>",
   "missingLayerCount": "",
   "missingLayerCount_plural": "missingLayerCount_plural",
   "undo": "undo",

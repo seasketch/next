@@ -1,0 +1,17 @@
+{
+  "Cache Details": "ਕੈਸ਼ ਵੇਰਵੇ",
+  "Cache Status": "ਕੈਸ਼ ਸਥਿਤੀ",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "ਬਿਹਤਰ ਪ੍ਰਦਰਸ਼ਨ ਲਈ ਹੋਰ ਡੇਟਾ ਕੈਸ਼ ਕਰਦਾ ਹੈ ਅਤੇ ਸੰਪਤੀਆਂ ਨੂੰ ਪਹਿਲਾਂ ਤੋਂ ਲੋਡ ਕਰਦਾ ਹੈ। ਔਫਲਾਈਨ ਵਰਤੋਂ ਦਾ ਸਮਰਥਨ ਕਰਦਾ ਹੈ।",
+  "Data Caching": "ਡਾਟਾ ਕੈਚਿੰਗ",
+  "Default": "ਡਿਫਾਲਟ",
+  "Improved Performance": "ਬਿਹਤਰ ਪ੍ਰਦਰਸ਼ਨ",
+  "Maximum": "ਵੱਧ ਤੋਂ ਵੱਧ",
+  "Minimum": "ਘੱਟੋ-ਘੱਟ",
+  "No service worker found!": "ਕੋਈ ਸੇਵਾ ਕਰਮਚਾਰੀ ਨਹੀਂ ਮਿਲਿਆ!",
+  "Only what's necessary to run SeaSketch": "ਸਿਰਫ਼ ਉਹੀ ਜੋ ਸੀਸਕੇਚ ਚਲਾਉਣ ਲਈ ਜ਼ਰੂਰੀ ਹੈ",
+  "Query Cache": "ਪੁੱਛਗਿੱਛ ਕੈਸ਼",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "ਬਿਹਤਰ ਸ਼ੁਰੂਆਤੀ ਪ੍ਰਦਰਸ਼ਨ ਅਤੇ ਮਾੜੇ ਇੰਟਰਨੈਟ ਕਨੈਕਸ਼ਨਾਂ 'ਤੇ ਵਰਤੋਂ ਲਈ ਹਾਲ ਹੀ ਵਿੱਚ ਵਰਤੇ ਗਏ ਕੁਝ ਐਪ ਡੇਟਾ ਨੂੰ ਬਚਾਉਂਦਾ ਹੈ।",
+  "Service Worker": "ਸੇਵਾ ਕਰਮਚਾਰੀ",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "ਇਸ ਸੈਟਿੰਗ ਦੀ ਵਰਤੋਂ ਕਰੋ ਜੇਕਰ ਤੁਸੀਂ ਇੱਕ ਸੁਵਿਧਾਕਰਤਾ ਜਾਂ ਯੋਜਨਾਕਾਰ ਹੋ ਜੋ ਸੀਸਕੇਚ ਦੀ ਨਿਯਮਿਤ ਤੌਰ 'ਤੇ ਵਰਤੋਂ ਕਰਦਾ ਹੈ। ਔਫਲਾਈਨ ਵਰਤੋਂ ਦਾ ਸਮਰਥਨ ਕਰਦਾ ਹੈ।",
+  "Using  of your browser's storage quota": "ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਦੇ ਸਟੋਰੇਜ ਕੋਟੇ ਦੀ ਵਰਤੋਂ"
+}

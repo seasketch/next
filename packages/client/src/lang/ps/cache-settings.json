@@ -1,0 +1,17 @@
+{
+  "Cache Details": "د کیش توضیحات",
+  "Cache Status": "د زیرمې حالت",
+  "Caches more data and preloads assets for better performance. Supports offline use.": "د ښه فعالیت لپاره ډیر معلومات خوندي کوي او شتمنۍ مخکې له مخکې باروي. د آفلاین کارونې ملاتړ کوي.",
+  "Data Caching": "د معلوماتو کیش کول",
+  "Default": "ډیفالټ",
+  "Improved Performance": "ښه شوی فعالیت",
+  "Maximum": "اعظمي",
+  "Minimum": "لږ تر لږه",
+  "No service worker found!": "د خدماتو کارکوونکی ونه موندل شو!",
+  "Only what's necessary to run SeaSketch": "یوازې هغه څه چې د سی سکیچ چلولو لپاره اړین دي",
+  "Query Cache": "د پوښتنې زیرمه",
+  "Saves some recently used app data for improved startup performance and use over poor internet connections": "د پیل فعالیت ښه کولو او په ضعیف انټرنیټ اتصالاتو کې د کارولو لپاره د وروستیو کارول شویو اپلیکیشنونو ځینې معلومات خوندي کوي.",
+  "Service Worker": "د خدماتو کارکوونکی",
+  "Use this setting if you are a facilitator or planner who uses SeaSketch regularly. Supports offline use.": "که تاسو یو تسهیل کوونکی یا پلان جوړونکی یاست چې په منظم ډول سی سکیچ کاروي نو دا ترتیب وکاروئ. د آفلاین کارولو ملاتړ کوي.",
+  "Using  of your browser's storage quota": "ستاسو د براوزر د ذخیره کولو کوټې کارول"
+}

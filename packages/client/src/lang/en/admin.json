@@ -125,8 +125,6 @@
   "Enable New Report Builder": "Enable New Report Builder",
   "Enable Offline Support": "Enable Offline Support",
   "Enable data download": "Enable data download",
-  "Enable iNaturalist Layers": "Enable iNaturalist Layers",
-  "Enable iNaturalist layers for this project.": "Enable iNaturalist layers for this project.",
   "Enabling public access will also enable public listing. Are you sure?": "Enabling public access will also enable public listing. Are you sure?",
   "English": "English",
   "Enter a <2>url template</2> the tells SeaSketch how to load a raster tile data source.": "Enter a <2>url template</2> the tells SeaSketch how to load a raster tile data source.",

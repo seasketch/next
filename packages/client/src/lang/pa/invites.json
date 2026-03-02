@@ -1,0 +1,17 @@
+{
+  "Accept as": "{{ਈਮੇਲ}} ਵਜੋਂ ਸਵੀਕਾਰ ਕਰੋ",
+  "An account with this email address already exists.": "ਇਸ ਈਮੇਲ ਪਤੇ ਵਾਲਾ ਇੱਕ ਖਾਤਾ ਪਹਿਲਾਂ ਹੀ ਮੌਜੂਦ ਹੈ।",
+  "Confirming invite": "ਸੱਦੇ ਦੀ ਪੁਸ਼ਟੀ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ",
+  "Contact {{supportEmail}} to request a new invitation.": "ਨਵੇਂ ਸੱਦੇ ਦੀ ਬੇਨਤੀ ਕਰਨ ਲਈ {{supportEmail}} ਨਾਲ ਸੰਪਰਕ ਕਰੋ।",
+  "Create an Account": "ਅਕਾਉਂਟ ਬਣਾਓ",
+  "Logout and sign in as ": "ਲੌਗਆਉਟ ਕਰੋ ਅਤੇ ਇਸ ਵਜੋਂ ਸਾਈਨ ਇਨ ਕਰੋ ",
+  "Sign In": "ਸਾਈਨ - ਇਨ",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "ਇਹ ਸੱਦਾ ਪਹਿਲਾਂ ਹੀ ਸਵੀਕਾਰ ਕਰ ਲਿਆ ਗਿਆ ਹੈ। <1> ਪ੍ਰੋਜੈਕਟ 'ਤੇ ਅੱਗੇ ਵਧੋ </1> ਜਾਂ ਜੇਕਰ ਤੁਹਾਨੂੰ ਲੱਗਦਾ ਹੈ ਕਿ ਇਹ ਇੱਕ ਗਲਤੀ ਹੈ ਤਾਂ <5>ਸਹਾਇਤਾ ਨਾਲ ਸੰਪਰਕ ਕਰੋ</5>।",
+  "This invitation was originally sent to <2></2>.": "ਇਹ ਸੱਦਾ ਅਸਲ ਵਿੱਚ <2></2> ਨੂੰ ਭੇਜਿਆ ਗਿਆ ਸੀ।",
+  "Use another account": "ਕੋਈ ਹੋਰ ਖਾਤਾ ਵਰਤੋ",
+  "Verifying invitation code": "ਸੱਦਾ ਕੋਡ ਦੀ ਪੁਸ਼ਟੀ ਕੀਤੀ ਜਾ ਰਹੀ ਹੈ",
+  "Welcome, !": "ਜੀ ਆਇਆਂ ਨੂੰ, !",
+  "Welcome!": "ਜੀ ਆਇਆਂ ਨੂੰ!",
+  "You have been invited to participate in a SeaSketch project.": "ਤੁਹਾਨੂੰ ਸੀਸਕੇਚ ਪ੍ਰੋਜੈਕਟ ਵਿੱਚ ਹਿੱਸਾ ਲੈਣ ਲਈ ਸੱਦਾ ਦਿੱਤਾ ਗਿਆ ਹੈ।",
+  "Your invitation to this project has expired.": "ਇਸ ਪ੍ਰੋਜੈਕਟ ਲਈ ਤੁਹਾਡੇ ਸੱਦੇ ਦੀ ਮਿਆਦ ਖਤਮ ਹੋ ਗਈ ਹੈ।"
+}

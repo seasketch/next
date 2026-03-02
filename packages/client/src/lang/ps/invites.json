@@ -1,0 +1,17 @@
+{
+  "Accept as": "د {{برېښنالیک}} په توګه ومنئ",
+  "An account with this email address already exists.": "د دې برېښنالیک پتې سره یو حساب دمخه شتون لري.",
+  "Confirming invite": "د بلنې تایید",
+  "Contact {{supportEmail}} to request a new invitation.": "د نوي بلنې غوښتنه کولو لپاره {{supportEmail}} سره اړیکه ونیسئ.",
+  "Create an Account": "حساب جوړ کړئ",
+  "Logout and sign in as ": "ننوتل او په دې توګه ننوتل ",
+  "Sign In": "سيستم ته داخل کيدل",
+  "This invitation has already been accepted.<1> Proceed to the project </1> or <5>contact support</5>if you believe this to be an error.": "دا بلنه لا دمخه منل شوې ده. <1> پروژې ته لاړ شئ </1> یا <5> د ملاتړ سره اړیکه ونیسئ </5> که تاسو باور لرئ چې دا یوه تېروتنه ده.",
+  "This invitation was originally sent to <2></2>.": "دا بلنه په اصل کې <2></2> ته لیږل شوې وه.",
+  "Use another account": "بل حساب وکاروئ",
+  "Verifying invitation code": "د بلنې کوډ تایید کول",
+  "Welcome, !": "ښه راغلاست، !",
+  "Welcome!": "ښه راغلاست!",
+  "You have been invited to participate in a SeaSketch project.": "تاسو ته د سی سکیچ پروژې کې د ګډون بلنه درکول شوې ده.",
+  "Your invitation to this project has expired.": "دې پروژې ته ستاسو بلنه پای ته رسیدلې ده."
+}

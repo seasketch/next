@@ -8488,10 +8488,6 @@ select{
   gap:1px
 }
 
-.gap-0\.5{
-  gap:0.125rem
-}
-
 .gap-x-4{
   column-gap:1rem
 }
@@ -12846,6 +12842,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-blue-500:hover{
+  --tw-bg-opacity:1;
+  background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))
+}
+
 .hover\:bg-blue-500\/15:hover{
   background-color:rgb(59 130 246 / 0.15)
 }
@@ -13011,11 +13012,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:bg-yellow-200:hover{
   --tw-bg-opacity:1;
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
-}
-
-.hover\:bg-blue-500:hover{
-  --tw-bg-opacity:1;
-  background-color:rgb(59 130 246 / var(--tw-bg-opacity, 1))
 }
 
 .hover\:bg-opacity-10:hover{

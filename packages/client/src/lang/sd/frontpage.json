@@ -1,0 +1,11 @@
+{
+  "Create a Project": "هڪ منصوبو ٺاهيو",
+  "Create your own<1></1><2> SeaSketch Project</2>": "پنهنجو ٺاهيو <1></1><2> سي اسڪيچ پروجيڪٽ</2>",
+  "Create your project": "پنھنجو منصوبو ٺاھيو",
+  "Developer API": "ڊولپر API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "توهان جي منصوبابندي جي ڪوششن جي مدد لاءِ سي اسڪيچ کي ڪيئن استعمال ڪري سگهجي ٿو، ان بابت بحث جو بندوبست ڪرڻ لاءِ مهرباني ڪري اسان سان <2>support@seasketch.org</2> تي رابطو ڪريو.",
+  "Project name": "منصوبي جو نالو",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "سي اسڪيچ پروجيڪٽس کي اسان جي اوپن سورس <2>جيو پروسيسنگ فريم ورڪ</2> استعمال ڪندي ترتيب ڏئي سگهجي ٿو. پروجيڪٽ رپورٽون بيان ڪري سگهن ٿا جيڪي ٽائيپ اسڪرپٽ، ري ايڪٽ، ۽ AWS ليمبڊا استعمال ڪندي امڪاني زونن جي اثر کي تصور ڪن ٿيون.",
+  "Trusted by": "اعتبار ڪيل",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "پنهنجي علائقي ۾ سامونڊي فضائي منصوبابندي لاءِ اسان جي تعاون واري جيو ڊيزائن ۽ سروي جا اوزار استعمال ڪريو. توهان جي منصوبي ۾ نقشن کي ڏسڻ، بحث مباحثا ٺاهڻ، منصوبا ٺاهڻ، ۽ سروي استعمال ڪندي ڊيٽا گڏ ڪرڻ جا اوزار شامل هوندا - <i> مفت ۾!</i> تجزياتي رپورٽون اسان جي <5> جيو پروسيسنگ فريم ورڪ</5> استعمال ڪندي تيار ۽ ترتيب ڏئي سگهجن ٿيون."
+}

@@ -1,0 +1,11 @@
+{
+  "Create a Project": "پروژه جوړه کړئ",
+  "Create your own<1></1><2> SeaSketch Project</2>": "خپل <1></1><2> د سی سکیچ پروژه</2> جوړه کړئ",
+  "Create your project": "خپله پروژه جوړه کړئ",
+  "Developer API": "د پراختیا کونکي API",
+  "Please contact us at <2>support@seasketch.org</2> to arrange a discussion about how SeaSketch can be used to support your planning efforts.": "مهرباني وکړئ موږ سره د <2>support@seasketch.org</2> په پته اړیکه ونیسئ ترڅو د دې په اړه بحث تنظیم کړئ چې څنګه سی سکیچ ستاسو د پلان جوړونې هڅو ملاتړ لپاره کارول کیدی شي.",
+  "Project name": "د پروژې نوم",
+  "SeaSketch projects can be customized using our open-source <2>Geoprocessing Framework</2>. Projects can define reports that visualize the impact of prospective zones using Typescript, React, and AWS Lambda.": "د سی سکیچ پروژې زموږ د خلاصې سرچینې <2>جیو پروسس کولو چوکاټ</2> په کارولو سره تنظیم کیدی شي. پروژې کولی شي راپورونه تعریف کړي چې د ټایپ سکریپټ، ری ایکټ، او AWS لامبډا په کارولو سره د احتمالي زونونو اغیز تصور کوي.",
+  "Trusted by": "د باور وړ",
+  "Use our collaborative geodesign and survey tools for marine spatial planning in your region. Your project will include tools to visualize maps, create discussion forums, sketch plans, and collect data using surveys - <i>for free!</i> Analytical reports may be developed and customized using our <5>geoprocessing framework</5>.": "ستاسو په سیمه کې د سمندري فضايي پلان جوړونې لپاره زموږ د ګډ جیوډیزاین او سروې وسیلو څخه کار واخلئ. ستاسو پروژه به د نقشو لیدلو، د بحث فورمونو جوړولو، د پلانونو سکیچ کولو، او د سروې ګانو په کارولو سره د معلوماتو راټولولو لپاره وسایل ولري - <i> وړیا!</i> تحلیلي راپورونه ممکن زموږ د <5> جیو پروسس کولو چوکاټ</5> په کارولو سره رامینځته او تنظیم شي."
+}
