@@ -2,6 +2,11 @@ import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Pencil2Icon, CaretDownIcon, TrashIcon } from "@radix-ui/react-icons";
 import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
+import {
+  ReportSourceLayerDropdown,
+  ReportSourceLayerValue,
+  ReportSourceGeometryType,
+} from "./ReportSourceLayerDropdown";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import {
   ClassTableRow,
@@ -14,7 +19,6 @@ import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import getSlug from "../../getSlug";
-import { useOverlaysForReportLayerTogglesQuery } from "../../generated/graphql";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { TooltipInfoIcon } from "../../editor/TooltipMenu";
 
@@ -89,6 +93,8 @@ type ClassRowSettingsPopoverProps = {
     updater: (dependencies: MetricDependency[]) => MetricDependency[]
   ) => void;
   t: (key: string, opts?: Record<string, any>) => string;
+  /** When set, only layers matching these geometry/types can be added. Omit to allow all. */
+  allowedGeometryTypes?: ReportSourceGeometryType[];
 };
 
 export const ClassRowSettingsPopover = ({
@@ -99,6 +105,7 @@ export const ClassRowSettingsPopover = ({
   onUpdateDependencyParameters,
   onUpdateAllDependencies,
   t,
+  allowedGeometryTypes,
 }: ClassRowSettingsPopoverProps) => {
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const { allSources: overlaySources } = useOverlaySources();
@@ -106,10 +113,6 @@ export const ClassRowSettingsPopover = ({
   const [titlesByStableId, setTitlesByStableId] = useState<
     Record<string, string>
   >({});
-  const { data } = useOverlaysForReportLayerTogglesQuery({
-    variables: { slug: getSlug() },
-  });
-
   // Determine metric type from existing dependencies
   const metricType = useMemo(() => {
     return dependencies?.[0]?.type || "count";
@@ -131,70 +134,7 @@ export const ClassRowSettingsPopover = ({
     );
   }, [dependencies]);
 
-  // Create filtered options for LayerPickerDropdown, excluding already-used layers
-  const filteredLayerOptions = useMemo(() => {
-    const map = new Map<
-      string,
-      {
-        stableId?: string;
-        title: string;
-        hasReportingOutput: boolean;
-      }
-    >();
-
-    const items =
-      data?.projectBySlug?.draftTableOfContentsItems?.filter(
-        (i): i is NonNullable<typeof i> => !!i?.stableId
-      ) || [];
-    for (const item of items) {
-      if (!item.stableId) continue;
-      map.set(item.stableId, {
-        stableId: typeof item.stableId === "string" ? item.stableId : undefined,
-        title: item.title || t("Unknown layer"),
-        hasReportingOutput: !!item.reportingOutput,
-      });
-    }
-
-    if (map.size === 0) {
-      for (const s of overlaySources) {
-        const sid = s.tableOfContentsItem?.stableId;
-        if (!sid || map.has(sid)) continue;
-        map.set(sid, {
-          stableId: typeof sid === "string" ? sid : undefined,
-          title: s.tableOfContentsItem?.title || t("Unknown layer"),
-          hasReportingOutput: false,
-        });
-      }
-    }
-
-    const options: Array<{
-      stableId: string;
-      title: string;
-      reporting?: boolean;
-    }> = [];
-    for (const opt of overlayOptions) {
-      const info = map.get(opt.value);
-      if (!info) continue;
-      // Filter out already-used layers
-      if (info.stableId && currentSourceIds.has(info.stableId)) {
-        continue;
-      }
-      options.push({
-        stableId: opt.value,
-        title: info.title,
-        reporting: info.hasReportingOutput,
-      });
-    }
-    return options;
-  }, [
-    data?.projectBySlug?.draftTableOfContentsItems,
-    overlaySources,
-    overlayOptions,
-    currentSourceIds,
-    t,
-  ]);
-
-  const handleAddSource = (layerValue: LayerPickerValue | undefined) => {
+  const handleAddSource = (layerValue: ReportSourceLayerValue | undefined) => {
     if (!layerValue?.stableId) return;
     // Don't add if already in use
     if (currentSourceIds.has(layerValue.stableId)) return;
@@ -408,6 +348,12 @@ export const ClassRowSettingsPopover = ({
         align="center"
         sideOffset={6}
         className="bg-white rounded-lg shadow-lg border border-gray-200 p-0 w-[680px] max-h-128 flex flex-col"
+        onPointerDownOutside={(e) => {
+          const target = e.target as HTMLElement;
+          if (target?.closest?.("[data-report-source-layer-dropdown]")) {
+            e.preventDefault();
+          }
+        }}
       >
         <div className="text-xs px-3 py-3 shadow-sm z-10 grid grid-cols-3 gap-2 items-center font-semibold uppercase tracking-wide text-gray-500 bg-white border-b rounded-t-lg flex-none">
           <div className="pl-1 flex items-center gap-1">
@@ -610,13 +556,10 @@ export const ClassRowSettingsPopover = ({
               `Rows can be added to this table by using the "Group by" option, adding multiple sources, or some combination.`
             )}
           </p>
-          <LayerPickerDropdown
-            value={undefined}
+          <ReportSourceLayerDropdown
             onChange={handleAddSource}
-            required={false}
-            onlyReportingLayers={false}
-            hideSearch={false}
-            optionsOverride={filteredLayerOptions}
+            excludeStableIds={currentSourceIds}
+            allowedGeometryTypes={allowedGeometryTypes}
           >
             <button
               type="button"
@@ -627,7 +570,7 @@ export const ClassRowSettingsPopover = ({
               </span>
               <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
             </button>
-          </LayerPickerDropdown>
+          </ReportSourceLayerDropdown>
         </div>
       </Popover.Content>
     </Popover.Root>

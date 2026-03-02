@@ -23154,7 +23154,7 @@ export type ProjectReportingLayersQuery = (
         { __typename?: 'DataLayer' }
         & { dataSource?: Maybe<(
           { __typename?: 'DataSource' }
-          & Pick<DataSource, 'id' | 'type'>
+          & Pick<DataSource, 'id' | 'type' | 'geostats'>
         )> }
       )> }
     )>> }
@@ -30239,6 +30239,7 @@ export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
         dataSource {
           id
           type
+          geostats
         }
       }
     }

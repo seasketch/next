@@ -390,6 +390,7 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           onUpdateDependencyParameters={onUpdateDependencyParameters}
           onUpdateAllDependencies={onUpdateAllDependencies}
           t={t}
+          allowedGeometryTypes={["Polygon", "MultiPolygon"]}
         />
         <TooltipMorePopover>
           <TooltipBooleanConfigurationOption

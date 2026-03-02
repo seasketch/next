@@ -638,20 +638,24 @@ export type BuildReportCommandGroupsArgs = {
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
 };
 
-function ProcessForReportingFooter({
+export function ProcessForReportingFooter({
   onProcess,
+  description,
 }: {
   onProcess: () => Promise<boolean>;
+  description?: string;
 }) {
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const defaultDescription =
+    "To see more options for content related to overlay analysis, prepare it for reporting.";
 
   return (
     <div className="border-t border-gray-100 p-2">
       {/* eslint-disable-next-line i18next/no-literal-string */}
       <p className="text-xs text-gray-500 mb-2 px-1">
-        To see more options for content related to overlay analysis, prepare it
-        for reporting.
+        {description ?? defaultDescription}
       </p>
       {error && <p className="text-xs text-red-600 mb-2 px-1">{error}</p>}
       <button
@@ -683,7 +687,7 @@ function ProcessForReportingFooter({
 /**
  * Fetches and displays version, author, and creation date for an overlay layer.
  */
-function OverlayLayerInfo({
+export function OverlayLayerInfo({
   tableOfContentsItemId,
 }: {
   tableOfContentsItemId: number;
@@ -742,7 +746,7 @@ function OverlayLayerInfo({
  * processed. Renders nothing when processing is complete. Automatically
  * stops polling on completion or error.
  */
-function OverlayProcessingStatus({
+export function OverlayProcessingStatus({
   tableOfContentsItemId,
 }: {
   tableOfContentsItemId: number;

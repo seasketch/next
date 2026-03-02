@@ -7749,6 +7749,10 @@ select{
   min-width:32rem
 }
 
+.min-w-\[16rem\]{
+  min-width:16rem
+}
+
 .\!max-w-128{
   max-width:32rem !important
 }
@@ -13849,9 +13853,24 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(243 244 246 / var(--tw-bg-opacity, 1))
 }
 
+.data-\[highlighted\]\:bg-blue-50[data-highlighted]{
+  --tw-bg-opacity:1;
+  background-color:rgb(239 246 255 / var(--tw-bg-opacity, 1))
+}
+
 .data-\[state\=active\]\:text-blue-600[data-state="active"]{
   --tw-text-opacity:1;
   color:rgb(37 99 235 / var(--tw-text-opacity, 1))
+}
+
+.data-\[highlighted\]\:text-blue-900[data-highlighted]{
+  --tw-text-opacity:1;
+  color:rgb(30 58 138 / var(--tw-text-opacity, 1))
+}
+
+.data-\[highlighted\]\:text-gray-800[data-highlighted]{
+  --tw-text-opacity:1;
+  color:rgb(31 41 55 / var(--tw-text-opacity, 1))
 }
 
 .data-\[state\=active\]\:opacity-60[data-state="active"]{

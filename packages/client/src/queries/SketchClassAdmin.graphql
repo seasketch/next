@@ -794,6 +794,7 @@ query ProjectReportingLayers($slug: String!) {
         dataSource {
           id
           type
+          geostats
         }
       }
     }
