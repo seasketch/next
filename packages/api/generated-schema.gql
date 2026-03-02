@@ -15472,6 +15472,7 @@ type SketchClass implements Node {
   sketchCount: BigInt
   templateDescription: String
   translatedProps: JSON!
+  useGeographyClipping: Boolean
 
   """Reads and enables pagination through a set of `SketchClass`."""
   validChildren(

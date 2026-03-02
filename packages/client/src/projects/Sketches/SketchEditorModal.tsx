@@ -202,7 +202,7 @@ function SketchEditorModal({
 
   const extraRequestParams = useMemo(() => {
     if (
-      sketchClass.isGeographyClippingEnabled &&
+      sketchClass.useGeographyClipping &&
       Array.isArray(sketchClass.clippingGeographies)
     ) {
       const geographies = [];
@@ -238,10 +238,10 @@ function SketchEditorModal({
       };
     }
     return undefined;
-  }, [sketchClass.isGeographyClippingEnabled, sketchClass.clippingGeographies]);
+  }, [sketchClass.useGeographyClipping, sketchClass.clippingGeographies]);
 
   const warmFragmentCacheConfig = useMemo(() => {
-    if (sketchClass.isGeographyClippingEnabled) {
+    if (sketchClass.useGeographyClipping) {
       const endpoint =
         process.env.REACT_APP_GRAPHQL_ENDPOINT?.replace(
           /\/graphql$/,
@@ -250,7 +250,7 @@ function SketchEditorModal({
       return { endpoint, sketchClassId: sketchClass.id };
     }
     return undefined;
-  }, [sketchClass.isGeographyClippingEnabled, sketchClass.id]);
+  }, [sketchClass.useGeographyClipping, sketchClass.id]);
 
   const draw = useMapboxGLDraw(
     uiState,
@@ -260,7 +260,7 @@ function SketchEditorModal({
       setFeature(feature);
     },
     undefined,
-    sketchClass.isGeographyClippingEnabled
+    sketchClass.useGeographyClipping
       ? "https://sketch-preprocessing-worker.underbluewaters.workers.dev/clip"
       : sketchClass.preprocessingEndpoint || undefined,
     setPreprocessedGeometry,
@@ -268,7 +268,7 @@ function SketchEditorModal({
     (feature) => {
       if (
         feature.geometry.coordinates[0].length > 3 &&
-        sketchClass.isGeographyClippingEnabled
+        sketchClass.useGeographyClipping
       ) {
         fetch(
           "https://sketch-preprocessing-worker.underbluewaters.workers.dev/warm-cache",

@@ -21,6 +21,7 @@ fragment ProjectMetadata on Project {
     translatedProps
     reportId
     isGeographyClippingEnabled
+    useGeographyClipping
   }
   supportedLanguages
   translatedProps

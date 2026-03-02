@@ -14300,6 +14300,7 @@ export type SketchClass = Node & {
   sketchCount?: Maybe<Scalars['BigInt']>;
   templateDescription?: Maybe<Scalars['String']>;
   translatedProps: Scalars['JSON'];
+  useGeographyClipping?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   validChildren?: Maybe<Array<SketchClass>>;
 };
@@ -21936,7 +21937,7 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled'>
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -22215,7 +22216,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'reportId'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'reportId'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -22978,7 +22979,7 @@ export type ReportContextQuery = (
     { __typename?: 'Sketch' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled'>
+      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled' | 'useGeographyClipping'>
       & ReportContextSketchClassDetailsFragment
     )> }
     & ReportContextSketchDetailsFragment
@@ -23105,7 +23106,8 @@ export type LegacyReportContextQuery = (
     { __typename?: 'Sketch' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'isGeographyClippingEnabled'>
+      & Pick<SketchClass, 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl'>
+      & { useGeographyClippingEnabled: SketchClass['isGeographyClippingEnabled'] }
       & ReportContextSketchClassDetailsFragment
     )> }
     & ReportContextSketchDetailsFragment
@@ -26251,6 +26253,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     translatedProps
     reportId
     isGeographyClippingEnabled
+    useGeographyClipping
   }
   supportedLanguages
   translatedProps
@@ -26531,6 +26534,7 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   canDigitize
   translatedProps
   isGeographyClippingEnabled
+  useGeographyClipping
   clippingGeographies {
     ...GeographyDetails
   }
@@ -30102,6 +30106,7 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
       geoprocessingClientUrl
       geoprocessingProjectUrl
       isGeographyClippingEnabled
+      useGeographyClipping
     }
   }
   report(id: $reportId) {
@@ -30197,7 +30202,7 @@ export const LegacyReportContextDocument = /*#__PURE__*/ gql`
       geoprocessingClientName
       geoprocessingClientUrl
       geoprocessingProjectUrl
-      isGeographyClippingEnabled
+      useGeographyClippingEnabled: isGeographyClippingEnabled
     }
   }
 }

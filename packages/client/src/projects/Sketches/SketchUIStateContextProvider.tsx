@@ -1787,7 +1787,7 @@ export default function SketchUIStateContextProvider({
                     (sc) => sc.id === sketchClassId
                   );
                 if (
-                  sketchClass?.isGeographyClippingEnabled &&
+                  sketchClass?.useGeographyClipping &&
                   sketchClass?.reportId
                 ) {
                   return (

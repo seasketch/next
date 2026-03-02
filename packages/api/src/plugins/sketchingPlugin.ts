@@ -170,10 +170,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  context.sketchIds
-                )})`
+                  context.sketchIds,
+                )})`,
               );
-            }
+            },
           );
         },
         folders: async (results, args, context, resolveInfo) => {
@@ -182,10 +182,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  context.folderIds
-                )})`
+                  context.folderIds,
+                )})`,
               );
-            }
+            },
           );
         },
         updatedCollections: async (results, args, context, resolveInfo) => {
@@ -204,7 +204,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             select distinct(
               get_parent_collection_id(type, id)
             ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
-            [JSON.stringify(tocItems)]
+            [JSON.stringify(tocItems)],
           );
           const updatedCollectionIds = [
             ...(previousCollectionIds || []),
@@ -216,10 +216,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  updatedCollectionIds
-                )})`
+                  updatedCollectionIds,
+                )})`,
               );
-            }
+            },
           );
         },
       },
@@ -230,10 +230,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  context.sketchIds
-                )})`
+                  context.sketchIds,
+                )})`,
               );
-            }
+            },
           );
         },
         folders: async (results, args, context, resolveInfo) => {
@@ -242,10 +242,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  context.folderIds
-                )})`
+                  context.folderIds,
+                )})`,
               );
-            }
+            },
           );
         },
         updatedCollection: async (results, args, context, resolveInfo) => {
@@ -258,10 +258,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               (tableAlias, queryBuilder) => {
                 queryBuilder.where(
                   sql.fragment`${tableAlias}.id = ${sql.value(
-                    context.parentCollectionId
-                  )}`
+                    context.parentCollectionId,
+                  )}`,
                 );
-              }
+              },
             )) as any;
           return row || null;
         },
@@ -273,10 +273,10 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(${sql.value(
-                  context.previousCollectionIds
-                )})`
+                  context.previousCollectionIds,
+                )})`,
               );
-            }
+            },
           );
         },
       },
@@ -294,17 +294,17 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           sketchClass,
           args,
           context: Context<{ pgClient: Pool }>,
-          resolveInfo
+          resolveInfo,
         ) => {
           return resolveInfo.graphile.selectGraphQLResultFromTable(
             sql.fragment`project_geography`,
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
                 sql.fragment`${tableAlias}.id = any(select geography_id from sketch_class_geographies where sketch_class_id = ${sql.value(
-                  sketchClass.id
-                )})`
+                  sketchClass.id,
+                )})`,
               );
-            }
+            },
           );
         },
       },
@@ -323,7 +323,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 canonicalEmail,
                 isSuperuser,
               },
-              "1 day"
+              "1 day",
             );
           } else {
             return null;
@@ -335,7 +335,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           _query,
           { name, sketchClassId, userGeom, collectionId, folderId, properties },
           context: Context<{ pgClient: Pool }>,
-          resolveInfo
+          resolveInfo,
         ) => {
           if (!context.user.id) {
             throw new Error("Permission denied");
@@ -346,12 +346,12 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select geometry_type, is_geography_clipping_enabled, preprocessing_endpoint, id, project_id from public.sketch_classes where id = $1`,
-            [sketchClassId]
+            `select geometry_type, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping, preprocessing_endpoint, id, project_id from public.sketch_classes where id = $1`,
+            [sketchClassId],
           );
           const sketchClass = rows[0] as {
             geometry_type: string;
-            is_geography_clipping_enabled: boolean;
+            use_geography_clipping: boolean;
             preprocessing_endpoint: string;
             id: number;
             project_id: number;
@@ -372,7 +372,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 collectionId,
                 folderId,
                 properties,
-              ]
+              ],
             );
 
             const [row] =
@@ -380,12 +380,12 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`,
                   );
-                }
+                },
               )) as any;
             return row;
-          } else if (sketchClass.is_geography_clipping_enabled) {
+          } else if (sketchClass.use_geography_clipping) {
             const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,
@@ -403,9 +403,9 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`,
                   );
-                }
+                },
               );
             return row;
           } else {
@@ -415,7 +415,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               // submit for geoprocessing
               const response = await preprocess(
                 sketchClass.preprocessing_endpoint,
-                userGeom
+                userGeom,
               );
               geometry = response;
             } else {
@@ -434,7 +434,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 JSON.stringify(geometry.geometry),
                 folderId,
                 properties,
-              ]
+              ],
             );
 
             const [row] =
@@ -442,9 +442,9 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`,
                   );
-                }
+                },
               );
             return row;
           }
@@ -453,7 +453,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           _query,
           { id, name, userGeom, properties },
           context,
-          resolveInfo
+          resolveInfo,
         ) => {
           if (!context.user.id) {
             throw new Error("Permission denied");
@@ -475,7 +475,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               rows: [sketch],
             } = await pgClient.query(
               `update sketches set name = $1, properties = $2 where id = $3 RETURNING id`,
-              [name, properties, id]
+              [name, properties, id],
             );
 
             const [row] =
@@ -483,17 +483,17 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`,
                   );
-                }
+                },
               );
             return row;
           }
 
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select * from public.sketch_classes where id = ((select sketch_class_id from sketches where id = $1))`,
-            [id]
+            `select *, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping from public.sketch_classes where id = ((select sketch_class_id from sketches where id = $1))`,
+            [id],
           );
           if (rows.length === 0) {
             throw new Error("Sketch class or sketch not found.");
@@ -502,7 +502,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           // Check to see if preprocessing is required. If so, do it
           let geometry: Feature;
 
-          if (sketchClass.is_geography_clipping_enabled) {
+          if (sketchClass.use_geography_clipping) {
             const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,
@@ -518,16 +518,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 sql.fragment`sketches`,
                 (tableAlias, queryBuilder) => {
                   queryBuilder.where(
-                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`
+                    sql.fragment`${tableAlias}.id = ${sql.value(sketchId)}`,
                   );
-                }
+                },
               );
             return row;
           } else if (sketchClass.preprocessing_endpoint) {
             // submit for geoprocessing
             const response = await preprocess(
               sketchClass.preprocessing_endpoint,
-              userGeom
+              userGeom,
             );
             geometry = response;
           } else {
@@ -543,16 +543,16 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
               JSON.stringify(geometry.geometry),
               properties,
               id,
-            ]
+            ],
           );
 
           const [row] = await resolveInfo.graphile.selectGraphQLResultFromTable(
             sql.fragment`sketches`,
             (tableAlias, queryBuilder) => {
               queryBuilder.where(
-                sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`
+                sql.fragment`${tableAlias}.id = ${sql.value(sketch.id)}`,
               );
-            }
+            },
           );
           return row;
         },
@@ -560,7 +560,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           _query,
           { id, type, forForum },
           context,
-          resolveInfo
+          resolveInfo,
         ) => {
           const { pgClient } = context;
           const result = await copySketchTocItem(id, type, forForum, pgClient);
@@ -579,14 +579,14 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           _query,
           { folderId, collectionId, tocItems },
           context,
-          resolveInfo
+          resolveInfo,
         ) => {
           const { pgClient } = context;
           const result = await updateSketchTocItemParent(
             folderId,
             collectionId,
             tocItems,
-            pgClient
+            pgClient,
           );
 
           context.sketchIds = result.sketchIds;
