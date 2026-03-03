@@ -262,7 +262,7 @@ export default function SketchClassReportsAdmin({
     );
   }
   if (!selectedSketchId) {
-    console.error("No selected sketch id");
+    // console.error("No selected sketch id");
     return null;
   }
 
