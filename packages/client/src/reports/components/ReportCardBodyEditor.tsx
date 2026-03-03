@@ -146,17 +146,25 @@ function ReportCardBodyEditorInner({
       refetchQueries: [DraftReportDocument],
     });
 
-  const handleCardSave = useCallback(async () => {
-    await updateReportCard({
-      variables: {
-        id: cardId,
-        body: setCollapsibleBlocksClosed(draftBody),
-      },
-      refetchQueries: [DraftReportDocument, ReportDependenciesDocument],
-      awaitRefetchQueries: true,
-    });
-    setEditing(null);
-  }, [updateReportCard, cardId, draftBody, setEditing]);
+  const saveWithBody = useCallback(
+    async (body: ProsemirrorBodyJSON) => {
+      await updateReportCard({
+        variables: {
+          id: cardId,
+          body: setCollapsibleBlocksClosed(body),
+        },
+        refetchQueries: [DraftReportDocument, ReportDependenciesDocument],
+        awaitRefetchQueries: true,
+      });
+      setEditing(null);
+    },
+    [updateReportCard, cardId, setEditing]
+  );
+
+  const handleCardSave = useCallback(
+    () => saveWithBody(draftBody),
+    [saveWithBody, draftBody]
+  );
 
   const history = useHistory();
   const { t } = useTranslation("sketching");
@@ -409,6 +417,13 @@ function ReportCardBodyEditorInner({
         plugins,
         doc,
       }),
+      handleKeyDown: (editorView, event) => {
+        if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+          saveWithBody(editorView.state.doc.toJSON());
+          return true;
+        }
+        return false;
+      },
       nodeViews: {
         // @ts-ignore
         metric(node, view, getPos, decorations) {
@@ -504,6 +519,7 @@ function ReportCardBodyEditorInner({
     setSelection,
     preselectTitle,
     cardId,
+    saveWithBody,
   ]);
 
   // Update editor state when language changes (body will be different for different languages)
@@ -611,7 +627,7 @@ function ReportCardBodyEditorInner({
                 <Button
                   small
                   label={t("Save")}
-                  onClick={handleCardSave}
+                  onClick={() => handleCardSave()}
                   disabled={
                     updateReportCardState.loading ||
                     deleteCardMutationState.loading
