@@ -161,7 +161,7 @@ export default function Legend({
               />
             </Accordion.Trigger>
           </Accordion.Header>
-          <Accordion.Content className="flex-1 max-h-full overflow-y-auto border-t border-black border-opacity-10">
+          <Accordion.Content className="flex-1 max-h-full overflow-y-auto overscroll-contain border-t border-black border-opacity-10">
             <ul
               className="list-none overflow-y-auto pr-1"
               style={{ maxHeight }}
