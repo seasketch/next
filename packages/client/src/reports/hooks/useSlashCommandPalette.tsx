@@ -19,6 +19,7 @@ import {
   CommandPaletteItem,
 } from "../commandPalette/types";
 import Spinner from "../../components/Spinner";
+import { ChevronRightIcon } from "@radix-ui/react-icons";
 import {
   uploadImageWithPlaceholder,
   insertBlockImage,
@@ -40,6 +41,25 @@ type CommandPalettePreviewItem = CommandPaletteItem & {
   }[];
 };
 
+type SubmenuNav = {
+  parentKey: string;
+  flatChildren: CommandPalettePreviewItem[];
+  activeChildIndex: number;
+  hasFooter: boolean;
+} | null;
+
+function flattenChildren(
+  item: CommandPalettePreviewItem
+): CommandPalettePreviewItem[] {
+  const result: CommandPalettePreviewItem[] = [...(item.children || [])];
+  if (item.childGroups) {
+    for (const g of item.childGroups) {
+      result.push(...g.items);
+    }
+  }
+  return result;
+}
+
 /**
  * Renders a single widget child item with a hover-activated preview card
  * showing the screenshot and description. The preview uses Radix Popover
@@ -48,29 +68,49 @@ type CommandPalettePreviewItem = CommandPaletteItem & {
 function ChildItemWithPreview({
   child,
   onApply,
+  isKeyboardActive,
+  onMouseEnter,
 }: {
   child: CommandPalettePreviewItem;
   onApply: () => void;
+  isKeyboardActive?: boolean;
+  onMouseEnter?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+  const showPreview = hovered || !!isKeyboardActive;
   const hasPreview = !!(child.screenshotSrc || child.description);
+  const btnRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isKeyboardActive) {
+      btnRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [isKeyboardActive]);
 
   return (
-    <Popover.Root open={hovered && hasPreview}>
+    <Popover.Root open={showPreview && hasPreview}>
       <Popover.Anchor asChild>
         <button
-          className="w-full px-3 py-1.5 text-left text-sm font-medium text-gray-900 hover:bg-gray-50"
+          ref={btnRef}
+          className={`w-full px-3 py-1.5 text-left text-sm font-medium transition-colors ${
+            isKeyboardActive
+              ? "bg-blue-50 text-blue-900"
+              : "text-gray-900 hover:bg-gray-50"
+          }`}
           onClick={(e) => {
             e.preventDefault();
             onApply();
           }}
-          onMouseEnter={() => setHovered(true)}
+          onMouseEnter={() => {
+            setHovered(true);
+            onMouseEnter?.();
+          }}
           onMouseLeave={() => setHovered(false)}
         >
           {child.label}
         </button>
       </Popover.Anchor>
-      {hasPreview && hovered && (
+      {hasPreview && showPreview && (
         <Popover.Portal>
           <Popover.Content
             side="right"
@@ -453,6 +493,13 @@ function buildBaseGroups(
   return groups;
 }
 
+/**
+ * When true, standard (non-submenu) items show their screenshot preview
+ * popover on keyboard highlight, not just on mouse hover.
+ * Set to false to revert to hover-only previews.
+ */
+const SHOW_PREVIEW_ON_KEYBOARD_FOCUS = true;
+
 export function useSlashCommandPalette({
   viewRef,
   state,
@@ -478,6 +525,8 @@ export function useSlashCommandPalette({
   const listContainerRef = useRef<HTMLDivElement | null>(null);
   const previousBodyOverflowRef = useRef<string | null>(null);
   const paletteContainerRef = useRef<HTMLDivElement | null>(null);
+  const footerRef = useRef<HTMLDivElement | null>(null);
+  const [submenuNav, setSubmenuNav] = useState<SubmenuNav>(null);
 
   const filtered = useMemo<{
     groups: CommandPaletteGroup[];
@@ -517,7 +566,29 @@ export function useSlashCommandPalette({
 
   useEffect(() => {
     setActiveIndex(0);
+    setSubmenuNav(null);
   }, [trigger?.query, filtered.flatItems.length]);
+
+  useEffect(() => {
+    if (!submenuNav) return;
+    const entry = filtered.flatItems.find(
+      (e) => `${e.groupId}:${e.item.id}` === submenuNav.parentKey
+    );
+    if (!entry) return;
+    const item = entry.item as CommandPalettePreviewItem;
+    const newChildren = flattenChildren(item);
+    const hasFooter = !!item.popoverFooter;
+    const oldIds = submenuNav.flatChildren.map((c) => c.id).join(",");
+    const newIds = newChildren.map((c) => c.id).join(",");
+    if (oldIds !== newIds || submenuNav.hasFooter !== hasFooter) {
+      setSubmenuNav({
+        parentKey: submenuNav.parentKey,
+        flatChildren: newChildren,
+        activeChildIndex: 0,
+        hasFooter,
+      });
+    }
+  }, [filtered.flatItems, submenuNav]);
 
   const updateTriggerFromSlash = useCallback(
     (currentState: EditorState, view: EditorView) => {
@@ -671,6 +742,30 @@ export function useSlashCommandPalette({
     [trigger, viewRef]
   );
 
+  const enterSubmenu = useCallback(
+    (selected: CommandPalettePreviewItem, key: string) => {
+      const children = flattenChildren(selected);
+      const hasFooter = !!selected.popoverFooter;
+      setPreviewKey(key);
+      setActivatedKey(key);
+      if (children.length || hasFooter) {
+        setSubmenuNav({
+          parentKey: key,
+          flatChildren: children,
+          activeChildIndex: 0,
+          hasFooter,
+        });
+      }
+    },
+    []
+  );
+
+  const exitSubmenu = useCallback(() => {
+    setSubmenuNav(null);
+    setActivatedKey(null);
+    setPreviewKey(null);
+  }, []);
+
   useEffect(() => {
     const view = viewRef.current;
     if (!view) {
@@ -681,6 +776,63 @@ export function useSlashCommandPalette({
         return;
       }
 
+      // --- Submenu mode ---
+      if (submenuNav) {
+        if (event.key === "ArrowDown") {
+          event.preventDefault();
+          setSubmenuNav((prev) => {
+            if (!prev) return prev;
+            const max =
+              prev.flatChildren.length - 1 + (prev.hasFooter ? 1 : 0);
+            return {
+              ...prev,
+              activeChildIndex: Math.min(max, prev.activeChildIndex + 1),
+            };
+          });
+          return;
+        }
+        if (event.key === "ArrowUp") {
+          event.preventDefault();
+          setSubmenuNav((prev) =>
+            prev
+              ? {
+                  ...prev,
+                  activeChildIndex: Math.max(0, prev.activeChildIndex - 1),
+                }
+              : prev
+          );
+          return;
+        }
+        if (event.key === "Enter") {
+          event.preventDefault();
+          const isFooterActive =
+            submenuNav.hasFooter &&
+            submenuNav.activeChildIndex >= submenuNav.flatChildren.length;
+          if (isFooterActive) {
+            const btn = footerRef.current?.querySelector("button");
+            btn?.click();
+          } else {
+            const child =
+              submenuNav.flatChildren[submenuNav.activeChildIndex];
+            if (child) {
+              applyCommand(child);
+              setPreviewKey(null);
+              setSubmenuNav(null);
+            }
+          }
+          return;
+        }
+        if (event.key === "ArrowLeft" || event.key === "Escape") {
+          event.preventDefault();
+          exitSubmenu();
+          return;
+        }
+        // While in submenu, block other keys from reaching the editor
+        // (except modifier-only presses)
+        return;
+      }
+
+      // --- Main list mode ---
       if (event.key === "Escape") {
         setTrigger(null);
         return;
@@ -691,6 +843,8 @@ export function useSlashCommandPalette({
           return;
         }
         event.preventDefault();
+        setPreviewKey(null);
+        setActivatedKey(null);
         setActiveIndex((index) =>
           Math.min(filtered.flatItems.length - 1, index + 1)
         );
@@ -702,7 +856,29 @@ export function useSlashCommandPalette({
           return;
         }
         event.preventDefault();
+        setPreviewKey(null);
+        setActivatedKey(null);
         setActiveIndex((index) => Math.max(0, index - 1));
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        if (!filtered.flatItems.length) {
+          return;
+        }
+        const selected = filtered.flatItems[activeIndex]?.item as
+          | CommandPalettePreviewItem
+          | undefined;
+        if (!selected) return;
+        const key = `${filtered.flatItems[activeIndex]?.groupId}:${selected.id}`;
+        const hasChildren =
+          !!selected.children?.length ||
+          !!selected.childGroups?.length ||
+          !!selected.customPopoverContent;
+        if (hasChildren) {
+          event.preventDefault();
+          enterSubmenu(selected, key);
+        }
         return;
       }
 
@@ -715,9 +891,12 @@ export function useSlashCommandPalette({
           | CommandPalettePreviewItem
           | undefined;
         const key = `${filtered.flatItems[activeIndex]?.groupId}:${selected?.id}`;
-        if (selected?.children?.length || selected?.customPopoverContent) {
-          setPreviewKey(key);
-          setActivatedKey(key);
+        const hasChildren =
+          !!selected?.children?.length ||
+          !!selected?.childGroups?.length ||
+          !!selected?.customPopoverContent;
+        if (hasChildren) {
+          enterSubmenu(selected!, key);
         } else {
           applyCommand(selected);
         }
@@ -734,8 +913,11 @@ export function useSlashCommandPalette({
   }, [
     activeIndex,
     applyCommand,
+    enterSubmenu,
+    exitSubmenu,
     filtered.flatItems,
     openManualPalette,
+    submenuNav,
     trigger,
     viewRef,
   ]);
@@ -752,6 +934,7 @@ export function useSlashCommandPalette({
     if (!trigger) {
       setPreviewKey(null);
       setActivatedKey(null);
+      setSubmenuNav(null);
     }
   }, [trigger]);
 
@@ -788,6 +971,15 @@ export function useSlashCommandPalette({
       el.scrollIntoView({ block: "nearest" });
     }
   }, [activeIndex, filtered.flatItems, trigger]);
+
+  useEffect(() => {
+    if (
+      submenuNav?.hasFooter &&
+      submenuNav.activeChildIndex >= submenuNav.flatChildren.length
+    ) {
+      footerRef.current?.scrollIntoView({ block: "nearest" });
+    }
+  }, [submenuNav]);
 
   useEffect(() => {
     if (!trigger) {
@@ -956,12 +1148,21 @@ export function useSlashCommandPalette({
                       const closePopover = () => {
                         setPreviewKey(null);
                         setActivatedKey(null);
+                        setSubmenuNav(null);
                       };
                       const focusPalette = () => viewRef.current?.focus();
+                      const showKeyboardPreview =
+                        SHOW_PREVIEW_ON_KEYBOARD_FOCUS &&
+                        isActive &&
+                        !hasChildren &&
+                        !submenuNav &&
+                        !!(previewItem.screenshotSrc || previewItem.description);
                       return (
                         <Popover.Root
                           key={previewItem.id}
-                          open={previewKey === refKey}
+                          open={
+                            previewKey === refKey || showKeyboardPreview
+                          }
                           onOpenChange={(open) => {
                             if (!open) setPreviewKey(null);
                           }}
@@ -987,8 +1188,7 @@ export function useSlashCommandPalette({
                                 e.preventDefault();
                                 if (isDisabled) return;
                                 if (hasChildren) {
-                                  setPreviewKey(refKey);
-                                  setActivatedKey(refKey);
+                                  enterSubmenu(previewItem, refKey);
                                 } else {
                                   applyCommand(previewItem);
                                 }
@@ -996,6 +1196,7 @@ export function useSlashCommandPalette({
                               onMouseEnter={() => {
                                 setActiveIndex(itemIndex);
                                 setPreviewKey(refKey);
+                                setSubmenuNav(null);
                                 if (
                                   previewItem.activateOnHover &&
                                   hasChildren
@@ -1013,15 +1214,22 @@ export function useSlashCommandPalette({
                               }}
                             >
                               <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-2">
+                                <div className="flex items-center gap-2 min-w-0">
                                   {previewItem.icon ? (
-                                    <span className="text-gray-500">
+                                    <span className="text-gray-500 flex-shrink-0">
                                       {previewItem.icon}
                                     </span>
                                   ) : null}
-                                  <span className="text-sm">{item.label}</span>
+                                  <span className="text-sm truncate">
+                                    {item.label}
+                                  </span>
                                 </div>
-                                {!previewItem.activateOnHover && inlineStatus}
+                                <div className="flex items-center gap-1 flex-shrink-0">
+                                  {!previewItem.activateOnHover && inlineStatus}
+                                  {hasChildren && (
+                                    <ChevronRightIcon className="w-4 h-4 text-gray-400" />
+                                  )}
+                                </div>
                               </div>
                             </button>
                           </Popover.Anchor>
@@ -1084,40 +1292,147 @@ export function useSlashCommandPalette({
                                     </div>
                                     {previewItem.children?.length ? (
                                       <div className="py-1">
-                                        {previewItem.children.map((child) => (
-                                          <ChildItemWithPreview
-                                            key={child.id}
-                                            child={child}
-                                            onApply={() => {
-                                              applyCommand(child);
-                                              setPreviewKey(null);
-                                            }}
-                                          />
-                                        ))}
+                                        {previewItem.children.map(
+                                          (child, ci) => (
+                                            <ChildItemWithPreview
+                                              key={child.id}
+                                              child={child}
+                                              isKeyboardActive={
+                                                submenuNav?.parentKey ===
+                                                  refKey &&
+                                                submenuNav?.flatChildren[
+                                                  submenuNav.activeChildIndex
+                                                ]?.id === child.id
+                                              }
+                                              onMouseEnter={() => {
+                                                if (
+                                                  submenuNav?.parentKey ===
+                                                  refKey
+                                                ) {
+                                                  setSubmenuNav((prev) =>
+                                                    prev
+                                                      ? {
+                                                          ...prev,
+                                                          activeChildIndex: ci,
+                                                        }
+                                                      : prev
+                                                  );
+                                                }
+                                              }}
+                                              onApply={() => {
+                                                applyCommand(child);
+                                                setPreviewKey(null);
+                                                setSubmenuNav(null);
+                                              }}
+                                            />
+                                          )
+                                        )}
                                       </div>
                                     ) : null}
                                     {previewItem.childGroups
-                                      ? previewItem.childGroups.map((grp) => (
-                                          <div key={grp.id}>
-                                            <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-gray-400 tracking-wide uppercase">
-                                              {grp.label}
+                                      ? previewItem.childGroups.map((grp) => {
+                                          const groupStartIndex =
+                                            (previewItem.children?.length ??
+                                              0) +
+                                            (previewItem.childGroups ?? [])
+                                              .slice(
+                                                0,
+                                                previewItem.childGroups!.indexOf(
+                                                  grp
+                                                )
+                                              )
+                                              .reduce(
+                                                (sum, g) =>
+                                                  sum + g.items.length,
+                                                0
+                                              );
+                                          return (
+                                            <div key={grp.id}>
+                                              <div className="px-3 pt-2 pb-1 text-[11px] font-medium text-gray-400 tracking-wide uppercase">
+                                                {grp.label}
+                                              </div>
+                                              <div className="pb-1">
+                                                {grp.items.map((child, ci) => (
+                                                  <ChildItemWithPreview
+                                                    key={child.id}
+                                                    child={child}
+                                                    isKeyboardActive={
+                                                      submenuNav?.parentKey ===
+                                                        refKey &&
+                                                      submenuNav?.flatChildren[
+                                                        submenuNav
+                                                          .activeChildIndex
+                                                      ]?.id === child.id
+                                                    }
+                                                    onMouseEnter={() => {
+                                                      if (
+                                                        submenuNav?.parentKey ===
+                                                        refKey
+                                                      ) {
+                                                        setSubmenuNav((prev) =>
+                                                          prev
+                                                            ? {
+                                                                ...prev,
+                                                                activeChildIndex:
+                                                                  groupStartIndex +
+                                                                  ci,
+                                                              }
+                                                            : prev
+                                                        );
+                                                      }
+                                                    }}
+                                                    onApply={() => {
+                                                      applyCommand(child);
+                                                      setPreviewKey(null);
+                                                      setSubmenuNav(null);
+                                                    }}
+                                                  />
+                                                ))}
+                                              </div>
                                             </div>
-                                            <div className="pb-1">
-                                              {grp.items.map((child) => (
-                                                <ChildItemWithPreview
-                                                  key={child.id}
-                                                  child={child}
-                                                  onApply={() => {
-                                                    applyCommand(child);
-                                                    setPreviewKey(null);
-                                                  }}
-                                                />
-                                              ))}
-                                            </div>
-                                          </div>
-                                        ))
+                                          );
+                                        })
                                       : null}
-                                    {previewItem.popoverFooter}
+                                    {previewItem.popoverFooter && (() => {
+                                      const isFooterActive =
+                                        submenuNav?.parentKey === refKey &&
+                                        submenuNav?.hasFooter &&
+                                        submenuNav?.activeChildIndex >=
+                                          submenuNav?.flatChildren.length;
+                                      return (
+                                        <div
+                                          ref={
+                                            submenuNav?.parentKey === refKey
+                                              ? footerRef
+                                              : undefined
+                                          }
+                                          className={
+                                            isFooterActive
+                                              ? "ring-2 ring-blue-500 ring-inset rounded-b-md"
+                                              : ""
+                                          }
+                                          onMouseEnter={() => {
+                                            if (
+                                              submenuNav?.parentKey === refKey &&
+                                              submenuNav?.hasFooter
+                                            ) {
+                                              setSubmenuNav((prev) =>
+                                                prev
+                                                  ? {
+                                                      ...prev,
+                                                      activeChildIndex:
+                                                        prev.flatChildren
+                                                          .length,
+                                                    }
+                                                  : prev
+                                              );
+                                            }
+                                          }}
+                                        >
+                                          {previewItem.popoverFooter}
+                                        </div>
+                                      );
+                                    })()}
                                   </div>
                                 );
                               }

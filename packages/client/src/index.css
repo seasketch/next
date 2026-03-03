@@ -13824,6 +13824,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   opacity:0.8
 }
 
+.data-\[disabled\]\:cursor-not-allowed[data-disabled]{
+  cursor:not-allowed
+}
+
 .data-\[state\=active\]\:border-b-2[data-state="active"]{
   border-bottom-width:2px
 }
@@ -13874,6 +13878,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 }
 
 .data-\[state\=active\]\:opacity-60[data-state="active"]{
+  opacity:0.6
+}
+
+.data-\[disabled\]\:opacity-60[data-disabled]{
   opacity:0.6
 }
 
