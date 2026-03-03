@@ -551,6 +551,11 @@ export default function TreeItemComponent({
               } ${isHidden ? "opacity-50" : ""}`}
               onClick={updateSelectionOnClick}
               onContextMenu={contextMenuHandler}
+              onMouseEnter={(e) => {
+                const el = e.currentTarget;
+                el.title =
+                  el.scrollWidth > el.clientWidth ? el.textContent || "" : "";
+              }}
             >
               {highlights?.[node.id]?.title ? (
                 <SearchResultHighlights data={highlights[node.id].title!} />
