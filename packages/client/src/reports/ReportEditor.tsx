@@ -251,9 +251,17 @@ export default function ReportEditor({
               />
             </div>
             <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
+              <DropdownMenu.Trigger disabled={editing != null} asChild>
                 <button
-                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
+                  className={`p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors ${
+                    editing != null ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={editing != null}
+                  title={
+                    editing != null
+                      ? t("Cannot add cards while editing")
+                      : undefined
+                  }
                   aria-label={t("Report actions")}
                 >
                   <PlusIcon className="w-5 h-5" />
