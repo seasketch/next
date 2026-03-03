@@ -36229,6 +36229,7 @@ GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.ske
 
 REVOKE ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO seasketch_user;
+GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO anon;
 
 
 --
