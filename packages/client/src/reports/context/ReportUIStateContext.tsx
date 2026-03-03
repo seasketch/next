@@ -9,6 +9,11 @@ export const ReportUIStateContext = createContext<{
   preselectTitle?: boolean;
   showCalcDetails?: number;
   setShowCalcDetails: (cardId: number | undefined) => void;
+  /** Called when a card's ProseMirror editor is ready; use the focus fn for proper keyboard focus */
+  onEditorReadyForFocus?: (
+    cardId: number,
+    focus: () => void
+  ) => void;
 }>({
   setSelectedTabId: () => {},
   editing: null,

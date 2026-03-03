@@ -104,8 +104,15 @@ function ReportCardBodyEditorInner({
   preselectTitle = false,
   footerContainerRef,
 }: ReportCardBodyEditorProps) {
-  const { editing, setEditing, setShowCalcDetails, showCalcDetails } =
-    useContext(ReportUIStateContext);
+  const {
+    editing,
+    setEditing,
+    setShowCalcDetails,
+    showCalcDetails,
+    onEditorReadyForFocus,
+  } = useContext(ReportUIStateContext);
+  const onEditorReadyForFocusRef = useRef(onEditorReadyForFocus);
+  onEditorReadyForFocusRef.current = onEditorReadyForFocus;
   const { geographies, sketchClass, report } = useBaseReportContext();
   const subjectReportContext = useSubjectReportContext();
   const sketch = subjectReportContext.data?.sketch;
@@ -482,6 +489,7 @@ function ReportCardBodyEditorInner({
           }
         }
       }
+      onEditorReadyForFocusRef.current?.(cardId, () => view.focus());
     }
     setState(view.state);
     return () => {

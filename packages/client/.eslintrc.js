@@ -45,6 +45,7 @@ module.exports = {
           "useRouteMatch",
           "useLocalForage",
           "useLocalStorage",
+          "querySelector",
         ],
         onlyAttribute: ["label", "title", "description", "footer"],
         ignoreProperty: ["href", "className"],

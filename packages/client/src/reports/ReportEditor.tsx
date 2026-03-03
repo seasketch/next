@@ -61,7 +61,6 @@ export default function ReportEditor({
 
   // Track a newly created card that needs to be scrolled into view and focused
   const [pendingNewCardId, setPendingNewCardId] = useState<number | null>(null);
-  const pendingNewCardIdRef = useRef<number | null>(null);
 
   // Get all card IDs from the current tabs data
   const allCardIds = useMemo(() => {
@@ -72,51 +71,18 @@ export default function ReportEditor({
     );
   }, [baseContext.data?.report?.tabs]);
 
-  // When the pending card appears in the data, scroll to it and focus
+  // Scroll to the card when it appears. Focus is handled by ReportCardBodyEditor
+  // via onEditorReadyForFocus (uses ProseMirror's view.focus() for proper focus).
   useLayoutEffect(() => {
-    if (pendingNewCardId && allCardIds.has(pendingNewCardId)) {
-      const cardId = pendingNewCardId;
-      // Clear the pending state first to avoid re-running
-      setPendingNewCardId(null);
-      pendingNewCardIdRef.current = null;
+    if (!pendingNewCardId || !allCardIds.has(pendingNewCardId)) return;
 
-      // Use requestAnimationFrame to ensure DOM has painted
-      requestAnimationFrame(() => {
-        const cardElement = document.querySelector(
-          // eslint-disable-next-line i18next/no-literal-string
-          `[data-rbd-draggable-id="${cardId}"]`
-        );
-        if (cardElement) {
-          cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else {
-          console.error("No card element found for card", cardId);
-        }
+    const cardId = pendingNewCardId;
+    // eslint-disable-next-line i18next/no-literal-string
+    const cardSelector = `[data-rbd-draggable-id="${cardId}"]`;
 
-        const editor = document.querySelector(
-          // eslint-disable-next-line i18next/no-literal-string
-          `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
-        );
-        if (editor) {
-          (editor as HTMLElement).focus();
-        } else {
-          // Try again using a timeout
-          setTimeout(() => {
-            const editor = document.querySelector(
-              // eslint-disable-next-line i18next/no-literal-string
-              `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
-            );
-            if (editor) {
-              (editor as HTMLElement).focus();
-            } else {
-              console.error(
-                "No editor found for card",
-                cardId,
-                `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
-              );
-            }
-          }, 60);
-        }
-      });
+    const cardElement = document.querySelector(cardSelector);
+    if (cardElement) {
+      cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
     }
   }, [pendingNewCardId, allCardIds]);
 
@@ -146,24 +112,6 @@ export default function ReportEditor({
             },
           ],
         },
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              text: "Use ",
-            },
-            {
-              type: "text",
-              text: "Text Blocks",
-              marks: [{ type: "strong" }],
-            },
-            {
-              type: "text",
-              text: " to add instructions or other details to your report.",
-            },
-          ],
-        },
       ],
     };
 
@@ -183,11 +131,7 @@ export default function ReportEditor({
         console.error("No new card id");
         return;
       }
-      // Set the pending card ID - the useLayoutEffect will handle scrolling
-      // and focusing once the card appears in the data
       setPendingNewCardId(newCardId);
-      pendingNewCardIdRef.current = newCardId;
-      // Put the card into edit mode
       setEditing(newCardId, true);
     } catch (error) {
       // Error is handled by onError
@@ -212,6 +156,16 @@ export default function ReportEditor({
     [calcDetailsModalState]
   );
 
+  const onEditorReadyForFocus = useCallback(
+    (cardId: number, focus: () => void) => {
+      if (cardId === pendingNewCardId) {
+        setPendingNewCardId(null);
+        focus();
+      }
+    },
+    [pendingNewCardId]
+  );
+
   const uiStateContextValue = useMemo(() => {
     return {
       selectedTabId: selectedTabId,
@@ -222,6 +176,7 @@ export default function ReportEditor({
       preselectTitle: preselectTitle,
       showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
       setShowCalcDetails: setShowCalcDetails,
+      onEditorReadyForFocus,
     };
   }, [
     selectedTabId,
@@ -231,6 +186,7 @@ export default function ReportEditor({
     preselectTitle,
     calcDetailsModalState.state.cardId,
     setShowCalcDetails,
+    onEditorReadyForFocus,
   ]);
 
   if (baseContext.loading) {
