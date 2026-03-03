@@ -72,7 +72,11 @@ export default function useCommonLegendProps(
     } else {
       return [];
     }
-  }, [mapContext.legends, mapContext.layerStatesByTocStaticId]);
+  }, [
+    mapContext.legends,
+    mapContext.layerStatesByTocStaticId,
+    sketchClassLayerStates,
+  ]);
 
   return {
     onHiddenItemsChange,

@@ -3108,6 +3108,7 @@ class MapContextManager extends EventEmitter {
       if (state) {
         state.zOrderOverride = zOrder;
         this.pushSketchState();
+        this.debouncedUpdatePreferences();
       }
     } else {
       this.overlayStates.setZOrderOverride(stableId, zOrder);
@@ -3373,7 +3374,7 @@ class MapContextManager extends EventEmitter {
     }
 
     this.pushSketchState();
-
+    this.debouncedUpdatePreferences();
     this.debouncedUpdateStyle();
   }
 
