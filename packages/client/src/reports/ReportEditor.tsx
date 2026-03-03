@@ -196,7 +196,7 @@ export default function ReportEditor({
   return (
     <ReportUIStateContext.Provider value={uiStateContextValue}>
       <div className="flex-1 p-8 max-h-full overflow-hidden">
-        <div className="w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col">
+        <div className="w-128 mx-auto rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col bg-gray-100">
           {/* report header */}
           <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
             <div className="flex-1">

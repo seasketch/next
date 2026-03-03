@@ -156,8 +156,10 @@ function SketchReportWindowInner({
       <SubjectReportContextProvider sketchId={sketchId}>
         <ReportUIStateContext.Provider value={uiStateContextValue}>
           <div
-            className="flex-none flex flex-col bg-white rounded overflow-hidden w-128 shadow-lg pointer-events-auto"
-            style={{ maxHeight: "min(calc(100vh - 70px), 1024px)" }}
+            className="flex-none flex flex-col  rounded overflow-hidden w-128 shadow-lg pointer-events-auto bg-gray-100"
+            style={{
+              maxHeight: "min(calc(100vh - 70px), 1024px)",
+            }}
             onClick={(e) => {
               // Don't intercept clicks on links - let them work normally
               const link = (e.target as HTMLElement)?.closest("a");
@@ -174,7 +176,7 @@ function SketchReportWindowInner({
               }
             }}
           >
-            <div className="p-4 border-b flex items-center">
+            <div className="p-4 border-b flex items-center bg-white">
               <h1 className="flex-1 truncate text-lg">
                 <ReportTitle />
               </h1>
@@ -187,10 +189,7 @@ function SketchReportWindowInner({
               </button>
             </div>
             <ReportTabs />
-            <div
-              className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain"
-              style={{ backgroundColor: "#efefef" }}
-            >
+            <div className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-gray-100">
               <ReportBody />
             </div>
           </div>
