@@ -325,6 +325,7 @@ export default function LayerVersioning({
       )}
       {versions.find((v) => v.source.id === selectedItemId) && (
         <VersionDetails
+          layerName={item.title}
           itemId={item.id}
           version={
             versions.find((v) => v.source.id === selectedItemId)!.version
@@ -453,6 +454,8 @@ function VersionDetails({
   onRollback,
   itemId,
   archivedDataSource,
+
+  layerName,
 }: {
   itemId: number;
   source: FullAdminSourceFragment & { isArchived: boolean };
@@ -464,6 +467,7 @@ function VersionDetails({
   onDelete?: () => void;
   onRollback?: (e: { sourceId: number }) => void;
   archivedDataSource?: Pick<ArchivedDataSource, "sublayer" | "sourceLayer">;
+  layerName: string;
 }) {
   const onError = useGlobalErrorHandler();
   const [deleteArchive, deleteArchiveState] =
@@ -572,6 +576,7 @@ function VersionDetails({
       </h2>
       <div className="border rounded mt-4 overflow-hidden bg-white">
         <LayerInfoList
+          layerName={layerName}
           isLatestVersion={version === layer.version}
           source={source}
           layer={{

@@ -1,7 +1,7 @@
 import bytes from "bytes";
 import {
+  DataSourceTypes,
   DataUploadOutputType,
-  FullAdminOverlayFragment,
   FullAdminSourceFragment,
   useLayerTotalQuotaUsedQuery,
 } from "../../../generated/graphql";
@@ -11,13 +11,15 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { useTranslation } from "react-i18next";
 import "./TooltipContent.css";
 import { humanizeOutputType } from "../QuotaUsageTreemap";
-import { GeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
+import { isRasterInfo } from "@seasketch/geostats-types";
+import slugify from "slugify";
 
 export default function HostedLayerInfo({
   source,
   readonly,
   layerId,
   version,
+  layerName,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -32,6 +34,7 @@ export default function HostedLayerInfo({
   readonly?: boolean;
   layerId: number;
   version?: number;
+  layerName: string;
 }) {
   const { data } = useLayerTotalQuotaUsedQuery({
     variables: {
@@ -68,6 +71,7 @@ export default function HostedLayerInfo({
                 href={original.url}
                 target="_blank"
                 download={original.originalFilename}
+                rel="noreferrer"
               >
                 {original.originalFilename || original.url}
               </a>
@@ -75,6 +79,28 @@ export default function HostedLayerInfo({
           }
         />
       )}
+      {!original &&
+        !Boolean(source.outputs?.length) &&
+        source.url &&
+        source.type === DataSourceTypes.SeasketchVector && (
+          <SettingsDLListItem
+            term={"Legacy GeoJSON Source"}
+            description={
+              <div className="truncate">
+                <a
+                  className="text-primary-500 underline"
+                  href={source.url!}
+                  target="_blank"
+                  download={slugify(layerName) + ".geojson.json"}
+                  rel="noreferrer"
+                >
+                  {slugify(layerName) + ".geojson.json"}
+                </a>
+              </div>
+            }
+          />
+        )}
+
       {metadata && (
         <SettingsDLListItem
           term={"Metadata"}
@@ -90,6 +116,7 @@ export default function HostedLayerInfo({
                   href={metadata.url}
                   target="_blank"
                   download={metadata.filename}
+                  rel="noreferrer"
                 >
                   {metadata.filename || metadata.url}
                 </a>{" "}

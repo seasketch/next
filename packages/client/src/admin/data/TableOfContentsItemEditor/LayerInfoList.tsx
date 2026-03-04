@@ -35,6 +35,7 @@ export default function LayerInfoList({
   layer,
   children,
   isLatestVersion,
+  layerName,
 }: {
   source: Pick<
     FullAdminSourceFragment,
@@ -62,6 +63,7 @@ export default function LayerInfoList({
   readonly?: boolean;
   children?: ReactNode;
   isLatestVersion: boolean;
+  layerName: string;
 }) {
   const { t } = useTranslation("admin:data");
   let profile = source.authorProfile;
@@ -307,6 +309,7 @@ export default function LayerInfoList({
             readonly={readonly}
             source={source}
             version={layer.version || 0}
+            layerName={layerName}
           />
         )}
         {source.type === DataSourceTypes.ArcgisDynamicMapserver && (
