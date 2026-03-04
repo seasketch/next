@@ -2,7 +2,13 @@ import { useTranslation } from "react-i18next";
 import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { CaretDownIcon, LayersIcon } from "@radix-ui/react-icons";
-import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
+import {
+  Metric,
+  combineMetricsForFragments,
+  subjectIsGeography,
+  subjectIsFragment,
+  TotalAreaMetric,
+} from "overlay-engine";
 import { ReportWidget, TableHeadingsEditor } from "./widgets";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
@@ -56,21 +62,35 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     return geographies
       .filter((geography) => !excludeSet.has(geography.id))
       .map((geography) => {
-        const totalArea = metrics.reduce((acc, m) => {
-          if (
-            subjectIsFragment(m.subject) &&
-            m.subject.geographies.includes(geography.id)
-          ) {
-            return acc + m.value;
-          }
-          return acc;
-        }, 0);
-
-        const metric = metrics.find(
-          (m) => subjectIsGeography(m.subject) && m.subject.id === geography.id
+        if (metrics.length === 0) {
+          return {
+            geographyId: geography.id,
+            geographyName: geography.name,
+            areaSqKm: 0,
+            fractionOfTotal: 0,
+            stableId: undefined,
+          };
+        }
+        const areaSqKmMetric = combineMetricsForFragments<TotalAreaMetric>(
+          metrics.filter(
+            (m) =>
+              subjectIsFragment(m.subject) &&
+              m.subject.geographies.includes(geography.id)
+          ) as Pick<Metric, "type" | "value">[]
         );
-        const areaSqKm = metric?.value ?? 0;
-        const fractionOfTotal = totalArea > 0 ? totalArea / areaSqKm : 0;
+
+        const areaSqKm = areaSqKmMetric.value ?? 0;
+
+        const geographyAreaMetric = combineMetricsForFragments<TotalAreaMetric>(
+          metrics.filter(
+            (m) =>
+              subjectIsGeography(m.subject) && m.subject.id === geography.id
+          ) as Pick<Metric, "type" | "value">[]
+        );
+
+        const geographyArea = geographyAreaMetric.value ?? 0;
+        const fractionOfTotal =
+          geographyArea > 0 ? areaSqKm / geographyArea : 0;
 
         const geoKey = String(geography.id);
         const geoOverrides = componentSettings?.geographyStableIds;
@@ -430,8 +450,7 @@ function LayerToggleSettingsPopover({
           {geographies.map((geography) => {
             const geoKey = String(geography.id);
             const hasOverride = geoKey in geographyStableIds;
-            const defaultStableId =
-              geography.stableIds?.[0] ?? undefined;
+            const defaultStableId = geography.stableIds?.[0] ?? undefined;
             const effectiveStableId = hasOverride
               ? geographyStableIds[geoKey] ?? undefined
               : defaultStableId;
@@ -446,9 +465,7 @@ function LayerToggleSettingsPopover({
                 </span>
                 <LayerPickerDropdown
                   value={effectiveStableId}
-                  suggested={
-                    defaultStableId ? [defaultStableId] : undefined
-                  }
+                  suggested={defaultStableId ? [defaultStableId] : undefined}
                   onChange={(layerValue: LayerPickerValue | undefined) => {
                     const next = { ...geographyStableIds };
                     if (!layerValue?.stableId) {

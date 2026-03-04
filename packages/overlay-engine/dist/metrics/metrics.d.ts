@@ -203,7 +203,13 @@ export type MetricDependencyParameters = {
 export declare function hashMetricDependency(dependency: MetricDependency, overlaySourceUrls: {
     [stableId: string]: string;
 }): string;
-export declare function combineMetricsForFragments(metrics: Pick<Metric, "type" | "value">[]): Pick<Metric, "type" | "value">;
+/**
+ * Combines a list of metrics for fragments into a single metric. All metrics
+ * must have the same type (e.g. total_area, count, etc.)
+ * @param metrics - The metrics to combine.
+ * @returns The combined metric.
+ */
+export declare function combineMetricsForFragments<T extends Metric>(metrics: Pick<Metric, "type" | "value">[]): Pick<T, "type" | "value">;
 /**
  * Finds the primary geography id from a list of metrics. The primary
  * geography is the one that is in all fragments.

@@ -342,6 +342,12 @@ function fnv1a(input) {
     }
     return (hash >>> 0).toString(16).padStart(8, "0");
 }
+/**
+ * Combines a list of metrics for fragments into a single metric. All metrics
+ * must have the same type (e.g. total_area, count, etc.)
+ * @param metrics - The metrics to combine.
+ * @returns The combined metric.
+ */
 function combineMetricsForFragments(metrics) {
     if (metrics.length === 0) {
         throw new Error("Cannot combine empty array of metrics");
