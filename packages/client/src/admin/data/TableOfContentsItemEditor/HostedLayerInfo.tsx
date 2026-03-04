@@ -14,6 +14,22 @@ import { humanizeOutputType } from "../QuotaUsageTreemap";
 import { isRasterInfo } from "@seasketch/geostats-types";
 import slugify from "slugify";
 
+async function downloadWithFilename(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(blobUrl);
+  } catch {
+    // CORS or network error: fall back to opening in new tab
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+}
+
 export default function HostedLayerInfo({
   source,
   readonly,
@@ -87,15 +103,18 @@ export default function HostedLayerInfo({
             term={"Legacy GeoJSON Source"}
             description={
               <div className="truncate">
-                <a
-                  className="text-primary-500 underline"
-                  href={source.url!}
-                  target="_blank"
-                  download={slugify(layerName) + ".geojson.json"}
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit"
+                  onClick={() =>
+                    downloadWithFilename(
+                      source.url!,
+                      slugify(layerName) + ".geojson.json"
+                    )
+                  }
                 >
                   {slugify(layerName) + ".geojson.json"}
-                </a>
+                </button>
               </div>
             }
           />
