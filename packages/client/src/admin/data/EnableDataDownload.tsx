@@ -119,11 +119,13 @@ export default function EnableDataDownload({
   } else if (!item.hasOriginalSourceUpload) {
     isDisabled = true;
     canBeToggled = false;
-    <Trans ns={["admin"]}>
-      Data download cannot be enabled because the original is not available.
-      Older data layers may need to be uploaded again to support this
-      capability.
-    </Trans>;
+    description = (
+      <Trans ns={["admin"]}>
+        Data download cannot be enabled because the original is not available.
+        Older data layers may need to be uploaded again to support this
+        capability.
+      </Trans>
+    );
   }
 
   return (
