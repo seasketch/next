@@ -388,6 +388,41 @@ app.use("/verify-email", async function (req, res, next) {
   }
 });
 
+app.get("/fragments/:hash/geojson", async function (req: SSNRequest, res) {
+  if (!req.user?.id) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  const { hash } = req.params;
+  if (!hash) {
+    return res.status(400).json({ error: "Fragment hash is required" });
+  }
+  const client = await loadersPool.connect();
+  try {
+    const { rows } = await client.query(
+      `SELECT ST_AsGeoJSON(geometry)::json as geometry FROM fragments WHERE hash = $1`,
+      [hash],
+    );
+    if (rows.length === 0) {
+      return res.status(404).json({ error: "Fragment not found" });
+    }
+    const geojson = {
+      type: "Feature",
+      properties: { hash },
+      geometry: rows[0].geometry,
+    };
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=fragment-${hash.substring(0, 8)}.geojson.json`,
+    );
+    res.send(JSON.stringify(geojson));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
+});
+
 app.use(
   "/export-survey/:id/spatial/:element_id/tiles/:z/:x/:y.pbf",
   authorizationMiddleware,

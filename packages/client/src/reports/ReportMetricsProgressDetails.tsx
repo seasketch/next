@@ -10,11 +10,13 @@ import {
 import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { DownloadIcon } from "@radix-ui/react-icons";
 import { ReportCardConfiguration } from "./cards/cards";
 import { DraftReportContext } from "./DraftReportContext";
 import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import { useAuth0 } from "@auth0/auth0-react";
 
 export default function ReportMetricsProgressDetails({
   config,
@@ -24,6 +26,7 @@ export default function ReportMetricsProgressDetails({
   isAdmin?: boolean;
 }) {
   const { t } = useTranslation("sketching");
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
   const context = useCardDependenciesContext();
   const draftReportContext = useContext(DraftReportContext);
   const baseReportContext = useBaseReportContext();
@@ -215,10 +218,10 @@ export default function ReportMetricsProgressDetails({
                   metricType={metric.type}
                   parameters={metric.parameters}
                   title={
-                    <span className="truncate">
+                    <span className="inline-flex items-center gap-1 min-w-0">
                       <span
                         title={(metric.subject as { hash: string }).hash}
-                        className=" font-mono"
+                        className="font-mono truncate"
                       >
                         {t("Polygon ")}
                         <span className="text-slate-500">
@@ -228,6 +231,51 @@ export default function ReportMetricsProgressDetails({
                           )}
                         </span>
                       </span>
+                      {isAuthenticated && (
+                        <Tooltip.Root delayDuration={200}>
+                          <Tooltip.Trigger asChild>
+                            <span
+                              role="button"
+                              className="flex-shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-pointer"
+                              aria-label={t("Download GeoJSON")}
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                const hash = (
+                                  metric.subject as { hash: string }
+                                ).hash;
+                                try {
+                                  const token =
+                                    await getAccessTokenSilently();
+                                  const url =
+                                    // eslint-disable-next-line i18next/no-literal-string
+                                    process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+                                      "/graphql",
+                                      `/fragments/${hash}/geojson?token=${token}`
+                                    );
+                                  window.open(url, "_blank");
+                                } catch (e) {
+                                  console.error(
+                                    "Failed to get access token",
+                                    e
+                                  );
+                                }
+                              }}
+                            >
+                              <DownloadIcon className="w-3.5 h-3.5" />
+                            </span>
+                          </Tooltip.Trigger>
+                          <Tooltip.Portal>
+                            <Tooltip.Content
+                              className="bg-gray-900 text-white text-xs rounded px-2 py-1 z-50"
+                              sideOffset={4}
+                              side="top"
+                            >
+                              {t("Download GeoJSON")}
+                              <Tooltip.Arrow className="fill-gray-900" />
+                            </Tooltip.Content>
+                          </Tooltip.Portal>
+                        </Tooltip.Root>
+                      )}
                     </span>
                   }
                   state={metric.state}
