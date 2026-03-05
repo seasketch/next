@@ -248,7 +248,7 @@ export default function ReportEditor({
           {/* report tabs */}
           <ReportTabs />
           {/* report cards */}
-          <div className="relative max-h-full overflow-y-auto overscroll-contain">
+          <div className="relative max-h-full overflow-y-auto overscroll-none">
             {(baseContext.data!.report?.tabs || []).map((tab) => {
               const selected =
                 selectedTabId ?? baseContext.data!.report?.tabs?.[0]?.id;
