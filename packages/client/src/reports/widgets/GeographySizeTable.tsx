@@ -62,7 +62,12 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     return geographies
       .filter((geography) => !excludeSet.has(geography.id))
       .map((geography) => {
-        if (metrics.length === 0) {
+        const sketchMetrics = metrics.filter(
+          (m) =>
+            subjectIsFragment(m.subject) &&
+            m.subject.geographies.includes(geography.id)
+        ) as Pick<Metric, "type" | "value">[];
+        if (sketchMetrics.length === 0) {
           return {
             geographyId: geography.id,
             geographyName: geography.name,
@@ -71,13 +76,9 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
             stableId: undefined,
           };
         }
-        const areaSqKmMetric = combineMetricsForFragments<TotalAreaMetric>(
-          metrics.filter(
-            (m) =>
-              subjectIsFragment(m.subject) &&
-              m.subject.geographies.includes(geography.id)
-          ) as Pick<Metric, "type" | "value">[]
-        );
+
+        const areaSqKmMetric =
+          combineMetricsForFragments<TotalAreaMetric>(sketchMetrics);
 
         const areaSqKm = areaSqKmMetric.value ?? 0;
 
