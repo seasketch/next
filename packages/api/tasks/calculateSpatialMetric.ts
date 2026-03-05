@@ -10,6 +10,7 @@ import {
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
 import colors from "yoctocolors-cjs";
+import area from "@turf/area";
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -36,11 +37,26 @@ export default async function calculateSpatialMetric(
     const metric = await getSpatialMetric(payload.metricId, helpers);
     if (metric.type === "total_area") {
       if (subjectIsFragment(metric.subject)) {
-        // very simple to do, just ask postgis to calculate the area
         await helpers.withPgClient(async (client) => {
+          const startTime = Date.now();
+          const geojsonResult = await client.query(
+            `select ST_AsGeoJSON(geometry)::json as geojson from fragments where hash = $1`,
+            [(metric.subject as MetricSubjectFragment).hash],
+          );
+          const geojson = geojsonResult.rows[0]?.geojson;
+          if (!geojson) {
+            throw new Error(
+              `Fragment not found: ${(metric.subject as MetricSubjectFragment).hash}`,
+            );
+          }
+          const sqKm =
+            area({ type: "Feature", geometry: geojson, properties: {} }) /
+            1_000_000;
+          const endTime = Date.now();
+          const durationMs = endTime - startTime;
           return client.query(
-            `update spatial_metrics set value = to_json(ST_AREA((select geometry from fragments where hash = $1)::geography) / 1000000)::jsonb, state = 'complete' where id = $2`,
-            [(metric.subject as MetricSubjectFragment).hash, metric.id],
+            `update spatial_metrics set value = to_json($1::float)::jsonb, state = 'complete', duration = make_interval(secs => $2::float / 1000.0) where id = $3`,
+            [sqKm, durationMs, metric.id],
           );
         });
       } else {
