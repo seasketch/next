@@ -987,7 +987,7 @@ export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
             options={[
               { value: "none", label: t("none") },
               { value: "less", label: t("less") },
-              { value: "default", label: t("default") },
+              { value: "default", label: t("auto") },
               { value: "more", label: t("more") },
             ]}
             onChange={(value) =>
