@@ -506,6 +506,53 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
         result["was_repaired"] = True
     return result
 
+
+def detect_overlapping_features(output_file, sample_size=500):
+    """Detect if the output FlatGeobuf contains features from different
+    original polygons that truly overlap, using sampling and point-in-polygon.
+
+    Collects a random sample via reservoir sampling, then queries the FlatGeobuf
+    spatial index with each sample's representative_point(). Returns True on
+    the first confirmed overlap between features from different original polygons
+    (compared via __oidx).
+    """
+    import random
+
+    with fiona.open(output_file, "r") as src:
+        num_features = len(src)
+        if num_features < 2:
+            return False
+
+        sample = []
+        for i, feature in enumerate(src):
+            if feature['geometry']['type'] not in ('Polygon', 'MultiPolygon'):
+                return False
+            if len(sample) < sample_size:
+                sample.append(feature)
+            else:
+                j = random.randint(0, i)
+                if j < sample_size:
+                    sample[j] = feature
+
+    if len(sample) < 2:
+        return False
+
+    with fiona.open(output_file, "r") as src:
+        for feature in sample:
+            geom = shape(feature['geometry'])
+            oidx = feature['properties'].get('__oidx')
+            pt = geom.representative_point()
+
+            for _, candidate in src.items(bbox=(pt.x, pt.y, pt.x, pt.y)):
+                cand_oidx = candidate['properties'].get('__oidx')
+                if cand_oidx == oidx:
+                    continue
+                if shape(candidate['geometry']).contains(pt):
+                    return True
+
+    return False
+
+
 def multipart_to_singlepart(geometry):
     """
     Convert a MultiPolygon or GeometryCollection geometry to a list of Polygon geometries.

@@ -48,6 +48,7 @@ type OverlappingAreasTableSettings = {
   areaLabel?: string;
   percentWithinLabel?: string;
   showPercentColumn?: boolean;
+  hideColorSwatches?: boolean;
 } & ClassTableRowComponentSettings;
 
 const overlapUnitToAreaUnit: Record<OverlapUnit, AreaUnit> = {
@@ -89,6 +90,7 @@ export const OverlappingAreasTable: ReportWidget<
   const sortBy = componentSettings.sortBy || "overlap";
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
   const showPercentColumn = componentSettings.showPercentColumn ?? true;
+  const showColorSwatches = !componentSettings.hideColorSwatches;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const areaLabel = componentSettings.areaLabel || t("Area");
   const percentWithinLabel =
@@ -254,7 +256,7 @@ export const OverlappingAreasTable: ReportWidget<
                   ) : null}
                 </div>
               )}
-              {row.color && (
+              {showColorSwatches && row.color && (
                 <div className="flex-none w-4 flex justify-center">
                   <span
                     className="inline-block w-4 h-4 rounded-sm border border-black/10"
@@ -292,7 +294,7 @@ export const OverlappingAreasTable: ReportWidget<
         <TablePaddingRows
           count={paddingRowsCount}
           includeVisibilityColumn={hasVisibilityColumn}
-          includeColorColumn={rows.some((row) => row.color)}
+          includeColorColumn={showColorSwatches && rows.some((row) => row.color)}
           showPercentColumn={showPercentColumn}
         />
       </div>
@@ -376,12 +378,7 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
             handleUpdate({ sortBy: val as "overlap" | "name" })
           }
         />
-        <TableHeadingsEditor
-          labelKeys={["nameLabel", "areaLabel", "percentWithinLabel"]}
-          labelDisplayNames={["Name", "Area", "% Within"]}
-          componentSettings={settings}
-          onUpdate={onUpdate}
-        />
+
         <ClassRowSettingsPopover
           settings={settings}
           onUpdateSettings={(patch) => handleUpdate(patch)}
@@ -391,15 +388,22 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           onUpdateAllDependencies={onUpdateAllDependencies}
           t={t}
           allowedGeometryTypes={["Polygon", "MultiPolygon"]}
+          showZeros={showZero}
+          onShowZerosChange={(next) =>
+            handleUpdate({ showZeroOverlapCategories: next })
+          }
+          showColorSwatches={!settings.hideColorSwatches}
+          onShowColorSwatchesChange={(next) =>
+            handleUpdate({ hideColorSwatches: next ? undefined : true })
+          }
+        />
+        <TableHeadingsEditor
+          labelKeys={["nameLabel", "areaLabel", "percentWithinLabel"]}
+          labelDisplayNames={["Name", "Area", "% Within"]}
+          componentSettings={settings}
+          onUpdate={onUpdate}
         />
         <TooltipMorePopover>
-          <TooltipBooleanConfigurationOption
-            label={t("Show zeros")}
-            checked={showZero}
-            onChange={(next) =>
-              handleUpdate({ showZeroOverlapCategories: next })
-            }
-          />
           <TooltipBooleanConfigurationOption
             label={t("Show % column")}
             checked={showPercentColumn}

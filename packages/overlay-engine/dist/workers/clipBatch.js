@@ -54,7 +54,7 @@ const boolean_within_1 = __importDefault(require("@turf/boolean-within"));
 const boolean_disjoint_1 = __importDefault(require("@turf/boolean-disjoint"));
 const line_split_1 = __importDefault(require("@turf/line-split"));
 const along_1 = __importDefault(require("@turf/along"));
-async function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
+async function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, overlappingFeatures, }) {
     const results = { "*": 0 };
     if (groupBy) {
         const classKeys = ["*"];
@@ -69,13 +69,13 @@ async function clipBatch({ features, differenceMultiPolygon, subjectFeature, gro
             if (classKey === "*") {
                 continue;
             }
-            const size = calculatedClippedOverlapSize(features.filter((f) => f.feature.properties?.[groupBy] === classKey), differenceMultiPolygon, subjectFeature);
+            const size = calculatedClippedOverlapSize(features.filter((f) => f.feature.properties?.[groupBy] === classKey), differenceMultiPolygon, subjectFeature, 0, overlappingFeatures);
             results[classKey] += size;
             results["*"] += size;
         }
     }
     else {
-        const size = calculatedClippedOverlapSize(features, differenceMultiPolygon, subjectFeature);
+        const size = calculatedClippedOverlapSize(features, differenceMultiPolygon, subjectFeature, 0, overlappingFeatures);
         results["*"] += size;
     }
     return results;
@@ -92,9 +92,9 @@ function calcSize(feature) {
     return 0;
 }
 const SUBDIVISION_LIMIT = 3;
-function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature, subdivisions = 0) {
+function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature, subdivisions = 0, overlappingFeatures = false) {
     try {
-        return calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature);
+        return calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature, overlappingFeatures);
     }
     catch (e) {
         // If a batch fails, we'll subdivide the batch into smaller buckets
@@ -117,14 +117,17 @@ function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature,
         let total = 0;
         for (let i = 0; i < features.length; i += bucketSize) {
             const bucket = features.slice(i, i + bucketSize);
-            total += calculatedClippedOverlapSize(bucket, differenceGeoms, subjectFeature, subdivisions);
+            total += calculatedClippedOverlapSize(bucket, differenceGeoms, subjectFeature, subdivisions, overlappingFeatures);
         }
         return total;
     }
 }
-function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature) {
+function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature, overlappingFeatures = false) {
     if (features[0].feature.geometry.type === "Polygon" ||
         features[0].feature.geometry.type === "MultiPolygon") {
+        if (overlappingFeatures) {
+            return calculatedClippedOverlapSizePerFeature(features, differenceGeoms, subjectFeature);
+        }
         let product = [];
         let forClipping = [];
         for (const f of features) {
@@ -170,6 +173,40 @@ function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFe
         return totalLength;
     }
     return 0;
+}
+/**
+ * Per-feature clipping path for source layers with overlapping polygons.
+ * Each feature is clipped independently so that overlapping areas are counted
+ * for every feature rather than being unioned by polyclip-ts.
+ */
+function calculatedClippedOverlapSizePerFeature(features, differenceGeoms, subjectFeature) {
+    let totalSize = 0;
+    for (const f of features) {
+        let geom;
+        if (f.feature.geometry.type === "Polygon") {
+            geom = [f.feature.geometry.coordinates];
+        }
+        else {
+            geom = f.feature.geometry.coordinates;
+        }
+        if (f.requiresIntersection) {
+            geom = clipping.intersection(geom, subjectFeature.geometry.coordinates);
+        }
+        if (geom.length > 0 && differenceGeoms.length > 0) {
+            geom = clipping.difference(geom, ...differenceGeoms);
+        }
+        if (geom.length > 0) {
+            totalSize += calcSize({
+                type: "Feature",
+                geometry: {
+                    type: "MultiPolygon",
+                    coordinates: geom,
+                },
+                properties: {},
+            });
+        }
+    }
+    return totalSize;
 }
 async function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }) {
     const results = { "*": new Set() };
@@ -418,6 +455,7 @@ node_worker_threads_1.parentPort?.on("message", async (job) => {
                 differenceMultiPolygon: job.differenceMultiPolygon,
                 subjectFeature: job.subjectFeature,
                 groupBy: job.groupBy,
+                overlappingFeatures: job.overlappingFeatures,
             });
         }
         else if (operation === "count") {

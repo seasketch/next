@@ -40,6 +40,7 @@ export type FeaturePresenceTableSettings = {
   presenceLabel?: string;
   presenceColumnPresentation?: PresencePresentation;
   bufferMeters?: number;
+  hideColorSwatches?: boolean;
 } & ClassTableRowComponentSettings;
 
 type FeaturePresenceRow = ClassTableRow & {
@@ -59,6 +60,7 @@ export const FeaturePresenceTable: ReportWidget<
 }) => {
   const { t } = useTranslation("reports");
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
+  const showColorSwatches = !componentSettings.hideColorSwatches;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const presenceLabel = componentSettings.presenceLabel || t("Presence");
 
@@ -131,7 +133,10 @@ export const FeaturePresenceTable: ReportWidget<
     pageBounds,
   } = usePagination(rows, rowsPerPage);
 
-  const hasAnyColor = useMemo(() => rows.some((row) => row.color), [rows]);
+  const hasAnyColor = useMemo(
+    () => showColorSwatches && rows.some((row) => row.color),
+    [rows, showColorSwatches]
+  );
   const hasVisibilityColumn = useMemo(
     () =>
       rows.some(
@@ -193,7 +198,7 @@ export const FeaturePresenceTable: ReportWidget<
                     )}
                   </div>
                 )}
-                {color && (
+                {showColorSwatches && color && (
                   <div className="flex-none w-4 flex justify-center">
                     <span
                       className="inline-block w-4 h-4 rounded-sm border border-black/10"
@@ -344,6 +349,10 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
           onUpdateDependencyParameters={onUpdateDependencyParameters}
           onUpdateAllDependencies={onUpdateAllDependencies}
           t={t}
+          showColorSwatches={!settings.hideColorSwatches}
+          onShowColorSwatchesChange={(next) =>
+            handleUpdate({ hideColorSwatches: next ? undefined : true })
+          }
         />
         <TooltipMorePopover>
           <button

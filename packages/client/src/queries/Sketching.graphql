@@ -326,6 +326,7 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
     bufferDistanceKm
     maxResults
     maxDistanceKm
+    sourceHasOverlappingFeatures
   }
   sourceProcessingJobDependency
   eta

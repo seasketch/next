@@ -180,12 +180,53 @@ export type MetricDependency = {
     parameters?: MetricDependencyParameters;
 };
 export type MetricDependencyParameters = {
+    /**
+     * The groupBy parameter is used to group the results of the metric by a
+     * specific attribute. For example, if the metric is "overlay_area", the
+     * results can be grouped by the "class" attribute.
+     */
     groupBy?: string;
+    /**
+     * The includedColumns parameter is used to include specific columns in the
+     * results of the metric. For example, if the metric is "column_values", the
+     * results can be limited to the "habitat" column.
+     * In practice it is cheap to include all columns, so this parameter is
+     * typically not used.
+     */
     includedColumns?: string[];
+    /**
+     * The valueColumn parameter is used to specify the column that contains the
+     * values to be used in the metric. For example, if the metric is
+     * "column_values", the value column is the column that contains the values to
+     * be used in the metric.
+     *
+     * @default undefined
+     */
     valueColumn?: string;
+    /**
+     * The bufferDistanceKm parameter is used to specify the buffer distance in kilometers around the subject.
+     * This is used to exclude features that are outside the buffer distance from the subject.
+     *
+     * @default undefined
+     */
     bufferDistanceKm?: number;
+    /**
+     * The maxResults parameter is used to specify the maximum number of results to return.
+     * This is used to limit the number of results returned by the metric.
+     *
+     * @default undefined
+     */
     maxResults?: number;
     maxDistanceKm?: number;
+    /**
+     * If all polygon features in a source are orthogonal (e.g. habitat
+     * classification), the overlay-engine can use optimizations to speed up
+     * clipping dramatically. However, if the source has overlapping features,
+     * this would produce inaccurate results.
+     *
+     * @default false
+     */
+    sourceHasOverlappingFeatures?: boolean;
 };
 /**
  * Creates a unique id for a given metric dependency. Any difference in

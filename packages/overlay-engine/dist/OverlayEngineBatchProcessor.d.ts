@@ -72,6 +72,7 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     includedProperties?: string[];
     resultsLimit: number;
     columnValuesProperty?: string;
+    overlappingFeatures: boolean;
     private progress;
     private progressTarget;
     private isOverlayAreaOperation;
@@ -87,7 +88,7 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
         cql2Query?: Cql2Query | undefined;
-    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, columnValuesProperty?: string);
+    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, columnValuesProperty?: string, overlappingFeatures?: boolean);
     private resetBatchData;
     calculate(): Promise<OperationResultType<TOp>>;
     private processBatch;
@@ -114,6 +115,6 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     private mergePresenceTableBatchResults;
     addDifferenceFeatureReferencesToBatch(layerId: string, refs: FeatureReference[]): void;
     addFeatureToBatch(feature: FeatureWithMetadata<Feature<Geometry>>, requiresIntersection: boolean, requiresDifference: boolean): void;
-    weightForFeature(feature: FeatureWithMetadata<Feature<Geometry>>): any;
+    weightForFeature(feature: FeatureWithMetadata<Feature<Geometry>>): number;
 }
 //# sourceMappingURL=OverlayEngineBatchProcessor.d.ts.map

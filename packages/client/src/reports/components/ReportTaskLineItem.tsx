@@ -34,6 +34,7 @@ interface ReportTaskLineItemProps {
   numFeatures?: number | null;
   numRepairedFeatures?: number | null;
   wasRepaired?: boolean | null;
+  containsOverlappingFeatures?: boolean | null;
   onRepairClick?: () => void;
   repairLoading?: boolean;
 }
@@ -60,6 +61,7 @@ export default function ReportTaskLineItem({
   numFeatures,
   numRepairedFeatures,
   wasRepaired,
+  containsOverlappingFeatures,
   onRepairClick,
   repairLoading,
 }: ReportTaskLineItemProps) {
@@ -68,6 +70,9 @@ export default function ReportTaskLineItem({
     state === SpatialMetricState.Complete &&
     numInvalidFeatures != null &&
     numInvalidFeatures > 0;
+  const hasOverlappingFeatures =
+    state === SpatialMetricState.Complete &&
+    containsOverlappingFeatures === true;
   const hasTooltipInfo =
     (state === SpatialMetricState.Complete ||
       state === SpatialMetricState.Error) &&
@@ -76,7 +81,8 @@ export default function ReportTaskLineItem({
       errorMessage ||
       outputSize ||
       value ||
-      hasTopologyIssues);
+      hasTopologyIssues ||
+      hasOverlappingFeatures);
 
   // Precompute tooltip content
   const queuedTooltip = (
@@ -95,7 +101,15 @@ export default function ReportTaskLineItem({
       {metricType && (
         <div>
           <div className="font-semibold text-white">{t("Operation")}</div>
-          <div className="text-gray-300">{metricType}</div>
+          <div className="text-gray-300">
+            {metricType}
+            {metricType === "overlay_area" &&
+              parameters?.sourceHasOverlappingFeatures && (
+                <span className="ml-1.5 text-blue-300 text-xs">
+                  ({t("overlap mode")})
+                </span>
+              )}
+          </div>
         </div>
       )}
       {parameters && hasParameters(parameters) && (
@@ -226,6 +240,18 @@ export default function ReportTaskLineItem({
             )}
           </div>
         )}
+      {hasOverlappingFeatures && (
+        <div>
+          <div className="font-semibold text-white">
+            {t("Overlapping Features")}
+          </div>
+          <div className="text-blue-300">
+            {t(
+              "This data source contains overlapping polygon features. Overlay area calculations should be configured to use per-feature clipping to ensure accurate results."
+            )}
+          </div>
+        </div>
+      )}
       {state === SpatialMetricState.Complete &&
         value !== null &&
         value !== undefined && (

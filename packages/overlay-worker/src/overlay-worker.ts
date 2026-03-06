@@ -206,7 +206,11 @@ export default async function handler(payload: OverlayWorkerPayload) {
           differenceSources,
           helpers,
           payload.groupBy,
-          workerPool
+          workerPool,
+          undefined,
+          undefined,
+          undefined,
+          payload.sourceHasOverlappingFeatures,
         );
         const area = await processor.calculate();
         await flushMessages();

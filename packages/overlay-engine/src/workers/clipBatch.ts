@@ -26,6 +26,7 @@ export async function clipBatch({
   differenceMultiPolygon,
   subjectFeature,
   groupBy,
+  overlappingFeatures,
 }: {
   features: {
     feature: FeatureWithMetadata<
@@ -37,6 +38,7 @@ export async function clipBatch({
   differenceMultiPolygon: clipping.Geom[];
   subjectFeature: Feature<Polygon | MultiPolygon>;
   groupBy?: string;
+  overlappingFeatures?: boolean;
 }) {
   const results: { [classKey: string]: number } = { "*": 0 };
   if (groupBy) {
@@ -56,6 +58,8 @@ export async function clipBatch({
         features.filter((f) => f.feature.properties?.[groupBy!] === classKey),
         differenceMultiPolygon,
         subjectFeature,
+        0,
+        overlappingFeatures,
       );
       results[classKey] += size;
       results["*"] += size;
@@ -65,6 +69,8 @@ export async function clipBatch({
       features,
       differenceMultiPolygon,
       subjectFeature,
+      0,
+      overlappingFeatures,
     );
     results["*"] += size;
   }
@@ -101,12 +107,14 @@ export function calculatedClippedOverlapSize(
   differenceGeoms: clipping.Geom[],
   subjectFeature: Feature<Polygon | MultiPolygon>,
   subdivisions = 0,
+  overlappingFeatures = false,
 ): number {
   try {
     return calculatedClippedOverlapSizeUnsafe(
       features,
       differenceGeoms,
       subjectFeature,
+      overlappingFeatures,
     );
   } catch (e) {
     // If a batch fails, we'll subdivide the batch into smaller buckets
@@ -146,6 +154,7 @@ export function calculatedClippedOverlapSize(
         differenceGeoms,
         subjectFeature,
         subdivisions,
+        overlappingFeatures,
       );
     }
     return total;
@@ -162,11 +171,19 @@ function calculatedClippedOverlapSizeUnsafe(
   }[],
   differenceGeoms: clipping.Geom[],
   subjectFeature: Feature<Polygon | MultiPolygon>,
+  overlappingFeatures = false,
 ): number {
   if (
     features[0].feature.geometry.type === "Polygon" ||
     features[0].feature.geometry.type === "MultiPolygon"
   ) {
+    if (overlappingFeatures) {
+      return calculatedClippedOverlapSizePerFeature(
+        features,
+        differenceGeoms,
+        subjectFeature,
+      );
+    }
     let product: clipping.Geom = [];
     let forClipping: clipping.Geom = [];
     for (const f of features) {
@@ -227,6 +244,56 @@ function calculatedClippedOverlapSizeUnsafe(
     return totalLength;
   }
   return 0;
+}
+
+/**
+ * Per-feature clipping path for source layers with overlapping polygons.
+ * Each feature is clipped independently so that overlapping areas are counted
+ * for every feature rather than being unioned by polyclip-ts.
+ */
+function calculatedClippedOverlapSizePerFeature(
+  features: {
+    feature: FeatureWithMetadata<
+      Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    >;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[],
+  differenceGeoms: clipping.Geom[],
+  subjectFeature: Feature<Polygon | MultiPolygon>,
+): number {
+  let totalSize = 0;
+  for (const f of features) {
+    let geom: clipping.Geom;
+    if (f.feature.geometry.type === "Polygon") {
+      geom = [f.feature.geometry.coordinates] as clipping.Geom;
+    } else {
+      geom = f.feature.geometry.coordinates as clipping.Geom;
+    }
+
+    if (f.requiresIntersection) {
+      geom = clipping.intersection(
+        geom,
+        subjectFeature.geometry.coordinates as clipping.Geom,
+      );
+    }
+
+    if (geom.length > 0 && differenceGeoms.length > 0) {
+      geom = clipping.difference(geom, ...differenceGeoms);
+    }
+
+    if (geom.length > 0) {
+      totalSize += calcSize({
+        type: "Feature",
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: geom,
+        },
+        properties: {},
+      } as Feature<MultiPolygon>);
+    }
+  }
+  return totalSize;
 }
 
 export async function countFeatures({
@@ -612,6 +679,7 @@ parentPort?.on(
     limit?: number;
     includedProperties?: string[];
     property?: string;
+    overlappingFeatures?: boolean;
   }) => {
     try {
       const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
@@ -626,6 +694,7 @@ parentPort?.on(
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
           groupBy: job.groupBy,
+          overlappingFeatures: job.overlappingFeatures,
         });
       } else if (operation === "count") {
         result = await countFeatures({

@@ -1,14 +1,6 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import {
-  FC,
-  useContext,
-  useMemo,
-  useState,
-  useEffect,
-  useRef,
-  memo,
-} from "react";
+import { FC, useContext, useMemo, useState, useEffect, memo } from "react";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -22,12 +14,17 @@ import {
   SketchGeometryType,
   SpatialMetricState,
   useOverlaySourceProcessingStatusQuery,
-  useOverlayLayerAuthorInfoQuery,
+  useProjectReportingLayersQuery,
 } from "../../generated/graphql";
+import getSlug from "../../getSlug";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import { MetricDependency } from "overlay-engine";
-import { NodeSelection, SelectionRange, TextSelection } from "prosemirror-state";
+import {
+  NodeSelection,
+  SelectionRange,
+  TextSelection,
+} from "prosemirror-state";
 import { Trans, useTranslation } from "react-i18next";
 import {
   GeographySizeTable,
@@ -81,20 +78,11 @@ import { Mark, Node } from "prosemirror-model";
 import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import {
-  DotsHorizontalIcon,
-  DragHandleDots1Icon,
-  ExclamationTriangleIcon,
-  Pencil2Icon,
-} from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import Badge from "../../components/Badge";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import Spinner from "../../components/Spinner";
-import {
-  GeostatsLayer,
-  isGeostatsLayer,
-  RasterBandInfo,
-} from "@seasketch/geostats-types";
+import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import {
   findGetExpression,
   isExpression,
@@ -685,6 +673,37 @@ export function ProcessForReportingFooter({
 }
 
 /**
+ * Fetches author/version/attribution info for all project reporting layers in
+ * a single query (via ProjectReportingLayers) and returns the entry matching
+ * the given tableOfContentsItemId.
+ */
+function useOverlayAuthorInfo(tableOfContentsItemId: number) {
+  const { data, loading } = useProjectReportingLayersQuery({
+    variables: { slug: getSlug() },
+    fetchPolicy: "cache-only",
+  });
+
+  return useMemo(() => {
+    if (loading || !data) return { loading, data: null };
+    const item = data.projectBySlug?.draftTableOfContentsItems?.find(
+      (i) => i.id === tableOfContentsItemId
+    );
+    const dataLayer = item?.dataLayer;
+    const ds = dataLayer?.dataSource;
+    if (!ds) return { loading: false, data: null };
+    return {
+      loading: false,
+      data: {
+        profile: ds.authorProfile,
+        createdAt: ds.createdAt ? new Date(ds.createdAt) : null,
+        version: dataLayer?.version,
+        attribution: ds.attribution,
+      },
+    };
+  }, [loading, data, tableOfContentsItemId]);
+}
+
+/**
  * Fetches and displays version, author, and creation date for an overlay layer.
  */
 export function OverlayLayerInfo({
@@ -692,20 +711,11 @@ export function OverlayLayerInfo({
 }: {
   tableOfContentsItemId: number;
 }) {
-  const { data, loading } = useOverlayLayerAuthorInfoQuery({
-    variables: { tableOfContentsItemId },
-  });
+  const { data, loading } = useOverlayAuthorInfo(tableOfContentsItemId);
 
   if (loading || !data) return null;
 
-  const dataLayer = data.tableOfContentsItem?.dataLayer;
-  const ds = dataLayer?.dataSource;
-  if (!ds) return null;
-
-  const profile = ds.authorProfile;
-  const createdAt = ds.createdAt ? new Date(ds.createdAt) : null;
-  const version = dataLayer?.version;
-  const attribution = ds.attribution;
+  const { profile, createdAt, version, attribution } = data;
 
   return (
     // eslint-disable-next-line i18next/no-literal-string
@@ -742,35 +752,67 @@ export function OverlayLayerInfo({
 }
 
 /**
- * Polls the OverlaySourceProcessingStatus query while a layer is being
- * processed. Renders nothing when processing is complete. Automatically
- * stops polling on completion or error.
+ * Reads the processing-job status for a layer from the cached
+ * ProjectReportingLayers data. Only activates per-item polling when a job is
+ * actually in an active state (Queued / Processing).
+ */
+function useOverlayProcessingStatus(tableOfContentsItemId: number) {
+  const { data: bulkData } = useProjectReportingLayersQuery({
+    variables: { slug: getSlug() },
+    fetchPolicy: "cache-only",
+  });
+
+  const cachedJob = useMemo(() => {
+    const item = bulkData?.projectBySlug?.draftTableOfContentsItems?.find(
+      (i) => i.id === tableOfContentsItemId
+    );
+    return item?.dataLayer?.dataSource?.sourceProcessingJob ?? null;
+  }, [bulkData, tableOfContentsItemId]);
+
+  const cachedState = cachedJob?.state as SpatialMetricState | undefined;
+  const needsPolling =
+    cachedState === SpatialMetricState.Processing ||
+    cachedState === SpatialMetricState.Queued;
+
+  const { data: polledData, stopPolling } =
+    useOverlaySourceProcessingStatusQuery({
+      variables: { tableOfContentsItemId },
+      pollInterval: 1000,
+      fetchPolicy: "network-only",
+      skip: !needsPolling,
+    });
+
+  const polledJob =
+    polledData?.tableOfContentsItem?.dataLayer?.dataSource
+      ?.sourceProcessingJob ?? null;
+
+  const job = polledJob ?? cachedJob;
+  const state = job?.state as SpatialMetricState | undefined;
+
+  useEffect(() => {
+    if (
+      needsPolling &&
+      (state === SpatialMetricState.Complete ||
+        state === SpatialMetricState.Error)
+    ) {
+      stopPolling();
+    }
+  }, [state, stopPolling, needsPolling]);
+
+  return { job, state };
+}
+
+/**
+ * Displays processing status for an overlay layer.
+ * Renders nothing when complete or no job exists.
  */
 export function OverlayProcessingStatus({
   tableOfContentsItemId,
 }: {
   tableOfContentsItemId: number;
 }) {
-  const { data, stopPolling } = useOverlaySourceProcessingStatusQuery({
-    variables: { tableOfContentsItemId },
-    pollInterval: 1000,
-    fetchPolicy: "network-only",
-  });
+  const { job, state } = useOverlayProcessingStatus(tableOfContentsItemId);
 
-  const job =
-    data?.tableOfContentsItem?.dataLayer?.dataSource?.sourceProcessingJob;
-  const state = job?.state as SpatialMetricState | undefined;
-
-  useEffect(() => {
-    if (
-      state === SpatialMetricState.Complete ||
-      state === SpatialMetricState.Error
-    ) {
-      stopPolling();
-    }
-  }, [state, stopPolling]);
-
-  // Don't show anything when complete or no job
   if (!job || state === SpatialMetricState.Complete) return null;
 
   const isActive =
@@ -1321,6 +1363,13 @@ export function buildReportCommandGroups({
                         type: "overlay_area",
                         subjectType: "fragments",
                         stableId,
+                        ...(source.containsOverlappingFeatures
+                          ? {
+                              parameters: {
+                                sourceHasOverlappingFeatures: true,
+                              },
+                            }
+                          : {}),
                       },
                     ],
                     componentSettings: {
@@ -1348,6 +1397,13 @@ export function buildReportCommandGroups({
                           type: "overlay_area",
                           subjectType: "geographies",
                           stableId,
+                          ...(source.containsOverlappingFeatures
+                            ? {
+                                parameters: {
+                                  sourceHasOverlappingFeatures: true,
+                                },
+                              }
+                            : {}),
                         },
                       ],
                       componentSettings: {
@@ -1374,6 +1430,9 @@ export function buildReportCommandGroups({
                         stableId,
                         parameters: {
                           groupBy: groupByColumn,
+                          ...(source.containsOverlappingFeatures
+                            ? { sourceHasOverlappingFeatures: true }
+                            : {}),
                         },
                       },
                       {
@@ -1382,6 +1441,9 @@ export function buildReportCommandGroups({
                         stableId,
                         parameters: {
                           groupBy: groupByColumn,
+                          ...(source.containsOverlappingFeatures
+                            ? { sourceHasOverlappingFeatures: true }
+                            : {}),
                         },
                       },
                     ],

@@ -17,6 +17,7 @@ type ReportOverlaySourcePartial = {
   sourceProcessingJobId?: string;
   outputId?: number;
   sourceUrl?: string;
+  containsOverlappingFeatures?: boolean;
 };
 
 const ReportsPlugin = makeExtendSchemaPlugin((build) => {
@@ -42,6 +43,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         bufferDistanceKm: Float
         maxResults: Int
         maxDistanceKm: Float
+        sourceHasOverlappingFeatures: Boolean
       }
 
       type CompatibleSpatialMetric {
@@ -76,6 +78,10 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         outputId: Int!
         output: DataUploadOutput
         sourceUrl: String
+        # Whether the source contains overlapping features. This is used to
+        # determine if the source should be processed with the overlapping
+        # features flag set. Only applicable to polygon sources.
+        containsOverlappingFeatures: Boolean
       }
 
       input NodeDependency {
@@ -140,17 +146,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           relatedReportCard,
           args,
           context,
-          { graphile: { selectGraphQLResultFromTable } }
+          { graphile: { selectGraphQLResultFromTable } },
         ) {
           const rows = await selectGraphQLResultFromTable(
             sql.fragment`sketch_classes`,
             (tableAlias, sqlBuilder) => {
               return sqlBuilder.where(
                 sql.fragment`${tableAlias}.id = ${sql.value(
-                  relatedReportCard.sketchClassId
-                )}`
+                  relatedReportCard.sketchClassId,
+                )}`,
               );
-            }
+            },
           );
           return rows[0];
         },
@@ -167,7 +173,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               l.mapbox_gl_styles as mapbox_gl_styles,
               o.id as output_id,
               o.url as source_url,
-              jobs.job_key as source_processing_job_id
+              jobs.job_key as source_processing_job_id,
+              o.contains_overlapping_features as contains_overlapping_features
             from
               data_sources s
             inner join data_layers l on l.data_source_id = s.id
@@ -176,7 +183,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             left join lateral (
               select
                 o.id,
-                o.url
+                o.url,
+                o.contains_overlapping_features
               from
                 data_upload_outputs o
               where
@@ -191,11 +199,12 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
                 select data_source_id from source_processing_jobs where project_id = $1
               )
           `,
-            [project.id]
+            [project.id],
           );
           for (const row of result.rows) {
             stripUnnecessaryGeostatsFields(row.geostats);
           }
+          console.log("result.rows", result.rows);
           return result.rows.map((row: any) => ({
             __typename: "ReportOverlaySource",
             stableId: row.stable_id,
@@ -205,6 +214,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             sourceProcessingJobId: row.source_processing_job_id,
             outputId: row.output_id,
             sourceUrl: row.source_url,
+            containsOverlappingFeatures: row.contains_overlapping_features,
           }));
         },
       },
@@ -214,7 +224,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             report.id,
             context.pgClient,
             report.projectId,
-            args.sketchId
+            args.sketchId,
           );
         },
       },
@@ -223,17 +233,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           reportOverlaySource,
           args,
           context,
-          { graphile: { selectGraphQLResultFromTable } }
+          { graphile: { selectGraphQLResultFromTable } },
         ) {
           const rows = await selectGraphQLResultFromTable(
             sql.fragment`table_of_contents_items`,
             (tableAlias, sqlBuilder) => {
               return sqlBuilder.where(
                 sql.fragment`${tableAlias}.id = ${sql.value(
-                  reportOverlaySource.tableOfContentsItemId
-                )}`
+                  reportOverlaySource.tableOfContentsItemId,
+                )}`,
               );
-            }
+            },
           );
           return rows[0];
         },
@@ -241,17 +251,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           reportOverlaySource,
           args,
           context,
-          { graphile: { selectGraphQLResultFromTable } }
+          { graphile: { selectGraphQLResultFromTable } },
         ) {
           const rows = await selectGraphQLResultFromTable(
             sql.fragment`source_processing_jobs`,
             (tableAlias, sqlBuilder) => {
               return sqlBuilder.where(
                 sql.fragment`${tableAlias}.job_key = ${sql.value(
-                  reportOverlaySource.sourceProcessingJobId
-                )}`
+                  reportOverlaySource.sourceProcessingJobId,
+                )}`,
               );
-            }
+            },
           );
           return rows[0];
         },
@@ -259,17 +269,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           reportOverlaySource,
           args,
           context,
-          { graphile: { selectGraphQLResultFromTable } }
+          { graphile: { selectGraphQLResultFromTable } },
         ) {
           const rows = await selectGraphQLResultFromTable(
             sql.fragment`data_upload_outputs`,
             (tableAlias, sqlBuilder) => {
               return sqlBuilder.where(
                 sql.fragment`${tableAlias}.id = ${sql.value(
-                  reportOverlaySource.outputId
-                )}`
+                  reportOverlaySource.outputId,
+                )}`,
               );
-            }
+            },
           );
           return rows[0];
         },
@@ -282,14 +292,14 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           // First, make sure the sketch exists
           const { rows: sketchRows } = await pgClient.query(
             `select sketches.id, sketch_classes.project_id as project_id, session_is_admin(sketch_classes.project_id) as is_admin from sketches inner join sketch_classes on sketches.sketch_class_id = sketch_classes.id where sketches.id = $1`,
-            [sketchId]
+            [sketchId],
           );
           if (sketchRows.length === 0) {
             throw new Error("Sketch not found");
           }
           if (!sketchRows[0].is_admin) {
             throw new Error(
-              "You are not authorized to access draft metrics for this sketch."
+              "You are not authorized to access draft metrics for this sketch.",
             );
           }
           const sketch = sketchRows[0];
@@ -300,17 +310,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           if (sketchId) {
             const { rows: sketchFragmentsRows } = await pool.query(
               `select get_fragment_hashes_for_sketch($1)`,
-              [sketchId]
+              [sketchId],
             );
             if (
               sketchFragmentsRows.length > 0 &&
               sketchFragmentsRows[0].get_fragment_hashes_for_sketch &&
               Array.isArray(
-                sketchFragmentsRows[0].get_fragment_hashes_for_sketch
+                sketchFragmentsRows[0].get_fragment_hashes_for_sketch,
               )
             ) {
               fragments.push(
-                ...sketchFragmentsRows[0].get_fragment_hashes_for_sketch
+                ...sketchFragmentsRows[0].get_fragment_hashes_for_sketch,
               );
             }
           }
@@ -318,7 +328,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           // Retrieve all geographies related to the project
           const { rows: geogs } = await pool.query(
             `select name, id from project_geography where project_id = $1`,
-            [projectId]
+            [projectId],
           );
           if (geogs.length === 0) {
             throw new Error("No geographies found");
@@ -331,7 +341,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               true,
               projectId,
               fragments,
-              geogs
+              geogs,
             );
 
           return {
@@ -350,7 +360,7 @@ async function getOrCreateReportDependencies(
   reportId: number,
   pool: Pool | PoolClient,
   projectId: number,
-  sketchId?: number
+  sketchId?: number,
 ) {
   const isDraft = await isDraftReport(reportId, projectId, pool);
   // Retrieve all overlay sources related to the report
@@ -375,7 +385,7 @@ async function getOrCreateReportDependencies(
   // Retrieve all geographies related to the project
   const { rows: geogs } = await pool.query(
     `select name, id from project_geography where project_id = $1`,
-    [projectId]
+    [projectId],
   );
   if (geogs.length === 0) {
     throw new Error("No geographies found");
@@ -397,7 +407,7 @@ async function getOrCreateReportDependencies(
       where 
         rc.id in (select report_card_ids_for_report($1))
       group by rc.id, rc.type, rc.component_settings`,
-    [reportId]
+    [reportId],
   );
 
   for (const card of cards.rows) {
@@ -414,7 +424,7 @@ async function getOrCreateReportDependencies(
       isDraft,
       projectId,
       fragments,
-      geogs
+      geogs,
     );
 
     const cardOverlaySources = new Set<string>();
@@ -455,7 +465,7 @@ async function getOrCreateSpatialMetricsBatch(
     sourceProcessingJobDependency?: string;
     projectId: number;
     dependencyHash: string;
-  }>
+  }>,
 ): Promise<any[]> {
   const subjectFragmentIds: (string | null)[] = [];
   const subjectGeographyIds: (number | null)[] = [];
@@ -469,7 +479,7 @@ async function getOrCreateSpatialMetricsBatch(
   for (const input of inputs) {
     if (!input.subjectFragmentId && !input.subjectGeographyId) {
       throw new Error(
-        "Either subjectFragmentId or subjectGeographyId must be provided"
+        "Either subjectFragmentId or subjectGeographyId must be provided",
       );
     }
     let overlaySourceUrl = input.overlaySourceUrl;
@@ -487,7 +497,7 @@ async function getOrCreateSpatialMetricsBatch(
         continue;
       } else {
         throw new Error(
-          "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics"
+          "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics",
         );
       }
     }
@@ -498,7 +508,7 @@ async function getOrCreateSpatialMetricsBatch(
     overlaySourceUrls.push(overlaySourceUrl || null);
     parameters.push(input.parameters || {});
     sourceProcessingJobDependencies.push(
-      input.sourceProcessingJobDependency || null
+      input.sourceProcessingJobDependency || null,
     );
     projectIds.push(input.projectId);
     dependencyHashes.push(input.dependencyHash);
@@ -546,7 +556,7 @@ async function getOrCreateSpatialMetricsBatch(
       sourceProcessingJobDependencies,
       projectIds,
       dependencyHashes,
-    ]
+    ],
   );
 
   return result.rows.map((row: { metric: any }) => row.metric);
@@ -562,12 +572,12 @@ async function getOrCreateSpatialMetricsBatch(
 export async function startMetricCalculationsForSketch(
   pool: Pool | PoolClient,
   sketchId: number,
-  draft?: boolean
+  draft?: boolean,
 ) {
   // get sketch_class data first
   const { rows: sketchClassRows } = await pool.query(
     `select id, report_id, draft_report_id, project_id from sketch_classes where id = (select sketch_class_id from sketches where id = $1)`,
-    [sketchId]
+    [sketchId],
   );
   const sketchClass = sketchClassRows[0];
   if (!sketchClass) {
@@ -582,7 +592,7 @@ export async function startMetricCalculationsForSketch(
     reportId,
     pool,
     sketchClass.project_id,
-    sketchId
+    sketchId,
   );
 }
 
@@ -603,7 +613,7 @@ export default ReportsPlugin;
 async function getOverlaySourcesByStableIds(
   pool: Pool | PoolClient,
   stableIds: string[],
-  isDraft: boolean
+  isDraft: boolean,
 ): Promise<{
   [stableId: string]: ReportOverlaySourcePartial;
 }> {
@@ -621,7 +631,8 @@ async function getOverlaySourcesByStableIds(
         coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
         reporting_output.id as "outputId",
         sources.geostats as "geostats",
-        layers.mapbox_gl_styles as "mapboxGlStyles"
+        layers.mapbox_gl_styles as "mapboxGlStyles",
+        reporting_output.contains_overlapping_features as "containsOverlappingFeatures"
       from
         table_of_contents_items items
         join data_layers layers on layers.id = items.data_layer_id
@@ -631,7 +642,7 @@ async function getOverlaySourcesByStableIds(
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
       `,
-        [stableIds, isDraft]
+        [stableIds, isDraft],
       );
     for (const row of overlaySourceRows) {
       stripUnnecessaryGeostatsFields(row.geostats);
@@ -640,7 +651,7 @@ async function getOverlaySourcesByStableIds(
     for (const row of overlaySourceRows) {
       if (!row.sourceProcessingJobId) {
         throw new Error(
-          `No source processing job id for overlay source: ${row.stableId}`
+          `No source processing job id for overlay source: ${row.stableId}`,
         );
       }
     }
@@ -654,7 +665,7 @@ async function createMetricsForDependencies(
   isDraft: boolean,
   projectId: number,
   fragments: string[],
-  geogs: { id: number }[]
+  geogs: { id: number }[],
 ) {
   const metrics: any[] = [];
   const hashes: string[] = [];
@@ -670,13 +681,13 @@ async function createMetricsForDependencies(
   }> = [];
 
   const overlaySourceStableIds = Array.from(
-    new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!))
+    new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
   );
 
   const overlaySources = await getOverlaySourcesByStableIds(
     pool,
     overlaySourceStableIds,
-    isDraft
+    isDraft,
   );
 
   const overlaySourceUrls = {} as { [stableId: string]: string };
@@ -733,7 +744,7 @@ async function createMetricsForDependencies(
   if (batchInputs.length > 0) {
     const batchMetrics = await getOrCreateSpatialMetricsBatch(
       pool,
-      batchInputs
+      batchInputs,
     );
     metrics.push(...batchMetrics);
   }
@@ -784,13 +795,13 @@ function stripUnnecessaryGeostatsFields(geostats: any) {
 
 async function getFragmentHashesForSketch(
   sketchId: number,
-  pool: Pool | PoolClient
+  pool: Pool | PoolClient,
 ): Promise<string[]> {
   const fragments: string[] = [];
   if (sketchId) {
     const { rows: sketchFragmentsRows } = await pool.query(
       `select get_fragment_hashes_for_sketch($1)`,
-      [sketchId]
+      [sketchId],
     );
     if (
       sketchFragmentsRows.length > 0 &&
@@ -806,7 +817,7 @@ async function getFragmentHashesForSketch(
 async function isDraftReport(
   reportId: number,
   projectId: number,
-  pool: Pool | PoolClient
+  pool: Pool | PoolClient,
 ) {
   const { rows: reportRows } = await pool.query(
     `
@@ -816,7 +827,7 @@ async function isDraftReport(
         and project_id = $2
       ) as is_draft
     `,
-    [reportId, projectId]
+    [reportId, projectId],
   );
   return reportRows[0].is_draft;
 }

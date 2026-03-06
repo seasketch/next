@@ -3845,6 +3845,7 @@ enum DataSourceTypes {
 }
 
 type DataUploadOutput implements Node {
+  containsOverlappingFeatures: Boolean
   createdAt: Datetime!
 
   """
@@ -8644,6 +8645,7 @@ type MetricParameters {
   includedColumns: [String!]
   maxDistanceKm: Float
   maxResults: Int
+  sourceHasOverlappingFeatures: Boolean
   valueColumn: String
 }
 
@@ -14584,6 +14586,7 @@ type ReportOverlayDependencies {
 }
 
 type ReportOverlaySource {
+  containsOverlappingFeatures: Boolean
   geostats: JSON!
   mapboxGlStyles: JSON!
   output: DataUploadOutput

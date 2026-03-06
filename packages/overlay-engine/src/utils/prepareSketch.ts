@@ -43,5 +43,6 @@ export function prepareSketch(feature: Feature<any>): PreparedSketch {
   if ((sketch as any).type === "FeatureCollection") {
     throw new Error("sketch is a FeatureCollection");
   }
+  sketch.bbox = bbox as BBox;
   return { feature: sketch, envelopes };
 }

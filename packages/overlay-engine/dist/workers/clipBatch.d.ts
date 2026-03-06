@@ -2,7 +2,7 @@ import { FeatureWithMetadata } from "fgb-source";
 import { Feature, Geometry, LineString, MultiLineString, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
 import { PresenceTableValue } from "../metrics/metrics";
-export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
+export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, overlappingFeatures, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon | LineString | MultiLineString>>;
         requiresIntersection: boolean;
@@ -11,6 +11,7 @@ export declare function clipBatch({ features, differenceMultiPolygon, subjectFea
     differenceMultiPolygon: clipping.Geom[];
     subjectFeature: Feature<Polygon | MultiPolygon>;
     groupBy?: string;
+    overlappingFeatures?: boolean;
 }): Promise<{
     [classKey: string]: number;
 }>;
@@ -18,7 +19,7 @@ export declare function calculatedClippedOverlapSize(features: {
     feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon | LineString | MultiLineString>>;
     requiresIntersection: boolean;
     requiresDifference: boolean;
-}[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>, subdivisions?: number): number;
+}[], differenceGeoms: clipping.Geom[], subjectFeature: Feature<Polygon | MultiPolygon>, subdivisions?: number, overlappingFeatures?: boolean): number;
 export declare function countFeatures({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;

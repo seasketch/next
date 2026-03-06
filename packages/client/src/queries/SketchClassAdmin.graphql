@@ -641,6 +641,7 @@ mutation RecalculateSpatialMetrics(
 fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
   stableId
+  containsOverlappingFeatures
   tableOfContentsItem {
     title
     stableId
@@ -789,12 +790,24 @@ query ProjectReportingLayers($slug: String!) {
       id
       title
       stableId
+      isFolder
+      parentStableId
+      sortIndex
       copiedFromDataLibraryTemplateId
       dataLayer {
+        version
         dataSource {
           id
           type
           geostats
+          attribution
+          createdAt
+          authorProfile {
+            ...AuthorProfile
+          }
+          sourceProcessingJob {
+            ...SourceProcessingJobDetails
+          }
         }
       }
     }

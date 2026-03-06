@@ -96,7 +96,7 @@ class OverlayEngineBatchProcessor {
             throw new Error(`Invalid operation type: ${op}`);
         }
     }
-    constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool, includedProperties, resultsLimit, columnValuesProperty) {
+    constructor(operation, maxBatchSize, subjectFeature, intersectionSource, differenceSources, helpers, groupBy, pool, includedProperties, resultsLimit, columnValuesProperty, overlappingFeatures) {
         /**
          * Current weight of the batch. Once the weight exceeds the batch size, the
          * batch is processed. These values should be based on the complexity of the
@@ -112,6 +112,7 @@ class OverlayEngineBatchProcessor {
         this.batchPromises = [];
         this.presenceOperationEarlyReturn = false;
         this.resultsLimit = 50;
+        this.overlappingFeatures = false;
         this.progress = 0;
         this.progressTarget = 0;
         this.operation = operation;
@@ -121,6 +122,7 @@ class OverlayEngineBatchProcessor {
         this.maxBatchSize = maxBatchSize;
         this.subjectFeature = subjectFeature;
         this.helpers = (0, helpers_1.guaranteeHelpers)(helpers);
+        this.overlappingFeatures = overlappingFeatures ?? false;
         this.containerIndex = new containerIndex_1.ContainerIndex(subjectFeature);
         const boxes = this.containerIndex.getBBoxPolygons();
         let id = 0;
@@ -146,11 +148,6 @@ class OverlayEngineBatchProcessor {
         }
         if (this.operation === "column_values") {
             this.columnValuesProperty = columnValuesProperty;
-            // if (!this.columnValuesProperty) {
-            //   throw new Error(
-            //     "columnValuesProperty is required for column_values operation"
-            //   );
-            // }
         }
     }
     resetBatchData() {
@@ -357,6 +354,7 @@ class OverlayEngineBatchProcessor {
             includedProperties: this.includedProperties,
             resultsLimit: this.resultsLimit,
             property: this.columnValuesProperty,
+            overlappingFeatures: this.overlappingFeatures,
         };
         this.helpers.log(`submitting batchPayload: ${JSON.stringify({
             operation: this.operation,
@@ -413,6 +411,7 @@ class OverlayEngineBatchProcessor {
             differenceMultiPolygon: differenceMultiPolygon,
             subjectFeature: this.subjectFeature,
             groupBy: this.groupBy,
+            overlappingFeatures: this.overlappingFeatures,
         }).catch((error) => {
             console.error(`Error processing batch: ${error.message}`);
             throw error;

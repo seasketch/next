@@ -26,6 +26,10 @@ import { calculateRasterStats } from "../../src/rasterStats";
 import { reprojectFeatureTo6933 } from "../../src/utils/reproject";
 import { calculateDistanceToShore } from "../../src/calculateDistanceToShore";
 import buffer from "@turf/buffer";
+import calcArea from "@turf/area";
+import { combineMetricsForFragments } from "../../src/metrics/metrics";
+
+const alataua = require("./sketches/Alataua.geojson.json");
 
 const insideBioregion = require("./sketches/Inside-bioregion-2.geojson.json");
 
@@ -44,7 +48,7 @@ describe("sketchFragmentOverlap", () => {
   describe("Fiji", () => {
     const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
       `https://uploads.seasketch.org`,
-      1000 * 1024 * 128
+      1000 * 1024 * 128,
     );
 
     const FIJI_EEZ: GeographySettings = {
@@ -75,12 +79,12 @@ describe("sketchFragmentOverlap", () => {
           fetchRangeFn,
         });
         const overlappingFeatures = fgbSource.getFeaturesAsync(
-          sketch.envelopes
+          sketch.envelopes,
         );
         return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
       };
       pool = createClippingWorkerPool(
-        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
       );
     });
 
@@ -96,20 +100,20 @@ describe("sketchFragmentOverlap", () => {
           [
             { name: "classification", type: "string" },
             { name: "groupBy", type: "string" },
-          ]
+          ],
         );
         bboxWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/naitaba-bbox-features.fgb",
-          [{ name: "id", type: "integer" }]
+          [{ name: "id", type: "integer" }],
         );
         subjectWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/naitaba-subject-feature.fgb",
-          []
+          [],
         );
         helpers = {
           logFeature: (
             layer: OverlayWorkerLogFeatureLayerConfig,
-            feature: Feature<any>
+            feature: Feature<any>,
           ) => {
             switch (layer.name) {
               case "classified-features":
@@ -137,7 +141,7 @@ describe("sketchFragmentOverlap", () => {
         const fragments = await createFragments(
           prepared,
           [FIJI_EEZ],
-          clippingFn
+          clippingFn,
         );
         expect(fragments).toHaveLength(1);
       });
@@ -146,7 +150,7 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-geomorphic-2.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(naitaba);
         const processor = new OverlayEngineBatchProcessor(
@@ -157,7 +161,7 @@ describe("sketchFragmentOverlap", () => {
           [],
           helpers,
           "class",
-          pool
+          pool,
         );
         const results = await processor.calculate();
         compareResults(results, naitabaGeomorphologyResults, 0.005, {}, false);
@@ -176,20 +180,20 @@ describe("sketchFragmentOverlap", () => {
           [
             { name: "classification", type: "string" },
             { name: "groupBy", type: "string" },
-          ]
+          ],
         );
         bboxWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/naitaba-bbox-features.fgb",
-          [{ name: "id", type: "integer" }]
+          [{ name: "id", type: "integer" }],
         );
         subjectWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/naitaba-subject-feature.fgb",
-          []
+          [],
         );
         helpers = {
           logFeature: (
             layer: OverlayWorkerLogFeatureLayerConfig,
-            feature: Feature<any>
+            feature: Feature<any>,
           ) => {
             switch (layer.name) {
               case "classified-features":
@@ -217,7 +221,7 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-deepwater-bioregions-2.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(insideBioregion);
         const processor = new OverlayEngineBatchProcessor(
@@ -228,7 +232,7 @@ describe("sketchFragmentOverlap", () => {
           [],
           {}, //helpers,
           "Draft_name",
-          pool
+          pool,
         );
         const results = await processor.calculate();
         expect(results["Ambae Trough and North Fiji Basin"]).toBeGreaterThan(0);
@@ -249,24 +253,24 @@ describe("sketchFragmentOverlap", () => {
           [
             { name: "classification", type: "string" },
             { name: "groupBy", type: "string" },
-          ]
+          ],
         );
         bboxWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/naitaba-bbox-features.fgb",
-          [{ name: "id", type: "integer" }]
+          [{ name: "id", type: "integer" }],
         );
         subjectWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/naitaba-subject-feature.fgb",
-          []
+          [],
         );
         fragmentWriter = new DebuggingFgbWriter(
           __dirname + "/../outputs/hunga-fragments.fgb",
-          [{ name: "id", type: "integer" }]
+          [{ name: "id", type: "integer" }],
         );
         helpers = {
           logFeature: (
             layer: OverlayWorkerLogFeatureLayerConfig,
-            feature: Feature<any>
+            feature: Feature<any>,
           ) => {
             switch (layer.name) {
               case "classified-features":
@@ -285,11 +289,10 @@ describe("sketchFragmentOverlap", () => {
           },
         };
         clippingFn = async (sketch, source, op, query) => {
-          const fgbSource = await sourceCache.get<
-            Feature<MultiPolygon | Polygon>
-          >(source);
+          const fgbSource =
+            await sourceCache.get<Feature<MultiPolygon | Polygon>>(source);
           const overlappingFeatures = fgbSource.getFeaturesAsync(
-            sketch.envelopes
+            sketch.envelopes,
           );
           return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
         };
@@ -337,11 +340,11 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-eco-suma.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
 
         const pool = createClippingWorkerPool(
-          __dirname + "/../../dist/workers/clipBatch.standalone.js"
+          __dirname + "/../../dist/workers/clipBatch.standalone.js",
         );
         const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
@@ -353,13 +356,13 @@ describe("sketchFragmentOverlap", () => {
           differenceSources,
           undefined,
           "Site_Name",
-          pool
+          pool,
         );
         const results = await processor.calculate();
         expect(true).toBe(true);
 
         const prepared = prepareSketch(
-          require("./sketches/hunga-unclipped.geojson.json")
+          require("./sketches/hunga-unclipped.geojson.json"),
         );
         const fragments = await createFragments(
           prepared,
@@ -369,7 +372,7 @@ describe("sketchFragmentOverlap", () => {
               clippingLayers: FIJI_EEZ,
             },
           ],
-          clippingFn
+          clippingFn,
         );
         expect(fragments.length).toBeGreaterThan(1);
         if (helpers.logFeature) {
@@ -388,7 +391,7 @@ describe("sketchFragmentOverlap", () => {
                 properties: {
                   id: id++,
                 },
-              }
+              },
             );
           }
         }
@@ -402,7 +405,7 @@ describe("sketchFragmentOverlap", () => {
             [],
             helpers,
             "Site_Name",
-            pool
+            pool,
           );
           const sketchResults = await sketchProcessor.calculate();
           for (const classKey in sketchResults) {
@@ -418,7 +421,7 @@ describe("sketchFragmentOverlap", () => {
           //   `${classKey} ${totalResults[classKey]} ${results[classKey]}`
           // );
           expect(totalResults[classKey]).toBeLessThanOrEqual(
-            results[classKey] * 1.002
+            results[classKey] * 1.002,
           );
         }
         // const sketchProcessor
@@ -432,7 +435,7 @@ describe("sketchFragmentOverlap", () => {
             "https://uploads.seasketch.org/testing-hydrothermal-vents.fgb",
             {
               pageSize: "5MB",
-            }
+            },
           );
           const prepared = prepareSketch(ventsSketch);
           const processor = new OverlayEngineBatchProcessor(
@@ -441,7 +444,7 @@ describe("sketchFragmentOverlap", () => {
             prepared.feature,
             source,
             [],
-            {}
+            {},
           );
           const results = await processor.calculate();
           expect(results["*"].count).toBe(5);
@@ -453,10 +456,10 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-ebsa.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(
-          require("./sketches/hunga-unclipped.geojson.json")
+          require("./sketches/hunga-unclipped.geojson.json"),
         );
         const processor = new OverlayEngineBatchProcessor(
           "count",
@@ -464,7 +467,7 @@ describe("sketchFragmentOverlap", () => {
           prepared.feature,
           source,
           [],
-          {}
+          {},
         );
         const results = await processor.calculate();
         expect(results["*"].count).toBe(2);
@@ -475,10 +478,10 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-nitrogen-2.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(
-          require("./sketches/Kanacea-Island.geojson.json")
+          require("./sketches/Kanacea-Island.geojson.json"),
         );
         const processor = new OverlayEngineBatchProcessor(
           "count",
@@ -486,7 +489,7 @@ describe("sketchFragmentOverlap", () => {
           prepared.feature,
           source,
           [],
-          {}
+          {},
         );
         const results = await processor.calculate();
         expect(results["*"].count).toBe(3);
@@ -499,10 +502,10 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-seamounts.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(
-          require("./sketches/Offshore-North.geojson.json")
+          require("./sketches/Offshore-North.geojson.json"),
         );
         const processor = new OverlayEngineBatchProcessor(
           "presence_table",
@@ -510,7 +513,7 @@ describe("sketchFragmentOverlap", () => {
           prepared.feature,
           source,
           [],
-          {}
+          {},
         );
         const results = await processor.calculate();
         expect(results.values.length).toBe(26);
@@ -523,10 +526,10 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-nitrogen-2.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(
-          require("./sketches/Kanacea-Island.geojson.json")
+          require("./sketches/Kanacea-Island.geojson.json"),
         );
         const processor = new OverlayEngineBatchProcessor(
           "column_values",
@@ -539,7 +542,7 @@ describe("sketchFragmentOverlap", () => {
           pool,
           undefined,
           undefined,
-          "d15n"
+          "d15n",
         );
         const results = await processor.calculate();
         // console.log(results);
@@ -554,10 +557,10 @@ describe("sketchFragmentOverlap", () => {
           "https://uploads.seasketch.org/testing-offshore-priority-areas.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const prepared = prepareSketch(
-          require("./sketches/Offshore-North.geojson.json")
+          require("./sketches/Offshore-North.geojson.json"),
         );
         const processor = new OverlayEngineBatchProcessor(
           "column_values",
@@ -570,7 +573,7 @@ describe("sketchFragmentOverlap", () => {
           pool,
           undefined,
           undefined,
-          "SSOLN"
+          "SSOLN",
         );
         const results = await processor.calculate();
         // console.log(results);
@@ -596,24 +599,24 @@ describe("sketchFragmentOverlap", () => {
         [
           { name: "classification", type: "string" },
           { name: "groupBy", type: "string" },
-        ]
+        ],
       );
       bboxWriter = new DebuggingFgbWriter(
         __dirname + "/../outputs/naitaba-bbox-features.fgb",
-        [{ name: "id", type: "integer" }]
+        [{ name: "id", type: "integer" }],
       );
       subjectWriter = new DebuggingFgbWriter(
         __dirname + "/../outputs/subject-feature.fgb",
-        []
+        [],
       );
       fragmentWriter = new DebuggingFgbWriter(
         __dirname + "/../outputs/hunga-fragments.fgb",
-        [{ name: "id", type: "integer" }]
+        [{ name: "id", type: "integer" }],
       );
       helpers = {
         logFeature: (
           layer: OverlayWorkerLogFeatureLayerConfig,
-          feature: Feature<any>
+          feature: Feature<any>,
         ) => {
           switch (layer.name) {
             case "classified-features":
@@ -633,7 +636,7 @@ describe("sketchFragmentOverlap", () => {
       };
       pool = createClippingWorkerPool(
         __dirname + "/../../dist/workers/clipBatch.standalone.js",
-        5
+        5,
       );
     });
 
@@ -647,7 +650,7 @@ describe("sketchFragmentOverlap", () => {
 
     const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
       `https://uploads.seasketch.org`,
-      1000 * 1024 * 128
+      1000 * 1024 * 128,
     );
     const sourceCache = new SourceCache("128mb", {
       fetchRangeFn,
@@ -657,18 +660,18 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-ca-estuaries.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/Long-Beach.geojson.json")
+        require("./sketches/Long-Beach.geojson.json"),
       );
       const pool = createClippingWorkerPool(
-        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
       );
       if (helpers.logFeature) {
         helpers.logFeature(
           { name: "subject-feature", geometryType: "Polygon", fields: {} },
-          prepared.feature
+          prepared.feature,
         );
       }
       const processor = new OverlayEngineBatchProcessor(
@@ -679,7 +682,7 @@ describe("sketchFragmentOverlap", () => {
         [],
         helpers,
         undefined,
-        pool
+        pool,
       );
       const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(11.06, 1);
@@ -691,10 +694,10 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-linear-kelp.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/Long-Beach.geojson.json")
+        require("./sketches/Long-Beach.geojson.json"),
       );
       const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
@@ -704,7 +707,7 @@ describe("sketchFragmentOverlap", () => {
         [],
         helpers,
         undefined,
-        pool
+        pool,
       );
       const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(2.37853578);
@@ -716,10 +719,10 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-shoretypes.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/West-Anacapa-Island.geojson.json")
+        require("./sketches/West-Anacapa-Island.geojson.json"),
       );
       const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
@@ -729,7 +732,7 @@ describe("sketchFragmentOverlap", () => {
         [],
         helpers,
         "MapClass",
-        pool
+        pool,
       );
       const results = await processor.calculate();
       expect(results["*"]).toBeGreaterThan(12);
@@ -742,10 +745,10 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-shoretypes.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/West-Anacapa-Island.geojson.json")
+        require("./sketches/West-Anacapa-Island.geojson.json"),
       );
       const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
@@ -757,7 +760,7 @@ describe("sketchFragmentOverlap", () => {
         [],
         helpers,
         "MapClass",
-        pool
+        pool,
       );
       const results = await processor.calculate();
       expect(results["*"]).toBeGreaterThan(15);
@@ -769,7 +772,7 @@ describe("sketchFragmentOverlap", () => {
   describe("CRDSS", () => {
     const { fetchRangeFn } = makeFetchRangeFn(
       `https://uploads.seasketch.org`,
-      1000 * 1024 * 128
+      1000 * 1024 * 128,
     );
 
     let pool: WorkerPool<any, any>;
@@ -780,7 +783,7 @@ describe("sketchFragmentOverlap", () => {
         fetchRangeFn,
       });
       pool = createClippingWorkerPool(
-        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
       );
     });
 
@@ -789,10 +792,10 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-reef-injury-sites-2.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/CRDSS-Example-A.geojson.json")
+        require("./sketches/CRDSS-Example-A.geojson.json"),
       );
       const processor = new OverlayEngineBatchProcessor(
         "count",
@@ -802,7 +805,7 @@ describe("sketchFragmentOverlap", () => {
         [],
         {},
         "Type",
-        pool
+        pool,
       );
       const results = await processor.calculate();
       expect(results["*"].count).toBe(7);
@@ -816,10 +819,10 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-reef-injury-sites-2.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/CRDSS-Example-A.geojson.json")
+        require("./sketches/CRDSS-Example-A.geojson.json"),
       );
       const processor = new OverlayEngineBatchProcessor(
         "presence",
@@ -827,7 +830,7 @@ describe("sketchFragmentOverlap", () => {
         prepared.feature,
         source,
         [],
-        {}
+        {},
       );
       const results = await processor.calculate();
       expect(results).toBe(true);
@@ -838,10 +841,10 @@ describe("sketchFragmentOverlap", () => {
         "https://uploads.seasketch.org/testing-reef-injury-sites-2.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const prepared = prepareSketch(
-        require("./sketches/Long-Beach.geojson.json")
+        require("./sketches/Long-Beach.geojson.json"),
       );
       const processor = new OverlayEngineBatchProcessor(
         "presence",
@@ -849,7 +852,7 @@ describe("sketchFragmentOverlap", () => {
         prepared.feature,
         source,
         [],
-        {}
+        {},
       );
       const results = await processor.calculate();
       expect(results).toBe(false);
@@ -862,7 +865,7 @@ describe("Raster metrics", () => {
     const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
     // const source = "https://uploads.seasketch.org/gebco-cog.tif";
     const prepared = prepareSketch(
-      require("./sketches/Kanacea-Island.geojson.json")
+      require("./sketches/Kanacea-Island.geojson.json"),
     );
     const f = reprojectFeatureTo6933(prepared.feature);
     const stats = await calculateRasterStats(source, f);
@@ -877,13 +880,13 @@ describe("Distance to shore metrics", () => {
     const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
     const source = await createSource<Feature<Polygon>>(sourceUrl);
     const prepared = prepareSketch(
-      require("./sketches/Kanacea-Island.geojson.json")
+      require("./sketches/Kanacea-Island.geojson.json"),
     );
 
     const result = await calculateDistanceToShore(prepared.feature, source);
     expect(result.meters).toBe(0);
     const offshoreNorth = prepareSketch(
-      require("./sketches/Offshore-North.geojson.json")
+      require("./sketches/Offshore-North.geojson.json"),
     ).feature;
     const result2 = await calculateDistanceToShore(offshoreNorth, source);
     expect(result2.meters).toBeGreaterThan(0);
@@ -894,7 +897,7 @@ describe("Distance to shore metrics", () => {
     const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
     const source = await createSource<Feature<Polygon>>(sourceUrl);
     const prepared = prepareSketch(
-      require("./sketches/Midpoint-test-4.geojson.json")
+      require("./sketches/Midpoint-test-4.geojson.json"),
     );
     const result = await calculateDistanceToShore(prepared.feature, source);
     expect(result.meters).toBeCloseTo(1515.481);
@@ -904,7 +907,7 @@ describe("Distance to shore metrics", () => {
     const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
     const source = await createSource<Feature<Polygon>>(sourceUrl);
     const prepared = prepareSketch(
-      require("./sketches/Distance-test.geojson.json")
+      require("./sketches/Distance-test.geojson.json"),
     );
     const result = await calculateDistanceToShore(prepared.feature, source);
     expect(result.meters).toBeCloseTo(213248.537548996);
@@ -914,9 +917,62 @@ describe("Distance to shore metrics", () => {
     const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
     const source = await createSource<Feature<Polygon>>(sourceUrl);
     const prepared = prepareSketch(
-      require("./sketches/Distance-test-3.geojson.json")
+      require("./sketches/Distance-test-3.geojson.json"),
     );
     const result = await calculateDistanceToShore(prepared.feature, source);
     expect(result.meters).toBeCloseTo(12843.832120885687);
+  });
+});
+
+describe("Samoa test cases", () => {
+  let sourceCache: SourceCache;
+  let clippingFn: ClippingFn;
+  let pool: WorkerPool<any, any>;
+
+  beforeAll(async () => {
+    const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
+      `https://uploads.seasketch.org`,
+      1000 * 1024 * 128,
+    );
+
+    sourceCache = new SourceCache("256mb");
+    clippingFn = async (sketch, source, op, query) => {
+      const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+        source,
+        {
+          fetchRangeFn,
+        },
+      );
+      const overlappingFeatures = fgbSource.getFeaturesAsync(sketch.envelopes);
+      return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
+    };
+    pool = createClippingWorkerPool(
+      __dirname + "/../../dist/workers/clipBatch.standalone.js",
+    );
+  });
+
+  it("overlapping source features should be counted independently", async () => {
+    const fragment2 = require("./fragments/fragment-c55ab756.geojson.json");
+    const sourceUrl = "https://uploads.seasketch.org/testing-samoa-ebsa.fgb";
+    const source = await createSource<Feature<MultiPolygon>>(sourceUrl);
+    const sqKm = calcArea(fragment2) / 1_000_000;
+    const processor = new OverlayEngineBatchProcessor(
+      "overlay_area",
+      1024 * 1024 * 2,
+      fragment2,
+      source,
+      [],
+      {},
+      undefined,
+      pool,
+      undefined,
+      undefined,
+      undefined,
+      true, // overlappingFeatures
+    );
+    const f2Results = await processor.calculate();
+    // Two overlapping polygons in the source contain the fragment, so the
+    // total overlap area should exceed the fragment area.
+    expect(f2Results["*"]).toBeGreaterThan(sqKm);
   });
 });

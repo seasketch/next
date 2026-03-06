@@ -11,7 +11,7 @@ import requests
 import traceback
 import time
 
-from subdivide import process_file
+from subdivide import process_file, detect_overlapping_features
 from points import process_points
 from raster import process_raster
 from lines import process_lines
@@ -508,6 +508,11 @@ def handler(event, context):
                 elif geom_type in ('Polygon', 'MultiPolygon'):
                     print(f"Detected geometry type: {geom_type}, routing to subdivision processor")
                     processing_stats = process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress, repair_invalid=repair_invalid)
+                    contains_overlapping = detect_overlapping_features(output_path)
+                    print(f"Contains overlapping features: {contains_overlapping}")
+                    if processing_stats is None:
+                        processing_stats = {}
+                    processing_stats["contains_overlapping_features"] = contains_overlapping
                 elif geom_type in ('LineString', 'MultiLineString'):
                     print(f"Detected geometry type: {geom_type}, routing to line subdivision processor")
                     process_lines(input_path, output_path, max_nodes, progress_callback=_overall_progress)
@@ -541,6 +546,9 @@ def handler(event, context):
                             result_payload["numRepairedFeatures"] = num_repaired
                         if was_repaired:
                             result_payload["wasRepaired"] = True
+                        contains_overlapping = processing_stats.get("contains_overlapping_features")
+                        if contains_overlapping is not None:
+                            result_payload["containsOverlappingFeatures"] = contains_overlapping
                     notifier.result(result_payload)
                 except Exception:
                     pass

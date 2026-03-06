@@ -1,12 +1,30 @@
 import { useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { Pencil2Icon, CaretDownIcon, TrashIcon } from "@radix-ui/react-icons";
-import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
 import {
-  ReportSourceLayerDropdown,
+  Pencil2Icon,
+  CaretDownIcon,
+  TrashIcon,
+  MixerHorizontalIcon,
+  EyeOpenIcon,
+  EyeClosedIcon,
+  CheckCircledIcon,
+  CircleIcon,
+  QuestionMarkCircledIcon,
+  LayersIcon,
+  PlusIcon,
+} from "@radix-ui/react-icons";
+import { LayerPickerDropdown } from "./LayerPickerDropdown";
+// Old single-select dropdown (commented out in favour of ReportLayerMultiPicker)
+// import {
+//   ReportSourceLayerDropdown,
+//   ReportSourceLayerValue,
+//   ReportSourceGeometryType,
+// } from "./ReportSourceLayerDropdown";
+import {
+  ReportLayerMultiPicker,
   ReportSourceLayerValue,
   ReportSourceGeometryType,
-} from "./ReportSourceLayerDropdown";
+} from "./ReportLayerMultiPicker";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import {
   ClassTableRow,
@@ -18,9 +36,7 @@ import { MetricDependency } from "overlay-engine";
 import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { useOverlaySources } from "../hooks/useOverlaySources";
-import getSlug from "../../getSlug";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { TooltipInfoIcon } from "../../editor/TooltipMenu";
 
 function GroupByPicker({
   value,
@@ -39,7 +55,7 @@ function GroupByPicker({
       <Popover.Trigger asChild>
         <button
           type="button"
-          className="h-8 w-full truncate rounded border border-transparent hover:border-gray-300 px-2 pr-1.5 text-sm flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-right"
+          className="h-8 w-full rounded border border-gray-300 px-2 pr-1.5 text-sm flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500 text-left"
         >
           <span className="truncate flex-1 min-w-0">
             {(() => {
@@ -60,21 +76,29 @@ function GroupByPicker({
         side="bottom"
         sideOffset={6}
         className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-50 w-56 p-1"
+        data-group-by-picker-content
       >
-        <div className="max-h-64 overflow-auto space-y-1 pb-1">
-          {options.map((opt) => (
-            <button
-              key={opt.value}
-              type="button"
-              className="w-full text-left px-2.5 py-1.5 text-sm hover:bg-gray-50 focus:bg-gray-50 rounded-md transition-colors flex items-center gap-2"
-              onClick={() => {
-                onChange(opt.value === "__none__" ? undefined : opt.value);
-                setOpen(false);
-              }}
-            >
-              <span className="truncate">{opt.label}</span>
-            </button>
-          ))}
+        <div className="max-h-64 overflow-auto space-y-0.5 pb-1">
+          {options.map((opt) => {
+            const isSelected = opt.value === (value || "__none__");
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                className={`w-full text-left px-2.5 py-1.5 text-sm rounded-md transition-colors flex items-center gap-2 ${
+                  isSelected
+                    ? "bg-blue-50 text-blue-700 font-medium"
+                    : "bg-transparent hover:bg-gray-50 focus:bg-gray-50 text-gray-900"
+                }`}
+                onClick={() => {
+                  onChange(opt.value === "__none__" ? undefined : opt.value);
+                  setOpen(false);
+                }}
+              >
+                <span className="truncate">{opt.label}</span>
+              </button>
+            );
+          })}
         </div>
       </Popover.Content>
     </Popover.Root>
@@ -95,6 +119,12 @@ type ClassRowSettingsPopoverProps = {
   t: (key: string, opts?: Record<string, any>) => string;
   /** When set, only layers matching these geometry/types can be added. Omit to allow all. */
   allowedGeometryTypes?: ReportSourceGeometryType[];
+  /** Show the "Show zeros" toggle in the footer. */
+  showZeros?: boolean;
+  onShowZerosChange?: (value: boolean) => void;
+  /** Show the "Show color swatches" toggle in the footer. */
+  showColorSwatches?: boolean;
+  onShowColorSwatchesChange?: (value: boolean) => void;
 };
 
 export const ClassRowSettingsPopover = ({
@@ -106,6 +136,10 @@ export const ClassRowSettingsPopover = ({
   onUpdateAllDependencies,
   t,
   allowedGeometryTypes,
+  showZeros,
+  onShowZerosChange,
+  showColorSwatches,
+  onShowColorSwatchesChange,
 }: ClassRowSettingsPopoverProps) => {
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const { allSources: overlaySources } = useOverlaySources();
@@ -134,21 +168,19 @@ export const ClassRowSettingsPopover = ({
     );
   }, [dependencies]);
 
-  const handleAddSource = (layerValue: ReportSourceLayerValue | undefined) => {
-    if (!layerValue?.stableId) return;
-    // Don't add if already in use
-    if (currentSourceIds.has(layerValue.stableId)) return;
-    if (!layerValue.stableId) {
-      return;
-    }
+  const handleAddSources = (layers: ReportSourceLayerValue[]) => {
+    const validLayers = layers.filter(
+      (lv) => lv.stableId && !currentSourceIds.has(lv.stableId)
+    );
+    if (validLayers.length === 0) return;
 
-    if (layerValue.stableId) {
-      setTitlesByStableId((prev) => {
-        const next = { ...prev };
-        next[layerValue.stableId!] = layerValue.title;
-        return next;
-      });
-    }
+    setTitlesByStableId((prev) => {
+      const next = { ...prev };
+      for (const lv of validLayers) {
+        next[lv.stableId] = lv.title;
+      }
+      return next;
+    });
 
     onUpdateAllDependencies((currentDeps) => {
       const newDeps = [...currentDeps];
@@ -156,23 +188,21 @@ export const ClassRowSettingsPopover = ({
       if (bufferDistanceKm !== undefined) {
         params.bufferDistanceKm = bufferDistanceKm;
       }
-      // Add fragments dependency
-      newDeps.push({
-        type: metricType,
-        subjectType: "fragments",
-        stableId: layerValue.stableId,
-        parameters: params,
-      });
-      // Add geographies dependency
-      newDeps.push({
-        type: metricType,
-        subjectType: "geographies",
-        stableId: layerValue.stableId,
-        parameters: params,
-      });
 
-      // add layer toggles to all sources (if not already set)
-      // add custom label to the row so it doesn't just say "All features"
+      for (const layerValue of validLayers) {
+        newDeps.push({
+          type: metricType,
+          subjectType: "fragments",
+          stableId: layerValue.stableId,
+          parameters: params,
+        });
+        newDeps.push({
+          type: metricType,
+          subjectType: "geographies",
+          stableId: layerValue.stableId,
+          parameters: params,
+        });
+      }
 
       const newSettings = {
         ...settings,
@@ -191,7 +221,6 @@ export const ClassRowSettingsPopover = ({
             (s) => s.stableId === dep.stableId
           );
           if (relatedSource && dep.parameters?.groupBy) {
-            // set layer toggle for each key in the groupBy
             const values = Object.keys(
               relatedSource.geostats?.layers?.[0]?.attributes?.[
                 dep.parameters?.groupBy
@@ -204,12 +233,8 @@ export const ClassRowSettingsPopover = ({
               }
             }
           } else {
-            // set layer toggle
             const stableId =
-              relatedSource?.tableOfContentsItem?.stableId ||
-              (layerValue.stableId === dep.stableId
-                ? layerValue.stableId
-                : undefined);
+              relatedSource?.tableOfContentsItem?.stableId || dep.stableId;
             if (stableId) {
               const rowKey = classTableRowKey(dep.stableId!, "*");
               if (!(rowKey in newSettings.rowLinkedStableIds)) {
@@ -282,6 +307,19 @@ export const ClassRowSettingsPopover = ({
     return map;
   }, [dependencies]);
 
+  const overlappingFeaturesBySource = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    (dependencies || []).forEach((d) => {
+      if (
+        d.stableId !== undefined &&
+        d.parameters?.sourceHasOverlappingFeatures
+      ) {
+        map[String(d.stableId)] = true;
+      }
+    });
+    return map;
+  }, [dependencies]);
+
   const groupByOptionsBySource = useMemo(() => {
     const map: Record<
       string,
@@ -347,230 +385,476 @@ export const ClassRowSettingsPopover = ({
         side="top"
         align="center"
         sideOffset={6}
-        className="bg-white rounded-lg shadow-lg border border-gray-200 p-0 w-[680px] max-h-128 flex flex-col"
-        onPointerDownOutside={(e) => {
+        className="bg-white rounded-lg shadow-lg border border-gray-200 p-0 w-[680px] max-h-[22rem] flex flex-col"
+        onInteractOutside={(e) => {
           const target = e.target as HTMLElement;
-          if (target?.closest?.("[data-report-source-layer-dropdown]")) {
+          if (
+            target?.closest?.(
+              "[data-report-source-layer-dropdown], [data-source-options-popover], [data-group-by-picker-content], [data-report-layer-multi-picker]"
+            )
+          ) {
             e.preventDefault();
           }
         }}
       >
-        <div className="text-xs px-3 py-3 shadow-sm z-10 grid grid-cols-3 gap-2 items-center font-semibold uppercase tracking-wide text-gray-500 bg-white border-b rounded-t-lg flex-none">
-          <div className="pl-1 flex items-center gap-1">
-            <button autoFocus></button>
-            {t("Included Rows")}
-            <TooltipInfoIcon
-              content={t(
-                "Uncheck any rows you would like to exclude from the table."
-              )}
-              ariaLabel={t("Included rows help")}
-            />
-          </div>
-          <div className="pl-2 flex items-center gap-1">
-            {t("Label")}
-            <TooltipInfoIcon
-              content={t(
-                "Customized labels will appear in the table, replacing default values."
-              )}
-              ariaLabel={t("Label help")}
-            />
-          </div>
-          <div className="pl-2 flex items-center gap-1">
-            {t("Map Layer Toggle")}
-            <TooltipInfoIcon
-              content={t(
-                "If provided, a column will appear in the table with inputs for toggling linked data layers on the map. These may be the same layer used in the analysis, or in a different derivative visualization layer of your choosing."
-              )}
-              ariaLabel={t("Map layer toggle help")}
-            />
-          </div>
-        </div>
-        <div className="divide-y divide-gray-100 overflow-y-auto flex-1">
-          {groupedRows.map((group) => (
-            <div key={group.title}>
-              <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center space-x-2">
-                <span className="text-sm truncate font-light text-gray-400 whitespace-nowrap flex-1">
-                  {group.title}
-                </span>
-                <div className="w-42 flex items-center overflow-hidden space-x-2">
-                  <span className="text-[11px] uppercase tracking-wide text-gray-500 font-semibold flex-none ">
-                    {t("Group by")}
-                  </span>
-                  <GroupByPicker
-                    value={currentGroupByBySource[group.source?.stableId!]}
-                    options={
-                      groupByOptionsBySource[group.source?.stableId!] || [
-                        { value: "__none__", label: t("None") },
-                      ]
-                    }
-                    placeholder={t("None")}
-                    onChange={(groupByValue) => {
-                      const targetId = group.source?.stableId;
-                      if (!targetId) return;
-                      onUpdateDependencyParameters((dependency) => {
-                        const nextParams = {
-                          ...(dependency.parameters || {}),
-                        };
-                        if (dependency.stableId === targetId) {
-                          nextParams.groupBy = groupByValue;
-                        }
-                        return nextParams;
-                      });
-                    }}
-                  />
-                </div>
-                {groupedRows.length > 1 && group.source?.stableId && (
-                  <Tooltip.Provider delayDuration={100}>
-                    <Tooltip.Root>
-                      <Tooltip.Trigger asChild>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleRemoveSource(group.source!.stableId!)
-                          }
-                          className="flex items-center justify-center w-6 h-6 rounded hover:bg-gray-200 text-gray-500 hover:text-gray-700"
-                        >
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </Tooltip.Trigger>
-                      <Tooltip.Portal>
-                        <Tooltip.Content
-                          side="top"
-                          align="center"
-                          sideOffset={6}
-                          className="bg-gray-900 text-white text-[11px] px-2 py-1 rounded shadow-lg z-[60]"
-                        >
-                          {t("Remove source")}
-                          <Tooltip.Arrow className="fill-gray-900" />
-                        </Tooltip.Content>
-                      </Tooltip.Portal>
-                    </Tooltip.Root>
-                  </Tooltip.Provider>
-                )}
-              </div>
-
-              {group.rows.map((row) => {
-                const checked = !excludedSet.has(row.key);
-                const linkedStableId = settings.rowLinkedStableIds?.[row.key];
-                const customLabel = settings.customRowLabels?.[row.key] || "";
-                const stableId = row.sourceId ? row.sourceId : undefined;
-                return (
-                  <div
-                    key={row.key}
-                    className="grid grid-cols-3 gap-2 px-3 py-2 items-center"
-                    // style={{
-                    //   gridTemplateColumns:
-                    //     "minmax(0,200px) minmax(0,200px) minmax(0,200px)",
-                    // }}
-                  >
-                    <label className="flex items-center gap-2 text-sm text-gray-800 cursor-pointer">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300"
-                        checked={checked}
-                        onChange={(e) => {
-                          const nextExcluded = new Set(
-                            settings.excludedRowKeys || []
-                          );
-                          if (e.target.checked) {
-                            nextExcluded.delete(row.key);
-                          } else {
-                            nextExcluded.add(row.key);
-                          }
-                          onUpdateSettings({
-                            excludedRowKeys: Array.from(nextExcluded),
-                          });
-                        }}
-                      />
-                      <span className="flex-1 min-w-0 truncate text-sm font-medium text-gray-900">
-                        {row.groupByKey === "*"
-                          ? t("All features")
-                          : row.groupByKey}
-                      </span>
-                    </label>
-                    <input
-                      type="text"
-                      className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      placeholder={row.label}
-                      value={customLabel}
-                      onChange={(e) => {
-                        onUpdateSettings({
-                          customRowLabels: {
-                            ...(settings.customRowLabels || {}),
-                            [row.key]: e.target.value,
-                          },
-                        });
-                      }}
-                    />
-                    <LayerPickerDropdown
-                      suggested={stableId ? [stableId] : undefined}
-                      value={linkedStableId}
-                      onChange={(layerValue) => {
-                        const next = { ...(settings.rowLinkedStableIds || {}) };
-                        if (!layerValue?.stableId) {
-                          delete next[row.key];
-                        } else {
-                          next[row.key] = layerValue.stableId;
-                        }
-                        onUpdateSettings({ rowLinkedStableIds: next });
-                      }}
-                      required={false}
-                      onlyReportingLayers={false}
-                      hideSearch={false}
-                      title={t("Choose a layer")}
-                      description={t(
-                        "An input will be shown to toggle the chosen layer on the map."
-                      )}
-                    >
-                      <button
-                        type="button"
-                        className="h-8 w-full rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <span className="truncate flex-1 min-w-0">
-                          {linkedStableId
-                            ? overlayOptions.find(
-                                (o) => o.value === linkedStableId
-                              )?.label || linkedStableId
-                            : t("None")}
-                        </span>
-                        <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      </button>
-                    </LayerPickerDropdown>
-                  </div>
-                );
-              })}
-            </div>
-          ))}
-          {!groupedRows.length && (
-            <div className="text-xs text-gray-500 px-3 py-2">
-              {t("No rows available")}
-            </div>
-          )}
-        </div>
-        <div className="px-3 py-2 border-t border-gray-200 bg-gray-50 shadow-sm z-10">
-          <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-            {t("Add a Source")}
-          </div>
-          <p className="text-xs text-gray-500 pb-2">
+        <div className="px-3 py-2.5 shadow-sm z-10 border-b rounded-t-lg flex-none bg-slate-50">
+          <span className="text-sm font-semibold text-gray-800">
+            {t("Row and Source Layer Settings")}
+          </span>
+          <p className="text-xs text-gray-500 mt-1">
             {t(
-              `Rows can be added to this table by using the "Group by" option, adding multiple sources, or some combination.`
+              `Use the inputs below to configure how data sources appear as rows in the table.`
             )}
           </p>
-          <ReportSourceLayerDropdown
-            onChange={handleAddSource}
-            excludeStableIds={currentSourceIds}
-            allowedGeometryTypes={allowedGeometryTypes}
-          >
-            <button
-              type="button"
-              className="h-8 rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center justify-between gap-2 hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-72"
+        </div>
+        <Tooltip.Provider delayDuration={100}>
+          <div className="divide-y divide-gray-100 overflow-y-auto flex-1 overscroll-contain">
+            {groupedRows.map((group) => (
+              <div key={group.title}>
+                <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center justify-between gap-2">
+                  <span className="text-sm truncate font-medium text-gray-700 min-w-0">
+                    {group.title}
+                  </span>
+                  <Popover.Root>
+                    <Popover.Trigger asChild>
+                      <button
+                        type="button"
+                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-blue-100/50 border border-transparent hover:border-blue-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-300"
+                        aria-label={t("Source options")}
+                      >
+                        <MixerHorizontalIcon className="w-3.5 h-3.5" />
+                        <span>{t("Source options")}</span>
+                      </button>
+                    </Popover.Trigger>
+                    <Popover.Portal>
+                      <Popover.Content
+                        side="bottom"
+                        align="end"
+                        sideOffset={6}
+                        collisionPadding={8}
+                        data-source-options-popover
+                        onInteractOutside={(e) => {
+                          const target = e.target as HTMLElement;
+                          if (
+                            target?.closest?.("[data-group-by-picker-content]")
+                          ) {
+                            e.preventDefault();
+                          }
+                        }}
+                        className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-[60] w-80 p-0 overflow-hidden"
+                      >
+                        {/* <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50/80">
+                          <h3 className="text-sm font-semibold text-gray-800">
+                            {group.title}
+                          </h3>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {t(
+                              "Configure how this data source appears in the table."
+                            )}
+                          </p>
+                        </div> */}
+                        <div className="divide-y divide-gray-100">
+                          <div className="px-3 py-3">
+                            <h4 className="text-xs font-semibold text-gray-700 mb-1">
+                              {t("Group by")}
+                            </h4>
+                            <p className="text-xs text-gray-500 mb-2">
+                              {t(
+                                "Split this source into multiple rows based on column values."
+                              )}
+                            </p>
+                            <GroupByPicker
+                              value={
+                                currentGroupByBySource[group.source?.stableId!]
+                              }
+                              options={
+                                groupByOptionsBySource[
+                                  group.source?.stableId!
+                                ] || [{ value: "__none__", label: t("None") }]
+                              }
+                              placeholder={t("None")}
+                              onChange={(groupByValue) => {
+                                const targetId = group.source?.stableId;
+                                if (!targetId) return;
+                                onUpdateDependencyParameters((dependency) => {
+                                  const nextParams = {
+                                    ...(dependency.parameters || {}),
+                                  };
+                                  if (dependency.stableId === targetId) {
+                                    nextParams.groupBy = groupByValue;
+                                  }
+                                  return nextParams;
+                                });
+                              }}
+                            />
+                          </div>
+                          {metricType === "overlay_area" &&
+                            group.source?.stableId && (
+                              <div className="px-3 py-3">
+                                <h4 className="text-xs font-semibold text-gray-700 mb-1">
+                                  {t("Calculation method")}
+                                </h4>
+                                <p className="text-xs text-gray-500 mb-2">
+                                  {t(
+                                    "SeaSketch can calculate area much faster if it can assumes polygons in this source do not overlap each other. If they do, a slower, more precise method must be used."
+                                  )}
+                                </p>
+                                <div className="space-y-1">
+                                  {([false, true] as const).map(
+                                    (overlapValue) => {
+                                      const isSelected =
+                                        !!overlappingFeaturesBySource[
+                                          group.source!.stableId!
+                                        ] === overlapValue;
+                                      const sourceRecommends =
+                                        !!group.source!
+                                          .containsOverlappingFeatures ===
+                                        overlapValue;
+                                      return (
+                                        <button
+                                          key={String(overlapValue)}
+                                          type="button"
+                                          onClick={() => {
+                                            const targetId =
+                                              group.source!.stableId;
+                                            if (!targetId) return;
+                                            onUpdateDependencyParameters(
+                                              (dependency) => {
+                                                if (
+                                                  dependency.stableId ===
+                                                  targetId
+                                                ) {
+                                                  return {
+                                                    ...(dependency.parameters ||
+                                                      {}),
+                                                    sourceHasOverlappingFeatures:
+                                                      overlapValue || undefined,
+                                                  };
+                                                }
+                                                return (
+                                                  dependency.parameters || {}
+                                                );
+                                              }
+                                            );
+                                          }}
+                                          className={`w-full text-left px-2.5 py-2 rounded-md border transition-colors flex items-start gap-2 ${
+                                            isSelected
+                                              ? "border-gray-300 bg-gray-50"
+                                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                          }`}
+                                        >
+                                          <span className="mt-0 flex-shrink-0">
+                                            {isSelected ? (
+                                              <CheckCircledIcon className="w-4 h-4 text-gray-700" />
+                                            ) : (
+                                              <CircleIcon className="w-4 h-4 text-gray-400" />
+                                            )}
+                                          </span>
+                                          <span className="flex-1 min-w-0">
+                                            <span
+                                              className={`text-xs block ${
+                                                isSelected
+                                                  ? "font-medium text-gray-900"
+                                                  : "text-gray-700"
+                                              }`}
+                                            >
+                                              {overlapValue
+                                                ? t(
+                                                    "Polygons are known to overlap"
+                                                  )
+                                                : t(
+                                                    "Assume no overlap (faster)"
+                                                  )}
+                                            </span>
+                                            {sourceRecommends && (
+                                              <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 bg-blue-100 rounded">
+                                                {t(
+                                                  "Recommended for this layer"
+                                                )}
+                                                <Tooltip.Root>
+                                                  <Tooltip.Trigger asChild>
+                                                    <button
+                                                      type="button"
+                                                      className="inline-flex text-gray-400 hover:text-gray-600"
+                                                      onClick={(e) =>
+                                                        e.stopPropagation()
+                                                      }
+                                                      onMouseDown={(e) =>
+                                                        e.stopPropagation()
+                                                      }
+                                                    >
+                                                      <QuestionMarkCircledIcon className="w-3 h-3" />
+                                                    </button>
+                                                  </Tooltip.Trigger>
+                                                  <Tooltip.Portal>
+                                                    <Tooltip.Content
+                                                      side="top"
+                                                      sideOffset={4}
+                                                      className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[80] max-w-[240px] leading-snug"
+                                                    >
+                                                      {t(
+                                                        "SeaSketch analyzes a sample of polygons during data preparation in order to make this recommendation. It does not analyze all polygons, so there may be undetected instances of overlap."
+                                                      )}
+                                                      <Tooltip.Arrow className="fill-gray-900" />
+                                                    </Tooltip.Content>
+                                                  </Tooltip.Portal>
+                                                </Tooltip.Root>
+                                              </span>
+                                            )}
+                                          </span>
+                                        </button>
+                                      );
+                                    }
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          {groupedRows.length > 1 && group.source?.stableId && (
+                            <div className="px-3 py-3">
+                              <h4 className="text-xs font-semibold text-gray-700 mb-1">
+                                {t("Remove source")}
+                              </h4>
+                              <p className="text-xs text-gray-500 mb-2">
+                                {t(
+                                  "Remove this data source from the table. Rows and metrics for this source will no longer appear."
+                                )}
+                              </p>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  handleRemoveSource(group.source!.stableId!);
+                                }}
+                                className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-red-700 hover:text-red-800 hover:bg-red-50 rounded-md border border-red-200 transition-colors"
+                              >
+                                <TrashIcon className="w-3.5 h-3.5" />
+                                {t("Remove this source")}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </Popover.Content>
+                    </Popover.Portal>
+                  </Popover.Root>
+                </div>
+
+                {group.rows.map((row) => {
+                  const checked = !excludedSet.has(row.key);
+                  const linkedStableId = settings.rowLinkedStableIds?.[row.key];
+                  const customLabel = settings.customRowLabels?.[row.key] || "";
+                  const stableId = row.sourceId ? row.sourceId : undefined;
+                  const defaultLabel =
+                    row.groupByKey === "*" ? group.title : row.groupByKey;
+                  const chipLabel =
+                    row.groupByKey === "*" ? t("All features") : row.groupByKey;
+                  return (
+                    <div
+                      key={row.key}
+                      className={`flex gap-2 px-3 py-2 items-center transition-opacity ${
+                        !checked ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    >
+                      <div
+                        className={`flex-[2] min-w-0 relative ${
+                          !checked ? "pointer-events-none" : ""
+                        }`}
+                      >
+                        <input
+                          type="text"
+                          className={`w-full rounded border border-gray-300 bg-transparent px-2 py-1 text-sm font-medium text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0 focus:border-gray-300 ${
+                            customLabel ? "pr-28" : ""
+                          }`}
+                          placeholder={defaultLabel}
+                          value={customLabel}
+                          aria-label={t("Row label")}
+                          onChange={(e) => {
+                            onUpdateSettings({
+                              customRowLabels: {
+                                ...(settings.customRowLabels || {}),
+                                [row.key]: e.target.value,
+                              },
+                            });
+                          }}
+                        />
+                        {customLabel && (
+                          <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none px-1.5 text-[11px] text-gray-800/50 font-medium truncate max-w-[120px] bg-blue-50 rounded-sm ">
+                            {chipLabel}
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        className={`flex-1 min-w-0 ${
+                          !checked ? "pointer-events-none" : ""
+                        }`}
+                        aria-hidden={!checked}
+                      >
+                        <LayerPickerDropdown
+                          suggested={stableId ? [stableId] : undefined}
+                          value={linkedStableId}
+                          title={t("Choose a layer")}
+                          onChange={(layerValue) => {
+                            const next = {
+                              ...(settings.rowLinkedStableIds || {}),
+                            };
+                            if (!layerValue?.stableId) {
+                              delete next[row.key];
+                            } else {
+                              next[row.key] = layerValue.stableId;
+                            }
+                            onUpdateSettings({ rowLinkedStableIds: next });
+                          }}
+                          required={false}
+                          onlyReportingLayers={false}
+                          hideSearch={false}
+                          description={t(
+                            "If specified, an input will be shown in the table to toggle the associated layer on the map."
+                          )}
+                        >
+                          <button
+                            type="button"
+                            className="h-8 w-full rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                          >
+                            <LayersIcon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                            <span className="truncate flex-1 min-w-0">
+                              {linkedStableId
+                                ? overlayOptions.find(
+                                    (o) => o.value === linkedStableId
+                                  )?.label || linkedStableId
+                                : t("No layer toggle")}
+                            </span>
+                            <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          </button>
+                        </LayerPickerDropdown>
+                      </div>
+                      {group.rows.length > 1 ? (
+                        <Tooltip.Root>
+                          <Tooltip.Trigger asChild>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const nextExcluded = new Set(
+                                  settings.excludedRowKeys || []
+                                );
+                                if (checked) {
+                                  nextExcluded.add(row.key);
+                                } else {
+                                  nextExcluded.delete(row.key);
+                                }
+                                onUpdateSettings({
+                                  excludedRowKeys: Array.from(nextExcluded),
+                                });
+                              }}
+                              className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 flex-shrink-0 ${
+                                checked
+                                  ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                              }`}
+                              aria-label={
+                                checked
+                                  ? t("Hide row from table")
+                                  : t("Show row in table")
+                              }
+                            >
+                              {checked ? (
+                                <EyeOpenIcon className="w-4 h-4" />
+                              ) : (
+                                <EyeClosedIcon className="w-4 h-4" />
+                              )}
+                            </button>
+                          </Tooltip.Trigger>
+                          <Tooltip.Portal>
+                            <Tooltip.Content
+                              side="right"
+                              sideOffset={4}
+                              className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[200px]"
+                            >
+                              {checked
+                                ? t("Click to hide this row from the table")
+                                : t("Click to show this row in the table")}
+                              <Tooltip.Arrow className="fill-gray-900" />
+                            </Tooltip.Content>
+                          </Tooltip.Portal>
+                        </Tooltip.Root>
+                      ) : (
+                        <Tooltip.Root>
+                          <Tooltip.Trigger asChild>
+                            <span
+                              className="flex items-center justify-center w-8 h-8 rounded-md flex-shrink-0 text-gray-300 cursor-not-allowed"
+                              role="button"
+                              aria-disabled="true"
+                              aria-label={t("Row visibility (disabled)")}
+                            >
+                              <EyeOpenIcon className="w-4 h-4" />
+                            </span>
+                          </Tooltip.Trigger>
+                          <Tooltip.Portal>
+                            <Tooltip.Content
+                              side="right"
+                              sideOffset={4}
+                              className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[220px]"
+                            >
+                              {t(
+                                "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
+                              )}
+                              <Tooltip.Arrow className="fill-gray-900" />
+                            </Tooltip.Content>
+                          </Tooltip.Portal>
+                        </Tooltip.Root>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            ))}
+            {!groupedRows.length && (
+              <div className="text-xs text-gray-500 px-3 py-2">
+                {t("No rows available")}
+              </div>
+            )}
+          </div>
+        </Tooltip.Provider>
+        <div className="px-3 py-2.5 border-t border-gray-200 bg-slate-50 rounded-b-lg flex-none">
+          <div className="flex items-center gap-6">
+            <ReportLayerMultiPicker
+              onAdd={handleAddSources}
+              excludeStableIds={currentSourceIds}
+              allowedGeometryTypes={allowedGeometryTypes}
+              side="left"
+              align="center"
+              sideOffset={18}
             >
-              <span className="truncate flex-1 text-gray-500">
-                {t("Select layer to add...")}
-              </span>
-              <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-            </button>
-          </ReportSourceLayerDropdown>
+              <button
+                type="button"
+                className="h-7 rounded bg-blue-600 hover:bg-blue-700 px-2.5 text-xs text-left flex items-center gap-1.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 flex-shrink-0"
+              >
+                <PlusIcon className="w-3.5 h-3.5 text-white/80 flex-shrink-0" />
+                <span className="text-white font-medium whitespace-nowrap">
+                  {t("Add source(s)")}
+                </span>
+              </button>
+            </ReportLayerMultiPicker>
+            {onShowZerosChange !== undefined && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!showZeros}
+                  onChange={(e) => onShowZerosChange(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                />
+                {t("Show rows with zero overlap")}
+              </label>
+            )}
+            {onShowColorSwatchesChange !== undefined && (
+              <label className="flex items-center gap-1.5 text-xs text-gray-600 hover:text-gray-900 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showColorSwatches ?? true}
+                  onChange={(e) => onShowColorSwatchesChange(e.target.checked)}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5"
+                />
+                {t("Show color swatches")}
+              </label>
+            )}
+          </div>
         </div>
       </Popover.Content>
     </Popover.Root>

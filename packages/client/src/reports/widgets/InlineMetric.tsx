@@ -1226,6 +1226,27 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
             </div>
           </>
         )}
+        {["overlay_area", "geography_overlay_area"].includes(presentation) && (
+          <label className="flex items-center gap-2 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              className="rounded border-gray-300"
+              checked={dependencies.some(
+                (d) => d.parameters?.sourceHasOverlappingFeatures === true
+              )}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                onUpdateDependencyParameters((dependency) => ({
+                  ...(dependency.parameters || {}),
+                  sourceHasOverlappingFeatures: checked || undefined,
+                }));
+              }}
+            />
+            <span className="text-sm font-light text-gray-400 whitespace-nowrap">
+              {t("Source has overlapping features")}
+            </span>
+          </label>
+        )}
       </TooltipMorePopover>
     </>
   );

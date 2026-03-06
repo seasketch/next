@@ -262,6 +262,7 @@ type FeatureCountTableSettings = {
   percentWithinLabel?: string;
   showPercentColumn?: boolean;
   bufferMeters?: number;
+  hideColorSwatches?: boolean;
 } & ClassTableRowComponentSettings;
 
 type FeatureCountRow = ClassTableRow & {
@@ -283,6 +284,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   const sortBy = componentSettings.sortBy || "count";
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
   const showPercentColumn = componentSettings.showPercentColumn ?? true;
+  const showColorSwatches = !componentSettings.hideColorSwatches;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const countLabel = componentSettings.countLabel || t("Count");
   const percentWithinLabel =
@@ -379,7 +381,10 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
     pageBounds,
   } = usePagination(displayRows, rowsPerPage);
 
-  const hasAnyColor = useMemo(() => rows.some((row) => row.color), [rows]);
+  const hasAnyColor = useMemo(
+    () => showColorSwatches && rows.some((row) => row.color),
+    [rows, showColorSwatches]
+  );
   const hasVisibilityColumn = useMemo(
     () =>
       rows.some(
@@ -435,7 +440,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
             row.geographyTotal > 0
               ? row.count / row.geographyTotal
               : undefined;
-          const hasColor = color;
+          const hasColor = showColorSwatches && color;
           const stableId =
             row.stableId ||
             componentSettings.rowLinkedStableIds?.[row.key] ||
@@ -610,6 +615,14 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
         onUpdateDependencyParameters={onUpdateDependencyParameters}
         onUpdateAllDependencies={onUpdateAllDependencies}
         t={t}
+        showZeros={showZero}
+        onShowZerosChange={(next) =>
+          handleUpdate({ showZeroCountCategories: next })
+        }
+        showColorSwatches={!settings.hideColorSwatches}
+        onShowColorSwatchesChange={(next) =>
+          handleUpdate({ hideColorSwatches: next ? undefined : true })
+        }
       />
       <TooltipMorePopover>
         <button
@@ -622,11 +635,6 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
             {bufferFormatter.distance(buffer ?? 0)}
           </span>
         </button>
-        <TooltipBooleanConfigurationOption
-          label={t("Show zeros")}
-          checked={showZero}
-          onChange={(next) => handleUpdate({ showZeroCountCategories: next })}
-        />
         <TooltipBooleanConfigurationOption
           label={t("Show % column")}
           checked={showPercentColumn}

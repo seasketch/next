@@ -759,7 +759,10 @@ export default function TooltipMenu({
           ds?.tooltipPortal === "true" ||
           ds?.reportCommandPalette === "true" ||
           ds?.reportBlockHandle === "true" ||
-          ds?.reportSourceLayerDropdown === "true"
+          ds?.reportSourceLayerDropdown === "true" ||
+          ds?.sourceOptionsPopover !== undefined ||
+          ds?.groupByPickerContent !== undefined ||
+          ds?.reportLayerMultiPicker !== undefined
         );
       });
       if (inTooltip) return;

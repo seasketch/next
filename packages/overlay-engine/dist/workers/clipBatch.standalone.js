@@ -5642,7 +5642,8 @@ async function clipBatch({
   features,
   differenceMultiPolygon,
   subjectFeature,
-  groupBy
+  groupBy,
+  overlappingFeatures
 }) {
   const results = { "*": 0 };
   if (groupBy) {
@@ -5661,7 +5662,9 @@ async function clipBatch({
       const size = calculatedClippedOverlapSize(
         features.filter((f) => f.feature.properties?.[groupBy] === classKey),
         differenceMultiPolygon,
-        subjectFeature
+        subjectFeature,
+        0,
+        overlappingFeatures
       );
       results[classKey] += size;
       results["*"] += size;
@@ -5670,7 +5673,9 @@ async function clipBatch({
     const size = calculatedClippedOverlapSize(
       features,
       differenceMultiPolygon,
-      subjectFeature
+      subjectFeature,
+      0,
+      overlappingFeatures
     );
     results["*"] += size;
   }
@@ -5685,12 +5690,13 @@ function calcSize(feature2) {
   return 0;
 }
 var SUBDIVISION_LIMIT = 3;
-function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature, subdivisions = 0) {
+function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature, subdivisions = 0, overlappingFeatures = false) {
   try {
     return calculatedClippedOverlapSizeUnsafe(
       features,
       differenceGeoms,
-      subjectFeature
+      subjectFeature,
+      overlappingFeatures
     );
   } catch (e) {
     subdivisions++;
@@ -5718,14 +5724,22 @@ function calculatedClippedOverlapSize(features, differenceGeoms, subjectFeature,
         bucket,
         differenceGeoms,
         subjectFeature,
-        subdivisions
+        subdivisions,
+        overlappingFeatures
       );
     }
     return total;
   }
 }
-function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature) {
+function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFeature, overlappingFeatures = false) {
   if (features[0].feature.geometry.type === "Polygon" || features[0].feature.geometry.type === "MultiPolygon") {
+    if (overlappingFeatures) {
+      return calculatedClippedOverlapSizePerFeature(
+        features,
+        differenceGeoms,
+        subjectFeature
+      );
+    }
     let product = [];
     let forClipping = [];
     for (const f of features) {
@@ -5775,6 +5789,37 @@ function calculatedClippedOverlapSizeUnsafe(features, differenceGeoms, subjectFe
     return totalLength;
   }
   return 0;
+}
+function calculatedClippedOverlapSizePerFeature(features, differenceGeoms, subjectFeature) {
+  let totalSize = 0;
+  for (const f of features) {
+    let geom;
+    if (f.feature.geometry.type === "Polygon") {
+      geom = [f.feature.geometry.coordinates];
+    } else {
+      geom = f.feature.geometry.coordinates;
+    }
+    if (f.requiresIntersection) {
+      geom = intersection2(
+        geom,
+        subjectFeature.geometry.coordinates
+      );
+    }
+    if (geom.length > 0 && differenceGeoms.length > 0) {
+      geom = difference(geom, ...differenceGeoms);
+    }
+    if (geom.length > 0) {
+      totalSize += calcSize({
+        type: "Feature",
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: geom
+        },
+        properties: {}
+      });
+    }
+  }
+  return totalSize;
 }
 async function countFeatures({
   features,
@@ -6024,7 +6069,8 @@ import_node_worker_threads.parentPort?.on(
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
-          groupBy: job.groupBy
+          groupBy: job.groupBy,
+          overlappingFeatures: job.overlappingFeatures
         });
       } else if (operation2 === "count") {
         result = await countFeatures({

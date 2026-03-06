@@ -152,6 +152,7 @@ export class OverlayEngineBatchProcessor<
   includedProperties?: string[];
   resultsLimit = 50;
   columnValuesProperty?: string;
+  overlappingFeatures = false;
 
   private progress: number = 0;
   private progressTarget: number = 0;
@@ -240,7 +241,8 @@ export class OverlayEngineBatchProcessor<
     pool?: WorkerPool<any, any>,
     includedProperties?: string[],
     resultsLimit?: number,
-    columnValuesProperty?: string
+    columnValuesProperty?: string,
+    overlappingFeatures?: boolean,
   ) {
     this.operation = operation;
     this.pool = pool;
@@ -249,6 +251,7 @@ export class OverlayEngineBatchProcessor<
     this.maxBatchSize = maxBatchSize;
     this.subjectFeature = subjectFeature;
     this.helpers = guaranteeHelpers(helpers);
+    this.overlappingFeatures = overlappingFeatures ?? false;
 
     this.containerIndex = new ContainerIndex(subjectFeature);
     const boxes = this.containerIndex.getBBoxPolygons();
@@ -276,11 +279,6 @@ export class OverlayEngineBatchProcessor<
     }
     if (this.operation === "column_values") {
       this.columnValuesProperty = columnValuesProperty;
-      // if (!this.columnValuesProperty) {
-      //   throw new Error(
-      //     "columnValuesProperty is required for column_values operation"
-      //   );
-      // }
     }
   }
 
@@ -543,6 +541,7 @@ export class OverlayEngineBatchProcessor<
       includedProperties: this.includedProperties,
       resultsLimit: this.resultsLimit,
       property: this.columnValuesProperty,
+      overlappingFeatures: this.overlappingFeatures,
     };
 
     this.helpers.log(
@@ -618,6 +617,7 @@ export class OverlayEngineBatchProcessor<
       differenceMultiPolygon: differenceMultiPolygon,
       subjectFeature: this.subjectFeature,
       groupBy: this.groupBy,
+      overlappingFeatures: this.overlappingFeatures,
     }).catch((error) => {
       console.error(`Error processing batch: ${error.message}`);
       throw error;

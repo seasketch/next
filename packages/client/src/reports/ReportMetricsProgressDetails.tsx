@@ -144,6 +144,9 @@ export default function ReportMetricsProgressDetails({
                     numFeatures={layer.output?.numFeatures}
                     numRepairedFeatures={layer.output?.numRepairedFeatures}
                     wasRepaired={layer.output?.wasRepaired}
+                    containsOverlappingFeatures={
+                      layer.containsOverlappingFeatures
+                    }
                     onRepairClick={
                       isAdmin && layer.sourceProcessingJob?.jobKey
                         ? () =>
@@ -190,6 +193,8 @@ export default function ReportMetricsProgressDetails({
                   estimatedCompletionTime={metric.eta}
                   isAdmin={isAdmin}
                   value={metric.value}
+                  metricType={metric.type}
+                  parameters={metric.parameters}
                   sourcesReady={state.relatedOverlaySources.every(
                     (layer) =>
                       layer.output ||

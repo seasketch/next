@@ -38,6 +38,7 @@ function prepareSketch(feature) {
     if (sketch.type === "FeatureCollection") {
         throw new Error("sketch is a FeatureCollection");
     }
+    sketch.bbox = bbox;
     return { feature: sketch, envelopes };
 }
 //# sourceMappingURL=prepareSketch.js.map
