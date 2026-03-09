@@ -22,34 +22,36 @@ export default function DataLibraryModal({
   const metadata = useCurrentProjectMetadata();
   const { t } = useTranslation("admin:data");
   return (
-    <Modal title={t("Data Library")} onRequestClose={onRequestClose}>
-      <button onClick={onRequestClose}>
-        <XIcon className="w-6 h-6 absolute right-3 top-3 text-gray-600" />
+    <Modal
+      title={t("Data Library")}
+      onRequestClose={onRequestClose}
+      scrollable={false}
+      zeroPadding
+    >
+      <button className="absolute right-3 top-3" onClick={onRequestClose}>
+        <XIcon className="w-6 h-6   text-gray-600" />
       </button>
-      <div>
-        <p className="text-sm">
+      <div className="flex flex-col max-h-144">
+        <p className="text-sm flex-none px-6 border-b pb-4 shadow-md">
           <Trans ns="admin:data">
-            The SeaSketch team is in the process of creating a curated
-            collection of data from authoritative sources. These layers do not
-            count against your hosting quota, and come with preset cartography,
+            These layers provided from authoritative sources do not count
+            against your hosting quota, and come with preset cartography,
             metadata, and attribution. Data sources are updated regularly as
-            provided by the original sources.
-          </Trans>
-        </p>
-        <p className="text-sm">
-          <Trans ns="admin:data">
-            This list of layers will grow over time. If you are a data provider
-            who would like your project listed, please contact us at{" "}
+            provided by the original sources. Contact us at{" "}
             <a
               className="underline text-primary-500"
               href="mailto:support@seasketch.org"
             >
               support@seasketch.org
-            </a>
+            </a>{" "}
+            if you would like to add your data source to the list.
           </Trans>
         </p>
-        <div className="space-y-2 pt-4">
-          <DataLibraryEntry title={t("NOAA Coral Reef Watch")}>
+        <div className="space-y-2 pt-4 flex-1 overflow-y-auto p-6 bg-gray-100 overscroll-none">
+          <DataLibraryEntry
+            title={t("NOAA Coral Reef Watch")}
+            href="https://coralreefwatch.noaa.gov/index.php"
+          >
             <DataLibraryEntryDescription>
               <p>
                 {t(
@@ -67,7 +69,10 @@ export default function DataLibraryModal({
             />
           </DataLibraryEntry>
 
-          <DataLibraryEntry title={t("iNaturalist")}>
+          <DataLibraryEntry
+            title={t("iNaturalist")}
+            href="https://www.inaturalist.org"
+          >
             <DataLibraryEntryDescription>
               <p>
                 {t(
@@ -88,6 +93,136 @@ export default function DataLibraryModal({
               }}
             />
           </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Ecologically or Biologically Significant Marine Areas")}
+            href="https://www.cbd.int/ebsa/about/background"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Special areas of the ocean which meet the Convention of Biological Diversity (CBD) science criteria."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t(
+                "Ecologically or Biologically Significant Marine Areas thumbnail"
+              )}
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/eff2c984-f9a9-471c-2347-cc8faaea1800/thumbnail"
+            />
+            <DataLibraryActionButton
+              templateId="EBSA"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Blue Habitats Seafloor Geomorphic Features")}
+            href="https://bluehabitats.org/"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Global map of seafloor geomorphology, based on SRTM bathymetry grids."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t(
+                "Blue Habitats Seafloor Geomorphic Features Map thumbnail"
+              )}
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/cfa82d21-fcba-42a0-b738-ac697679df00/thumbnail"
+            />
+            <DataLibraryActionButton
+              templateId="BLUE_HABITATS"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Global Mangrove Watch")}
+            href="https://www.globalmangrovewatch.org/"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Global mangrove distribution (1996-2020), based on SAR global mosaics."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("Global Mangrove Watch thumbnail")}
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/49d18412-0d32-4d0c-d994-bf1f82bd6600/thumbnail"
+            />
+            <DataLibraryActionButton
+              templateId="GLOBAL_MANGROVE_WATCH"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Hydrothermal Vents")}
+            href="https://doi.org/10.1594/PANGAEA.917894"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Comprehensive collection of active submarine hydrothermal vent fields."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("Hydrothermal Vents thumbnail")}
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/0eae4d80-f196-4825-b16c-b0dacbd64100/thumbnail"
+            />
+            <DataLibraryActionButton
+              templateId="HYDROTHERMAL_VENTS"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Seamounts")}
+            href="https://doi.org/10.1016/j.dsr.2011.02.004"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Global distribution of seamounts based on 30 arc seconds bathymetry data. Yesson et al., 2011."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("Seamounts thumbnail")}
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/5ea9db69-523f-46fe-1557-f5ff5ababb00/thumbnail"
+            />
+            <DataLibraryActionButton
+              templateId="SEAMOUNTS"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
+            title={t("Pristine Seas")}
+            href="https://doi.org/10.1038/s41586-021-03371-z"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Prioritization of marine areas for biodiversity protection, boosting fisheries yield, and securing carbon stocks."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("Pristine Seas thumbnail")}
+              src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/95947ba7-7062-42d1-6a7f-f37990723100/thumbnail"
+            />
+            <DataLibraryActionButton
+              templateId="PRISTINE_SEAS"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
         </div>
       </div>
     </Modal>
@@ -97,9 +232,11 @@ export default function DataLibraryModal({
 function DataLibraryEntry({
   title,
   children,
+  href,
 }: {
   title: string;
   children?: React.ReactNode;
+  href?: string;
 }) {
   const { t } = useTranslation("admin:data");
   // get DataLIbraryEntryImage from children, if present
@@ -116,29 +253,18 @@ function DataLibraryEntry({
       (child.type === DataLibraryActionButton ||
         child.type === DataLibraryCustomActionButton)
   );
-  const isINaturalist = title === t("iNaturalist");
   return (
-    <div className="flex border rounded p-2">
+    <div className="flex border rounded p-4 bg-white shadow-sm">
       <div className="flex-1 space-y-1">
         <h4>{title}</h4>
         {description}
         <div className="space-x-2 pt-1">
           {actionButton}
-          {!isINaturalist && (
+          {href && (
             <a
               target="_blank"
               rel="noreferrer"
-              href="https://coralreefwatch.noaa.gov/index.php"
-              className="text-primary-500 underline text-sm"
-            >
-              {t("source website")}
-            </a>
-          )}
-          {isINaturalist && (
-            <a
-              target="_blank"
-              rel="noreferrer"
-              href="https://www.inaturalist.org"
+              href={href}
               className="text-primary-500 underline text-sm"
             >
               {t("source website")}
