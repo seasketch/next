@@ -359,6 +359,13 @@ export function compileLegendFromGLStyleLayers(
 
     eliminateDuplicatesAndRenameDefaults(panels);
 
+    // If any panels contain meaningful (non-text) symbology, suppress panels
+    // that consist entirely of text symbols. Text labels are only shown when
+    // they are the sole cartographic style for the data layer.
+    if (panels.some((p) => !panelContainsOnlyTextSymbols(p))) {
+      panels = panels.filter((p) => !panelContainsOnlyTextSymbols(p));
+    }
+
     // sort panels. filter panels should go last
     panels.sort((a, b) => {
       if (a.type === "GLLegendFilterPanel") {
@@ -418,6 +425,39 @@ function eliminateDuplicatesAndRenameDefaults(panels: GLLegendPanel[]) {
         panel.items.push(defaultItem);
       }
     }
+  }
+}
+
+/**
+ * Returns true if all symbol items in a panel are text symbols. Panels
+ * without any item-level symbols (e.g. gradient, heatmap) are always
+ * considered to contain non-text symbology and return false.
+ */
+function panelContainsOnlyTextSymbols(panel: GLLegendPanel): boolean {
+  switch (panel.type) {
+    case "GLLegendListPanel":
+      return (
+        panel.items.length > 0 &&
+        panel.items.every((item) => item.symbol.type === "text")
+      );
+    case "GLLegendSimpleSymbolPanel":
+      return (
+        panel.items.length > 0 &&
+        panel.items.every((item) => item.symbol.type === "text")
+      );
+    case "GLLegendStepPanel":
+      return (
+        panel.steps.length > 0 &&
+        panel.steps.every((step) => step.symbol.type === "text")
+      );
+    case "GLLegendFilterPanel":
+      return (
+        panel.children.length > 0 &&
+        panel.children.every((child) => panelContainsOnlyTextSymbols(child))
+      );
+    default:
+      // Bubble, Heatmap, Gradient, MarkerSize panels are always meaningful
+      return false;
   }
 }
 
