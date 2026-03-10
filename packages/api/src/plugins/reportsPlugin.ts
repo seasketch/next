@@ -196,7 +196,13 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             ) o on true
             where
               s.id  in (
-                select data_source_id from source_processing_jobs where project_id = $1
+                -- This part of the query seems more complex than it needs to be
+                -- That's because project toc items and data layers can refer to
+                -- data sources that belong to the superuser project if they are
+                -- based on a data library template.
+                select data_source_id from source_processing_jobs where data_source_id in (
+                  select data_source_id from data_layers where project_id = $1
+                )
               )
           `,
             [project.id],
