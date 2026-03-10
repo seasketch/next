@@ -203,7 +203,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
                 select data_source_id from source_processing_jobs where data_source_id in (
                   select data_source_id from data_layers where project_id = $1
                 )
-              )
+              ) and l.project_id = $1
           `,
             [project.id],
           );
