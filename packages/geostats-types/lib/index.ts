@@ -96,7 +96,7 @@ export type LegacyGeostatsAttribute = Omit<
 };
 
 export function isNumericGeostatsAttribute(
-  attr: GeostatsAttribute
+  attr: GeostatsAttribute,
 ): attr is NumericGeostatsAttribute {
   return attr.type === "number";
 }
@@ -156,7 +156,7 @@ export type LegacyGeostatsLayer = Omit<
 };
 
 export function isLegacyGeostatsLayer(
-  layer: LegacyGeostatsLayer | GeostatsLayer
+  layer: LegacyGeostatsLayer | GeostatsLayer,
 ): layer is LegacyGeostatsLayer {
   if ("attributesCount" in layer && (layer as any).attributesCount) {
     return (layer as GeostatsLayer).attributes[0].countDistinct === undefined;
@@ -166,7 +166,7 @@ export function isLegacyGeostatsLayer(
 }
 
 export function isLegacyGeostatsAttribute(
-  attr: LegacyGeostatsAttribute | GeostatsAttribute
+  attr: LegacyGeostatsAttribute | GeostatsAttribute,
 ): attr is LegacyGeostatsAttribute {
   return Array.isArray(attr.values);
 }
@@ -255,15 +255,25 @@ export interface RasterInfo {
 }
 
 export function isRasterInfo(
-  info: RasterInfo | GeostatsLayer | any
+  info: RasterInfo | GeostatsLayer | any,
 ): info is RasterInfo {
   return (info as RasterInfo).bands !== undefined;
 }
 
 export function isGeostatsLayer(
-  data: RasterInfo | GeostatsLayer | any
+  data: RasterInfo | GeostatsLayer | any,
 ): data is GeostatsLayer {
-  return (
-    !Array.isArray(data) && (data as GeostatsLayer).attributes !== undefined
-  );
+  if (!data) {
+    return false;
+  }
+  if (Array.isArray(data)) {
+    return false;
+  }
+  if (typeof data !== "object") {
+    return false;
+  }
+  if (!("attributes" in data)) {
+    return false;
+  }
+  return true;
 }

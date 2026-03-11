@@ -125,7 +125,11 @@ export function getClassTableRows(options: {
         const key = classTableRowKey(dependency.stableId!, "*");
         rows.push({
           key,
-          label: options.customLabels?.[key] || options.allFeaturesLabel,
+          label:
+            options.customLabels?.[key] ||
+            (multiSource
+              ? source?.tableOfContentsItem?.title || options.allFeaturesLabel
+              : options.allFeaturesLabel),
           groupByKey: "*",
           sourceId: dependency.stableId!.toString(),
           stableId: options.stableIds?.[key],
@@ -238,7 +242,9 @@ export function combineMetricsBySource<T extends Metric>(
         fragments: combineMetricsForFragments(
           metrics.filter(
             (m) =>
-              m.sourceUrl === source.sourceUrl && subjectIsFragment(m.subject)
+              m.sourceUrl === source.sourceUrl &&
+              subjectIsFragment(m.subject) &&
+              m.subject.geographies.includes(geographyId)
           ) as Pick<Metric, "type" | "value">[]
         ) as T,
         geographies: metrics.find(

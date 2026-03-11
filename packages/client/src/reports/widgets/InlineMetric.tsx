@@ -309,7 +309,9 @@ export type InlineMetricComponentSettings = {
     | "geography_overlay_area"
     | "count"
     | "column_values"
-    | "raster_stats";
+    | "raster_stats"
+    | "geography_raster_stats"
+    | "geography_proportion_captured";
   stat?: ColumnValuesStatKey;
   rasterStat?: RasterValuesStatKey;
   hideLabelForCount?: boolean;
@@ -547,6 +549,76 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         const formatted = formatters.decimal(value);
         return rasterUnitLabel ? `${formatted} ${rasterUnitLabel}` : formatted;
       }
+      case "geography_raster_stats": {
+        const geographyId =
+          componentSettings.geographyId === "auto" ||
+          componentSettings.geographyId === undefined
+            ? clippingGeography?.id
+            : componentSettings.geographyId;
+        if (geographyId === undefined) {
+          throw new Error("Primary geography not found.");
+        }
+        const geographyRasterMetric = metrics.find(
+          (m) =>
+            m.type === "raster_stats" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === geographyId
+        ) as RasterStats | undefined;
+        if (!geographyRasterMetric) {
+          throw new Error("Geography raster stats not found in metrics.");
+        }
+        const bands = geographyRasterMetric.value.bands;
+        if (!bands || bands.length === 0) {
+          throw new Error("No raster band data available for this geography.");
+        }
+        const value = bands[0][componentSettings?.rasterStat || "mean"];
+        const formatted = formatters.decimal(value);
+        return rasterUnitLabel ? `${formatted} ${rasterUnitLabel}` : formatted;
+      }
+      case "geography_proportion_captured": {
+        const geographyId =
+          componentSettings.geographyId === "auto" ||
+          componentSettings.geographyId === undefined
+            ? clippingGeography?.id
+            : componentSettings.geographyId;
+        if (geographyId === undefined) {
+          throw new Error("Primary geography not found.");
+        }
+        // Sketch sum: combine fragment raster_stats metrics
+        const fragmentRasterMetrics = metrics.filter(
+          (m) => m.type === "raster_stats" && subjectIsFragment(m.subject)
+        );
+        if (fragmentRasterMetrics.length === 0) {
+          throw new Error("Sketch raster stats not found in metrics.");
+        }
+        const combinedSketch = combineMetricsForFragments(
+          fragmentRasterMetrics as Pick<Metric, "type" | "value">[]
+        ) as RasterStats;
+        const sketchBands = combinedSketch.value.bands;
+        if (!sketchBands || sketchBands.length === 0) {
+          throw new Error("No raster band data available for sketch.");
+        }
+        const sketchSum = sketchBands[0].sum;
+        // Geography sum: find the raster_stats metric for the target geography
+        const geographyRasterMetric = metrics.find(
+          (m) =>
+            m.type === "raster_stats" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === geographyId
+        ) as RasterStats | undefined;
+        if (!geographyRasterMetric) {
+          throw new Error("Geography raster stats not found in metrics.");
+        }
+        const geographyBands = geographyRasterMetric.value.bands;
+        if (!geographyBands || geographyBands.length === 0) {
+          throw new Error("No raster band data available for this geography.");
+        }
+        const geographySum = geographyBands[0].sum;
+        if (!geographySum) {
+          return formatters.percent(0);
+        }
+        return formatters.percent(sketchSum / geographySum);
+      }
       default:
         // eslint-disable-next-line i18next/no-literal-string
         errors.push(`Unsupported presentation: ${presentation}`);
@@ -659,7 +731,7 @@ function inlineMetricPropsEqual(
 
 export const InlineMetric = memo(_InlineMetric, inlineMetricPropsEqual);
 
-function GeographySelector({
+export function GeographySelector({
   geographies,
   clippingGeography,
   value,
@@ -1018,7 +1090,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           }
         />
       )}
-      {presentation === "raster_stats" && (
+      {/* {(presentation === "raster_stats" ||
+        presentation === "geography_raster_stats") && (
         <UnitSelector
           unitType="distance"
           allowNone
@@ -1035,8 +1108,10 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
             })
           }
         />
-      )}
-      {presentation === "geography_overlay_area" && (
+      )} */}
+      {(presentation === "geography_overlay_area" ||
+        presentation === "geography_raster_stats" ||
+        presentation === "geography_proportion_captured") && (
         <GeographySelector
           geographies={geographies}
           clippingGeography={clippingGeography}
@@ -1066,7 +1141,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           onChange={(val) => handleStatChange(val as ColumnValuesStatKey)}
         />
       )}
-      {presentation === "raster_stats" && (
+      {(presentation === "raster_stats" ||
+        presentation === "geography_raster_stats") && (
         <LabeledDropdown
           label={t("Stat")}
           value={selectedRasterStat}
@@ -1264,6 +1340,12 @@ function formatPresentationLabel(presentation: string) {
       return "Overlay Area";
     case "geography_overlay_area":
       return "Geography Overlap Area";
+    case "raster_stats":
+      return "Raster Statistics";
+    case "geography_raster_stats":
+      return "Geography Raster Statistics";
+    case "geography_proportion_captured":
+      return "Geography Proportion Captured";
     default:
       return presentation;
   }

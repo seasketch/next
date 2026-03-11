@@ -44,6 +44,10 @@ import {
   guaranteeHelpers,
 } from "overlay-engine/src/utils/helpers";
 import { reprojectFeatureTo6933 } from "overlay-engine/src/utils/reproject";
+import { ContainerIndex } from "overlay-engine/src/utils/containerIndex";
+import { evaluateCql2JSONQuery } from "overlay-engine/src/cql2";
+import { union } from "overlay-engine/src/utils/polygonClipping";
+import * as clipping from "polyclip-ts";
 
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 
@@ -101,7 +105,7 @@ const sourceCache = new SourceCache("1GB", {
           throw new Error(
             `${e.message}. ${url} range=${range[0]}-${
               range[1] ? range[1] : ""
-            }: ${e.message}`
+            }: ${e.message}`,
           );
         });
       // .finally(() => {
@@ -115,7 +119,7 @@ const sourceCache = new SourceCache("1GB", {
 });
 
 const workerPool = createClippingWorkerPool(
-  process.env.PISCINA_WORKER_PATH || "worker.js"
+  process.env.PISCINA_WORKER_PATH || "worker.js",
 );
 
 export default async function handler(payload: OverlayWorkerPayload) {
@@ -124,13 +128,13 @@ export default async function handler(payload: OverlayWorkerPayload) {
   const progressNotifier = new ProgressNotifier(
     payload.jobKey,
     1000,
-    payload.queueUrl
+    payload.queueUrl,
   );
   await sendBeginMessage(
     payload.jobKey,
     "/test",
     new Date().toISOString(),
-    payload.queueUrl
+    payload.queueUrl,
   );
   const helpers = guaranteeHelpers({
     progress: async (progress: number, message?: string) => {
@@ -156,23 +160,23 @@ export default async function handler(payload: OverlayWorkerPayload) {
           const area = await calculateArea(
             payload.subject.clippingLayers,
             sourceCache,
-            helpers
+            helpers,
           );
           await flushMessages();
           await sendResultMessage(
             payload.jobKey,
             area,
             payload.queueUrl,
-            Date.now() - startTime
+            Date.now() - startTime,
           );
           return;
         } else if (subjectIsFragment(payload.subject)) {
           throw new Error(
-            "Total area for fragments not implemented in worker."
+            "Total area for fragments not implemented in worker.",
           );
         } else {
           throw new Error(
-            "Unknown subject type. Must be geography or fragment."
+            "Unknown subject type. Must be geography or fragment.",
           );
         }
       }
@@ -183,17 +187,17 @@ export default async function handler(payload: OverlayWorkerPayload) {
         const { intersectionFeature, differenceSources } =
           await subjectsForAnalysis(
             payload.subject as MetricSubjectFragment | MetricSubjectGeography,
-            helpers
+            helpers,
           );
         const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
           payload.sourceUrl,
           {
             pageSize: "5MB",
-          }
+          },
         );
         const bufferedIntersectionFeature = applySubjectBuffer(
           intersectionFeature,
-          payload.bufferDistanceKm
+          payload.bufferDistanceKm,
         );
 
         const processor = new OverlayEngineBatchProcessor(
@@ -218,7 +222,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
           payload.jobKey,
           area,
           payload.queueUrl,
-          Date.now() - startTime
+          Date.now() - startTime,
         );
         return;
       }
@@ -232,13 +236,13 @@ export default async function handler(payload: OverlayWorkerPayload) {
         const { intersectionFeature, differenceSources } =
           await subjectsForAnalysis(
             payload.subject as MetricSubjectFragment | MetricSubjectGeography,
-            helpers
+            helpers,
           );
         const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
           payload.sourceUrl,
           {
             pageSize: "5MB",
-          }
+          },
         );
         // Extract valueColumn from parameters for column_values
         const columnValuesProperty =
@@ -246,7 +250,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
 
         const bufferedIntersectionFeature = applySubjectBuffer(
           intersectionFeature,
-          payload.bufferDistanceKm
+          payload.bufferDistanceKm,
         );
 
         const processor = new OverlayEngineBatchProcessor(
@@ -262,7 +266,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
           workerPool,
           payload.includedColumns,
           payload.maxResults,
-          columnValuesProperty
+          columnValuesProperty,
         );
         const result = await processor.calculate();
         await flushMessages();
@@ -270,7 +274,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
           payload.jobKey,
           result,
           payload.queueUrl,
-          Date.now() - startTime
+          Date.now() - startTime,
         );
         return;
       }
@@ -283,19 +287,33 @@ export default async function handler(payload: OverlayWorkerPayload) {
         }
         if (payload.epsg !== 6933) {
           throw new Error(
-            `Support for projection EPSG:${payload.epsg} not implemented in worker.`
+            `Support for projection EPSG:${payload.epsg} not implemented in worker.`,
           );
         }
-        const { intersectionFeature, differenceSources } =
+        let { intersectionFeature, differenceSources } =
           await subjectsForAnalysis(
             payload.subject as MetricSubjectFragment | MetricSubjectGeography,
-            helpers
+            helpers,
           );
-        // if (subjectIsGeography(payload.subject)) {
-        //   throw new Error(
-        //     `raster_stats for geographies not implemented in worker yet.`
-        //   );
-        // } else {
+        const originalLength = JSON.stringify(
+          intersectionFeature,
+          null,
+          2,
+        ).length;
+        if (subjectIsGeography(payload.subject)) {
+          // attempt to build complete multipolygon representing the geography
+          // by subtracting difference source features from the intersection
+          // feature.
+          intersectionFeature = await buildCompleteGeographyMultiPolygon(
+            intersectionFeature,
+            differenceSources,
+          );
+          console.log(
+            "built complete geography multipolygon",
+            originalLength,
+            JSON.stringify(intersectionFeature, null, 2).length,
+          );
+        }
         const f = reprojectFeatureTo6933(intersectionFeature);
         const result = await calculateRasterStats(payload.sourceUrl, f);
         await flushMessages();
@@ -303,7 +321,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
           payload.jobKey,
           result,
           payload.queueUrl,
-          Date.now() - startTime
+          Date.now() - startTime,
         );
         return;
         // }
@@ -319,24 +337,24 @@ export default async function handler(payload: OverlayWorkerPayload) {
         const { intersectionFeature, differenceSources } =
           await subjectsForAnalysis(
             payload.subject as MetricSubjectFragment | MetricSubjectGeography,
-            helpers
+            helpers,
           );
         const source = await sourceCache.get<Feature<Polygon>>(
           payload.sourceUrl,
           {
             pageSize: "5MB",
-          }
+          },
         );
         const result = await calculateDistanceToShore(
           intersectionFeature,
-          source
+          source,
         );
         await flushMessages();
         await sendResultMessage(
           payload.jobKey,
           result,
           payload.queueUrl,
-          Date.now() - startTime
+          Date.now() - startTime,
         );
         return;
       }
@@ -351,9 +369,9 @@ export default async function handler(payload: OverlayWorkerPayload) {
       e instanceof Error
         ? e.message
         : typeof e === "string"
-        ? e
-        : "Unknown error",
-      payload.queueUrl
+          ? e
+          : "Unknown error",
+      payload.queueUrl,
     );
     // throw e;
   } finally {
@@ -390,7 +408,7 @@ export function validatePayload(data: any): OverlayWorkerPayload {
       typeof data.subject.id !== "number"
     ) {
       throw new Error(
-        'Geography subject must have type "geography" and numeric id'
+        'Geography subject must have type "geography" and numeric id',
       );
     }
   } else {
@@ -403,12 +421,12 @@ export function validatePayload(data: any): OverlayWorkerPayload {
   if (data.type !== "total_area") {
     if (!data.sourceUrl || typeof data.sourceUrl !== "string") {
       throw new Error(
-        `Payload type "${data.type}" must have sourceUrl property`
+        `Payload type "${data.type}" must have sourceUrl property`,
       );
     }
     if (!data.sourceType || typeof data.sourceType !== "string") {
       throw new Error(
-        `Payload type "${data.type}" must have sourceType property`
+        `Payload type "${data.type}" must have sourceType property`,
       );
     }
     if (data.groupBy && typeof data.groupBy !== "string") {
@@ -429,14 +447,14 @@ export function validatePayload(data: any): OverlayWorkerPayload {
 
 // Type guard for enhanced fragment subjects
 export function subjectIsFragment(
-  subject: any
+  subject: any,
 ): subject is MetricSubjectFragment & FragmentSubjectPayload {
   return "hash" in subject && "fragmentHash" in subject;
 }
 
 // Type guard for enhanced geography subjects
 export function subjectIsGeography(
-  subject: any
+  subject: any,
 ): subject is MetricSubjectGeography & GeographySubjectPayload {
   return (
     "type" in subject &&
@@ -446,7 +464,7 @@ export function subjectIsGeography(
 }
 
 function polygonFromFragment(
-  subject: FragmentSubjectPayload
+  subject: FragmentSubjectPayload,
 ): Feature<Polygon> {
   if (!subject.geobuf) {
     throw new Error("geobuf is required for fragment subjects");
@@ -467,7 +485,7 @@ function polygonFromFragment(
 
 async function subjectsForAnalysis(
   subject: MetricSubjectFragment | MetricSubjectGeography,
-  helpers: GuaranteedOverlayWorkerHelpers
+  helpers: GuaranteedOverlayWorkerHelpers,
 ): Promise<{
   intersectionFeature: Feature<Polygon | MultiPolygon>;
   differenceSources: {
@@ -484,7 +502,7 @@ async function subjectsForAnalysis(
         helpers,
         {
           pageSize: "5MB",
-        }
+        },
       );
     return {
       intersectionFeature,
@@ -492,7 +510,7 @@ async function subjectsForAnalysis(
     };
   } else if ("geobuf" in subject) {
     const feature = polygonFromFragment(
-      subject as unknown as FragmentSubjectPayload
+      subject as unknown as FragmentSubjectPayload,
     );
     return {
       intersectionFeature: feature,
@@ -505,7 +523,7 @@ async function subjectsForAnalysis(
 
 function applySubjectBuffer(
   feature: Feature<Polygon | MultiPolygon>,
-  bufferDistanceKm?: number
+  bufferDistanceKm?: number,
 ): Feature<Polygon | MultiPolygon> {
   if (
     typeof bufferDistanceKm !== "number" ||
@@ -528,4 +546,100 @@ function applySubjectBuffer(
     console.warn("Failed to buffer subject feature", err);
   }
   return feature;
+}
+
+/**
+ * Builds a complete MultiPolygon representing the true geography area by
+ * subtracting all difference-source features from the intersection feature.
+ *
+ * Used for raster_stats analysis where the actual geometry (not just an area
+ * value) is needed to spatially query a raster dataset.
+ *
+ * Strategy for efficiency:
+ *  1. Compute one bounding envelope from the intersection feature for spatial search.
+ *  2. Build a ContainerIndex on a simplified copy of the intersection feature so
+ *     features that fall entirely outside can be skipped cheaply.
+ *  3. Stream candidate features from each differenceSource, apply any CQL2 filter,
+ *     skip "outside" candidates, and collect the remainder.
+ *  4. Union all collected difference geometries into a single geometry, then
+ *     apply one clipping.difference call — avoiding repeated incremental clips.
+ */
+async function buildCompleteGeographyMultiPolygon(
+  intersectionFeature: Feature<Polygon | MultiPolygon>,
+  differenceSources: {
+    layerId: string;
+    source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+    cql2Query?: Cql2Query | undefined;
+  }[],
+): Promise<Feature<Polygon | MultiPolygon>> {
+  if (differenceSources.length === 0) {
+    return intersectionFeature;
+  }
+
+  // Compute a single bounding envelope from the geometry coordinates directly.
+  let minX = Infinity,
+    minY = Infinity,
+    maxX = -Infinity,
+    maxY = -Infinity;
+  const polys =
+    intersectionFeature.geometry.type === "Polygon"
+      ? [intersectionFeature.geometry.coordinates]
+      : intersectionFeature.geometry.coordinates;
+  for (const poly of polys) {
+    for (const ring of poly) {
+      for (const [x, y] of ring) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  const envelope = { minX, minY, maxX, maxY };
+
+  // Simplified intersection feature for ContainerIndex — fast classify without
+  // touching the high-resolution source geometry.
+  const simplified = simplify(
+    intersectionFeature as Feature<Polygon | MultiPolygon>,
+    { tolerance: 0.002 },
+  ) as Feature<Polygon | MultiPolygon>;
+  const containerIndex = new ContainerIndex(simplified);
+
+  // Collect difference polygon coordinates, skipping features with no overlap.
+  const differenceGeoms: clipping.Geom[] = [];
+  for (const { source, cql2Query } of differenceSources) {
+    for await (const f of source.getFeaturesAsync([envelope])) {
+      if (cql2Query && !evaluateCql2JSONQuery(cql2Query, f.properties)) {
+        continue;
+      }
+      if (containerIndex.classify(f) === "outside") {
+        continue;
+      }
+      differenceGeoms.push(f.geometry.coordinates as clipping.Geom);
+    }
+  }
+
+  if (differenceGeoms.length === 0) {
+    return intersectionFeature;
+  }
+
+  // Union all difference geometries first, then apply a single difference
+  // operation. This is faster than iterative clipping.
+  const unionedDifference: clipping.Geom =
+    differenceGeoms.length === 1 ? differenceGeoms[0] : union(differenceGeoms);
+
+  const result = clipping.difference(
+    intersectionFeature.geometry.coordinates as clipping.Geom,
+    unionedDifference,
+  );
+
+  if (result.length === 0) {
+    return intersectionFeature;
+  }
+
+  return {
+    type: "Feature",
+    geometry: { type: "MultiPolygon", coordinates: result },
+    properties: intersectionFeature.properties,
+  };
 }

@@ -125,6 +125,8 @@ type ClassRowSettingsPopoverProps = {
   /** Show the "Show color swatches" toggle in the footer. */
   showColorSwatches?: boolean;
   onShowColorSwatchesChange?: (value: boolean) => void;
+  /** Hide the "Group by" section (for raster sources that have no attribute columns). */
+  hideGroupBy?: boolean;
 };
 
 export const ClassRowSettingsPopover = ({
@@ -140,6 +142,7 @@ export const ClassRowSettingsPopover = ({
   onShowZerosChange,
   showColorSwatches,
   onShowColorSwatchesChange,
+  hideGroupBy,
 }: ClassRowSettingsPopoverProps) => {
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const { allSources: overlaySources } = useOverlaySources();
@@ -454,6 +457,7 @@ export const ClassRowSettingsPopover = ({
                           </p>
                         </div> */}
                         <div className="divide-y divide-gray-100">
+                          {!hideGroupBy && (
                           <div className="px-3 py-3">
                             <h4 className="text-xs font-semibold text-gray-700 mb-1">
                               {t("Group by")}
@@ -488,6 +492,7 @@ export const ClassRowSettingsPopover = ({
                               }}
                             />
                           </div>
+                          )}
                           {metricType === "overlay_area" &&
                             group.source?.stableId && (
                               <div className="px-3 py-3">
