@@ -92,9 +92,9 @@ export const TablePaddingRows: React.FC<TablePaddingRowsProps> = ({
           className="flex items-center gap-3 px-3 py-2 bg-gray-50/30"
           aria-hidden="true"
         >
-        {includeVisibilityColumn && (
-          <div className="flex-none w-10 flex justify-center" />
-        )}
+          {includeVisibilityColumn && (
+            <div className="flex-none w-10 flex justify-center" />
+          )}
           {includeColorColumn && (
             <div className="flex-none w-4 flex justify-center" />
           )}
@@ -132,10 +132,10 @@ export const PaginationSetting: React.FC<PaginationSettingProps> = ({
 
   const options = [
     { value: "None", label: t("None") },
-    { value: "10", label: t("{{count}} items", { count: 10 }) },
-    { value: "12", label: t("{{count}} items", { count: 12 }) },
-    { value: "15", label: t("{{count}} items", { count: 15 }) },
-    { value: "20", label: t("{{count}} items", { count: 20 }) },
+    { value: "10", label: (10).toLocaleString() },
+    { value: "12", label: (12).toLocaleString() },
+    { value: "15", label: (15).toLocaleString() },
+    { value: "20", label: (20).toLocaleString() },
   ];
 
   const value = rowsPerPage === 0 ? "None" : String(rowsPerPage);
