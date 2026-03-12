@@ -187,23 +187,30 @@ export const ClassRowSettingsPopover = ({
 
     onUpdateAllDependencies((currentDeps) => {
       const newDeps = [...currentDeps];
-      const params: Record<string, any> = {};
+      const baseParams: Record<string, any> = {};
       if (bufferDistanceKm !== undefined) {
-        params.bufferDistanceKm = bufferDistanceKm;
+        baseParams.bufferDistanceKm = bufferDistanceKm;
       }
 
       for (const layerValue of validLayers) {
+        const source = overlaySources.find(
+          (s) => s.stableId === layerValue.stableId
+        );
+        const parameters = { ...baseParams };
+        if (source?.containsOverlappingFeatures) {
+          parameters.sourceHasOverlappingFeatures = true;
+        }
         newDeps.push({
           type: metricType,
           subjectType: "fragments",
           stableId: layerValue.stableId,
-          parameters: params,
+          parameters,
         });
         newDeps.push({
           type: metricType,
           subjectType: "geographies",
           stableId: layerValue.stableId,
-          parameters: params,
+          parameters,
         });
       }
 
