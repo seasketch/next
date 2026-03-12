@@ -13,6 +13,8 @@ import bytes from "bytes";
 import { Trans, useTranslation } from "react-i18next";
 
 interface ReportTaskLineItemProps {
+  /** When true, renders only ETA + status icon (no title, no li). Use for inline rows that supply their own title. */
+  onlyStatus?: boolean;
   title: React.ReactNode;
   state: SpatialMetricState;
   progress?: number | null;
@@ -40,6 +42,7 @@ interface ReportTaskLineItemProps {
 }
 
 export default function ReportTaskLineItem({
+  onlyStatus = false,
   title,
   state,
   progress,
@@ -269,9 +272,8 @@ export default function ReportTaskLineItem({
     ? queuedTooltip
     : null;
 
-  return (
-    <li className="flex items-center">
-      <span className="flex-1 truncate text-sm">{title}</span>
+  const statusBlock = (
+    <>
       <ETACountdown
         eta={
           estimatedCompletionTime
@@ -294,7 +296,7 @@ export default function ReportTaskLineItem({
                 <CheckCircleIcon className="w-4 h-4 text-yellow-500 flex-shrink-0" />
               </div>
             ) : (
-              <div className="text-sm text-gray-600 flex items-center justify-center w-5 h-5 cursor-help focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded">
+              <div className="text-sm text-gray-600 flex items-center justify-center w-5 h-5 cursor-help focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 rounded flex-shrink-0">
                 <StateIcon
                   state={state}
                   progress={progress}
@@ -316,7 +318,7 @@ export default function ReportTaskLineItem({
           </Tooltip.Portal>
         </Tooltip.Root>
       ) : (
-        <span className="ml-2 text-sm text-gray-600 flex items-center justify-center w-5 h-5">
+        <span className="ml-2 text-sm text-gray-600 flex items-center justify-center w-5 h-5 flex-shrink-0">
           <StateIcon
             state={state}
             progress={progress}
@@ -326,6 +328,17 @@ export default function ReportTaskLineItem({
           />
         </span>
       )}
+    </>
+  );
+
+  if (onlyStatus) {
+    return statusBlock;
+  }
+
+  return (
+    <li className="flex items-center">
+      <span className="flex-1 truncate text-sm">{title}</span>
+      {statusBlock}
     </li>
   );
 }
