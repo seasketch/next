@@ -10,7 +10,6 @@ import {
 import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { DownloadIcon } from "@radix-ui/react-icons";
 import { ReportCardConfiguration } from "./cards/cards";
 import { DraftReportContext } from "./DraftReportContext";
 import { useCardDependenciesContext } from "./context/CardDependenciesContext";
@@ -216,6 +215,31 @@ export default function ReportMetricsProgressDetails({
                 crossings or overlap with other sketches in a collection.
               </Trans>
             </p>
+            {isAuthenticated && (
+              <p className="text-sm mt-1">
+                <button
+                  type="button"
+                  className="text-blue-600 hover:underline bg-transparent border-0 p-0 cursor-pointer font-inherit"
+                  onClick={async () => {
+                    try {
+                      const token = await getAccessTokenSilently();
+                      const hashes = state.fragmentMetrics
+                        .map((m) => (m.subject as { hash: string }).hash)
+                        .join(",");
+                      const url = process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
+                        "/graphql",
+                        `/fragments/geojson?hashes=${encodeURIComponent(hashes)}&token=${token}`
+                      );
+                      window.open(url, "_blank");
+                    } catch (err) {
+                      console.error("Failed to get access token", err);
+                    }
+                  }}
+                >
+                  {t("Download fragments GeoJSON")}
+                </button>
+              </p>
+            )}
             <ul className="space-y-1 py-2">
               {state.fragmentMetrics.map((metric) => (
                 <ReportTaskLineItem
@@ -223,64 +247,17 @@ export default function ReportMetricsProgressDetails({
                   metricType={metric.type}
                   parameters={metric.parameters}
                   title={
-                    <span className="inline-flex items-center gap-1 min-w-0">
-                      <span
-                        title={(metric.subject as { hash: string }).hash}
-                        className="font-mono truncate"
-                      >
-                        {t("Polygon ")}
-                        <span className="text-slate-500">
-                          {(metric.subject as { hash: string }).hash.substring(
-                            0,
-                            36
-                          )}
-                        </span>
+                    <span
+                      title={(metric.subject as { hash: string }).hash}
+                      className="font-mono truncate"
+                    >
+                      {t("Polygon ")}
+                      <span className="text-slate-500">
+                        {(metric.subject as { hash: string }).hash.substring(
+                          0,
+                          36
+                        )}
                       </span>
-                      {isAuthenticated && (
-                        <Tooltip.Root delayDuration={200}>
-                          <Tooltip.Trigger asChild>
-                            <span
-                              role="button"
-                              className="flex-shrink-0 p-0.5 rounded text-gray-300 hover:text-gray-500 cursor-pointer"
-                              aria-label={t("Download GeoJSON")}
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                const hash = (
-                                  metric.subject as { hash: string }
-                                ).hash;
-                                try {
-                                  const token =
-                                    await getAccessTokenSilently();
-                                  const url =
-                                    // eslint-disable-next-line i18next/no-literal-string
-                                    process.env.REACT_APP_GRAPHQL_ENDPOINT!.replace(
-                                      "/graphql",
-                                      `/fragments/${hash}/geojson?token=${token}`
-                                    );
-                                  window.open(url, "_blank");
-                                } catch (e) {
-                                  console.error(
-                                    "Failed to get access token",
-                                    e
-                                  );
-                                }
-                              }}
-                            >
-                              <DownloadIcon className="w-3.5 h-3.5" />
-                            </span>
-                          </Tooltip.Trigger>
-                          <Tooltip.Portal>
-                            <Tooltip.Content
-                              className="bg-gray-900 text-white text-xs rounded px-2 py-1 z-50"
-                              sideOffset={4}
-                              side="top"
-                            >
-                              {t("Download GeoJSON")}
-                              <Tooltip.Arrow className="fill-gray-900" />
-                            </Tooltip.Content>
-                          </Tooltip.Portal>
-                        </Tooltip.Root>
-                      )}
                     </span>
                   }
                   state={metric.state}
