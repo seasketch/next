@@ -1163,7 +1163,7 @@ export function buildReportCommandGroups({
             label: "Raster Proportion Captured Table",
             description:
               "Table showing what proportion of each raster layer's total value within a geography is captured by the sketch.",
-            screenshotSrc: "/slashCommands/raster-stats-table.png",
+            screenshotSrc: "/slashCommands/raster-proportion.png",
             run: (state, dispatch, view) => {
               return insertBlockMetric(view, state.selection.ranges[0], {
                 type: "RasterProportionTable",
