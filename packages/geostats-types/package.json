@@ -5,14 +5,14 @@
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
-  "main": "lib/index.js",
+  "main": "dist/lib/index.js",
   "directories": {
-    "lib": "lib",
+    "lib": "dist/lib",
     "test": "__tests__"
   },
-  "types": "lib/index.d.ts",
+  "types": "dist/lib/index.d.ts",
   "files": [
-    "lib"
+    "dist/lib"
   ],
   "repository": {
     "type": "git",

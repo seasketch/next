@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.downsampleHistogram = downsampleHistogram;
 exports.calculateRasterStats = calculateRasterStats;
+const bbox_1 = __importDefault(require("@turf/bbox"));
 function downsampleHistogram(histogram, maxEntries) {
     if (histogram.length === 0 || histogram.length <= maxEntries) {
         return histogram;
@@ -47,6 +51,29 @@ async function calculateRasterStats(sourceUrl, feature) {
     const geoblaze = getGeoblaze();
     try {
         const raster = await geoblaze.parse(sourceUrl);
+        const featureBBox = (0, bbox_1.default)(feature, { recompute: true });
+        const rasterBBox = [raster.xmin, raster.ymin, raster.xmax, raster.ymax];
+        if (!intersects(featureBBox, rasterBBox)) {
+            console.log("No intersection between feature and raster", featureBBox, rasterBBox);
+            // Without this check we just get errors like this:
+            // Cannot read properties of undefined (reading 'vrm')
+            return {
+                bands: [
+                    {
+                        count: 0,
+                        min: NaN,
+                        max: NaN,
+                        mean: NaN,
+                        median: NaN,
+                        range: NaN,
+                        histogram: [],
+                        invalid: 0,
+                        sum: 0,
+                    },
+                ],
+            };
+        }
+        console.log("raster", raster);
         const stats = await geoblaze.stats(raster, feature, {
             stats: [
                 "count",
@@ -108,5 +135,11 @@ async function calculateRasterStats(sourceUrl, feature) {
             throw e;
         }
     }
+}
+function intersects(bbox1, bbox2) {
+    return (bbox1[0] <= bbox2[2] &&
+        bbox1[2] >= bbox2[0] &&
+        bbox1[1] <= bbox2[3] &&
+        bbox1[3] >= bbox2[1]);
 }
 //# sourceMappingURL=rasterStats.js.map

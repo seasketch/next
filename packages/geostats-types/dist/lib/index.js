@@ -40,6 +40,18 @@ function isRasterInfo(info) {
     return info.bands !== undefined;
 }
 function isGeostatsLayer(data) {
-    return (!Array.isArray(data) && data.attributes !== undefined);
+    if (!data) {
+        return false;
+    }
+    if (Array.isArray(data)) {
+        return false;
+    }
+    if (typeof data !== "object") {
+        return false;
+    }
+    if (!("attributes" in data)) {
+        return false;
+    }
+    return true;
 }
 //# sourceMappingURL=index.js.map

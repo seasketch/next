@@ -8,6 +8,7 @@ import clsx from "clsx";
 // const supportsSrcSet = "srcset" in document.createElement("img");
 
 export default function ProfilePhoto({
+  className,
   fullname,
   email,
   canonicalEmail,
@@ -16,6 +17,7 @@ export default function ProfilePhoto({
   border,
   square,
 }: {
+  className?: string;
   fullname?: string | Maybe<string>;
   email?: string | Maybe<string>;
   canonicalEmail: string;
@@ -40,6 +42,7 @@ export default function ProfilePhoto({
       }
       className={clsx(
         `w-full h-full inline-block`,
+        className,
         square ? "rounded-sm" : "rounded-full",
         border ? "border-2 shadow bg-white border-white" : ""
       )}

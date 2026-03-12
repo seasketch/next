@@ -30,7 +30,11 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
-} from "./FeatureCountTable";
+} from "./ClassTableRows";
+import {
+  classTableRowHasSwatch,
+  SwatchForClassTableRow,
+} from "./SwatchForClassTableRow";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import { useClippingGeography } from "../hooks/useClippingGeography";
 
@@ -134,7 +138,7 @@ export const FeaturePresenceTable: ReportWidget<
   } = usePagination(rows, rowsPerPage);
 
   const hasAnyColor = useMemo(
-    () => showColorSwatches && rows.some((row) => row.color),
+    () => showColorSwatches && rows.some(classTableRowHasSwatch),
     [rows, showColorSwatches]
   );
   const hasVisibilityColumn = useMemo(
@@ -176,7 +180,6 @@ export const FeaturePresenceTable: ReportWidget<
             </div>
           </div>
           {paginatedRows.map((row) => {
-            const color = row.color;
             const stableId =
               row.stableId ||
               componentSettings.rowLinkedStableIds?.[row.key] ||
@@ -198,15 +201,7 @@ export const FeaturePresenceTable: ReportWidget<
                     )}
                   </div>
                 )}
-                {showColorSwatches && color && (
-                  <div className="flex-none w-4 flex justify-center">
-                    <span
-                      className="inline-block w-4 h-4 rounded-sm border border-black/10"
-                      style={{ backgroundColor: color }}
-                      aria-hidden
-                    />
-                  </div>
-                )}
+                {showColorSwatches && <SwatchForClassTableRow row={row} />}
                 <div className="flex-1 min-w-0 text-gray-800 text-sm">
                   <span
                     className="truncate block"

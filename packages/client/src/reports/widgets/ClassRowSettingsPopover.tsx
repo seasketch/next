@@ -31,7 +31,7 @@ import {
   ClassTableRowComponentSettings,
   classTableRowKey,
   getClassTableRows,
-} from "./FeatureCountTable";
+} from "./ClassTableRows";
 import { MetricDependency } from "overlay-engine";
 import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
@@ -125,6 +125,8 @@ type ClassRowSettingsPopoverProps = {
   /** Show the "Show color swatches" toggle in the footer. */
   showColorSwatches?: boolean;
   onShowColorSwatchesChange?: (value: boolean) => void;
+  /** Hide the "Group by" section (for raster sources that have no attribute columns). */
+  hideGroupBy?: boolean;
 };
 
 export const ClassRowSettingsPopover = ({
@@ -140,6 +142,7 @@ export const ClassRowSettingsPopover = ({
   onShowZerosChange,
   showColorSwatches,
   onShowColorSwatchesChange,
+  hideGroupBy,
 }: ClassRowSettingsPopoverProps) => {
   const overlayOptions = useOverlayOptionsForLayerToggle(t);
   const { allSources: overlaySources } = useOverlaySources();
@@ -184,23 +187,30 @@ export const ClassRowSettingsPopover = ({
 
     onUpdateAllDependencies((currentDeps) => {
       const newDeps = [...currentDeps];
-      const params: Record<string, any> = {};
+      const baseParams: Record<string, any> = {};
       if (bufferDistanceKm !== undefined) {
-        params.bufferDistanceKm = bufferDistanceKm;
+        baseParams.bufferDistanceKm = bufferDistanceKm;
       }
 
       for (const layerValue of validLayers) {
+        const source = overlaySources.find(
+          (s) => s.stableId === layerValue.stableId
+        );
+        const parameters = { ...baseParams };
+        if (source?.containsOverlappingFeatures) {
+          parameters.sourceHasOverlappingFeatures = true;
+        }
         newDeps.push({
           type: metricType,
           subjectType: "fragments",
           stableId: layerValue.stableId,
-          parameters: params,
+          parameters,
         });
         newDeps.push({
           type: metricType,
           subjectType: "geographies",
           stableId: layerValue.stableId,
-          parameters: params,
+          parameters,
         });
       }
 
@@ -454,6 +464,7 @@ export const ClassRowSettingsPopover = ({
                           </p>
                         </div> */}
                         <div className="divide-y divide-gray-100">
+                          {!hideGroupBy && (
                           <div className="px-3 py-3">
                             <h4 className="text-xs font-semibold text-gray-700 mb-1">
                               {t("Group by")}
@@ -488,6 +499,7 @@ export const ClassRowSettingsPopover = ({
                               }}
                             />
                           </div>
+                          )}
                           {metricType === "overlay_area" &&
                             group.source?.stableId && (
                               <div className="px-3 py-3">

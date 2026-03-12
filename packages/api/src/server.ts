@@ -388,6 +388,51 @@ app.use("/verify-email", async function (req, res, next) {
   }
 });
 
+// Multiple fragments GeoJSON (must be before /fragments/:hash/geojson)
+app.get("/fragments/geojson", async function (req: SSNRequest, res) {
+  if (!req.user?.id) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  const hashesParam = req.query.hashes;
+  const hashes =
+    typeof hashesParam === "string"
+      ? hashesParam.split(",").map((h) => h.trim()).filter(Boolean)
+      : Array.isArray(hashesParam)
+        ? (hashesParam as string[]).map((h) => String(h).trim()).filter(Boolean)
+        : [];
+  if (hashes.length === 0) {
+    return res.status(400).json({ error: "At least one fragment hash is required (hashes=hash1,hash2,...)" });
+  }
+  const client = await loadersPool.connect();
+  try {
+    const { rows } = await client.query(
+      `SELECT hash, ST_AsGeoJSON(geometry)::json as geometry FROM fragments WHERE hash = ANY($1::text[])`,
+      [hashes],
+    );
+    const features = rows.map(
+      (row: { hash: string; geometry: unknown }) => ({
+        type: "Feature" as const,
+        properties: { hash: row.hash },
+        geometry: row.geometry,
+      }),
+    );
+    const geojson = {
+      type: "FeatureCollection" as const,
+      features,
+    };
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=fragments.geojson.json`,
+    );
+    res.send(JSON.stringify(geojson));
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  } finally {
+    client.release();
+  }
+});
+
 app.get("/fragments/:hash/geojson", async function (req: SSNRequest, res) {
   if (!req.user?.id) {
     return res.status(401).json({ error: "Authentication required" });

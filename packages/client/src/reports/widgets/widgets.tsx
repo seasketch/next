@@ -74,6 +74,10 @@ import {
   RasterStatisticsTable,
   RasterStatisticsTableTooltipControls,
 } from "./RasterStatisticsTable";
+import {
+  RasterProportionTable,
+  RasterProportionTableTooltipControls,
+} from "./RasterProportionTable";
 import { Mark, Node } from "prosemirror-model";
 import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
@@ -328,6 +332,10 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     RasterStatisticsTable,
     "RasterStatisticsTable"
   ),
+  RasterProportionTable: memoWidget(
+    RasterProportionTable,
+    "RasterProportionTable"
+  ),
   InlineLayerToggle: memoWidget(InlineLayerToggle, "InlineLayerToggle"),
   BlockLayerToggle: memoWidget(BlockLayerToggle, "BlockLayerToggle"),
 };
@@ -492,6 +500,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <RasterValuesHistogramTooltipControls {...props} />;
     case "RasterStatisticsTable":
       return <RasterStatisticsTableTooltipControls {...props} />;
+    case "RasterProportionTable":
+      return <RasterProportionTableTooltipControls {...props} />;
     case "BlockLayerToggle":
       return <BlockLayerToggleTooltipControls {...props} />;
     case "InlineLayerToggle":
@@ -585,6 +595,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <memoizedWidgets.RasterValuesHistogram {...widgetProps} />;
     case "RasterStatisticsTable":
       return <memoizedWidgets.RasterStatisticsTable {...widgetProps} />;
+    case "RasterProportionTable":
+      return <memoizedWidgets.RasterProportionTable {...widgetProps} />;
     case "InlineLayerToggle":
       return <memoizedWidgets.InlineLayerToggle {...widgetProps} />;
     case "BlockLayerToggle":
@@ -1007,13 +1019,12 @@ export function buildReportCommandGroups({
             label: "Inline Metrics",
             items: [],
           };
-          // Raster handling can be added here if needed
           inlineGroup.items.push({
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-inline-band-stats`,
             label: "Raster Statistics",
             description:
-              "Insert a raster statistic such as mean, min, max, or count.",
+              "Insert a raster statistic such as mean, min, max, or count for the sketch.",
             screenshotSrc: "/slashCommands/inline-raster-metric.png",
             run: (state, dispatch, view) => {
               return insertInlineMetric(view, state.selection.ranges[0], {
@@ -1028,6 +1039,58 @@ export function buildReportCommandGroups({
                 componentSettings: {
                   presentation: "raster_stats",
                   rasterStat: "mean",
+                },
+              });
+            },
+          });
+          inlineGroup.items.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-geography-band-stats`,
+            label: "Geography Raster Statistics",
+            description:
+              "Insert a raster statistic (mean, min, max, or count) computed for an entire geography rather than just the sketch.",
+            screenshotSrc: "/slashCommands/inline-raster-metric.png",
+            run: (state, dispatch, view) => {
+              return insertInlineMetric(view, state.selection.ranges[0], {
+                type: "InlineMetric",
+                metrics: [
+                  {
+                    type: "raster_stats",
+                    subjectType: "geographies",
+                    stableId,
+                  },
+                ],
+                componentSettings: {
+                  presentation: "geography_raster_stats",
+                  rasterStat: "mean",
+                },
+              });
+            },
+          });
+          inlineGroup.items.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-geography-proportion-captured`,
+            label: "Geography Proportion Captured",
+            description:
+              "Percentage of the total raster sum within a geography that falls inside the sketch.",
+            screenshotSrc: "/slashCommands/percent-geography.png",
+            run: (state, dispatch, view) => {
+              return insertInlineMetric(view, state.selection.ranges[0], {
+                type: "InlineMetric",
+                metrics: [
+                  {
+                    type: "raster_stats",
+                    subjectType: "fragments",
+                    stableId,
+                  },
+                  {
+                    type: "raster_stats",
+                    subjectType: "geographies",
+                    stableId,
+                  },
+                ],
+                componentSettings: {
+                  presentation: "geography_proportion_captured",
                 },
               });
             },
@@ -1091,6 +1154,32 @@ export function buildReportCommandGroups({
                     max: true,
                   },
                 },
+              });
+            },
+          });
+          blockGroup.items.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-raster-proportion-table`,
+            label: "Raster Proportion Captured Table",
+            description:
+              "Table showing what proportion of each raster layer's total value within a geography is captured by the sketch.",
+            screenshotSrc: "/slashCommands/raster-proportion.png",
+            run: (state, dispatch, view) => {
+              return insertBlockMetric(view, state.selection.ranges[0], {
+                type: "RasterProportionTable",
+                metrics: [
+                  {
+                    type: "raster_stats",
+                    subjectType: "fragments",
+                    stableId,
+                  },
+                  {
+                    type: "raster_stats",
+                    subjectType: "geographies",
+                    stableId,
+                  },
+                ],
+                componentSettings: {},
               });
             },
           });

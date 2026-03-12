@@ -8853,6 +8853,10 @@ select{
   overflow-wrap:break-word
 }
 
+.break-all{
+  word-break:break-all
+}
+
 .rounded{
   border-radius:0.25rem
 }
@@ -9374,6 +9378,10 @@ select{
 .border-amber-200{
   --tw-border-opacity:1;
   border-color:rgb(253 230 138 / var(--tw-border-opacity, 1))
+}
+
+.border-white\/20{
+  border-color:rgb(255 255 255 / 0.2)
 }
 
 .border-b-black{
@@ -11793,6 +11801,14 @@ select{
 
 .text-white\/80{
   color:rgb(255 255 255 / 0.8)
+}
+
+.text-white\/70{
+  color:rgb(255 255 255 / 0.7)
+}
+
+.text-white\/50{
+  color:rgb(255 255 255 / 0.5)
 }
 
 .text-opacity-50{
