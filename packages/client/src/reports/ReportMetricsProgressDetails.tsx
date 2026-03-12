@@ -2,11 +2,13 @@ import { Trans, useTranslation } from "react-i18next";
 import { useCallback, useContext, useMemo } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
+  DataSourceTypes,
   DraftReportDependenciesDocument,
   Geography,
   ReportDependenciesDocument,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
+  useProjectReportingLayersQuery,
 } from "../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
@@ -17,6 +19,10 @@ import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { useAuth0 } from "@auth0/auth0-react";
+import getSlug from "../getSlug";
+import ProfilePhoto from "../admin/users/ProfilePhoto";
+import type { AuthorProfileFragment } from "../generated/graphql";
+import { nameForProfile } from "../projects/Forums/TopicListItem";
 
 export default function ReportMetricsProgressDetails({
   config,
@@ -112,6 +118,34 @@ export default function ReportMetricsProgressDetails({
     [state.fragmentMetrics]
   );
 
+  const { data: reportingLayersData } = useProjectReportingLayersQuery({
+    variables: { slug: getSlug() },
+    fetchPolicy: "cache-only",
+  });
+
+  const overlayAttributionByTocId = useMemo(() => {
+    const items =
+      reportingLayersData?.projectBySlug?.draftTableOfContentsItems ?? [];
+    const map = new Map<
+      number,
+      {
+        profile: AuthorProfileFragment | null;
+        createdAt: string | null;
+        sourceTypeLabel: string;
+      }
+    >();
+    for (const item of items) {
+      const ds = item.dataLayer?.dataSource;
+      if (!ds || !item.id) continue;
+      map.set(item.id, {
+        profile: ds.authorProfile ?? null,
+        createdAt: ds.createdAt ?? null,
+        sourceTypeLabel: sourceTypeLabel(ds.type, t),
+      });
+    }
+    return map;
+  }, [reportingLayersData?.projectBySlug?.draftTableOfContentsItems, t]);
+
   return (
     <Tooltip.Provider>
       <div className="space-y-2 bg-white">
@@ -127,64 +161,103 @@ export default function ReportMetricsProgressDetails({
                 updated.
               </Trans>
             </p>
-            <ul className="space-y-1 py-2">
+            <ul className="space-y-2 py-2">
               {state.relatedOverlaySources.map((layer) => {
                 const isComplete =
                   layer.sourceProcessingJob?.state ===
                     SpatialMetricState.Complete || Boolean(layer.output);
+                const tocId = layer.tableOfContentsItemId;
+                const attribution =
+                  tocId != null
+                    ? overlayAttributionByTocId.get(tocId)
+                    : undefined;
+                const displayDate =
+                  layer.output?.createdAt ?? attribution?.createdAt ?? null;
+                const layerTitle =
+                  layer.tableOfContentsItem?.title || t("Untitled");
                 return (
-                  <ReportTaskLineItem
-                    key={"rtli-layer-" + layer.tableOfContentsItemId}
-                    title={layer.tableOfContentsItem?.title || "Untitled"}
-                    state={
-                      isComplete
-                        ? SpatialMetricState.Complete
-                        : layer.sourceProcessingJob?.state ||
-                          SpatialMetricState.Queued
-                    }
-                    progress={
-                      isComplete
-                        ? 100
-                        : layer.sourceProcessingJob?.progressPercentage
-                    }
-                    startedAt={layer.sourceProcessingJob?.startedAt}
-                    progressPercent={
-                      isComplete
-                        ? 100
-                        : layer.sourceProcessingJob?.progressPercentage
-                    }
-                    completedAt={layer.output?.createdAt}
-                    durationSeconds={layer.sourceProcessingJob?.durationSeconds}
-                    errorMessage={layer.sourceProcessingJob?.errorMessage}
-                    outputSize={layer.output?.size}
-                    outputUrl={layer.output?.url}
-                    outputType={
-                      layer.output?.url && layer.output?.url.endsWith(".fgb")
-                        ? "FlatGeobuf"
-                        : layer.output?.url &&
-                          layer.output?.url.endsWith(".tif")
-                        ? "GeoTIFF"
-                        : undefined
-                    }
-                    isAdmin={isAdmin}
-                    estimatedCompletionTime={layer.sourceProcessingJob?.eta}
-                    numInvalidFeatures={layer.output?.numInvalidFeatures}
-                    numFeatures={layer.output?.numFeatures}
-                    numRepairedFeatures={layer.output?.numRepairedFeatures}
-                    wasRepaired={layer.output?.wasRepaired}
-                    containsOverlappingFeatures={
-                      layer.containsOverlappingFeatures
-                    }
-                    onRepairClick={
-                      isAdmin && layer.sourceProcessingJob?.jobKey
-                        ? () =>
-                            handleRepairSource(
-                              layer.sourceProcessingJob!.jobKey
-                            )
-                        : undefined
-                    }
-                    repairLoading={recalculateState.loading}
-                  />
+                  <li
+                    key={"rtli-layer-" + tocId}
+                    className="rounded-md border border-gray-100 bg-gray-50/50 px-2 py-1.5 flex items-center gap-2 min-w-0"
+                  >
+                    <span className="flex-1 flex items-center space-x-2">
+                      <span
+                        className="text-sm font-medium min-w-0 truncate"
+                        title={layerTitle}
+                      >
+                        {layerTitle}
+                      </span>
+                      {attribution && (
+                        <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+                          {attribution.sourceTypeLabel}
+                        </span>
+                      )}
+                      {attribution?.profile && (
+                        <span className="flex-shrink-0 flex items-center text-xs">
+                          <AuthorAvatarWithTooltip
+                            profile={attribution.profile}
+                          />
+                        </span>
+                      )}
+                    </span>
+                    <span className="flex-shrink-0 ml-auto flex items-center">
+                      <ReportTaskLineItem
+                        onlyStatus
+                        title=""
+                        state={
+                          isComplete
+                            ? SpatialMetricState.Complete
+                            : layer.sourceProcessingJob?.state ||
+                              SpatialMetricState.Queued
+                        }
+                        progress={
+                          isComplete
+                            ? 100
+                            : layer.sourceProcessingJob?.progressPercentage
+                        }
+                        startedAt={layer.sourceProcessingJob?.startedAt}
+                        progressPercent={
+                          isComplete
+                            ? 100
+                            : layer.sourceProcessingJob?.progressPercentage
+                        }
+                        completedAt={layer.output?.createdAt}
+                        durationSeconds={
+                          layer.sourceProcessingJob?.durationSeconds
+                        }
+                        errorMessage={layer.sourceProcessingJob?.errorMessage}
+                        outputSize={layer.output?.size}
+                        outputUrl={layer.output?.url}
+                        outputType={
+                          layer.output?.url &&
+                          layer.output?.url.endsWith(".fgb")
+                            ? "FlatGeobuf"
+                            : layer.output?.url &&
+                              layer.output?.url.endsWith(".tif")
+                            ? "GeoTIFF"
+                            : undefined
+                        }
+                        isAdmin={isAdmin}
+                        estimatedCompletionTime={layer.sourceProcessingJob?.eta}
+                        numInvalidFeatures={layer.output?.numInvalidFeatures}
+                        numFeatures={layer.output?.numFeatures}
+                        numRepairedFeatures={layer.output?.numRepairedFeatures}
+                        wasRepaired={layer.output?.wasRepaired}
+                        containsOverlappingFeatures={
+                          layer.containsOverlappingFeatures
+                        }
+                        onRepairClick={
+                          isAdmin && layer.sourceProcessingJob?.jobKey
+                            ? () =>
+                                handleRepairSource(
+                                  layer.sourceProcessingJob!.jobKey
+                                )
+                            : undefined
+                        }
+                        repairLoading={recalculateState.loading}
+                      />
+                    </span>
+                  </li>
                 );
               })}
             </ul>
@@ -374,6 +447,74 @@ function nameForGeography(
     return subject.hash;
   }
   return geographies.find((g) => g.id === subject.id)?.name;
+}
+
+function sourceTypeLabel(
+  type: DataSourceTypes,
+  t: (key: string) => string
+): string {
+  const rasterTypes = [
+    DataSourceTypes.Raster,
+    DataSourceTypes.RasterDem,
+    DataSourceTypes.SeasketchRaster,
+    DataSourceTypes.ArcgisRasterTiles,
+    DataSourceTypes.Image,
+    DataSourceTypes.ArcgisDynamicMapserver,
+    DataSourceTypes.ArcgisDynamicMapserverRasterSublayer,
+  ];
+  if (rasterTypes.includes(type)) return t("Raster");
+  return t("Vector");
+}
+
+function AuthorAvatarWithTooltip({
+  profile,
+}: {
+  profile: AuthorProfileFragment;
+}) {
+  const { t } = useTranslation("sketching");
+  const name = nameForProfile(profile);
+  return (
+    <Tooltip.Root delayDuration={200}>
+      <Tooltip.Trigger asChild>
+        <span className="inline-flex items-center gap-1.5 cursor-default">
+          <span className="w-5 h-5 flex-shrink-0 rounded-full overflow-hidden inline-block">
+            <ProfilePhoto
+              fullname={profile.fullname ?? undefined}
+              email={profile.email ?? undefined}
+              canonicalEmail={profile.email ?? ""}
+              picture={profile.picture ?? undefined}
+            />
+          </span>
+          {/* <span className="truncate">{name || t("Unknown")}</span> */}
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          className="bg-gray-900 text-white text-xs rounded px-2 py-1.5 z-50 max-w-xs"
+          sideOffset={4}
+          side="top"
+        >
+          <div className="space-y-0.5">
+            {profile.fullname && (
+              <div className="font-medium">
+                {t("Authored by ")}
+                {profile.fullname}
+              </div>
+            )}
+            {profile.email && (
+              <div className="text-gray-300 truncate">{profile.email}</div>
+            )}
+            {profile.affiliations && (
+              <div className="text-gray-400 text-[11px]">
+                {profile.affiliations}
+              </div>
+            )}
+          </div>
+          <Tooltip.Arrow className="fill-gray-900" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
 }
 
 function groupMetricsBySourceAndOperation(
