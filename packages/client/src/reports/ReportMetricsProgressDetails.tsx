@@ -181,6 +181,13 @@ export default function ReportMetricsProgressDetails({
                     className="rounded-md border border-gray-100 bg-gray-50/50 px-2 py-1.5 flex items-center gap-2 min-w-0"
                   >
                     <span className="flex-1 flex items-center space-x-2">
+                      {attribution?.profile && (
+                        <span className="flex-shrink-0 flex items-center text-xs">
+                          <AuthorAvatarWithTooltip
+                            profile={attribution.profile}
+                          />
+                        </span>
+                      )}
                       <span
                         className="text-sm font-medium min-w-0 truncate"
                         title={layerTitle}
@@ -190,13 +197,6 @@ export default function ReportMetricsProgressDetails({
                       {attribution && (
                         <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
                           {attribution.sourceTypeLabel}
-                        </span>
-                      )}
-                      {attribution?.profile && (
-                        <span className="flex-shrink-0 flex items-center text-xs">
-                          <AuthorAvatarWithTooltip
-                            profile={attribution.profile}
-                          />
                         </span>
                       )}
                     </span>
@@ -479,6 +479,7 @@ function AuthorAvatarWithTooltip({
         <span className="inline-flex items-center gap-1.5 cursor-default">
           <span className="w-5 h-5 flex-shrink-0 rounded-full overflow-hidden inline-block">
             <ProfilePhoto
+              className="opacity-50 hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-200"
               fullname={profile.fullname ?? undefined}
               email={profile.email ?? undefined}
               canonicalEmail={profile.email ?? ""}
@@ -497,7 +498,7 @@ function AuthorAvatarWithTooltip({
           <div className="space-y-0.5">
             {profile.fullname && (
               <div className="font-medium">
-                {t("Authored by ")}
+                {t("Uploaded by ")}
                 {profile.fullname}
               </div>
             )}
