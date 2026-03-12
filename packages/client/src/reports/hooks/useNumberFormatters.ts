@@ -204,6 +204,8 @@ export function useNumberFormatters({
           Error(`Percent value is greater than 100%. Value: ${value * 100}%`)
         );
         return "100%";
+      } else if (value > 1) {
+        // keep inaccurate values
       } else if (value > 0.9999) {
         // Very small rounding issues are fine
         value = 1;
