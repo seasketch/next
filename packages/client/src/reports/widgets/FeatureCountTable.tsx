@@ -3,8 +3,6 @@ import { Trans, useTranslation } from "react-i18next";
 import {
   MetricDependency,
   subjectIsFragment,
-  subjectIsGeography,
-  combineMetricsForFragments,
   CountMetric,
   Metric,
 } from "overlay-engine";
@@ -21,17 +19,17 @@ import { LabeledDropdown } from "./LabeledDropdown";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
+import { SpatialMetricState } from "../../generated/graphql";
 import {
-  extractColorForLayers,
-  extractColorsForCategories,
-} from "../utils/colors";
-import { AnyLayer } from "mapbox-gl";
-import { GeostatsLayer } from "@seasketch/geostats-types";
+  ClassTableRow,
+  ClassTableRowComponentSettings,
+  combineMetricsBySource,
+  getClassTableRows,
+} from "./ClassTableRows";
 import {
-  CompatibleSpatialMetricDetailsFragment,
-  OverlaySourceDetailsFragment,
-  SpatialMetricState,
-} from "../../generated/graphql";
+  classTableRowHasSwatch,
+  SwatchForClassTableRow,
+} from "./SwatchForClassTableRow";
 import {
   PaginationFooter,
   PaginationSetting,
@@ -42,222 +40,6 @@ import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import { useClippingGeography } from "../hooks/useClippingGeography";
-
-export type ClassTableRow = {
-  key: string;
-  label: string;
-  groupByKey: string;
-  sourceId: string;
-  color?: string;
-  stableId?: string;
-};
-
-export type ClassTableRowComponentSettings = {
-  /**
-   * A list of row keys to exclude from the table. The key must match the ClassTableRow.key value.
-   */
-  excludedRowKeys?: string[];
-  /**
-   * A map of row keys to custom labels. The key must match the ClassTableRow.key value.
-   */
-  customRowLabels?: { [key: string]: string };
-  /**
-   * A map of row keys to stable IDs. The key must match the ClassTableRow.key value.
-   */
-  rowLinkedStableIds?: { [key: string]: string };
-};
-
-/**
- * Returns a list of ClassTableRows for the given dependencies and sources. In
- * report widgets like FeatureCountTable and OverlappingAreasTable, the widget
- * can populate these rows with metrics data for rendering as part of a table
- * component. The purpose of this function is to let table widgets delegate
- * responsibility for determining what rows to display, their colors, and their
- * labels, based on depedencies and common configuration. Widget-specific
- * functionality can then be implemented by callers.
- *
- * If sources aren't provided, likely because they haven't been loaded yet, the
- * function will return placeholder rows.
- * @param options
- * @returns
- */
-export function getClassTableRows(options: {
-  dependencies: MetricDependency[];
-  sources: OverlaySourceDetailsFragment[];
-  allFeaturesLabel: string;
-  /**
-   * A map of group by keys to custom labels. The key must match the
-   * ClassTableRow.key value.
-   */
-  customLabels?: { [key: string]: string };
-  /**
-   * A map of table of contents item IDs to stable IDs for showing map layer
-   * toggles. The key must match the ClassTableRow.sourceId value.
-   */
-  stableIds?: { [key: string]: string };
-  excludedRowKeys?: string[];
-}): ClassTableRow[] {
-  // console.log("getClassTableRows", options);
-  const rows = [] as ClassTableRow[];
-  const fragmentDependencies = options.dependencies.filter(
-    (d) => d.subjectType === "fragments" && Boolean(d.stableId)
-  );
-  const multiSource =
-    fragmentDependencies.length > 1 && options.sources.length > 1;
-  for (const dependency of fragmentDependencies) {
-    const source = options.sources.find(
-      (s) => s.stableId === dependency.stableId
-    );
-    const layer = source?.geostats?.layers?.[0] as GeostatsLayer | undefined;
-    if (!source || !layer) {
-      if (dependency.parameters?.groupBy) {
-        [1, 2, 3].forEach((i) => {
-          rows.push({
-            // eslint-disable-next-line i18next/no-literal-string
-            key: `${dependency.stableId}-placeholder-${i}`,
-            label: `-`,
-            // eslint-disable-next-line i18next/no-literal-string
-            groupByKey: `${dependency.stableId}-placeholder-${i}`,
-            sourceId: dependency.stableId!.toString(),
-          });
-        });
-      } else {
-        const key = classTableRowKey(dependency.stableId!, "*");
-        rows.push({
-          key,
-          label:
-            options.customLabels?.[key] ||
-            (multiSource
-              ? source?.tableOfContentsItem?.title || options.allFeaturesLabel
-              : options.allFeaturesLabel),
-          groupByKey: "*",
-          sourceId: dependency.stableId!.toString(),
-          stableId: options.stableIds?.[key],
-        });
-      }
-    } else {
-      if (dependency.parameters?.groupBy) {
-        const attr = layer.attributes?.find(
-          (a) => a.attribute === dependency.parameters?.groupBy
-        );
-        if (!attr) {
-          throw new Error(
-            `Attribute ${dependency.parameters?.groupBy} not found in geostats layer`
-          );
-        }
-        const values = Object.keys(attr.values || {});
-        const colors = extractColorsForCategories(
-          values,
-          attr,
-          source.mapboxGlStyles as AnyLayer[]
-        );
-        for (const value of values) {
-          const key = classTableRowKey(dependency.stableId!, value);
-          let color: string | undefined =
-            colors[value] ||
-            extractColorForLayers(source.mapboxGlStyles as AnyLayer[]);
-          if (color === "transparent" || color === "#00000000") {
-            color = undefined;
-          }
-          rows.push({
-            key,
-            label: options.customLabels?.[key] || value,
-            groupByKey: value,
-            sourceId: dependency.stableId!.toString(),
-            stableId: options.stableIds?.[key],
-            color,
-          });
-        }
-      } else {
-        const key = classTableRowKey(dependency.stableId!, "*");
-        let color: string | undefined = extractColorForLayers(
-          source.mapboxGlStyles as AnyLayer[]
-        );
-        if (color === "transparent" || color === "#00000000") {
-          color = undefined;
-        }
-        rows.push({
-          key,
-          label:
-            options.customLabels?.[key] ||
-            (multiSource
-              ? source.tableOfContentsItem?.title || options.allFeaturesLabel
-              : options.allFeaturesLabel),
-          groupByKey: "*",
-          sourceId: dependency.stableId!.toString(),
-          stableId: options.stableIds?.[key],
-          color,
-        });
-      }
-    }
-  }
-  // console.log(
-  //   "returning rows",
-  //   rows.filter((r) => !options.excludedRowKeys?.includes(r.key))
-  // );
-  return rows.filter((r) => !options.excludedRowKeys?.includes(r.key));
-}
-
-export function classTableRowKey(stableId: string, groupByKey?: string) {
-  return `${stableId}-${groupByKey || "*"}`;
-}
-
-export function combineMetricsBySource<T extends Metric>(
-  metrics: CompatibleSpatialMetricDetailsFragment[],
-  sources: OverlaySourceDetailsFragment[],
-  geographyId: number
-): {
-  [sourceId: string]: {
-    fragments: T;
-    geographies: T;
-  };
-} {
-  // handle duplicates
-  const metricIds = new Set<string>(metrics.map((m) => m.id));
-  metrics = metrics.filter((m) => m.state === SpatialMetricState.Complete);
-  metrics = Array.from(metricIds)
-    .map((id) => metrics.find((m) => m.id === id))
-    .filter(Boolean) as CompatibleSpatialMetricDetailsFragment[];
-  const result: {
-    [sourceId: string]: {
-      fragments: T;
-      geographies: T;
-    };
-  } = {};
-  // first, gather up source ids
-  const sourceIds = new Set<string>();
-  for (const metric of metrics) {
-    if (metric.sourceUrl) {
-      const source = sources.find((s) => s.sourceUrl === metric.sourceUrl);
-      if (source) {
-        sourceIds.add(source.stableId);
-      }
-    }
-  }
-  // then for each sourceId, combine the metrics
-  for (const sourceId of sourceIds) {
-    const source = sources.find((s) => s.stableId === sourceId);
-    if (source) {
-      result[source.stableId] = {
-        fragments: combineMetricsForFragments(
-          metrics.filter(
-            (m) =>
-              m.sourceUrl === source.sourceUrl &&
-              subjectIsFragment(m.subject) &&
-              m.subject.geographies.includes(geographyId)
-          ) as Pick<Metric, "type" | "value">[]
-        ) as T,
-        geographies: metrics.find(
-          (m) =>
-            m.sourceUrl === source.sourceUrl &&
-            subjectIsGeography(m.subject) &&
-            m.subject.id === geographyId
-        ) as unknown as T,
-      };
-    }
-  }
-  return result;
-}
 
 type FeatureCountTableSettings = {
   showZeroCountCategories?: boolean;
@@ -388,7 +170,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   } = usePagination(displayRows, rowsPerPage);
 
   const hasAnyColor = useMemo(
-    () => showColorSwatches && rows.some((row) => row.color),
+    () => showColorSwatches && rows.some(classTableRowHasSwatch),
     [rows, showColorSwatches]
   );
   const hasVisibilityColumn = useMemo(
@@ -439,14 +221,12 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
           )}
         </div>
         {paginatedRows.map((row) => {
-          const color = row.color;
           const percent =
             !loading &&
             typeof row.geographyTotal === "number" &&
             row.geographyTotal > 0
               ? row.count / row.geographyTotal
               : undefined;
-          const hasColor = showColorSwatches && color;
           const stableId =
             row.stableId ||
             componentSettings.rowLinkedStableIds?.[row.key] ||
@@ -469,15 +249,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
                   )}
                 </div>
               )}
-              {hasColor && (
-                <div className="flex-none w-4 flex justify-center">
-                  <span
-                    className="inline-block w-4 h-4 rounded-sm border border-black/10"
-                    style={{ backgroundColor: color }}
-                    aria-hidden
-                  />
-                </div>
-              )}
+              {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
                 <span
                   className="truncate block"

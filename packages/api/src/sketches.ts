@@ -678,6 +678,9 @@ export async function updateSketchFragments(
   pgClient: PoolClient,
   deletionScope?: string[],
 ): Promise<void> {
+  if (fragments.length > 80) {
+    throw new Error("Too many fragments to update. Maximum is 80.");
+  }
   const fragmentInputs = fragments
     .map((f) => {
       const geomJson = JSON.stringify(f.geometry);

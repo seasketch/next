@@ -118,6 +118,38 @@ export default function ReportMetricsProgressDetails({
     [state.fragmentMetrics]
   );
 
+  const geographyDurationSummary = useMemo(() => {
+    const settled =
+      state.geographyMetrics.length > 0 &&
+      state.geographyMetrics.every(
+        (m) =>
+          m.state === SpatialMetricState.Complete ||
+          m.state === SpatialMetricState.Error
+      );
+    if (!settled) return null;
+    const total = state.geographyMetrics.reduce(
+      (sum, m) => sum + (m.durationSeconds ?? 0),
+      0
+    );
+    return total > 0 ? { totalSeconds: total } : null;
+  }, [state.geographyMetrics]);
+
+  const fragmentDurationSummary = useMemo(() => {
+    const settled =
+      state.fragmentMetrics.length > 0 &&
+      state.fragmentMetrics.every(
+        (m) =>
+          m.state === SpatialMetricState.Complete ||
+          m.state === SpatialMetricState.Error
+      );
+    if (!settled) return null;
+    const total = state.fragmentMetrics.reduce(
+      (sum, m) => sum + (m.durationSeconds ?? 0),
+      0
+    );
+    return total > 0 ? { totalSeconds: total } : null;
+  }, [state.fragmentMetrics]);
+
   const { data: reportingLayersData } = useProjectReportingLayersQuery({
     variables: { slug: getSlug() },
     fetchPolicy: "cache-only",
@@ -273,6 +305,13 @@ export default function ReportMetricsProgressDetails({
                 recalculated if a source layer is updated.
               </Trans>
             </p>
+            {geographyDurationSummary && (
+              <p className="text-xs text-gray-500 mt-1">
+                {t("Total compute duration")}:{" "}
+                {geographyDurationSummary.totalSeconds.toFixed(1)}{" "}
+                {t("seconds")}
+              </p>
+            )}
             <div className="space-y-3 py-2">
               {groupedGeographyMetrics.map((group) => (
                 <div
@@ -372,6 +411,13 @@ export default function ReportMetricsProgressDetails({
               {uniqueFragmentHashes} {t("unique fragments")} {t("and")}{" "}
               {groupedFragmentMetrics.length} {t("operation groups")}
             </p>
+            {fragmentDurationSummary && (
+              <p className="text-xs text-gray-500 mt-1">
+                {t("Total compute duration")}:{" "}
+                {fragmentDurationSummary.totalSeconds.toFixed(1)}{" "}
+                {t("seconds")}
+              </p>
+            )}
             <div className="space-y-3 py-2">
               {groupedFragmentMetrics.map((group) => (
                 <div

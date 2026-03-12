@@ -1,10 +1,7 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, RasterStats } from "overlay-engine";
-import {
-  ReportWidget,
-  TableHeadingsEditor,
-} from "./widgets";
+import { ReportWidget, TableHeadingsEditor } from "./widgets";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -24,7 +21,11 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
-} from "./FeatureCountTable";
+} from "./ClassTableRows";
+import {
+  classTableRowHasSwatch,
+  SwatchForClassTableRow,
+} from "./SwatchForClassTableRow";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
@@ -202,26 +203,14 @@ export const RasterProportionTable: ReportWidget<
                   ) : null}
                 </div>
               )}
-              {showColorSwatches && row.color && (
-                <div className="flex-none w-4 flex justify-center">
-                  <span
-                    className="inline-block w-4 h-4 rounded-sm border border-black/10"
-                    style={{ backgroundColor: row.color }}
-                    aria-hidden
-                  />
-                </div>
-              )}
+              {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
                 <span className="truncate block" title={row.label}>
                   {row.label}
                 </span>
               </div>
               <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
-                {loading ? (
-                  <MetricLoadingDots />
-                ) : (
-                  formatters.percent(percent)
-                )}
+                {loading ? <MetricLoadingDots /> : formatters.percent(percent)}
               </div>
             </div>
           );
@@ -229,7 +218,9 @@ export const RasterProportionTable: ReportWidget<
         <TablePaddingRows
           count={paddingRowsCount}
           includeVisibilityColumn={hasVisibilityColumn}
-          includeColorColumn={showColorSwatches && rows.some((row) => row.color)}
+          includeColorColumn={
+            showColorSwatches && rows.some(classTableRowHasSwatch)
+          }
         />
       </div>
       {!loading && rows.length === 0 && (
@@ -309,9 +300,7 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
           label={t("Sort by")}
           value={sortBy}
           options={sortOptions}
-          onChange={(val) =>
-            handleUpdate({ sortBy: val as "value" | "name" })
-          }
+          onChange={(val) => handleUpdate({ sortBy: val as "value" | "name" })}
         />
         <ClassRowSettingsPopover
           settings={settings}

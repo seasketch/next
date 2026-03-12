@@ -31,7 +31,7 @@ import {
   ClassTableRowComponentSettings,
   classTableRowKey,
   getClassTableRows,
-} from "./FeatureCountTable";
+} from "./ClassTableRows";
 import { MetricDependency } from "overlay-engine";
 import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
