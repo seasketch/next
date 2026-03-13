@@ -312,24 +312,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           const projectId = sketch.project_id;
 
           // Retrieve all fragments related to the sketch (if any)
-          const fragments: string[] = [];
-          if (sketchId) {
-            const { rows: sketchFragmentsRows } = await pool.query(
-              `select get_fragment_hashes_for_sketch($1)`,
-              [sketchId],
-            );
-            if (
-              sketchFragmentsRows.length > 0 &&
-              sketchFragmentsRows[0].get_fragment_hashes_for_sketch &&
-              Array.isArray(
-                sketchFragmentsRows[0].get_fragment_hashes_for_sketch,
-              )
-            ) {
-              fragments.push(
-                ...sketchFragmentsRows[0].get_fragment_hashes_for_sketch,
-              );
-            }
-          }
+          const fragments = await getFragmentHashesForSketch(sketchId, pool);
 
           // Retrieve all geographies related to the project
           const { rows: geogs } = await pool.query(
