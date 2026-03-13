@@ -9,8 +9,25 @@ import {
 } from "overlay-engine";
 import { OverlayWorkerPayload } from "overlay-worker";
 import AWS from "aws-sdk";
+import Bottleneck from "bottleneck";
 import colors from "yoctocolors-cjs";
 import area from "@turf/area";
+
+/** Rate-limits overlay worker Lambda/dev-handler calls (e.g. 10k per 5 min). No concurrency cap. */
+const rateLimit =
+  parseInt(process.env.OVERLAY_WORKER_RATE_LIMIT ?? "10000", 10) || 10000;
+const rateLimitWindowMs =
+  (parseInt(process.env.OVERLAY_WORKER_RATE_LIMIT_WINDOW_MINUTES ?? "5", 10) ||
+    5) *
+  60 *
+  1000;
+
+const overlayWorkerLimiter = new Bottleneck({
+  maxConcurrent: 10000, // no effective concurrency limit
+  reservoir: rateLimit,
+  reservoirRefreshAmount: rateLimit,
+  reservoirRefreshInterval: rateLimitWindowMs,
+});
 
 const lambda = new AWS.Lambda({
   region: process.env.AWS_REGION || "us-west-2",
@@ -202,35 +219,46 @@ async function getGeobufForFragment(fragmentHash: string, helpers: Helpers) {
   });
 }
 
+const OVERLAY_WORKER_RATE_LIMIT_EXCEEDED =
+  "Overlay worker rate limit exceeded. Try again after the limit window refreshes.";
+
 async function callOverlayWorker(payload: OverlayWorkerPayload) {
-  console.log(colors.bgMagenta(`[${payload.jobKey}] Calling overlay worker`));
-  if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
-    const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    const data = await response.json();
-    if (data.error) {
-      throw new Error(`Overlay worker dev handler error: ${data.error}`);
-    }
-    return data;
-  } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
-    try {
-      await lambda
-        .invoke({
-          FunctionName: process.env.OVERLAY_WORKER_LAMBDA_ARN,
-          InvocationType: "Event", // Async invocation
-          Payload: JSON.stringify(payload),
-        })
-        .promise();
-    } catch (e) {
-      throw new Error(`Overlay worker lambda error: ${e}`);
-    }
-  } else {
-    throw new Error(
-      "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented.",
-    );
+  const reservoir = await (
+    overlayWorkerLimiter as Bottleneck
+  ).currentReservoir();
+  if (reservoir == null || reservoir <= 0) {
+    throw new Error(OVERLAY_WORKER_RATE_LIMIT_EXCEEDED);
   }
+  return overlayWorkerLimiter.schedule(async () => {
+    console.log(colors.bgMagenta(`[${payload.jobKey}] Calling overlay worker`));
+    if (process.env.OVERLAY_WORKER_DEV_HANDLER) {
+      const response = await fetch(process.env.OVERLAY_WORKER_DEV_HANDLER, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(`Overlay worker dev handler error: ${data.error}`);
+      }
+      return data;
+    } else if (process.env.OVERLAY_WORKER_LAMBDA_ARN) {
+      try {
+        await lambda
+          .invoke({
+            FunctionName: process.env.OVERLAY_WORKER_LAMBDA_ARN,
+            InvocationType: "Event", // Async invocation
+            Payload: JSON.stringify(payload),
+          })
+          .promise();
+      } catch (e) {
+        throw new Error(`Overlay worker lambda error: ${e}`);
+      }
+    } else {
+      throw new Error(
+        "Neither OVERLAY_WORKER_DEV_HANDLER nor OVERLAY_WORKER_LAMBDA_ARN are set. Lambda is not implemented.",
+      );
+    }
+  });
 }
 
 function parseClippingLayer(clippingLayer: {
