@@ -21,7 +21,10 @@ export type WidgetDependenciesResult = {
   sources: OverlaySourceDetailsFragment[];
   loading: boolean;
   errors: string[];
-  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
+  geographies: Pick<
+    Geography,
+    "id" | "name" | "translatedProps" | "stableIds"
+  >[];
   sketchClass: SketchClassForWidgets;
 };
 
@@ -130,7 +133,14 @@ export function useWidgetDependencies(
 
   // Combine card metrics with draft metrics
   const allMetrics = useMemo(() => {
-    return [...cardMetrics, ...draftReportContext.draftMetrics];
+    const seenIds = new Set<number>();
+    const all = [] as CompatibleSpatialMetricDetailsFragment[];
+    for (const metric of [...cardMetrics, ...draftReportContext.draftMetrics]) {
+      if (metric.id && seenIds.has(metric.id)) continue;
+      if (metric.id) seenIds.add(metric.id);
+      all.push(metric);
+    }
+    return all;
   }, [cardMetrics, draftReportContext.draftMetrics]);
 
   // Filter metrics and sources for this widget
@@ -250,7 +260,10 @@ function useStableArray(arr: string[]): string[] {
  * Returns stable reference for geographies array
  */
 function useStableGeographies(
-  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[]
+  geographies: Pick<
+    Geography,
+    "id" | "name" | "translatedProps" | "stableIds"
+  >[]
 ): Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[] {
   const ref = useRef(geographies);
   const prevKey = useRef<string>("");

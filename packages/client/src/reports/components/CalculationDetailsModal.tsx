@@ -109,10 +109,13 @@ export function CalculationDetailsModal({
 
   const handleRecalculate = useCallback(async () => {
     const metricsToRecalculate: number[] = [];
+    const seenIds = new Set<number>();
     for (const metric of [
       ...draftReportContext.draftMetrics,
       ...context.metrics,
     ]) {
+      if (metric.id != null && seenIds.has(metric.id)) continue;
+      if (metric.id != null) seenIds.add(metric.id);
       if (subjectIsFragment(metric.subject) || recomputeTotals) {
         metricsToRecalculate.push(metric.id);
       }

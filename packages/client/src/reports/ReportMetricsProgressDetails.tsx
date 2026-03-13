@@ -41,11 +41,19 @@ export default function ReportMetricsProgressDetails({
   const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
     onError,
   });
-
-  const allMetrics = useMemo(
-    () => [...draftReportContext.draftMetrics, ...context.metrics],
-    [draftReportContext.draftMetrics, context.metrics]
-  );
+  const allMetrics = useMemo(() => {
+    const seenIds = new Set<number>();
+    const all = [] as CompatibleSpatialMetricDetailsFragment[];
+    for (const metric of [
+      ...draftReportContext.draftMetrics,
+      ...context.metrics,
+    ]) {
+      if (metric.id && seenIds.has(metric.id)) continue;
+      if (metric.id) seenIds.add(metric.id);
+      all.push(metric);
+    }
+    return all;
+  }, [draftReportContext.draftMetrics, context.metrics]);
 
   const handleRepairSource = useCallback(
     async (jobKey: string) => {
@@ -71,11 +79,14 @@ export default function ReportMetricsProgressDetails({
 
   const state = useMemo(() => {
     const failedMetrics = [] as number[];
-    const metrics = [...draftReportContext.draftMetrics, ...context.metrics];
-    const overlaySources = [
+    const metrics = allMetrics; // already deduped above
+    const overlaySourcesRaw = [
       ...draftReportContext.draftOverlaySources,
       ...context.sources,
     ];
+    const overlaySources = overlaySourcesRaw.filter((s, i, arr) =>
+      s.stableId ? arr.findIndex((x) => x.stableId === s.stableId) === i : true
+    );
 
     return {
       geographyMetrics: metrics.filter((m) => !subjectIsFragment(m.subject)),
@@ -83,12 +94,7 @@ export default function ReportMetricsProgressDetails({
       relatedOverlaySources: Array.from(overlaySources),
       failedMetrics,
     };
-  }, [
-    draftReportContext.draftMetrics,
-    draftReportContext.draftOverlaySources,
-    context.metrics,
-    context.sources,
-  ]);
+  }, [allMetrics, draftReportContext.draftOverlaySources, context.sources]);
 
   const groupedGeographyMetrics = useMemo(
     () =>
@@ -414,8 +420,7 @@ export default function ReportMetricsProgressDetails({
             {fragmentDurationSummary && (
               <p className="text-xs text-gray-500 mt-1">
                 {t("Total compute duration")}:{" "}
-                {fragmentDurationSummary.totalSeconds.toFixed(1)}{" "}
-                {t("seconds")}
+                {fragmentDurationSummary.totalSeconds.toFixed(1)} {t("seconds")}
               </p>
             )}
             <div className="space-y-3 py-2">
