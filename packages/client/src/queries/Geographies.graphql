@@ -61,6 +61,8 @@ query GeographyClippingSettings($slug: String!) {
     geographies {
       ...GeographyDetails
     }
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
   }
 }
 
@@ -139,6 +141,12 @@ mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
     geography {
       ...GeographyDetails
     }
+  }
+}
+
+mutation GenerateMissingFragmentsForProject($slug: String!) {
+  generateMissingFragmentsForProject(slug: $slug) {
+    success
   }
 }
 

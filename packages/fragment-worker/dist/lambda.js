@@ -4,6 +4,12 @@ exports.lambdaHandler = void 0;
 const handler_1 = require("./handler");
 const lambdaHandler = async (event, context) => {
     try {
+        if (event.operation === "warm-cache") {
+            return await (0, handler_1.handleWarmCache)(event);
+        }
+        if (event.operation === "create-collection-fragments") {
+            return await (0, handler_1.handleCreateCollectionFragments)(event);
+        }
         return await (0, handler_1.handleCreateFragments)(event);
     }
     catch (e) {

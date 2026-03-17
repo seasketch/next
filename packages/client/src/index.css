@@ -6455,6 +6455,14 @@ select{
   margin:auto
 }
 
+.-m-2\.5{
+  margin:-0.625rem
+}
+
+.-m-2{
+  margin:-0.5rem
+}
+
 .-mx-0{
   margin-left:-0px;
   margin-right:-0px
@@ -10632,6 +10640,10 @@ select{
 
 .p-\[5px\]{
   padding:5px
+}
+
+.p-2\.5{
+  padding:0.625rem
 }
 
 .px-0{

@@ -79,6 +79,7 @@ type ReportState = {
   sketchId: number;
   uiState: ReportWindowUIState;
   sketchClassId: number;
+  previewNewReporting?: boolean;
 };
 
 /**
@@ -589,22 +590,33 @@ export default function SketchUIStateContextProvider({
   >(false);
 
   const openSketchReport = useCallback(
-    (sketchId: number, uiState?: "left" | "right" | "docked") => {
+    (
+      sketchId: number,
+      uiState?: "left" | "right" | "docked",
+      options?: { previewNewReporting?: boolean }
+    ) => {
       const sketch: SketchTocDetailsFragment =
         // @ts-ignore
         client.cache.data.data[`Sketch:${sketchId}`];
       if (sketch) {
+        const previewNewReporting = options?.previewNewReporting ?? false;
         setOpenReports((openReports) => {
           const maxWindows = Math.floor((window.innerWidth - 69) / 512);
+          // Only replace reports that match both sketchId and preview mode,
+          // so legacy and new reports can be open side-by-side for comparison
+          const filtered = openReports.filter(
+            (r) =>
+              r.sketchId !== sketchId ||
+              (r.previewNewReporting ?? false) !== previewNewReporting
+          );
           return [
             {
               sketchId,
               uiState: "right",
               sketchClassId: sketch?.sketchClassId,
+              previewNewReporting: options?.previewNewReporting,
             },
-            ...openReports
-              .filter((r) => r.sketchId !== sketchId)
-              .slice(0, maxWindows - 1),
+            ...filtered.slice(0, maxWindows - 1),
           ];
         });
       }
@@ -1098,8 +1110,19 @@ export default function SketchUIStateContextProvider({
   // mySketches, myFolders]);
 
   const onRequestReportClose = useCallback(
-    (id: number) => {
-      setOpenReports((prev) => [...prev.filter((r) => r.sketchId !== id)]);
+    (id: number, previewNewReporting?: boolean) => {
+      setOpenReports((prev) => {
+        // When previewNewReporting is provided, close only the matching report.
+        // Otherwise (e.g. keyboard shortcut), close all reports for this sketch.
+        if (previewNewReporting !== undefined) {
+          return prev.filter(
+            (r) =>
+              r.sketchId !== id ||
+              (r.previewNewReporting ?? false) !== previewNewReporting
+          );
+        }
+        return prev.filter((r) => r.sketchId !== id);
+      });
       setSelectedIds([]);
     },
     [setOpenReports, setSelectedIds]
@@ -1351,6 +1374,20 @@ export default function SketchUIStateContextProvider({
       ];
       const update: DropdownOption[] = [];
       const read: DropdownOption[] = [];
+      const selectedSketchClassId =
+        selectionType?.collection || selectionType?.sketch
+          ? // @ts-ignore private cache api
+            (client.cache.data.get(selectedIds[0], "sketchClassId") as
+              | number
+              | undefined)
+          : undefined;
+      const selectedSketchClass = selectedSketchClassId
+        ? sketchClasses.find((s) => s.id === selectedSketchClassId)
+        : undefined;
+      const canPreviewNewReports =
+        Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
+        Boolean(selectedSketchClass?.previewNewReports) &&
+        !selectedSketchClass?.useGeographyClipping;
       const viewReports: DropdownOption | undefined =
         selectionType?.collection || selectionType?.sketch
           ? {
@@ -1364,6 +1401,20 @@ export default function SketchUIStateContextProvider({
           : undefined;
       if (viewReports) {
         contextMenu.push(viewReports);
+      }
+      if (
+        canPreviewNewReports &&
+        (selectionType?.collection || selectionType?.sketch)
+      ) {
+        contextMenu.push({
+          id: "preview-new-reports",
+          label: t("Preview New Reports"),
+          onClick: () => {
+            openSketchReport(selectedId!, undefined, {
+              previewNewReporting: true,
+            });
+          },
+        });
       }
       if (selectionBBox) {
         read.push({
@@ -1577,6 +1628,7 @@ export default function SketchUIStateContextProvider({
     },
     [
       projectMetadata.data?.project?.sketchClasses,
+      projectMetadata.data?.project?.sessionIsAdmin,
       t,
       client.cache,
       history,
@@ -1781,22 +1833,32 @@ export default function SketchUIStateContextProvider({
               style={{ zIndex: 20 }}
               className="absolute top-2 right-2 flex flex-wrap gap-2 max-w-full justify-end pointer-events-none"
             >
-              {openReports.map(({ sketchId, uiState, sketchClassId }) => {
+              {openReports.map(
+                ({ sketchId, uiState, sketchClassId, previewNewReporting }) => {
                 const sketchClass =
                   projectMetadata.data?.project?.sketchClasses?.find(
                     (sc) => sc.id === sketchClassId
                   );
+                const canUseNewReporting =
+                  sketchClass?.useGeographyClipping ||
+                  (Boolean(previewNewReporting) &&
+                    Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
+                    Boolean(sketchClass?.previewNewReports));
+                // Unique key so legacy and preview reports for same sketch can coexist
+                const reportKey = `${sketchId}-${previewNewReporting ? "preview" : "legacy"}`;
+                const handleClose = () =>
+                  onRequestReportClose(sketchId, previewNewReporting ?? false);
                 if (
-                  sketchClass?.useGeographyClipping &&
+                  canUseNewReporting &&
                   sketchClass?.reportId
                 ) {
                   return (
                     <SketchReportWindow
-                      key={sketchId}
+                      key={reportKey}
                       sketchId={sketchId}
                       sketchClassId={sketchClassId}
                       reportId={sketchClass.reportId}
-                      onRequestClose={onRequestReportClose}
+                      onRequestClose={handleClose}
                       uiState={uiState}
                       selected={
                         selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
@@ -1810,10 +1872,10 @@ export default function SketchUIStateContextProvider({
                 } else {
                   return (
                     <LegacySketchReportWindow
-                      key={sketchId}
+                      key={reportKey}
                       sketchId={sketchId}
                       sketchClassId={sketchClassId}
-                      onRequestClose={onRequestReportClose}
+                      onRequestClose={handleClose}
                       uiState={uiState}
                       selected={
                         selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
@@ -1825,7 +1887,8 @@ export default function SketchUIStateContextProvider({
                     />
                   );
                 }
-              })}
+              },
+              )}
             </div>,
             document.body
           )}

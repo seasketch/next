@@ -1,5 +1,9 @@
 import { Context } from "aws-lambda";
-import { handleCreateFragments, handleWarmCache } from "./handler";
+import {
+  handleCreateCollectionFragments,
+  handleCreateFragments,
+  handleWarmCache,
+} from "./handler";
 
 export const lambdaHandler = async (
   event: any,
@@ -8,6 +12,9 @@ export const lambdaHandler = async (
   try {
     if (event.operation === "warm-cache") {
       return await handleWarmCache(event);
+    }
+    if (event.operation === "create-collection-fragments") {
+      return await handleCreateCollectionFragments(event);
     }
     return await handleCreateFragments(event);
   } catch (e: any) {

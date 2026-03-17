@@ -13,7 +13,7 @@ import {
   clipSketchToPolygons,
   clipToGeographies,
 } from "overlay-engine";
-import { PoolClient } from "pg";
+import { Pool, PoolClient } from "pg";
 import bbox from "@turf/bbox";
 import { PendingFragmentResult } from "overlay-engine/dist/fragments";
 import { makeNodeFetchRangeFn } from "./nodeFetchRangeFn";
@@ -39,6 +39,12 @@ type CreateFragmentsResult = {
   success: boolean;
   clipped?: Feature<MultiPolygon> | null;
   fragments?: FragmentResult[];
+  error?: string;
+};
+
+type CreateCollectionFragmentsResult = {
+  success: boolean;
+  fragmentsBySketchId?: Record<number, FragmentResult[]>;
   error?: string;
 };
 
@@ -106,6 +112,51 @@ async function callFragmentWorkerLambda(
     clipped: result.clipped ?? null,
     fragments: result.fragments ?? [],
   };
+}
+
+async function callFragmentWorkerCollectionLambda(
+  sketches: Array<{ id: number; feature: Feature<any> }>,
+  geographies: GeographySettings[],
+  geographiesForClipping: number[],
+): Promise<Record<number, FragmentResult[]>> {
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
+  }
+  const payload = {
+    operation: "create-collection-fragments",
+    sketches,
+    geographies,
+    geographiesForClipping,
+  };
+  const client = getLambdaClient();
+  const command = new InvokeCommand({
+    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+    InvocationType: "RequestResponse",
+    Payload: Buffer.from(JSON.stringify(payload)),
+  });
+  const response = await client.send(command);
+  if (response.FunctionError) {
+    const errorPayload = response.Payload
+      ? JSON.parse(Buffer.from(response.Payload).toString())
+      : null;
+    throw new Error(
+      `Fragment worker Lambda error: ${
+        errorPayload?.errorMessage || response.FunctionError
+      }`,
+    );
+  }
+  if (!response.Payload) {
+    throw new Error("Fragment worker Lambda returned no payload");
+  }
+  const result: CreateCollectionFragmentsResult = JSON.parse(
+    Buffer.from(response.Payload).toString(),
+  );
+  if (!result.success) {
+    throw new Error(
+      `Fragment worker Lambda error: ${result.error || "Unknown error"}`,
+    );
+  }
+  return result.fragmentsBySketchId ?? {};
 }
 
 /**
@@ -642,6 +693,51 @@ export async function getFragmentsForSketch(
   return fragments;
 }
 
+export async function getFragmentHashesForSketch(
+  sketchId: number,
+  pgClient: Pool | PoolClient,
+): Promise<string[]> {
+  const { rows } = await pgClient.query(
+    `select get_fragment_hashes_for_sketch($1)`,
+    [sketchId],
+  );
+  if (
+    rows.length > 0 &&
+    rows[0].get_fragment_hashes_for_sketch &&
+    Array.isArray(rows[0].get_fragment_hashes_for_sketch)
+  ) {
+    return rows[0].get_fragment_hashes_for_sketch;
+  }
+  return [];
+}
+
+/**
+ * Batch lookup of fragment hashes for multiple sketches (single query).
+ * Sketches with no fragments or that fail RLS are omitted; caller should
+ * initialize missing entries to [] as needed.
+ */
+export async function getFragmentHashesForSketches(
+  sketchIds: number[],
+  pgClient: Pool | PoolClient,
+): Promise<Record<number, string[]>> {
+  if (sketchIds.length === 0) return {};
+  const { rows } = await pgClient.query<{
+    sketch_id: number;
+    fragment_hashes: string[];
+  }>(
+    `select sketch_id, fragment_hashes from get_fragment_hashes_for_sketches($1::int[])`,
+    [sketchIds],
+  );
+  const result: Record<number, string[]> = {};
+  for (const row of rows) {
+    result[row.sketch_id] =
+      row.fragment_hashes && Array.isArray(row.fragment_hashes)
+        ? row.fragment_hashes
+        : [];
+  }
+  return result;
+}
+
 let idCounter = 0;
 
 function convertToPendingFragmentResult(
@@ -681,13 +777,16 @@ export async function updateSketchFragments(
   if (fragments.length > 80) {
     throw new Error("Too many fragments to update. Maximum is 80.");
   }
-  const fragmentInputs = fragments
-    .map((f) => {
-      const geomJson = JSON.stringify(f.geometry);
-      const geographyIds = f.properties.__geographyIds.join(",");
-      return `ROW(ST_GeomFromGeoJSON('${geomJson}'), ARRAY[${geographyIds}])::fragment_input`;
-    })
-    .join(",");
+  const fragmentInputs =
+    fragments.length > 0
+      ? fragments
+          .map((f) => {
+            const geomJson = JSON.stringify(f.geometry);
+            const geographyIds = f.properties.__geographyIds.join(",");
+            return `ROW(ST_GeomFromGeoJSON('${geomJson}'), ARRAY[${geographyIds}])::fragment_input`;
+          })
+          .join(",")
+      : "";
 
   const deletionScopeSql =
     deletionScope && deletionScope.length > 0
@@ -697,12 +796,410 @@ export async function updateSketchFragments(
   const sql = `
     SELECT update_sketch_fragments(
       $1::int, 
-      ARRAY[${fragmentInputs}],
+      ${
+        fragments.length > 0
+          ? `ARRAY[${fragmentInputs}]`
+          : "ARRAY[]::fragment_input[]"
+      },
       ${deletionScopeSql}
     )
   `;
 
   await pgClient.query(sql, [sketchId]);
+}
+
+export async function ensureCollectionFragments(
+  collectionId: number,
+  projectId: number,
+  pgClient: PoolClient,
+): Promise<string[]> {
+  const childSketchIds = await getChildSketchIds(
+    "sketch",
+    collectionId,
+    pgClient,
+  );
+  if (childSketchIds.length === 0) {
+    return [];
+  }
+
+  // Sketches that have polygon/multipolygon user_geom and are missing from sketch_fragments.
+  const { rows: missingFragments } = await pgClient.query<{ id: number }>(
+    `select s.id
+     from sketches s
+     where s.id = any($1::int[])
+       and s.user_geom is not null
+       and ST_GeometryType(s.user_geom) in ('ST_Polygon', 'ST_MultiPolygon')
+       and not exists (
+         select 1 from sketch_fragments sf where sf.sketch_id = s.id
+       )`,
+    [childSketchIds],
+  );
+
+  if (missingFragments.length === 0) {
+    // All polygon sketches already have fragments; return their hashes (batch query).
+    const { rows: withPolygonGeom } = await pgClient.query<{ id: number }>(
+      `select id from sketches
+       where id = any($1::int[])
+         and user_geom is not null
+         and ST_GeometryType(user_geom) in ('ST_Polygon', 'ST_MultiPolygon')`,
+      [childSketchIds],
+    );
+    const polygonSketchIds = withPolygonGeom.map((r) => r.id);
+    const batchHashes = await getFragmentHashesForSketches(
+      polygonSketchIds,
+      pgClient,
+    );
+    return [...new Set(Object.values(batchHashes).flat())];
+  }
+
+  // Need to generate fragments: load user_geom (GeoJSON) for the Lambda.
+  const { rows: sketchesForLambda } = await pgClient.query<{
+    id: number;
+    sketch_class_id: number;
+    user_geom: string;
+  }>(
+    `select sketches.id, sketches.sketch_class_id, ST_AsGeoJSON(sketches.user_geom) as user_geom
+     from sketches
+     where sketches.id = any($1::int[])
+       and sketches.user_geom is not null
+       and ST_GeometryType(sketches.user_geom) in ('ST_Polygon', 'ST_MultiPolygon')`,
+    [childSketchIds],
+  );
+
+  const sketchClassIds = Array.from(
+    new Set(sketchesForLambda.map((sketch) => sketch.sketch_class_id)),
+  );
+  if (sketchClassIds.length !== 1) {
+    throw new Error(
+      `Collection ${collectionId} has sketches with different sketch classes; cannot generate fragments in a single batch`,
+    );
+  }
+  const sketchClassId = sketchClassIds[0];
+
+  const { rows: clippingLayers } = await pgClient.query(
+    `
+    select * from clipping_layers_for_sketch_class($1, $2)
+    `,
+    [projectId, sketchClassId],
+  );
+  const geographies = clippingLayers.reduce(
+    (acc: GeographySettings[], l: any) => {
+      let geography: GeographySettings | undefined = acc.find(
+        (g) => g.id === l.geography_id,
+      );
+      if (!geography) {
+        geography = {
+          id: l.geography_id,
+          clippingLayers: [],
+        };
+        acc.push(geography);
+      }
+      if (l.object_key === null) {
+        throw new Error(
+          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`,
+        );
+      }
+      geography.clippingLayers.push({
+        op: l.operation_type.toUpperCase(),
+        source: l.object_key,
+        cql2Query: l.cql2_query,
+      });
+      return acc;
+    },
+    [] as GeographySettings[],
+  );
+
+  const clippingGeographyLayers = Array.from(
+    new Set(
+      clippingLayers
+        .filter((l: any) => l.for_clipping)
+        .map((l: any) => l.geography_id),
+    ),
+  );
+
+  const fragmentsBySketchId = await callFragmentWorkerCollectionLambda(
+    sketchesForLambda.map((sketch) => ({
+      id: sketch.id,
+      feature: {
+        type: "Feature",
+        properties: {},
+        geometry: JSON.parse(sketch.user_geom),
+      } as Feature<any>,
+    })),
+    geographies,
+    clippingGeographyLayers,
+  );
+
+  for (const sketch of sketchesForLambda) {
+    const existingHashes = await getFragmentHashesForSketch(
+      sketch.id,
+      pgClient,
+    );
+    const fragments = fragmentsBySketchId[sketch.id] || [];
+    await updateSketchFragments(sketch.id, fragments, pgClient, existingHashes);
+    await pgClient.query(
+      `
+      update sketches s
+      set geom = (
+        select
+          case
+            when count(*) = 0 then null
+            else ST_Multi(ST_CollectionExtract(ST_Union(f.geometry), 3))
+          end
+        from sketch_fragments sf
+        join fragments f on f.hash = sf.fragment_hash
+        where sf.sketch_id = s.id
+      )
+      where s.id = $1
+      `,
+      [sketch.id],
+    );
+  }
+  const batchHashes = await getFragmentHashesForSketches(
+    sketchesForLambda.map((s) => s.id),
+    pgClient,
+  );
+  return [...new Set(Object.values(batchHashes).flat())];
+}
+
+export async function ensureSketchFragments(
+  sketchId: number,
+  projectId: number,
+  pgClient: PoolClient,
+  options?: { resetClippedGeometry?: boolean },
+): Promise<string[]> {
+  const existingHashes = await getFragmentHashesForSketch(sketchId, pgClient);
+  if (existingHashes.length > 0) {
+    return existingHashes;
+  }
+
+  const {
+    rows: [sketchRow],
+  } = await pgClient.query<{
+    id: number;
+    name: string;
+    user_id: number;
+    properties: any;
+    sketch_class_id: number;
+    project_id: number;
+    geometry_type: string;
+    use_geography_clipping: boolean;
+    preview_new_reports: boolean;
+    user_geom: string | null;
+  }>(
+    `
+    select
+      sketches.id,
+      sketches.name,
+      sketches.user_id,
+      sketches.properties,
+      sketches.sketch_class_id,
+      sketch_classes.project_id,
+      sketch_classes.geometry_type,
+      sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping,
+      coalesce(sketch_classes.preview_new_reports, false) as preview_new_reports,
+      ST_AsGeoJSON(sketches.user_geom) as user_geom
+    from sketches
+    join sketch_classes on sketch_classes.id = sketches.sketch_class_id
+    where sketches.id = $1
+    `,
+    [sketchId],
+  );
+
+  if (!sketchRow) {
+    throw new Error(`Sketch ${sketchId} not found`);
+  }
+
+  if (sketchRow.geometry_type === "FILTERED_PLANNING_UNITS") {
+    return [];
+  }
+
+  if (!sketchRow.use_geography_clipping && !sketchRow.preview_new_reports) {
+    return [];
+  }
+
+  if (sketchRow.geometry_type === "COLLECTION") {
+    throw new Error("Collection geometry type is not supported yet");
+    // const hashes = await ensureCollectionFragments(
+    //   sketchId,
+    //   projectId || sketchRow.project_id,
+    //   pgClient,
+    // );
+    // const collectionHashes = await getFragmentHashesForSketch(
+    //   sketchId,
+    //   pgClient,
+    // );
+    // if (collectionHashes.length > 0) {
+    //   return collectionHashes;
+    // }
+    // return hashes;
+  }
+
+  if (!sketchRow.user_geom) {
+    throw new Error("ensureSketchFragments - Sketch has no geometry");
+  }
+
+  const userGeom = {
+    type: "Feature" as const,
+    properties: {},
+    geometry: JSON.parse(sketchRow.user_geom),
+  };
+
+  const { clipped, fragments, fragmentDeletionScope } =
+    await generateFragmentsForSketchGeometry({
+      userGeom,
+      sketchClassId: sketchRow.sketch_class_id,
+      projectId: projectId || sketchRow.project_id,
+      collectionId: null,
+      folderCollectionId: null,
+      sketchId,
+      pgClient,
+    });
+
+  await reconcileFragments(
+    [],
+    fragments,
+    fragmentDeletionScope,
+    pgClient,
+    sketchId,
+  );
+
+  if (options?.resetClippedGeometry) {
+    await pgClient.query(
+      `update sketches set geom = ST_GeomFromGeoJSON($1) where id = $2`,
+      [JSON.stringify(clipped.geometry), sketchId],
+    );
+  }
+
+  return getFragmentHashesForSketch(sketchId, pgClient);
+}
+
+/**
+ * Generates clipped geometry and fragments for a sketch using project geography
+ * clipping. Does not update the sketch row or any other sketch properties.
+ * Used by createOrUpdateSketch and ensureSketchFragments (standalone path).
+ */
+async function generateFragmentsForSketchGeometry(params: {
+  userGeom: Feature<any>;
+  sketchClassId: number;
+  projectId: number;
+  collectionId: number | null;
+  folderCollectionId: number | null;
+  sketchId: number | null;
+  pgClient: PoolClient;
+}): Promise<{
+  clipped: Feature<MultiPolygon>;
+  fragments: FragmentResult[];
+  fragmentDeletionScope: string[];
+}> {
+  const {
+    userGeom,
+    sketchClassId,
+    projectId,
+    collectionId,
+    folderCollectionId,
+    sketchId,
+    pgClient,
+  } = params;
+
+  const preparedSketch = prepareSketch(userGeom);
+
+  let { rows: clippingLayers } = await pgClient.query(
+    `select * from clipping_layers_for_sketch_class($1, $2)`,
+    [projectId, sketchClassId],
+  );
+
+  const geographies = clippingLayers.reduce(
+    (acc: GeographySettings[], l: any) => {
+      let geography: GeographySettings | undefined = acc.find(
+        (g) => g.id === l.geography_id,
+      );
+      if (!geography) {
+        geography = { id: l.geography_id, clippingLayers: [] };
+        acc.push(geography);
+      }
+      if (l.object_key === null) {
+        throw new Error(
+          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`,
+        );
+      }
+      geography.clippingLayers.push({
+        op: l.operation_type.toUpperCase(),
+        source: l.object_key,
+        cql2Query: l.cql2_query,
+      });
+      return acc;
+    },
+    [] as GeographySettings[],
+  );
+
+  const clippingGeographyLayers = Array.from(
+    new Set(
+      clippingLayers
+        .filter((l: any) => l.for_clipping)
+        .map((l: any) => l.geography_id),
+    ),
+  );
+
+  const existingOverlappingFragments: SketchFragment[] =
+    collectionId || folderCollectionId
+      ? await overlappingFragmentsInCollection(
+          collectionId || folderCollectionId!,
+          sketchId,
+          preparedSketch.envelopes,
+          pgClient,
+        )
+      : [];
+
+  const fragmentDeletionScope = existingOverlappingFragments.map(
+    (f) => f.properties.__hash,
+  );
+
+  const distinctGeographyIds = new Set(clippingGeographyLayers);
+  if (distinctGeographyIds.size !== clippingGeographyLayers.length) {
+    throw new Error("Clipping geography layers contains duplicate values");
+  }
+
+  let clipped: Feature<MultiPolygon> | null;
+  let fragments: FragmentResult[];
+
+  if (process.env.NODE_ENV === "test") {
+    const result = await clipToGeographies(
+      preparedSketch,
+      geographies,
+      clippingGeographyLayers,
+      existingOverlappingFragments,
+      sketchId,
+      async (feature, objectKey, op, cql2Query) => {
+        const source =
+          await sourceCache.get<Feature<Polygon | MultiPolygon>>(objectKey);
+        return clipSketchToPolygons(
+          feature,
+          op,
+          cql2Query,
+          source.getFeaturesAsync(feature.envelopes),
+        );
+      },
+    );
+    clipped = result.clipped;
+    fragments = result.fragments;
+  } else {
+    const workerResult = await callFragmentWorkerLambda(
+      userGeom,
+      geographies,
+      clippingGeographyLayers,
+      existingOverlappingFragments,
+      sketchId,
+    );
+    clipped = workerResult.clipped;
+    fragments = workerResult.fragments;
+  }
+
+  if (!clipped) {
+    throw new Error("Clipping failed. No geometry returned.");
+  }
+
+  return { clipped, fragments, fragmentDeletionScope };
 }
 
 export async function createOrUpdateSketch({
@@ -743,68 +1240,16 @@ export async function createOrUpdateSketch({
     }
   }
 
-  // First, prepare the sketch for clipping (e.g. convert to multipolygon,
-  // split at antimeridian, and normalize coordinates)
-  const preparedSketch = prepareSketch(userGeom);
-
-  // Get all the clipping layers for geographies in this project, including
-  // those used for clipping this sketch class.
-
-  let { rows: clippingLayers } = await pgClient.query(
-    `
-    select * from clipping_layers_for_sketch_class($1, $2)
-    `,
-    [projectId, sketchClassId],
-  );
-
-  // group by geography_id
-  const geographies = clippingLayers.reduce(
-    (acc: GeographySettings[], l: any) => {
-      let geography: GeographySettings | undefined = acc.find(
-        (g) => g.id === l.geography_id,
-      );
-      if (!geography) {
-        geography = {
-          id: l.geography_id,
-          clippingLayers: [],
-        };
-        acc.push(geography);
-      }
-      if (l.object_key === null) {
-        throw new Error(
-          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`,
-        );
-      }
-      geography.clippingLayers.push({
-        op: l.operation_type.toUpperCase(),
-        source: l.object_key,
-        cql2Query: l.cql2_query,
-      });
-      return acc;
-    },
-    [] as GeographySettings[],
-  );
-
-  // Filter out layers that are not used for clipping this sketch class.
-  const clippingGeographyLayers = Array.from(
-    new Set(
-      clippingLayers
-        .filter((l: any) => l.for_clipping)
-        .map((l: any) => l.geography_id),
-    ),
-  );
-
+  let resolvedCollectionId = collectionId ?? undefined;
+  let folderCollectionId: number | null = null;
   if (sketchId) {
-    // collection_id is not updatable, so we need to check if the sketch is
-    // already in a collection
     const {
       rows: [sketch],
     } = await pgClient.query(`SELECT get_parent_collection_id('sketch', $1)`, [
       sketchId,
     ]);
-    collectionId = sketch.get_parent_collection_id;
+    resolvedCollectionId = sketch?.get_parent_collection_id ?? undefined;
   }
-  let folderCollectionId: number | null = null;
   if (folderId) {
     const {
       rows: [folder],
@@ -812,75 +1257,19 @@ export async function createOrUpdateSketch({
       `SELECT get_parent_collection_id('sketch_folder', $1)`,
       [folderId],
     );
-    folderCollectionId = folder.get_parent_collection_id;
+    folderCollectionId = folder?.get_parent_collection_id ?? null;
   }
 
-  const existingOverlappingFragments: SketchFragment[] =
-    collectionId || folderCollectionId
-      ? await overlappingFragmentsInCollection(
-          collectionId || folderCollectionId!,
-          sketchId || null,
-          preparedSketch.envelopes,
-          pgClient,
-        )
-      : [];
-
-  const fragmentDeletionScope = existingOverlappingFragments.map(
-    (f) => f.properties.__hash,
-  );
-
-  // check that clippingGeographyLayers contains distinct values
-  const distinctGeographyIds = new Set(
-    clippingGeographyLayers.map((l: any) => l.geography_id),
-  );
-  if (distinctGeographyIds.size !== clippingGeographyLayers.length) {
-    throw new Error("Clipping geography layers contains duplicate values");
-  }
-
-  // Clip the sketch to the geographies.
-  let clipped: Feature<MultiPolygon> | null;
-  let fragments: FragmentResult[];
-
-  if (process.env.NODE_ENV === "test") {
-    // In test mode, run clipping locally to avoid external service dependency
-    const result = await clipToGeographies(
-      preparedSketch,
-      geographies,
-      clippingGeographyLayers,
-      existingOverlappingFragments,
-      sketchId || null,
-      async (feature, objectKey, op, cql2Query) => {
-        const source =
-          await sourceCache.get<Feature<Polygon | MultiPolygon>>(objectKey);
-        let count = 0;
-        for await (const f of source.getFeaturesAsync(feature.envelopes)) {
-          count++;
-        }
-        return clipSketchToPolygons(
-          feature,
-          op,
-          cql2Query,
-          source.getFeaturesAsync(feature.envelopes),
-        );
-      },
-    );
-    clipped = result.clipped;
-    fragments = result.fragments;
-  } else {
-    const workerResult = await callFragmentWorkerLambda(
+  const { clipped, fragments, fragmentDeletionScope } =
+    await generateFragmentsForSketchGeometry({
       userGeom,
-      geographies,
-      clippingGeographyLayers,
-      existingOverlappingFragments,
-      sketchId || null,
-    );
-    clipped = workerResult.clipped;
-    fragments = workerResult.fragments;
-  }
-
-  if (!clipped) {
-    throw new Error("Clipping failed. No geometry returned.");
-  }
+      sketchClassId,
+      projectId,
+      collectionId: resolvedCollectionId ?? null,
+      folderCollectionId,
+      sketchId: sketchId ?? null,
+      pgClient,
+    });
 
   if (sketchId) {
     // TODO: note in docs that folder_id and collection_id are not updatable
@@ -897,7 +1286,7 @@ export async function createOrUpdateSketch({
       [
         name,
         JSON.stringify(userGeom.geometry),
-        JSON.stringify(clipped?.geometry),
+        JSON.stringify(clipped.geometry),
         properties,
         sketchId,
       ],
@@ -927,7 +1316,7 @@ export async function createOrUpdateSketch({
         userId,
         collectionId,
         JSON.stringify(userGeom.geometry),
-        JSON.stringify(clipped?.geometry),
+        JSON.stringify(clipped.geometry),
         folderId,
         properties,
       ],
@@ -935,13 +1324,11 @@ export async function createOrUpdateSketch({
     sketchId = sketch.id;
   }
 
+  const targetCollectionId =
+    resolvedCollectionId ?? collectionId ?? folderCollectionId;
   await reconcileFragments(
-    collectionId || folderCollectionId
-      ? await getChildSketchIds(
-          "sketch",
-          collectionId || folderCollectionId!,
-          pgClient,
-        )
+    targetCollectionId
+      ? await getChildSketchIds("sketch", targetCollectionId, pgClient)
       : [],
     fragments,
     fragmentDeletionScope,

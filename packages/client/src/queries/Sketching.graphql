@@ -223,6 +223,9 @@ fragment ReportContextSketchClassDetails on SketchClass {
   id
   projectId
   geometryType
+  useGeographyClipping
+  previewNewReports
+  reportId
   form {
     id
     formElements {

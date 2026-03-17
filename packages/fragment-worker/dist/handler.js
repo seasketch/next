@@ -1,6 +1,8 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.handleWarmCache = handleWarmCache;
 exports.handleCreateFragments = handleCreateFragments;
+exports.handleCreateCollectionFragments = handleCreateCollectionFragments;
 const overlay_engine_1 = require("overlay-engine");
 const fgb_source_1 = require("fgb-source");
 const undici_1 = require("undici");
@@ -54,19 +56,73 @@ const sourceCache = new fgb_source_1.SourceCache("1GB", {
     },
     maxCacheSize: "256MB",
 });
+async function handleWarmCache(payload) {
+    const preparedSketch = (0, overlay_engine_1.prepareSketch)(payload.feature);
+    const uniqueSources = new Set();
+    for (const geography of payload.geographies) {
+        for (const layer of geography.clippingLayers) {
+            uniqueSources.add(layer.source);
+        }
+    }
+    console.time("warm cache");
+    await Promise.all(Array.from(uniqueSources).map(async (sourceKey) => {
+        const source = await sourceCache.get(sourceKey);
+        return source.getFeaturesAsync(preparedSketch.envelopes, {
+            warmCache: true,
+        });
+    }));
+    console.timeEnd("warm cache");
+    return { success: true };
+}
 async function handleCreateFragments(payload) {
     const preparedSketch = (0, overlay_engine_1.prepareSketch)(payload.feature);
     console.time("clip to geographies");
     const { clipped, fragments } = await (0, overlay_engine_1.clipToGeographies)(preparedSketch, payload.geographies, payload.geographiesForClipping, payload.existingOverlappingFragments, payload.existingSketchId, async (feature, objectKey, op, cql2Query) => {
-        console.time("get source");
         const source = await sourceCache.get(objectKey);
-        console.timeEnd("get source");
-        console.time("clip sketch to polygons");
-        const result = await (0, overlay_engine_1.clipSketchToPolygons)(feature, op, cql2Query, source.getFeaturesAsync(feature.envelopes));
-        console.timeEnd("clip sketch to polygons");
-        return result;
+        return (0, overlay_engine_1.clipSketchToPolygons)(feature, op, cql2Query, source.getFeaturesAsync(feature.envelopes));
     });
     console.timeEnd("clip to geographies");
     return { success: true, clipped, fragments };
+}
+async function handleCreateCollectionFragments(payload) {
+    const preparedSketches = payload.sketches.map((sketch) => ({
+        id: sketch.id,
+        preparedSketch: (0, overlay_engine_1.prepareSketch)(sketch.feature),
+    }));
+    const allFragmentsBySketch = await Promise.all(preparedSketches.map(async ({ id, preparedSketch }) => {
+        const fragments = await (0, overlay_engine_1.createFragments)(preparedSketch, payload.geographies, async (feature, objectKey, op, cql2Query) => {
+            const source = await sourceCache.get(objectKey);
+            return (0, overlay_engine_1.clipSketchToPolygons)(feature, op, cql2Query, source.getFeaturesAsync(feature.envelopes));
+        });
+        const clippingFragments = fragments.filter((fragment) => fragment.properties.__geographyIds.some((geographyId) => payload.geographiesForClipping.includes(geographyId)));
+        return {
+            id,
+            fragments: clippingFragments,
+        };
+    }));
+    const taggedFragments = allFragmentsBySketch.flatMap(({ id, fragments }) => fragments.map((fragment) => ({
+        ...fragment,
+        properties: {
+            ...fragment.properties,
+            __sketchIds: [id],
+        },
+    })));
+    const reconciled = (0, overlay_engine_1.eliminateOverlap)(taggedFragments, []);
+    const fragmentsBySketchId = {};
+    for (const sketch of payload.sketches) {
+        fragmentsBySketchId[sketch.id] = [];
+    }
+    for (const fragment of reconciled) {
+        for (const sketchId of fragment.properties.__sketchIds) {
+            if (!fragmentsBySketchId[sketchId]) {
+                fragmentsBySketchId[sketchId] = [];
+            }
+            fragmentsBySketchId[sketchId].push(fragment);
+        }
+    }
+    return {
+        success: true,
+        fragmentsBySketchId,
+    };
 }
 //# sourceMappingURL=handler.js.map

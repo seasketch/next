@@ -57,6 +57,7 @@ fragment SketchingDetails on SketchClass {
   translatedProps
   isGeographyClippingEnabled
   useGeographyClipping
+  previewNewReports
   clippingGeographies {
     ...GeographyDetails
   }
@@ -144,6 +145,8 @@ mutation UpdateSketchClass(
   $name: String
   $isArchived: Boolean
   $filterApiServerLocation: String
+  $isGeographyClippingEnabled: Boolean
+  $previewNewReports: Boolean
 ) {
   updateSketchClass(
     input: {
@@ -152,6 +155,8 @@ mutation UpdateSketchClass(
         name: $name
         isArchived: $isArchived
         filterApiServerLocation: $filterApiServerLocation
+        isGeographyClippingEnabled: $isGeographyClippingEnabled
+        previewNewReports: $previewNewReports
       }
     }
   ) {

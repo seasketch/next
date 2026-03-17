@@ -7265,6 +7265,10 @@ type FragmentSubject {
   sketches: [Int!]!
 }
 
+type GenerateMissingFragmentsPayload {
+  success: Boolean!
+}
+
 """All input for the `generateOfflineTilePackage` mutation."""
 input GenerateOfflineTilePackageInput {
   """
@@ -9896,6 +9900,12 @@ type Mutation {
     """
     input: FailDataUploadInput!
   ): FailDataUploadPayload
+
+  """
+  Enqueue generation of geometry fragments for sketches that are missing them.
+  Use when geography settings change or when migrating to the new report builder.
+  """
+  generateMissingFragmentsForProject(slug: String!): GenerateMissingFragmentsPayload!
   generateOfflineTilePackage(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -12332,6 +12342,12 @@ type Project implements Node {
   ): [SketchClass!]!
 
   """
+  True when fragment generation jobs are queued or running for this project.
+  """
+  sketchesFragmentGenerationInProgress: Boolean
+  sketchesMissingFragments: Int
+
+  """
   This token can be used to access this user's sketches from the geojson endpoint.
   For example, `/sketches/123.geojson.json?access_token=xxx`
   Returns null if user is not singed in. Can be used only for a single
@@ -14184,6 +14200,11 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchClass
+
+  """
+  True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin.
+  """
+  sketchesFragmentGenerationInProgress(pProjectId: Int): Boolean
   sketchFolder(id: Int!): SketchFolder
 
   """Reads a single `SketchFolder` using its globally unique `ID`."""
@@ -15682,6 +15703,7 @@ type SketchClass implements Node {
   nodeId: ID!
   preprocessingEndpoint: String
   preprocessingProjectUrl: String
+  previewNewReports: Boolean!
 
   """Reads a single `Project` that is related to this `SketchClass`."""
   project: Project
@@ -15832,6 +15854,7 @@ input SketchClassPatch {
   name: String
   preprocessingEndpoint: String
   preprocessingProjectUrl: String
+  previewNewReports: Boolean
   templateDescription: String
   translatedProps: JSON
 }

@@ -6244,6 +6244,11 @@ export type FragmentSubject = {
   sketches: Array<Scalars['Int']>;
 };
 
+export type GenerateMissingFragmentsPayload = {
+  __typename?: 'GenerateMissingFragmentsPayload';
+  success: Scalars['Boolean'];
+};
+
 /** All input for the `generateOfflineTilePackage` mutation. */
 export type GenerateOfflineTilePackageInput = {
   /**
@@ -7923,6 +7928,11 @@ export type Mutation = {
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
+  /**
+   * Enqueue generation of geometry fragments for sketches that are missing them.
+   * Use when geography settings change or when migrating to the new report builder.
+   */
+  generateMissingFragmentsForProject: GenerateMissingFragmentsPayload;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
   /**
@@ -9130,6 +9140,12 @@ export type MutationEnableOfflineSupportArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationFailDataUploadArgs = {
   input: FailDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGenerateMissingFragmentsForProjectArgs = {
+  slug: Scalars['String'];
 };
 
 
@@ -10795,6 +10811,9 @@ export type Project = Node & {
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  /** True when fragment generation jobs are queued or running for this project. */
+  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
+  sketchesMissingFragments?: Maybe<Scalars['Int']>;
   /**
    * This token can be used to access this user's sketches from the geojson endpoint.
    * For example, `/sketches/123.geojson.json?access_token=xxx`
@@ -12147,6 +12166,8 @@ export type Query = Node & {
   sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
+  /** True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin. */
+  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
@@ -13129,6 +13150,12 @@ export type QuerySketchClassByFormElementIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchesFragmentGenerationInProgressArgs = {
+  pProjectId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -14505,6 +14532,7 @@ export type SketchClass = Node & {
   nodeId: Scalars['ID'];
   preprocessingEndpoint?: Maybe<Scalars['String']>;
   preprocessingProjectUrl?: Maybe<Scalars['String']>;
+  previewNewReports: Scalars['Boolean'];
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
@@ -14600,6 +14628,7 @@ export type SketchClassPatch = {
   name?: Maybe<Scalars['String']>;
   preprocessingEndpoint?: Maybe<Scalars['String']>;
   preprocessingProjectUrl?: Maybe<Scalars['String']>;
+  previewNewReports?: Maybe<Scalars['Boolean']>;
   templateDescription?: Maybe<Scalars['String']>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
@@ -21461,7 +21490,7 @@ export type GeographyClippingSettingsQuery = (
     & ClippingLayerDetailsFragment
   )>>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'sketchesMissingFragments' | 'sketchesFragmentGenerationInProgress'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
@@ -21574,6 +21603,19 @@ export type UpdateGeographyMutation = (
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
     ) }
+  ) }
+);
+
+export type GenerateMissingFragmentsForProjectMutationVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type GenerateMissingFragmentsForProjectMutation = (
+  { __typename?: 'Mutation' }
+  & { generateMissingFragmentsForProject: (
+    { __typename?: 'GenerateMissingFragmentsPayload' }
+    & Pick<GenerateMissingFragmentsPayload, 'success'>
   ) }
 );
 
@@ -22154,7 +22196,7 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping'>
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -22433,7 +22475,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'reportId'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports' | 'reportId'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -22567,6 +22609,8 @@ export type UpdateSketchClassMutationVariables = Exact<{
   name?: Maybe<Scalars['String']>;
   isArchived?: Maybe<Scalars['Boolean']>;
   filterApiServerLocation?: Maybe<Scalars['String']>;
+  isGeographyClippingEnabled?: Maybe<Scalars['Boolean']>;
+  previewNewReports?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -23732,7 +23776,7 @@ export type ReportContextSketchDetailsFragment = (
 
 export type ReportContextSketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType'>
+  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType' | 'useGeographyClipping' | 'previewNewReports' | 'reportId'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -26479,6 +26523,7 @@ export const ProjectMetadataFragmentDoc = gql`
     reportId
     isGeographyClippingEnabled
     useGeographyClipping
+    previewNewReports
   }
   supportedLanguages
   translatedProps
@@ -26760,6 +26805,7 @@ export const SketchingDetailsFragmentDoc = gql`
   translatedProps
   isGeographyClippingEnabled
   useGeographyClipping
+  previewNewReports
   clippingGeographies {
     ...GeographyDetails
   }
@@ -26997,6 +27043,9 @@ export const ReportContextSketchClassDetailsFragmentDoc = gql`
   id
   projectId
   geometryType
+  useGeographyClipping
+  previewNewReports
+  reportId
   form {
     id
     formElements {
@@ -33131,6 +33180,8 @@ export const GeographyClippingSettingsDocument = gql`
     geographies {
       ...GeographyDetails
     }
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
   }
 }
     ${ClippingLayerDetailsFragmentDoc}
@@ -33384,6 +33435,39 @@ export function useUpdateGeographyMutation(baseOptions?: Apollo.MutationHookOpti
 export type UpdateGeographyMutationHookResult = ReturnType<typeof useUpdateGeographyMutation>;
 export type UpdateGeographyMutationResult = Apollo.MutationResult<UpdateGeographyMutation>;
 export type UpdateGeographyMutationOptions = Apollo.BaseMutationOptions<UpdateGeographyMutation, UpdateGeographyMutationVariables>;
+export const GenerateMissingFragmentsForProjectDocument = gql`
+    mutation GenerateMissingFragmentsForProject($slug: String!) {
+  generateMissingFragmentsForProject(slug: $slug) {
+    success
+  }
+}
+    `;
+export type GenerateMissingFragmentsForProjectMutationFn = Apollo.MutationFunction<GenerateMissingFragmentsForProjectMutation, GenerateMissingFragmentsForProjectMutationVariables>;
+
+/**
+ * __useGenerateMissingFragmentsForProjectMutation__
+ *
+ * To run a mutation, you first call `useGenerateMissingFragmentsForProjectMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useGenerateMissingFragmentsForProjectMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [generateMissingFragmentsForProjectMutation, { data, loading, error }] = useGenerateMissingFragmentsForProjectMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useGenerateMissingFragmentsForProjectMutation(baseOptions?: Apollo.MutationHookOptions<GenerateMissingFragmentsForProjectMutation, GenerateMissingFragmentsForProjectMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<GenerateMissingFragmentsForProjectMutation, GenerateMissingFragmentsForProjectMutationVariables>(GenerateMissingFragmentsForProjectDocument, options);
+      }
+export type GenerateMissingFragmentsForProjectMutationHookResult = ReturnType<typeof useGenerateMissingFragmentsForProjectMutation>;
+export type GenerateMissingFragmentsForProjectMutationResult = Apollo.MutationResult<GenerateMissingFragmentsForProjectMutation>;
+export type GenerateMissingFragmentsForProjectMutationOptions = Apollo.BaseMutationOptions<GenerateMissingFragmentsForProjectMutation, GenerateMissingFragmentsForProjectMutationVariables>;
 export const OverlaysForGeographyDocument = gql`
     query OverlaysForGeography($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -35012,9 +35096,9 @@ export type SketchClassesQueryHookResult = ReturnType<typeof useSketchClassesQue
 export type SketchClassesLazyQueryHookResult = ReturnType<typeof useSketchClassesLazyQuery>;
 export type SketchClassesQueryResult = Apollo.QueryResult<SketchClassesQuery, SketchClassesQueryVariables>;
 export const UpdateSketchClassDocument = gql`
-    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean, $filterApiServerLocation: String) {
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean, $filterApiServerLocation: String, $isGeographyClippingEnabled: Boolean, $previewNewReports: Boolean) {
   updateSketchClass(
-    input: {id: $id, patch: {name: $name, isArchived: $isArchived, filterApiServerLocation: $filterApiServerLocation}}
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived, filterApiServerLocation: $filterApiServerLocation, isGeographyClippingEnabled: $isGeographyClippingEnabled, previewNewReports: $previewNewReports}}
   ) {
     sketchClass {
       ...AdminSketchingDetails
@@ -35041,6 +35125,8 @@ export type UpdateSketchClassMutationFn = Apollo.MutationFunction<UpdateSketchCl
  *      name: // value for 'name'
  *      isArchived: // value for 'isArchived'
  *      filterApiServerLocation: // value for 'filterApiServerLocation'
+ *      isGeographyClippingEnabled: // value for 'isGeographyClippingEnabled'
+ *      previewNewReports: // value for 'previewNewReports'
  *   },
  * });
  */
@@ -40584,6 +40670,7 @@ export const namedOperations = {
     CreateGeographies: 'CreateGeographies',
     DeleteGeography: 'DeleteGeography',
     UpdateGeography: 'UpdateGeography',
+    GenerateMissingFragmentsForProject: 'GenerateMissingFragmentsForProject',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

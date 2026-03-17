@@ -8,6 +8,7 @@ import { AnyLayer } from "mapbox-gl";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { Pool, PoolClient } from "pg";
 import { extractMetricDependenciesFromReportBody } from "overlay-engine";
+import { ensureSketchFragments } from "../sketches";
 
 type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
@@ -312,7 +313,11 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           const projectId = sketch.project_id;
 
           // Retrieve all fragments related to the sketch (if any)
-          const fragments = await getFragmentHashesForSketch(sketchId, pool);
+          const fragments = await ensureSketchFragments(
+            sketchId,
+            projectId,
+            pgClient,
+          );
 
           // Retrieve all geographies related to the project
           const { rows: geogs } = await pool.query(
@@ -368,7 +373,7 @@ async function getOrCreateReportDependencies(
 
   // Retrieve all fragments related to the sketch (if any)
   const fragments = sketchId
-    ? await getFragmentHashesForSketch(sketchId, pool)
+    ? await ensureSketchFragments(sketchId, projectId, pool as PoolClient)
     : [];
 
   // Retrieve all geographies related to the project
@@ -780,27 +785,6 @@ function stripUnnecessaryGeostatsFields(geostats: any) {
     console.warn("geostats is not an object or layers is not an array");
     console.log("found instead", geostats);
   }
-}
-
-async function getFragmentHashesForSketch(
-  sketchId: number,
-  pool: Pool | PoolClient,
-): Promise<string[]> {
-  const fragments: string[] = [];
-  if (sketchId) {
-    const { rows: sketchFragmentsRows } = await pool.query(
-      `select get_fragment_hashes_for_sketch($1)`,
-      [sketchId],
-    );
-    if (
-      sketchFragmentsRows.length > 0 &&
-      sketchFragmentsRows[0].get_fragment_hashes_for_sketch &&
-      Array.isArray(sketchFragmentsRows[0].get_fragment_hashes_for_sketch)
-    ) {
-      fragments.push(...sketchFragmentsRows[0].get_fragment_hashes_for_sketch);
-    }
-  }
-  return fragments;
 }
 
 async function isDraftReport(

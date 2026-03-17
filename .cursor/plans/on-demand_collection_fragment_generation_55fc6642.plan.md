@@ -4,40 +4,40 @@ overview: Add on-demand, synchronous fragment generation to three mutation/query
 todos:
   - id: migration-preview-new-reports
     content: "Add database migration: preview_new_reports boolean (default false) on sketch_classes; expose on GraphQL SketchClass type"
-    status: pending
+    status: completed
   - id: api-sketching-plugin-settings
     content: "In sketchingPlugin.ts: respect use_geography_clipping and preview_new_reports — only use fragment path when use_geography_clipping is true; preview_new_reports does not change create/update sketch behavior"
-    status: pending
-  - id: api-report-preview-access
-    content: "In reportsPlugin: gate report dependencies and draft report access when sketch class has preview_new_reports and not use_geography_clipping — allow only admins (session_is_admin); when allowed, ensureSketchFragments runs (consider preview_new_reports in ensureSketchFragments so fragments are generated for preview)"
-    status: pending
+    status: completed
+  - id: api-ensure-fragments-preview
+    content: "In ensureSketchFragments (sketches.ts): treat fragment generation as enabled when use_geography_clipping OR preview_new_reports is true, so preview report loads still generate fragments on demand"
+    status: completed
   - id: client-reporting-settings-ui
     content: Replace single 'Enable New Reporting System' toggle in SketchClassForm with three radio options (geoprocessing only, new only, transition)
-    status: pending
+    status: completed
   - id: client-preview-context-menu
     content: Add 'Preview New Reports' to sketch/collection context menu when preview_new_reports is true and user is admin; action opens new report builder for that sketch
-    status: pending
+    status: completed
   - id: lambda-collection-op
     content: "Add operation: 'create-collection-fragments' to packages/fragment-worker/src/handler.ts and lambda.ts — two-phase: parallel createFragments per sketch then single eliminateOverlap, return fragmentsBySketchId"
-    status: pending
+    status: completed
   - id: api-ensure-functions
     content: Add ensureCollectionFragments(collectionId, ...) and ensureSketchFragments(sketchId, ...) to packages/api/src/sketches.ts — the shared primitive called from all trigger points
-    status: pending
+    status: completed
   - id: trigger-report
     content: Replace getFragmentHashesForSketch with ensureSketchFragments() in getOrCreateReportDependencies and draftReportDependencies in reportsPlugin.ts
-    status: pending
+    status: completed
   - id: trigger-createOrUpdateSketch
     content: Call ensureCollectionFragments() at start of createOrUpdateSketch in sketches.ts when sketch is in a collection and any siblings are missing fragments
-    status: pending
+    status: completed
   - id: trigger-geography-change
     content: "In GeographyPlugin.ts geography mutation: delete all affected fragments, then enqueue a single regenerateFragmentsForProject job (behind a feature flag)"
-    status: pending
+    status: completed
   - id: graphile-worker-ensure-task
     content: "Add packages/api/tasks/ensureSketchFragments.ts graphile-worker task — per-sketch job, no-op if fragments exist, jobKey: fragments:sketch:{id}"
-    status: pending
+    status: completed
   - id: graphile-worker-regen-task
     content: Add packages/api/tasks/regenerateFragmentsForProject.ts — deletes all project fragments, queries all sketches ordered collections-first, enqueues one ensureSketchFragments job per sketch
-    status: pending
+    status: completed
 isProject: false
 ---
 
@@ -79,9 +79,9 @@ To support migrating from seasketch/geoprocessing and services-based clipping to
 
 - **Database:** Add `preview_new_reports boolean NOT NULL DEFAULT false` to `sketch_classes`; expose on GraphQL (e.g. `previewNewReports`).
 - **API sketchingPlugin:** Create/update sketch logic is unchanged: only when `use_geography_clipping` is true do we run the fragment path; when `preview_new_reports` is true alone, we keep using legacy preprocessing and no fragments on save.
-- **API reportsPlugin:** When resolving report dependencies or draft report for a sketch whose class has `preview_new_reports` and not `use_geography_clipping`, allow access only if `session_is_admin(project_id)`. When allowed, call `ensureSketchFragments` so fragments exist for the preview; in `ensureSketchFragments`, treat "should generate fragments?" as `use_geography_clipping OR preview_new_reports` (so preview requests still trigger fragment generation when the project has geography config).
+- **API:** No server-side access control for preview reports; the "Preview New Reports" entry point is client-only (context menu visible only to admins). When an admin does open the preview, the existing report-dependencies path runs and calls `ensureSketchFragments`; that function must treat "should generate fragments?" as `use_geography_clipping OR preview_new_reports` so preview loads still generate fragments on demand.
 - **Client admin UI:** In `[SketchClassForm.tsx](packages/client/src/admin/sketchClasses/SketchClassForm.tsx)`, replace the single "Enable New Reporting System" switch with a "Preprocessing and Reporting Settings" block and three radio options (copy from the user's wording). Persist via existing `ToggleSketchClassGeographyClipping`-style mutation plus a new mutation or patch field for `preview_new_reports`.
-- **Client sketch context menu:** In `[SketchUIStateContextProvider.tsx](packages/client/src/projects/Sketches/SketchUIStateContextProvider.tsx)` (where `getMenuOptions` builds "View Reports"), when the selected sketch's class has `preview_new_reports` and not `use_geography_clipping`, and the user is an admin, add a "Preview New Reports" context menu item that opens the new report builder for that sketch (same flow as "View Reports" but only for admins and only in transition mode). When `use_geography_clipping` is true, keep showing "View Reports" for everyone.
+- **Client sketch context menu:** In `[SketchUIStateContextProvider.tsx](packages/client/src/projects/Sketches/SketchUIStateContextProvider.tsx)` (where `getMenuOptions` builds "View Reports"), when the selected sketch's class has `preview_new_reports` and not `use_geography_clipping`, and the user is an admin, add a "Preview New Reports" context menu item that opens the new report builder for that sketch (same flow as "View Reports"). Hide this item for non-admins (client-only; no server-side lockout). When `use_geography_clipping` is true, keep showing "View Reports" for everyone.
 
 ## The Core Challenge: Collections Require Whole-Collection Processing
 
@@ -425,19 +425,19 @@ where sc.project_id = <id>
 
 ---
 
-### Test 3b — Transition mode: admin "Preview New Reports", non-admin cannot access
+### Test 3b — Transition mode: admin "Preview New Reports", hidden for non-admin
 
 **Steps:**
 
 1. Set a sketch class to **Transition** (preview_new_reports = true, use_geography_clipping = false); ensure sketches have no fragments.
 2. As an **admin**, right-click a sketch and choose "Preview New Reports"; confirm the new report builder opens and fragments are generated on demand.
-3. As a **non-admin** (or in an incognito session with a non-admin user), open the same project and sketch; confirm there is no "Preview New Reports" context option and that the primary report remains the legacy geoprocessing report.
+3. As a **non-admin**, open the same project and sketch; confirm there is no "Preview New Reports" context option and that the primary report remains the legacy geoprocessing report.
 
 **Expected:**
 
 - Admins see "Preview New Reports" in the context menu when the sketch class is in transition mode.
 - Clicking it loads the new report and triggers `ensureSketchFragments`; fragments appear and metrics load.
-- Non-admins do not see the preview action and cannot open the new report builder for that sketch class (API returns forbidden or equivalent if they attempt direct access).
+- Non-admins do not see the preview action (client hides it); primary report flow is unchanged.
 
 ---
 
