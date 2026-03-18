@@ -462,7 +462,7 @@ export async function updateSketchTocItemParent(
           await reconcileFragments(
             siblingSketchIds,
             fragments,
-            [...new Set(fragmentDeletionScope)],
+            Array.from(new Set(fragmentDeletionScope)),
             pgClient,
             parseInt(sketchId),
           );
@@ -767,12 +767,15 @@ function convertToPendingFragmentResult(
  * @param fragments - The fragments to update.
  * @param pgClient - The PostgreSQL client to use.
  * @param deletionScope - Optional array of fragment hashes to delete.
+ * @param options.runAsSketchOwner - Set session.user_id to the sketch owner for this call
+ *   (graphile-worker has no user session; tests use postgres + SET ROLE so session.user_id still applies).
  */
 export async function updateSketchFragments(
   sketchId: number,
   fragments: FragmentResult[],
   pgClient: PoolClient,
   deletionScope?: string[],
+  options?: { runAsSketchOwner?: boolean },
 ): Promise<void> {
   if (fragments.length > 80) {
     throw new Error("Too many fragments to update. Maximum is 80.");
@@ -805,7 +808,33 @@ export async function updateSketchFragments(
     )
   `;
 
-  await pgClient.query(sql, [sketchId]);
+  let prevUserIdSetting: string | null = null;
+  if (options?.runAsSketchOwner) {
+    const { rows: prev } = await pgClient.query<{ s: string | null }>(
+      `select nullif(current_setting('session.user_id', true), '') as s`,
+    );
+    prevUserIdSetting = prev[0]?.s ?? null;
+    const { rows: ownerRow } = await pgClient.query<{ user_id: number }>(
+      `select user_id from sketches where id = $1`,
+      [sketchId],
+    );
+    if (!ownerRow[0]) {
+      throw new Error(`updateSketchFragments: sketch ${sketchId} not found`);
+    }
+    await pgClient.query(
+      `select set_config('session.user_id', $1::text, false)`,
+      [String(ownerRow[0].user_id)],
+    );
+  }
+  try {
+    await pgClient.query(sql, [sketchId]);
+  } finally {
+    if (options?.runAsSketchOwner) {
+      await pgClient.query(`select set_config('session.user_id', $1, false)`, [
+        prevUserIdSetting ?? "",
+      ]);
+    }
+  }
 }
 
 export async function ensureCollectionFragments(
@@ -849,7 +878,7 @@ export async function ensureCollectionFragments(
       polygonSketchIds,
       pgClient,
     );
-    return [...new Set(Object.values(batchHashes).flat())];
+    return Array.from(new Set(Object.values(batchHashes).flat()));
   }
 
   // Need to generate fragments: load user_geom (GeoJSON) for the Lambda.
@@ -936,7 +965,9 @@ export async function ensureCollectionFragments(
       pgClient,
     );
     const fragments = fragmentsBySketchId[sketch.id] || [];
-    await updateSketchFragments(sketch.id, fragments, pgClient, existingHashes);
+    await updateSketchFragments(sketch.id, fragments, pgClient, existingHashes, {
+      runAsSketchOwner: true,
+    });
     await pgClient.query(
       `
       update sketches s
@@ -959,7 +990,7 @@ export async function ensureCollectionFragments(
     sketchesForLambda.map((s) => s.id),
     pgClient,
   );
-  return [...new Set(Object.values(batchHashes).flat())];
+  return Array.from(new Set(Object.values(batchHashes).flat()));
 }
 
 export async function ensureSketchFragments(
@@ -1062,6 +1093,7 @@ export async function ensureSketchFragments(
     fragmentDeletionScope,
     pgClient,
     sketchId,
+    { runAsSketchOwner: true },
   );
 
   if (options?.resetClippedGeometry) {
@@ -1371,14 +1403,18 @@ async function reconcileFragments(
   fragmentDeletionScope: string[],
   pgClient: PoolClient,
   sketchId?: number,
+  options?: { runAsSketchOwner?: boolean },
 ) {
   const fragmentGroups = groupFragmentsBySketchId(fragments, sketchId);
-  const ids = [...new Set([...(sketchId ? [sketchId] : []), ...siblingIds])];
+  const ids = Array.from(
+    new Set([...(sketchId ? [sketchId] : []), ...siblingIds]),
+  );
   await updateGroupedSketchFragments(
     fragmentGroups,
     pgClient,
     ids,
     fragmentDeletionScope,
+    options,
   );
 }
 
@@ -1406,6 +1442,7 @@ async function updateGroupedSketchFragments(
   pgClient: PoolClient,
   filterToSketchIds: number[],
   fragmentDeletionScope?: string[],
+  options?: { runAsSketchOwner?: boolean },
 ) {
   for (const [idForSketch, fragments] of Object.entries(fragmentGroups)) {
     if (filterToSketchIds.indexOf(parseInt(idForSketch)) === -1) {
@@ -1417,6 +1454,7 @@ async function updateGroupedSketchFragments(
       fragments,
       pgClient,
       fragmentDeletionScope,
+      options,
     );
   }
 }

@@ -21769,50 +21769,37 @@ declare
   v_user_id int;
   v_geography_id int;
 begin
-  -- Get current user ID from session
   v_user_id := nullif(current_setting('session.user_id', TRUE), '')::int;
-  
-  -- Verify ownership
-  -- skip if role is postgres
-  if current_role != 'postgres' and not exists (
-    select 1 from sketches 
-    where id = p_sketch_id 
+
+  if not exists (
+    select 1 from sketches
+    where id = p_sketch_id
     and user_id = v_user_id
   ) then
     raise exception 'Permission denied';
   end if;
 
-  -- Start transaction
   begin
-    -- Get existing fragment hashes for this sketch
     select array_agg(fragment_hash) into v_existing_fragment_hashes
     from sketch_fragments
     where sketch_id = p_sketch_id;
 
-    -- Process each input fragment
     foreach v_fragment in array p_fragments
     loop
-      -- Calculate hash for the geometry
       v_hash := md5(st_asbinary(st_normalize(v_fragment.geometry)));
 
-      -- Try to find existing fragment with this hash
       if not exists (select 1 from fragments where hash = v_hash) then
-        -- If no existing fragment found, create new one
         insert into fragments (geometry)
         values (v_fragment.geometry);
       end if;
 
-      -- Ensure sketch-fragment relationship exists
       insert into sketch_fragments (sketch_id, fragment_hash)
       values (p_sketch_id, v_hash)
       on conflict (sketch_id, fragment_hash) do nothing;
 
-      -- Update geography associations
-      -- First remove all existing geography associations for this fragment
       delete from fragment_geographies
       where fragment_hash = v_hash;
 
-      -- Then add new geography associations
       foreach v_geography_id in array v_fragment.geography_ids
       loop
         insert into fragment_geographies (fragment_hash, geography_id)
@@ -21820,21 +21807,17 @@ begin
       end loop;
     end loop;
 
-    -- Remove sketch-fragment relationships for fragments that are no longer used
     delete from sketch_fragments
     where sketch_id = p_sketch_id
     and fragment_hash not in (
       select md5(st_asbinary(st_normalize((unnest(p_fragments)).geometry)))
     )
     and (
-      -- If p_fragment_deletion_scope is null, allow deletion of all fragments (original behavior)
       p_fragment_deletion_scope is null
       or
-      -- If p_fragment_deletion_scope is provided, only delete fragments in that scope
       fragment_hash = any(p_fragment_deletion_scope)
     );
 
-    -- Delete orphaned fragments (those not associated with any sketch)
     delete from fragments
     where hash in (
       select f.hash
