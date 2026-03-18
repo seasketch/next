@@ -61,6 +61,34 @@ query GeographyClippingSettings($slug: String!) {
     geographies {
       ...GeographyDetails
     }
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
+  }
+}
+
+query SketchFragmentStatus($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
+    sketchClassMissingFragmentCounts {
+      sketchClassId
+      sketchClassName
+      missingCount
+    }
+    sketchFragmentJobDetails {
+      id
+      taskIdentifier
+      key
+      payload
+      runAt
+      attempts
+      maxAttempts
+      lastError
+      createdAt
+      updatedAt
+      lockedAt
+    }
   }
 }
 
@@ -139,6 +167,12 @@ mutation UpdateGeography($id: Int!, $payload: UpdateProjectGeographyPayload!) {
     geography {
       ...GeographyDetails
     }
+  }
+}
+
+mutation GenerateMissingFragmentsForProject($slug: String!) {
+  generateMissingFragmentsForProject(slug: $slug) {
+    success
   }
 }
 

@@ -1830,6 +1830,39 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` to be created by this mutation. */
+  originalSourceId: OriginalSourceIdInput;
+};
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayload = {
+  __typename?: 'CreateOriginalSourceIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` that was created by this mutation. */
+  originalSourceId?: Maybe<OriginalSourceId>;
+  /** An edge for our `OriginalSourceId`. May be used by Relay 1. */
+  originalSourceIdEdge?: Maybe<OriginalSourceIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -1961,6 +1994,39 @@ export type CreateProjectsSharedBasemapPayload = {
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` to be created by this mutation. */
+  publishedTocItemId: PublishedTocItemIdInput;
+};
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayload = {
+  __typename?: 'CreatePublishedTocItemIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` that was created by this mutation. */
+  publishedTocItemId?: Maybe<PublishedTocItemId>;
+  /** An edge for our `PublishedTocItemId`. May be used by Relay 1. */
+  publishedTocItemIdEdge?: Maybe<PublishedTocItemIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayloadPublishedTocItemIdEdgeArgs = {
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 /** All input for the `createRemoteGeojsonSource` mutation. */
@@ -6176,6 +6242,11 @@ export type FragmentSubject = {
   sketches: Array<Scalars['Int']>;
 };
 
+export type GenerateMissingFragmentsPayload = {
+  __typename?: 'GenerateMissingFragmentsPayload';
+  success: Scalars['Boolean'];
+};
+
 /** All input for the `generateOfflineTilePackage` mutation. */
 export type GenerateOfflineTilePackageInput = {
   /**
@@ -6706,6 +6777,29 @@ export type GetChildFoldersRecursivePayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   integers?: Maybe<Array<Maybe<Scalars['Int']>>>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
 };
@@ -7623,6 +7717,8 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /** Creates a single `OriginalSourceId`. */
+  createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -7646,6 +7742,8 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  /** Creates a single `PublishedTocItemId`. */
+  createPublishedTocItemId?: Maybe<CreatePublishedTocItemIdPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
@@ -7828,6 +7926,11 @@ export type Mutation = {
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
+  /**
+   * Enqueue generation of geometry fragments for sketches that are missing them.
+   * Use when geography settings change or when migrating to the new report builder.
+   */
+  generateMissingFragmentsForProject: GenerateMissingFragmentsPayload;
   generateOfflineTilePackage?: Maybe<GenerateOfflineTilePackagePayload>;
   getChildFoldersRecursive?: Maybe<GetChildFoldersRecursivePayload>;
   /**
@@ -7836,6 +7939,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8441,6 +8545,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOriginalSourceIdArgs = {
+  input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   message: Scalars['JSON'];
   topicId: Scalars['Int'];
@@ -8468,6 +8578,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreatePublishedTocItemIdArgs = {
+  input: CreatePublishedTocItemIdInput;
 };
 
 
@@ -9026,6 +9142,12 @@ export type MutationFailDataUploadArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationGenerateMissingFragmentsForProjectArgs = {
+  slug: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationGenerateOfflineTilePackageArgs = {
   input: GenerateOfflineTilePackageInput;
 };
@@ -9052,6 +9174,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -10217,6 +10345,43 @@ export enum OptionalBasemapLayersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export type OriginalSourceId = {
+  __typename?: 'OriginalSourceId';
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OriginalSourceId` */
+export type OriginalSourceIdInput = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `OriginalSourceId` values. */
+export type OriginalSourceIdsConnection = {
+  __typename?: 'OriginalSourceIdsConnection';
+  /** A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination. */
+  edges: Array<OriginalSourceIdsEdge>;
+  /** A list of `OriginalSourceId` objects. */
+  nodes: Array<OriginalSourceId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OriginalSourceId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OriginalSourceId` edge in the connection. */
+export type OriginalSourceIdsEdge = {
+  __typename?: 'OriginalSourceIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OriginalSourceId` at the end of the edge. */
+  node: OriginalSourceId;
+};
+
+/** Methods to use when ordering `OriginalSourceId`. */
+export enum OriginalSourceIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 export type OutstandingSurveyInvites = {
   __typename?: 'OutstandingSurveyInvites';
   projectId: Scalars['Int'];
@@ -10644,6 +10809,11 @@ export type Project = Node & {
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  sketchClassMissingFragmentCounts?: Maybe<Array<SketchClassFragmentStatus>>;
+  /** True when fragment generation jobs are queued or running for this project. */
+  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
+  sketchesMissingFragments?: Maybe<Scalars['Int']>;
+  sketchFragmentJobDetails?: Maybe<Array<SketchFragmentJobDetail>>;
   /**
    * This token can be used to access this user's sketches from the geojson endpoint.
    * For example, `/sketches/123.geojson.json?access_token=xxx`
@@ -11741,6 +11911,43 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+export type PublishedTocItemId = {
+  __typename?: 'PublishedTocItemId';
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `PublishedTocItemId` */
+export type PublishedTocItemIdInput = {
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `PublishedTocItemId` values. */
+export type PublishedTocItemIdsConnection = {
+  __typename?: 'PublishedTocItemIdsConnection';
+  /** A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination. */
+  edges: Array<PublishedTocItemIdsEdge>;
+  /** A list of `PublishedTocItemId` objects. */
+  nodes: Array<PublishedTocItemId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `PublishedTocItemId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `PublishedTocItemId` edge in the connection. */
+export type PublishedTocItemIdsEdge = {
+  __typename?: 'PublishedTocItemIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `PublishedTocItemId` at the end of the edge. */
+  node: PublishedTocItemId;
+};
+
+/** Methods to use when ordering `PublishedTocItemId`. */
+export enum PublishedTocItemIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
@@ -11901,6 +12108,8 @@ export type Query = Node & {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
+  /** Reads and enables pagination through a set of `OriginalSourceId`. */
+  originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -11932,6 +12141,8 @@ export type Query = Node & {
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
   publicSprites?: Maybe<Array<Sprite>>;
+  /** Reads and enables pagination through a set of `PublishedTocItemId`. */
+  publishedTocItemIdsConnection?: Maybe<PublishedTocItemIdsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -11955,6 +12166,8 @@ export type Query = Node & {
   sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
+  /** True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin. */
+  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
@@ -12682,6 +12895,17 @@ export type QueryOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOriginalSourceIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -12839,6 +13063,17 @@ export type QueryPublicSpritesArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryPublishedTocItemIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryReportArgs = {
   id: Scalars['Int'];
 };
@@ -12915,6 +13150,12 @@ export type QuerySketchClassByFormElementIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QuerySketchClassByNodeIdArgs = {
   nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchesFragmentGenerationInProgressArgs = {
+  pProjectId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -14291,6 +14532,7 @@ export type SketchClass = Node & {
   nodeId: Scalars['ID'];
   preprocessingEndpoint?: Maybe<Scalars['String']>;
   preprocessingProjectUrl?: Maybe<Scalars['String']>;
+  previewNewReports: Scalars['Boolean'];
   /** Reads a single `Project` that is related to this `SketchClass`. */
   project?: Maybe<Project>;
   /** SketchClasses belong to a single project. */
@@ -14347,6 +14589,13 @@ export type SketchClassCondition = {
   projectId?: Maybe<Scalars['Int']>;
 };
 
+export type SketchClassFragmentStatus = {
+  __typename?: 'SketchClassFragmentStatus';
+  missingCount: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+  sketchClassName: Scalars['String'];
+};
+
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
 export type SketchClassPatch = {
   /**
@@ -14386,6 +14635,7 @@ export type SketchClassPatch = {
   name?: Maybe<Scalars['String']>;
   preprocessingEndpoint?: Maybe<Scalars['String']>;
   preprocessingProjectUrl?: Maybe<Scalars['String']>;
+  previewNewReports?: Maybe<Scalars['Boolean']>;
   templateDescription?: Maybe<Scalars['String']>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
@@ -14485,6 +14735,21 @@ export enum SketchFoldersOrderBy {
   UserIdAsc = 'USER_ID_ASC',
   UserIdDesc = 'USER_ID_DESC'
 }
+
+export type SketchFragmentJobDetail = {
+  __typename?: 'SketchFragmentJobDetail';
+  attempts: Scalars['Int'];
+  createdAt?: Maybe<Scalars['Datetime']>;
+  id: Scalars['String'];
+  key?: Maybe<Scalars['String']>;
+  lastError?: Maybe<Scalars['String']>;
+  lockedAt?: Maybe<Scalars['Datetime']>;
+  maxAttempts: Scalars['Int'];
+  payload?: Maybe<Scalars['JSON']>;
+  runAt?: Maybe<Scalars['Datetime']>;
+  taskIdentifier: Scalars['String'];
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
 
 export enum SketchGeometryType {
   ChooseFeature = 'CHOOSE_FEATURE',
@@ -21247,11 +21512,31 @@ export type GeographyClippingSettingsQuery = (
     & ClippingLayerDetailsFragment
   )>>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'sketchesMissingFragments' | 'sketchesFragmentGenerationInProgress'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
     )> }
+  )> }
+);
+
+export type SketchFragmentStatusQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchFragmentStatusQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'sketchesMissingFragments' | 'sketchesFragmentGenerationInProgress'>
+    & { sketchClassMissingFragmentCounts?: Maybe<Array<(
+      { __typename?: 'SketchClassFragmentStatus' }
+      & Pick<SketchClassFragmentStatus, 'sketchClassId' | 'sketchClassName' | 'missingCount'>
+    )>>, sketchFragmentJobDetails?: Maybe<Array<(
+      { __typename?: 'SketchFragmentJobDetail' }
+      & Pick<SketchFragmentJobDetail, 'id' | 'taskIdentifier' | 'key' | 'payload' | 'runAt' | 'attempts' | 'maxAttempts' | 'lastError' | 'createdAt' | 'updatedAt' | 'lockedAt'>
+    )>> }
   )> }
 );
 
@@ -21360,6 +21645,19 @@ export type UpdateGeographyMutation = (
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
     ) }
+  ) }
+);
+
+export type GenerateMissingFragmentsForProjectMutationVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type GenerateMissingFragmentsForProjectMutation = (
+  { __typename?: 'Mutation' }
+  & { generateMissingFragmentsForProject: (
+    { __typename?: 'GenerateMissingFragmentsPayload' }
+    & Pick<GenerateMissingFragmentsPayload, 'success'>
   ) }
 );
 
@@ -21940,7 +22238,7 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping'>
+    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -22219,7 +22517,7 @@ export type SketchFormElementFragment = (
 
 export type SketchingDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'reportId'>
+  & Pick<SketchClass, 'id' | 'name' | 'isArchived' | 'isTemplate' | 'mapboxGlStyle' | 'projectId' | 'sketchCount' | 'allowMulti' | 'geometryType' | 'filterApiVersion' | 'filterApiServerLocation' | 'geoprocessingClientName' | 'geoprocessingClientUrl' | 'geoprocessingProjectUrl' | 'formElementId' | 'preprocessingEndpoint' | 'preprocessingProjectUrl' | 'canDigitize' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports' | 'reportId'>
   & { validChildren?: Maybe<Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name'>
@@ -22353,6 +22651,8 @@ export type UpdateSketchClassMutationVariables = Exact<{
   name?: Maybe<Scalars['String']>;
   isArchived?: Maybe<Scalars['Boolean']>;
   filterApiServerLocation?: Maybe<Scalars['String']>;
+  isGeographyClippingEnabled?: Maybe<Scalars['Boolean']>;
+  previewNewReports?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -23518,7 +23818,7 @@ export type ReportContextSketchDetailsFragment = (
 
 export type ReportContextSketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType'>
+  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType' | 'useGeographyClipping' | 'previewNewReports' | 'reportId'>
   & { form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
@@ -26265,6 +26565,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     reportId
     isGeographyClippingEnabled
     useGeographyClipping
+    previewNewReports
   }
   supportedLanguages
   translatedProps
@@ -26546,6 +26847,7 @@ export const SketchingDetailsFragmentDoc = /*#__PURE__*/ gql`
   translatedProps
   isGeographyClippingEnabled
   useGeographyClipping
+  previewNewReports
   clippingGeographies {
     ...GeographyDetails
   }
@@ -26783,6 +27085,9 @@ export const ReportContextSketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
   id
   projectId
   geometryType
+  useGeographyClipping
+  previewNewReports
+  reportId
   form {
     id
     formElements {
@@ -29080,11 +29385,40 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
     geographies {
       ...GeographyDetails
     }
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
   }
 }
     ${ClippingLayerDetailsFragmentDoc}
 ${ClippingDataSourceDetailsFragmentDoc}
 ${GeographyDetailsFragmentDoc}`;
+export const SketchFragmentStatusDocument = /*#__PURE__*/ gql`
+    query SketchFragmentStatus($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
+    sketchClassMissingFragmentCounts {
+      sketchClassId
+      sketchClassName
+      missingCount
+    }
+    sketchFragmentJobDetails {
+      id
+      taskIdentifier
+      key
+      payload
+      runAt
+      attempts
+      maxAttempts
+      lastError
+      createdAt
+      updatedAt
+      lockedAt
+    }
+  }
+}
+    `;
 export const EezLayerDocument = /*#__PURE__*/ gql`
     query EEZLayer {
   eezlayer {
@@ -29170,6 +29504,13 @@ export const UpdateGeographyDocument = /*#__PURE__*/ gql`
   }
 }
     ${GeographyDetailsFragmentDoc}`;
+export const GenerateMissingFragmentsForProjectDocument = /*#__PURE__*/ gql`
+    mutation GenerateMissingFragmentsForProject($slug: String!) {
+  generateMissingFragmentsForProject(slug: $slug) {
+    success
+  }
+}
+    `;
 export const OverlaysForGeographyDocument = /*#__PURE__*/ gql`
     query OverlaysForGeography($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29757,9 +30098,9 @@ export const SketchClassesDocument = /*#__PURE__*/ gql`
 }
     ${AdminSketchingDetailsFragmentDoc}`;
 export const UpdateSketchClassDocument = /*#__PURE__*/ gql`
-    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean, $filterApiServerLocation: String) {
+    mutation UpdateSketchClass($id: Int!, $name: String, $isArchived: Boolean, $filterApiServerLocation: String, $isGeographyClippingEnabled: Boolean, $previewNewReports: Boolean) {
   updateSketchClass(
-    input: {id: $id, patch: {name: $name, isArchived: $isArchived, filterApiServerLocation: $filterApiServerLocation}}
+    input: {id: $id, patch: {name: $name, isArchived: $isArchived, filterApiServerLocation: $filterApiServerLocation, isGeographyClippingEnabled: $isGeographyClippingEnabled, previewNewReports: $previewNewReports}}
   ) {
     sketchClass {
       ...AdminSketchingDetails
@@ -31611,6 +31952,7 @@ export const namedOperations = {
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GeographyClippingSettings: 'GeographyClippingSettings',
+    SketchFragmentStatus: 'SketchFragmentStatus',
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',
@@ -31769,6 +32111,7 @@ export const namedOperations = {
     CreateGeographies: 'CreateGeographies',
     DeleteGeography: 'DeleteGeography',
     UpdateGeography: 'UpdateGeography',
+    GenerateMissingFragmentsForProject: 'GenerateMissingFragmentsForProject',
     JoinProject: 'JoinProject',
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',

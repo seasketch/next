@@ -106,6 +106,47 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           id: Int!
           input: UpdateProjectGeographyPayload!
         ): GeographyUpdatedPayload!
+
+        """
+        Enqueue generation of geometry fragments for sketches that are missing them.
+        Use when geography settings change or when migrating to the new report builder.
+        """
+        generateMissingFragmentsForProject(
+          slug: String!
+        ): GenerateMissingFragmentsPayload!
+      }
+
+      type GenerateMissingFragmentsPayload {
+        success: Boolean!
+      }
+
+      type SketchClassFragmentStatus {
+        sketchClassId: Int!
+        sketchClassName: String!
+        missingCount: Int!
+      }
+
+      type SketchFragmentJobDetail {
+        id: String!
+        taskIdentifier: String!
+        key: String
+        payload: JSON
+        runAt: Datetime
+        attempts: Int!
+        maxAttempts: Int!
+        lastError: String
+        createdAt: Datetime
+        updatedAt: Datetime
+        lockedAt: Datetime
+      }
+
+      extend type Project {
+        """
+        True when fragment generation jobs are queued or running for this project.
+        """
+        sketchesFragmentGenerationInProgress: Boolean
+        sketchClassMissingFragmentCounts: [SketchClassFragmentStatus!]
+        sketchFragmentJobDetails: [SketchFragmentJobDetail!]
       }
 
       extend type Geography {
@@ -118,6 +159,96 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
     `,
 
     resolvers: {
+      Project: {
+        sketchesFragmentGenerationInProgress: async (
+          project,
+          _args,
+          context,
+        ) => {
+          const projectId = Number(project.id);
+          if (!Number.isInteger(projectId) || projectId < 1) return false;
+
+          const { pgClient } = context;
+          const { rows } = await pgClient.query(
+            `select sketches_fragment_generation_in_progress(${projectId}) as in_progress`,
+          );
+          return rows[0]?.in_progress ?? false;
+        },
+        sketchClassMissingFragmentCounts: async (project, _args, context) => {
+          const projectId = Number(project.id);
+          if (!Number.isInteger(projectId) || projectId < 1) return [];
+          const { pgClient } = context;
+          const result = await pgClient.query(
+            `
+            select
+              sketch_class_id,
+              sketch_class_name,
+              missing_count
+            from get_sketch_class_fragment_status($1::int)
+            `,
+            [projectId],
+          );
+          const rows = result.rows as {
+            sketch_class_id: number;
+            sketch_class_name: string;
+            missing_count: number;
+          }[];
+          return rows.map((row) => ({
+            sketchClassId: row.sketch_class_id,
+            sketchClassName: row.sketch_class_name,
+            missingCount: row.missing_count,
+          }));
+        },
+        sketchFragmentJobDetails: async (project, _args, context) => {
+          const projectId = Number(project.id);
+          if (!Number.isInteger(projectId) || projectId < 1) return [];
+          const { pgClient } = context;
+          const result = await pgClient.query(
+            `
+            select
+              id,
+              task_identifier,
+              key,
+              payload,
+              run_at,
+              attempts,
+              max_attempts,
+              last_error,
+              created_at,
+              updated_at,
+              locked_at
+            from get_sketch_fragment_job_details($1::int)
+            `,
+            [projectId],
+          );
+          const rows = result.rows as {
+            id: string | number;
+            task_identifier: string;
+            key: string | null;
+            payload: Record<string, unknown> | null;
+            run_at: string | null;
+            attempts: number;
+            max_attempts: number;
+            last_error: string | null;
+            created_at: string | null;
+            updated_at: string | null;
+            locked_at: string | null;
+          }[];
+          return rows.map((row) => ({
+            id: `${row.id}`,
+            taskIdentifier: row.task_identifier,
+            key: row.key,
+            payload: row.payload,
+            runAt: row.run_at,
+            attempts: row.attempts,
+            maxAttempts: row.max_attempts,
+            lastError: row.last_error,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            lockedAt: row.locked_at,
+          }));
+        },
+      },
       CreateGeographiesPayload: {
         geographies: async (results, args, context, resolveInfo) => {
           return resolveInfo.graphile.selectGraphQLResultFromTable(
@@ -411,6 +542,21 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 [clippingLayerIdsToDelete],
               );
             }
+            // Only regenerate fragments when clipping layers actually changed
+            const clippingLayersChanged =
+              clippingLayersToCreate.length > 0 ||
+              clippingLayerIdsToDelete.length > 0 ||
+              clippingLayersToUpdate.length > 0;
+            if (clippingLayersChanged) {
+              await deleteProjectFragments(
+                geographyRows[0].project_id,
+                pgClient,
+              );
+              await enqueueProjectFragmentRegeneration(
+                geographyRows[0].project_id,
+                pgClient,
+              );
+            }
           }
           context.geographyId = id;
           return {};
@@ -457,6 +603,13 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             "DELETE FROM project_geography WHERE id = $1 returning *",
             [id],
           );
+          if (rows[0]?.project_id) {
+            await deleteProjectFragments(rows[0].project_id, pgClient);
+            await enqueueProjectFragmentRegeneration(
+              rows[0].project_id,
+              pgClient,
+            );
+          }
 
           return rows[0];
         },
@@ -557,8 +710,35 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               clippingLayerIds.push(layerRows[0].id);
             }
           }
+          if (inputs.length > 0) {
+            const projectId = await idForSlug(inputs[0].slug, pgClient);
+            await deleteProjectFragments(projectId, pgClient);
+            await enqueueProjectFragmentRegeneration(projectId, pgClient);
+          }
           context.createdGeographyIds = createdGeographyIds;
           return {};
+        },
+        generateMissingFragmentsForProject: async (
+          _query,
+          args,
+          context,
+          resolveInfo,
+        ) => {
+          const { pgClient } = context;
+          const { slug } = args;
+
+          const isAdmin = await sessionIsAdmin(slug, pgClient);
+          if (!isAdmin) {
+            throw new Error(
+              "You do not have permission to generate fragments for this project",
+            );
+          }
+          const projectId = await idForSlug(slug, pgClient);
+          await enqueueProjectFragmentRegenerationManual(
+            projectId,
+            context.adminPool,
+          );
+          return { success: true };
         },
       },
     },
@@ -738,6 +918,90 @@ export async function idForSlug(
     throw new Error(`Project with slug ${slug} not found`);
   }
   return rows[0].id;
+}
+
+async function deleteProjectFragments(projectId: number, pgClient: PoolClient) {
+  const { rows: deletedRefs } = await pgClient.query(
+    `
+    delete from sketch_fragments
+    where sketch_id in (
+      select sketches.id
+      from sketches
+      join sketch_classes on sketch_classes.id = sketches.sketch_class_id
+      where sketch_classes.project_id = $1
+        and (
+          sketch_classes_use_geography_clipping(sketch_classes.*)
+          or coalesce(sketch_classes.preview_new_reports, false)
+        )
+    )
+    returning fragment_hash
+    `,
+    [projectId],
+  );
+  if (deletedRefs.length > 0) {
+    await pgClient.query(
+      `
+      delete from fragments
+      where hash = any($1::text[])
+        and not exists (
+          select 1
+          from sketch_fragments
+          where sketch_fragments.fragment_hash = fragments.hash
+        )
+      `,
+      [deletedRefs.map((row: any) => row.fragment_hash)],
+    );
+  }
+}
+
+async function enqueueProjectFragmentRegeneration(
+  projectId: number,
+  pgClient: PoolClient,
+) {
+  if (process.env.ENABLE_BACKGROUND_FRAGMENT_REGENERATION !== "true") {
+    return;
+  }
+  await enqueueProjectFragmentRegenerationManual(projectId, pgClient);
+}
+
+/**
+ * Enqueues generateMissingFragmentsForProject job. Used for both automatic
+ * (geography change) and manual (user-triggered) regeneration.
+ */
+async function enqueueProjectFragmentRegenerationManual(
+  projectId: number,
+  pgClient: PoolClient,
+) {
+  // Remove any queued ensureSketchFragments jobs for this project so they don't
+  // run after a full project regeneration has been scheduled (avoids out-of-order
+  // work when geography changes are frequent). Use graphile_worker.remove_job
+  // per the official API (removes if not locked; otherwise marks to not retry).
+  const { rows: jobRows } = await pgClient.query<{ key: string }>(
+    `
+    select key from graphile_worker.jobs
+    where task_identifier = 'ensureSketchFragments'
+      and (payload->>'projectId')::int = $1::int
+      and locked_at is null
+      and key is not null
+    `,
+    [projectId],
+  );
+  for (const row of jobRows) {
+    await pgClient.query(`select graphile_worker.remove_job($1::text)`, [
+      row.key,
+    ]);
+  }
+  await pgClient.query(
+    `
+    select graphile_worker.add_job(
+      identifier := 'generateMissingFragmentsForProject',
+      payload := json_build_object('projectId', $1::int),
+      job_key := format('generate-missing-fragments:%s', $1::int),
+      max_attempts := 1
+    )
+    `,
+    [projectId],
+  );
 }
 
 /**

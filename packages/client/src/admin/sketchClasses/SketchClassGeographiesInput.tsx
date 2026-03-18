@@ -3,6 +3,8 @@ import { useCallback, useState } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   GeographyDetailsFragment,
+  SketchClassGeographyEditorDetailsDocument,
+  SketchFragmentStatusDocument,
   useSketchClassGeographyEditorDetailsQuery,
   useUpdateSketchClassGeographiesMutation,
 } from "../../generated/graphql";
@@ -20,6 +22,7 @@ export default function SketchClassGeographiesInput({
   projectGeographies,
 }: SketchClassGeographiesInputProps) {
   const { t } = useTranslation("admin:sketching");
+  const slug = getSlug();
   const onError = useGlobalErrorHandler();
   const [pendingGeographyId, setPendingGeographyId] = useState<number | null>(
     null
@@ -36,7 +39,7 @@ export default function SketchClassGeographiesInput({
     });
 
   const { data, loading } = useSketchClassGeographyEditorDetailsQuery({
-    variables: { slug: getSlug() },
+    variables: { slug },
   });
 
   const sketchClass = data?.projectBySlug?.sketchClasses.find(
@@ -45,48 +48,59 @@ export default function SketchClassGeographiesInput({
 
   const selectedGeographyId = sketchClass?.clippingGeographies?.[0]?.id;
 
+  const applyGeographyChange = useCallback(
+    (newGeographyId: number | null) => {
+      setPendingGeographyId(newGeographyId);
+      updateGeographies({
+        variables: {
+          id: sketchClassId,
+          geographyIds: newGeographyId ? [newGeographyId] : [],
+        },
+        refetchQueries: [
+          {
+            query: SketchClassGeographyEditorDetailsDocument,
+            variables: { slug },
+          },
+          {
+            query: SketchFragmentStatusDocument,
+            variables: { slug },
+          },
+        ],
+        awaitRefetchQueries: true,
+      }).finally(() => {
+        setPendingGeographyId(null);
+      });
+    },
+    [sketchClassId, slug, updateGeographies]
+  );
+
   const handleGeographyChange = useCallback(
     (newGeographyId: number | null) => {
-      // If there's no current selection, just update directly
-      if (!selectedGeographyId) {
-        updateGeographies({
-          variables: {
-            id: sketchClassId,
-            geographyIds: newGeographyId ? [newGeographyId] : [],
-          },
-        });
+      if (newGeographyId === selectedGeographyId) {
         return;
       }
 
-      // If changing to a new geography, show confirmation
-      if (newGeographyId !== selectedGeographyId) {
+      // Only show confirmation when changing from one geography to another.
+      if (selectedGeographyId && newGeographyId) {
         setPendingChange({
           newGeographyId,
           currentGeographyId: selectedGeographyId,
         });
         setShowConfirmModal(true);
+        return;
       }
+
+      applyGeographyChange(newGeographyId);
     },
-    [selectedGeographyId, sketchClassId, updateGeographies]
+    [applyGeographyChange, selectedGeographyId]
   );
 
   const handleConfirmChange = useCallback(() => {
     if (!pendingChange) return;
-
-    setPendingGeographyId(pendingChange.newGeographyId);
-    updateGeographies({
-      variables: {
-        id: sketchClassId,
-        geographyIds: pendingChange.newGeographyId
-          ? [pendingChange.newGeographyId]
-          : [],
-      },
-    }).finally(() => {
-      setPendingGeographyId(null);
-      setShowConfirmModal(false);
-      setPendingChange(null);
-    });
-  }, [pendingChange, sketchClassId, updateGeographies]);
+    applyGeographyChange(pendingChange.newGeographyId);
+    setShowConfirmModal(false);
+    setPendingChange(null);
+  }, [applyGeographyChange, pendingChange]);
 
   if (loading) {
     return (
@@ -171,8 +185,9 @@ export default function SketchClassGeographiesInput({
                 <b className="font-medium">
                   {newGeography?.name || "new geography"}
                 </b>
-                ? Changing the geography will require reprocessing existing
-                sketches and recalculating any cached reports.
+                ? Existing user geometries will need to be re-clipped to this
+                new geography, which may slow report calculation until
+                reprocessing is complete.
               </Trans>
             </p>
           </div>

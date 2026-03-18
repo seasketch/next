@@ -346,12 +346,13 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select geometry_type, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping, preprocessing_endpoint, id, project_id from public.sketch_classes where id = $1`,
+            `select geometry_type, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping, coalesce(preview_new_reports, false) as preview_new_reports, preprocessing_endpoint, id, project_id from public.sketch_classes where id = $1`,
             [sketchClassId],
           );
           const sketchClass = rows[0] as {
             geometry_type: string;
             use_geography_clipping: boolean;
+            preview_new_reports: boolean;
             preprocessing_endpoint: string;
             id: number;
             project_id: number;
@@ -492,7 +493,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
 
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select *, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping from public.sketch_classes where id = ((select sketch_class_id from sketches where id = $1))`,
+            `select *, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping, coalesce(preview_new_reports, false) as preview_new_reports from public.sketch_classes where id = ((select sketch_class_id from sketches where id = $1))`,
             [id],
           );
           if (rows.length === 0) {

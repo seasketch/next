@@ -8,6 +8,8 @@ import {
   GeographySettings,
   SketchFragment,
   FragmentResult,
+  createFragments,
+  eliminateOverlap,
 } from "overlay-engine";
 import { SourceCache } from "fgb-source";
 import { Feature, MultiPolygon, Polygon } from "geojson";
@@ -93,6 +95,19 @@ export interface CreateFragmentsResult {
   error?: string;
 }
 
+export interface CreateCollectionFragmentsPayload {
+  operation: "create-collection-fragments";
+  sketches: Array<{ id: number; feature: Feature<any> }>;
+  geographies: GeographySettings[];
+  geographiesForClipping: number[];
+}
+
+export interface CreateCollectionFragmentsResult {
+  success: boolean;
+  fragmentsBySketchId?: Record<number, FragmentResult[]>;
+  error?: string;
+}
+
 export async function handleWarmCache(
   payload: WarmCachePayload,
 ): Promise<{ success: boolean }> {
@@ -146,4 +161,76 @@ export async function handleCreateFragments(
   );
   console.timeEnd("clip to geographies");
   return { success: true, clipped, fragments };
+}
+
+export async function handleCreateCollectionFragments(
+  payload: CreateCollectionFragmentsPayload,
+): Promise<CreateCollectionFragmentsResult> {
+  const preparedSketches = payload.sketches.map((sketch) => ({
+    id: sketch.id,
+    preparedSketch: prepareSketch(sketch.feature),
+  }));
+
+  const allFragmentsBySketch = await Promise.all(
+    preparedSketches.map(async ({ id, preparedSketch }) => {
+      const fragments = await createFragments(
+        preparedSketch,
+        payload.geographies,
+        async (
+          feature: PreparedSketch,
+          objectKey: string,
+          op: ClippingOperation,
+          cql2Query?: Cql2Query,
+        ) => {
+          const source =
+            await sourceCache.get<Feature<Polygon | MultiPolygon>>(objectKey);
+          return clipSketchToPolygons(
+            feature,
+            op,
+            cql2Query,
+            source.getFeaturesAsync(feature.envelopes),
+          );
+        },
+      );
+      const clippingFragments = fragments.filter((fragment) =>
+        fragment.properties.__geographyIds.some((geographyId) =>
+          payload.geographiesForClipping.includes(geographyId),
+        ),
+      );
+      return {
+        id,
+        fragments: clippingFragments,
+      };
+    }),
+  );
+
+  const taggedFragments = allFragmentsBySketch.flatMap(({ id, fragments }) =>
+    fragments.map((fragment) => ({
+      ...fragment,
+      properties: {
+        ...fragment.properties,
+        __sketchIds: [id],
+      },
+    })),
+  );
+
+  const reconciled = eliminateOverlap(taggedFragments, []);
+  const fragmentsBySketchId: Record<number, FragmentResult[]> = {};
+
+  for (const sketch of payload.sketches) {
+    fragmentsBySketchId[sketch.id] = [];
+  }
+  for (const fragment of reconciled) {
+    for (const sketchId of fragment.properties.__sketchIds) {
+      if (!fragmentsBySketchId[sketchId]) {
+        fragmentsBySketchId[sketchId] = [];
+      }
+      fragmentsBySketchId[sketchId].push(fragment);
+    }
+  }
+
+  return {
+    success: true,
+    fragmentsBySketchId,
+  };
 }
