@@ -66,6 +66,32 @@ query GeographyClippingSettings($slug: String!) {
   }
 }
 
+query SketchFragmentStatus($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
+    sketchClassMissingFragmentCounts {
+      sketchClassId
+      sketchClassName
+      missingCount
+    }
+    sketchFragmentJobDetails {
+      id
+      taskIdentifier
+      key
+      payload
+      runAt
+      attempts
+      maxAttempts
+      lastError
+      createdAt
+      updatedAt
+      lockedAt
+    }
+  }
+}
+
 query EEZLayer {
   eezlayer {
     id

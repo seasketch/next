@@ -7395,6 +7395,10 @@ select{
   max-height:100vh
 }
 
+.max-h-40{
+  max-height:10rem
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -7425,6 +7429,10 @@ select{
 
 .min-h-screen{
   min-height:100vh
+}
+
+.min-h-64{
+  min-height:16rem
 }
 
 .\!w-\[340px\]{
@@ -7777,6 +7785,10 @@ select{
   min-width:32rem
 }
 
+.min-w-\[36rem\]{
+  min-width:36rem
+}
+
 .\!max-w-128{
   max-width:32rem !important
 }
@@ -7965,6 +7977,10 @@ select{
   max-width:20rem
 }
 
+.max-w-0{
+  max-width:0px
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -8027,6 +8043,16 @@ select{
 
 .border-collapse{
   border-collapse:collapse
+}
+
+.border-separate{
+  border-collapse:separate
+}
+
+.border-spacing-0{
+  --tw-border-spacing-x:0px;
+  --tw-border-spacing-y:0px;
+  border-spacing:var(--tw-border-spacing-x) var(--tw-border-spacing-y)
 }
 
 .origin-left{
@@ -8835,6 +8861,14 @@ select{
   overscroll-behavior:none
 }
 
+.overscroll-y-contain{
+  overscroll-behavior-y:contain
+}
+
+.overscroll-x-contain{
+  overscroll-behavior-x:contain
+}
+
 .truncate{
   overflow:hidden;
   text-overflow:ellipsis;
@@ -9390,6 +9424,11 @@ select{
 .border-yellow-600{
   --tw-border-opacity:1;
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
+}
+
+.border-green-200{
+  --tw-border-opacity:1;
+  border-color:rgb(167 243 208 / var(--tw-border-opacity, 1))
 }
 
 .border-b-black{
@@ -10119,6 +10158,11 @@ select{
 .bg-slate-100{
   --tw-bg-opacity:1;
   background-color:rgb(241 245 249 / var(--tw-bg-opacity, 1))
+}
+
+.bg-amber-100{
+  --tw-bg-opacity:1;
+  background-color:rgb(254 243 199 / var(--tw-bg-opacity, 1))
 }
 
 .bg-opacity-10{
@@ -11820,6 +11864,11 @@ select{
   color:rgb(120 53 15 / var(--tw-text-opacity, 1))
 }
 
+.text-amber-800{
+  --tw-text-opacity:1;
+  color:rgb(146 64 14 / var(--tw-text-opacity, 1))
+}
+
 .text-opacity-50{
   --tw-text-opacity:0.5
 }
@@ -11863,6 +11912,10 @@ select{
 .decoration-dotted{
   -webkit-text-decoration-style:dotted;
           text-decoration-style:dotted
+}
+
+.underline-offset-2{
+  text-underline-offset:2px
 }
 
 .antialiased{
@@ -12250,6 +12303,16 @@ select{
 
 .ring-white\/20{
   --tw-ring-color:rgb(255 255 255 / 0.2)
+}
+
+.ring-amber-200{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(253 230 138 / var(--tw-ring-opacity, 1))
+}
+
+.ring-red-200{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(254 202 202 / var(--tw-ring-opacity, 1))
 }
 
 .ring-opacity-10{
@@ -13315,6 +13378,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-white:hover{
   --tw-text-opacity:1;
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-primary-800:hover{
+  --tw-text-opacity:1;
+  color:rgb(58 73 101 / var(--tw-text-opacity, 1))
 }
 
 .hover\:underline:hover{

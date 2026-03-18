@@ -1600,6 +1600,7 @@ CREATE TABLE public.sketch_classes (
     is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
     report_id integer,
     draft_report_id integer,
+    preview_new_reports boolean DEFAULT false NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_mapbox_gl_style_not_null CHECK (((mapbox_gl_style IS NOT NULL) OR (geometry_type <> ALL (ARRAY['POLYGON'::public.sketch_geometry_type, 'POINT'::public.sketch_geometry_type, 'LINESTRING'::public.sketch_geometry_type]))))
@@ -9746,6 +9747,41 @@ CREATE FUNCTION public.delete_expired_archived_data_sources() RETURNS void
 
 
 --
+-- Name: delete_fragments_for_sketch_class(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.delete_fragments_for_sketch_class(p_sketch_class_id integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    begin
+      with deleted_refs as (
+        delete from sketch_fragments
+        where sketch_id in (
+          select id
+          from sketches
+          where sketch_class_id = p_sketch_class_id
+        )
+        returning fragment_hash
+      )
+      delete from fragments
+      where hash in (select fragment_hash from deleted_refs)
+        and not exists (
+          select 1
+          from sketch_fragments
+          where sketch_fragments.fragment_hash = fragments.hash
+        );
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION delete_fragments_for_sketch_class(p_sketch_class_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.delete_fragments_for_sketch_class(p_sketch_class_id integer) IS '@omit';
+
+
+--
 -- Name: offline_tile_packages; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -11327,6 +11363,32 @@ COMMENT ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) IS 
 
 
 --
+-- Name: get_fragment_hashes_for_sketches(integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_fragment_hashes_for_sketches(sketch_ids integer[]) RETURNS TABLE(sketch_id integer, fragment_hashes text[])
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+begin
+  return query
+  select sf.sketch_id::int, array_agg(f.hash)::text[] as fragment_hashes
+  from sketch_fragments sf
+  join fragments f on f.hash = sf.fragment_hash
+  where sf.sketch_id = any(sketch_ids)
+    and check_sketch_rls_policy(sf.sketch_id)
+  group by sf.sketch_id;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION get_fragment_hashes_for_sketches(sketch_ids integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_fragment_hashes_for_sketches(sketch_ids integer[]) IS '@omit';
+
+
+--
 -- Name: get_fragment_ids_for_sketch_recursive(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11859,6 +11921,105 @@ CREATE FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) 
       return result;
     end;
   $$;
+
+
+--
+-- Name: get_sketch_class_fragment_status(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_sketch_class_fragment_status(p_project_id integer) RETURNS TABLE(sketch_class_id integer, sketch_class_name text, missing_count integer)
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+      if not session_is_admin(p_project_id) then
+        return;
+      end if;
+
+      if not exists (
+        select 1
+        from projects
+        where id = p_project_id
+          and enable_report_builder = true
+      ) then
+        return;
+      end if;
+
+      return query
+      select
+        sc.id as sketch_class_id,
+        sc.name::text as sketch_class_name,
+        count(s.id)::int as missing_count
+      from sketch_classes sc
+      join sketches s on s.sketch_class_id = sc.id
+      where sc.project_id = p_project_id
+        and sc.geometry_type = 'POLYGON'
+        and (
+          sc.is_geography_clipping_enabled = true
+          or coalesce(sc.preview_new_reports, false) = true
+        )
+        and not exists (
+          select 1
+          from sketch_fragments sf
+          where sf.sketch_id = s.id
+        )
+      group by sc.id, sc.name
+      order by count(s.id) desc, sc.name asc;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_sketch_class_fragment_status(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_sketch_class_fragment_status(p_project_id integer) IS '@omit';
+
+
+--
+-- Name: get_sketch_fragment_job_details(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_sketch_fragment_job_details(p_project_id integer) RETURNS TABLE(id bigint, task_identifier text, key text, payload json, run_at timestamp with time zone, attempts integer, max_attempts integer, last_error text, created_at timestamp with time zone, updated_at timestamp with time zone, locked_at timestamp with time zone)
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+      if not session_is_admin(p_project_id) then
+        return;
+      end if;
+
+      return query
+      select
+        j.id,
+        j.task_identifier,
+        j.key,
+        j.payload::json,
+        j.run_at,
+        j.attempts,
+        j.max_attempts,
+        j.last_error,
+        j.created_at,
+        j.updated_at,
+        j.locked_at
+      from graphile_worker.jobs j
+      where j.task_identifier = 'ensureSketchFragments'
+        and (j.payload->>'projectId')::int = p_project_id
+        and (
+          (j.attempts < j.max_attempts and j.last_error is null)
+          or (
+            j.last_error is not null
+            and j.updated_at >= now() - interval '24 hours'
+          )
+        )
+      order by coalesce(j.locked_at, j.updated_at, j.run_at) desc, j.id desc;
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION get_sketch_fragment_job_details(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_sketch_fragment_job_details(p_project_id integer) IS '@omit';
 
 
 --
@@ -15358,6 +15519,45 @@ CREATE FUNCTION public.projects_session_participation_status(p public.projects) 
     AS $$
     select users_participation_status(users.*, p.id) from users where it_me(users.id);
 $$;
+
+
+--
+-- Name: projects_sketches_missing_fragments(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_sketches_missing_fragments(project public.projects) RETURNS integer
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    declare
+      num_missing_fragments integer;
+    begin
+    if session_is_admin(project.id) then
+      if project.enable_report_builder then
+        with sketch_class_ids as (
+          select 
+            id 
+          from 
+            sketch_classes 
+          where 
+            project_id = project.id
+            and geometry_type = 'POLYGON'
+            and (
+              is_geography_clipping_enabled = true
+              or preview_new_reports = true
+            )
+        )
+        select count(*) into num_missing_fragments from sketches where sketch_class_id = any(select id from sketch_class_ids) and not exists (
+          select 1 from sketch_fragments where sketch_fragments.sketch_id = sketches.id
+        );
+        return num_missing_fragments;
+      else
+        return 0;
+      end if;
+    else
+      raise exception 'Must be a project admin to view missing fragments';
+    end if;
+    end;
+  $$;
 
 
 --
@@ -19168,6 +19368,34 @@ CREATE FUNCTION public.sketches_filter_mvt_url(s public.sketches) RETURNS text
 
 
 --
+-- Name: sketches_fragment_generation_in_progress(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.sketches_fragment_generation_in_progress(p_project_id integer) RETURNS boolean
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+    begin
+      if not session_is_admin(p_project_id) then
+        return false;
+      end if;
+      return exists (
+        select 1 from graphile_worker.jobs
+        where task_identifier in ('ensureSketchFragments', 'generateMissingFragmentsForProject')
+          and (payload->>'projectId')::int = p_project_id
+          and attempts < max_attempts and last_error is null
+      );
+    end;
+  $$;
+
+
+--
+-- Name: FUNCTION sketches_fragment_generation_in_progress(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.sketches_fragment_generation_in_progress(p_project_id integer) IS 'True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin.';
+
+
+--
 -- Name: fragments; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -21489,10 +21717,35 @@ CREATE FUNCTION public.update_sketch_class_geographies(sketch_class_id integer, 
     AS $$
     declare
       sketch_class sketch_classes;
+      previous_geography_ids integer[];
+      next_geography_ids integer[];
+      geographies_changed boolean;
     begin
     if session_is_admin((select project_id from sketch_classes where id = sketch_class_id)) then
-      delete from sketch_class_geographies where sketch_class_geographies.sketch_class_id = update_sketch_class_geographies.sketch_class_id;
-      insert into sketch_class_geographies (sketch_class_id, geography_id) values (sketch_class_id, unnest(geography_ids));
+      select
+        coalesce(array_agg(scg.geography_id order by scg.geography_id), '{}'::integer[])
+      into previous_geography_ids
+      from sketch_class_geographies scg
+      where scg.sketch_class_id = update_sketch_class_geographies.sketch_class_id;
+
+      select
+        coalesce(array_agg(distinct g.geography_id order by g.geography_id), '{}'::integer[])
+      into next_geography_ids
+      from unnest(coalesce(geography_ids, '{}'::integer[])) as g(geography_id);
+
+      geographies_changed := previous_geography_ids is distinct from next_geography_ids;
+
+      delete from sketch_class_geographies
+      where sketch_class_geographies.sketch_class_id = update_sketch_class_geographies.sketch_class_id;
+
+      insert into sketch_class_geographies (sketch_class_id, geography_id)
+      select sketch_class_id, geography_id
+      from unnest(next_geography_ids) as t(geography_id);
+
+      if geographies_changed then
+        perform delete_fragments_for_sketch_class(update_sketch_class_geographies.sketch_class_id);
+      end if;
+
       select * into sketch_class from sketch_classes where id = update_sketch_class_geographies.sketch_class_id;
       return sketch_class;
     else
@@ -21520,7 +21773,8 @@ begin
   v_user_id := nullif(current_setting('session.user_id', TRUE), '')::int;
   
   -- Verify ownership
-  if not exists (
+  -- skip if role is postgres
+  if current_role != 'postgres' and not exists (
     select 1 from sketches 
     where id = p_sketch_id 
     and user_id = v_user_id
@@ -28940,6 +29194,13 @@ GRANT UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO se
 
 
 --
+-- Name: COLUMN sketch_classes.preview_new_reports; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(preview_new_reports) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: FUNCTION _create_sketch_class(name text, project_id integer, form_element_id integer, template_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32250,6 +32511,13 @@ REVOKE ALL ON FUNCTION public.delete_expired_archived_data_sources() FROM PUBLIC
 
 
 --
+-- Name: FUNCTION delete_fragments_for_sketch_class(p_sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.delete_fragments_for_sketch_class(p_sketch_class_id integer) FROM PUBLIC;
+
+
+--
 -- Name: TABLE offline_tile_packages; Type: ACL; Schema: public; Owner: -
 --
 
@@ -33605,6 +33873,14 @@ GRANT ALL ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) T
 
 
 --
+-- Name: FUNCTION get_fragment_hashes_for_sketches(sketch_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_fragment_hashes_for_sketches(sketch_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_fragment_hashes_for_sketches(sketch_ids integer[]) TO anon;
+
+
+--
 -- Name: FUNCTION get_fragment_ids_for_sketch_recursive(sketch_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -33727,6 +34003,22 @@ GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_
 
 REVOKE ALL ON FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_sketch_class_fragment_status(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_sketch_class_fragment_status(p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_sketch_class_fragment_status(p_project_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION get_sketch_fragment_job_details(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_sketch_fragment_job_details(p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_sketch_fragment_job_details(p_project_id integer) TO seasketch_user;
 
 
 --
@@ -35645,6 +35937,14 @@ GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.proj
 
 
 --
+-- Name: FUNCTION projects_sketches_missing_fragments(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_sketches_missing_fragments(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_sketches_missing_fragments(project public.projects) TO seasketch_user;
+
+
+--
 -- Name: TABLE source_processing_jobs; Type: ACL; Schema: public; Owner: -
 --
 
@@ -36474,6 +36774,14 @@ GRANT ALL ON FUNCTION public.sketches_children(sketch public.sketches) TO anon;
 
 REVOKE ALL ON FUNCTION public.sketches_filter_mvt_url(s public.sketches) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketches_filter_mvt_url(s public.sketches) TO anon;
+
+
+--
+-- Name: FUNCTION sketches_fragment_generation_in_progress(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.sketches_fragment_generation_in_progress(p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.sketches_fragment_generation_in_progress(p_project_id integer) TO seasketch_user;
 
 
 --

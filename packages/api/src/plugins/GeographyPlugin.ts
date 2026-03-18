@@ -120,11 +120,33 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
         success: Boolean!
       }
 
+      type SketchClassFragmentStatus {
+        sketchClassId: Int!
+        sketchClassName: String!
+        missingCount: Int!
+      }
+
+      type SketchFragmentJobDetail {
+        id: String!
+        taskIdentifier: String!
+        key: String
+        payload: JSON
+        runAt: Datetime
+        attempts: Int!
+        maxAttempts: Int!
+        lastError: String
+        createdAt: Datetime
+        updatedAt: Datetime
+        lockedAt: Datetime
+      }
+
       extend type Project {
         """
         True when fragment generation jobs are queued or running for this project.
         """
         sketchesFragmentGenerationInProgress: Boolean
+        sketchClassMissingFragmentCounts: [SketchClassFragmentStatus!]
+        sketchFragmentJobDetails: [SketchFragmentJobDetail!]
       }
 
       extend type Geography {
@@ -151,6 +173,80 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             `select sketches_fragment_generation_in_progress(${projectId}) as in_progress`,
           );
           return rows[0]?.in_progress ?? false;
+        },
+        sketchClassMissingFragmentCounts: async (project, _args, context) => {
+          const projectId = Number(project.id);
+          if (!Number.isInteger(projectId) || projectId < 1) return [];
+          const { pgClient } = context;
+          const result = await pgClient.query(
+            `
+            select
+              sketch_class_id,
+              sketch_class_name,
+              missing_count
+            from get_sketch_class_fragment_status($1::int)
+            `,
+            [projectId],
+          );
+          const rows = result.rows as {
+            sketch_class_id: number;
+            sketch_class_name: string;
+            missing_count: number;
+          }[];
+          return rows.map((row) => ({
+            sketchClassId: row.sketch_class_id,
+            sketchClassName: row.sketch_class_name,
+            missingCount: row.missing_count,
+          }));
+        },
+        sketchFragmentJobDetails: async (project, _args, context) => {
+          const projectId = Number(project.id);
+          if (!Number.isInteger(projectId) || projectId < 1) return [];
+          const { pgClient } = context;
+          const result = await pgClient.query(
+            `
+            select
+              id,
+              task_identifier,
+              key,
+              payload,
+              run_at,
+              attempts,
+              max_attempts,
+              last_error,
+              created_at,
+              updated_at,
+              locked_at
+            from get_sketch_fragment_job_details($1::int)
+            `,
+            [projectId],
+          );
+          const rows = result.rows as {
+            id: string | number;
+            task_identifier: string;
+            key: string | null;
+            payload: Record<string, unknown> | null;
+            run_at: string | null;
+            attempts: number;
+            max_attempts: number;
+            last_error: string | null;
+            created_at: string | null;
+            updated_at: string | null;
+            locked_at: string | null;
+          }[];
+          return rows.map((row) => ({
+            id: `${row.id}`,
+            taskIdentifier: row.task_identifier,
+            key: row.key,
+            payload: row.payload,
+            runAt: row.run_at,
+            attempts: row.attempts,
+            maxAttempts: row.max_attempts,
+            lastError: row.last_error,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+            lockedAt: row.locked_at,
+          }));
         },
       },
       CreateGeographiesPayload: {

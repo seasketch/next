@@ -9,10 +9,8 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import {
   DataSourceTypes,
-  GeographyClippingSettingsDocument,
   SketchGeometryType,
   useGeographyClippingSettingsQuery,
-  useGenerateMissingFragmentsForProjectMutation,
 } from "../../generated/graphql";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
@@ -29,6 +27,7 @@ import DigitizingTools from "../../formElements/DigitizingTools";
 import CreateGeographyWizard from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import EditGeographyModal from "./EditGeographyModal";
+import SketchFragmentStatusModal from "./SketchFragmentStatusModal";
 import deepEqual from "fast-deep-equal";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
@@ -101,26 +100,11 @@ const ensureGeographyVisibleAndInView = (
 export default function GeographyAdmin() {
   const { t } = useTranslation("admin:geography");
   const slug = getSlug();
-  const [pollInterval, setPollInterval] = useState(0);
+  const [showFragmentStatusModal, setShowFragmentStatusModal] = useState(false);
   const { data, loading, error } = useGeographyClippingSettingsQuery({
     variables: { slug },
     skip: !slug,
-    pollInterval,
   });
-
-  const fragmentGenerationInProgress =
-    data?.projectBySlug?.sketchesFragmentGenerationInProgress ?? false;
-
-  useEffect(() => {
-    setPollInterval(fragmentGenerationInProgress ? 2000 : 0);
-  }, [fragmentGenerationInProgress]);
-
-  const [generateMissingFragments, { loading: reprocessing }] =
-    useGenerateMissingFragmentsForProjectMutation({
-      refetchQueries: [
-        { query: GeographyClippingSettingsDocument, variables: { slug } },
-      ],
-    });
 
   const [state, setState] = useState<AdminState>({
     mapLoaded: false,
@@ -663,34 +647,7 @@ export default function GeographyAdmin() {
                 )}
               </Warning>
             )}
-            {(data?.projectBySlug?.sketchesMissingFragments ?? 0) > 0 &&
-              !loading && (
-                <Warning level="warning">
-                  {t(
-                    "{{n}} sketches in this project are missing geometry fragments needed for reporting. This can happen when geography settings change, or when migrating to the new report builder.",
-                    {
-                      n: data?.projectBySlug?.sketchesMissingFragments ?? 0,
-                    }
-                  )}{" "}
-                  <button
-                    type="button"
-                    className="bg-gray-50 border px-2 py-1 rounded-md shadow-sm text-black mt-1 flex items-center space-x-2"
-                    onClick={() =>
-                      slug && generateMissingFragments({ variables: { slug } })
-                    }
-                    disabled={reprocessing || fragmentGenerationInProgress}
-                  >
-                    {(reprocessing || fragmentGenerationInProgress) && (
-                      <Spinner />
-                    )}
-                    <span>
-                      {reprocessing || fragmentGenerationInProgress
-                        ? t("Reprocessing...")
-                        : t("Reprocess these Sketches")}
-                    </span>
-                  </button>
-                </Warning>
-              )}
+
             {!loading && (
               <ul className="w-full p-2 py-4 space-y-2">
                 {data?.projectBySlug?.geographies?.map((geog) => (
@@ -759,6 +716,26 @@ export default function GeographyAdmin() {
                 </button>
               </div>
             )}
+            {(data?.projectBySlug?.sketchesMissingFragments ?? 0) > 0 &&
+              !loading && (
+                <div className="p-2">
+                  <Warning level="info" className="py-2">
+                    {t(
+                      "{{n}} sketches in this project have not been clipped to the current configuration.",
+                      {
+                        n: data?.projectBySlug?.sketchesMissingFragments ?? 0,
+                      }
+                    )}
+                    <button
+                      type="button"
+                      className="ml-1 underline decoration-dotted underline-offset-2"
+                      onClick={() => setShowFragmentStatusModal(true)}
+                    >
+                      {t("View details")}
+                    </button>
+                  </Warning>
+                </div>
+              )}
           </div>
         </nav>
       )}
@@ -971,6 +948,12 @@ export default function GeographyAdmin() {
               showLayerChoice: show,
             }));
           }}
+        />
+      )}
+      {showFragmentStatusModal && slug && (
+        <SketchFragmentStatusModal
+          slug={slug}
+          onRequestClose={() => setShowFragmentStatusModal(false)}
         />
       )}
     </div>

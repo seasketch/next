@@ -42,6 +42,7 @@ export default async function generateMissingFragmentsForProject(
         {
           jobKey: `fragments:sketch:${row.id}`,
           queueName: "sketch-fragments",
+          maxAttempts: 2,
         },
       );
     }

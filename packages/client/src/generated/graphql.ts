@@ -10811,9 +10811,11 @@ export type Project = Node & {
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  sketchClassMissingFragmentCounts?: Maybe<Array<SketchClassFragmentStatus>>;
   /** True when fragment generation jobs are queued or running for this project. */
   sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
   sketchesMissingFragments?: Maybe<Scalars['Int']>;
+  sketchFragmentJobDetails?: Maybe<Array<SketchFragmentJobDetail>>;
   /**
    * This token can be used to access this user's sketches from the geojson endpoint.
    * For example, `/sketches/123.geojson.json?access_token=xxx`
@@ -14589,6 +14591,13 @@ export type SketchClassCondition = {
   projectId?: Maybe<Scalars['Int']>;
 };
 
+export type SketchClassFragmentStatus = {
+  __typename?: 'SketchClassFragmentStatus';
+  missingCount: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+  sketchClassName: Scalars['String'];
+};
+
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
 export type SketchClassPatch = {
   /**
@@ -14728,6 +14737,21 @@ export enum SketchFoldersOrderBy {
   UserIdAsc = 'USER_ID_ASC',
   UserIdDesc = 'USER_ID_DESC'
 }
+
+export type SketchFragmentJobDetail = {
+  __typename?: 'SketchFragmentJobDetail';
+  attempts: Scalars['Int'];
+  createdAt?: Maybe<Scalars['Datetime']>;
+  id: Scalars['String'];
+  key?: Maybe<Scalars['String']>;
+  lastError?: Maybe<Scalars['String']>;
+  lockedAt?: Maybe<Scalars['Datetime']>;
+  maxAttempts: Scalars['Int'];
+  payload?: Maybe<Scalars['JSON']>;
+  runAt?: Maybe<Scalars['Datetime']>;
+  taskIdentifier: Scalars['String'];
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
 
 export enum SketchGeometryType {
   ChooseFeature = 'CHOOSE_FEATURE',
@@ -21495,6 +21519,26 @@ export type GeographyClippingSettingsQuery = (
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
     )> }
+  )> }
+);
+
+export type SketchFragmentStatusQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchFragmentStatusQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'sketchesMissingFragments' | 'sketchesFragmentGenerationInProgress'>
+    & { sketchClassMissingFragmentCounts?: Maybe<Array<(
+      { __typename?: 'SketchClassFragmentStatus' }
+      & Pick<SketchClassFragmentStatus, 'sketchClassId' | 'sketchClassName' | 'missingCount'>
+    )>>, sketchFragmentJobDetails?: Maybe<Array<(
+      { __typename?: 'SketchFragmentJobDetail' }
+      & Pick<SketchFragmentJobDetail, 'id' | 'taskIdentifier' | 'key' | 'payload' | 'runAt' | 'attempts' | 'maxAttempts' | 'lastError' | 'createdAt' | 'updatedAt' | 'lockedAt'>
+    )>> }
   )> }
 );
 
@@ -33215,6 +33259,61 @@ export function useGeographyClippingSettingsLazyQuery(baseOptions?: Apollo.LazyQ
 export type GeographyClippingSettingsQueryHookResult = ReturnType<typeof useGeographyClippingSettingsQuery>;
 export type GeographyClippingSettingsLazyQueryHookResult = ReturnType<typeof useGeographyClippingSettingsLazyQuery>;
 export type GeographyClippingSettingsQueryResult = Apollo.QueryResult<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>;
+export const SketchFragmentStatusDocument = gql`
+    query SketchFragmentStatus($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
+    sketchClassMissingFragmentCounts {
+      sketchClassId
+      sketchClassName
+      missingCount
+    }
+    sketchFragmentJobDetails {
+      id
+      taskIdentifier
+      key
+      payload
+      runAt
+      attempts
+      maxAttempts
+      lastError
+      createdAt
+      updatedAt
+      lockedAt
+    }
+  }
+}
+    `;
+
+/**
+ * __useSketchFragmentStatusQuery__
+ *
+ * To run a query within a React component, call `useSketchFragmentStatusQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSketchFragmentStatusQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSketchFragmentStatusQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useSketchFragmentStatusQuery(baseOptions: Apollo.QueryHookOptions<SketchFragmentStatusQuery, SketchFragmentStatusQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SketchFragmentStatusQuery, SketchFragmentStatusQueryVariables>(SketchFragmentStatusDocument, options);
+      }
+export function useSketchFragmentStatusLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SketchFragmentStatusQuery, SketchFragmentStatusQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SketchFragmentStatusQuery, SketchFragmentStatusQueryVariables>(SketchFragmentStatusDocument, options);
+        }
+export type SketchFragmentStatusQueryHookResult = ReturnType<typeof useSketchFragmentStatusQuery>;
+export type SketchFragmentStatusLazyQueryHookResult = ReturnType<typeof useSketchFragmentStatusLazyQuery>;
+export type SketchFragmentStatusQueryResult = Apollo.QueryResult<SketchFragmentStatusQuery, SketchFragmentStatusQueryVariables>;
 export const EezLayerDocument = gql`
     query EEZLayer {
   eezlayer {
@@ -40512,6 +40611,7 @@ export const namedOperations = {
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GeographyClippingSettings: 'GeographyClippingSettings',
+    SketchFragmentStatus: 'SketchFragmentStatus',
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',

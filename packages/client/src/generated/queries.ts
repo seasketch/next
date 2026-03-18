@@ -10809,9 +10809,11 @@ export type Project = Node & {
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
+  sketchClassMissingFragmentCounts?: Maybe<Array<SketchClassFragmentStatus>>;
   /** True when fragment generation jobs are queued or running for this project. */
   sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
   sketchesMissingFragments?: Maybe<Scalars['Int']>;
+  sketchFragmentJobDetails?: Maybe<Array<SketchFragmentJobDetail>>;
   /**
    * This token can be used to access this user's sketches from the geojson endpoint.
    * For example, `/sketches/123.geojson.json?access_token=xxx`
@@ -14587,6 +14589,13 @@ export type SketchClassCondition = {
   projectId?: Maybe<Scalars['Int']>;
 };
 
+export type SketchClassFragmentStatus = {
+  __typename?: 'SketchClassFragmentStatus';
+  missingCount: Scalars['Int'];
+  sketchClassId: Scalars['Int'];
+  sketchClassName: Scalars['String'];
+};
+
 /** Represents an update to a `SketchClass`. Fields that are set will be updated. */
 export type SketchClassPatch = {
   /**
@@ -14726,6 +14735,21 @@ export enum SketchFoldersOrderBy {
   UserIdAsc = 'USER_ID_ASC',
   UserIdDesc = 'USER_ID_DESC'
 }
+
+export type SketchFragmentJobDetail = {
+  __typename?: 'SketchFragmentJobDetail';
+  attempts: Scalars['Int'];
+  createdAt?: Maybe<Scalars['Datetime']>;
+  id: Scalars['String'];
+  key?: Maybe<Scalars['String']>;
+  lastError?: Maybe<Scalars['String']>;
+  lockedAt?: Maybe<Scalars['Datetime']>;
+  maxAttempts: Scalars['Int'];
+  payload?: Maybe<Scalars['JSON']>;
+  runAt?: Maybe<Scalars['Datetime']>;
+  taskIdentifier: Scalars['String'];
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
 
 export enum SketchGeometryType {
   ChooseFeature = 'CHOOSE_FEATURE',
@@ -21493,6 +21517,26 @@ export type GeographyClippingSettingsQuery = (
       { __typename?: 'Geography' }
       & GeographyDetailsFragment
     )> }
+  )> }
+);
+
+export type SketchFragmentStatusQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SketchFragmentStatusQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'sketchesMissingFragments' | 'sketchesFragmentGenerationInProgress'>
+    & { sketchClassMissingFragmentCounts?: Maybe<Array<(
+      { __typename?: 'SketchClassFragmentStatus' }
+      & Pick<SketchClassFragmentStatus, 'sketchClassId' | 'sketchClassName' | 'missingCount'>
+    )>>, sketchFragmentJobDetails?: Maybe<Array<(
+      { __typename?: 'SketchFragmentJobDetail' }
+      & Pick<SketchFragmentJobDetail, 'id' | 'taskIdentifier' | 'key' | 'payload' | 'runAt' | 'attempts' | 'maxAttempts' | 'lastError' | 'createdAt' | 'updatedAt' | 'lockedAt'>
+    )>> }
   )> }
 );
 
@@ -29348,6 +29392,33 @@ export const GeographyClippingSettingsDocument = /*#__PURE__*/ gql`
     ${ClippingLayerDetailsFragmentDoc}
 ${ClippingDataSourceDetailsFragmentDoc}
 ${GeographyDetailsFragmentDoc}`;
+export const SketchFragmentStatusDocument = /*#__PURE__*/ gql`
+    query SketchFragmentStatus($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    sketchesMissingFragments
+    sketchesFragmentGenerationInProgress
+    sketchClassMissingFragmentCounts {
+      sketchClassId
+      sketchClassName
+      missingCount
+    }
+    sketchFragmentJobDetails {
+      id
+      taskIdentifier
+      key
+      payload
+      runAt
+      attempts
+      maxAttempts
+      lastError
+      createdAt
+      updatedAt
+      lockedAt
+    }
+  }
+}
+    `;
 export const EezLayerDocument = /*#__PURE__*/ gql`
     query EEZLayer {
   eezlayer {
@@ -31881,6 +31952,7 @@ export const namedOperations = {
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GeographyClippingSettings: 'GeographyClippingSettings',
+    SketchFragmentStatus: 'SketchFragmentStatus',
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',
