@@ -382,19 +382,18 @@ export default function SketchClassForm({
                       value: "transition",
                       description: (
                         <Trans ns="admin:sketching">
-                          With this option selected,{" "}
                           <a
                             className="text-primary-500 hover:underline"
                             href="https://github.com/seasketch/geoprocessing"
                             target="_blank"
                             rel="noreferrer"
                           >
-                            geoprocessing framework services
+                            Geoprocessing framework services
                           </a>{" "}
-                          will be used for preprocessing and reporting on
-                          sketches. The new report builder will be made
-                          available to admins for authoring reports intended to
-                          eventually replace the geoprocessing services.
+                          will be used for clipping and reporting on sketches.
+                          The report builder will be available to admins for
+                          authoring reports, intended to eventually replace
+                          geoprocessing services.
                         </Trans>
                       ),
                     },
