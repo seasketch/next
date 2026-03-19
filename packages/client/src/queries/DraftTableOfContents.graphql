@@ -273,6 +273,7 @@ fragment FullAdminSource on DataSource {
     isCustomUpload
   }
   changelog
+  isConvertibleLegacySource
 }
 
 fragment ArchivedSource on ArchivedDataSource {

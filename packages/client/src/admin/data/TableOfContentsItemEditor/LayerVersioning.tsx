@@ -16,6 +16,7 @@ import {
   SublayerType,
   useDeleteArchivedDataSourceMutation,
   useProjectBackgroundJobsQuery,
+  useReprocessLegacyDataSourceMutation,
   useRollbackArchivedDataSourceMutation,
   useSetChangelogMutation,
 } from "../../../generated/graphql";
@@ -332,6 +333,7 @@ export default function LayerVersioning({
           }
           source={versions.find((v) => v.source.id === selectedItemId)?.source!}
           layer={item.dataLayer!}
+          hasActiveJobs={relatedJobs.length > 0}
           archivedDataSource={
             item.dataLayer?.archivedSources?.find(
               (s) => s.dataSource?.id === selectedItemId
@@ -454,7 +456,7 @@ function VersionDetails({
   onRollback,
   itemId,
   archivedDataSource,
-
+  hasActiveJobs,
   layerName,
 }: {
   itemId: number;
@@ -467,6 +469,7 @@ function VersionDetails({
   onDelete?: () => void;
   onRollback?: (e: { sourceId: number }) => void;
   archivedDataSource?: Pick<ArchivedDataSource, "sublayer" | "sourceLayer">;
+  hasActiveJobs?: boolean;
   layerName: string;
 }) {
   const onError = useGlobalErrorHandler();
@@ -474,6 +477,8 @@ function VersionDetails({
     useDeleteArchivedDataSourceMutation({
       onError,
     });
+  const [reprocessLegacySource, reprocessLegacySourceState] =
+    useReprocessLegacyDataSourceMutation({ onError });
   const [rollbackGLStyle, setRollbackGLStyle] = useState(false);
   const [rollback, rollbackState] = useRollbackArchivedDataSourceMutation({
     onError,
@@ -596,6 +601,41 @@ function VersionDetails({
           )}
         </LayerInfoList>
       </div>
+      {!source.isArchived &&
+        source.isConvertibleLegacySource &&
+        !hasActiveJobs && (
+          <Warning level="warning" className="mt-4">
+            <p className="font-medium">
+              <Trans ns="admin:data">
+                This older layer is incompatible with some features
+              </Trans>
+            </p>
+            <p className="mt-1">
+              <Trans ns="admin:data">
+                Some cartography and reporting tools, as well as data download
+                functionality, will not work with this layer until it is
+                reprocessed. Reprocessing will run the original source through
+                the current processing pipeline to generate all required
+                outputs. A new version will be created automatically.
+              </Trans>
+            </p>
+            <button
+              disabled={reprocessLegacySourceState.loading}
+              onClick={() => {
+                reprocessLegacySource({
+                  variables: { tableOfContentsItemId: itemId },
+                });
+              }}
+              className="mt-2 px-2 py-1 text-sm font-medium bg-white rounded border border-black border-opacity-20 shadow-sm disabled:opacity-50"
+            >
+              {reprocessLegacySourceState.loading ? (
+                <Trans ns="admin:data">Starting…</Trans>
+              ) : (
+                <Trans ns="admin:data">Reprocess Layer</Trans>
+              )}
+            </button>
+          </Warning>
+        )}
       {(getSlug() === "superuser" ||
         source.uploadedBy !== "datalibrary@seasketch.org") && (
         <div className="py-2 flex space-x-2">
