@@ -13,6 +13,7 @@ import MutableAutosaveInput from "../MutableAutosaveInput";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
+import RadioGroup from "../../components/RadioGroup";
 import { useCallback, useMemo, useState } from "react";
 import Button from "../../components/Button";
 import useDialog from "../../components/useDialog";
@@ -79,11 +80,12 @@ export default function SketchClassForm({
   >();
   const isReportBuilderEnabled =
     projectMetadata.data?.project?.enableReportBuilder;
-  const reportingMode = sketchClass.isGeographyClippingEnabled
-    ? "new"
-    : sketchClass.previewNewReports
-    ? "transition"
-    : "legacy";
+  const reportingMode: "new" | "legacy" | "transition" =
+    sketchClass.isGeographyClippingEnabled
+      ? "new"
+      : sketchClass.previewNewReports
+      ? "transition"
+      : "legacy";
 
   const handleReportingModeChange = useCallback(
     (mode: "legacy" | "new" | "transition") => {
@@ -129,7 +131,7 @@ export default function SketchClassForm({
             ...(reportingMode !== "new"
               ? [
                   {
-                    name: "Geoprocessing",
+                    name: "Geoprocessing Services",
                     id: "geoprocessing",
                     current: selectedTab === "geoprocessing",
                   },
@@ -340,6 +342,73 @@ export default function SketchClassForm({
             {sketchClass.acl?.nodeId && (
               <AccessControlListEditor nodeId={sketchClass.acl?.nodeId} />
             )}
+            {isReportBuilderEnabled &&
+              sketchClass.geometryType === SketchGeometryType.Polygon && (
+                <RadioGroup<"new" | "legacy" | "transition">
+                  legend={t("Analytical Reports")}
+                  value={reportingMode}
+                  onChange={(mode) => handleReportingModeChange(mode)}
+                  items={[
+                    {
+                      label: t("Use the Report Builder"),
+                      value: "new",
+                      description: (
+                        <Trans ns="admin:sketching">
+                          Create reports using a graphical editor, referencing
+                          the overlay layers uploaded to your project.
+                        </Trans>
+                      ),
+                    },
+                    {
+                      label: t("Use Geoprocessing Services"),
+                      value: "legacy",
+                      description: (
+                        <Trans ns="admin:sketching">
+                          Use services developed using the{" "}
+                          <a
+                            className="text-primary-500 hover:underline"
+                            href="https://github.com/seasketch/geoprocessing"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            SeaSketch Geoprocessing Framework
+                          </a>{" "}
+                          to clip sketches and show reports.
+                        </Trans>
+                      ),
+                    },
+                    {
+                      label: t("Transition from Geoprocessing Services"),
+                      value: "transition",
+                      description: (
+                        <Trans ns="admin:sketching">
+                          With this option selected,{" "}
+                          <a
+                            className="text-primary-500 hover:underline"
+                            href="https://github.com/seasketch/geoprocessing"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            geoprocessing framework services
+                          </a>{" "}
+                          will be used for preprocessing and reporting on
+                          sketches. The new report builder will be made
+                          available to admins for authoring reports intended to
+                          eventually replace the geoprocessing services.
+                        </Trans>
+                      ),
+                    },
+                  ]}
+                  error={mutationState.error?.message}
+                  state={
+                    mutationState.called
+                      ? mutationState.loading
+                        ? "SAVING"
+                        : "SAVED"
+                      : "NONE"
+                  }
+                />
+              )}
             <div className="">
               <InputBlock
                 input={
@@ -354,101 +423,6 @@ export default function SketchClassForm({
                 )}
               />
             </div>
-            {isReportBuilderEnabled &&
-              sketchClass.geometryType === SketchGeometryType.Polygon && (
-                <div className="space-y-3 text-left">
-                  <h3 className="text-base font-medium text-gray-900">
-                    {t("Reporting Mode")}
-                  </h3>
-                  <div
-                    className="space-y-1"
-                    role="radiogroup"
-                    aria-label={t("Reporting Mode")}
-                  >
-                    <label className="flex gap-3 items-start cursor-pointer rounded-md py-2 pr-2 hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name={`reporting-mode-${sketchClass.id}`}
-                        checked={reportingMode === "new"}
-                        onChange={() => handleReportingModeChange("new")}
-                        className="mt-1.5 h-4 w-4 flex-shrink-0 border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="flex-1 min-w-0">
-                        <span className="font-medium text-gray-900 block">
-                          {t("Use the Report Builder")}
-                        </span>
-                        <span className="text-sm text-gray-500 block mt-0.5">
-                          <Trans ns="admin:sketching">
-                            Create reports using a graphical editor, referencing
-                            the overlay layers uploaded to your project.
-                          </Trans>
-                        </span>
-                      </span>
-                    </label>
-                    <label className="flex gap-3 items-start cursor-pointer rounded-md py-2 pr-2 hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name={`reporting-mode-${sketchClass.id}`}
-                        checked={reportingMode === "legacy"}
-                        onChange={() => handleReportingModeChange("legacy")}
-                        className="mt-1.5 h-4 w-4 flex-shrink-0 border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="flex-1 min-w-0">
-                        <span className="font-medium text-gray-900 block">
-                          {t("Use Geoprocessing Services")}
-                        </span>
-                        <span className="text-sm text-gray-500 block mt-0.5">
-                          <Trans ns="admin:sketching">
-                            Use services developed using the{" "}
-                            <a
-                              className="text-primary-500 hover:underline"
-                              href="https://github.com/seasketch/geoprocessing"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              SeaSketch Geoprocessing Framework
-                            </a>{" "}
-                            to clip sketches and show reports.
-                          </Trans>
-                        </span>
-                      </span>
-                    </label>
-                    <label className="flex gap-3 items-start cursor-pointer rounded-md py-2 pr-2 hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        name={`reporting-mode-${sketchClass.id}`}
-                        checked={reportingMode === "transition"}
-                        onChange={() => handleReportingModeChange("transition")}
-                        className="mt-1.5 h-4 w-4 flex-shrink-0 border-gray-300 text-primary-600 focus:ring-primary-500"
-                      />
-                      <span className="flex-1 min-w-0">
-                        <span className="font-medium text-gray-900 block">
-                          <Trans ns="admin:sketching">
-                            Transition from Geoprocessing Services
-                          </Trans>
-                        </span>
-                        <span className="text-sm text-gray-500 block mt-0.5">
-                          <Trans ns="admin:sketching">
-                            With this option selected,{" "}
-                            <a
-                              className="text-primary-500 hover:underline"
-                              href="https://github.com/seasketch/geoprocessing"
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              geoprocessing framework services
-                            </a>{" "}
-                            will be used for preprocessing and reporting on
-                            sketches. The new report builder will be made
-                            available to admins for authoring reports intended
-                            to eventually replace the geoprocessing services.
-                          </Trans>
-                        </span>
-                      </span>
-                    </label>
-                  </div>
-                </div>
-              )}
             <InputBlock
               input={
                 <Button

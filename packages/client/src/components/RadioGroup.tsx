@@ -5,7 +5,7 @@ import { MutationStateIndicator } from "./MutationStateIndicator";
 interface RadioItem<T> {
   value: T;
   label: string;
-  description?: string;
+  description?: ReactNode;
   children?: React.ReactNode;
 }
 
