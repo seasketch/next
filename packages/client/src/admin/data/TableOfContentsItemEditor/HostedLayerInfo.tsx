@@ -14,6 +14,16 @@ import { humanizeOutputType } from "../QuotaUsageTreemap";
 import { isRasterInfo } from "@seasketch/geostats-types";
 import slugify from "slugify";
 
+function filenameFromUrl(url: string): string {
+  try {
+    const path = new URL(url).pathname;
+    const segment = path.split("/").filter(Boolean).pop();
+    return segment || "download";
+  } catch {
+    return "download";
+  }
+}
+
 async function downloadWithFilename(url: string, filename: string) {
   try {
     const response = await fetch(url);
@@ -22,8 +32,11 @@ async function downloadWithFilename(url: string, filename: string) {
     const a = document.createElement("a");
     a.href = blobUrl;
     a.download = filename;
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+    // Revoke after navigation so the download is not cut off in some browsers
+    setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
   } catch {
     // CORS or network error: fall back to opening in new tab
     window.open(url, "_blank", "noopener,noreferrer");
@@ -82,15 +95,19 @@ export default function HostedLayerInfo({
           term={"Uploaded File"}
           description={
             <div className="truncate">
-              <a
-                className="text-primary-500 underline"
-                href={original.url}
-                target="_blank"
-                download={original.originalFilename}
-                rel="noreferrer"
+              <button
+                type="button"
+                className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit text-left"
+                onClick={() =>
+                  downloadWithFilename(
+                    original.url,
+                    original.originalFilename ||
+                      filenameFromUrl(original.url)
+                  )
+                }
               >
                 {original.originalFilename || original.url}
-              </a>
+              </button>
             </div>
           }
         />
@@ -130,15 +147,18 @@ export default function HostedLayerInfo({
               }`}
             >
               <span>
-                <a
-                  className="text-primary-500 underline"
-                  href={metadata.url}
-                  target="_blank"
-                  download={metadata.filename}
-                  rel="noreferrer"
+                <button
+                  type="button"
+                  className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit text-left"
+                  onClick={() =>
+                    downloadWithFilename(
+                      metadata.url,
+                      metadata.filename || filenameFromUrl(metadata.url)
+                    )
+                  }
                 >
                   {metadata.filename || metadata.url}
-                </a>{" "}
+                </button>{" "}
               </span>
               <span className="text-gray-500 w-full">
                 {metadata.createdAt && metadataFormat
