@@ -26,6 +26,11 @@ export type ClassTableRow = {
    * from data-driven fill/circle/line-color when a single row color cannot be resolved.
    */
   colors?: string[];
+  /**
+   * Multi-color 6×6 pixel swatch: ramp order for continuous raster ramps, soft
+   * scatter for categorical rasters and vector palettes.
+   */
+  multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter";
 };
 
 /**
@@ -44,12 +49,18 @@ function isRasterSource(
   );
 }
 
+type RasterColorsFromStyle = {
+  colors: string[];
+  multiColorSwatchLayout: "raster-ramp-order" | "soft-scatter";
+};
+
 /**
- * Extracts ordered color values from a raster layer's raster-color paint
- * expression, whether interpolate, step, or match. Returns undefined if none found.
- * Transparent colors (keyword, rgba with alpha 0, hex with alpha 00) are excluded.
+ * Extracts color values from raster-color. Interpolate/step → ramp order for
+ * pixel swatches; match → soft scatter like categorical vectors.
  */
-function getRasterColorsFromStyle(layers: AnyLayer[]): string[] | undefined {
+function getRasterColorsFromStyle(
+  layers: AnyLayer[]
+): RasterColorsFromStyle | undefined {
   for (const layer of layers) {
     if (layer.type !== "raster" || !layer.paint) continue;
     const rasterColor = (layer.paint as Record<string, unknown>)["raster-color"];
@@ -63,18 +74,20 @@ function getRasterColorsFromStyle(layers: AnyLayer[]): string[] | undefined {
       if (typeof c === "string" && !isTransparentColor(c)) colorStops.push(c);
     };
 
+    let layout: "raster-ramp-order" | "soft-scatter";
+
     if (/^interpolate(-hcl|-lab)?$/.test(fn)) {
-      // [ "interpolate", interpolation, input, v1, c1, v2, c2, ... ]
+      layout = "raster-ramp-order";
       for (let i = 4; i < rasterColor.length; i += 2) {
         pushIfOpaque(rasterColor[i] as string);
       }
     } else if (fn === "step") {
-      // [ "step", input, defaultColor, v1, c1, v2, c2, ... ]
+      layout = "raster-ramp-order";
       for (let i = 2; i < rasterColor.length; i += 2) {
         pushIfOpaque(rasterColor[i] as string);
       }
     } else if (fn === "match") {
-      // [ "match", input, label1, output1, label2, output2, ..., defaultOutput ]
+      layout = "soft-scatter";
       let i = 2;
       while (i < rasterColor.length) {
         if (i === rasterColor.length - 1) {
@@ -84,9 +97,13 @@ function getRasterColorsFromStyle(layers: AnyLayer[]): string[] | undefined {
         pushIfOpaque(rasterColor[i + 1] as string);
         i += 2;
       }
+    } else {
+      continue;
     }
 
-    if (colorStops.length > 0) return colorStops;
+    if (colorStops.length > 0) {
+      return { colors: colorStops, multiColorSwatchLayout: layout };
+    }
   }
   return undefined;
 }
@@ -98,7 +115,11 @@ function getRasterColorsFromStyle(layers: AnyLayer[]): string[] | undefined {
 function vectorSwatchFromSource(
   source: OverlaySourceDetailsFragment,
   singleColor: string | undefined
-): { color?: string; colors?: string[] } {
+): {
+  color?: string;
+  colors?: string[];
+  multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter";
+} {
   const styles = source.mapboxGlStyles as AnyLayer[] | undefined;
   if (!styles?.length) {
     if (singleColor !== undefined && !isTransparentColor(singleColor)) {
@@ -120,7 +141,7 @@ function vectorSwatchFromSource(
   if (palette.length === 1) {
     return { color: palette[0] };
   }
-  return { colors: palette };
+  return { colors: palette, multiColorSwatchLayout: "soft-scatter" };
 }
 
 export type ClassTableRowComponentSettings = {
@@ -207,12 +228,15 @@ export function getClassTableRows(options: {
       } else {
         const key = classTableRowKey(dependency.stableId!, "*");
         const styles = source?.mapboxGlStyles as AnyLayer[] | undefined;
-        let swatch: { color?: string; colors?: string[] } = {};
+        let swatch: { color?: string; colors?: string[]; multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter" } = {};
 
         if (source && isRasterSource(source) && styles?.length) {
-          const rasterColors = getRasterColorsFromStyle(styles);
-          if (rasterColors?.length) {
-            swatch = { colors: rasterColors };
+          const raster = getRasterColorsFromStyle(styles);
+          if (raster?.colors.length) {
+            swatch = {
+              colors: raster.colors,
+              multiColorSwatchLayout: raster.multiColorSwatchLayout,
+            };
           } else {
             swatch = vectorSwatchFromSource(source, extractColorForLayers(styles));
           }
