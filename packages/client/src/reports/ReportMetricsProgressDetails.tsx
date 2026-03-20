@@ -55,8 +55,8 @@ export default function ReportMetricsProgressDetails({
     return all;
   }, [draftReportContext.draftMetrics, context.metrics]);
 
-  const handleRepairSource = useCallback(
-    async (jobKey: string) => {
+  const handleReprocessSource = useCallback(
+    async (jobKey: string, repairInvalid: boolean) => {
       const metricIds = allMetrics
         .filter((m) => m.sourceProcessingJobDependency === jobKey)
         .map((m) => m.id);
@@ -65,7 +65,7 @@ export default function ReportMetricsProgressDetails({
         variables: {
           metricIds,
           preprocessSources: true,
-          repairInvalid: true,
+          repairInvalid,
         },
         refetchQueries: [
           ReportDependenciesDocument,
@@ -201,9 +201,16 @@ export default function ReportMetricsProgressDetails({
             </p>
             <ul className="space-y-2 py-2">
               {state.relatedOverlaySources.map((layer) => {
+                const jobState = layer.sourceProcessingJob?.state;
+                const jobIsRunning =
+                  jobState === SpatialMetricState.Queued ||
+                  jobState === SpatialMetricState.Processing;
+                // Do not treat stale `output` as complete while a job is queued/processing
+                // (reprocessing keeps previous output until the new run finishes).
                 const isComplete =
-                  layer.sourceProcessingJob?.state ===
-                    SpatialMetricState.Complete || Boolean(layer.output);
+                  !jobIsRunning &&
+                  (jobState === SpatialMetricState.Complete ||
+                    Boolean(layer.output));
                 const tocId = layer.tableOfContentsItemId;
                 const attribution =
                   tocId != null
@@ -259,16 +266,24 @@ export default function ReportMetricsProgressDetails({
                             ? 100
                             : layer.sourceProcessingJob?.progressPercentage
                         }
-                        completedAt={layer.output?.createdAt}
+                        completedAt={
+                          jobIsRunning ? undefined : layer.output?.createdAt
+                        }
                         durationSeconds={
-                          layer.sourceProcessingJob?.durationSeconds
+                          jobIsRunning
+                            ? undefined
+                            : layer.sourceProcessingJob?.durationSeconds
                         }
                         errorMessage={layer.sourceProcessingJob?.errorMessage}
-                        outputSize={layer.output?.size}
-                        outputUrl={layer.output?.url}
+                        outputSize={
+                          jobIsRunning ? undefined : layer.output?.size
+                        }
+                        outputUrl={jobIsRunning ? undefined : layer.output?.url}
                         outputType={
-                          layer.output?.url &&
-                          layer.output?.url.endsWith(".fgb")
+                          jobIsRunning
+                            ? undefined
+                            : layer.output?.url &&
+                              layer.output?.url.endsWith(".fgb")
                             ? "FlatGeobuf"
                             : layer.output?.url &&
                               layer.output?.url.endsWith(".tif")
@@ -277,22 +292,35 @@ export default function ReportMetricsProgressDetails({
                         }
                         isAdmin={isAdmin}
                         estimatedCompletionTime={layer.sourceProcessingJob?.eta}
-                        numInvalidFeatures={layer.output?.numInvalidFeatures}
-                        numFeatures={layer.output?.numFeatures}
-                        numRepairedFeatures={layer.output?.numRepairedFeatures}
-                        wasRepaired={layer.output?.wasRepaired}
+                        numInvalidFeatures={
+                          jobIsRunning
+                            ? undefined
+                            : layer.output?.numInvalidFeatures
+                        }
+                        numFeatures={
+                          jobIsRunning ? undefined : layer.output?.numFeatures
+                        }
+                        numRepairedFeatures={
+                          jobIsRunning
+                            ? undefined
+                            : layer.output?.numRepairedFeatures
+                        }
+                        wasRepaired={
+                          jobIsRunning ? undefined : layer.output?.wasRepaired
+                        }
                         containsOverlappingFeatures={
                           layer.containsOverlappingFeatures
                         }
-                        onRepairClick={
+                        onReprocessSource={
                           isAdmin && layer.sourceProcessingJob?.jobKey
-                            ? () =>
-                                handleRepairSource(
-                                  layer.sourceProcessingJob!.jobKey
+                            ? (repairInvalid) =>
+                                handleReprocessSource(
+                                  layer.sourceProcessingJob!.jobKey,
+                                  repairInvalid
                                 )
                             : undefined
                         }
-                        repairLoading={recalculateState.loading}
+                        reprocessLoading={recalculateState.loading}
                       />
                     </span>
                   </li>

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { SpatialMetricState } from "../../generated/graphql";
 import CircularProgressIndicator from "./CircularProgressIndicator";
 import ETACountdown from "./ETACountdown";
@@ -6,11 +6,120 @@ import { ClockIcon } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   CheckCircleIcon,
+  CogIcon,
   PauseIcon,
   XCircleIcon,
 } from "@heroicons/react/solid";
 import bytes from "bytes";
 import { Trans, useTranslation } from "react-i18next";
+
+/**
+ * Inline menu (no portal) so it stays inside the Radix tooltip hover region.
+ */
+function LayerOutputActionsMenu({
+  outputUrl,
+  onReprocessSource,
+  reprocessLoading,
+}: {
+  outputUrl?: string | null;
+  onReprocessSource: (repairInvalid: boolean) => void;
+  reprocessLoading?: boolean;
+}) {
+  const { t } = useTranslation("sketching");
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLDivElement>(null);
+  const hasDownload = Boolean(outputUrl);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDocPointerDown = (e: PointerEvent) => {
+      if (
+        wrapRef.current &&
+        !wrapRef.current.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("pointerdown", onDocPointerDown, true);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDocPointerDown, true);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={wrapRef} className="relative inline-flex items-center">
+      <button
+        type="button"
+        disabled={reprocessLoading}
+        aria-expanded={open}
+        aria-haspopup="menu"
+        aria-label={t("Layer actions")}
+        title={t("Layer actions")}
+        className="inline-flex items-center justify-center rounded p-0.5 text-gray-400 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 focus-visible:ring-offset-gray-900 disabled:opacity-50"
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((v) => !v);
+        }}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <CogIcon className="w-4 h-4" aria-hidden />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute left-0 top-full z-[200] mt-1 min-w-[12rem] rounded-md bg-white py-1 text-sm text-gray-800 shadow-lg border border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {hasDownload && (
+            <a
+              role="menuitem"
+              href={outputUrl!}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block px-3 py-2 hover:bg-gray-100 outline-none"
+              onClick={() => setOpen(false)}
+            >
+              {t("Download")}
+            </a>
+          )}
+          {hasDownload && <div className="h-px bg-gray-200 my-1" />}
+          <button
+            type="button"
+            role="menuitem"
+            disabled={reprocessLoading}
+            className="w-full text-left px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+              onReprocessSource(false);
+            }}
+          >
+            {reprocessLoading ? t("Reprocessing...") : t("Reprocess Layer")}
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            disabled={reprocessLoading}
+            className="w-full text-left px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:pointer-events-none"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpen(false);
+              onReprocessSource(true);
+            }}
+          >
+            {reprocessLoading ? t("Reprocessing...") : t("Reprocess and Repair")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ReportTaskLineItemProps {
   /** When true, renders only ETA + status icon (no title, no li). Use for inline rows that supply their own title. */
@@ -37,8 +146,9 @@ interface ReportTaskLineItemProps {
   numRepairedFeatures?: number | null;
   wasRepaired?: boolean | null;
   containsOverlappingFeatures?: boolean | null;
-  onRepairClick?: () => void;
-  repairLoading?: boolean;
+  /** Admin: re-run source preprocessing (optimized layer). `true` runs make_valid repair. */
+  onReprocessSource?: (repairInvalid: boolean) => void;
+  reprocessLoading?: boolean;
 }
 
 export default function ReportTaskLineItem({
@@ -65,8 +175,8 @@ export default function ReportTaskLineItem({
   numRepairedFeatures,
   wasRepaired,
   containsOverlappingFeatures,
-  onRepairClick,
-  repairLoading,
+  onReprocessSource,
+  reprocessLoading,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
   const hasTopologyIssues =
@@ -85,7 +195,8 @@ export default function ReportTaskLineItem({
       outputSize ||
       value ||
       hasTopologyIssues ||
-      hasOverlappingFeatures);
+      hasOverlappingFeatures ||
+      (isAdmin && onReprocessSource));
 
   // Precompute tooltip content
   const queuedTooltip = (
@@ -121,17 +232,58 @@ export default function ReportTaskLineItem({
           <JSONPreview value={formatParameters(parameters)} />
         </div>
       )}
-      {state === SpatialMetricState.Error && errorMessage && (
-        <div>
-          <div className="font-semibold text-red-400 mb-1">{t("Error")}</div>
-          <div className="text-gray-300">{errorMessage}</div>
-        </div>
-      )}
+      {state === SpatialMetricState.Error &&
+        (errorMessage || (isAdmin && onReprocessSource)) && (
+          <div>
+            {errorMessage && (
+              <>
+                <div className="font-semibold text-red-400 mb-1">
+                  {t("Error")}
+                </div>
+                <div className="text-gray-300">{errorMessage}</div>
+              </>
+            )}
+            {isAdmin && onReprocessSource && (
+              <div className={errorMessage ? "mt-2" : ""}>
+                <LayerOutputActionsMenu
+                  outputUrl={undefined}
+                  onReprocessSource={onReprocessSource}
+                  reprocessLoading={reprocessLoading}
+                />
+              </div>
+            )}
+          </div>
+        )}
       {state === SpatialMetricState.Complete && outputSize && (
         <div>
           <div className="font-semibold text-white">{t("Output")}</div>
-          <div className="text-gray-300">
-            {isAdmin && outputUrl ? (
+          <div className="text-gray-300 flex flex-wrap items-center gap-x-2 gap-y-1">
+            {isAdmin && onReprocessSource ? (
+              <>
+                {outputUrl ? (
+                  <a
+                    href={outputUrl}
+                    className="text-blue-400 hover:text-blue-300 underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    {outputType ? outputType : t("Download")} (
+                    {bytes(parseInt(outputSize))})
+                  </a>
+                ) : (
+                  <span>
+                    {outputType
+                      ? `${outputType} (${bytes(parseInt(outputSize))})`
+                      : bytes(parseInt(outputSize))}
+                  </span>
+                )}
+                <LayerOutputActionsMenu
+                  outputUrl={outputUrl ?? undefined}
+                  onReprocessSource={onReprocessSource}
+                  reprocessLoading={reprocessLoading}
+                />
+              </>
+            ) : isAdmin && outputUrl ? (
               <a
                 href={outputUrl}
                 className="text-blue-400 hover:text-blue-300 underline"
@@ -201,6 +353,21 @@ export default function ReportTaskLineItem({
                     function to repair topology.
                   </Trans>
                 </div>
+                {onReprocessSource && !wasRepaired && (
+                  <button
+                    type="button"
+                    className="mt-2 inline-flex items-center px-2.5 py-1.5 text-xs font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onReprocessSource(true);
+                    }}
+                    disabled={reprocessLoading}
+                  >
+                    {reprocessLoading
+                      ? t("Reprocessing...")
+                      : t("Reprocess and Repair")}
+                  </button>
+                )}
               </>
             )}
             {wasRepaired && numRepairedFeatures != null && (
@@ -226,20 +393,6 @@ export default function ReportTaskLineItem({
                   </Trans>
                 </div>
               </>
-            )}
-            {onRepairClick && !wasRepaired && (
-              <button
-                className="mt-2 inline-flex items-center px-2.5 py-1 text-xs font-medium rounded bg-blue-600 hover:bg-blue-500 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRepairClick();
-                }}
-                disabled={repairLoading}
-              >
-                {repairLoading
-                  ? t("Reprocessing...")
-                  : t("Reprocess and repair")}
-              </button>
             )}
           </div>
         )}
@@ -308,7 +461,7 @@ export default function ReportTaskLineItem({
           </Tooltip.Trigger>
           <Tooltip.Portal>
             <Tooltip.Content
-              className="bg-gray-900 rounded-lg shadow-xl p-3 max-w-96 z-50 overflow-hidden"
+              className="bg-gray-900 rounded-lg shadow-xl p-3 max-w-96 z-50 overflow-visible"
               sideOffset={5}
               side="left"
             >

@@ -56,8 +56,13 @@ interface CalculationDetailsModalProps {
   config?: ReportCardConfiguration<any>;
   /** Metrics for this card */
   metrics?: CompatibleSpatialMetricDetailsFragment[];
-  /** Whether the user is in admin mode */
+  /** Report editor: full recalculate UX (nested modal, etc.) */
   adminMode?: boolean;
+  /**
+   * When set, controls download links / topology details in the modal body.
+   * Defaults to adminMode. Use true for project admins viewing from the map or reports.
+   */
+  showAdminDetails?: boolean;
 }
 
 /**
@@ -68,7 +73,9 @@ export function CalculationDetailsModal({
   onClose,
   config,
   adminMode = false,
+  showAdminDetails,
 }: CalculationDetailsModalProps) {
+  const detailsAdmin = showAdminDetails ?? adminMode;
   const { t } = useTranslation("admin:sketching");
   const onError = useGlobalErrorHandler();
   const context = useCardDependenciesContext();
@@ -220,7 +227,7 @@ export function CalculationDetailsModal({
             : []),
         ]}
       >
-        <ReportMetricsProgressDetails config={config} isAdmin={adminMode} />
+        <ReportMetricsProgressDetails config={config} isAdmin={detailsAdmin} />
       </Modal>
 
       {recalcOpen && (

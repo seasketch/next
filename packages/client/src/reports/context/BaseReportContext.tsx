@@ -13,7 +13,12 @@ import { useQuery } from "@apollo/client";
 type BaseReportContextValue = {
   sketchClass: Pick<
     ReportContextSketchClassDetailsFragment,
-    "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+    | "id"
+    | "projectId"
+    | "geometryType"
+    | "form"
+    | "clippingGeographies"
+    | "project"
   >;
   report: ReportConfiguration;
   geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];

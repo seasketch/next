@@ -245,6 +245,7 @@ fragment ReportContextSketchClassDetails on SketchClass {
   }
   project {
     id
+    sessionIsAdmin
     supportedLanguages
     geographies {
       id

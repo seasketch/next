@@ -211,6 +211,9 @@ export default function ReportCard(
   } = useContext(ReportUIStateContext);
 
   const baseReportContext = useBaseReportContext();
+  const sessionIsAdmin =
+    baseReportContext.sketchClass.project?.sessionIsAdmin ?? false;
+  const showAdminCalculationDetails = adminMode || sessionIsAdmin;
   const cardDependencies = useCardDependencies(props.config.id);
   return (
     <CardDependenciesContext.Provider
@@ -240,6 +243,7 @@ export default function ReportCard(
           config={props.config}
           metrics={[]}
           adminMode={adminMode}
+          showAdminDetails={showAdminCalculationDetails}
         />
       )}
     </CardDependenciesContext.Provider>
