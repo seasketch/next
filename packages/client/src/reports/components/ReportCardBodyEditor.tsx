@@ -44,6 +44,7 @@ import {
   ProjectReportingLayersDocument,
   useProjectReportingLayersQuery,
   usePreprocessSourceMutation,
+  BaseDraftReportContextDocument,
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
@@ -117,6 +118,20 @@ function ReportCardBodyEditorInner({
   const subjectReportContext = useSubjectReportContext();
   const sketch = subjectReportContext.data?.sketch;
 
+  const refetchDraftReportTree = useMemo(
+    () => [
+      {
+        query: DraftReportDocument,
+        variables: { sketchClassId: sketchClass.id },
+      },
+      {
+        query: BaseDraftReportContextDocument,
+        variables: { sketchClassId: sketchClass.id },
+      },
+    ],
+    [sketchClass.id]
+  );
+
   const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
   const [draftBody, setDraftBody] = useState<ProsemirrorBodyJSON>(
     JSON.parse(JSON.stringify(body))
@@ -143,7 +158,7 @@ function ReportCardBodyEditorInner({
     useUpdateReportCardBodyMutation({
       onError,
       awaitRefetchQueries: true,
-      refetchQueries: [DraftReportDocument],
+      refetchQueries: refetchDraftReportTree,
     });
 
   const saveWithBody = useCallback(
@@ -153,12 +168,15 @@ function ReportCardBodyEditorInner({
           id: cardId,
           body: setCollapsibleBlocksClosed(body),
         },
-        refetchQueries: [DraftReportDocument, ReportDependenciesDocument],
+        refetchQueries: [
+          ...refetchDraftReportTree,
+          ReportDependenciesDocument,
+        ],
         awaitRefetchQueries: true,
       });
       setEditing(null);
     },
-    [updateReportCard, cardId, setEditing]
+    [updateReportCard, cardId, setEditing, refetchDraftReportTree]
   );
 
   const handleCardSave = useCallback(
@@ -293,7 +311,7 @@ function ReportCardBodyEditorInner({
   const [deleteCardMutation, deleteCardMutationState] =
     useDeleteReportCardMutation({
       onError,
-      refetchQueries: [DraftReportDocument],
+      refetchQueries: refetchDraftReportTree,
       awaitRefetchQueries: true,
     });
 

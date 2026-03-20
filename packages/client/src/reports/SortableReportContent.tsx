@@ -9,6 +9,7 @@ import {
 import { ReportTabConfiguration } from "./cards/cards";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import {
+  BaseDraftReportContextDocument,
   ReorderReportTabCardsMutation,
   ReorderReportTabCardsMutationVariables,
   useReorderReportTabCardsMutation,
@@ -92,7 +93,7 @@ export function SortableReportContent(props: SortableReportContentProps) {
   const onError = useGlobalErrorHandler();
 
   // Context values for toolbar context
-  const { report } = useBaseReportContext();
+  const { report, sketchClass } = useBaseReportContext();
 
   const hasMultipleTabs = useMemo(
     () => (report.tabs || []).length > 1,
@@ -101,6 +102,13 @@ export function SortableReportContent(props: SortableReportContentProps) {
 
   const [reorderReportTabCards] = useReorderReportTabCardsMutation({
     onError,
+    awaitRefetchQueries: true,
+    refetchQueries: [
+      {
+        query: BaseDraftReportContextDocument,
+        variables: { sketchClassId: sketchClass.id },
+      },
+    ],
     optimisticResponse: (
       vars: ReorderReportTabCardsMutationVariables
     ): ReorderReportTabCardsMutation => {
@@ -121,25 +129,26 @@ export function SortableReportContent(props: SortableReportContentProps) {
     },
     update: (cache, { data }) => {
       const reportCards = data?.reorderReportTabCards?.reportCards;
-      if (!reportCards) return;
+      if (!reportCards?.length) return;
 
       cache.modify({
         id: cache.identify({ __typename: "ReportTab", id: selectedTab.id }),
         fields: {
           cards(existingCardRefs, { readField }) {
-            // Create a map of id -> new position from the mutation result
-            const positionMap = new Map(
-              reportCards.map((card) => [card.id, card.position])
+            const refs = existingCardRefs ?? [];
+            const refById = new Map<number, (typeof refs)[number]>();
+            for (const ref of refs) {
+              refById.set(readField("id", ref) as number, ref);
+            }
+            const ordered = [...reportCards]
+              .sort((a, b) => a.position - b.position)
+              .map((c) => refById.get(c.id))
+              .filter((r) => r != null) as typeof refs;
+            const used = new Set(reportCards.map((c) => c.id));
+            const rest = [...refs].filter(
+              (ref) => !used.has(readField("id", ref) as number)
             );
-
-            // Sort existing refs by their new position
-            return [...existingCardRefs].sort((a, b) => {
-              const aId = readField("id", a) as number;
-              const bId = readField("id", b) as number;
-              const aPos = positionMap.get(aId) ?? Infinity;
-              const bPos = positionMap.get(bId) ?? Infinity;
-              return aPos - bPos;
-            });
+            return [...ordered, ...rest];
           },
         },
       });
