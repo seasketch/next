@@ -118,6 +118,13 @@ export type ClassTableRowComponentSettings = {
    * A map of row keys to stable IDs. The key must match the ClassTableRow.key value.
    */
   rowLinkedStableIds?: { [key: string]: string };
+  /**
+   * Overlay source stableIds for which an extra row should be shown for the
+   * total across all features (`groupByKey` `"*"`). When `groupBy` is set, the
+   * overlay engine still records combined overlap under `"*"` alongside per-class
+   * keys; this setting exposes that as a table row.
+   */
+  includeAllFeaturesRowForGroupedSources?: string[];
 };
 
 export function classTableRowKey(stableId: string, groupByKey?: string) {
@@ -153,6 +160,8 @@ export function getClassTableRows(options: {
    */
   stableIds?: { [key: string]: string };
   excludedRowKeys?: string[];
+  /** @see ClassTableRowComponentSettings.includeAllFeaturesRowForGroupedSources */
+  includeAllFeaturesRowForGroupedSources?: string[];
 }): ClassTableRow[] {
   const rows = [] as ClassTableRow[];
   const fragmentDependencies = options.dependencies.filter(
@@ -228,6 +237,30 @@ export function getClassTableRows(options: {
           attr,
           source.mapboxGlStyles as AnyLayer[]
         );
+        const includeAllFeaturesRow =
+          options.includeAllFeaturesRowForGroupedSources?.includes(
+            dependency.stableId!
+          );
+        if (includeAllFeaturesRow) {
+          const totalKey = classTableRowKey(dependency.stableId!, "*");
+          let totalColor: string | undefined = extractColorForLayers(
+            source.mapboxGlStyles as AnyLayer[]
+          );
+          if (totalColor !== undefined && isTransparentColor(totalColor)) {
+            totalColor = undefined;
+          }
+          rows.push({
+            key: totalKey,
+            label:
+              options.customLabels?.[totalKey] ||
+              source.tableOfContentsItem?.title ||
+              options.allFeaturesLabel,
+            groupByKey: "*",
+            sourceId: dependency.stableId!.toString(),
+            stableId: options.stableIds?.[totalKey],
+            color: totalColor,
+          });
+        }
         for (const value of values) {
           const key = classTableRowKey(dependency.stableId!, value);
           let color: string | undefined =

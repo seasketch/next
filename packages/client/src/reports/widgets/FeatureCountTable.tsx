@@ -88,6 +88,8 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
       allFeaturesLabel: t("All features"),
       stableIds: componentSettings.rowLinkedStableIds,
       excludedRowKeys: componentSettings.excludedRowKeys,
+      includeAllFeaturesRowForGroupedSources:
+        componentSettings.includeAllFeaturesRowForGroupedSources,
     });
 
     const completedFragmentMetrics = metrics.filter(
@@ -155,6 +157,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
     componentSettings.customRowLabels,
     componentSettings.rowLinkedStableIds,
     componentSettings.excludedRowKeys,
+    componentSettings.includeAllFeaturesRowForGroupedSources,
   ]);
 
   const displayRows = loading ? rows : rows;

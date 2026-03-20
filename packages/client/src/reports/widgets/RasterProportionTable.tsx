@@ -89,6 +89,8 @@ export const RasterProportionTable: ReportWidget<
       allFeaturesLabel: t("All features"),
       stableIds: componentSettings.rowLinkedStableIds,
       excludedRowKeys: componentSettings.excludedRowKeys,
+      includeAllFeaturesRowForGroupedSources:
+        componentSettings.includeAllFeaturesRowForGroupedSources,
     });
 
     if (sources.length === 0 || metrics.length === 0 || loading) {
@@ -145,6 +147,7 @@ export const RasterProportionTable: ReportWidget<
     componentSettings.customRowLabels,
     componentSettings.rowLinkedStableIds,
     componentSettings.excludedRowKeys,
+    componentSettings.includeAllFeaturesRowForGroupedSources,
     showZeroRows,
     sortBy,
     t,
