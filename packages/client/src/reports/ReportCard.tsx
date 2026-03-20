@@ -212,7 +212,7 @@ export default function ReportCard(
 
   const baseReportContext = useBaseReportContext();
   const sessionIsAdmin =
-    baseReportContext.sketchClass.project?.sessionIsAdmin ?? false;
+    baseReportContext.sketchClass.project?.sessionIsAdmin || false;
   const showAdminCalculationDetails = adminMode || sessionIsAdmin;
   const cardDependencies = useCardDependencies(props.config.id);
   return (

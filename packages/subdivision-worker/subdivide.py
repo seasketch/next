@@ -24,15 +24,12 @@ def count_nodes(geom):
 def subdivide_and_write_feature(feature, write, max_nodes):
     """Recursively subdivide a geometry into smaller parts and update stats."""
     geom = shape(feature['geometry'])
-    # prepare(geom)
-    stack = multipart_to_singlepart(geom)    
+    stack = multipart_to_singlepart(geom)
     while stack:
       geom = stack.pop()
-      # Early exit if already small enough
       num_coords_geom = get_num_coordinates(geom)
       if num_coords_geom <= max_nodes:
           f = fiona.Feature(geometry=fiona.Geometry.from_dict(mapping(geom)), properties=feature['properties'])
-          # Pass node count through; caller wrapper may use it for progress
           write(f, num_coords_geom)
           continue
 
@@ -41,26 +38,20 @@ def subdivide_and_write_feature(feature, write, max_nodes):
       height = bounds[3] - bounds[1]
 
       if width > height:
-          # Split along vertical line (longer x-axis)
           split_line = LineString([(bounds[0] + width / 2, bounds[1]),
                                   (bounds[0] + width / 2, bounds[3])])
       else:
-          # Split along horizontal line (longer y-axis)
           split_line = LineString([(bounds[0], bounds[1] + height / 2),
                                   (bounds[2], bounds[1] + height / 2)])
-      
-      # Perform the split
+
       split_parts = split(geom, split_line)
       for part in split_parts.geoms:
         num_coords = get_num_coordinates(part)
         if num_coords <= max_nodes:
             f = fiona.Feature(geometry=fiona.Geometry.from_dict(mapping(part)), properties=feature['properties'])
-            # Pass node count through; caller wrapper may use it for progress
             write(f, num_coords)
         else:
-            # prepare(part)
             stack.append(part)
-  
 
 
 def _unwrap_ring_longitudes(coords):
@@ -112,6 +103,95 @@ def geojson_crosses_antimeridian(geom):
         return any(geojson_crosses_antimeridian({'type':'Polygon','coordinates':coords})
                    for coords in geom['coordinates'])
     return False
+
+
+def _bbox_prime_meridian_antimeridian_strip(minx: float, maxx: float, lat_h: float, lon_w: float) -> bool:
+    """True when naive bbox is ~180° wide with one edge near 0° and one near ±180° (long-way strip).
+
+    Planar subdivision can produce rings from ~0° to ~-180° (or ~0° to ~+180°) with a thin latitude
+    band; lon_w is only ~180° so wider thresholds above miss them. See artifacts-2.geojson samples.
+    """
+    if lat_h > 5.0 or lon_w < 165.0:
+        return False
+    # Strip ties together near prime meridian and near antimeridian (either hemisphere).
+    near_pm = (-12.0 <= minx <= 12.0) or (-12.0 <= maxx <= 12.0)
+    near_anti_w = minx <= -165.0 or maxx <= -165.0
+    near_anti_e = minx >= 165.0 or maxx >= 165.0
+    if near_pm and (near_anti_w or near_anti_e):
+        return True
+    return False
+
+
+def is_antimeridian_box_artifact(geom_geojson):
+    """True for bogus fragments from planar subdivision on lon/lat near ±180°.
+
+    (1) Bbox ~360° wide × thin latitude. (1b) Bbox ~180° wide but ties near 0° to near ±180°
+    (long-way strip; see artifacts-2.geojson). (2) Simple 4-vertex quads on the meridian.
+    """
+    try:
+        g = shape(geom_geojson)
+    except Exception:
+        return False
+    if g.is_empty or g.geom_type != "Polygon":
+        return False
+
+    minx, miny, maxx, maxy = g.bounds
+    lon_w = maxx - minx
+    lat_h = maxy - miny
+
+    # (1) Any ring whose geographic bbox wraps most of the world but is thin in latitude.
+    # Real features do not use a single polygon to wrap 360° with a small lat extent.
+    # Sample bad output: ~360° lon × ~0.7° lat with dozens of vertices along +180°.
+    if lon_w >= 300.0 and lat_h <= 35.0:
+        return True
+    if lon_w >= 250.0 and lat_h <= 8.0:
+        return True
+
+    # (1b) Bbox only ~180° wide but ties 0° to ±180° with thin latitude (missed by (1)).
+    if _bbox_prime_meridian_antimeridian_strip(minx, maxx, lat_h, lon_w):
+        return True
+
+    # (2) Simple quadrilateral with every corner on/near ±180° and huge lon span
+    ext = g.exterior
+    coords = list(ext.coords)
+    n = len(coords)
+    if n == 5:
+        if coords[0] != coords[-1]:
+            return False
+        n_unique = 4
+    elif n == 4:
+        n_unique = 4
+    else:
+        return False
+
+    xs = [p[0] for p in coords[:n_unique]]
+    if all(abs(x) >= 179.5 for x in xs) and lon_w >= 300.0:
+        return True
+    return False
+
+
+def filter_antimeridian_artifacts(geom_geojson):
+    """Remove polygon parts matching is_antimeridian_box_artifact. Returns None if nothing left."""
+    if geom_geojson is None:
+        return None
+    t = geom_geojson.get("type")
+    if t == "Polygon":
+        if is_antimeridian_box_artifact(geom_geojson):
+            return None
+        return geom_geojson
+    if t == "MultiPolygon":
+        kept = []
+        for coords in geom_geojson.get("coordinates", []):
+            poly = {"type": "Polygon", "coordinates": coords}
+            if not is_antimeridian_box_artifact(poly):
+                kept.append(coords)
+        if not kept:
+            return None
+        if len(kept) == 1:
+            return {"type": "Polygon", "coordinates": kept[0]}
+        return {"type": "MultiPolygon", "coordinates": kept}
+    return geom_geojson
+
 
 def antimeridian_split_to_non_crossing(geom_geojson):
     """Return a GeoJSON geometry with no parts crossing the antimeridian.
@@ -223,6 +303,7 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
     output_feature_count = 0
     invalid_output_feature_count = 0
     repaired_count = 0
+    filtered_antimeridian_count = 0
     
     # Geodesic calculator (input is always EPSG:4326)
     geod = Geod(ellps="WGS84")
@@ -331,8 +412,11 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
           def write(feature, is_split=False):
             nonlocal output_feature_count
             nonlocal invalid_output_feature_count
-            # Compute area and add to properties before batching
-            geom_geojson = feature['geometry']
+            nonlocal filtered_antimeridian_count
+            geom_geojson = filter_antimeridian_artifacts(feature['geometry'])
+            if geom_geojson is None:
+              filtered_antimeridian_count += 1
+              return
             props = dict(feature['properties'])
             if '__area' not in props:
               area_val = geodesic_area_sqkm(geom_geojson)
@@ -347,7 +431,7 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
               except Exception:
                 invalid_output_feature_count += 1
             nonlocal cumulative_processed_nodes
-            cumulative_processed_nodes += count_nodes(feature['geometry'])
+            cumulative_processed_nodes += count_nodes(geom_geojson)
             if is_split:
               cumulative_processed_nodes -= 1
             if progress_callback is not None:
@@ -478,6 +562,7 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
           print(f"Total small features in input dataset: {total_features - len(big_poly_indexes.keys())}")
           print(f"Total big features in input dataset: {len(big_poly_indexes.keys())}")
           print(f"Total output features: {output_feature_count}")
+          print(f"Filtered antimeridian box artifacts: {filtered_antimeridian_count}")
           print(f"Invalid original features: {len(invalid_original_indices)}")
           print(f"Invalid output features: {invalid_output_feature_count}")
           if repair_invalid:
@@ -500,6 +585,7 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
     result = {
         "num_features": output_feature_count,
         "num_invalid_features": invalid_output_feature_count,
+        "num_filtered_antimeridian_artifacts": filtered_antimeridian_count,
     }
     if repair_invalid:
         result["num_repaired_features"] = repaired_count
@@ -573,7 +659,9 @@ def multipart_to_singlepart(geometry):
         parts = []
         for geom in geometry.geoms:
             if geom.geom_type == "MultiPolygon":
-                parts.extend(list(geometry.geoms))
+                parts.extend(list(geom.geoms))
+            elif geom.geom_type == "GeometryCollection":
+                parts.extend(multipart_to_singlepart(geom))
             else:
                 parts.append(geom)
         return parts
