@@ -22,7 +22,10 @@ import {
   validVisualizationTypesForGeostats,
 } from "./visualizationTypes";
 import { FillLayer, Layer } from "mapbox-gl";
-import { MapManagerContext, idForLayer } from "../../../dataLayers/MapContextManager";
+import {
+  MapManagerContext,
+  idForLayer,
+} from "../../../dataLayers/MapContextManager";
 import { validateGLStyleFragment } from "../GLStyleEditor/extensions/validateGLStyleFragment";
 import * as Editors from "./Editors";
 import EditorForVisualizationType from "./EditorForVisualizationType";
@@ -382,7 +385,10 @@ export default function GUIStyleEditor({
     );
   }
 
-  if (!isRasterInfo(geostats) && isLegacyGeostatsLayer(geostats)) {
+  if (
+    geostats === null ||
+    (!isRasterInfo(geostats) && isLegacyGeostatsLayer(geostats))
+  ) {
     return (
       <Editors.Card>
         <Warning level="info">
@@ -392,7 +398,7 @@ export default function GUIStyleEditor({
           <br />
           <br />
           {t(
-            "You can download the data and upload a new copy from the Data Source tab. Older data sources will be upgraded for the new system using an automated process in the future."
+            "To enable the new cartography tools, open the Data Source tab and use the Reprocess Layer button in the Versions panel."
           )}
         </Warning>
       </Editors.Card>

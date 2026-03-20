@@ -181,3 +181,19 @@ mutation getPresignedPMTilesUploadUrl($filename: String!, $bytes: BigInt!) {
     key
   }
 }
+
+mutation ReprocessAllLegacyDataSources($projectId: Int!) {
+  reprocessAllLegacyDataSources(input: { projectId: $projectId }) {
+    integer
+  }
+}
+
+mutation ReprocessLegacyDataSource($tableOfContentsItemId: Int!) {
+  reprocessLegacyDataSource(
+    input: { tableOfContentsItemId: $tableOfContentsItemId }
+  ) {
+    projectBackgroundJob {
+      ...BackgroundJobDetails
+    }
+  }
+}

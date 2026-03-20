@@ -497,15 +497,18 @@ export function ReportLayerMultiPicker({
           })
         );
         if (!layer.sourceId) continue;
+        const isLastLayer = i === unprocessed.length - 1;
         await preprocessSourceMutation({
           variables: { slug: getSlug(), sourceId: layer.sourceId },
-          refetchQueries: [
-            {
-              query: ProjectReportingLayersDocument,
-              variables: { slug: getSlug() },
-            },
-          ],
-          awaitRefetchQueries: true,
+          refetchQueries: isLastLayer
+            ? [
+                {
+                  query: ProjectReportingLayersDocument,
+                  variables: { slug: getSlug() },
+                },
+              ]
+            : [],
+          awaitRefetchQueries: isLastLayer,
         });
       }
 

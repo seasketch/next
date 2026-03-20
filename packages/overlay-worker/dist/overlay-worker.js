@@ -53,6 +53,10 @@ const simplify_1 = __importDefault(require("@turf/simplify"));
 const buffer_1 = __importDefault(require("@turf/buffer"));
 const helpers_1 = require("overlay-engine/src/utils/helpers");
 const reproject_1 = require("overlay-engine/src/utils/reproject");
+const containerIndex_1 = require("overlay-engine/src/utils/containerIndex");
+const cql2_1 = require("overlay-engine/src/cql2");
+const polygonClipping_1 = require("overlay-engine/src/utils/polygonClipping");
+const clipping = __importStar(require("polyclip-ts"));
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
@@ -166,7 +170,7 @@ async function handler(payload) {
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor("overlay_area", 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(bufferedIntersectionFeature, {
                     tolerance: SIMPLIFICATION_TOLERANCE,
-                }), source, differenceSources, helpers, payload.groupBy, workerPool);
+                }), source, differenceSources, helpers, payload.groupBy, workerPool, undefined, undefined, undefined, payload.sourceHasOverlappingFeatures);
                 const area = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
@@ -205,12 +209,15 @@ async function handler(payload) {
                 if (payload.epsg !== 6933) {
                     throw new Error(`Support for projection EPSG:${payload.epsg} not implemented in worker.`);
                 }
-                const { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
-                // if (subjectIsGeography(payload.subject)) {
-                //   throw new Error(
-                //     `raster_stats for geographies not implemented in worker yet.`
-                //   );
-                // } else {
+                let { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
+                const originalLength = JSON.stringify(intersectionFeature, null, 2).length;
+                if (subjectIsGeography(payload.subject)) {
+                    // attempt to build complete multipolygon representing the geography
+                    // by subtracting difference source features from the intersection
+                    // feature.
+                    intersectionFeature = await buildCompleteGeographyMultiPolygon(intersectionFeature, differenceSources);
+                    console.log("built complete geography multipolygon", originalLength, JSON.stringify(intersectionFeature, null, 2).length);
+                }
                 const f = (0, reproject_1.reprojectFeatureTo6933)(intersectionFeature);
                 const result = await (0, overlay_engine_1.calculateRasterStats)(payload.sourceUrl, f);
                 await (0, messaging_1.flushMessages)();
@@ -370,5 +377,78 @@ function applySubjectBuffer(feature, bufferDistanceKm) {
         console.warn("Failed to buffer subject feature", err);
     }
     return feature;
+}
+/**
+ * Builds a complete MultiPolygon representing the true geography area by
+ * subtracting all difference-source features from the intersection feature.
+ *
+ * Used for raster_stats analysis where the actual geometry (not just an area
+ * value) is needed to spatially query a raster dataset.
+ *
+ * Strategy for efficiency:
+ *  1. Compute one bounding envelope from the intersection feature for spatial search.
+ *  2. Build a ContainerIndex on a simplified copy of the intersection feature so
+ *     features that fall entirely outside can be skipped cheaply.
+ *  3. Stream candidate features from each differenceSource, apply any CQL2 filter,
+ *     skip "outside" candidates, and collect the remainder.
+ *  4. Union all collected difference geometries into a single geometry, then
+ *     apply one clipping.difference call — avoiding repeated incremental clips.
+ */
+async function buildCompleteGeographyMultiPolygon(intersectionFeature, differenceSources) {
+    if (differenceSources.length === 0) {
+        return intersectionFeature;
+    }
+    // Compute a single bounding envelope from the geometry coordinates directly.
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    const polys = intersectionFeature.geometry.type === "Polygon"
+        ? [intersectionFeature.geometry.coordinates]
+        : intersectionFeature.geometry.coordinates;
+    for (const poly of polys) {
+        for (const ring of poly) {
+            for (const [x, y] of ring) {
+                if (x < minX)
+                    minX = x;
+                if (y < minY)
+                    minY = y;
+                if (x > maxX)
+                    maxX = x;
+                if (y > maxY)
+                    maxY = y;
+            }
+        }
+    }
+    const envelope = { minX, minY, maxX, maxY };
+    // Simplified intersection feature for ContainerIndex — fast classify without
+    // touching the high-resolution source geometry.
+    const simplified = (0, simplify_1.default)(intersectionFeature, { tolerance: 0.002 });
+    const containerIndex = new containerIndex_1.ContainerIndex(simplified);
+    // Collect difference polygon coordinates, skipping features with no overlap.
+    const differenceGeoms = [];
+    for (const { source, cql2Query } of differenceSources) {
+        for await (const f of source.getFeaturesAsync([envelope])) {
+            if (cql2Query && !(0, cql2_1.evaluateCql2JSONQuery)(cql2Query, f.properties)) {
+                continue;
+            }
+            if (containerIndex.classify(f) === "outside") {
+                continue;
+            }
+            differenceGeoms.push(f.geometry.coordinates);
+        }
+    }
+    if (differenceGeoms.length === 0) {
+        return intersectionFeature;
+    }
+    // Union all difference geometries first, then apply a single difference
+    // operation. This is faster than iterative clipping.
+    const unionedDifference = differenceGeoms.length === 1 ? differenceGeoms[0] : (0, polygonClipping_1.union)(differenceGeoms);
+    const result = clipping.difference(intersectionFeature.geometry.coordinates, unionedDifference);
+    if (result.length === 0) {
+        return intersectionFeature;
+    }
+    return {
+        type: "Feature",
+        geometry: { type: "MultiPolygon", coordinates: result },
+        properties: intersectionFeature.properties,
+    };
 }
 //# sourceMappingURL=overlay-worker.js.map

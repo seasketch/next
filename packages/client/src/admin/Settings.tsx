@@ -27,6 +27,7 @@ import {
   useUpdateShowLegendByDefaultMutation,
   useUpdateFeatureFlagsMutation,
   UpdateFeatureFlagsMutationVariables,
+  useReprocessAllLegacyDataSourcesMutation,
 } from "../generated/graphql";
 import ProjectAutosaveInput from "./ProjectAutosaveInput";
 import { useDropzone } from "react-dropzone";
@@ -1029,6 +1030,10 @@ function SuperUserSettings() {
   const [updateEnableReportBuilder, updateEnableReportBuilderState] =
     useUpdateEnableReportBuilderMutation();
 
+  const [reprocessAllLegacy, reprocessAllLegacyState] =
+    useReprocessAllLegacyDataSourcesMutation({ onError });
+  const [reprocessCount, setReprocessCount] = useState<number | null>(null);
+
   if (loading) {
     return null;
   }
@@ -1200,6 +1205,49 @@ function SuperUserSettings() {
                   "Amount of spatial data that can be uploaded to this project. We limit this amount initially to prevent abuse and to identify important projects."
                 )}
               />
+              <div className="border-t pt-4">
+                <h4 className="text-sm font-medium text-gray-700">
+                  <Trans ns="admin">Reprocess Legacy Data Sources</Trans>
+                </h4>
+                <p className="mt-1 text-sm text-gray-500">
+                  <Trans ns="admin">
+                    Queue reprocessing jobs for all draft layers in this project
+                    that were uploaded before the current cartography and
+                    reporting pipeline. Layers already being processed will be
+                    skipped. You may need to increase the data hosting quota to
+                    accommodate the additional data.
+                  </Trans>
+                </p>
+                {reprocessCount !== null && (
+                  <p className="mt-2 text-sm text-green-700">
+                    <Trans ns="admin" count={reprocessCount}>
+                      {/* eslint-disable-next-line i18next/no-literal-string */}
+                      {
+                        "{{count}} layer(s) queued for reprocessing. Monitor status from the Data Layers page."
+                      }
+                    </Trans>
+                  </p>
+                )}
+                <button
+                  type="button"
+                  disabled={reprocessAllLegacyState.loading}
+                  onClick={async () => {
+                    const result = await reprocessAllLegacy({
+                      variables: { projectId: data!.project!.id },
+                    });
+                    setReprocessCount(
+                      result.data?.reprocessAllLegacyDataSources?.integer ?? 0
+                    );
+                  }}
+                  className="mt-2 px-3 py-1.5 text-sm font-medium bg-white rounded border border-black border-opacity-20 shadow-sm disabled:opacity-50"
+                >
+                  {reprocessAllLegacyState.loading ? (
+                    <Trans ns="admin">Starting…</Trans>
+                  ) : (
+                    <Trans ns="admin">Reprocess All Legacy Layers</Trans>
+                  )}
+                </button>
+              </div>
               {/* <InputBlock
                 input={
                   <Switch
