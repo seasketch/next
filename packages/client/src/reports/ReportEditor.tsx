@@ -10,7 +10,6 @@ import {
   memo,
   useCallback,
   useContext,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -30,18 +29,6 @@ import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { PlusIcon } from "@radix-ui/react-icons";
 
-/**
- * Console diagnostics for report add-card / scroll / focus flows.
- * Set in devtools: localStorage.setItem("seasketchDebugReportEditor", "1") then reload.
- * Unset: localStorage.removeItem("seasketchDebugReportEditor")
- */
-function isReportEditorDebugEnabled(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    window.localStorage?.getItem("seasketchDebugReportEditor") === "1"
-  );
-}
-
 /** New cards are appended at the end of the tab; scroll the list to the bottom. */
 function scrollContainerToBottom(
   scrollContainer: HTMLElement,
@@ -57,44 +44,11 @@ function scrollContainerToBottom(
  */
 function scrollContainerToBottomAfterLayout(
   scrollContainer: HTMLElement,
-  behavior: ScrollBehavior = "smooth",
-  debugTag?: string
+  behavior: ScrollBehavior = "smooth"
 ) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      if (isReportEditorDebugEnabled()) {
-        const maxTop = Math.max(
-          0,
-          scrollContainer.scrollHeight - scrollContainer.clientHeight
-        );
-        // eslint-disable-next-line i18next/no-literal-string
-        console.warn("[ReportEditor:debug] scroll after layout (before)", {
-          tag: debugTag,
-          scrollTop: scrollContainer.scrollTop,
-          maxTop,
-          scrollHeight: scrollContainer.scrollHeight,
-          clientHeight: scrollContainer.clientHeight,
-        });
-      }
       scrollContainerToBottom(scrollContainer, behavior);
-      if (isReportEditorDebugEnabled()) {
-        requestAnimationFrame(() => {
-          const maxTop = Math.max(
-            0,
-            scrollContainer.scrollHeight - scrollContainer.clientHeight
-          );
-          // eslint-disable-next-line i18next/no-literal-string
-          console.warn(
-            "[ReportEditor:debug] scroll after layout (+1 rAF; smooth may still be animating)",
-            {
-              tag: debugTag,
-              scrollTop: scrollContainer.scrollTop,
-              maxTop,
-              deltaFromMax: maxTop - scrollContainer.scrollTop,
-            }
-          );
-        });
-      }
     });
   });
 }
@@ -172,72 +126,7 @@ export default function ReportEditor({
         block: "end",
       });
     }
-
-    if (!cardElement) {
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn("[ReportEditor] New card present in report data but draggable DOM node not found", {
-        cardId,
-        pendingNewCardId,
-        reportId: baseContext.data?.report?.id,
-        hadScrollArea: Boolean(scrollArea),
-      });
-    } else if (!scrollArea && isReportEditorDebugEnabled()) {
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn("[ReportEditor:debug] cardsScrollAreaRef missing; used scrollIntoView fallback", {
-        cardId,
-      });
-    }
-  }, [
-    pendingNewCardId,
-    allCardIds,
-    editing,
-    setEditing,
-    baseContext.data?.report?.id,
-  ]);
-
-  useEffect(() => {
-    if (!pendingNewCardId || allCardIds.has(pendingNewCardId)) return;
-    const id = pendingNewCardId;
-    const t = window.setTimeout(() => {
-      if (pendingNewCardIdRef.current !== id) return;
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(
-        "[ReportEditor] pendingNewCardId still not in report list after 4s (cache/refetch?)",
-        {
-          pendingNewCardId: id,
-          allCardIdsSize: allCardIds.size,
-          reportId: baseContext.data?.report?.id,
-        }
-      );
-    }, 4000);
-    return () => window.clearTimeout(t);
-  }, [pendingNewCardId, allCardIds, baseContext.data?.report?.id]);
-
-  // ProseMirror must call onEditorReadyForFocus to clear pending; if it never does, editing can look stuck.
-  useEffect(() => {
-    if (!pendingNewCardId || !allCardIds.has(pendingNewCardId)) return;
-    const id = pendingNewCardId;
-    const t = window.setTimeout(() => {
-      if (pendingNewCardIdRef.current !== id) return;
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(
-        "[ReportEditor] pendingNewCardId not cleared after 8s — onEditorReadyForFocus likely never ran (ProseMirror / preselectTitle?)",
-        {
-          pendingNewCardId: id,
-          editing,
-          preselectTitle,
-          reportId: baseContext.data?.report?.id,
-        }
-      );
-    }, 8000);
-    return () => window.clearTimeout(t);
-  }, [
-    pendingNewCardId,
-    allCardIds,
-    editing,
-    preselectTitle,
-    baseContext.data?.report?.id,
-  ]);
+  }, [pendingNewCardId, allCardIds, editing, setEditing]);
 
   const [addReportCard] = useAddReportCardMutation({
     awaitRefetchQueries: true,
@@ -268,14 +157,6 @@ export default function ReportEditor({
     };
 
     const sketchClassId = baseContext.data?.sketchClass.id;
-    const reportId = baseContext.data?.report?.id;
-    if (!sketchClassId) {
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn(
-        "[ReportEditor] addReportCard: sketchClassId missing; refetchQueries skipped — list may lag in production",
-        { reportId, currentTabId }
-      );
-    }
     try {
       const { data } = await addReportCard({
         variables: {
@@ -297,34 +178,12 @@ export default function ReportEditor({
       });
       const newCardId = data?.addReportCard?.reportCard?.id || null;
       if (!newCardId) {
-        // eslint-disable-next-line i18next/no-literal-string
-        console.error("[ReportEditor] addReportCard returned no reportCard id", {
-          reportId,
-          currentTabId,
-          hasData: Boolean(data),
-        });
+        console.error("No new card id");
         return;
-      }
-      if (isReportEditorDebugEnabled()) {
-        // eslint-disable-next-line i18next/no-literal-string
-        console.warn(
-          "[ReportEditor:debug] addReportCard succeeded; deferring edit mode until card is in list",
-          {
-            newCardId,
-            sketchClassId,
-            currentTabId,
-            reportId,
-          }
-        );
       }
       setPendingNewCardId(newCardId);
     } catch (error) {
-      // eslint-disable-next-line i18next/no-literal-string
-      console.warn("[ReportEditor] addReportCard request failed (see GlobalErrorHandler / network tab)", {
-        reportId,
-        currentTabId,
-        error,
-      });
+      // Error is handled by onError
     }
   }, [addReportCard, selectedTabId, baseContext.data]);
 
@@ -351,28 +210,11 @@ export default function ReportEditor({
         focus();
         const scrollArea = cardsScrollAreaRef.current;
         if (scrollArea) {
-          scrollContainerToBottomAfterLayout(
-            scrollArea,
-            "smooth",
-            "onEditorReadyForFocus"
-          );
-        } else {
-          // eslint-disable-next-line i18next/no-literal-string
-          console.warn(
-            "[ReportEditor] onEditorReadyForFocus: cardsScrollAreaRef missing; post-PM scroll skipped",
-            { cardId, reportId: baseContext.data?.report?.id }
-          );
+          scrollContainerToBottomAfterLayout(scrollArea, "smooth");
         }
-      } else if (pendingNewCardIdRef.current != null) {
-        // eslint-disable-next-line i18next/no-literal-string
-        console.warn("[ReportEditor] onEditorReadyForFocus ignored (card id mismatch)", {
-          cardId,
-          pendingNewCardId: pendingNewCardIdRef.current,
-          reportId: baseContext.data?.report?.id,
-        });
       }
     },
-    [baseContext.data?.report?.id]
+    []
   );
 
   const uiStateContextValue = useMemo(() => {
